@@ -1,0 +1,63 @@
+{
+  "title": "Extract a shared pumpApp/l10n test harness — 25+ duplicated MaterialApp+delegate blocks across features/profiles/presentation tests",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "TQ-3",
+  "area": "test/features/profiles/presentation/** (widget-test harness helpers)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/widgets/parent_pin_keypad_dialog_test.dart",
+      "line": 59,
+      "quote": "localizationsDelegates: const [\nAppLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/widgets/add_profile_dialog_test.dart",
+      "line": 61,
+      "quote": "localizationsDelegates: const [\nAppLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+      "line": 145,
+      "quote": "localizationsDelegates: const [\nAppLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/profile_picker_screen_l1_test.dart",
+      "line": 138,
+      "quote": "localizationsDelegates: const [\nAppLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/ts3_parent_track_archive_test.dart",
+      "line": 101,
+      "quote": "localizationsDelegates: const [\nAppLocalizations.delegate,"
+    }
+  ],
+  "sites": 25,
+  "why": "grep -c 'GlobalCupertinoLocalizations.delegate' across the 15 batch files totals 25 occurrences in 13/15 files (7 alone in parent_pin_keypad_dialog_test.dart, 3 each in add_profile_dialog_test.dart and parent_track_management_screen_l1_test.dart) — every widget test hand-rolls its own MaterialApp(locale:, localizationsDelegates: const [4 delegates], supportedLocales:, home:) wrapper. No pumpApp helper exists anywhere in test/ (repo-wide search). This is Fowler-textbook shotgun-surgery risk: adding a 5th delegate, changing supportedLocales, or fixing an RTL default requires touching dozens of call sites, and drift has already started — pp11_edit_dialog_autofocus_test.dart and pp13 write the delegate list without 'const' while most others use 'const ['.",
+  "recommendation": "Add test/helpers/pump_app.dart exporting a pumpApp(tester, {required Widget child, Locale locale = const Locale('en'), List<Override> overrides = const [], StackRouter? router}) that wraps ProviderScope+MaterialApp+the 4 delegates+supportedLocales once; migrate these 15 files onto it incrementally.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and is imported by at least the files in this batch.",
+    "grep -rc 'GlobalCupertinoLocalizations.delegate' test/features/profiles/presentation/ drops from 25 to 0 outside the new shared helper."
+  ],
+  "labels": [
+    "duplication",
+    "test-quality",
+    "profiles",
+    "harness"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Two unevidenced narrative claims are false: (1) 'No pumpApp helper exists anywhere in test/ (repo-wide search)' is wrong — test/e2e/harness/e2e_harness.dart:304 defines E2EHarness.pumpApp(), used by 30+ e2e journey tests (a different tier, but the claim as stated is inaccurate). (2) 'pp13 write[s] the delegate list without const' is wrong — pp13_add_profile_selects_new_profile_test.dart:85 uses 'localizationsDelegates: const ['. pp11's no-const claim checks out. Confidence lowered to SUSPECTED due to these overreaches; core finding and P2 severity otherwise stand."
+    ]
+  },
+  "sourceBatch": "t1-feat-profiles-p3",
+  "chunk": "grp-080",
+  "normArea": "tests/profiles",
+  "id": "AUD-t-profiles-03",
+  "linearPriority": "Medium"
+}

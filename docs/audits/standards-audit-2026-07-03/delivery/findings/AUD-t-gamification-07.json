@@ -1,0 +1,48 @@
+{
+  "title": "Replace fixed-duration Future.delayed sleeps with deterministic sync in gamification reactive-stream tests",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "TQ-6 hermetic tests",
+  "area": "features/gamification presentation tests (staleness/reactive group)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_balance_reactive_test.dart",
+      "line": 57,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 20));"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_rewards_staleness_test.dart",
+      "line": 99,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 150));"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/pending_redemptions_reactive_test.dart",
+      "line": 89,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 20));"
+    }
+  ],
+  "sites": 3,
+  "why": "These 3 files (10 occurrences total) use hard-coded 20/50/150ms real-time sleeps as the only synchronization before asserting a Drift Stream has propagated a new emission, with no retry/poll and no use of pumpEventQueue() (confirmed 0 usages repo-wide). On a loaded CI runner a slower-than-budgeted FFI round-trip would fail the assertion with no code regression involved — exactly the kind of flake that erodes trust in the 'staleness regression' suite meant to guard DG-RDMP-01/02 and DG-PND-05.",
+  "recommendation": "Replace `Future.delayed(fixedDuration)` with `pumpEventQueue()` or a small poll-until-condition helper bounded by a generous timeout, so the wait tracks actual event-loop drain rather than a guessed duration.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No test in these 3 files gates its only assertion on a bare Future.delayed(fixed duration); a poll/pumpEventQueue-based helper is used instead."
+  ],
+  "labels": [
+    "flaky-test",
+    "test-quality"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p3",
+  "chunk": "grp-057",
+  "normArea": "tests/gamification",
+  "id": "AUD-t-gamification-07",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,41 @@
+{
+  "title": "Rename the top-level child() test helper in progress_widgets_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming hygiene",
+  "area": "test/features/progress/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/progress/presentation/widgets/progress_widgets_test.dart",
+      "line": 582,
+      "quote": "Widget child(HierarchyLevelProgress level) =>\n    HierarchyProgressCard(level: level);"
+    }
+  ],
+  "sites": 1,
+  "why": "A top-level function literally named `child` is called as `SingleChildScrollView(child: child(level))` (line 483) in the same file — the free function shares its name with the ubiquitous Flutter `child:` named parameter used dozens of times elsewhere in the same 583-line file, forcing a reader to disambiguate 'parameter or function?' at every occurrence.",
+  "recommendation": "Rename to something like _hostedLevelCard or _buildLevelCard.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No top-level test helper shares a name with a common Flutter named parameter (child, key, builder, etc.)"
+  ],
+  "labels": [
+    "hygiene",
+    "naming",
+    "progress"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor overstatement: `child:` appears only 8 times in the file (grep -c confirmed), not 'dozens' as claimed. Does not change the verdict."
+    ]
+  },
+  "sourceBatch": "t1-feat-progress-p4",
+  "chunk": "grp-088",
+  "normArea": "tests/progress",
+  "id": "AUD-t-progress-09",
+  "linearPriority": "Low"
+}

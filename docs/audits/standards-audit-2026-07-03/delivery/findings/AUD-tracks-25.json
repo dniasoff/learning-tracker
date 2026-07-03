@@ -1,0 +1,43 @@
+{
+  "title": "Stop hardcoding TextDirection.rtl on TrackLabelStep's free-text field regardless of app locale",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "no_hardcoded_text_direction (custom lint) / AX",
+  "area": "presentation/tracks-setup",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_label_step.dart",
+      "line": 68,
+      "quote": "textDirection: TextDirection.rtl,"
+    }
+  ],
+  "sites": 1,
+  "why": "TrackLabelStep's TextFormField is the free-text 'name this track' input — the user can type anything, in either app locale. Forcing textDirection: TextDirection.rtl unconditionally (not gated on locale or on the defaultLabel's script) means an English-locale user typing 'Morning Bavli Study' gets a right-anchored cursor/hint and base-RTL layout for a field the rest of the (LTR) English screen doesn't otherwise use RTL for. This is precisely what the currently-broken `no_hardcoded_text_direction` custom lint rule exists to catch — with custom_lint crashing repo-wide, nothing currently flags it.",
+  "recommendation": "Drive textDirection from the ambient Directionality/locale (or drop the explicit override and let Flutter's default locale-derived directionality apply), the same way other bidi-sensitive widgets in this batch (scope_views.dart's chooseLevelPrompt) key off useHebrew instead of hardcoding a direction.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "textDirection on this field is either removed or computed from Directionality.of(context)/a Hebrew-Terms-aware flag, not a literal TextDirection.rtl.",
+    "An EN-locale widget test asserts the field's effective text direction is ltr.",
+    "custom_lint's no_hardcoded_text_direction rule (once unbroken) passes on this file."
+  ],
+  "labels": [
+    "accessibility",
+    "i18n",
+    "rtl"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "New evidence found: learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart lines 167-194 (steps list omits AddTrackStep.trackName) and line 841 (`AddTrackStep.trackName => const SizedBox.shrink()`) plus a repo-wide grep showing TrackLabelStep is referenced only by itself and its unit test. The widget is orphaned/dead code, not a live screen. Downgrade P2->P3: this is a latent defect in unreachable code, not a current user-visible RTL bug. If the step is ever wired up, the underlying hardcoding must still be fixed."
+    ]
+  },
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "grp-115",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-25",
+  "linearPriority": "Low"
+}

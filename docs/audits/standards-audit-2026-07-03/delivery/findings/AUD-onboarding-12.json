@@ -1,0 +1,44 @@
+{
+  "title": "Confirm whether Positioned(left:/right:) illustration badges in intro pages need PositionedDirectional for RTL",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "AX-1 (spirit)",
+  "area": "onboarding/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart",
+      "line": 32,
+      "quote": "left: 0,"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart",
+      "line": 66,
+      "quote": "right: 32,"
+    }
+  ],
+  "sites": 6,
+  "why": "AX-1's RTL rule is written against EdgeInsets.only(left/right) and Alignment.centerLeft/Right, but Positioned(left:/right:) has the identical non-mirroring failure mode under RTL that PositionedDirectional(start:/end:) avoids. app_intro_screen_l1_test.dart's RTL smoke test only checks the screen mounts without throwing, not badge placement, so a mirroring regression on these floating badges in Hebrew locale would not be caught. This may be an intentional 'decorative collage doesn't need to mirror' choice rather than a bug — needs a visual check to confirm either way.",
+  "recommendation": "Take a Locale('he') screenshot of AppIntroScreen pages 2-3 (reusing the app_intro_rewards_cta_overlap_test.dart rig) and confirm badge placement reads correctly; switch to PositionedDirectional(start:/end:) if not.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A golden or screenshot test of pages 2-3 in Locale('he') exists and has been reviewed for correct badge placement"
+  ],
+  "labels": [
+    "rtl",
+    "onboarding",
+    "accessibility"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-070",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-12",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,47 @@
+{
+  "title": "Use a clock-skew-safe timestamp, not client clock, for notification_settings updated_at LWW field",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "FB-2 (pattern)",
+  "area": "features/notifications/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 341,
+      "quote": "final updatedAtMs = DateTimeFactory.nowUtc().millisecondsSinceEpoch;"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 366,
+      "quote": "'updated_at': DateTime.fromMillisecondsSinceEpoch(\n      updatedAtMs,"
+    }
+  ],
+  "sites": 1,
+  "why": "This client-computed timestamp becomes the payload's updated_at field pushed via enqueueNotificationSettings; core/sync/merge/notification_settings_merger.dart (outside this batch) parses remote['updated_at'] to arbitrate LWW. If two devices' clocks disagree, the device with the faster/wrong clock can push a stale settings change that looks 'newer' and wins over a genuinely newer change made on a correctly-clocked device, silently reverting the user's real edit with no error surfaced anywhere. Confirming the full blast radius requires reading the outbox-drain write path (outside this batch) to see whether it overwrites this field with FieldValue.serverTimestamp() before commit.",
+  "recommendation": "Confirm whether the write path already substitutes a server timestamp before commit; if not, do so, or route the push side through the same clock-skew arbitration MergeStore.remoteIsNewer already implements for the pull side.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A sync test with an artificially-skewed local clock demonstrates the genuinely later settings write wins regardless of which device has the faster clock."
+  ],
+  "labels": [
+    "sync",
+    "fb-2",
+    "notifications",
+    "clock-skew"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "DateTimeFactory.nowUtc() confirmed to be raw SystemLocalDayClock (core/utils/date_utils.dart:15-19) — genuinely uncorrected client clock, strengthening the claim."
+    ]
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-064",
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-07",
+  "linearPriority": "Medium"
+}

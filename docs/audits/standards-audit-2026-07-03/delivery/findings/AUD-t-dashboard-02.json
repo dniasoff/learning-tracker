@@ -1,0 +1,56 @@
+{
+  "title": "dashboard_todays_missions_heading_test.dart: override trackHasChazaraProvider so ActiveTrackCard stops opening a real UserDatabase",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests: no real DB/network) / TQ-2 (fresh, controlled container) / Feathers seam lens",
+  "area": "test/features/dashboard/presentation/widgets (dashboard feature test)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+      "line": 116,
+      "quote": "anyActiveTrackHasChazaraProvider.overrideWith(\n  (ref) => Future.value(false),\n),"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/active_track_card.dart",
+      "line": 322,
+      "quote": ".watch(trackHasChazaraProvider(track.id))"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+      "line": 521,
+      "quote": "final db = ref.watch(userDatabaseProvider);\n  final count = await db.stageDao.countStagesForTrack(trackId);"
+    },
+    {
+      "file": "learning_tracker/lib/core/providers/database_provider.dart",
+      "line": 36,
+      "quote": "final database = UserDatabase(driftDatabase(name: dbName));"
+    }
+  ],
+  "sites": 1,
+  "why": "_buildApp overrides anyActiveTrackHasChazaraProvider (used by DashboardBody's chazara-review gate), but ActiveTrackCard — rendered because the test passes activeTracks: [_track()] — reads a DIFFERENT, similarly-named provider, trackHasChazaraProvider(track.id), which stays unoverridden and falls through to the real userDatabaseProvider. Confirmed by execution: running this file prints drift's own runtime warning 'WARNING (drift): It looks like you've created the database class UserDatabase multiple times... race conditions will occur and might corrupt the database' twice (once per extra testWidgets in the file), with a stack trace tracing straight through ActiveTrackCard.build -> trackHasChazaraProvider -> userDatabase -> UserDatabase(driftDatabase(...)). The 'widget' test is therefore not hermetic: it opens 3 real native Drift databases per run, the chazara-badge branch in ActiveTrackCard is exercised against whatever that ambient real DB happens to return for stageDao.countStagesForTrack(1) rather than the _track() fixture (so this test asserts nothing about, and cannot regress-guard, that branch), and it is measurably slower and flakier than the fake/in-memory pattern (test/helpers/test_database.dart) used elsewhere in the suite.",
+  "recommendation": "Add `trackHasChazaraProvider(1).overrideWith((ref) => Future.value(false))` (mirroring the existing anyActiveTrackHasChazaraProvider override) to _buildApp's overrides list, or override userDatabaseProvider directly with the shared in-memory test database helper.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "trackHasChazaraProvider(1) (or userDatabaseProvider) is overridden in _buildApp's overrides list.",
+    "`flutter test test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart` produces zero 'WARNING (drift): ... created the database class UserDatabase multiple times' output."
+  ],
+  "labels": [
+    "testing",
+    "hermeticity",
+    "dashboard",
+    "drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p3",
+  "chunk": "grp-050",
+  "normArea": "tests/dashboard",
+  "id": "AUD-t-dashboard-02",
+  "linearPriority": "Medium"
+}

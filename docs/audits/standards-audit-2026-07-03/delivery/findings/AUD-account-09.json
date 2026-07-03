@@ -1,0 +1,45 @@
+{
+  "title": "Extract the duplicated drift .sqlite-suffix delete helper out of AccountLifecycleService and PendingLocalSignupStore",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler: duplicated code (Extract Method)",
+  "area": "features/account/domain",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+      "line": 126,
+      "quote": "final driftFile = File('$_dbPath/$dbFileName.sqlite');"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/pending_local_signup.dart",
+      "line": 222,
+      "quote": "final driftFile = File('$databasesPath/$dbFileName.sqlite');"
+    }
+  ],
+  "sites": 2,
+  "why": "Both private _deleteDbFile methods encode the identical drift_flutter '.sqlite'-suffix-with-bare-name-fallback workaround, each discovered and fixed as a separate bug (each carries its own header comment and its own dedicated regression test in this batch: account_lifecycle_db_delete_test.dart and pending_local_signup_file_cleanup_test.dart). Any future drift_flutter version change to the on-disk filename scheme means this exact fix has to be found and reapplied in two places; missing one leaves orphaned .sqlite files on disk or a delete that silently no-ops.",
+  "recommendation": "Extract one shared deleteDriftDbFile(databasesPath, dbFileName) utility (e.g. under core/database/ or core/utils/) that both services call; keep both existing regression tests but retarget them at the shared utility.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "one shared function implements the .sqlite-suffix delete-with-fallback logic",
+    "AccountLifecycleService and PendingLocalSignupStore both delegate to it instead of each defining their own copy",
+    "both existing regression tests still pass"
+  ],
+  "labels": [
+    "duplication",
+    "fowler"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p2",
+  "chunk": "grp-038",
+  "normArea": "features/account",
+  "id": "AUD-account-09",
+  "linearPriority": "Medium"
+}

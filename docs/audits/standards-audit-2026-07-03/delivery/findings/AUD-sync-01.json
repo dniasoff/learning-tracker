@@ -1,0 +1,54 @@
+{
+  "title": "SyncStatus.error and RestoreStatus.error carry a free-text message instead of a stable code, inviting raw/untranslated text downstream",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5",
+  "area": "features/sync domain models",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sync/domain/models/sync_status.dart",
+      "line": 41,
+      "quote": "required String message,"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/domain/models/restore_status.dart",
+      "line": 26,
+      "quote": "const factory RestoreStatus.error({required String message}) ="
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 60,
+      "quote": "message: error.toString(),"
+    }
+  ],
+  "sites": 2,
+  "why": "EH-5 requires domain/data errors to carry stable codes/enums, never pre-formatted human messages, because this is an EN+Hebrew app where presentation must resolve text via AppLocalizations. Both status models instead expose a raw String message, and sync_providers.dart populates SyncStatus.error.message straight from error.toString() -- an unbounded, unlocalized, potentially technical string. This is not hypothetical: features/settings/presentation/widgets/backup_sync_section.dart already had to add an explicit guard (its own comment: 'never pass a raw exception string into the user-facing subtitle') to avoid rendering SyncStatusError.message directly, and lib/app/restore/device_restore_service.dart embeds RestoreStatus.error's message straight into a rethrown Exception's text. Any future consumer that pattern-matches .message without knowing about that workaround ships raw/English text to Hebrew-locale users.",
+  "recommendation": "Replace the free-text message field on both SyncStatus.error and RestoreStatus.error with a stable enum/code (e.g. SyncErrorCode) plus optional non-user-facing debug detail, and have presentation resolve the code via AppLocalizations, per EH-5.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "EH-5 Rule-0 checker (grep for `required String message` on sealed status/result types, or raw error.toString() flowing into a domain model) passes.",
+    "backup_sync_section.dart's existing raw-string guard becomes structurally unnecessary because the type no longer exposes text to short-circuit around."
+  ],
+  "labels": [
+    "EH-5",
+    "i18n",
+    "error-handling",
+    "sync"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Finding's claim that device_restore_service.dart 'embeds RestoreStatus.error's message into a rethrown Exception' has causality reversed -- line 175 embeds SyncStatus.error's message into a thrown Exception, whose toString() then becomes RestoreStatus.error's message at line 252. Substance (unbounded raw text chaining through both models) still holds and is further confirmed by device_restore_screen.dart directly rendering it.",
+      "The 'why' text's claim that device_restore_service.dart 'embeds RestoreStatus.error's message straight into a rethrown Exception's text' is inaccurate — that behavior (embedding a .message field into a new thrown Exception) is exhibited by SyncStatusError at device_restore_service.dart:175, not RestoreStatus.error. RestoreStatus.error's message is only ever populated FROM e.toString() (device_restore_service.dart:252, restore_providers.dart:63), never read back into a new exception. Doesn't undermine the finding: independently found device_restore_screen.dart:219-220 renders RestoreStatus.error's raw .message directly in a Text widget with zero localization guard — stronger, directly-on-point evidence for the same P1 claim."
+    ]
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-106",
+  "normArea": "features/sync",
+  "id": "AUD-sync-01",
+  "linearPriority": "High"
+}

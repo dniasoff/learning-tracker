@@ -1,0 +1,53 @@
+{
+  "title": "Replace ws5_per_profile_test.dart's tautological payload-format assertions with real NotificationGateway verification",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological test)",
+  "area": "features/notifications (tests, tautology)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/notifications/ws5_per_profile_test.dart",
+      "line": 71,
+      "quote": "const payload = '$dailyReminderPayload:$profileId';\n      expect(payload, equals('daily_reminder:42'));"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/ws5_per_profile_test.dart",
+      "line": 74,
+      "quote": "const parts = ['daily_reminder', '42'];\n      expect(parts.length, equals(2));"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/ws5_per_profile_test.dart",
+      "line": 80,
+      "quote": "const payloadA = '$dailyReminderPayload:1';\n      const payloadB = '$dailyReminderPayload:2';"
+    }
+  ],
+  "sites": 3,
+  "why": "None of the 3 tests in the 'notification payload format' group ever construct a NotificationGateway or call scheduleDailyReminderForProfile/scheduleStreakAlertForProfile (confirmed: no NotificationGateway( appears anywhere in this file). Two of the three just re-interpolate the same '$dailyReminderPayload:$profileId' formula the source uses and compare it to a literal, or hand-write a `parts` list and assert facts about the literal they just wrote three lines earlier -- these can never fail regardless of what NotificationGateway actually does, so despite the docstring's claim to verify \"per-profile payload format\", they add file weight without adding protection. The real protection already exists properly (mocked zonedSchedule + captureAny) in the sibling notification_gateway_test.dart:320-416 outside this batch, which is why this is hygiene/redundancy (P3) rather than a live coverage gap.",
+  "recommendation": "Either delete these two redundant tests (coverage already exists in notification_gateway_test.dart) or rewrite them to construct a NotificationGateway with a mocked FlutterLocalNotificationsPlugin and assert on the captured `payload:` argument from scheduleDailyReminderForProfile, matching this file's own '(good)' ID-allocation tests which do call the real functions.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Remaining payload-format tests in this file (if kept) invoke NotificationGateway rather than re-deriving the expected string independently.",
+    "Red-first check: temporarily change the separator/format in notification_gateway.dart's per-profile payload construction and confirm whichever tests remain go red."
+  ],
+  "labels": [
+    "testing",
+    "TQ-8",
+    "tautological"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Core defect confirmed (no NotificationGateway( construction in file; cited asserts are self-computed tautologies). But the 'real protection at notification_gateway_test.dart:320-416' citation is wrong — that range covers non-profile scheduleDailyReminder. The actual per-profile payload test is at lines 1044-1073 ('embeds profileId in payload'). Finding and P3 severity still stand.",
+      "The supporting claim that real coverage exists at 'notification_gateway_test.dart:320-416' cites the wrong range — that span tests the non-per-profile `scheduleDailyReminder`, not per-profile. Actual per-profile payload coverage (which does exist, confirming real protection is elsewhere) is at lines 981-1300 (`scheduleDailyReminderForProfile`/`scheduleStreakAlertForProfile` groups). Doesn't change the tautology verdict itself."
+    ]
+  },
+  "sourceBatch": "t1-feat-notifications-p2",
+  "chunk": "grp-066",
+  "normArea": "tests/notifications",
+  "id": "AUD-t-notifications-07",
+  "linearPriority": "Low"
+}

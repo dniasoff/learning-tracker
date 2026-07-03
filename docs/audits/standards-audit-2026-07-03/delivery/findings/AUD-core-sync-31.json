@@ -1,0 +1,54 @@
+{
+  "title": "Deduplicate the Ref/WidgetRef builder pairs in tutored_pull_providers.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler: duplicated code (Extract Method)",
+  "area": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+      "line": 42,
+      "quote": "TutoredPullService buildTutoredPullService({\n  required Ref ref,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+      "line": 60,
+      "quote": "TutoredPullService buildTutoredPullServiceFromWidget({\n  required WidgetRef ref,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+      "line": 109,
+      "quote": "TutoredMirrorWipeService buildTutoredMirrorWipeService({\n  required Ref ref,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+      "line": 118,
+      "quote": "TutoredMirrorWipeService buildTutoredMirrorWipeServiceFromWidget({\n  required WidgetRef ref,"
+    }
+  ],
+  "sites": 2,
+  "why": "buildTutoredPullService/buildTutoredPullServiceFromWidget (lines 42-56 / 60-74) have byte-for-byte identical bodies, differing only in the Ref-vs-WidgetRef parameter type; buildTutoredMirrorWipeService/buildTutoredMirrorWipeServiceFromWidget (lines 109-115 / 118-124) repeat the same pattern. Every future change to either pair's construction logic has to be made twice and kept in sync by hand.",
+  "recommendation": "Since both already delegate to a shared _build() helper, extract just the duplicated ref.read(...) argument computation into one place — e.g. have the WidgetRef variant call the Ref variant's logic through a small shared private function, or accept the already-resolved values directly.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The four functions no longer contain duplicated argument-computation bodies; a single shared implementation is called from both Ref and WidgetRef entry points."
+  ],
+  "labels": [
+    "duplication",
+    "hygiene",
+    "riverpod"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-providers",
+  "chunk": "grp-033",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-31",
+  "linearPriority": "Low"
+}

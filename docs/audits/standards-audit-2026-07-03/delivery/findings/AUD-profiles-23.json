@@ -1,0 +1,45 @@
+{
+  "title": "Use PositionedDirectional in TutoredChildrenSection's pending-invite count badge instead of physical right:",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-1 (spirit)",
+  "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 145,
+      "quote": "Positioned(\n  top: 6,"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 147,
+      "quote": "right: 6,"
+    }
+  ],
+  "sites": 1,
+  "why": "AX-1 bans physical left:/right: positioning in this RTL (Hebrew) app; EdgeInsets.only(left:/right:) and Alignment.centerLeft/Right are the named examples but Positioned(right:) is the same class of bug and isn't caught by the current grep (which only targets EdgeInsets/Alignment APIs) or by any of the 22 make audit checks (confirmed clean on this exact tree). In Hebrew/RTL the pending-invite count badge stays pinned to the physical right of the mail icon instead of mirroring to the leading/'start' corner like directional UI elsewhere in the app.",
+  "recommendation": "Wrap with PositionedDirectional(top: 6, end: 6, ...) — the Stack is already inside an ambient Directionality via MaterialApp.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Positioned(...right:...) no longer appears in tutored_children_section.dart",
+    "The root Makefile's AX-1 grep is extended to also flag Positioned(...left:/right:...)"
+  ],
+  "labels": [
+    "ax-1",
+    "rtl",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-079",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-23",
+  "linearPriority": "Low"
+}

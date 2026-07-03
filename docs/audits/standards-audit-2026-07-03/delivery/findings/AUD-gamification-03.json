@@ -1,0 +1,52 @@
+{
+  "title": "Stop achievementsOverviewProvider and _pointConfigDataProvider writing to Drift/SharedPreferences and pushing to Firestore from inside FutureProvider build",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "SM-2 (provider build is pure: no writes/requests/side effects)",
+  "area": "features/gamification/presentation/providers, features/gamification/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/providers/achievements_overview_provider.dart",
+      "line": 88,
+      "quote": "if (await service.stripStockTemplateMilestones()) {\n        await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/point_config_screen.dart",
+      "line": 122,
+      "quote": "await db.pointConfigDao.upsertConfig(\n            PointConfigsCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/point_config_screen.dart",
+      "line": 154,
+      "quote": "if (wroteConfigs) {\n      await sync?.pushGamificationSettingsSnapshot();"
+    }
+  ],
+  "sites": 2,
+  "why": "Both providers exist to compute a read-only view model (achievements list / per-track point config rows), but their build functions mutate persisted state (SharedPreferences milestone config, Drift PointConfigs rows) and push a network sync write as an unguarded side effect of simply being watched. Riverpod rebuilds these providers on every dependency change (achievementsOverviewProvider re-runs on every completionCommittedProvider tick; _pointConfigDataProvider re-runs whenever activeTracksProvider emits) -- so opening the achievements screen or the point-settings screen can silently trigger writes and a Firestore push purely from reading state, with no user action and no guard against concurrent/duplicate invocation. This also makes both providers impossible to unit test as pure read logic without a working sync facade and DB write path.",
+  "recommendation": "Move the strip-stock-templates / seed-default-configs mutations out of the read providers into an explicit one-shot action (invoked once from a screen lifecycle hook or a dedicated Notifier method with SM-4-safe mounted checks), leaving the FutureProviders as pure reads.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "achievementsOverviewProvider's build function performs no writes; a separate, explicitly-invoked action performs stripStockTemplateMilestones + push",
+    "_pointConfigDataProvider's build function performs no writes; seeding defaults happens in a separate action",
+    "A ProviderContainer.test() test watches each read provider twice and asserts the mutation/sync-push call count is 0 (or exactly 1, deliberately) rather than growing with rebuilds"
+  ],
+  "labels": [
+    "SM-2",
+    "riverpod",
+    "side-effects",
+    "sync"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "high-048",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-03",
+  "linearPriority": "High"
+}

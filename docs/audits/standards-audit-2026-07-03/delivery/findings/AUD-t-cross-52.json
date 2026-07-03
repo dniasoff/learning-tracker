@@ -1,0 +1,52 @@
+{
+  "title": "Add Locale('he') RTL coverage for GoalSetupForm/GoalSetupScreen and StudyDaysReadOnly",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/features (widget)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutor_pin_dialog_and_goal_setup_l1_test.dart",
+      "line": 162,
+      "quote": "Locale locale = const Locale('en'),"
+    },
+    {
+      "file": "learning_tracker/test/features/tutor_pin_dialog_and_goal_setup_l1_test.dart",
+      "line": 401,
+      "quote": "locale: const Locale('he'),"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart",
+      "line": 511,
+      "quote": "_buildStudyDaysReadOnlyApp(programName: 'Daf Yomi', onContinue: () {}),"
+    }
+  ],
+  "sites": 2,
+  "why": "_buildGoalFormHarness/_buildGoalScreenHarness already accept a `locale` parameter, but of the ~15 tests across groups D-I (goal-type switching, deadline mode, pace mode with Amudim/Dafim/Perakim/Pesukim unit-picker pills, submission, screen wrapper) not one passes Locale('he') — the single Hebrew test in this 1407-line file (line 401) covers only the unrelated Tutor PIN dialog. Likewise StudyDaysReadOnly (tests 10-14) has no RTL variant even though its sibling StudyDaysEditable does (test #9). TQ-3 exists precisely because 'RTL-only layout and overflow bugs—which this app ships fixes for every audit wave—are invisible to LTR-only tests', and GoalSetupForm's slider + segmented unit-picker pills are exactly the kind of layout most prone to RTL overflow.",
+  "recommendation": "Add at least one Locale('he') smoke test per screen (mirroring the existing StudyDaysEditable/ContentHierarchyScreen/TutorPinVerificationDialog pattern already in this batch) asserting no overflow/crash for GoalSetupForm (pace mode with a unit picker) and for StudyDaysReadOnly.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "at least one testWidgets case per screen pumps with locale: const Locale('he') and asserts find.byType(Scaffold) (or equivalent) renders without a FlutterError/overflow"
+  ],
+  "labels": [
+    "TQ-3",
+    "i18n",
+    "RTL",
+    "coverage-gap"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "learning_tracker/test/features/scheduler/widgets/goal_setup_screen_test.dart:471-497 runs `for (final locale in const [Locale('en'), Locale('he')])` x textScale [1.0,1.3] asserting GoalSetupScreen's pace-mode Bavli unit-picker labels never truncate — this already covers the GoalSetupForm/pace/unit-picker RTL risk the finding claims is untested. StudyDaysReadOnly (line 511) remains genuinely uncovered."
+    ]
+  },
+  "sourceBatch": "t1-test-cross-p5",
+  "chunk": "grp-148",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-52",
+  "linearPriority": "Low"
+}

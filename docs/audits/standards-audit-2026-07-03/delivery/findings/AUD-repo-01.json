@@ -1,0 +1,40 @@
+{
+  "title": "De-duplicate 7 public type names defined in two files each (AG-4)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-4",
+  "area": "cross-cutting",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib",
+      "line": 1,
+      "quote": "CurriculumSummary, PaceCalculator, PaceIndicator, PaceStatus, PinFlowMode, PinFlowStep, StudyDayPattern each defined in 2 lib/ files (script scan; pairs in appendix)"
+    }
+  ],
+  "sites": 7,
+  "why": "Agents locate code by grep; a duplicated public name sends them to the wrong definition and breeds divergent parallel copies — this repo's documented accretion failure. PaceCalculator/PaceStatus duplicated across features is exactly how two pace algorithms drift apart silently.",
+  "recommendation": "For each pair: keep one canonical definition (core/ or the owning feature), rename or delete the other, and land the AG-4 duplicate-symbol audit script so the count ratchets to zero.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "AG-4 audit script lands in make audit and reports zero duplicate public top-level type names",
+    "each of the 7 names resolves to exactly one lib/ definition"
+  ],
+  "labels": [
+    "architecture",
+    "agent-workflow"
+  ],
+  "origin": "orchestrator-baseline",
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "orchestrator",
+  "chunk": "grp-134",
+  "normArea": "repo",
+  "id": "AUD-repo-01",
+  "linearPriority": "Medium"
+}

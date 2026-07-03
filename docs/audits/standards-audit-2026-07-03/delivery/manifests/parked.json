@@ -1,0 +1,987 @@
+[
+  {
+    "id": "AUD-content_browsing-02",
+    "severity": "P1",
+    "normArea": "features/content_browsing"
+  },
+  {
+    "id": "AUD-content_browsing-03",
+    "severity": "P2",
+    "normArea": "features/content_browsing"
+  },
+  {
+    "id": "AUD-content_browsing-04",
+    "severity": "P2",
+    "normArea": "features/content_browsing"
+  },
+  {
+    "id": "AUD-content_browsing-05",
+    "severity": "P2",
+    "normArea": "features/content_browsing"
+  },
+  {
+    "id": "AUD-content_browsing-06",
+    "severity": "P2",
+    "normArea": "features/content_browsing"
+  },
+  {
+    "id": "AUD-content_browsing-07",
+    "severity": "P3",
+    "normArea": "features/content_browsing"
+  },
+  {
+    "id": "AUD-content_browsing-08",
+    "severity": "P3",
+    "normArea": "features/content_browsing"
+  },
+  {
+    "id": "AUD-content_browsing-09",
+    "severity": "P3",
+    "normArea": "features/content_browsing"
+  },
+  {
+    "id": "AUD-core-analytics-02",
+    "severity": "P2",
+    "normArea": "core/analytics"
+  },
+  {
+    "id": "AUD-core-analytics-03",
+    "severity": "P3",
+    "normArea": "core/analytics"
+  },
+  {
+    "id": "AUD-core-analytics-04",
+    "severity": "P3",
+    "normArea": "core/analytics"
+  },
+  {
+    "id": "AUD-core-auth-01",
+    "severity": "P2",
+    "normArea": "core/auth"
+  },
+  {
+    "id": "AUD-core-auth-02",
+    "severity": "P2",
+    "normArea": "core/auth"
+  },
+  {
+    "id": "AUD-core-auth-03",
+    "severity": "P2",
+    "normArea": "core/auth"
+  },
+  {
+    "id": "AUD-core-auth-04",
+    "severity": "P3",
+    "normArea": "core/auth"
+  },
+  {
+    "id": "AUD-core-auth-05",
+    "severity": "P3",
+    "normArea": "core/auth"
+  },
+  {
+    "id": "AUD-core-auth-06",
+    "severity": "P3",
+    "normArea": "core/auth"
+  },
+  {
+    "id": "AUD-core-constants-01",
+    "severity": "P3",
+    "normArea": "core/constants"
+  },
+  {
+    "id": "AUD-core-constants-02",
+    "severity": "P3",
+    "normArea": "core/constants"
+  },
+  {
+    "id": "AUD-core-content-01",
+    "severity": "P2",
+    "normArea": "core/content"
+  },
+  {
+    "id": "AUD-core-content-02",
+    "severity": "P2",
+    "normArea": "core/content"
+  },
+  {
+    "id": "AUD-core-content-03",
+    "severity": "P2",
+    "normArea": "core/content"
+  },
+  {
+    "id": "AUD-core-content-04",
+    "severity": "P2",
+    "normArea": "core/content"
+  },
+  {
+    "id": "AUD-core-content-05",
+    "severity": "P3",
+    "normArea": "core/content"
+  },
+  {
+    "id": "AUD-core-content-06",
+    "severity": "P3",
+    "normArea": "core/content"
+  },
+  {
+    "id": "AUD-core-content-07",
+    "severity": "P3",
+    "normArea": "core/content"
+  },
+  {
+    "id": "AUD-core-domain-01",
+    "severity": "P1",
+    "normArea": "core/domain"
+  },
+  {
+    "id": "AUD-core-domain-02",
+    "severity": "P2",
+    "normArea": "core/domain"
+  },
+  {
+    "id": "AUD-core-domain-03",
+    "severity": "P2",
+    "normArea": "core/domain"
+  },
+  {
+    "id": "AUD-core-domain-04",
+    "severity": "P2",
+    "normArea": "core/domain"
+  },
+  {
+    "id": "AUD-core-domain-05",
+    "severity": "P2",
+    "normArea": "core/domain"
+  },
+  {
+    "id": "AUD-core-domain-06",
+    "severity": "P3",
+    "normArea": "core/domain"
+  },
+  {
+    "id": "AUD-core-domain-07",
+    "severity": "P3",
+    "normArea": "core/domain"
+  },
+  {
+    "id": "AUD-core-exceptions-01",
+    "severity": "P3",
+    "normArea": "core/exceptions"
+  },
+  {
+    "id": "AUD-core-ids-01",
+    "severity": "P2",
+    "normArea": "core/ids"
+  },
+  {
+    "id": "AUD-core-ids-02",
+    "severity": "P3",
+    "normArea": "core/ids"
+  },
+  {
+    "id": "AUD-core-labels-01",
+    "severity": "P1",
+    "normArea": "core/labels"
+  },
+  {
+    "id": "AUD-core-labels-02",
+    "severity": "P2",
+    "normArea": "core/labels"
+  },
+  {
+    "id": "AUD-core-labels-04",
+    "severity": "P3",
+    "normArea": "core/labels"
+  },
+  {
+    "id": "AUD-core-learning-01",
+    "severity": "P2",
+    "normArea": "core/learning"
+  },
+  {
+    "id": "AUD-core-logging-02",
+    "severity": "P2",
+    "normArea": "core/logging"
+  },
+  {
+    "id": "AUD-core-navigation-01",
+    "severity": "P2",
+    "normArea": "core/navigation"
+  },
+  {
+    "id": "AUD-core-navigation-02",
+    "severity": "P2",
+    "normArea": "core/navigation"
+  },
+  {
+    "id": "AUD-core-navigation-03",
+    "severity": "P3",
+    "normArea": "core/navigation"
+  },
+  {
+    "id": "AUD-core-navigation-04",
+    "severity": "P3",
+    "normArea": "core/navigation"
+  },
+  {
+    "id": "AUD-core-network-01",
+    "severity": "P2",
+    "normArea": "core/network"
+  },
+  {
+    "id": "AUD-core-network-02",
+    "severity": "P2",
+    "normArea": "core/network"
+  },
+  {
+    "id": "AUD-core-network-03",
+    "severity": "P3",
+    "normArea": "core/network"
+  },
+  {
+    "id": "AUD-core-network-04",
+    "severity": "P3",
+    "normArea": "core/network"
+  },
+  {
+    "id": "AUD-core-preferences-01",
+    "severity": "P1",
+    "normArea": "core/preferences"
+  },
+  {
+    "id": "AUD-core-preferences-02",
+    "severity": "P1",
+    "normArea": "core/preferences"
+  },
+  {
+    "id": "AUD-core-preferences-03",
+    "severity": "P1",
+    "normArea": "core/preferences"
+  },
+  {
+    "id": "AUD-core-preferences-04",
+    "severity": "P2",
+    "normArea": "core/preferences"
+  },
+  {
+    "id": "AUD-core-preferences-05",
+    "severity": "P3",
+    "normArea": "core/preferences"
+  },
+  {
+    "id": "AUD-core-preferences-06",
+    "severity": "P3",
+    "normArea": "core/preferences"
+  },
+  {
+    "id": "AUD-core-theme-01",
+    "severity": "P2",
+    "normArea": "core/theme"
+  },
+  {
+    "id": "AUD-core-time-01",
+    "severity": "P3",
+    "normArea": "core/time"
+  },
+  {
+    "id": "AUD-core-utils-01",
+    "severity": "P2",
+    "normArea": "core/utils"
+  },
+  {
+    "id": "AUD-core-utils-02",
+    "severity": "P3",
+    "normArea": "core/utils"
+  },
+  {
+    "id": "AUD-core-widgets-02",
+    "severity": "P3",
+    "normArea": "core/widgets"
+  },
+  {
+    "id": "AUD-core-widgets-03",
+    "severity": "P3",
+    "normArea": "core/widgets"
+  },
+  {
+    "id": "AUD-guardrails-04",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-05",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-06",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-07",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-08",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-09",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-10",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-11",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-12",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-13",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-14",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-15",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-16",
+    "severity": "P2",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-18",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-19",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-20",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-21",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-22",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-23",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-24",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-25",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-26",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-27",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-28",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-29",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-30",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-31",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-32",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-33",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-34",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-35",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-36",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-37",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-38",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-guardrails-39",
+    "severity": "P3",
+    "normArea": "guardrails"
+  },
+  {
+    "id": "AUD-l10n-01",
+    "severity": "P2",
+    "normArea": "l10n"
+  },
+  {
+    "id": "AUD-platform-01",
+    "severity": "P1",
+    "normArea": "platform"
+  },
+  {
+    "id": "AUD-platform-02",
+    "severity": "P3",
+    "normArea": "platform"
+  },
+  {
+    "id": "AUD-platform-03",
+    "severity": "P3",
+    "normArea": "platform"
+  },
+  {
+    "id": "AUD-platform-04",
+    "severity": "P3",
+    "normArea": "platform"
+  },
+  {
+    "id": "AUD-platform-05",
+    "severity": "P3",
+    "normArea": "platform"
+  },
+  {
+    "id": "AUD-platform-06",
+    "severity": "P3",
+    "normArea": "platform"
+  },
+  {
+    "id": "AUD-profiles-03",
+    "severity": "P1",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-05",
+    "severity": "P2",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-06",
+    "severity": "P2",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-07",
+    "severity": "P2",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-08",
+    "severity": "P2",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-09",
+    "severity": "P2",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-10",
+    "severity": "P2",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-11",
+    "severity": "P2",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-12",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-13",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-14",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-15",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-16",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-17",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-18",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-20",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-21",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-22",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-profiles-23",
+    "severity": "P3",
+    "normArea": "features/profiles"
+  },
+  {
+    "id": "AUD-progress-02",
+    "severity": "P2",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-03",
+    "severity": "P2",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-04",
+    "severity": "P2",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-05",
+    "severity": "P2",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-06",
+    "severity": "P2",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-07",
+    "severity": "P2",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-08",
+    "severity": "P2",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-09",
+    "severity": "P3",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-10",
+    "severity": "P3",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-13",
+    "severity": "P3",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-14",
+    "severity": "P3",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-progress-15",
+    "severity": "P3",
+    "normArea": "features/progress"
+  },
+  {
+    "id": "AUD-sacred_time-01",
+    "severity": "P1",
+    "normArea": "features/sacred_time"
+  },
+  {
+    "id": "AUD-sacred_time-03",
+    "severity": "P1",
+    "normArea": "features/sacred_time"
+  },
+  {
+    "id": "AUD-sacred_time-04",
+    "severity": "P2",
+    "normArea": "features/sacred_time"
+  },
+  {
+    "id": "AUD-sacred_time-05",
+    "severity": "P2",
+    "normArea": "features/sacred_time"
+  },
+  {
+    "id": "AUD-sacred_time-06",
+    "severity": "P2",
+    "normArea": "features/sacred_time"
+  },
+  {
+    "id": "AUD-sacred_time-07",
+    "severity": "P3",
+    "normArea": "features/sacred_time"
+  },
+  {
+    "id": "AUD-sacred_time-08",
+    "severity": "P3",
+    "normArea": "features/sacred_time"
+  },
+  {
+    "id": "AUD-sacred_time-09",
+    "severity": "P3",
+    "normArea": "features/sacred_time"
+  },
+  {
+    "id": "AUD-scheduler-01",
+    "severity": "P1",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-03",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-04",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-05",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-06",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-08",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-09",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-10",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-11",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-12",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-13",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-14",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-15",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-16",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-17",
+    "severity": "P2",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-18",
+    "severity": "P3",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-19",
+    "severity": "P3",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-20",
+    "severity": "P3",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-21",
+    "severity": "P3",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-22",
+    "severity": "P3",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-23",
+    "severity": "P3",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-24",
+    "severity": "P3",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-scheduler-25",
+    "severity": "P3",
+    "normArea": "features/scheduler"
+  },
+  {
+    "id": "AUD-settings-04",
+    "severity": "P2",
+    "normArea": "features/settings"
+  },
+  {
+    "id": "AUD-settings-05",
+    "severity": "P2",
+    "normArea": "features/settings"
+  },
+  {
+    "id": "AUD-settings-06",
+    "severity": "P2",
+    "normArea": "features/settings"
+  },
+  {
+    "id": "AUD-settings-07",
+    "severity": "P2",
+    "normArea": "features/settings"
+  },
+  {
+    "id": "AUD-settings-08",
+    "severity": "P2",
+    "normArea": "features/settings"
+  },
+  {
+    "id": "AUD-settings-09",
+    "severity": "P2",
+    "normArea": "features/settings"
+  },
+  {
+    "id": "AUD-settings-10",
+    "severity": "P3",
+    "normArea": "features/settings"
+  },
+  {
+    "id": "AUD-settings-11",
+    "severity": "P3",
+    "normArea": "features/settings"
+  },
+  {
+    "id": "AUD-settings-12",
+    "severity": "P3",
+    "normArea": "features/settings"
+  },
+  {
+    "id": "AUD-settings-13",
+    "severity": "P3",
+    "normArea": "features/settings"
+  },
+  {
+    "id": "AUD-tracks-01",
+    "severity": "P1",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-04",
+    "severity": "P1",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-05",
+    "severity": "P1",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-06",
+    "severity": "P1",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-07",
+    "severity": "P1",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-08",
+    "severity": "P1",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-09",
+    "severity": "P2",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-10",
+    "severity": "P2",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-11",
+    "severity": "P2",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-12",
+    "severity": "P2",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-13",
+    "severity": "P2",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-14",
+    "severity": "P2",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-15",
+    "severity": "P2",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-16",
+    "severity": "P2",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-17",
+    "severity": "P3",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-18",
+    "severity": "P3",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-19",
+    "severity": "P3",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-20",
+    "severity": "P3",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-21",
+    "severity": "P3",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-22",
+    "severity": "P3",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-23",
+    "severity": "P3",
+    "normArea": "features/tracks"
+  },
+  {
+    "id": "AUD-tracks-25",
+    "severity": "P3",
+    "normArea": "features/tracks"
+  }
+]

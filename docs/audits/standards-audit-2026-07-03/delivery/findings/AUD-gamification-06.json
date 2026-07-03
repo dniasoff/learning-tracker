@@ -1,0 +1,46 @@
+{
+  "title": "Log RewardMilestoneService.getAllMilestones/getAllUnlocks JSON-decode failures instead of silently returning an empty list that can later overwrite cloud data",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 (log-less catch is a pending violation; every catch rethrows, converts, or logs via AppLogger)",
+  "area": "features/gamification/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+      "line": 89,
+      "quote": "} catch (_) {\n      return const [];"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+      "line": 112,
+      "quote": "} catch (_) {\n      return const [];"
+    }
+  ],
+  "sites": 2,
+  "why": "If the SharedPreferences-stored reward config JSON is unreadable (process death mid-write, storage corruption, cross-version format mismatch), getAllMilestones/getAllUnlocks silently treat 'corrupt' the same as 'genuinely empty', with zero AppLogger call. That empty result then flows straight into exportCloudPayload(), which is what pushGamificationSettingsSnapshot() uploads as the authoritative reward_settings snapshot on the next sync -- silently overwriting the family's real, previously-configured reward list on every other synced device, with no diagnostic trail to explain why rewards 'disappeared'. The existing test suite (reward_milestone_service_test.dart 'getAllMilestones edge cases', lines 536-574) exercises invalid/blank/non-list JSON but only ever asserts the method returns empty -- it pins the silent-swallow as the specified behavior rather than testing that the failure is surfaced or logged.",
+  "recommendation": "Log via AppLogger.error (or similar) inside both catch blocks before returning the fallback list, including enough context (profileId, key) to diagnose; consider whether a corrupt-vs-genuinely-empty distinction should block the next cloud push instead of silently exporting empty.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both catch(_) blocks in getAllMilestones/getAllUnlocks call AppLogger before returning the empty fallback",
+    "A test seeds corrupted JSON, calls the method, and asserts the logger recorded the failure (fake/spy AppLogger sink)"
+  ],
+  "labels": [
+    "EH-3",
+    "data-loss",
+    "sync",
+    "logging"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-051",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-06",
+  "linearPriority": "Medium"
+}

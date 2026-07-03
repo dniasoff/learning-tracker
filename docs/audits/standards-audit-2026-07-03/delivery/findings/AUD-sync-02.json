@@ -1,0 +1,71 @@
+{
+  "title": "LocalDataUploadService.pushAllLocalData enqueues every entity kind via a per-row awaited loop instead of a batched outbox write",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-3",
+  "area": "features/sync data",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+      "line": 84,
+      "quote": "for (final p in ownProfiles) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+      "line": 135,
+      "quote": "for (final b in bookmarks) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+      "line": 162,
+      "quote": "for (final g in goals) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+      "line": 196,
+      "quote": "for (final p in profilePrograms) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+      "line": 229,
+      "quote": "for (final e in streakEvents) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+      "line": 258,
+      "quote": "for (final e in ledgerEntries) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+      "line": 287,
+      "quote": "for (final t in tracks) {"
+    }
+  ],
+  "sites": 7,
+  "why": "pushAllLocalData is explicitly a one-time bulk operation ('Called once after a local-born account is upgraded to cloud... so the user's offline learning history is immediately available') yet writes to the single Drift outbox table one row at a time across 7 loops, each await-ing OutboxSyncWriteFacade._enqueue -> OutboxDao.insertOutboxRow individually. Per outbox_sync_write_facade.dart:289-292, each insert also fires its own unawaited network drain-kick. A learner with a full year of history could have hundreds of completions/streak events/ledger entries; the one-time account-conversion flow does hundreds of sequential single-row DB writes plus hundreds of concurrent drain-kick Futures where a handful of batch inserts would do, extending how long this migration keeps the DB busy and widening the exposure window for the SM-4 race described in the companion finding.",
+  "recommendation": "Batch each entity kind's outbox rows via db.batch()/insertAll (build the list of OutboxCompanions first, one transaction per kind) instead of looping individually-awaited _enqueue calls; fire at most one drain-kick per pushAllLocalData call rather than one per row.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "DB-3 Rule-0 checker (audit grep for awaited per-row insert loops against the same table) reports zero hits in local_data_upload_service.dart.",
+    "Test asserting pushAllLocalData with N seeded rows of a given kind performs O(1) outbox-table statements via a batch/insertAll spy, not O(N)."
+  ],
+  "labels": [
+    "DB-3",
+    "performance",
+    "sync",
+    "drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-106",
+  "normArea": "features/sync",
+  "id": "AUD-sync-02",
+  "linearPriority": "Medium"
+}

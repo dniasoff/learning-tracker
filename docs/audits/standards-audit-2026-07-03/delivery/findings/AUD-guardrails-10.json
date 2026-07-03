@@ -1,0 +1,55 @@
+{
+  "title": "Delete or fix the dead, non-compiling tool/seed_content_db.dart fragment at repo root",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-2 AREA NOTE: dead code, drift between duplicated configs",
+  "area": "tool (repo-root vs learning_tracker/tool duplicate)",
+  "evidence": [
+    {
+      "file": "tool/seed_content_db.dart",
+      "line": 1,
+      "quote": "// ── Phase 3: Text content ────────────────────────────────────────────────"
+    },
+    {
+      "file": "tool/seed_content_db.dart",
+      "line": 3,
+      "quote": "Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {"
+    },
+    {
+      "file": "learning_tracker/tool/seed_content_db.dart",
+      "line": 30,
+      "quote": "import 'dart:async';"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 236,
+      "quote": "dart run tool/seed_content_db.dart --build --no-resume"
+    }
+  ],
+  "sites": 1,
+  "why": "The file this batch was asked to audit — root-level tool/seed_content_db.dart (242 lines) — has NO imports, NO `void main()`, and references types/constants (Dio, ContentDatabase, _Args, _curricula, _maxConcurrentFetches, ...) that are defined nowhere in the file. It cannot compile as a standalone Dart script. The real, complete, actively-referenced seed-build tool lives at learning_tracker/tool/seed_content_db.dart (809 lines, proper imports, invoked by learning_tracker/Makefile:236,239 and documented everywhere as `cd learning_tracker && ...`). The root copy is tracked in git, has its own commit history, and is not referenced by any Makefile target or doc's actual invocation instructions — it is pure orphaned duplicate content that will confuse anyone (human or agent) who opens 'tool/seed_content_db.dart' from repo root expecting the real build tool.",
+  "recommendation": "Delete the root-level tool/seed_content_db.dart (git history preserves it) since the canonical tool already lives at learning_tracker/tool/seed_content_db.dart. If some workflow genuinely needs a repo-root entry point, make it a one-line wrapper that shells into the real file, not a stale content fork.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "tool/seed_content_db.dart at repo root is removed (or reduced to a documented redirect), and `dart run tool/seed_content_db.dart` from repo root either doesn't exist as a workflow or correctly delegates to learning_tracker/tool/seed_content_db.dart.",
+    "A grep/CI check fails if two files share a basename under tool/** and learning_tracker/tool/** with diverging content, to prevent recurrence."
+  ],
+  "labels": [
+    "dead-code",
+    "drift",
+    "tooling"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-root-tool",
+  "chunk": "grp-163",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-10",
+  "linearPriority": "Medium"
+}

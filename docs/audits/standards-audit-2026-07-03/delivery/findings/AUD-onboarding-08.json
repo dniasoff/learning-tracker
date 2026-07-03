@@ -1,0 +1,62 @@
+{
+  "title": "BulkPriorCompletionService.execute()'s profileId branch bypasses DI and its bookmark write is never asserted",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-7, TQ-8",
+  "area": "onboarding/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/services/bulk_prior_completion_service.dart",
+      "line": 282,
+      "quote": "? BookmarkRepositoryImpl("
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/domain/services/bulk_prior_completion_service_test.dart",
+      "line": 234,
+      "quote": "final result = await service.execute("
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/domain/services/bulk_prior_completion_siyum_detection_test.dart",
+      "line": 333,
+      "quote": "profileId: profileId,"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/services/bulk_prior_completion_service.dart",
+      "line": 281,
+      "quote": "final bookmarkRepo = profileId != null\n          ? BookmarkRepositoryImpl("
+    }
+  ],
+  "sites": 4,
+  "why": "When execute() runs with a non-null profileId — the live path add_track_flow_screen.dart uses when a parent adds a track for a specific child — the service `new`s up a BookmarkRepositoryImpl directly instead of using the injected _bookmarkRepository, so no test double can intercept it (no seam). bulk_prior_completion_service_test.dart's execute() tests never pass profileId, so that branch never runs there at all. bulk_prior_completion_siyum_detection_test.dart does pass profileId (lines 333, 372) so the branch does run against a real in-memory DB, but neither test reads back the bookmarks table afterward — the branch's correctness (right profileId, right track resolved) is completely unverified. A bug here would silently point a child's bookmark at the wrong profile/track with no test failure.",
+  "recommendation": "Parameterize bookmarkRepositoryProvider as a .family(profileId) (or inject a BookmarkRepository factory into BulkPriorCompletionService) so the profileId path goes through the same injectable seam as the rest of the class; add an assertion in bulk_prior_completion_siyum_detection_test.dart that reads back the bookmark row for the target profile and checks it points at the expected sefariaRef.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A test calls execute(profileId: X) and then asserts (via a real or fake repository read) that the bookmark was written under profile X",
+    "bulk_prior_completion_service.dart contains no direct `BookmarkRepositoryImpl(` construction outside a provider"
+  ],
+  "labels": [
+    "di",
+    "testing",
+    "onboarding"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-069",
+  "mergedFrom": [
+    "Replace inline BookmarkRepositoryImpl construction in BulkPriorCompletionService with a DI seam"
+  ],
+  "coDiscoverers": [
+    "t1-feat-onboarding-p1",
+    "t1-feat-onboarding-p2"
+  ],
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-08",
+  "linearPriority": "Medium"
+}

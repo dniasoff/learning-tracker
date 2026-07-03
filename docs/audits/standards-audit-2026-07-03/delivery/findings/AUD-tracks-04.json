@@ -1,0 +1,55 @@
+{
+  "title": "Log and surface the swallowed exceptions in step_starting_position.dart._loadContent and step_starting_position_calendar.dart._refreshCalendarEntry instead of silently stranding the user",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3",
+  "area": "presentation/tracks-setup",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+      "line": 113,
+      "quote": "} catch (_) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+      "line": 114,
+      "quote": "if (mounted) setState(() => _loading = false);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart",
+      "line": 95,
+      "quote": "final service = await ref.read(calendarProgramServiceProvider.future);"
+    }
+  ],
+  "sites": 2,
+  "why": "step_starting_position.dart._loadContent catches everything and only flips _loading to false — it never logs via AppLogger and never sets an error flag. Since _containers/_leaves default to [], build() falls straight through to `_buildContainerList` with an EMPTY list and no CircularProgressIndicator, no error text, and no retry action: the user lands on a blank, silently-broken 'starting position' step of the Add-Track wizard with the Continue button permanently disabled (onPressed requires _selectedLeaf != null, which can never become non-null from an empty list) and zero indication anything went wrong. step_starting_position_calendar.dart._refreshCalendarEntry has no catch at all (only `finally`) around two awaits, and every caller invokes it via `unawaited(...)`, so a thrown exception becomes an unhandled Future rejection with no AppLogger trail; the user instead sees the ALSO-hardcoded 'No local calendar entry found for this date.' fallback, which mislabels a real fetch/service failure as 'no data for this date'.",
+  "recommendation": "In both catches (or the missing one in the calendar file), log via AppLogger with context (curriculumId/programKey), and expose a distinct error state to the widget (e.g. an AppErrorView with retry, matching the pattern TrackManagementBody already uses via ref.watch(...).when(error: ...)) instead of silently falling through to an indistinguishable empty/fallback UI.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both catch paths call AppLogger.error/warning with the caught exception before updating state.",
+    "A widget test that makes the repository/service throw asserts a visible error affordance (not a blank list / not the generic 'no entry' text) appears.",
+    "EH-3's log-less-catch grep (once made a checker) passes on both files."
+  ],
+  "labels": [
+    "error-handling",
+    "silent-failure",
+    "ux-dead-end"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Site 2's claim of 'no AppLogger trail' is not accurate: main.dart wraps runApp in runZonedGuarded(), whose handler calls AppLogger.instance.handle(error, stack) (and Crashlytics.recordError) for any uncaught zone error, which includes unhandled Future rejections from unawaited(_refreshCalendarEntry()). So the exception IS logged globally, just without curriculumId/programKey context and without any widget-local error state — the user still only ever sees the hardcoded 'No local calendar entry found for this date.' fallback (confirmed at line ~426), which is the real, narrower defect at this site. Also note _refreshCalendarEntry has no catch block at all (only finally), so it isn't literally an 'empty/log-less catch' under EH-3's wording — the recommendation to 'log via AppLogger in both catches' requires adding a catch clause here, not fixing an existing one. Keep the finding but drop the 'no AppLogger trail' claim for site 2 and center it on 'misleading UI fallback + no contextual/local error surfacing', not a literal EH-3 catch-block violation.",
+      "Site 2 claim \"a thrown exception becomes an unhandled Future rejection with no AppLogger trail\" is inaccurate: main.dart's runZonedGuarded error handler calls AppLogger.instance.handle(error, stack) (and Crashlytics.recordError fatal:true) for any unhandled zone error, which includes errors from unawaited(_refreshCalendarEntry()) since it has no local catch. The defect at site 2 is better framed as: missing contextual (curriculumId/programKey) logging and a misleading generic fallback UI, not a total absence of logging. Site 1's claims are all verified accurate as written.",
+      "Site 2's premise is partly wrong: step_starting_position_calendar.dart's _refreshCalendarEntry has try/finally with no catch, called via unawaited(...), so any thrown exception propagates as an uncaught zone error — but main.dart wraps runApp in runZonedGuarded whose handler calls `AppLogger.instance.handle(error, stack)` (main.dart:32) and reports to Crashlytics. So the finding's claim of 'no AppLogger trail' for site 2 is factually incorrect — it IS logged, just not surfaced as a distinct UI error state (the misleading 'No local calendar entry found for this date.' text remains a real but separate UX issue, weaker than an EH-3 log-less-catch violation since there's no catch block at all here). The finding should stand on site 1 alone; site 2 / the 'sites: 2' framing and its EH-3 rationale should be dropped or reframed as a UX-only concern in any rewrite."
+    ]
+  },
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "high-090",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-04",
+  "linearPriority": "High"
+}

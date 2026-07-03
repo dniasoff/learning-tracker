@@ -1,0 +1,45 @@
+{
+  "title": "Delete or reactivate the dead tautological placeholders in v15_to_v16_test.dart's skipped group",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7/TQ-8",
+  "area": "test/migration",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/migration/v15_to_v16_test.dart",
+      "line": 69,
+      "quote": "true, // W3.22: derivedFromEvents removed — placeholder"
+    },
+    {
+      "file": "learning_tracker/test/migration/v15_to_v16_test.dart",
+      "line": 112,
+      "quote": "true, // W3.22: derivedFromEvents removed — placeholder"
+    }
+  ],
+  "sites": 2,
+  "why": "Both assertions are dead literals left after the derived_from_events column was removed: line 68-72 is `expect(true, isFalse, ...)` which will FAIL immediately the instant the group's `skip:` is lifted, and line 111-116 is `expect(true, isTrue, ...)` which passes forever and tests nothing. This repo's own root CLAUDE.md documents the reactivation workflow as \"remove the skip: parameter... replace the empty () {} bodies with real assertions\" — implying skipped tests should carry empty bodies, exactly the clean pattern used two files over in v18_to_v19_test.dart in this same batch. Worse, two of the four tests in this same skipped group (duplicate-commit dedup, migration-backfill row survival) contain real, still-valid assertions unrelated to the removed field and could be unskipped today, but sit dark under one blanket skip.",
+  "recommendation": "Delete the two placeholder tests (or rewrite them against whatever invariant superseded derived_from_events), and split the two tests with real assertions out of the skipped group so they run in CI now.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep for `expect(true, isFalse` / `expect(true, isTrue` with a `// placeholder` marker in test/ returns zero hits",
+    "the duplicate-commit and migration-backfill tests in this file run unskipped in CI"
+  ],
+  "labels": [
+    "test-quality",
+    "dead-code",
+    "migration"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p6",
+  "chunk": "grp-148",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-62",
+  "linearPriority": "Low"
+}

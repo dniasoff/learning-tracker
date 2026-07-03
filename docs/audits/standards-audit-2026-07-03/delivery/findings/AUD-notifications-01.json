@@ -1,0 +1,71 @@
+{
+  "title": "Guard ref access after await in notification_providers.dart effect providers (SM-4)",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "SM-4",
+  "area": "features/notifications/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 589,
+      "quote": "final profiles = await ref.watch(profileListStreamProvider.future);"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 590,
+      "quote": "final gateway = ref.read(notificationServiceProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 468,
+      "quote": "final prefs = await SharedPreferences.getInstance();"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 499,
+      "quote": "final tasks = await ref.watch(allDailyTasksProvider.future);"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 523,
+      "quote": "final location = ref.read(sacredLocationProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 736,
+      "quote": "await service.cancelAlert();"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 737,
+      "quote": "final analytics = ref.read(analyticsServiceProvider);"
+    }
+  ],
+  "sites": 3,
+  "why": "allProfilesReminderBootstrap, reminderSyncEffect and streakAlertSyncEffect all touch ref (read/watch) immediately after an await with no ref.mounted guard. If any of these keepAlive FutureProviders is invalidated or disposed while suspended past its first await (profile switch, container teardown during navigation/tests, hot-reload), the next ref access throws UnmountedRefException uncaught, leaving the provider's AsyncValue stuck in .error and silently freezing that profile's notification (re)scheduling until something else forces a rebuild.",
+  "recommendation": "Add `if (!ref.mounted) return;` immediately after each await, before any further ref access, in all three functions.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A test that invalidates a watched dependency mid-flight (e.g. activeProfileIdProvider while profileListStreamProvider.future is pending) asserts the effect settles instead of throwing UnmountedRefException.",
+    "A Rule-0 grep/lint flags ref.read(/ref.watch( on a line whose nearest preceding statement in the same async function contains await with no intervening ref.mounted check."
+  ],
+  "labels": [
+    "riverpod",
+    "sm-4",
+    "notifications",
+    "hotspot"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "high-056",
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-01",
+  "linearPriority": "High"
+}

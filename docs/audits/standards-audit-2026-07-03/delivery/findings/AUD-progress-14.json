@@ -1,0 +1,48 @@
+{
+  "title": "Replace hand-rolled ==/hashCode on PaceCalculator, LifetimeLeafProvenance and RecentActivityWindow with @freezed or a record",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming/placement — domain/state models are @freezed; never hand-write ==/hashCode for data classes",
+  "area": "features/progress (domain models + providers)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/domain/services/pace_calculator.dart",
+      "line": 209,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/domain/models/lifetime_knowledge.dart",
+      "line": 67,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/recent_activity_providers.dart",
+      "line": 46,
+      "quote": "bool operator ==(Object other) =>"
+    }
+  ],
+  "sites": 3,
+  "why": "Three separate hand-written equality implementations exist in this one feature slice alongside a fourth model file (journey_view_model.dart) that correctly uses @freezed for the same kind of value object, and alongside sibling family-key records elsewhere in this same batch (e.g. lifetime_knowledge_providers.dart's ({int profileId, CurriculumId curriculumId})) that get structural equality for free. Hand-rolled equality is exactly the boilerplate freezed exists to generate and keep in sync; PaceCalculator's == only compares 6 of its 13 fields (the derived ones are excluded) which is easy to get wrong silently the next time a field is added, since nothing forces == and hashCode to be touched together.",
+  "recommendation": "Convert PaceCalculator and LifetimeLeafProvenance to @freezed classes (both fit the private-const-factory-plus-named-computing-factory pattern already used elsewhere for derived-field value objects); convert RecentActivityWindow to a named-field record (({DateTime startDate, DateTime endDate, String? curriculumId})) to match the record-based family keys already used in this same feature.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -rn 'bool operator ==' lib/features/progress/ (excluding .freezed.dart/.g.dart) returns no hits."
+  ],
+  "labels": [
+    "consistency",
+    "freezed"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p1",
+  "chunk": "grp-082",
+  "normArea": "features/progress",
+  "id": "AUD-progress-14",
+  "linearPriority": "Low"
+}

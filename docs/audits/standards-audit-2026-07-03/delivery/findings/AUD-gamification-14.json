@@ -1,0 +1,45 @@
+{
+  "title": "Convert RewardMilestone/RewardUnlockRecord to @freezed data classes",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Naming/placement (domain/state models are immutable @freezed classes; never hand-write ==/hashCode for data classes)",
+  "area": "features/gamification/domain/models",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/domain/models/reward_milestone.dart",
+      "line": 3,
+      "quote": "class RewardMilestone {"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/domain/models/reward_milestone.dart",
+      "line": 107,
+      "quote": "class RewardUnlockRecord {"
+    }
+  ],
+  "sites": 2,
+  "why": "Both classes are hand-written data holders with a hand-rolled copyWith/toJson/fromJson but no == / hashCode override at all, so they fall back to identity equality -- two RewardMilestones with identical field values are not `==`. Current call sites happen to compare by `.id` field rather than object equality (so no live bug was found), but this is fragile: any future code that puts RewardMilestone in a Set, uses List.contains, or relies on Riverpod .select()-style equality skipping would silently misbehave. The sibling model in the same feature (StreakRecoveryInfo) already follows the correct @freezed convention, showing the pattern is known and used elsewhere in this exact directory.",
+  "recommendation": "Convert RewardMilestone and RewardUnlockRecord to @freezed classes (keeping the existing toJson/fromJson as named factory/method overrides if the generated ones don't match the custom snake_case JSON shape).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "RewardMilestone and RewardUnlockRecord are @freezed with generated equality",
+    "Existing reward_milestone_test.dart suite passes unchanged (or updated only for the freezed toString/copyWith surface)"
+  ],
+  "labels": [
+    "freezed",
+    "naming-placement",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-053",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-14",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,57 @@
+{
+  "title": "Rewrite docs/explainers/sync-subsystem.md — it still presents the deleted SyncEngine/OfflineQueue dual-stack as the live, highest-risk architecture",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs/explainers",
+  "evidence": [
+    {
+      "file": "docs/explainers/sync-subsystem.md",
+      "line": 46,
+      "quote": "the legacy `SyncEngine`. Several thousand lines, the largest single file in `features/sync/`, marked `@deprecated` and still load-bearing."
+    },
+    {
+      "file": "docs/explainers/sync-subsystem.md",
+      "line": 161,
+      "quote": "`learning_order` has no `EntityMerger` in the new stack — the orchestrator's pull silently merges nothing for that collection"
+    },
+    {
+      "file": "docs/explainers/sync-subsystem.md",
+      "line": 179,
+      "quote": "├── merge/                          # MergeRouter + 8 EntityMergers"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/merge_router.dart",
+      "line": 38,
+      "quote": "case EntityKind.learningOrder: // W2.26 — closes C3/H3"
+    }
+  ],
+  "sites": 1,
+  "why": "git log shows commit e14479af \"refactor(sync): delete SyncEngine, OfflineQueue, FirestoreDataSource — W2.35-W2.39\": grepping lib/ for SyncEngine/OfflineQueue/sync_engine.dart today returns zero hits. learning_order_merger.dart exists and is wired in merge_router.dart's switch (18 case labels = 18 concrete *_merger.dart files, not the doc's claimed 8). An engineer or AI agent reading this doc to understand sync architecture — the coding-standards.md digest itself calls core/sync/** the area needing \"Nygard lens mandatory\" scrutiny — will hunt for a deleted file, misjudge risk, and may re-attempt a decomposition that is already finished, or skip auditing the 10 mergers the doc doesn't mention.",
+  "recommendation": "Regenerate this explainer against current lib/core/sync/: drop the two-stack narrative entirely (SyncEngine is gone), correct the EntityMerger count to the actual count of *_merger.dart files, and remove the learning_order \"sharp edge\" (closed by W2.26). Re-verify the other two \"known sharp edges\" (curriculum-import collection naming — already renamed per firestore_gateway_impl.dart:617; DriftMergeStore.currentUpdatedAt nullability) before republishing.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Doc no longer references features/sync/data/sync_engine.dart, SyncEngine, or OfflineQueue as live/current.",
+    "EntityMerger count and the merge/ file listing match `ls learning_tracker/lib/core/sync/merge/*_merger.dart | grep -v entity_merger.dart | wc -l`.",
+    "The \"as of 2026-05-19\" disclaimer date is bumped to the doc's actual re-verification date.",
+    "Optional but recommended: a CI/doc-lint script asserts the merger count named in the doc equals the file-count above, failing non-zero on drift (operationalizes AG-8 for this doc)."
+  ],
+  "labels": [
+    "docs",
+    "sync",
+    "architecture-drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p1",
+  "chunk": "grp-169",
+  "normArea": "docs",
+  "id": "AUD-docs-18",
+  "linearPriority": "Medium"
+}

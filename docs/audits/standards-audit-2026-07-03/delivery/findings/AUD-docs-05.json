@@ -1,0 +1,60 @@
+{
+  "title": "Correct learning_tracker/CLAUDE.md's false custom-lint enforcement claims",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-2 (CLAUDE.md exact commands) / Rule 0",
+  "area": "CLAUDE.md / documentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/CLAUDE.md",
+      "line": 59,
+      "quote": "**Enforced by:** `no-feature-cross-import` custom lint (DNI-386)."
+    },
+    {
+      "file": "learning_tracker/CLAUDE.md",
+      "line": 71,
+      "quote": "**Enforced by:** `no-firebase-outside-core` custom lint (DNI-387)."
+    },
+    {
+      "file": "learning_tracker/CLAUDE.md",
+      "line": 77,
+      "quote": "**Enforced by:** `no-raw-talker` custom lint (DNI-387)."
+    },
+    {
+      "file": "learning_tracker/CLAUDE.md",
+      "line": 83,
+      "quote": "**Enforced by:** `no-curriculum-display-name-bypass` custom lint (DNI-386)."
+    },
+    {
+      "file": "learning_tracker/CLAUDE.md",
+      "line": 87,
+      "quote": "Run `make audit` to execute every layering grep and lint check locally before pushing."
+    }
+  ],
+  "sites": 5,
+  "why": "Two independent falsehoods compound here. (1) custom_lint is currently broken and enforces nothing (baselined fact) — yet all five 'Enforced by: <custom lint> (DNI-38x)' lines assert active enforcement. (2) Even ignoring that, `make audit` (learning_tracker/Makefile:277-505) never invokes custom_lint at all — that's a separate `lint` target (lines 270-275) that this file never mentions running. An AI agent or developer reading this file (the FIRST and most authoritative guardrail doc for the app package) will reasonably skip manually checking Rules 1/2 (feature-import boundaries) since those are the two rules whose grep-based backstop is itself only warn-only (known backlog) — meaning Rules 1/2 currently have NO effective enforcement at all despite this file's confident claim.",
+  "recommendation": "Update the five 'Enforced by' lines to note custom_lint is currently non-functional (link to the tracking issue) and either fix `make audit` to also run `make lint`, or change line 87 to say 'Run `make audit && make lint`'.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "learning_tracker/CLAUDE.md's enforcement claims match what `make audit` and custom_lint actually do today, verified by re-reading the file against learning_tracker/Makefile after the fix."
+  ],
+  "labels": [
+    "ag-2",
+    "documentation",
+    "claude-md",
+    "rule-0"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-154",
+  "normArea": "docs",
+  "id": "AUD-docs-05",
+  "linearPriority": "Medium"
+}

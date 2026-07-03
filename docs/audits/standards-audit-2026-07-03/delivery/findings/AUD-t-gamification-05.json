@@ -1,0 +1,43 @@
+{
+  "title": "Fix stale 'flagged as BUG (no UI lock)' header comment in parent_pending_redemptions_screen_l1_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Documentation must not contradict the code/tests it sits beside",
+  "area": "features/gamification/presentation/screens (test file header)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/parent_pending_redemptions_screen_l1_test.dart",
+      "line": 12,
+      "quote": "///   - Double-tap guard: tapping Approve twice — flagged as BUG (no UI lock)."
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/parent_pending_redemptions_screen_l1_test.dart",
+      "line": 589,
+      "quote": "// guard: _RedemptionCard disables Fulfil/Decline (_busy) while the async is"
+    }
+  ],
+  "sites": 1,
+  "why": "The file's own header (line 12) claims Approve double-tap is an open, un-guarded bug, but parent_pending_redemptions_screen.dart:199-207/263/286 has a `_busy` flag disabling both Fulfil and Decline while an operation is in flight, and this same test file's later comment (lines 588-594) correctly describes that guard. A maintainer skimming only the header would believe there's live unfixed work here or file a duplicate bug report.",
+  "recommendation": "Update the header bullet to describe the _busy guard instead of the stale 'flagged as BUG' claim, matching lines 588-594.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Header comment at the top of the file no longer claims an unguarded double-tap bug on Approve."
+  ],
+  "labels": [
+    "hygiene",
+    "stale-comment"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p3",
+  "chunk": "grp-057",
+  "normArea": "tests/gamification",
+  "id": "AUD-t-gamification-05",
+  "linearPriority": "Low"
+}

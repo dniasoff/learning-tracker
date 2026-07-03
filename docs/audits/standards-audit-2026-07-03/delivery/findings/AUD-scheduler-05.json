@@ -1,0 +1,60 @@
+{
+  "title": "Decouple ProgramLabelResolver from Flutter/Riverpod so its label logic can be unit-tested without pumpWidget",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "naming/placement layering (features/<f>/{data,domain,presentation}); Feathers testability lens",
+  "area": "features/scheduler/domain/labels",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/labels/program_label_resolver.dart",
+      "line": 1,
+      "quote": "import 'package:flutter/widgets.dart';\nimport 'package:flutter_riverpod/flutter_riverpod.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/labels/program_label_resolver.dart",
+      "line": 29,
+      "quote": "const ProgramLabelResolver._(this._labels);"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/labels/program_label_resolver.dart",
+      "line": 41,
+      "quote": "factory ProgramLabelResolver.fromRef(Ref ref) =>\n      ProgramLabelResolver._(domainTermLabelsFromRef(ref));"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/projection/projection.dart",
+      "line": 18,
+      "quote": "/// Layering: pure Dart domain layer — no Flutter, Riverpod, Drift, or Firebase."
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/labels/program_label_resolver_test.dart",
+      "line": 36,
+      "quote": "testWidgets('Hebrew ON → Hebrew name from CalendarProgramRegistry', (\n      tester,\n    ) async {"
+    }
+  ],
+  "sites": 1,
+  "why": "ProgramLabelResolver sits in domain/labels/ next to projection/, whose own docstring declares the module 'pure Dart domain layer — no Flutter, Riverpod, Drift, or Firebase' — but this file imports flutter/widgets.dart and flutter_riverpod directly, and its only public constructors take a WidgetRef or a Riverpod Ref (the plain constructor is private). The label-selection methods themselves (learningProgramLabel, calendarEntryLabel, calendarEntryTodayRef) only need a DomainTermLabels value and, for one method, an AppLocalizations instance — none of that requires Flutter widgets. Because the constructor is gated behind Ref, every one of program_label_resolver_test.dart's ~13 cases is forced into testWidgets + pumpWidget(ProviderScope(MaterialApp(Scaffold(Consumer(...))))) + pumpAndSettle, for what is fundamentally a handful of ternary/fallback string picks — a real, measured cost in test complexity and runtime versus a plain test().",
+  "recommendation": "Expose a public ProgramLabelResolver(DomainTermLabels labels) constructor (or move the file to presentation/) so the label logic is unit-testable directly; keep .of(ref)/.fromRef(ref) as thin wiring factories.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "ProgramLabelResolver has a public constructor independent of WidgetRef/Ref.",
+    "The majority of program_label_resolver_test.dart's cases are converted to plain test() cases against the new constructor; only the .of(ref)/.fromRef(ref) wiring keeps a thin widget/provider test."
+  ],
+  "labels": [
+    "testability",
+    "layering",
+    "riverpod"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "chunk": "grp-091",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-05",
+  "linearPriority": "Medium"
+}

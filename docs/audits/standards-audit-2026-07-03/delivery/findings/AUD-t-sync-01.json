@@ -1,0 +1,51 @@
+{
+  "title": "Three test files exercise or scaffold a fully-deleted sync subsystem (OfflineQueue, SyncEngine, FirestoreDataSource) instead of being deleted",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code",
+  "area": "features/sync test",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/sync/data/offline_queue_test.dart",
+      "line": 13,
+      "quote": "skip: 'Retired W2.35 — OfflineQueue deleted; see OutboxProcessor tests',"
+    },
+    {
+      "file": "learning_tracker/test/features/sync/data/offline_queue_enqueue_test.dart",
+      "line": 12,
+      "quote": "skip: 'Retired W2.35 — OfflineQueue deleted; see OutboxProcessor tests',"
+    },
+    {
+      "file": "learning_tracker/test/features/sync/data/sync_engine_test.dart.skip",
+      "line": 9,
+      "quote": "import 'package:learning_tracker/features/sync/data/sync_engine.dart';"
+    }
+  ],
+  "sites": 3,
+  "why": "lib/features/sync/data/sync_engine.dart, firestore_data_source.dart, and offline_queue.dart do not exist anywhere in lib/ -- all three classes these tests target were deleted in W2.35. offline_queue_test.dart and offline_queue_enqueue_test.dart are permanently-skipped single-placeholder-test shells (`test('placeholder', () {})`); sync_engine_test.dart.skip is 629 lines renamed with a non-.dart extension specifically so dart test/flutter analyze never touch it (last modified in an old cleanup commit, 2777f26b). None add value: they compile-check nothing, run nothing, and the two skip-tagged files' own comments say where the real coverage now lives (outbox_processor_test.dart).",
+  "recommendation": "Delete all three files outright -- git history preserves them if ever needed; a permanently-skipped or extension-renamed test file is worse than no file since it still shows up in directory listings and audit tooling as if it were live test surface (as happened in this very audit batch).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep confirms no remaining test files under test/ importing lib paths that don't exist in lib/ (sync_engine.dart, firestore_data_source.dart, offline_queue.dart)."
+  ],
+  "labels": [
+    "dead-code",
+    "hygiene",
+    "test-debris"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "offline_queue_test.dart's skip: quote is actually at line 14, not line 13 as cited — off-by-one; text and substance otherwise exact."
+    ]
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-107",
+  "normArea": "tests/sync",
+  "id": "AUD-t-sync-01",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Replace seed_manager_test.dart's 7 silent early-return guards with an explicit precondition instead of a vacuous pass",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7 (weakened test / silent skip)",
+  "area": "test/core/database/seed_manager_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/seed_manager_test.dart",
+      "line": 176,
+      "quote": "if (oldVersion <= 0) {\n        // Unlikely, but skip gracefully if bundledSeedVersion == 1."
+    },
+    {
+      "file": "learning_tracker/test/core/database/seed_manager_test.dart",
+      "line": 694,
+      "quote": "if (oldVersion <= 0) return;"
+    }
+  ],
+  "sites": 7,
+  "why": "bundledSeedVersion is 15 today (lib/core/database/seed_version.dart:13), so `if (oldVersion <= 0) return;` never fires and every guarded test body runs its real assertions — but the guard is copy-pasted 7 times (lines 176, 200, 212, 223, 236, 694, 758) as unconditional insurance against bundledSeedVersion ever dropping to 1. If that ever happens, up to 7 tests covering version-mismatch rollback, replacing-content-db logging, upgrade/extract-failed logging, rolled-back logging, and boundary behavior silently report PASS having executed zero assertions, with no `skip:` marker in test output to reveal it.",
+  "recommendation": "Replace the 7 repeated guards with a single documented precondition (e.g. a top-of-file `assert(bundledSeedVersion > 1, 'these tests assume bundledSeedVersion > 1')` or restructure the version arithmetic) so a future bundledSeedVersion of 1 fails loudly instead of vacuously passing.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No test in seed_manager_test.dart can complete with zero assertions executed when bundledSeedVersion <= 1; either the file fails fast via assert, or the affected tests use `skip:` with a stated reason so it's visible in test output."
+  ],
+  "labels": [
+    "test-quality",
+    "silent-skip",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-root-p2",
+  "chunk": "grp-013",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-89",
+  "linearPriority": "Low"
+}

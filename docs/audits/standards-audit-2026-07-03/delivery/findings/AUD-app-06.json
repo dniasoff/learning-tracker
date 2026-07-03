@@ -1,0 +1,61 @@
+{
+  "title": "Log the swallowed exceptions in firebase_bootstrap.dart's two comment-only catch blocks (lines 39-41, 50-52) — invisible to the Makefile's single-line-only empty-catch grep",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 (log-less catch) + Rule-0 checker gap",
+  "area": "lib/app/bootstrap/firebase_bootstrap.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart",
+      "line": 39,
+      "quote": "} catch (_) {\n      // App Check unavailable — continue; sync may be rejected if enforced."
+    },
+    {
+      "file": "learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart",
+      "line": 50,
+      "quote": "} catch (_) {\n    // Firebase init failed — app continues in local-first mode."
+    },
+    {
+      "file": "Makefile",
+      "line": 176,
+      "quote": "HITS=$$(grep -rn 'catch\\s*(_)\\s*{}' \"$$LIB/\" \\"
+    }
+  ],
+  "sites": 3,
+  "why": "Both catch blocks have a comment as their only content — no rethrow, no state conversion, no AppLogger call — so they satisfy none of EH-3's three disjuncts ('rethrows, converts, or logs'). This is not merely a Pending-tier gap: the project's own 'Enforced' check for exactly this class of bug (Makefile [9/12], NFR23, 'empty catch blocks catch (_) {}') only matches the single-line literal pattern `catch\\s*(_)\\s*{}`; running it against this file confirms zero hits despite two genuinely empty-bodied (comment-only) catches spanning multiple lines. The App Check catch (39-41) is the more consequential of the two: the surrounding comment documents a known real failure mode ('FirebearStorageCryptoHelper decryption failures... cause activate() to hang indefinitely') that the timeout specifically guards against, yet if it fires there is zero log trace — this is the same class of App-Check/permission-denied failure this team has separately had to debug via manual token inspection. The outer catch (50-52) swallows a bare (untyped) exception from Firebase.initializeApp() itself with equally zero trace, so a total Firebase-subsystem failure in the field (no sync, no crash reporting, no analytics) would leave no diagnostic breadcrumb anywhere.",
+  "recommendation": "Change both `catch (_) { /* comment */ }` blocks to `catch (e, stack) { AppLogger.instance.warning(event: '...', exception: e, stackTrace: stack); }` (AppLogger.instance is safe to call here even though AppLogger.init() hasn't run yet — crashlytics_bootstrap.dart already relies on the same lazy-singleton behavior). Separately, broaden the Makefile NFR23 grep so it is not blind to multi-line comment-only catch bodies.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both catch blocks in firebase_bootstrap.dart (App Check activation, Firebase.initializeApp) capture the exception/stack and call AppLogger.instance.{warning|error} with a distinct event name.",
+    "Makefile check [9/12] (NFR23) is extended to also flag catch blocks whose body contains only comments/whitespace, not just literal `catch (_) {}`; re-running it against firebase_bootstrap.dart now reports the two sites instead of 0 hits.",
+    "A regression test forces FirebaseAppCheck.instance.activate (or Firebase.initializeApp) to throw and asserts an AppLogger/Talker history entry is recorded."
+  ],
+  "labels": [
+    "error-handling",
+    "logging",
+    "rule-0-gap",
+    "bootstrap",
+    "app-check"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The recommended fix (AppLogger.instance.warning inside the catch) runs before bootstrap()'s AppLogger.init() on the next line; init() replaces _talkerInstance, discarding pre-init history, so in release builds that logged warning would itself vanish from the ring buffer unless bootstrap()'s ordering is also fixed."
+    ]
+  },
+  "sourceBatch": "sup-eh1-bootstrap",
+  "mergedFrom": [
+    "Log Firebase/App Check init failures in firebase_bootstrap.dart instead of swallowing them silently"
+  ],
+  "coDiscoverers": [
+    "sup-eh1-bootstrap",
+    "t1-app-l10n-p1"
+  ],
+  "normArea": "app",
+  "id": "AUD-app-06",
+  "linearPriority": "Medium"
+}

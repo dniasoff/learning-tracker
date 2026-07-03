@@ -1,0 +1,42 @@
+{
+  "title": "Add Linear IDs to the 8 untracked TODO/FIXME comments (AG-6)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6",
+  "area": "cross-cutting",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib",
+      "line": 1,
+      "quote": "8 TODO/FIXME comments without a DNI-#### id (grep scan; list in appendix)"
+    }
+  ],
+  "sites": 8,
+  "why": "Untracked TODOs are parked half-finished work that no ticket owns; they persist as cross-wave noise until someone re-discovers them the hard way.",
+  "recommendation": "File or link a DNI ticket for each of the 8 and generalize audit check 10 into the AG-6 grep (TODO/FIXME without DNI- fails).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "audit grep for untracked TODO/FIXME returns zero",
+    "each TODO carries DNI-####"
+  ],
+  "labels": [
+    "hygiene",
+    "agent-workflow"
+  ],
+  "origin": "orchestrator-baseline",
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Evidence file field says 'learning_tracker/lib' but 2 of the 8 sites are in test/story_acceptance/ and 1 in integration_test/ — scope is repo-wide dart files, not lib/ only; count of 8 is correct once scoped properly."
+    ]
+  },
+  "sourceBatch": "orchestrator",
+  "chunk": "grp-134",
+  "normArea": "repo",
+  "id": "AUD-repo-02",
+  "linearPriority": "Low"
+}

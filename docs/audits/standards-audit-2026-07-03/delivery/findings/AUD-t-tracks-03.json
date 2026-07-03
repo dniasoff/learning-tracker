@@ -1,0 +1,50 @@
+{
+  "title": "Fix the vacuous ChazaraInlineSetup custom-round tests in edit_track_screen_l1_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological tests / assertions weaker than what the source can do wrong)",
+  "area": "test/features/tracks/setup/edit_track_screen_l1_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks/setup/edit_track_screen_l1_test.dart",
+      "line": 1016,
+      "quote": "expect(find.byIcon(Icons.add_circle_outline_rounded), findsNothing);"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/edit_track_screen_l1_test.dart",
+      "line": 1040,
+      "quote": "final addIcons = find.byIcon(Icons.add_rounded);"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/edit_track_screen_l1_test.dart",
+      "line": 1094,
+      "quote": "closeButtons.evaluate().length,\n        greaterThanOrEqualTo(0),"
+    }
+  ],
+  "sites": 3,
+  "why": "The file's own header claims coverage of 'Custom cycle enforces min 1 / max 5 rounds', and the real production logic exists (step_chazara.dart:295 onRemove null guard, :302-303 'if (_customDelays.length < 5) AddRoundChip'), but all 3 tests against it are vacuous: two probe icon constants (Icons.add_circle_outline_rounded, Icons.add_rounded) that AddRoundChip never renders — it renders Icons.add, confirmed by reading chazara_widgets.dart:196 — so their assertions pass independent of real widget behavior, and the third asserts List.length >= 0, a Dart-level tautology that is always true. A future change that broke min/max-round enforcement entirely (always 6+ rounds allowed, or the last round removable) would leave this whole test group green.",
+  "recommendation": "Fix the icon finders to Icons.add scoped via a Key/byWidgetPredicate (to avoid ambiguity with the unrelated TinyCircleButton Icons.add elsewhere), fix initialDelays: [1] to [3] in the add-round test per its own comment so it actually starts in custom mode, and replace the tautological length check with a real assertion on round count / IconButton.onPressed before vs after.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Deliberately make _customDelays.length < 5 unconditionally true and confirm the 'hidden at 5' test now fails",
+    "Deliberately make onRemove always non-null and confirm the 'remove absent at 1' test now fails"
+  ],
+  "labels": [
+    "test-quality",
+    "tautological-test",
+    "tracks"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "grp-117",
+  "normArea": "tests/tracks",
+  "id": "AUD-t-tracks-03",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,54 @@
+{
+  "title": "test/helpers/golden_runner.dart and flutter_test_config.dart produce no usable golden-regression coverage — no fonts loaded, and every caller skips the pixel assertion",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-5 (goldens deterministic — fonts loaded in flutter_test_config.dart)",
+  "area": "learning_tracker/test/helpers (golden test infrastructure)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/flutter_test_config.dart",
+      "line": 13,
+      "quote": "GoogleFonts.config.allowRuntimeFetching = false;"
+    },
+    {
+      "file": "learning_tracker/test/helpers/golden_runner.dart",
+      "line": 53,
+      "quote": "matchesGoldenFile('goldens/$name.${locale.languageCode}.png'),"
+    },
+    {
+      "file": "docs/coding-standards.md",
+      "line": 472,
+      "quote": "Goldens are deterministic (fonts loaded in `flutter_test_config.dart`; pinned size/theme/locale; fixed clock; constant data)"
+    }
+  ],
+  "sites": 2,
+  "why": "flutter_test_config.dart runs before every test file but never calls FontLoader/loadAppFonts — it only disables GoogleFonts network fetching. I built a throwaway probe (`goldenTest('probe', builder: (l) => const Text('Probe'))`) and ran `flutter test ... --update-goldens`: the captured PNG was 100% blank white — no glyphs at all. A second probe (`Container(color: red, child: Text(...))`) rendered the red container at full size (proving layout/paint itself works) but the text area was a solid opaque black smear, never legible characters. For comparison, test/golden/goldens/phone_1_dashboard.png (built by the separate store_screenshots_test.dart, which does call FontLoader itself) renders crisp real glyphs in the same sandbox — proving the blankness is caused by golden_runner.dart's missing font load, not an environment limitation. Because of this (or in anticipation of it), every one of the 11 current goldenTest() call sites across test/story_acceptance/ passes skipGolden: true, so matchesGoldenFile never actually executes anywhere today. The RTL/LTR visual-regression protection this helper's own doc comment claims to provide ('UI bugs that only manifest in RTL Hebrew layouts... cost the team a release window in E18') is not happening — if anyone flips skipGolden to false today to 'baseline' goldens per the tracked follow-up (DNI-380), they will commit blank/illegible PNGs as the accepted baseline without any test failure to warn them.",
+  "recommendation": "Add explicit font loading to flutter_test_config.dart (FontLoader per family declared in pubspec's fonts: section, mirroring what store_screenshots_test.dart already does locally) before testMain() runs. Re-run the probe pattern above with skipGolden:false to confirm real glyphs render, then un-skip and baseline the goldens that are ready (per the DNI-380 tracked follow-up).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A goldenTest() call with skipGolden:false and real text content produces a PNG with legible (non-blank, non-tofu-smear) glyphs, verified by re-running the probe pattern used in this audit.",
+    "flutter_test_config.dart contains a font-loading step covering every family declared in pubspec.yaml's fonts: section.",
+    "At least one of the 11 currently-skipped call sites is un-skipped and baselined, or a tracked ticket documents why it remains skipped beyond DNI-380's original scope."
+  ],
+  "labels": [
+    "test-infra",
+    "golden-tests",
+    "tq-5",
+    "empirically-verified"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "10 goldenTest() call sites exist today, not 11 as claimed (3+1+6across three files) — minor miscount, doesn't affect the 'every site skips' claim, which holds for all 10."
+    ]
+  },
+  "sourceBatch": "t1-test-helpers",
+  "chunk": "grp-149",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-51",
+  "linearPriority": "Medium"
+}

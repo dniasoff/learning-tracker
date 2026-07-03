@@ -1,0 +1,51 @@
+{
+  "title": "Fix root Makefile's audit/analyze/test-all targets so they stop reporting false passes",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 0 (checker failures must exit non-zero)",
+  "area": "Makefile / guardrail infra",
+  "evidence": [
+    {
+      "file": "Makefile",
+      "line": 217,
+      "quote": "cd learning_tracker && dart run custom_lint; \\\n\techo \"audit PASSED.\""
+    },
+    {
+      "file": "Makefile",
+      "line": 86,
+      "quote": "@echo \"Running all tests...\"\n\t@cd learning_tracker && flutter test"
+    },
+    {
+      "file": "Makefile",
+      "line": 90,
+      "quote": "@echo \"Running dart analyze...\"\n\t@cd learning_tracker && dart analyze"
+    }
+  ],
+  "sites": 3,
+  "why": "The whole `audit` recipe is one shell invocation (backslash-continued); its final two statements are joined by `;`, not `&&`, so the recipe's exit status is that of the LAST command (`echo \"audit PASSED.\"`), never custom_lint's. Empirically reproduced: a `false;`-then-`echo` recipe in a throwaway Makefile prints the trailing text and `make` still exits 0. Since custom_lint is currently broken (crashes, per baseline), running `make audit` from the repo root today prints the crash output and then unconditionally declares \"audit PASSED.\" Separately, root `analyze` omits `--fatal-infos` and `test-all` omits `--coverage`, unlike learning_tracker/Makefile's equivalents (which say \"matches CI --fatal-infos flag\" and are correct) — so `make ci` from repo root can go green on issues the real CI gate (which always runs from learning_tracker/) would reject.",
+  "recommendation": "Replace the trailing `;` with `&&` (or check `$?` explicitly) so a lint failure fails the recipe; add `--fatal-infos` to root `analyze` and `--coverage` to root `test-all`, or better, make the root Makefile's targets thin `cd learning_tracker && make $@` wrappers so there is exactly one place these flags can drift.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`make audit` from the repo root exits non-zero when the underlying custom_lint invocation fails.",
+    "root `make analyze` uses --fatal-infos and root `make test-all`/`ci` produce coverage output, matching learning_tracker/Makefile."
+  ],
+  "labels": [
+    "rule-0",
+    "makefile",
+    "guardrails",
+    "bypassable-gate"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-154",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-13",
+  "linearPriority": "Medium"
+}

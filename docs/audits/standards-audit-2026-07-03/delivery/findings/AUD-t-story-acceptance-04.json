@@ -1,0 +1,54 @@
+{
+  "title": "Confirm TrackManagementBody is wired into a real screen — it currently has zero callers in lib/",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance + features/tracks",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_22_track_management_body_test.dart",
+      "line": 33,
+      "quote": "const widget = TrackManagementBody(showBackButton: false);\n          expect(widget.showBackButton, isFalse);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+      "line": 21,
+      "quote": "/// Shared body widget for both parent and child track-management screens.\n///\n/// Both screens are structurally identical."
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+      "line": 24,
+      "quote": "bool trackDeletionAllowed({required int activeCurriculumCount}) {\n  return activeCurriculumCount > 1;"
+    }
+  ],
+  "sites": 1,
+  "why": "TrackManagementBody's own doc comment says it unifies 'both parent and child track-management screens.' grep -rn \"TrackManagementBody\" lib/ finds only its own definition file — no @RoutePage() screen, and no entry in the generated app_router.gr.dart, ever instantiates it. The actual routed hub screen, track_management_hub_screen.dart (340 lines, near-identical import list), is a separate hand-rolled implementation with its own 'TS-16' deactivation guard (trackDeletionAllowed) — the exact concept Story 26.22 AC2 put in the service layer — and it was touched by a later bug-fix wave ('fix(tracks-scheduler): fix all 8 confirmed-bug clusters TS-1 through TS-16', 2026-06-11) that track_management_body.dart never received (last touched 2026-05-20, a mechanical colour-literal pass). The acceptance test only constructs TrackManagementBody in isolation and reads a constructor field, so it reports Story 26.22's central claim as verified while the shipped app still runs a duplicate, drifting implementation — and if TrackManagementBody is ever wired in later without reconciling the drift, it will reintroduce the 8 bugs TS-1..TS-16 fixed only in the hub screen.",
+  "recommendation": "Either finish the consolidation — replace track_management_hub_screen.dart's build() with TrackManagementBody(showBackButton: ...) and delete the duplicated logic (carrying the TS-1..TS-16 fixes into the shared widget) — or, if the widget was superseded, delete the dead track_management_body.dart and this test. Add a source-grep assertion (matching the pattern already used in 26.20 AC3/4) proving the real screen references TrackManagementBody(.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -rn 'TrackManagementBody(' lib/features/ matches at least one real @RoutePage() screen's build method",
+    "a story-acceptance test asserts track_management_hub_screen.dart's source contains 'TrackManagementBody(', the same way 26.20 AC4 checks settings_screen.dart",
+    "the TS-16 deactivation guard logic exists in exactly one place, not duplicated between the widget and the hub screen"
+  ],
+  "labels": [
+    "testing",
+    "epic-26",
+    "dead-code",
+    "duplication"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Evidence cites track_management_hub_screen.dart:24 but the quoted function signature/body actually sits at lines 25-26; line 24 is the last line of the preceding doc comment. Quote text itself is verbatim-accurate, just off by one line."
+    ]
+  },
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-130",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-04",
+  "linearPriority": "Medium"
+}

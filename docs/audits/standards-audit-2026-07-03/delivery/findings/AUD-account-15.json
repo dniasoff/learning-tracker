@@ -1,0 +1,39 @@
+{
+  "title": "Remove the fixed height:32 on OfflineTopBanner's Container so large text-scale doesn't clip it",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "AX-4 (no fixed heights on text wrappers)",
+  "area": "features/account/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/presentation/widgets/offline_top_banner.dart",
+      "line": 30,
+      "quote": "width: double.infinity,\n                height: 32,"
+    }
+  ],
+  "sites": 1,
+  "why": "The banner's Container is given a tight height:32 which forces the same tight cross-axis height onto the Row wrapping the cloud-off Icon and the offline-message Text. The app sets no textScaler clamp anywhere (grep-confirmed repo-wide), so under a standard OS large-text accessibility setting the Text needs more than 32 logical pixels; because Container does not clip by default, the text would paint outside the 32px band, visually overlapping the AppBar/content around it rather than wrapping or growing the banner.",
+  "recommendation": "Let the banner size to its child's intrinsic height (drop the fixed height, or express it as a minHeight), and add a widget test that pumps OfflineTopBanner under a scaled MediaQuery (TextScaler.linear(1.6)+) and asserts no overflow/clip.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "a widget/golden test pumps OfflineTopBanner at textScaler >= 1.6x and asserts the rendered content fits within its layout bounds",
+    "the banner Container no longer hard-codes height:32"
+  ],
+  "labels": [
+    "accessibility",
+    "ax-4"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p2",
+  "chunk": "grp-039",
+  "normArea": "features/account",
+  "id": "AUD-account-15",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,46 @@
+{
+  "title": "Add Android/iOS branch coverage for NotificationGateway.requestPermission()/hasPermission()",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1 / testability",
+  "area": "features/notifications/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+      "line": 121,
+      "quote": "final android = _plugin\n        .resolvePlatformSpecificImplementation<"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/domain/services/notification_gateway_test.dart",
+      "line": 219,
+      "quote": "'returns true when no platform-specific impl is available (non-mobile)',"
+    }
+  ],
+  "sites": 1,
+  "why": "resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>() (and the iOS equivalent) always return null against the mock plugin in a plain unit test, so requestPermission/hasPermission's tests only exercise the trivial fallback branch. The actual Android (POST_NOTIFICATIONS + exact-alarm) and iOS (alert/badge/sound) request logic -- the code that determines whether real users on real devices actually get permission requested correctly -- has no unit-test seam at all.",
+  "recommendation": "Introduce a thin platform-request abstraction NotificationGateway can take a fake for, or verify mocktail can stub AndroidFlutterLocalNotificationsPlugin/IOSFlutterLocalNotificationsPlugin directly so the branch logic becomes testable.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A test exercising the Android branch asserts both requestNotificationsPermission() and requestExactAlarmsPermission() are called and the granted flag is threaded through correctly; an equivalent test exists for iOS."
+  ],
+  "labels": [
+    "test-gap",
+    "notifications",
+    "testability"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "notification_gateway.dart quote \"final android = _plugin...\" begins at line 122, not 121 (line 121 is the method signature)."
+    ]
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-065",
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-10",
+  "linearPriority": "Low"
+}

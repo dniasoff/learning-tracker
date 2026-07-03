@@ -1,0 +1,50 @@
+{
+  "title": "Wire packages/custom_lints/test/ into CI or a make target — the entire suite runs nowhere today",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 0",
+  "area": "custom_lints",
+  "evidence": [
+    {
+      "file": "packages/custom_lints/pubspec.yaml",
+      "line": 15,
+      "quote": "dev_dependencies:\n  test: ^1.24.0"
+    },
+    {
+      "file": "packages/custom_lints/test/no_raw_talker_test.dart",
+      "line": 1,
+      "quote": "import 'package:test/test.dart';"
+    }
+  ],
+  "sites": 1,
+  "why": "grep across .github/workflows/ci.yml, root Makefile, and learning_tracker/Makefile for 'packages/custom_lints' or 'custom_lints' turns up nothing except the path dependency declaration in learning_tracker/pubspec.yaml — no CI job and no make target ever sets working-directory to packages/custom_lints or runs `dart test` there. Since `dart run custom_lint` is separately broken (analyzer 8-vs-9, baselined), these 7 unit-test files (1449 lines) are the ONLY thing that could catch a logic bug in any of the 9 lint rules — and they never execute automatically. This audit's own F1a/F1b/F7 findings (barrel-name mismatch, missing whitelist directories, weak filename match) are exactly the class of bug this suite exists to catch but currently cannot, because nothing runs it.",
+  "recommendation": "Add a `lint-rules-test` target to root or learning_tracker/Makefile (`cd packages/custom_lints && dart pub get && dart test`) and call it from ci.yml and from `make ci`/`make audit`.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A committed make target runs `dart test` inside packages/custom_lints.",
+    "ci.yml invokes that target (or the equivalent working-directory step) on every PR.",
+    "Deliberately breaking one rule's whitelist logic makes CI fail via this path (manual smoke check)."
+  ],
+  "labels": [
+    "guardrail",
+    "rule-0",
+    "ci",
+    "custom-lint",
+    "dead-target"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "pubspec.yaml quote spans lines 14-15; 'dev_dependencies:' is line 14 not 15 — trivial anchor offset, content accurate."
+    ]
+  },
+  "sourceBatch": "t2-lints-hooks",
+  "chunk": "grp-160",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-17",
+  "linearPriority": "Medium"
+}

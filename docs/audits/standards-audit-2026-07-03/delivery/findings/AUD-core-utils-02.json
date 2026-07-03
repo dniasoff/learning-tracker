@@ -1,0 +1,58 @@
+{
+  "title": "Remove dead isShabbos/isYomTov/formatHebrewDate from HebrewCalendarUtils (superseded by zmanim_window_service)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Evans lens (ubiquitous language re-derived, not enforced in one place) + dead code",
+  "area": "lib/core/utils/hebrew_calendar_utils.dart (duplication/dead-code)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+      "line": 82,
+      "quote": "static bool isShabbos(DateTime gregorianDate) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+      "line": 94,
+      "quote": "static bool isYomTov(DateTime gregorianDate) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+      "line": 114,
+      "quote": "static String formatHebrewDate("
+    },
+    {
+      "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+      "line": 81,
+      "quote": "/// For precise zmanim (sunset/nightfall), use ComplexZmanimCalendar with a GeoLocation."
+    }
+  ],
+  "sites": 3,
+  "why": "`grep -rn` across all of lib/ finds zero production callers of isShabbos, isYomTov, or formatHebrewDate outside their own definition file — only test/core/utils/hebrew_calendar_utils_test.dart and one story-acceptance test call isShabbos, testing code nothing else ever runs. Meanwhile lib/features/sacred_time/domain/services/zmanim_window_service.dart implements the real, GeoLocation/zmanim-aware Shabbos+Yom-Tov window (candle-lighting offset, tzais, JewishCalendar.isAssurBemelacha) that actually drives the Sacred Time lock feature — and isShabbos's own doc comment admits its 18:00-local-clock-hour heuristic is inferior (\"For precise zmanim... use ComplexZmanimCalendar with a GeoLocation\"). Because this dead code lives in core/utils/ (importable by any feature — Rule 1 only blocks core→features, not the reverse) and is unit-tested (making it look supported), a future feature needing \"is it Shabbos right now\" is one natural-language search away from wiring up the crude, timezone-naive version instead of the correct geo-aware one — and if the caller passes a UTC DateTime (the P5-mandated storage format everywhere else in this codebase), isShabbos's `.hour >= 18` check reads UTC hour, not true local hour, silently wrong for any locale far from UTC.",
+  "recommendation": "Delete isShabbos, isYomTov, and formatHebrewDate (and their test coverage) from HebrewCalendarUtils. If a lightweight non-geo fallback is genuinely wanted somewhere, rename it to make the approximation explicit (e.g. isApproximateShabbosNoGeo) and doc-link to zmanim_window_service.dart as the source of truth.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`grep -rn \"isShabbos\\|isYomTov\\|formatHebrewDate\" learning_tracker/lib/` shows zero references outside sacred_time/ (or the methods are removed entirely).",
+    "hebrew_calendar_utils_test.dart's corresponding groups are removed alongside the source methods."
+  ],
+  "labels": [
+    "dead-code",
+    "duplication",
+    "evans"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Downgrade P2→P3: no runtime path uses this code today, so there is no active/concrete cost being paid, only a hypothetical future-misuse scenario. Minor separate nit: the acceptance-criteria grep (isShabbos|isYomTov|formatHebrewDate) will false-positive on step_study_days.dart's unrelated isShabbos widget field — doesn't affect the core finding.",
+      "none — evidence and reasoning verified accurate as stated."
+    ]
+  },
+  "sourceBatch": "t1-core-nav-utils",
+  "chunk": "grp-020",
+  "normArea": "core/utils",
+  "id": "AUD-core-utils-02",
+  "linearPriority": "Low"
+}

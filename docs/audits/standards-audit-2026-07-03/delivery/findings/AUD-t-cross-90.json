@@ -1,0 +1,43 @@
+{
+  "title": "Replace tautological isNotNull assertion on non-nullable testConfig field in learning_program_service_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological assertion — asserts what the type system already guarantees, not real behavior)",
+  "area": "test/core/services (weak assertion)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/services/learning_program_service_test.dart",
+      "line": 189,
+      "quote": "expect(p.testConfig, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/learning_program_service.dart",
+      "line": 36,
+      "quote": "final String testConfig;"
+    }
+  ],
+  "sites": 1,
+  "why": "LearningProgramData.testConfig is declared as a non-nullable String, so expect(p.testConfig, isNotNull) can never fail — it's checking a compile-time guarantee, not runtime behavior. The test's evident intent (verify the '{}' fallback applied in learning_program_service.dart:86 when a seed omits test_config) is never actually asserted, so a regression that defaults testConfig to '' or breaks the fallback would pass this test silently.",
+  "recommendation": "Replace with a behavioral assertion, e.g. expect(p.testConfig, isNotEmpty), or explicitly assert the '{}' default for seeds that omit test_config.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Assertion changed to one that can fail (verified by temporarily breaking the source default and confirming red, then reverting to green)"
+  ],
+  "labels": [
+    "test-quality",
+    "tautological-test"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-services",
+  "chunk": "grp-024",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-90",
+  "linearPriority": "Low"
+}

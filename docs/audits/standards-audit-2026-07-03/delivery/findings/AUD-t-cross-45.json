@@ -1,0 +1,46 @@
+{
+  "title": "Tighten bulk_prior_completion_b6_b8_test.dart's greaterThanOrEqualTo(2) assertion to an exact count",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7",
+  "area": "test/integration",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+      "line": 984,
+      "quote": "greaterThanOrEqualTo(2),"
+    },
+    {
+      "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+      "line": 986,
+      "quote": "'Should have one active completion per curriculum for Berakhot 2',"
+    }
+  ],
+  "sites": 1,
+  "why": "The test's own reason string states the invariant is exactly one active row per curriculum (2 curricula seeded => exactly 2), but the matcher accepts any count >= 2. A duplicate-insert regression in BulkPriorCompletionService.execute (e.g. a double-write bug) would silently pass this assertion, which is the 'assertion weaker than what the source can do wrong' pattern the audit is hunting for.",
+  "recommendation": "Replace greaterThanOrEqualTo(2) with equals(2) (or hasLength(2)) to match the stated invariant.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test 2 in the 'Finding 8' group asserts rows.length == 2 (or equivalent exact matcher), and fails if execute() is made to double-insert"
+  ],
+  "labels": [
+    "TQ-7",
+    "TQ-8",
+    "weak-assertion"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Rule tag TQ-7 is imprecise — the test was never weakened from a stricter version (git blame: authored loose from the start), so it's better characterized as TQ-8's 'assertion weaker than what source can do wrong' pattern, which the finding already lists as a secondary label."
+    ]
+  },
+  "sourceBatch": "t1-test-cross-p5",
+  "chunk": "grp-147",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-45",
+  "linearPriority": "Medium"
+}

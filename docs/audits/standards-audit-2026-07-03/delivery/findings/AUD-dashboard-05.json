@@ -1,0 +1,45 @@
+{
+  "title": "Delete or wire up the orphaned dashboardModelProvider composition layer",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler dead-code / SM-1",
+  "area": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_model_provider.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_model_provider.dart",
+      "line": 90,
+      "quote": "final dashboardModelProvider = Provider.autoDispose<AsyncValue<DashboardModel>>("
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/screens/dashboard_screen.dart",
+      "line": 88,
+      "quote": "final userModeAsync = ref.watch(dashboardUserModeProvider);"
+    }
+  ],
+  "sites": 1,
+  "why": "The file's own doc comment says widgets 'previously watched 5-10 individual providers [and] now watch this one provider' (DNI-350/26.7), but dashboard_screen.dart — the only screen that could use it — still watches dashboardActiveTracksStreamProvider, dashboardUserModeProvider, dashboardStreakProvider, and activeProfileProvider directly and never references dashboardModelProvider/DashboardModel (confirmed by repo-wide grep). The only remaining consumer is the file's own acceptance test, so this 143-line composition layer is pure maintenance cost today: any leaf-provider change now has two places to stay consistent, and the second is invisible in the real UI.",
+  "recommendation": "Either finish the DNI-350 migration (make dashboard_screen.dart/dashboard_body.dart consume dashboardModelProvider and delete the direct leaf-provider watches) or delete dashboard_model_provider.dart and its dedicated test.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -rn dashboardModelProvider lib/ returns either a real widget consumer in addition to the provider file, or zero results after deletion.",
+    "test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart is updated or removed to match, not left pointing at unreachable code."
+  ],
+  "labels": [
+    "dead-code",
+    "riverpod",
+    "dashboard"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "grp-047",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-05",
+  "linearPriority": "Medium"
+}

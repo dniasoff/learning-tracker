@@ -1,0 +1,44 @@
+{
+  "title": "Dedupe the copy-pasted DB-wipe block in epic_26_story_23 — duplicate per-table delete calls in both tests",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplicated code",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_23_data_export_round_trip_test.dart",
+      "line": 451,
+      "quote": "await db.delete(db.streakEvents).go();\n          await db.delete(db.streakEvents).go();"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_23_data_export_round_trip_test.dart",
+      "line": 691,
+      "quote": "await db.delete(db.completionEvents).go();\n          await db.delete(db.completionEvents).go();"
+    }
+  ],
+  "sites": 2,
+  "why": "Both the multi-profile round-trip test and the C3-tombstone test wipe the database with the same ~17-statement manual delete sequence, each accidentally issuing the delete for two tables twice (streakEvents+completionEvents in the first block, completionEvents+streakEvents in the second) — harmless no-ops against an already-empty table, but evidence the block was copy-pasted rather than shared, so a future added/renamed table now needs updating in two independently-drifting copies.",
+  "recommendation": "Extract a `_wipeAllUserTables(db)` test helper (one db.transaction, one delete per table) and call it from both tests.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "the two wipe blocks collapse to one shared helper with no duplicate per-table delete call"
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "epic-26"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-131",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-29",
+  "linearPriority": "Low"
+}

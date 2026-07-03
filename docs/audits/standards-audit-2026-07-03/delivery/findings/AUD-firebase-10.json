@@ -1,0 +1,77 @@
+{
+  "title": "Whitelist fields on tutor CRUD Cloud Functions instead of merging caller-supplied objects verbatim",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SR-2 (functions parity)",
+  "area": "functions/tutor-writes",
+  "evidence": [
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 1137,
+      "quote": "// Admin SDK bypasses Firestore Security Rules -- the permission checks above are"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 1347,
+      "quote": "await goalRef.set(\n    { ...goalData, synced_at: writtenAt },"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 1454,
+      "quote": "await trackRef.set(\n    { ...trackData, synced_at: writtenAt },"
+    },
+    {
+      "file": "learning_tracker/firestore.rules",
+      "line": 326,
+      "quote": "allow create, update: if isOwner(uid)\n            && request.resource.data.keys().hasOnly(["
+    },
+    {
+      "file": "learning_tracker/firestore.rules",
+      "line": 314,
+      "quote": "allow create, update: if isOwner(uid)\n            && request.resource.data.keys().hasOnly(["
+    },
+    {
+      "file": "learning_tracker/firestore.rules",
+      "line": 375,
+      "quote": "allow create, update: if isOwner(uid)\n            && request.resource.data.keys().hasOnly(["
+    },
+    {
+      "file": "learning_tracker/firestore.rules",
+      "line": 409,
+      "quote": "allow create, update: if isOwner(uid)\n            && request.resource.data.keys().hasOnly(["
+    }
+  ],
+  "sites": 8,
+  "why": "tutorUpsertGoal, tutorUpsertTrack, tutorUpsertStageDefinition, tutorUpsertStudyDayConfig, tutorUpdateGamificationSettings, tutorUpsertBookmark, tutorSetProfileProgram and tutorUpsertCurriculumScope all use the Admin SDK, which bypasses firestore.rules entirely -- the code's own comment says its permission checks 'are the sole enforcement layer for these write paths', but those checks only gate who may write and which collection, not what shape. Each function spreads the caller-supplied `xData` object straight into the child's synced document after only an object-vs-array/null check -- no field whitelist (unlike the `.hasOnly()` the same collections enforce for the owner's own direct writes) and no size cap. An invited tutor -- a distinct, deliberately lower-trust principal with fine-grained permission flags precisely because they're less trusted -- can therefore write fields the owner is rules-blocked from writing directly, or inflate a doc with an oversized field. None of cf_tutor_content.test.mjs / cf_tutor_goals_tracks.test.mjs / cf_tutor_settings_profile.test.mjs exercises this; every test fixture is a small, clean object. tutorEditProfile, in the same file, shows the correct pattern (explicit per-field validation with a length cap).",
+  "recommendation": "Give each tutorUpsertX function the same field whitelist as the corresponding firestore.rules `.hasOnly()` block (or one shared `assertAllowedFields` helper), mirroring tutorEditProfile's existing validation style.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A tutorUpsertGoal call with an extra unexpected key (or an oversized string field) in goalData is rejected with invalid-argument, proven by a new test."
+  ],
+  "labels": [
+    "security",
+    "cloud-functions",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "2 of the 8 cited sites (tutorUpdateGamificationSettings -> preferences/{scope}; tutorUpsertCurriculumScope -> curriculum_scopes) target collections with NO hasOnly() whitelist for owner writes either (firestore.rules ~363-372, ~425-431) -- open-ended by design. The 'tutor writes fields the owner is rules-blocked from' escalation claim holds for only 6/8 sites, not all 8."
+    ]
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "chunk": "grp-157",
+  "mergedFrom": [
+    "Add value-type and string-size checks to firestore.rules' hasOnly() snapshot-collection whitelists"
+  ],
+  "coDiscoverers": [
+    "t2-firebase-rules-functions-p1"
+  ],
+  "normArea": "firebase",
+  "id": "AUD-firebase-10",
+  "linearPriority": "Medium"
+}

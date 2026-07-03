@@ -1,0 +1,49 @@
+{
+  "title": "Wrap tutorEditProfile's read-then-overwrite in a transaction to stop the lost-update race",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "functions correctness (Nygard: concurrent I/O)",
+  "area": "functions/tutor-writes",
+  "evidence": [
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 2000,
+      "quote": "const beforeSnap = await profilePath.get();"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 2008,
+      "quote": "const fullDoc = beforeValue ? { ...beforeValue, ...updates } : updates;"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 2009,
+      "quote": "await profilePath.set(fullDoc, { merge: false });"
+    }
+  ],
+  "sites": 1,
+  "why": "Every other stateful mutation needing read-then-write consistency in this file (acceptTutorInvite, revokeTutorGrant, resignTutorGrant, expirePendingInvites) wraps it in db.runTransaction. tutorEditProfile instead reads the profile doc, merges edit fields in application memory, then does a full-document `set(..., {merge:false})` with no transaction. If the owner's own device (or a second tutor) writes any other field to the same learner_profiles/{profileId} doc between the get() and the set(), that write is silently overwritten by tutorEditProfile's stale full-doc replace -- a lost-update race, undermining the very H2 fix comment that motivated reading the full doc first.",
+  "recommendation": "Wrap the read+write in db.runTransaction (txn.get + txn.set), consistent with the rest of the file, or switch to `profilePath.set(updates, {merge:true})` for the scalar fields being edited -- Firestore applies a merge write atomically server-side without a client-side read first.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A concurrency test (a second writer updates an unrelated profile field between tutorEditProfile's get and set) shows that field survives."
+  ],
+  "labels": [
+    "cloud-functions",
+    "correctness",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "chunk": "grp-157",
+  "normArea": "firebase",
+  "id": "AUD-firebase-11",
+  "linearPriority": "Medium"
+}

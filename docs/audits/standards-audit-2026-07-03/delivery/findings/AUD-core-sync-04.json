@@ -1,0 +1,47 @@
+{
+  "title": "Fix TutoredPullService.pull()'s misleading on-Exception comment / uncaught upsert failure",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2 / documentation drift",
+  "area": "core/sync (tutored)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/tutored_pull_service.dart",
+      "line": 83,
+      "quote": "final localId = await _profileDao.upsertTutoredProfile("
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/tutored_pull_service.dart",
+      "line": 118,
+      "quote": "// A failure outside the per-collection guards (e.g. the synthetic-profile\n      // upsert) — surface as a soft error; do NOT wipe (not a revocation)."
+    }
+  ],
+  "sites": 1,
+  "why": "upsertTutoredProfile is awaited on line 83, before the try block opens on line 97. The `on Exception` catch's own comment (line 118) says it covers failures like 'the synthetic-profile upsert' -- but that call already ran to completion (or threw) before the try even starts, so a real upsert failure (DB busy, unique-constraint violation on grantId, disk I/O) is not caught by this method at all; it propagates straight out of pull(), unlike every other failure path here, which returns TutoredPullResult.error. A maintainer trusting the comment would wrongly assume upsert failures degrade softly like the rest of this method.",
+  "recommendation": "Either move the upsertTutoredProfile call inside the try (returning TutoredPullResult.error on failure, consistent with the rest of the method), or correct the comment to state plainly that upsert failures propagate uncaught to the caller.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A test that makes profileDao.upsertTutoredProfile throw asserts pull() either returns TutoredPullResult.error or the method's doc explicitly says it throws."
+  ],
+  "labels": [
+    "doc-drift",
+    "EH-2",
+    "sync",
+    "tutored"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "New evidence beyond the finding's own: the sole production call site (tutored_children_section.dart:460) invokes pull() via `unawaited(...)`, and only catches `on StateError` (for the builder's own validation error), not the upsert's actual exception types. Its own doc comment (lines 469-472) promises the flow 'never crashes' and 'shows an error snackbar' on failure — a named invariant this exact path violates, since no dismissLoading()/snackbar/selection-clear runs when upsertTutoredProfile throws. This makes the defect a concretely reachable, user-visible stuck-dialog bug, not just a misleading comment, justifying P1 over the reported P2."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-root-p1",
+  "chunk": "grp-033",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-04",
+  "linearPriority": "High"
+}

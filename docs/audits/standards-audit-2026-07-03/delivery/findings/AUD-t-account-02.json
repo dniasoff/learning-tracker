@@ -1,0 +1,50 @@
+{
+  "title": "Replace sign_in_context_reset_test.dart's source-text-matching 'wiring' assertions with real call-chain verification",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1/TQ-8 methodology (Feathers seam)",
+  "area": "features/account/sign_in_context_reset_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/account/sign_in_context_reset_test.dart",
+      "line": 150,
+      "quote": "controllerSrc = File(\n        'lib/features/account/presentation/notifiers/sign_in_controller.dart',"
+    },
+    {
+      "file": "learning_tracker/test/features/account/sign_in_context_reset_test.dart",
+      "line": 167,
+      "quote": "controllerSrc,\n        contains('activeTutoredProfileSelectionProvider.notifier).exit()'),"
+    },
+    {
+      "file": "learning_tracker/test/features/account/sign_in_context_reset_test.dart",
+      "line": 180,
+      "quote": "final navIdx = controllerSrc.indexOf('_navigateAfterSignIn(StackRouter');\n      expect(navIdx, greaterThanOrEqualTo(0));"
+    }
+  ],
+  "sites": 4,
+  "why": "The 'wiring' group (4 tests) reads sign_in_controller.dart / account_picker_screen.dart as raw text with File.readAsStringSync() and asserts substring presence (e.g. 'routerProvider).pinGuard.lock()' appears somewhere after another substring). This proves the token exists in the file — including inside a comment, a dead branch, or an `if (false)` — not that the reset actually runs during a real sign-in. A refactor that renames a local variable, extracts the same call into a helper, or reorders it outside the funnel would either false-fail (token literally moved) or false-pass (token still present but now unreachable) without any real Riverpod/router state ever being observed. The file's own 'runtime semantics' group shows the better pattern is available (it drives the real PinGuard/activeTutoredProfileSelectionProvider primitives directly) — it just never chains them through an actual signInWithEmail/signInWithGoogle call.",
+  "recommendation": "Replace the source-grep assertions with an end-to-end check: seed a tutored selection + authenticated PIN scope, drive SignInController.signInWithEmail/signInWithGoogle (as sign_in_controller_test.dart and the sign_in_*_throws_test.dart files in this batch already do with a stub router), and assert the real providers were cleared afterward — the same technique the 'runtime semantics' group in this file already uses for the primitives themselves.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "No test in this file reads a .dart source file as text to assert behavior.",
+    "Commenting out (not deleting) the _resetSessionContextForFreshSignIn() call inside _navigateAfterSignIn makes the corresponding test fail red."
+  ],
+  "labels": [
+    "test-quality",
+    "feathers-seam",
+    "fragile-test"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p3",
+  "chunk": "grp-040",
+  "normArea": "tests/account",
+  "id": "AUD-t-account-02",
+  "linearPriority": "Medium"
+}

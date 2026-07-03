@@ -1,0 +1,45 @@
+{
+  "title": "Fix or delete NaturalKey.forLearnerProfile's fragile non-null-Object emptiness check — fallbackProfileId branch is effectively unreachable and untested",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Type-safety design flaw in dead code",
+  "area": "learning_tracker/lib/core/ids",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/ids/natural_key.dart",
+      "line": 86,
+      "quote": "required Object profileIdOrRow,"
+    },
+    {
+      "file": "learning_tracker/lib/core/ids/natural_key.dart",
+      "line": 89,
+      "quote": "profileIdOrRow.toString().isNotEmpty"
+    }
+  ],
+  "sites": 1,
+  "why": "profileIdOrRow is typed as non-nullable Object, so it can never be null, and Object.toString() is non-empty for every realistic value (an int, a non-empty String, or the default 'Instance of X') — the only way to hit the fallbackProfileId branch is to pass a literal empty string, which is nowhere documented as the sentinel. This reads like an attempt to model 'optional row value, else use this id' that should have used `Object?` with a null check instead of a string-emptiness check. It has zero callers repo-wide (confirmed via grep across lib/ and test/), so this has never been exercised and the bug would surface silently the moment someone starts using it expecting the fallback to work.",
+  "recommendation": "If kept, change the signature to `Object? profileIdOrRow` and check `== null` instead of `.toString().isNotEmpty`. If truly unused going forward, delete it along with the other 5 unused factories (see companion finding).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "If kept: a unit test constructs NaturalKey.forLearnerProfile with profileIdOrRow omitted/null and asserts the fallbackProfileId branch actually executes",
+    "If deleted: covered by the companion 'unused factories' finding's acceptance criteria"
+  ],
+  "labels": [
+    "dead-code",
+    "type-safety",
+    "natural-key"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-small-a",
+  "chunk": "grp-025",
+  "normArea": "core/ids",
+  "id": "AUD-core-ids-02",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,46 @@
+{
+  "title": "Remove flutter_test_config.dart's FlutterError.onError GoogleFonts filter — TestWidgetsFlutterBinding never lets it run during a test",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Test-infra correctness (no direct coding-standards rule ID)",
+  "area": "learning_tracker/test/flutter_test_config.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/flutter_test_config.dart",
+      "line": 18,
+      "quote": "FlutterError.onError = (details) {"
+    },
+    {
+      "file": "/home/daniel/flutter/packages/flutter_test/lib/src/binding.dart",
+      "line": 1773,
+      "quote": "FlutterError.onError = (FlutterErrorDetails details) {"
+    }
+  ],
+  "sites": 1,
+  "why": "The comment above this block claims it suppresses 'residual font not found errors... cosmetic rendering issues, not test logic failures' during test execution. I traced the installed Flutter SDK (3.44.1, matching this repo's `flutter --version`): TestWidgetsFlutterBinding._runTest() (binding.dart:1770) saves whatever handler is currently installed into _oldExceptionHandler, then unconditionally overwrites FlutterError.onError with its own handler that just does `_pendingExceptionDetails = details` — it never calls the previously-installed handler. postTest() (binding.dart:2131-2134) restores _oldExceptionHandler only after the test body has finished. Since _runTest() wraps every individual test()/testWidgets() body, the custom GoogleFonts-substring filter installed in flutter_test_config.dart is captured as 'the old handler' before the first test and is never invoked while any test is actually running — exactly the window in which a font-not-found FlutterError would fire. If such an error does occur during a pump, it is captured into _pendingExceptionDetails and fails the test outright, contradicting the file's own comment about what it does.",
+  "recommendation": "Delete the dead FlutterError.onError override (lines 17-22), or replace it with a mechanism proven to run mid-test (e.g. wrap only the specific pump inside affected tests, or fix the font-loading gap in finding 'golden_runner.dart never renders real glyphs' so the underlying error stops occurring). Do not rely on a global onError swap in this file for anything that needs to suppress errors during pumpWidget/pumpAndSettle.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A widget test that deliberately throws/renders a FlutterError whose message contains 'GoogleFonts' mid-pump either fails (proving the current filter does nothing) or is demonstrated to pass only via a mechanism that actually executes during _runTest's window.",
+    "The doc comment above the handler is removed or corrected to match what the code can actually do."
+  ],
+  "labels": [
+    "test-infra",
+    "dead-code",
+    "misleading-comment",
+    "sdk-traced"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-helpers",
+  "chunk": "grp-150",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-81",
+  "linearPriority": "Low"
+}

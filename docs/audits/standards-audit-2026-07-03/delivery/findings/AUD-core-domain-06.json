@@ -1,0 +1,53 @@
+{
+  "title": "Give StartDateWindowException a stable error code instead of a raw pre-formatted English message (EH-5)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5",
+  "area": "core/domain/value_objects (tracks/setup)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/program_starting_position.dart",
+      "line": 62,
+      "quote": "'Program start date cannot be in the future. '"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/program_starting_position.dart",
+      "line": 182,
+      "quote": "class StartDateWindowException extends ValidationException {"
+    },
+    {
+      "file": "learning_tracker/lib/core/exceptions/app_exception.dart",
+      "line": 33,
+      "quote": "final String message;"
+    }
+  ],
+  "sites": 1,
+  "why": "EH-5 requires domain/data errors to carry stable codes/enums rather than pre-formatted human messages, specifically because this is an EN+Hebrew app where a raw English string renders untranslated for Hebrew-locale users. StartDateWindowException (thrown from the live B2/B3 date-window invariant, reached via ProgramStartingPosition.fromLegacyGrammar → track_blueprint.dart) is constructed with a fully-formatted English sentence, and it extends AppException whose only payload field is `final String message` — there is no code/enum to key an ARB lookup off. A repo-wide grep found no catch site for StartDateWindowException anywhere in lib/, so if the 30-day window is ever violated by legacy/migrated data (not just live UI input, which the picker constrains), the raw English text is the only representation available to whatever eventually surfaces it to the user.",
+  "recommendation": "Add a stable code/enum to StartDateWindowException (or to the AppException hierarchy generally) and have the presentation layer resolve it via AppLocalizations instead of displaying `message` directly.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "StartDateWindowException exposes a stable, locale-independent identifier (enum/const code) alongside or instead of the free-text message.",
+    "Any UI that surfaces this exception resolves the user-facing string via AppLocalizations/ARB, verified by an EN+HE widget test."
+  ],
+  "labels": [
+    "EH-5",
+    "i18n",
+    "error-handling"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "app_exception.dart quote is at line 35, not 33. TrackBlueprint.fromLegacyResult (the only path to this exception) has zero lib/ callers — only its own test invokes it; the claimed exposure path is currently dead code, not a live risk.",
+      "app_exception.dart citation says line 33 but 'final String message;' is actually at line 35 (line 33 is blank) — 2-line offset, quote text itself is real and correctly found nearby; doesn't change the finding's validity."
+    ]
+  },
+  "sourceBatch": "t1-core-domain-learning",
+  "chunk": "grp-017",
+  "normArea": "core/domain",
+  "id": "AUD-core-domain-06",
+  "linearPriority": "Low"
+}

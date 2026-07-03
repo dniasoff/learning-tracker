@@ -1,0 +1,44 @@
+{
+  "title": "Fix nonexistent 'torah' CurriculumId in docs/flows/add-track-flow.md Screen-1 table",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "doc-accuracy",
+  "area": "docs/flows/add-track-flow.md",
+  "evidence": [
+    {
+      "file": "docs/flows/add-track-flow.md",
+      "line": 207,
+      "quote": "| `torah` | תורה | No |"
+    },
+    {
+      "file": "learning_tracker/lib/core/enums/curriculum_id.dart",
+      "line": 22,
+      "quote": "mishnehTorah('mishneh_torah'),"
+    }
+  ],
+  "sites": 1,
+  "why": "The real 9th CurriculumId storageKey is `mishneh_torah` (Mishneh Torah, Maimonides' legal code) — there is no `torah` curriculum. This is the exact confusion component-inventory.md and developer-handbook.md separately warn readers not to make ('do not confuse with Chumash/Torah'), yet it appears as a literal table entry here, and the doc's Screen-1 curriculum list is missing Mishneh Torah entirely as a result.",
+  "recommendation": "Replace the `torah` row with `mishneh_torah` / משנה תורה / Yes (it has programs — Dirshu Kinyan Torah).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "add-track-flow.md's Screen 1 curriculum table lists all 9 CurriculumId storageKeys exactly as declared in curriculum_id.dart"
+  ],
+  "labels": [
+    "docs",
+    "drift",
+    "curriculum"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p1",
+  "chunk": "grp-165",
+  "normArea": "docs",
+  "id": "AUD-docs-30",
+  "linearPriority": "Low"
+}

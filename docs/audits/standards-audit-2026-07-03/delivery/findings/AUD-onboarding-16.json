@@ -1,0 +1,43 @@
+{
+  "title": "Stop surfacing PinService's raw ArgumentError.message as OnboardingParentPinStep's error text",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "EH-2 / EH-5",
+  "area": "features/onboarding/presentation/steps",
+  "sites": 1,
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_parent_pin_step.dart",
+      "line": 67,
+      "quote": "_pinError = e.message as String?;"
+    }
+  ],
+  "why": "The domain layer's exception message is an English literal that reaches the presentation layer verbatim and unlocalized (PinService throws ArgumentError('PIN must be exactly 4 numeric digits') at pin_service.dart:65,135,199), so a Hebrew-locale parent sees this exact English sentence when setting up a child's PIN. It is also brittle cross-layer coupling: ArgumentError.message is typed Object?, so the `as String?` cast is only safe because every current throw site happens to pass a String -- changing any one of the three pin_service.dart throw sites to ArgumentError.value(...) would turn a benign validation failure into an unhandled TypeError in this catch block.",
+  "recommendation": "Give PinService a typed error (enum or sealed class per EH-2/EH-6) instead of ArgumentError(String), and resolve the display string in the widget via AppLocalizations.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "PinService validation failure exposed as a typed value/enum, not ArgumentError with a formatted message",
+    "a test asserts the PIN-mismatch/invalid-PIN error text is resolved via AppLocalizations for both en and he locales"
+  ],
+  "labels": [
+    "error-handling",
+    "i18n",
+    "onboarding",
+    "pin"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Failure scenario is guarded by core/widgets/pin_entry_widget.dart's per-digit digitsOnly/maxLength(1) formatters — pin.length!=4/!_isNumeric can't actually occur through this UI path, so the concrete i18n-cost claim is overstated; the architectural coupling/cast-fragility point still stands as P3 hygiene."
+    ]
+  },
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "chunk": "grp-067",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-16",
+  "linearPriority": "Low"
+}

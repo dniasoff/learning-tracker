@@ -1,0 +1,77 @@
+{
+  "title": "Add '// keepAlive:' justification comments to the 8 bare keepAlive:true providers in preference_providers.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-6 (every keepAlive: true carries an inline justification comment)",
+  "area": "core/preferences (riverpod hygiene)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 28,
+      "quote": "@Riverpod(keepAlive: true)\nHebrewDatePreference hebrewDatePreference(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 35,
+      "quote": "@Riverpod(keepAlive: true)\nNikudPreference nikudPreference(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 42,
+      "quote": "@Riverpod(keepAlive: true)\nTransliterationVariantPreference transliterationVariantPreference(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 49,
+      "quote": "@Riverpod(keepAlive: true)\nTextDisplayPreference textDisplayPreference(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 125,
+      "quote": "@Riverpod(keepAlive: true)\nclass UseHebrewDate extends _$UseHebrewDate {"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 145,
+      "quote": "@Riverpod(keepAlive: true)\nclass ShowNikudPref extends _$ShowNikudPref {"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 210,
+      "quote": "@Riverpod(keepAlive: true)\nclass CurrentTransliterationVariant extends _$CurrentTransliterationVariant {"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 231,
+      "quote": "@Riverpod(keepAlive: true)\nclass CurrentFontSize extends _$CurrentFontSize {"
+    }
+  ],
+  "sites": 8,
+  "why": "docs/coding-standards.md:154 requires 'every keepAlive: true carries an inline // keepAlive: justification'; the tagged-comment convention is already established elsewhere in this codebase (core/sync/providers/sync_orchestrator_providers.dart:51, features/profiles/.../pin_flow_controller.dart:127, features/content_browsing/.../content_providers.dart:12) but 8 of this file's 11 keepAlive sites carry zero comment of any kind, and even the one that does explain itself (hebrewTermsPreference, line 19-20) doesn't use the tagged format — so a future SM-6 audit grep has nothing to anchor on here.",
+  "recommendation": "Add a one-line '// keepAlive: <reason>' above each, e.g. '// keepAlive: profile-scoped singleton preference store; lives for the app session.'",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A grep for 'keepAlive: true' in this file with no '// keepAlive' comment within 2 lines above returns zero hits (the SM-6 pending audit check)."
+  ],
+  "labels": [
+    "hygiene",
+    "riverpod",
+    "SM-6",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "'the one that does explain itself' should be 'three' (lines 19-20, 77-79, 186-190 all have doc comments); doesn't change the 8 flagged sites."
+    ]
+  },
+  "sourceBatch": "t1-core-providers-prefs",
+  "chunk": "grp-023",
+  "normArea": "core/preferences",
+  "id": "AUD-core-preferences-05",
+  "linearPriority": "Low"
+}

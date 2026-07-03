@@ -1,0 +1,72 @@
+{
+  "title": "Route UserProfileHeaderCard through feature barrels instead of 6 deep cross-feature imports; settings.dart barrel is dead (Rule 2)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 2 (cross-feature barrel) + Rule-0 checker defect",
+  "area": "features/settings presentation layering",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 4,
+      "quote": "import 'package:learning_tracker/features/account/domain/models/app_user.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 5,
+      "quote": "import 'package:learning_tracker/features/account/domain/models/auth_state.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 6,
+      "quote": "import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 7,
+      "quote": "import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 8,
+      "quote": "import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 9,
+      "quote": "import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/settings.dart",
+      "line": 3,
+      "quote": "// Import this barrel (features/settings/settings.dart) from outside this"
+    }
+  ],
+  "sites": 7,
+  "why": "Rule 2 requires cross-feature references go through a barrel; UserProfileHeaderCard instead reaches directly into 3 files under features/account and 3 under features/profiles. Meanwhile features/settings/settings.dart -- the feature's only declared public surface, per its own header comment -- exports nothing and a repo-wide grep shows zero files import it. This is invisible in the audit baseline because the Makefile's own Rule-2 checker (make audit check 15/15, learning_tracker/Makefile:374-386) is broken: its awk step compares the feature name parsed from the file-path column against the feature name parsed from the FIRST 'features/X/' match in the whole grep line, which is always the importing file's own path (it appears before the import statement in `grep -n` output) -- so a[1] always equals b[1] and the WARN branch can never fire, for any file, repo-wide. I confirmed this by running the exact Makefile pipeline against this file: it produced zero matches despite the 6 genuine cross-feature imports above. Concrete cost: renaming/restructuring AppUser, AuthState or ProfileModel inside account/profiles breaks this widget with no barrel boundary to absorb the change, and nothing in CI would warn about it even though Rule 2 is nominally 'enforced'.",
+  "recommendation": "Either populate settings.dart (and account's/profiles' equivalents) with a real public surface and route UserProfileHeaderCard's imports through them, or delete the dead settings.dart if the barrel convention is being abandoned. Separately, fix the awk field-comparison in Makefile check 15/15 so it diffs the importing file's own feature (from the path column) against the feature parsed specifically from the `package:learning_tracker/features/...` import string, not the first match in the whole line.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "make audit check 15/15 flags a deliberately-reintroduced cross-feature deep import in a scratch file (proves the checker actually fires)",
+    "user_profile_header_card.dart imports account/profiles symbols only via their barrels, or settings.dart is removed if the barrel convention is dropped"
+  ],
+  "labels": [
+    "layering",
+    "rule-2",
+    "tooling-defect"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "coding-standards.md's actual Rule 2 text names `providers.dart` as the sole sanctioned barrel, not `<feature>.dart` — settings.dart is not really 'the' correct target either. Also verified account.dart (populated, real exports) and profiles.dart (empty, like settings.dart) both have zero repo-wide importers too — the dead-barrel problem is systemic across features, broader than the single file reported, not narrower. This strengthens rather than weakens the finding."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p2",
+  "chunk": "grp-100",
+  "normArea": "features/settings",
+  "id": "AUD-settings-09",
+  "linearPriority": "Medium"
+}

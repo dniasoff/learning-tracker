@@ -1,0 +1,68 @@
+{
+  "title": "Move DB/temp-dir cleanup into addTearDown across epic_21_multi_account_test.dart so failed assertions don't leak resources",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 / Nygard lens (cleanup on the failure path)",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+      "line": 194,
+      "quote": "await aliceDb.close();"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+      "line": 365,
+      "quote": "await db.close();"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+      "line": 475,
+      "quote": "await registry.close();"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+      "line": 636,
+      "quote": "await registry.close();"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+      "line": 637,
+      "quote": "await tempDir.delete(recursive: true);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+      "line": 1002,
+      "quote": "await registry.close();"
+    }
+  ],
+  "sites": 20,
+  "why": "20 of this file's ~30 tests acquire a DeviceRegistryDatabase/UserDatabase/temp Directory and release it as the very last statement of the test body instead of via addTearDown/tearDown -- the correct pattern the SAME file already uses in Stories 21.1, 21.3, and 21.4 (`tearDown(() => registry.close())` at lines 32/208/257). When an earlier expect() in one of the 20 ad-hoc tests fails, execution stops before the cleanup line runs: the temp directory and its .db file are never deleted, and the Drift database handle is never closed. On a local edit-test-rerun loop this leaks a fresh systemTemp directory on every failed run; a leaked open DB handle mid-suite risks 'database is locked'-style failures bleeding into unrelated tests later in the same run, muddying CI triage of an unrelated failure.",
+  "recommendation": "Replace every trailing `await registry.close()` / `await db.close()` / `await tempDir.delete(recursive: true)` with `addTearDown(() => ...)` registered immediately after the resource is created, mirroring the tearDown(() => registry.close()) pattern already used in this file's Stories 21.1/21.3/21.4 groups.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "No test body in this file calls .close()/.delete(recursive on a resource it created without a preceding addTearDown for that same resource",
+    "A deliberately-failing expect() inserted before the old cleanup line still results in the temp dir/DB being cleaned up (verified via addTearDown running)"
+  ],
+  "labels": [
+    "Nygard-lens",
+    "resource-leak",
+    "test-hygiene",
+    "TQ-6"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The 'database is locked-style failures bleeding into unrelated tests' mechanism is overstated: all DBs cited use NativeDatabase.memory() and each tempDir has a unique generated name, so cross-test file-lock contention is implausible. The real, supportable cost is leaked temp directories under Directory.systemTemp accumulating across local failed test runs, which is still a legitimate P2."
+    ]
+  },
+  "sourceBatch": "t1-story-epics-21-24",
+  "chunk": "grp-141",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-15",
+  "linearPriority": "Medium"
+}

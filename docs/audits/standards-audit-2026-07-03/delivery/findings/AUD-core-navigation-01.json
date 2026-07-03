@@ -1,0 +1,66 @@
+{
+  "title": "Delete dead core/navigation re-export shims and break the app_router↔guards import cycle",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "coding-standards.md:63 \"dependency direction is strictly app → features → core\"; adjacent to Rule 2's \"do not add other barrel/re-export files\"",
+  "area": "lib/core/navigation (architecture/layering)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/navigation/app_router.dart",
+      "line": 2,
+      "quote": "export 'package:learning_tracker/app/router/app_router.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/core/navigation/app_shell.dart",
+      "line": 2,
+      "quote": "export 'package:learning_tracker/app/router/app_shell.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/core/navigation/router_provider.dart",
+      "line": 2,
+      "quote": "export 'package:learning_tracker/app/router/router_provider.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/core/navigation/guards/auth_guard.dart",
+      "line": 2,
+      "quote": "export 'package:learning_tracker/app/router/guards/auth_guard.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/core/navigation/guards/pin_guard.dart",
+      "line": 3,
+      "quote": "import 'package:learning_tracker/core/navigation/app_router.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_router.dart",
+      "line": 8,
+      "quote": "import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';"
+    }
+  ],
+  "sites": 4,
+  "why": "The W1.2 refactor (commit eb9e7fb7, message: \"Old core/navigation/ paths become re-export stubs so all 42 importers keep compiling without mass edits\") moved the real router files to lib/app/router/ but the promised cleanup never happened. Three of this batch's own guards (pin_guard.dart:3, profile_guard.dart:6, restore_guard.dart:8) still import the OLD core/navigation/app_router.dart shim to reach route classes, and lib/app/router/app_router.dart imports those same three guards (line 8 and neighbours) — producing a real import cycle app→core→(shim)→app that spans exactly the boundary coding-standards.md:63 calls \"strict\". Dart tolerates the cycle at compile time, but it makes the documented layering diagram false and blocks ever extracting core/ as a standalone package. Two of the four shims are worse than merely redundant: app_shell.dart has zero importers anywhere in the repo (fully dead), and guards/auth_guard.dart is imported only by 3 test files (test/core/navigation/app_shell_test.dart, auth_guard_test.dart, story_acceptance/epic_01_foundation_test.dart) — production code already migrated off it, tests didn't.",
+  "recommendation": "Point pin_guard.dart/profile_guard.dart/restore_guard.dart's route-class imports at lib/app/router/app_router.dart directly (or, better, pass the needed PageRouteInfo constructors in via the guard constructor so core/ guards don't need to know about app/router at all). Delete app_shell.dart outright (dead). Delete guards/auth_guard.dart and repoint its 3 remaining test importers at lib/app/router/guards/auth_guard.dart. Leave router_provider.dart's shim only if a follow-up ticket is filed to finish its migration too.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "`grep -rn \"import 'package:learning_tracker/app/\" learning_tracker/lib/core/` returns no matches.",
+    "`grep -rln \"core/navigation/app_shell.dart\\|core/navigation/guards/auth_guard.dart\" learning_tracker/lib learning_tracker/test` returns no matches (files deleted, callers repointed).",
+    "make audit gains a core→app check mirroring existing check 14/15 (core→features)."
+  ],
+  "labels": [
+    "architecture",
+    "layering",
+    "dead-code"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-nav-utils",
+  "chunk": "grp-019",
+  "normArea": "core/navigation",
+  "id": "AUD-core-navigation-01",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,58 @@
+{
+  "title": "Widen PinFlowController's catch scopes and add a finally so busy never sticks true on an untyped PinService exception",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "SM-5",
+  "area": "features/profiles/presentation/providers/pin_flow_controller.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 283,
+      "quote": "    } on ArgumentError catch (e) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 350,
+      "quote": "        state = state.copyWith(busy: true, errorMessage: null);\n        await pinService.setProfilePin(profileId, pin);"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 397,
+      "quote": "    } on PinLockoutException catch (e) {"
+    }
+  ],
+  "sites": 4,
+  "why": "PinFlowState hand-rolls AsyncValue's job via a `busy`/`errorMessage` pair instead of AsyncNotifier+AsyncValue.guard, and the hand-rolled error handling is incomplete: _handleSetup catches only ArgumentError, _handleChange's verifyCurrent and _handleVerify catch only PinLockoutException, and _handleChange's confirm step (line 350-351, the PIN-CHANGE save call) has no catch at all. appendDigit/backspace both early-return while `state.busy` is true, so any OTHER exception from PinService.setProfilePin/verifyProfilePin (a bcrypt hashing error, a DB write failure, disk full) leaves busy stuck true forever, permanently freezing the parent-PIN keypad with no error shown and no way to recover short of an app restart. This is the load-bearing PIN gate for parent/settings access.",
+  "recommendation": "Wrap each of the 4 call sites in a catch-all (or a `finally { if (state.busy) state = state.copyWith(busy: false); }`) in addition to the existing typed catches, and route the generic-exception case to `state.copyWith(busy:false, errorMessage: <generic error>)` instead of leaving busy uncleared.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Every code path through _handleSetup, _handleChange (all 3 async steps), and _handleVerify guarantees state.busy is false after the method returns, on both success and any exception type.",
+    "Regression test: a fake PinService that throws a generic StateError (not ArgumentError/PinLockoutException) from setProfilePin/verifyProfilePin in each of the 4 sites; assert state.busy == false and state.errorMessage != null afterward, and that appendDigit still accepts input.",
+    "Rule-0 checker: extend tool/ audit greps to flag a `busy: true`/`loading: true` state assignment in a Notifier method that is not followed by an unconditional reset before the method's closing brace (heuristic grep for `copyWith(busy: true` without a paired `finally`)."
+  ],
+  "labels": [
+    "sm-5",
+    "riverpod",
+    "error-handling",
+    "parent-pin",
+    "frozen-ui"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 3,
+    "refutations": [
+      "Evidence quotes are literally accurate (verified at lines 283, 324, 350-351, 397), and SM-5's grep target (try/catch assigning state in a @riverpod Notifier, hand-rolled instead of AsyncValue.guard) does match this file. But the severity narrative is dishonest: 3 of the 4 cited call sites (line 324'"
+    ],
+    "corrections": [
+      "The claim 'no way to recover short of an app restart' is false and overstates severity. parent_pin_keypad_dialog.dart's PinKeypadDialogFrame wires PopScope(canPop:false) and the X close button's onPressed to `onClose` UNCONDITIONALLY (not gated on `busy` -- only the digit/backspace/keypad-cancel buttons check `busy`). Tapping close or the back gesture calls _popResult -> router.pop, exiting the frozen screen. Re-entering the PIN flow creates a new PinFlowScreen with a fresh _mountToken, and initializeForMount() detects the token mismatch and fully resets PinFlowState (busy:false) -- no app restart needed, just close-and-retry. The underlying defect (silent failure, no error shown, current entry attempt lost) is still real and rule-violating, but it's a recoverable UX/reliability bug, not a permanent app-breaking freeze, so I'm downgrading from P1 to P2.",
+      "3 of the 4 cited call sites (pin_flow_controller.dart:324, :350-351, :397 — all inside _handleChange/_handleVerify) sit behind PinFlowChangeRoute/PinFlowVerifyRoute, which are defined in app_router.gr.dart but never invoked from any production or test code path (confirmed via repo-wide grep) — i.e. dead code, not 'the load-bearing PIN gate for parent/settings access' as claimed. The real live parent-PIN verify/change UI is a separate widget, ParentPinKeypadDialog/showParentPinChangeDialog (settings_screen.dart:661), untouched by this finding. Only the _handleSetup site (line 283), reachable via PinFlowSetupRoute for first-time/post-wipe PIN creation only (pin_guard.dart:103, settings_screen.dart:668-671 guarded by `!_hasPin`), is a genuine live-code SM-5/busy-stuck risk. Downgrade from P1 to P2 (narrow, first-run-only design debt) and confidence to SUSPECTED since 75% of the evidenced sites and the central severity justification do not hold in shipped code; the recommendation to fix all 4 sites is still reasonable hygiene but should not be sold as fixing a load-bearing gate.</evidence_correction>\n",
+      "3 of the 4 evidence sites (pin_flow_controller.dart:324, :350-351, :397, inside _handleChange and _handleVerify) are unreachable in production — PinFlowMode.change/verify are never triggered because PinFlowChangeRoute/PinFlowVerifyRoute are never pushed anywhere in lib/ (confirmed by grep and by the already-verified sibling finding in verified-findings-r3.json recommending their deletion). Only line 283 (_handleSetup, ArgumentError-only catch, reachable via PinFlowSetupRoute) is a live production site."
+    ]
+  },
+  "sourceBatch": "sup-sm5",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-11",
+  "linearPriority": "Medium"
+}

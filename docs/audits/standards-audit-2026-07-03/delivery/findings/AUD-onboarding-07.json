@@ -1,0 +1,44 @@
+{
+  "title": "Await BulkMarkScreen._expungeRefs's expunge writes before invalidating dependent providers",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard-lens (unordered I/O)",
+  "area": "features/onboarding/presentation/screens",
+  "sites": 1,
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+      "line": 303,
+      "quote": "service\n          .expungePriorCompletions("
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+      "line": 319,
+      "quote": "ref.invalidate(dashboardCompletionPercentageProvider(widget.curriculumId));"
+    }
+  ],
+  "why": "The loop fires expungePriorCompletions (which internally does multiple awaited DB writes) without awaiting it, then immediately calls ref.invalidate on the dashboard/progress providers. Because those providers are manually invalidated rather than backed by a reactive .watch() stream, the invalidated providers can refetch before the un-awaited expunge write lands, showing the user a stale (pre-expunge) completion count right after unticking a previously-marked item. Confirming this needs a widget test with a deliberately delayed fake CompletionRepository asserting the provider's value immediately after _toggleItem completes.",
+  "recommendation": "await Future.wait(refs.map((r) => service.expungePriorCompletions(...))) before the ref.invalidate calls, or move invalidation into a .whenComplete() continuation.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "a test with an artificially delayed expunge write asserts the dashboard provider reflects the post-expunge count immediately after the awaited toggle completes, not the pre-expunge count"
+  ],
+  "labels": [
+    "race-condition",
+    "riverpod",
+    "onboarding"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "chunk": "grp-067",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-07",
+  "linearPriority": "Medium"
+}

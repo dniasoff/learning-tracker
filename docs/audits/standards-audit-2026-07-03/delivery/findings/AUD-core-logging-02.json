@@ -1,0 +1,71 @@
+{
+  "title": "Remove or explicitly justify AppLogger.setupFlutterErrorHandlers — dead code duplicating crashlytics_bootstrap.dart's live handlers",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code (Everything sweep) / Fowler duplication",
+  "area": "core/logging",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/logging/logger.dart",
+      "line": 85,
+      "quote": "static void setupFlutterErrorHandlers() {"
+    },
+    {
+      "file": "learning_tracker/lib/app/bootstrap/crashlytics_bootstrap.dart",
+      "line": 26,
+      "quote": "FlutterError.onError = (FlutterErrorDetails details) {"
+    },
+    {
+      "file": "learning_tracker/lib/app/bootstrap/bootstrap.dart",
+      "line": 40,
+      "quote": "crashlytics = bootstrapCrashlyticsHandlers("
+    },
+    {
+      "file": "learning_tracker/test/core/logging/logger_test.dart",
+      "line": 54,
+      "quote": "AppLogger.setupFlutterErrorHandlers();"
+    },
+    {
+      "file": "learning_tracker/lib/app/bootstrap/logger_bootstrap.dart",
+      "line": 8,
+      "quote": "void bootstrapLogger() {\n  AppLogger.init();"
+    },
+    {
+      "file": "learning_tracker/lib/app/bootstrap/bootstrap.dart",
+      "line": 37,
+      "quote": "final talker = AppLogger.init();\n  final log = AppLogger(talker);"
+    }
+  ],
+  "sites": 1,
+  "why": "Grepping every .dart file in the repo shows AppLogger.setupFlutterErrorHandlers is referenced nowhere except its own definition and its 3 unit tests in logger_test.dart. Production's bootstrap chain (bootstrap.dart:40) installs FlutterError.onError/PlatformDispatcher.onError exclusively via bootstrapCrashlyticsHandlers in app/bootstrap/crashlytics_bootstrap.dart — a completely independent implementation of the same responsibility that also forwards to Crashlytics (setupFlutterErrorHandlers only forwards to Talker). A maintainer reading logger_test.dart's 3 green tests would reasonably believe this is the production error-handling path; if some future refactor swaps main.dart's wiring back to this method for 'simplicity', fatal-crash reporting silently stops reaching Crashlytics while Talker logs keep looking healthy, and the existing green test suite would not catch it since it only ever exercises the unused copy.",
+  "recommendation": "Delete AppLogger.setupFlutterErrorHandlers and its 3 tests, or — if it's meant as a documented fallback for contexts without Crashlytics wired — rename it and add a comment cross-referencing crashlytics_bootstrap.dart so the duplication is intentional and visible rather than accidental drift.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn 'setupFlutterErrorHandlers' lib/ returns only its own definition, or a caller with a comment explaining the split from crashlytics_bootstrap.dart",
+    "No test exercises a code path unreachable from main.dart's actual bootstrap chain"
+  ],
+  "labels": [
+    "dead-code",
+    "hygiene",
+    "P2",
+    "logging"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "None — all four cited file:line/quote pairs verified exact; grep confirms no other production callers."
+    ]
+  },
+  "sourceBatch": "t1-core-analytics-logging",
+  "chunk": "grp-003",
+  "mergedFrom": [
+    "Delete dead AppLogger.setupFlutterErrorHandlers (logger.dart:85-94) — near-duplicate of the live crashlytics_bootstrap.dart handler wiring"
+  ],
+  "normArea": "core/logging",
+  "id": "AUD-core-logging-02",
+  "linearPriority": "Medium"
+}

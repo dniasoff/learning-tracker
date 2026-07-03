@@ -1,0 +1,45 @@
+{
+  "title": "Replace DateTime.now() wall-clock calls with DateTimeFactory.nowUtc() in profile_creation_use_case_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart",
+      "line": 226,
+      "quote": "createdAt: DateTime.now().toUtc(),"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart",
+      "line": 277,
+      "quote": "createdAt: DateTime.now().toUtc(),"
+    }
+  ],
+  "sites": 4,
+  "why": "TQ-6 requires hermetic tests with no wall-clock; check 6/15 of make audit already forbids DateTime.now() in lib/ (outside core/time) but doesn't scan test/, so this slipped through. This same file's own setUp (line 37-38) correctly uses DateTimeFactory.nowUtc() — these 4 calls (lines 226, 227, 277, 278) are the only wall-clock use in the file, seeding LearnerProfilesCompanion.insert rows directly. Currently harmless since no assertion reads the timestamp, but it's an inconsistent, uncontrolled precedent in an otherwise clock-disciplined test file.",
+  "recommendation": "Swap all 4 occurrences to DateTimeFactory.nowUtc().",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep 'DateTime.now()' test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart returns nothing",
+    "The repo-wide DateTime.now() Rule-0 grep is extended to cover test/ (TQ-6 checker)"
+  ],
+  "labels": [
+    "tq-6",
+    "testing",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-079",
+  "normArea": "tests/profiles",
+  "id": "AUD-t-profiles-05",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,46 @@
+{
+  "title": "Remove the inert .gitattributes merge=beads directive for a gitignored path",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-1 (dead guardrail config)",
+  "area": "git config",
+  "evidence": [
+    {
+      "file": ".gitattributes",
+      "line": 3,
+      "quote": ".beads/issues.jsonl merge=beads"
+    },
+    {
+      "file": ".gitignore",
+      "line": 5,
+      "quote": ".beads/"
+    }
+  ],
+  "sites": 2,
+  "why": "`.beads/` is git-ignored at the repo root, and `git ls-files | grep beads` confirms `.beads/issues.jsonl` has never been tracked. A `merge=` custom-merge-driver attribute only ever activates during a git merge of a tracked file, so this line can never fire. Even setting that aside, no `merge.beads.driver` command is registered anywhere in the repo (no hooks/, tool/, or doc sets it via `git config`) — so even a force-added copy of the file would hit 'unable to find custom merge driver beads' rather than actually merging. This is dead scaffolding for a workflow (the beads issue tracker) that isn't wired into this repo.",
+  "recommendation": "Either delete the .gitattributes line (if beads isn't used here), or un-ignore .beads/issues.jsonl and add a committed setup step that registers `git config merge.beads.driver`.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Either .gitattributes no longer references a driver that's never registered, or the driver is registered by a committed script and the target path is tracked."
+  ],
+  "labels": [
+    "hygiene",
+    "dead-config",
+    "git"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "'.beads/issues.jsonl has never been tracked' is false: commit 34643e55 added it and commit 8aa6c1dd ('chore: Remove beads in favor of gastown') deliberately removed it. It's leftover scaffolding from a deprecated tool switch, not something never wired up -- doesn't change the current-state inertness conclusion. AG-1 citation is also a mismatch; this is really a Fowler dead-code observation."
+    ]
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-155",
+  "normArea": "repo",
+  "id": "AUD-repo-05",
+  "linearPriority": "Low"
+}

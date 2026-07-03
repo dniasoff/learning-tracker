@@ -1,0 +1,45 @@
+{
+  "title": "De-duplicate hand-typed matrix literals from write_payloads.json PAYLOADS in firestore_rules.test.mjs (stage_definitions.track_id, study_day_configs.day_type)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "duplication (Fowler) — precedent already documented in-file",
+  "area": "firestore-rules-tests (functions/test)",
+  "evidence": [
+    {
+      "file": "learning_tracker/functions/test/firestore_rules.test.mjs",
+      "line": 401,
+      "quote": "track_id: 't1',"
+    },
+    {
+      "file": "learning_tracker/functions/test/fixtures/write_payloads.json",
+      "line": 30,
+      "quote": "\"track_id\": 1,"
+    }
+  ],
+  "sites": 2,
+  "why": "The file's own comment at line 459-461 documents a real incident: 'A stale fixture carrying track_type made this rules test red on dev... invisible because test-rules isn't wired into make ci.' That incident is exactly this pattern repeating: the hand-typed Path-13 `validStage` literal encodes `track_id` as a STRING ('t1') while the codec-derived PAYLOADS.stage_definitions fixture (the file's own stated 'single source of truth') encodes it as a NUMBER (1); similarly Path-22's `validConfig.day_type` is 'learning' while PAYLOADS.study_day_configs.day_type (used by PHASE E, line 844) is 'study'. Neither copy is cross-checked against the other. Today neither divergence trips a rule (hasOnly only checks key names, not value types), so nothing is currently broken — this is a latent maintenance trap that reproduces the file's own documented failure mode, not a live bug.",
+  "recommendation": "Derive the Path-13/Path-22 matrix literals from PAYLOADS (spread + override, as PHASE D/E already do) instead of hand-typing a second copy, or add an explicit comment cross-referencing the fixture so a schema change prompts updating both.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "stage_definitions and study_day_configs matrix-test literals are sourced from PAYLOADS or explicitly comment-linked to it so one edit updates both"
+  ],
+  "labels": [
+    "hygiene",
+    "duplication",
+    "fixtures",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p2",
+  "chunk": "grp-159",
+  "normArea": "firebase",
+  "id": "AUD-firebase-13",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,45 @@
+{
+  "title": "Document all 9 shipped custom_lint rules in README.md; fix the 'eight rules' miscount",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "custom_lints",
+  "evidence": [
+    {
+      "file": "packages/custom_lints/lib/learning_tracker_lints.dart",
+      "line": 3,
+      "quote": "/// Provides eight rules:"
+    },
+    {
+      "file": "packages/custom_lints/README.md",
+      "line": 159,
+      "quote": "## Rule 5 — `no_hardcoded_text_direction`"
+    }
+  ],
+  "sites": 2,
+  "why": "learning_tracker_lints.dart's doc comment claims 'eight rules' but lists and registers nine (NoColorLiteralOutsideTheme, NoCurriculumDisplayNameBypass, NoEToStringInUi, NoFeatureCrossImport, NoFirebaseOutsideCore, NoHardcodedDomainTerm, NoHardcodedTextDirection, NoRawLogEvent, NoRawTalker). README.md documents only 5 (Rules 1-5: curriculum-bypass, feature-cross-import, firebase-outside-core, raw-talker, hardcoded-text-direction) and its 'Configuration' disable-list matches only those 5. Verified via git log that no_color_literal_outside_theme (0c66c611), no_hardcoded_domain_term (e84e880f), and no_e_to_string_in_ui + no_raw_logevent (bc327fef) were each added in commits that never touched README.md — the doc was last updated in a56ac75b, before any of those three commits. A developer hitting one of the 4 undocumented rules gets no 'why it exists'/'how to fix' guidance the other 5 rules provide.",
+  "recommendation": "Add README.md sections for no_color_literal_outside_theme, no_hardcoded_domain_term, no_e_to_string_in_ui, and no_raw_logevent (same What/Why/How-to-fix format as Rules 1-5), extend the Configuration disable-list to all 9, and fix the doc-comment count.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "packages/custom_lints/README.md documents all 9 rules registered in learning_tracker_lints.dart.",
+    "learning_tracker_lints.dart's doc comment count matches the actual list length."
+  ],
+  "labels": [
+    "docs-drift",
+    "custom-lint",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-lints-hooks",
+  "chunk": "grp-161",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-24",
+  "linearPriority": "Low"
+}

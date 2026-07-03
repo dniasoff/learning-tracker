@@ -1,0 +1,47 @@
+{
+  "title": "Convert ProfileSession to @freezed instead of hand-written ==/hashCode",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming/placement — domain/state models are @freezed, never hand-written ==/hashCode",
+  "area": "features/profiles/domain/models",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/models/profile_session.dart",
+      "line": 22,
+      "quote": "bool operator ==(Object other) =>\n      identical(this, other) ||"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/models/profile_session.dart",
+      "line": 30,
+      "quote": "int get hashCode => profileId.hashCode;"
+    }
+  ],
+  "sites": 1,
+  "why": "ProfileSession is a domain/state model living under domain/models/ (the same directory as the correctly-@freezed ProfileModel), but hand-writes operator== and hashCode instead of using @freezed as the coding standard requires. Today's implementation looks correct, but hand-rolled equality is exactly the class of bug (forgotten field, inconsistent hashCode) the @freezed rule exists to prevent, and it's inconsistent with its own sibling file in the same directory.",
+  "recommendation": "Convert ProfileSession to an abstract @freezed class with a private const constructor for the isActive getter, matching ProfileModel's pattern.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "ProfileSession is declared @freezed; dart run build_runner build generates profile_session.freezed.dart",
+    "Existing call sites (ProfileSession(profileId:), .none(), .isActive) keep compiling unchanged"
+  ],
+  "labels": [
+    "freezed",
+    "hygiene",
+    "naming"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "First evidence line should read 23, not 22 — minor citation offset, doesn't affect substance."
+    ]
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-075",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-12",
+  "linearPriority": "Low"
+}

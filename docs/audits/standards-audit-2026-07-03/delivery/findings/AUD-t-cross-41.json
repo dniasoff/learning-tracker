@@ -1,0 +1,51 @@
+{
+  "title": "Rewrite ConnectivityGateway's only test — it is tautologically true and hits the real network",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests: no network) + TQ-8 (assertion weaker than what the source can do wrong)",
+  "area": "core/network (test hermeticity)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/network/connectivity_service_test.dart",
+      "line": 14,
+      "quote": "expect(online, isNot(offline));"
+    },
+    {
+      "file": "learning_tracker/lib/core/network/connectivity_gateway.dart",
+      "line": 26,
+      "quote": "Future<bool> get isOffline async => !(await isOnline);"
+    },
+    {
+      "file": "learning_tracker/lib/core/network/connectivity_gateway.dart",
+      "line": 14,
+      "quote": "final result = await InternetAddress.lookup(\n        'dns.google',"
+    }
+  ],
+  "sites": 2,
+  "why": "isOffline is defined as the literal negation of isOnline, so expect(online, isNot(offline)) reduces to 'online == online' — true for every possible return value, including if isOnline were hardcoded to `return true;`. The test can never catch a regression in the actual DNS-lookup logic. Because ConnectivityGateway has no injectable seam for the lookup, the test cannot fake a response either way and instead performs a live DNS query to dns.google on every run — flaky/slow/blocked in network-restricted CI or sandboxes, and this is the class's only test.",
+  "recommendation": "Add an injectable lookup function (e.g. `Future<List<InternetAddress>> Function(String)`, defaulting to InternetAddress.lookup) to ConnectivityGateway, then test both the true and false paths via a fake with zero real network access.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "test asserts isOnline == true for a faked successful lookup and == false for a faked SocketException/timeout",
+    "test suite passes with network access disabled",
+    "renamed to connectivity_gateway_test.dart (see naming finding)"
+  ],
+  "labels": [
+    "testing",
+    "hermeticity",
+    "tautological-test"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-network",
+  "chunk": "grp-021",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-41",
+  "linearPriority": "Medium"
+}

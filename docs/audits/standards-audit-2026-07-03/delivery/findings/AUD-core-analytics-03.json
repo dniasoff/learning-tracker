@@ -1,0 +1,46 @@
+{
+  "title": "Fix misleading 'Keeps alive' doc comment on streakMilestoneAnalyticsObserverProvider — it is declared autoDispose",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming/doc hygiene (Evans ubiquitous language)",
+  "area": "core/analytics",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/analytics/streak_milestone_analytics_observer.dart",
+      "line": 2,
+      "quote": "/// Keeps alive to monitor streak milestones for the active profile."
+    },
+    {
+      "file": "learning_tracker/lib/core/analytics/streak_milestone_analytics_observer.dart",
+      "line": 39,
+      "quote": "StreamProvider.autoDispose<void>((ref) async* {"
+    }
+  ],
+  "sites": 1,
+  "why": "In a codebase where SM-6 gives `keepAlive: true` a specific, load-bearing meaning ('every keepAlive: true carries inline justification'), a doc comment reading 'Keeps alive' directly above a provider declared `.autoDispose` reads as a factual claim about Riverpod lifecycle rather than a plain-English aside — a maintainer skimming the doc before touching this provider's lifetime semantics is one likely misreading away from a wrong conclusion about whether it's safe to change.",
+  "recommendation": "Reword to something like 'Stays active while watched to monitor...', removing the collision with Riverpod's keepAlive terminology.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Doc comment no longer contains the phrase 'Keeps alive' unless the provider is actually annotated keepAlive: true"
+  ],
+  "labels": [
+    "docs",
+    "P3",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Quote 'Keeps alive to monitor streak milestones...' is at line 20, not the cited line 2 (line 2 is actually '/// [AnalyticsEvent.streakMilestoneReached] the first time the'). Second citation (line 39, autoDispose) is exact."
+    ]
+  },
+  "sourceBatch": "t1-core-analytics-logging",
+  "chunk": "grp-004",
+  "normArea": "core/analytics",
+  "id": "AUD-core-analytics-03",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,40 @@
+{
+  "title": "Type and log the catch block in TutorPinResetScreen._sendResetEmail",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 / EH-4",
+  "area": "features/tutoring/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+      "line": 86,
+      "quote": "} catch (e) {\n      if (mounted) {"
+    }
+  ],
+  "sites": 1,
+  "why": "The bare `catch (e)` has no `on X` type, so per Dart semantics it catches everything thrown — including Error subtypes (StateError, TypeError, NoSuchMethodError from a programmer bug) — and silently converts all of them into the same generic 'send failed' UI message with zero AppLogger call. A real programming defect elsewhere in the call chain would present identically to a normal network failure, with no trace to diagnose it.",
+  "recommendation": "Catch a specific exception type (or at least log via AppLogger.instance.error before setting the UI message) so Error subtypes are not silently masked and failures are traceable.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "the catch block logs via AppLogger with the exception and stack trace before updating _errorMessage",
+    "the catch is narrowed to typed exceptions the send/clear operations can actually throw, not a bare catch(e)"
+  ],
+  "labels": [
+    "EH-3",
+    "EH-4",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "grp-124",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-13",
+  "linearPriority": "Medium"
+}

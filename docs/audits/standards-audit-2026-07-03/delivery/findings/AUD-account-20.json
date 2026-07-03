@@ -1,0 +1,45 @@
+{
+  "title": "Centralize the minimum-password-length constant shared by the UI validator and LocalAuthService",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Evans ubiquitous-language / invariant re-derivation",
+  "area": "features/account password policy",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart",
+      "line": 24,
+      "quote": "if (value.length < 6) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/local_auth_service.dart",
+      "line": 59,
+      "quote": "static const int _minPasswordLength = 8;"
+    }
+  ],
+  "sites": 2,
+  "why": "The same conceptual policy (minimum local-account password length) is hard-coded as 6 in the client-side form validator and 8 in LocalAuthService's domain-layer check. Today the two never collide end-to-end — the offline-signup path that reaches LocalAuthService.signUp always passes a synthetic UUID password, never the user-typed one gated by the 6-char validator — but the values being a single conceptual invariant with two different numbers is a landmine for the next call site that wires a real user-typed password through both layers (client says valid at 6-7 chars, domain then throws InvalidInputException).",
+  "recommendation": "Define the constant once (e.g. alongside LocalAuthService or in a small shared constants file) and reference it from auth_validators.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A single named constant is referenced by both the UI validator and LocalAuthService",
+    "A unit test asserts the two validators agree at the boundary length"
+  ],
+  "labels": [
+    "evans",
+    "invariant",
+    "password-policy"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p1",
+  "chunk": "grp-037",
+  "normArea": "features/account",
+  "id": "AUD-account-20",
+  "linearPriority": "Low"
+}

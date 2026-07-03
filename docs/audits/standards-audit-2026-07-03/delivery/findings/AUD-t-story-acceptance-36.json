@@ -1,0 +1,44 @@
+{
+  "title": "Fix stale AC5 doc comment in epic_26_story_26_20 — still claims hebrewTerms/hebrewDate default to false",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "doc-drift",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "line": 10,
+      "quote": "/// AC5: hebrewTerms defaults to false, useHebrewDate defaults to false"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "line": 194,
+      "quote": "'Story 26.20 AC5 — hebrewTerms and useHebrewDate default to true (issue-7a)',"
+    }
+  ],
+  "sites": 1,
+  "why": "The file-level doc comment (written for the original story) still says defaults are false; the group title 184 lines below it, and the tests themselves — which correctly assert isTrue and match the live `defaultValue => true` getters in hebrew_terms_preference.dart / hebrew_date_preference.dart — were updated for fix(issue-7a) but the banner wasn't. A reader who only skims the file header gets the wrong answer.",
+  "recommendation": "Update lines 10-11 to state defaults are true, referencing fix(issue-7a).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "the file header's AC5 line matches the group title and the actual defaultValue getters"
+  ],
+  "labels": [
+    "hygiene",
+    "doc-drift",
+    "epic-26"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-132",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-36",
+  "linearPriority": "Low"
+}

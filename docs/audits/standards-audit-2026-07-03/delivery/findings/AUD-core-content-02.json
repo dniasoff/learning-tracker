@@ -1,0 +1,45 @@
+{
+  "title": "Fix ContentTree.parent()'s off-by-one when a leaf precedes its container in source order",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Correctness bug (Fowler duplicated-but-inconsistent logic between pass 1 and pass 2)",
+  "area": "core/content/content_tree.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/content/content_tree.dart",
+      "line": 138,
+      "quote": "final levels = item.isLeaf ? _ancestorLevels(item) : _levelsOf(item);"
+    },
+    {
+      "file": "learning_tracker/lib/core/content/content_tree.dart",
+      "line": 142,
+      "quote": "final parentLevels = levels.sublist(0, levels.length - 1);"
+    }
+  ],
+  "sites": 1,
+  "why": "Empirically verified: constructed a 4-level Bavli fixture where the leaf item ('Berakhot 2a:1') appears before its own container ('Berakhot 2a') in the input list, called ContentTree.fromCurricula(...).parent('Berakhot 2a:1'), and got 'Berakhot 2' (the grandparent/daf-level container) instead of the correct immediate parent 'Berakhot 2a'. Root cause: for a leaf, `_ancestorLevels(item)` already returns the PARENT container's own key (that's its documented purpose, and pass 1 at lines 110-121 uses it directly with no further truncation). Pass 2 treats `levels` uniformly as if it were the item's own key and applies a second `.sublist(0, length - 1)` 'walk up one level' step — which, for leaves, walks up an extra level past the true parent. Pass 1 resolves leaves correctly when their container is registered first; pass 2's fallback only fires — with the wrong answer — when a leaf is encountered before its container. ContentTree.parent() currently has zero callers in lib/ (content_hierarchy_screen.dart uses only .children()/.containerFor()), so this is not live-user-visible today, but it is a public, documented, keepAlive-cached API on the exact class whose stated purpose is 'O(1) parent/child/adjacent traversal' — the first feature that calls .parent() for breadcrumb 'up' navigation inherits a silently-wrong result whenever source ordering isn't strictly parent-before-child.",
+  "recommendation": "In pass 2's leaf branch, use `ancestorLevels` (the value already returned by _ancestorLevels) directly as the parent container key, the same way pass 1 does — do not apply an additional sublist(0, length-1) truncation for leaves.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A regression test at test/core/content/content_tree_test.dart builds a curriculum with a leaf listed before its own container and asserts ContentTree.parent(leafRef) returns the immediate parent, not the grandparent.",
+    "Existing epic_25_schema_core_test.dart ContentTree assertions continue to pass."
+  ],
+  "labels": [
+    "core/content",
+    "correctness-bug",
+    "confirmed-by-repro"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-content",
+  "chunk": "grp-007",
+  "normArea": "core/content",
+  "id": "AUD-core-content-02",
+  "linearPriority": "Medium"
+}

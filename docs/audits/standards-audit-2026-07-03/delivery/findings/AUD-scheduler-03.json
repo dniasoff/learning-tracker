@@ -1,0 +1,61 @@
+{
+  "title": "Add a profileId ownership check to GoalRepositoryImpl.updateGoal/deleteGoal and unify its profileId source",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "profileId-in-PK / multi-profile isolation invariant (repository as last line of defense); naming/placement (single source of truth)",
+  "area": "features/scheduler/data+domain repositories",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+      "line": 19,
+      "quote": "int profileId = 0,"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+      "line": 74,
+      "quote": "final goals = await _database.goalDao.getGoalsByCurriculumAndProfile(\n      curriculumId.storageKey,"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/repositories/goal_repository.dart",
+      "line": 16,
+      "quote": "required int profileId,"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+      "line": 92,
+      "quote": "final existing = await _database.goalDao.getGoalById(goalId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+      "line": 163,
+      "quote": "final existing = await _database.goalDao.getGoalById(goalId);"
+    }
+  ],
+  "sites": 3,
+  "why": "getGoals() filters by the constructor-injected _profileId field, but createGoal takes its own explicit profileId parameter that is never cross-checked against _profileId — the interface lets a caller create a goal 'for' a different profile than the repository instance represents, which would then be invisible to that same instance's getGoals(). Independently, updateGoal and deleteGoal load the existing row by bare goalId and mutate/delete it with no ownership check at all — updateGoal even copies existing.profileId straight back into the write (line-133, not separately confirmed) without ever comparing it to _profileId. None of this is proven to be hit by today's UI (all current call sites happen to pass matching profileIds), but the repository adds zero defense-in-depth on top of the DAO layer (which itself does not scope goalDao.updateGoal/deleteGoal/getGoalById by profile) — the next screen or bug that supplies a mismatched id/profileId pair silently edits or deletes another profile's goal.",
+  "recommendation": "Pick one source of truth for 'which profile owns this repository instance' and have updateGoal/deleteGoal verify existing.profileId against it before mutating, throwing a typed error on mismatch.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "createGoal derives profileId from the same single source as the rest of the class (drop the redundant parameter or validate it against _profileId).",
+    "updateGoal and deleteGoal verify existing.profileId == _profileId before mutating/deleting, throwing a typed error otherwise.",
+    "New regression test: construct two GoalRepositoryImpl instances (one per profile) sharing one DB; assert profile B's repository cannot update or delete a goalId belonging to profile A."
+  ],
+  "labels": [
+    "multi-profile-isolation",
+    "authorization",
+    "goal-repository"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "chunk": "grp-090",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-03",
+  "linearPriority": "Medium"
+}

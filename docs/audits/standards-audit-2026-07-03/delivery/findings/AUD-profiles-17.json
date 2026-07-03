@@ -1,0 +1,41 @@
+{
+  "title": "Migrate switcherSheetPinGuardRequiredProvider to @riverpod codegen and move it to presentation/providers/",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-1 / placement convention",
+  "area": "features/profiles/presentation/widgets/profile_switcher_sheet.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_switcher_sheet.dart",
+      "line": 28,
+      "quote": "final switcherSheetPinGuardRequiredProvider = FutureProvider<bool>((ref) async {"
+    }
+  ],
+  "sites": 1,
+  "why": "This provider was added fresh in commit 2c346a77 ('AN-2 gate escalating actions... wave-B'), not part of the 121-usage legacy backlog the standard exempts — SM-1 explicitly says to count new additions. Every other provider in the same feature already uses @riverpod codegen (profile_providers.dart:129,137,147; active_profile_provider.dart:42). Because it's a manually-declared, non-family FutureProvider it is never autoDispose: once any widget reads it, it and its watch of profileListStreamProvider/activeProfileIdProvider stay alive for the app's remaining lifetime, not just while the switcher sheet is open. The doc comment's stated reason for going manual ('so tests can inject a known result without touching FlutterSecureStorage') doesn't require it — codegen providers are equally overridable in tests, as the neighboring codegen providers demonstrate.",
+  "recommendation": "Rewrite as an @riverpod FutureProvider<bool> under presentation/providers/, keeping the same override-based test seam.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "switcherSheetPinGuardRequiredProvider is annotated @riverpod and lives in lib/features/profiles/presentation/providers/",
+    "an2_switcher_pin_guard_test.dart's existing overrides continue to pass unmodified",
+    "No manually-declared top-level Provider/FutureProvider remains under presentation/widgets/ in this feature"
+  ],
+  "labels": [
+    "riverpod",
+    "sm-1",
+    "placement"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-077",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-17",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Fix the two-call wall-clock race in epic_25_schema_core_test.dart's SystemLocalDayClock.today() test",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+      "line": 1140,
+      "quote": "final today = clock.today();"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+      "line": 1141,
+      "quote": "final sysNow = DateTime.now();"
+    }
+  ],
+  "sites": 1,
+  "why": "clock.today() and DateTime.now() are two independent wall-clock reads compared for equal year/month/day; if local midnight falls between the two calls the assertions intermittently disagree — a hairline but real flake source, exactly the class TQ-6 exists to keep out of test/ (test/ is not yet covered by the DateTime.now() audit grep that already protects lib/).",
+  "recommendation": "Capture one DateTime.now() first and derive both the expected y/m/d and the clock.today() call from it, or bracket clock.today() between a before/after DateTime.now() pair instead of comparing to a second independent read.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "test reads the wall clock once (or brackets before/after) instead of comparing two independent DateTime.now()-derived values"
+  ],
+  "labels": [
+    "TQ-6",
+    "wall-clock",
+    "flaky-test-risk"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-25",
+  "chunk": "grp-129",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-37",
+  "linearPriority": "Low"
+}

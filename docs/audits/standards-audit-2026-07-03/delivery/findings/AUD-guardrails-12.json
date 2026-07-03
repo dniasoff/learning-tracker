@@ -1,0 +1,52 @@
+{
+  "title": "Fix no_feature_cross_import's _isBarrel to match the documented providers.dart crossing point (or fix the doc)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 2 / AG-11",
+  "area": "custom_lints",
+  "evidence": [
+    {
+      "file": "packages/custom_lints/README.md",
+      "line": 52,
+      "quote": "The single allowed crossing point is `features/<feature>/providers.dart`, which is the deliberate, documented public surface."
+    },
+    {
+      "file": "packages/custom_lints/lib/src/rules/no_feature_cross_import.dart",
+      "line": 47,
+      "quote": "static bool _isBarrel(String importedFeature, String importedPath) {\n    return importedPath == '$importedFeature.dart';"
+    },
+    {
+      "file": "packages/custom_lints/test/no_feature_cross_import_test.dart",
+      "line": 251,
+      "quote": "test('does not recognise providers.dart as barrel', () {\n        expect(_isBarrel('tracks', 'providers.dart'), isFalse);"
+    }
+  ],
+  "sites": 2,
+  "why": "docs/coding-standards.md Rule 2 and this package's own README both tell developers/agents the only sanctioned cross-feature import is `features/<feature>/providers.dart`. No such file exists anywhere in the repo (grep confirms zero `providers.dart` under lib/features/); the real, consistently-used barrel across all 15 features is `features/<feature>/<feature>.dart`, which is what `_isBarrel` actually checks and what the parallel root-Makefile audit check 15 also accepts. A contributor who follows the written standard to fix a warn-only Rule-2 violation would create `providers.dart`, and the lint (once unbricked) would still reject it — the test file even asserts this outcome explicitly (`_isBarrel('tracks', 'providers.dart')` is `isFalse`).",
+  "recommendation": "Pick one source of truth and make all three artifacts agree: either rename the real convention to `providers.dart` project-wide, or update docs/coding-standards.md Rule 2 and packages/custom_lints/README.md to document `<feature>.dart` as the actual barrel. Cheapest fix: update the two docs (README.md Rule 2 section + coding-standards.md Rule 2, the latter outside this batch) to say `<feature>.dart`.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "packages/custom_lints/README.md Rule 2 section and docs/coding-standards.md Rule 2 name the same barrel filename that no_feature_cross_import.dart's _isBarrel actually accepts.",
+    "no_feature_cross_import_test.dart's barrel-name assertions match the corrected documented convention.",
+    "dart test in packages/custom_lints still passes."
+  ],
+  "labels": [
+    "guardrail",
+    "docs-drift",
+    "custom-lint",
+    "rule-2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-lints-hooks",
+  "chunk": "grp-159",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-12",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,53 @@
+{
+  "title": "Inject LocalDayClock into ParentDashboardAggregator instead of hardcoding SystemLocalDayClock",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 / SM-7",
+  "area": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+      "line": 94,
+      "quote": "clock: const SystemLocalDayClock(),"
+    },
+    {
+      "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart",
+      "line": 122,
+      "quote": "final today = DateTime.now().toUtc();"
+    }
+  ],
+  "sites": 2,
+  "why": "compute({DateTime? now}) documents now as 'pass explicitly for testability', and every other metric (pace, engagement, recent-completions window) honors it — but the streak sub-computation always builds StreakStateProvider with a hardcoded SystemLocalDayClock(), which reads real DateTime.now() regardless of the now argument. The accompanying test cannot control this and is forced to call real DateTime.now() to seed matching streak_events (quoted comment at lines 119-121 explains exactly why), making that test a genuine wall-clock dependency and leaving a live day-boundary race: if the wall clock ticks past local midnight between the caller choosing now and StreakStateProvider's internal clock read, currentStreak/maxStreak reflect a different 'today' than the rest of the ParentDashboardData snapshot.",
+  "recommendation": "Accept an optional LocalDayClock clock constructor parameter (default const SystemLocalDayClock()), pass it into StreakStateProvider, and derive it from the aggregator's own now so compute(now: ...) fully determines the snapshot including streak.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A new unit test overrides the injected clock (not real DateTime.now()) and asserts currentStreak/maxStreak for a fixed 'today', replacing the wall-clock seeding at parent_dashboard_aggregator_compute_test.dart:118-122.",
+    "The TQ-6 hermetic-test grep (no DateTime.now() outside core/time) passes for this test file."
+  ],
+  "labels": [
+    "TQ-6",
+    "clock-injection",
+    "dashboard",
+    "streak"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "grp-048",
+  "mergedFrom": [
+    "Replace DateTime.now().toUtc() with a fixed clock in parent_dashboard_aggregator_compute_test.dart's streak test"
+  ],
+  "coDiscoverers": [
+    "t1-feat-dashboard-p1",
+    "t1-feat-parent_mode"
+  ],
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-07",
+  "linearPriority": "Medium"
+}

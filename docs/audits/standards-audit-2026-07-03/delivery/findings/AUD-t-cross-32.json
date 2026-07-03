@@ -1,0 +1,49 @@
+{
+  "title": "Make the 'All fetchers cover all 7 curricula' test verify against CurriculumId.values instead of a hand-maintained map",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (assertion weaker than what the source can actually do wrong)",
+  "area": "test/core/network/sefaria (test quality)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/network/sefaria/fetcher_test.dart",
+      "line": 787,
+      "quote": "// All 7 curricula with dedicated fetchers.\n      expect(fetchers.length, 7);"
+    },
+    {
+      "file": "learning_tracker/lib/core/enums/curriculum_id.dart",
+      "line": 23,
+      "quote": "mishnehTorah('mishneh_torah'),"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart",
+      "line": 55,
+      "quote": "static final Map<String, CompositeCurriculumStrategy> _registry = {"
+    }
+  ],
+  "sites": 1,
+  "why": "The test's title claims 'each CurriculumId has a corresponding fetcher' but it only checks internal self-consistency of a hardcoded 7-entry map — it never iterates CurriculumId.values. CurriculumId actually has 9 values; only 'tanach' is registered in CompositeCurriculumStrategy._registry as fetcher-exempt (composite of chumash+nach). 'mishnehTorah' is neither composite nor present in the fetcher map nor backed by any class in tool/lib/sefaria/, yet the test passes regardless — a curriculum can silently lack fetcher coverage forever without this 'coverage' test ever turning red. (Whether mishneh_torah.json is actually correct today is not established here — the defect is that this test cannot detect the gap either way.)",
+  "recommendation": "Rewrite the test to iterate CurriculumId.values, skip ids where CompositeCurriculumStrategy.isComposite(id.storageKey) is true, and assert every remaining id has a fetcher entry.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test fails today (before any fetcher is added) if run against the corrected assertion, proving it actually detects the mishnehTorah gap",
+    "Test passes once mishnehTorah is either registered composite or given a real fetcher"
+  ],
+  "labels": [
+    "test-quality",
+    "false-coverage"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-network",
+  "chunk": "grp-022",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-32",
+  "linearPriority": "Medium"
+}

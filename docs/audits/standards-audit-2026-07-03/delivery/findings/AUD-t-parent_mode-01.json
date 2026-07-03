@@ -1,0 +1,56 @@
+{
+  "title": "Deduplicate ParentDashboardAggregator.compute() coverage across _compute_test.dart and _extended_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1",
+  "area": "test/features/parent_mode/domain/services/parent_dashboard_aggregator_*.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart",
+      "line": 100,
+      "quote": "test('includes recent completions from last 7 days', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_extended_test.dart",
+      "line": 105,
+      "quote": "test('includes recent completions within 7-day window', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart",
+      "line": 222,
+      "quote": "test('returns 0.0 when no completions', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_extended_test.dart",
+      "line": 206,
+      "quote": "test('returns 0.0 when no completions', () async {"
+    }
+  ],
+  "sites": 2,
+  "why": "Both files independently seed a track+completion and assert the same compute() outputs (zero-state, points sum, 7-day recency cutoff) with different fixture-setup idioms and literal point values, and both carry a computeCompletionPercentage test with the exact same name and assertion ('returns 0.0 when no completions'). A change to the 7-day window boundary has to be re-verified in two places with different fixture styles, and neither file signals that the other asserts the same contract.",
+  "recommendation": "Merge parent_dashboard_aggregator_compute_test.dart into parent_dashboard_aggregator_extended_test.dart (keep the union of scenarios); drop the exact-duplicate 'no completions -> 0.0' case. Leave migration_test.dart separate — it covers a genuinely distinct tier-filter scenario set.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "One file covers ParentDashboardAggregator.compute()'s DB-backed path with no scenario loss."
+  ],
+  "labels": [
+    "test-duplication",
+    "TQ",
+    "parent_dashboard_aggregator"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Same TQ-1 mistag as finding 3 (pyramid-shape rule misapplied to duplication) — cosmetic labeling issue only, the duplication itself is real and precisely evidenced."
+    ]
+  },
+  "sourceBatch": "t1-feat-parent_mode",
+  "chunk": "grp-072",
+  "normArea": "tests/parent_mode",
+  "id": "AUD-t-parent_mode-01",
+  "linearPriority": "Medium"
+}

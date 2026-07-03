@@ -1,0 +1,40 @@
+{
+  "title": "Replace hand-rolled ==/hashCode on RecentActivityWindow with @freezed or a record",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming/placement (no hand-written ==/hashCode on data classes)",
+  "area": "lib/features/progress/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/recent_activity_providers.dart",
+      "line": 46,
+      "quote": "bool operator ==(Object other) =>\n      other is RecentActivityWindow &&"
+    }
+  ],
+  "sites": 1,
+  "why": "Standards mandate immutable @freezed classes with generated equality, never hand-written ==/hashCode. RecentActivityWindow hand-writes both. Its sibling family-key type in the very same feature, lifetimeDataProvider's `({int profileId, CurriculumId curriculumId})` record (lifetime_knowledge_providers.dart:148-151), gets structural equality for free and cannot drift out of sync — RecentActivityWindow's hand-rolled version would silently under-compare (stale FutureProvider.family cache hits) if a field were ever added to the class but forgotten in operator==.",
+  "recommendation": "Convert RecentActivityWindow to @freezed, or to a record matching the lifetimeDataProvider sibling's pattern.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "RecentActivityWindow has no hand-written operator==/hashCode",
+    "Adding a field to the type cannot silently break FutureProvider.family memoization"
+  ],
+  "labels": [
+    "riverpod",
+    "hygiene",
+    "progress"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p4",
+  "chunk": "grp-087",
+  "normArea": "features/progress",
+  "id": "AUD-progress-15",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,48 @@
+{
+  "title": "Remove or reconcile the dead LWW/merge-forward helpers in merge_rules.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Dead code / Fowler speculative generality; Evans ubiquitous-language drift (file claims authority it no longer has)",
+  "area": "core/sync/merge",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/merge/merge_rules.dart",
+      "line": 29,
+      "quote": "MergeResult<T> lwwMerge<T>({"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/merge_rules.dart",
+      "line": 47,
+      "quote": "int mergeForwardMaxInt(int local, int remote) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/merge_rules.dart",
+      "line": 56,
+      "quote": "Set<T> mergeForwardUnion<T>(Iterable<T> local, Iterable<T> remote) => {"
+    }
+  ],
+  "sites": 1,
+  "why": "A repo-wide grep shows lwwMerge, mergeForwardMaxInt, mergeForwardMaxDate, mergeForwardUnion and MergeResult are referenced only by test/features/sync/domain/merge_rules_test.dart and one story-acceptance test — no production merger calls any of them; the real LWW gate is DriftMergeStore.remoteIsNewer. The file's doc comment ('Conflict resolution rules for non-event-log data... These rules handle the rest') presents itself as the authoritative merge-rule library, misleading a reader when 12 of 13 LWW mergers actually moved to DriftMergeStore in the documented 'Phase 3' upgrade.",
+  "recommendation": "Once StudyDayConfigMerger is migrated off this file's remoteIsNewer (see the paired finding), delete the unused functions/class and their now-orphaned tests, or correct the file's doc comment to state it is superseded/test-only.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Post-fix grep confirms merge_rules.dart has zero production callers left; file is either deleted or its doc comment is corrected."
+  ],
+  "labels": [
+    "hygiene",
+    "dead-code"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-merge",
+  "chunk": "grp-030",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-37",
+  "linearPriority": "Low"
+}

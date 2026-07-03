@@ -1,0 +1,43 @@
+{
+  "title": "Rename account_actions_sheet_nav_test.dart's single-account Sign Out test — title claims SignInRoute, assertion checks AccountPickerRoute",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 / Evans ubiquitous-language consistency (test name must match what it verifies)",
+  "area": "features/settings/presentation/widgets (account actions sheet)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+      "line": 265,
+      "quote": "'Sign Out (single account) → root router.replaceAll([SignInRoute]) — no regression',"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+      "line": 293,
+      "quote": "expect(routes.first, isA<AccountPickerRoute>());"
+    }
+  ],
+  "sites": 1,
+  "why": "The testWidgets title says the single-account sign-out case routes to SignInRoute, but the assertion checks AccountPickerRoute — and the test's own inline comment (lines 268-270) shows the author caught the discrepancy while writing it ('Single account: getAllAccounts returns 1 → still AccountPicker path? No — sign-out keeps the account row; the picker is correct with ≥1... The SignInRoute branch is the EMPTY-registry case, covered below') but never renamed the test string. A reader skimming test names for the routing invariant would learn the wrong rule.",
+  "recommendation": "Rename the test to 'Sign Out (single account) → root router.replaceAll([AccountPickerRoute])' to match its assertion.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The test's title string matches the route type its expect() checks."
+  ],
+  "labels": [
+    "test-naming",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-103",
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-11",
+  "linearPriority": "Low"
+}

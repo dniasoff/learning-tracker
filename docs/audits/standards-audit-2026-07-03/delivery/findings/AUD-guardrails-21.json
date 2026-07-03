@@ -1,0 +1,66 @@
+{
+  "title": "Define a retention policy for completed-round device-test workflow.js scripts instead of letting run2/run3 accumulate in tool/ indefinitely",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-1/AG-11-adjacent (repo hygiene)",
+  "area": "tool/",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/run2_test_sweep.workflow.js",
+      "line": 2,
+      "quote": "name: 'run2-on-device-sweep',"
+    },
+    {
+      "file": "learning_tracker/tool/run2_tutoring_gamification.workflow.js",
+      "line": 2,
+      "quote": "name: 'run2-tutoring-gamification',"
+    },
+    {
+      "file": "learning_tracker/tool/run2_tutoring_retest.workflow.js",
+      "line": 2,
+      "quote": "name: 'run2-tutoring-retest',"
+    },
+    {
+      "file": "learning_tracker/tool/run3_cycle3_single.workflow.js",
+      "line": 2,
+      "quote": "name: 'run3-cycle3-single-account',"
+    },
+    {
+      "file": "learning_tracker/tool/run3_test_cycle.workflow.js",
+      "line": 2,
+      "quote": "name: 'run3-test-cycle',"
+    },
+    {
+      "file": "learning_tracker/tool/run3_tutor_extensive.workflow.js",
+      "line": 2,
+      "quote": "name: 'run3-tutor-extensive',"
+    }
+  ],
+  "sites": 6,
+  "why": "Each script hardcodes one specific device IP, throwaway test-account PINs, and references specific numbered fixes ('FIX#7', 'FIX#9') from one already-completed testing round (run2, run3). git history shows later rounds (run-6, run-7, per the repo's recent commit log) left no equivalent *.workflow.js files behind, so retention is inconsistent — a reader can't tell whether run2/run3 are kept deliberately as re-runnable regression scripts or are simply uncleaned leftovers, and there is no tool/README documenting either answer.",
+  "recommendation": "Document a retention rule for run-N workflow scripts (e.g. archive completed rounds under docs/audits/ next to the bug-log report they produced, or delete once their fixes have landed and been verified), and apply it to run2/run3.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "tool/ (or a new tool/README) states the retention rule for *.workflow.js device-test scripts",
+    "run2/run3 scripts are archived, removed, or explicitly kept per that stated rule"
+  ],
+  "labels": [
+    "repo-hygiene",
+    "tier2-tooling"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "A parallel, currently-active device-test script family (tool/device_e2e/run2_full_suite.mjs .. run7_full_suite.mjs, dated Jun23-29, root-level tool/) exists and effectively supersedes these; the finding missed it but its core claim (no documented retention policy for the old family) still stands."
+    ]
+  },
+  "sourceBatch": "t2-app-tool-p1",
+  "chunk": "grp-152",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-21",
+  "linearPriority": "Low"
+}

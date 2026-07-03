@@ -1,0 +1,50 @@
+{
+  "title": "Delete or wire up dead widgets DashboardTaskItem and PointsSummaryWidget",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler dead code; TQ-8 (stale acceptance-test confidence)",
+  "area": "lib/features/dashboard/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_task_item.dart",
+      "line": 10,
+      "quote": "class DashboardTaskItem extends ConsumerWidget {"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_task_item.dart",
+      "line": 34,
+      "quote": "onTap: () {}, // Navigate to learning screen"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/points_summary_widget.dart",
+      "line": 7,
+      "quote": "class PointsSummaryWidget extends StatelessWidget {"
+    }
+  ],
+  "sites": 2,
+  "why": "DashboardTaskItem (168 lines) has zero references anywhere in lib/ or test/ — grep for the class name repo-wide only matches its own declaration. It was last touched by an l10n refactor (commit dba4118f) that kept dead code 'clean' without anyone noticing it is unreachable, and its onTap is a no-op stub with a stale 'Navigate to learning screen' comment. PointsSummaryWidget was superseded by DashboardLevelPointsCard (wired into dashboard_body.dart:407 after the Epic 20 redesign) but is kept alive only by test/golden/store_screenshots_test.dart:199 and test/story_acceptance/epic_07_dashboard_test.dart:551, both giving false confidence that 'points summary' is exercised in the shipping app when it is not. A future contributor grepping for 'the task item widget' or 'the points widget' finds two candidates and can easily edit or extend the dead one.",
+  "recommendation": "Delete both widgets and their now-pointless test/golden references, or — if DashboardTaskItem's per-task quick-complete affordance is still wanted on the dashboard — wire it in and file the onTap navigation as a tracked story instead of leaving a silent stub.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn 'DashboardTaskItem' lib/ and grep -rn 'PointsSummaryWidget' lib/ each return either a real call site (if revived) or nothing but the class declaration removed (if deleted)",
+    "if deleted, the now-orphaned references in test/golden/store_screenshots_test.dart and test/story_acceptance/epic_07_dashboard_test.dart are removed in the same change"
+  ],
+  "labels": [
+    "dead-code",
+    "dashboard",
+    "maintainability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "chunk": "grp-049",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-04",
+  "linearPriority": "Medium"
+}

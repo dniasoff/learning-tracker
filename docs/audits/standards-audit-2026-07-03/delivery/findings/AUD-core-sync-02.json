@@ -1,0 +1,59 @@
+{
+  "title": "Fix FirestoreGatewayImpl.deleteUserData to target real nested Firestore paths instead of empty top-level ones",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "FB-9 / data-retention",
+  "area": "core/sync (push/gateway)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 19,
+      "quote": "///   `users/{uid}/learner_profiles/{profileId}/<collection>/...`"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 630,
+      "quote": "const subcollections = [\n      'completions',"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+      "line": 106,
+      "quote": "// Step 1: delete Firestore data via gateway (client-side best-effort)"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 52,
+      "quote": "await db.recursiveDelete(db.collection(\"users\").doc(uid));"
+    }
+  ],
+  "sites": 1,
+  "why": "deleteUserData(uid) queries users/{uid}/<name> directly for 10 of its 12 hardcoded names (completions, bookmarks, settings, streaks, profiles, goals, rewards, sync_queue, learning_order, stage_definitions) -- but per this same file's own doc comment two lines above the class declaration, all of that data actually lives two levels deeper at users/{uid}/learner_profiles/{profileId}/<collection>. The wrong-path queries return zero docs and delete nothing, silently -- an empty result looks identical to 'already deleted'. Two names are also stale ('streaks' vs the real 'streak_events'; 'profiles'/'rewards'/'sync_queue' match no real collection). account_lifecycle_service.deleteCloudAccount() calls this as 'Step 1' with a comment ('execution order is critical ... NEVER deletes local before cloud succeeds') that assumes this step does real, potentially-failing work; in practice it only removes the learner_profiles parent docs and diagnostic_logs, leaving every real child subcollection (completions, streak_events, learning_ledger, curriculum_tracks, goals, bookmarks, preferences/*, points_ledger, reward_redemptions...) orphaned in Firestore. Account deletion is not actually broken today only because Step 2 (deleteCurrentFirebaseUser) fires the onUserDeleted Cloud Function, which does a correct db.recursiveDelete of the whole users/{uid} tree -- making this entire client-side step dead weight that documents a guarantee it doesn't provide.",
+  "recommendation": "Either fix _deleteCollection's target paths to enumerate each profile under learner_profiles and delete its real, current subcollection names, or delete this client-side step entirely, rely solely on the onUserDeleted CF, and correct account_lifecycle_service.dart's comment so it stops claiming a partial-failure risk this step doesn't carry.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Emulator test seeds users/{uid}/learner_profiles/{id}/completions (and siblings) and asserts deleteUserData(uid) actually removes them, or the step is deleted and the doc/comment updated to match.",
+    "No collection name in the deletion path diverges from the names used by this file's own push*/listen* methods."
+  ],
+  "labels": [
+    "FB-9",
+    "privacy",
+    "data-retention",
+    "dead-code"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Third evidence citation (account_lifecycle_service.dart) is at line 105, not 106 — the comment text quoted is otherwise exact.",
+      "Add: AccountLifecycleService.deleteCloudAccount (the sole caller of the buggy deleteUserData path) has no production callers in lib/ -- confirmed via grep across lib/ and test/; only self-references and one guard-clause unit test exist. The actual production account-deletion flow is AccountManagementService.deleteAccount -> Cloud Function `deleteAccountData` (functions/src/index.ts:194), which already does correct server-side recursiveDelete, independent of and unaffected by this bug. Downgrade from P1 to P2: this is real dead/buggy code worth fixing or deleting (matches the recommendation's alternative to delete the step), but it carries no live data-loss/privacy risk since it is never invoked today."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-root-p1",
+  "chunk": "high-028",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-02",
+  "linearPriority": "High"
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Convert ReminderPreferences to @freezed instead of hand-rolled ==/hashCode/copyWith",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming/placement — data classes must be @freezed",
+  "area": "features/notifications/domain/models",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/models/reminder_preferences.dart",
+      "line": 75,
+      "quote": "bool operator ==(Object other) =>\n      identical(this, other) ||"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/models/reminder_preferences.dart",
+      "line": 88,
+      "quote": "int get hashCode => Object.hash(\n    reminderEnabled,"
+    }
+  ],
+  "sites": 1,
+  "why": "Matches the coding standard's explicit rule to never hand-write ==/hashCode for data classes. The 7 fields are consistent between == and hashCode today, but every future field addition is a manual 3-way sync across the constructor, ==, hashCode and copyWith -- an easy place to introduce a silent equality bug (a field present in the constructor but missed in == makes two logically-different instances compare equal).",
+  "recommendation": "Convert to @freezed class ReminderPreferences with _$ReminderPreferences.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "dart run build_runner build generates the freezed file and existing tests (e.g. notification_providers_deep_test.dart groups H/A-E) keep passing unmodified."
+  ],
+  "labels": [
+    "hygiene",
+    "freezed",
+    "notifications"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-065",
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-11",
+  "linearPriority": "Low"
+}

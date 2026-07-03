@@ -1,0 +1,44 @@
+{
+  "title": "Wrap saveOrder/resetToDefault's reorder-amnesty stamp in the same transaction as the order write",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-2 (>1 write = one transaction()) + Nygard partial-failure lens",
+  "area": "lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+      "line": 126,
+      "quote": "await _database.transaction(() async {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+      "line": 147,
+      "quote": "await _stampReorderAt(curriculumId, updatedAt);"
+    }
+  ],
+  "sites": 2,
+  "why": "_stampReorderAt does its own read+write OUTSIDE the transaction that persists the order change, in both saveOrder and resetToDefault. A process death or DB error between the two calls leaves the new order committed but the overdue-amnesty stamp missing (or the delete committed but the stamp missing on resetToDefault) — the code's own comment about wrapping upserts 'so a mid-loop crash cannot leave a half-shuffled state' shows the author cared about exactly this class of bug but didn't extend it to the second write.",
+  "recommendation": "Move the _stampReorderAt call inside the same _database.transaction(...) block in both saveOrder and resetToDefault.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test: throw inside a fake trackDao.stampReorderAt call and assert the learning_order upsert rows are also rolled back as one atomic unit"
+  ],
+  "labels": [
+    "data-integrity",
+    "drift",
+    "tracks"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "grp-117",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-16",
+  "linearPriority": "Medium"
+}

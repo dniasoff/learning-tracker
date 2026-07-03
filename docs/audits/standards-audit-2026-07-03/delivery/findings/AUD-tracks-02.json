@@ -1,0 +1,145 @@
+{
+  "title": "Localize the hardcoded English 'Order' app-bar suffix in LearningOrderScreen",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2",
+  "area": "lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+      "line": 51,
+      "quote": "'${curriculumLabelText(ref, curriculum: widget.curriculumId)} '\n              'Order',"
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 2934,
+      "quote": "\"trackReorderScreenTitle\": \"{curriculum} • Reorder\","
+    },
+    {
+      "file": "learning_tracker/test/features/learning_order/presentation/screens/learning_order_screen_test.dart",
+      "line": 31,
+      "quote": "expect(find.byType(Scaffold), findsOneWidget);"
+    },
+    {
+      "file": "learning_tracker/test/features/learning_order/presentation/screens/learning_order_screen_reset_test.dart",
+      "line": 126,
+      "quote": "// The UI must show the default order — deterministically.\n      expect(_renderedOrder(tester), const ['Default_A', 'Default_B']);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+      "line": 50,
+      "quote": "'${curriculumLabelText(ref, curriculum: widget.curriculumId)} '"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+      "line": 52,
+      "quote": "'Order',"
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 15,
+      "quote": "\"todaysLearning\": \"Today's Learning\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 1265,
+      "quote": "\"todaysLearning\": \"Today's learning ({count})\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 433,
+      "quote": "\"today\": \"TODAY\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 2200,
+      "quote": "\"today\": \"Today\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 1938,
+      "quote": "\"notificationReminderBody\": \"{taskCount,plural, =0{No tasks today — stay on track!} =1{...} other{...}}\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 2834,
+      "quote": "\"notificationReminderBody\": \"You have {taskCount, plural, =1{1 task} other{{taskCount} tasks}} across ... today\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_localizations_en.dart",
+      "line": 3657,
+      "quote": "return 'You have $_temp0 across $_temp1 today';"
+    },
+    {
+      "file": "learning_tracker/tool/arb_parity_check.dart",
+      "line": 30,
+      "quote": "final enMap = jsonDecode(enFile.readAsStringSync()) as Map<String, dynamic>;"
+    },
+    {
+      "file": "learning_tracker/lib/core/content/hierarchy_browser.dart",
+      "line": 193,
+      "quote": ": const Center(child: Text('No content available'));"
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 520,
+      "quote": "\"contentHierarchyNoContent\": \"No content available\","
+    },
+    {
+      "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+      "line": 599,
+      "quote": "hintText: 'you@quest.com',"
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 1041,
+      "quote": "\"signInEmailHint\": \"yourname@quest.com\","
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+      "line": 270,
+      "quote": "group('iter9 l10n regression: signup screen strings localized', () {"
+    }
+  ],
+  "sites": 19,
+  "why": "learning_order_screen.dart:49-53 builds the AppBar title as a raw string concatenation ending in the literal 'Order' — never routed through AppLocalizations — even though every other user-facing string in the same file (resetToDefaultOrder tooltip, noItemsToOrder, controlledByParent) correctly uses AppLocalizations. The sibling per-track reorder screen already does this right: app_en.arb/app_he.arb define trackReorderScreenTitle ('{curriculum} • Reorder', translated), but no equivalent key exists for this whole-curriculum screen. Every Hebrew-locale user who opens this screen sees an app-bar title reading '<curriculum name> Order' with 'Order' rendered in English inside an otherwise-Hebrew UI. Neither widget test in this batch can catch it: learning_order_screen_test.dart asserts only Scaffold presence, and learning_order_screen_reset_test.dart asserts only the reordered list's contents — neither checks the app-bar text, and neither pumps a Locale('he') variant (TQ-3), so the defect has zero test surface.",
+  "recommendation": "Add an ARB key (EN+HE) for this screen's title mirroring trackReorderScreenTitle's shape, e.g. learningOrderScreenTitle: '{curriculum} Order' (EN) with a proper Hebrew ICU translation, and use AppLocalizations.of(context)!.learningOrderScreenTitle(curriculumLabelText(...)) instead of the raw string concatenation. Extend one of this batch's widget tests to pump under Locale('he') and assert the app-bar text does not contain the literal ASCII substring 'Order' (or assert the exact localized string).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "learning_order_screen.dart's AppBar title comes entirely from AppLocalizations — no raw string literal concatenated onto the curriculum label.",
+    "New ARB key present in both app_en.arb and app_he.arb; make arb-parity still reports full EN/HE parity.",
+    "A widget test pumps LearningOrderScreen under Locale('he') and asserts the rendered title is the localized string (or explicitly asserts it does not contain 'Order')."
+  ],
+  "labels": [
+    "AX-2",
+    "i18n",
+    "hebrew",
+    "hardcoded-string"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-learning_order",
+  "chunk": "high-055",
+  "mergedFrom": [
+    "Localize the hardcoded 'Order' AppBar title in LearningOrderScreen",
+    "Remove duplicate top-level keys in app_en.arb — they silently shadow earlier definitions and the parity checker can't see it",
+    "Route hierarchy_browser.dart's empty-state text through AppLocalizations instead of a hardcoded English literal",
+    "Localize signup_screen.dart's hardcoded 'you@quest.com' email hint and extend the iter9 l10n regression test to cover it"
+  ],
+  "coDiscoverers": [
+    "t1-app-l10n-p1",
+    "t1-core-content",
+    "t1-feat-learning_order",
+    "t1-feat-onboarding-p3",
+    "t1-feat-tracks-p3"
+  ],
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-02",
+  "linearPriority": "High"
+}

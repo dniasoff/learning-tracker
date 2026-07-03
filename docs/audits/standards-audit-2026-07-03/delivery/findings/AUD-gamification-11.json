@@ -1,0 +1,67 @@
+{
+  "title": "Wrap RewardMilestoneService/StreakService/StreakStateProvider in @riverpod providers instead of constructing them ad-hoc at every call site",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-7 (repositories/services/DAOs constructed only inside their @riverpod provider; no ad-hoc construction/service-locator lookups)",
+  "area": "features/gamification (domain/services, presentation/providers, presentation/screens)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/domain/services/points_service.dart",
+      "line": 139,
+      "quote": "final reward = RewardMilestoneService(_database, profileId: profileId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.dart",
+      "line": 129,
+      "quote": "final svc = RewardMilestoneService(db, profileId: profileId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/providers/achievements_overview_provider.dart",
+      "line": 86,
+      "quote": "final service = RewardMilestoneService(db, profileId: profileId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+      "line": 53,
+      "quote": "final svc = RewardMilestoneService(db, profileId: profileId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/gamification_screen.dart",
+      "line": 35,
+      "quote": "final streakService = StreakService(db, profileId: profileId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/domain/services/streak_service.dart",
+      "line": 17,
+      "quote": "_provider = StreakStateProvider(\n        db: db,\n        clock: const SystemLocalDayClock(),"
+    }
+  ],
+  "sites": 9,
+  "why": "No @riverpod/Provider wraps RewardMilestoneService, StreakService, or StreakStateProvider anywhere in the codebase (grep confirms zero matches for 'Provider<RewardMilestoneService>' etc.); instead `RewardMilestoneService(db, profileId: profileId)` is repeated at 12 call sites repo-wide (7 inside this batch alone across 4 files, plus reward_config_controller.dart has 4 separate occurrences of the identical two-line construction), and StreakService/StreakStateProvider follow the same pattern. Every call site must independently obtain a UserDatabase and profileId and re-derive the same object graph. A constructor signature change, a swap of the SharedPreferences-backed store, or a test override all require touching every call site instead of one provider. It also means these classes can only be faked in tests by injecting a fake UserDatabase all the way through, not by a single ProviderScope override.",
+  "recommendation": "Introduce rewardMilestoneServiceProvider / streakServiceProvider @riverpod providers (mirroring the existing, correct pointsServiceProvider pattern in points_providers.dart) and have every listed call site use ref.watch/ref.read of the provider instead of constructing directly.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "A single @riverpod provider exists for each of RewardMilestoneService, StreakService, and StreakStateProvider",
+    "All 9 in-batch construction sites (and the additional sites in dashboard/learning/sync features) are replaced with ref.watch/ref.read of the provider",
+    "Existing service unit tests continue to pass by overriding the provider rather than constructing the service directly"
+  ],
+  "labels": [
+    "SM-7",
+    "riverpod",
+    "DI",
+    "testability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-051",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-11",
+  "linearPriority": "Medium"
+}

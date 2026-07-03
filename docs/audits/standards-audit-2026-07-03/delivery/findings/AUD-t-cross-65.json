@@ -1,0 +1,43 @@
+{
+  "title": "Delete the dead nullService ternary in sy2_device_restore_idle_blank_test.dart's _buildHarness",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene / dead code",
+  "area": "test/app/restore",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/app/restore/sy2_device_restore_idle_blank_test.dart",
+      "line": 86,
+      "quote": ": null, // always null — no service needed for these tests"
+    },
+    {
+      "file": "learning_tracker/test/app/restore/sy2_device_restore_idle_blank_test.dart",
+      "line": 77,
+      "quote": "bool nullService = false,"
+    }
+  ],
+  "sites": 1,
+  "why": "`nullService ? null : null` evaluates to null on both branches — the nullService bool parameter has zero effect on behavior, yet every call site passes `nullService: true` as if it mattered. A future maintainer who needs a non-null-service variant of this harness will reasonably flip it to `nullService: false` expecting different behavior and get nothing, wasting debugging time on a flag that was already inert.",
+  "recommendation": "Delete the nullService parameter and the ternary; pass deviceRestoreServiceProvider.overrideWithValue(null) directly, matching the comment's own admission of actual behavior.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "nullService parameter and the dead ternary are removed from _buildHarness; dart analyze / dart format stay clean."
+  ],
+  "labels": [
+    "hygiene",
+    "dead-code"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-app-l10n-p2",
+  "chunk": "grp-002",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-65",
+  "linearPriority": "Low"
+}

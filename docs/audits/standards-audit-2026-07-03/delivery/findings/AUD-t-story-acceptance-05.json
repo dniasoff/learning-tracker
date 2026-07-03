@@ -1,0 +1,50 @@
+{
+  "title": "Deduplicate the two full 40-method FirestoreGateway fakes in epic_25_story_12_sync_decomp_part1_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication (shotgun surgery)",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart",
+      "line": 242,
+      "quote": "class _RecordingGateway implements FirestoreGateway {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart",
+      "line": 475,
+      "quote": "class _PagingGateway implements FirestoreGateway {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart",
+      "line": 441,
+      "quote": "// W6.13: fetchAuditLogEntries added to FirestoreGateway interface."
+    }
+  ],
+  "sites": 2,
+  "why": "_RecordingGateway (lines 242-467) and _PagingGateway (lines 475-697) each hand-implement all 40 FirestoreGateway methods with near-identical no-op bodies. The file's own retrofit comments ('W6.13: fetchAuditLogEntries added...', 'T1.gateway — parent-scoped child reads (stub)') appear in both classes, proving every past interface addition already had to be pasted into both by hand; the identical pattern repeats in 20+ other test files repo-wide (test/sync/*, test/core/sync/*), so the next FirestoreGateway method is N-way shotgun surgery, and a forgotten override silently returns a stale default in one fake but not the other.",
+  "recommendation": "Extract a shared `NoOpFirestoreGateway` base (all 40 methods returning empty/no-op defaults) into test/helpers/ or test/mocks/; have _RecordingGateway/_PagingGateway extend it and override only the handful of methods each test actually exercises.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_RecordingGateway and _PagingGateway shrink to only their overridden methods plus the shared base",
+    "adding a new FirestoreGateway method requires editing the shared base once, not every fake in this file"
+  ],
+  "labels": [
+    "fowler-duplication",
+    "test-quality",
+    "maintenance-cost"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-25",
+  "chunk": "grp-129",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-05",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,52 @@
+{
+  "title": "Add test coverage for firestore_codec.dart, settings_codec.dart and tutor_grant_codec.dart — the only codecs with zero tests",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1/TQ-8, AG-5",
+  "area": "core/sync/codec",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/codec/firestore_codec.dart",
+      "line": 20,
+      "quote": "abstract class FirestoreCodec {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/codec/settings_codec.dart",
+      "line": 43,
+      "quote": "class SettingsCodec extends EntityCodec<SettingsRow> {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/codec/tutor_grant_codec.dart",
+      "line": 42,
+      "quote": "class TutorGrantCodec extends EntityCodec<TutorGrantRow> {"
+    }
+  ],
+  "sites": 3,
+  "why": "Grepping the whole test/ tree for each of the 15 batch filenames finds zero references to any of these three. Every one of the other 11 non-trivial codecs (bookmark, completion_event, goal, learner_profile, learning_ledger, learning_order, profile_program, stage_definition, streak_event, study_day_config, track) has a test/sync/merge/*_roundtrip_test.dart and most also appear in test/sync/codec_rules_contract_test.dart. firestore_codec.dart is the shared DateTime/int/bool parser transitively exercised by every other codec's decode() path (4 documented DateTime wire shapes, String/num int coercion, string/int bool coercion) but has no direct unit test of any of that logic — a regression here would silently corrupt every entity kind's pull with nothing to catch it. settings_codec.dart's nested stage-list decode (stagesList?.cast<Map>().map(stageCodec.decode).whereType<StageDefinitionRow>()) is untested. tutor_grant_codec.dart's decode(), which feeds tutor-mode UI state, is untested end to end.",
+  "recommendation": "Add a firestore_codec_test.dart covering all four DateTime wire shapes (DateTime/String/int/Map) plus parseInt/parseBool edge cases (String, num, bool passthrough, malformed input); add a settings roundtrip test covering the nested-stages decode path; add a tutor_grant roundtrip test mirroring the existing *_roundtrip_test.dart pattern.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A firestore_codec_test.dart (or equivalent) exists and exercises parseDateTime's 4 shapes plus parseInt/parseBool edge cases.",
+    "settings_codec and tutor_grant_codec each gain a roundtrip test mirroring test/sync/merge/*_roundtrip_test.dart siblings."
+  ],
+  "labels": [
+    "testing",
+    "coverage",
+    "sync"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "tutor_grant_codec.dart is not 'untested-but-live' as claimed. TutorGrantMerger.merge() is an intentional no-op (own doc comment: grants are never stored locally) and the real UI path, FirestoreTutorGrantRepository, parses via TutorGrantDoc.fromFirestore/TutorGrant.fromDoc, never TutorGrantCodec (grep confirms zero call sites in lib/ beyond the class's own definition). The class is unreachable dead code, so 'which feeds tutor-mode UI state' is false; that component should be re-scoped as a Fowler dead-code question (like the sibling SettingsCodec.encode finding) rather than a testing gap. Does not sink the finding — the other two files carry it."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-codec",
+  "chunk": "grp-027",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-16",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,45 @@
+{
+  "title": "Add a getIdToken(forceRefresh) primitive so a synced write hitting permission-denied/unauthenticated can recover",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AU-5",
+  "area": "core/auth (token-refresh primitive)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+      "line": 47,
+      "quote": "if (user == null) return null;\n    await user.reload();"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/data/repositories/auth_repository_impl.dart",
+      "line": 9,
+      "quote": "/// Delegates to the auth gateways in `lib/core/auth/`. Per layering rule 3,\n/// this file MUST NOT import the firebase_auth SDK"
+    }
+  ],
+  "sites": 2,
+  "why": "AU-5 requires exactly one getIdToken(true) forced refresh plus a single retry when a synced write fails with permission-denied/unauthenticated. A repo-wide grep for 'getIdToken' returns zero hits in lib/. Neither FirebaseAuthGateway/FirebaseAuthGatewayImpl nor AuthRepository/AuthRepositoryImpl — the only classes layering Rule 3 permits to touch FirebaseAuth for this feature — expose any way to force-refresh the cached ID token; the closest method, reloadCurrentUser()/User.reload(), only refreshes profile fields (displayName, emailVerified), not the JWT/claims. A stale token (e.g. after a custom-claims change) therefore has no dedicated recovery path; a failing synced write can only retry against the same stale token via the outbox's generic exponential backoff until it dead-letters, and the only user-facing fix is a full sign-out/sign-in.",
+  "recommendation": "Add Future<String?> getIdToken({bool forceRefresh = false}) to FirebaseAuthGateway/AuthRepository as a thin pass-through to User.getIdToken, and wire the outbox/push-pipeline's permission-denied handler to call it once with forceRefresh: true plus a single retry before falling through to the existing backoff.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "FirebaseAuthGateway/AuthRepository gain a getIdToken(forceRefresh: true) method with a unit test against the fake/mock gateway.",
+    "Outbox/push-pipeline regression test: inject permission-denied on first attempt, assert exactly one getIdToken(true) call plus one retry occurs before falling back to normal backoff."
+  ],
+  "labels": [
+    "auth",
+    "AU-5",
+    "sync",
+    "resilience"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "sup-au-family",
+  "normArea": "core/auth",
+  "id": "AUD-core-auth-01",
+  "linearPriority": "Medium"
+}

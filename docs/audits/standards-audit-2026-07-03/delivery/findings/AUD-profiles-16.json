@@ -1,0 +1,62 @@
+{
+  "title": "Log swallowed exceptions in profiles' log-less catch blocks instead of silently discarding them",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 (log-less catch)",
+  "area": "features/profiles",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+      "line": 107,
+      "quote": "} catch (_) {\n      // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+      "line": 159,
+      "quote": "} catch (_) {\n      // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+      "line": 335,
+      "quote": "} catch (_) {\n      // no-op: cloud push failure is non-fatal; local write already succeeded."
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/screens/profile_picker_screen.dart",
+      "line": 291,
+      "quote": "} catch (_) {\n              set(() => err = null);"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/add_profile_dialog.dart",
+      "line": 51,
+      "quote": "} catch (_) {\n            set(() => err = null);"
+    }
+  ],
+  "sites": 5,
+  "why": "Five catch blocks across this batch swallow exceptions with zero AppLogger call — three in profile_repository_impl.dart discard cloud-sync push failures (create/update/self-heal) with only a code comment, and two more (profile_picker_screen.dart, add_profile_dialog.dart) silently clear a live duplicate-name validation error on any DB exception. add_profile_dialog.dart's own line 269-280 shows the correct pattern (AppLogger.instance.error with event/exception/stackTrace) right next to one of the log-less ones, proving the gap is an oversight, not a style choice. Without logging, a real production failure pattern (e.g. outbox writes silently failing on a subset of devices) leaves no telemetry trail to diagnose from.",
+  "recommendation": "Replace each `catch (_) { ... }` with a catch that logs via AppLogger.instance.warning/error (event + exception) before continuing with the existing non-fatal behavior.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "All 5 listed catch blocks call AppLogger before continuing",
+    "A grep-based Rule-0 check (or custom_lint rule, once custom_lint is unblocked) flags `catch (_) {` / `catch (e) {` blocks in lib/ with no AppLogger call in their body"
+  ],
+  "labels": [
+    "error-handling",
+    "eh-3",
+    "logging"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Digest posture #3 explicitly names 'log-less catch' as its own canonical P3/minimal example ('naming drift, missing const, log-less catch, a 401-line file'). This finding is exactly that archetype at 5 sites — P2 is an inflation relative to the digest's own calibration; lowering to P3."
+    ]
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-075",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-16",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,56 @@
+{
+  "title": "Delete or merge the duplicate pending_local_signup test suites",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / test-suite hygiene",
+  "area": "test/features/auth/domain/services/",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/auth/domain/services/pending_local_registration_test.dart",
+      "line": 38,
+      "quote": "test('returns null when accountId is missing', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/auth/domain/services/pending_local_signup_test.dart",
+      "line": 60,
+      "quote": "test('tryParse returns null when required fields are missing', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/auth/domain/services/pending_local_registration_test.dart",
+      "line": 167,
+      "quote": "test('tryReserveEmail fails when email already reserved', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/auth/domain/services/pending_local_signup_test.dart",
+      "line": 201,
+      "quote": "test('duplicate reservation fails', () async {"
+    }
+  ],
+  "sites": 2,
+  "why": "Both files import the same lib/features/account/domain/services/pending_local_signup.dart and independently re-derive the same test matrix — tryParse null/missing-field/malformed-JSON handling, toJson round-trip, and every tryReserveEmail/releaseEmail case-insensitivity/multi-email scenario — 219 + 317 = 536 lines maintaining one behavior twice, with neither file referencing the other. Any future change to PendingLocalRegistration's JSON shape or the reservation semantics has to be applied in both files or one silently goes stale.",
+  "recommendation": "Keep pending_local_signup_test.dart (correctly named after its subject file) and delete pending_local_registration_test.dart; a line-by-line comparison shows no assertion in the latter that the former lacks.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one test file covers PendingLocalRegistration/PendingLocalSignupStore",
+    "No distinct test case present in the deleted file is missing from the survivor",
+    "dart test on the surviving file is green"
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "auth"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-auth",
+  "chunk": "grp-042",
+  "normArea": "tests/auth",
+  "id": "AUD-t-auth-01",
+  "linearPriority": "Medium"
+}

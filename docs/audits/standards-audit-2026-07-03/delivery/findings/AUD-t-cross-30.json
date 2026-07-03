@@ -1,0 +1,47 @@
+{
+  "title": "Give sync_status_emission_test.dart's 'empty outbox + online + after pull → synced' test actual assertions",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological/vacuous test)",
+  "area": "test/sync",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/sync_status_emission_test.dart",
+      "line": 113,
+      "quote": "test('empty outbox + online + after pull → synced', () async {"
+    },
+    {
+      "file": "learning_tracker/test/sync/sync_status_emission_test.dart",
+      "line": 139,
+      "quote": "// No assertion here — pre-pull, status remains whatever the failed"
+    }
+  ],
+  "sites": 1,
+  "why": "The test's name and the file's own header matrix both promise to verify the 'synced' cell (empty outbox + online + a completed pull), but the body ends after recordDrainAttempt() with a comment admitting no assertion is made, because _EmptyGateway cannot simulate a successful pull (every real fetch throws via noSuchMethod). The test always passes regardless of whether synced emission is broken for this exact scenario — it is pure green-checkmark noise. SyncStatusSynced IS exercised elsewhere in the same file, but only via the throttled-resume branch (_everPulledOnLaunch force-set by the throttle, not by a genuinely completed pull), so the 'real successful cold pull → synced' path this test is named for has no working assertion anywhere in the file.",
+  "recommendation": "Either delete the test, or give it a gateway fake that lets pullOnLaunch complete successfully (mirroring _ProfileProgramsGateway in sync_rework_profile_programs_pull_test.dart) and assert `orchestrator.currentStatus is SyncStatusSynced` afterward.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "the 'empty outbox + online + after pull → synced' test contains at least one expect() against SyncStatus, or is removed",
+    "if kept, the pull it drives completes successfully (non-throttled) before the synced assertion"
+  ],
+  "labels": [
+    "testing",
+    "sync",
+    "coverage-gap"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "None — evidence fully verified as stated, no corrections needed."
+    ]
+  },
+  "sourceBatch": "t1-feat-sync-p3",
+  "chunk": "grp-109",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-30",
+  "linearPriority": "Medium"
+}

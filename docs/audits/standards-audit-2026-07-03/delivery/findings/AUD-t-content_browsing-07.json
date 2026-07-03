@@ -1,0 +1,50 @@
+{
+  "title": "Replace the 'accepts any exception' navigation assertion in hierarchy_navigation_test.dart and curriculum_list_screen_test.dart with real router verification",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (assertion weaker than what the source can do wrong)",
+  "area": "test-quality — content_browsing integration + presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/content_browsing/integration/hierarchy_navigation_test.dart",
+      "line": 183,
+      "quote": "final exception = tester.takeException();"
+    },
+    {
+      "file": "learning_tracker/test/features/content_browsing/integration/hierarchy_navigation_test.dart",
+      "line": 184,
+      "quote": "expect(exception, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/features/content_browsing/presentation/screens/curriculum_list_screen_test.dart",
+      "line": 180,
+      "quote": "final exception = tester.takeException();"
+    }
+  ],
+  "sites": 2,
+  "why": "Both tests tap a curriculum row and assert only that `tester.takeException()` is non-null — that passes for any exception at all, including an unrelated build error introduced by a future regression, not specifically the intended 'no AutoRouter in the test tree' push failure. hierarchy_navigation_test.dart also pre-builds elaborate filterByLevel mocks for three deeper drill levels (Berachos, Perek 1, Mishna 1) that are never exercised because the test ends at the very first tap — dead setup code that makes the test look far more thorough than it is. This same batch already contains the fix pattern in text_display_screen_l1_test.dart and r2_content_hierarchy_nav_test.dart: inject a mocktail `_MockStackRouter` via `StackRouterScope` and `verify()` the specific push/replace call.",
+  "recommendation": "Swap the AutoRouter-less MaterialApp harness for the StackRouterScope + _MockStackRouter pattern already used elsewhere in this batch, and verify() the specific route pushed. Delete or actually use the now-provably-dead multi-level filterByLevel mock setup in hierarchy_navigation_test.dart's first test.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both tests assert a specific route via verify(() => router.push(any(that: isA<ContentHierarchyRoute>()))) or equivalent, not `exception, isNotNull`."
+  ],
+  "labels": [
+    "test-quality",
+    "content_browsing",
+    "weak-assertion",
+    "navigation"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p2",
+  "chunk": "grp-045",
+  "normArea": "tests/content_browsing",
+  "id": "AUD-t-content_browsing-07",
+  "linearPriority": "Low"
+}

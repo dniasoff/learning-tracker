@@ -1,0 +1,45 @@
+{
+  "title": "Delete or wire up the unreachable form.error branch in reward_configuration_screen.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Dead code (Fowler lens / AG-6 hygiene)",
+  "area": "features/gamification/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+      "line": 287,
+      "quote": "if (form.error != null) {\n      return Scaffold("
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_form.dart",
+      "line": 17,
+      "quote": "this.error,\n  });"
+    }
+  ],
+  "sites": 1,
+  "why": "RewardForm.error defaults to null and is never set to a non-null value anywhere: RewardConfigController.bootstrap() explicitly sets `error: null`, and grep across the whole gamification feature finds no other `copyWith(error: ...)` call. The `if (form.error != null)` branch and its whole error Scaffold (lines 287-293) are therefore unreachable dead code -- a maintenance trap for the next person who assumes it's live error-handling.",
+  "recommendation": "Either delete the dead branch, or wire a real failure path (e.g. bootstrap()'s try/catch setting a localized error) that actually reaches it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Either the form.error != null branch is removed, or a test demonstrates a real code path setting it and rendering the error Scaffold"
+  ],
+  "labels": [
+    "dead-code",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Rule tag \"AG-6 hygiene\" is loose (AG-6 is literally about TODO markers/commented code, not dead branches); digest's separate \"dead code\" sweep item is the better citation. Doesn't affect validity."
+    ]
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-052",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-17",
+  "linearPriority": "Low"
+}

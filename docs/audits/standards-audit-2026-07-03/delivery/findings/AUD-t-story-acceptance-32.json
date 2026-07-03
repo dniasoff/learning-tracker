@@ -1,0 +1,38 @@
+{
+  "title": "Delete or fix the tautological empty-list StreakReducer assertion in epic_27_story_05_bulk_mark_prior_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance — gamification/streak",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart",
+      "line": 177,
+      "quote": "final reducerState = const StreakReducer().reduce(\n        const <StreakEvent>[],"
+    }
+  ],
+  "sites": 1,
+  "why": "The comment above (lines 166-176) claims this 'pins the reducer directly against the empty event log' and replays 'the events attributable to the batch', but the code passes a literal `const <StreakEvent>[]`, never the `streakRows` queried two blocks earlier — so `reducerState.currentStreak == 0` is true by construction for any run, proving nothing about bulkMarkComplete. No coverage gap results (the preceding `streakRows, isEmpty` assertion at line 154-164 already correctly covers the real invariant against the DB), but the block misleads a reader into thinking the reducer was exercised against real data.",
+  "recommendation": "Either delete the redundant block, or map the already-queried `streakRows` into StreakEvents and reduce those instead of a hardcoded empty list.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The reducer assertion consumes the DB-queried rows, or the redundant block is removed."
+  ],
+  "labels": [
+    "testing",
+    "tautological"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-27",
+  "chunk": "grp-136",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-32",
+  "linearPriority": "Low"
+}

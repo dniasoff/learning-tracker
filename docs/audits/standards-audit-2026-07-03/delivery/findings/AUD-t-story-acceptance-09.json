@@ -1,0 +1,55 @@
+{
+  "title": "Fix inverted guard in epic_26_story_15's 'isComposite returns false for leaf curricula' test — it cannot fail",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_15_composite_strategy_test.dart",
+      "line": 67,
+      "quote": "if (!CompositeCurriculumStrategy.isComposite(id.storageKey)) {\n            expect("
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_15_composite_strategy_test.dart",
+      "line": 214,
+      "quote": "'saveOrder writes all items atomically — all rows present after call',"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_15_composite_strategy_test.dart",
+      "line": 260,
+      "quote": "contains('_database.transaction('),"
+    }
+  ],
+  "sites": 3,
+  "why": "The loop wraps the assertion in `if (!isComposite(id))`. When isComposite correctly returns false, the guard is true, entering the block to assert isFalse on a value already known false — tautological but harmless. When isComposite returns true for some non-tanach id — the exact regression this test's name claims to catch — the guard is false, the block (and its expect) is skipped entirely, and the test passes silently. The test cannot fail for any implementation of CompositeCurriculumStrategy.isComposite, including a buggy one that marks every curriculum composite.",
+  "recommendation": "Drop the inner if and assert directly: `expect(CompositeCurriculumStrategy.isComposite(id.storageKey), isFalse, reason: 'only tanach should be composite');` for every non-tanach id.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "the test fails if CompositeCurriculumStrategy.isComposite is changed to return true for any non-tanach CurriculumId"
+  ],
+  "labels": [
+    "testing",
+    "tautological",
+    "epic-26"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-130",
+  "mergedFrom": [
+    "Add a failure-path test for LearningOrderRepositoryImpl.saveOrder's transaction — only the happy path is covered"
+  ],
+  "coDiscoverers": [
+    "t1-story-epic-26"
+  ],
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-09",
+  "linearPriority": "Medium"
+}

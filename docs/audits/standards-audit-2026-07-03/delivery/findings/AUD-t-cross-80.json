@@ -1,0 +1,40 @@
+{
+  "title": "Remove dead ProfileDao import in user_database_managers_test.dart:12",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code (applicability sweep: Everything)",
+  "area": "learning_tracker/test/core/database/user_database_managers_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+      "line": 12,
+      "quote": "import 'package:learning_tracker/core/database/daos/profile_dao.dart';"
+    }
+  ],
+  "sites": 1,
+  "why": "`ProfileDao` (a DatabaseAccessor class, not an extension) is never referenced anywhere in the 1073-line file. `unused_import` is absent from analysis_options.yaml's hand-rolled lint list (confirmed by grep), so `flutter analyze` — clean in the audit baseline — does not and will not catch this or future dead imports in this file.",
+  "recommendation": "Delete the import. Separately, consider adding `unused_import` to the explicit lint list so this class of defect gets a Rule-0 checker.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Line 12 import removed; dart analyze stays clean.",
+    "(Optional, stated separately) unused_import enabled in analysis_options.yaml so `flutter analyze`/`make audit` flags dead imports automatically going forward."
+  ],
+  "labels": [
+    "dead-code",
+    "hygiene",
+    "lint-gap"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-root-p4",
+  "chunk": "grp-015",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-80",
+  "linearPriority": "Low"
+}

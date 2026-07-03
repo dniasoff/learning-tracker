@@ -1,0 +1,45 @@
+{
+  "title": "Replace date_utils_test.dart's real DateTime.now() read with a fixed/injected clock",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests: no wall-clock)",
+  "area": "test/core/utils/date_utils_test.dart (hermetic tests)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/utils/date_utils_test.dart",
+      "line": 11,
+      "quote": "final actualNow = DateTime.now().toUtc();"
+    },
+    {
+      "file": "learning_tracker/test/core/utils/date_utils_test.dart",
+      "line": 13,
+      "quote": "expect(diff.inSeconds, lessThan(1));"
+    }
+  ],
+  "sites": 1,
+  "why": "This is the only wall-clock read across all 14 test files in the batch — every other test in the suite (and in the file's own source, date_utils.dart, which is explicitly designed around a swappable LocalDayClock so \"day-boundary semantics are deterministic in tests\") uses fixed DateTime.utc(...) literals. Comparing DateTimeFactory.nowUtc() against a freshly-read DateTime.now() with a 1-second tolerance is a live flake source: any CI scheduling jitter, GC pause, or slow VM startup between the two calls pushes the gap over 1 second and fails the test for a reason unrelated to the code under test.",
+  "recommendation": "Override the LocalDayClock with a fixed fake instant (per the source file's own documented pattern: `localDayClockProvider.overrideWithValue(...)` or `useLocalDayClock`) and assert DateTimeFactory.nowUtc() returns exactly that fixed instant, rather than \"close to real time\".",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No `DateTime.now()` call remains in test/core/utils/date_utils_test.dart.",
+    "The nowUtc test asserts equality against an injected/fixed clock value, not a real-time tolerance window."
+  ],
+  "labels": [
+    "hermetic-tests",
+    "flake-risk",
+    "tq-6"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-nav-utils",
+  "chunk": "grp-020",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-87",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,40 @@
+{
+  "title": "Replace track_dao.dart's stringly-typed TrackState class with a real Dart enum",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-6 spirit / Evans ubiquitous language",
+  "area": "core/database/daos/track_dao.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+      "line": 15,
+      "quote": "class TrackState {\n  const TrackState._();\n  static const active = 'active';"
+    }
+  ],
+  "sites": 1,
+  "why": "TrackState is a 4-value closed lifecycle (active/retired/archived/deleted) central to this HOTSPOT file's whole model, modeled as bare String constants on a TextColumn with no DB-level or compiler-level check that only these 4 values ever get stored. Any code that branches on `.state` gets no exhaustiveness checking, and nothing stops a typo'd string reaching the column (mitigated today only by everyone remembering to use the TrackState.* constants rather than literals — a convention, not a guarantee).",
+  "recommendation": "Model TrackState as a real Dart `enum` (or use Drift's `.withConverter` to store it as text but expose an enum in Dart), so switches over track state are compiler-exhaustive and no non-member string can be constructed.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "TrackState is a Dart enum (or enum-backed column); all TrackState.active-style call sites in this batch keep compiling.",
+    "Any switch/when over the state value is exhaustive without a default/_ arm."
+  ],
+  "labels": [
+    "modeling",
+    "type-safety",
+    "hotspot"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "grp-008",
+  "normArea": "core/database",
+  "id": "AUD-core-database-15",
+  "linearPriority": "Low"
+}

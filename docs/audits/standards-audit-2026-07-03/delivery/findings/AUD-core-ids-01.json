@@ -1,0 +1,73 @@
+{
+  "title": "Adopt or delete 6 of 7 unused NaturalKey.forX factories — mergers duplicate the exact key-format logic inline",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication (DRY) / natural-key single-source-of-truth invariant",
+  "area": "learning_tracker/lib/core/ids",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/ids/natural_key.dart",
+      "line": 13,
+      "quote": "/// [DriftMergeStore] splits on `|` to decode composite keys, so the"
+    },
+    {
+      "file": "learning_tracker/lib/core/ids/natural_key.dart",
+      "line": 57,
+      "quote": "factory NaturalKey.forTrackConfig({required String curriculumId}) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/ids/natural_key.dart",
+      "line": 63,
+      "quote": "factory NaturalKey.forStageDefinition({"
+    },
+    {
+      "file": "learning_tracker/lib/core/ids/natural_key.dart",
+      "line": 72,
+      "quote": "factory NaturalKey.forSettings({required String curriculumId}) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/ids/natural_key.dart",
+      "line": 79,
+      "quote": "factory NaturalKey.forBookmark({required String curriculumId}) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/ids/natural_key.dart",
+      "line": 97,
+      "quote": "factory NaturalKey.forLearningOrder({"
+    },
+    {
+      "file": "learning_tracker/lib/core/ids/natural_key.dart",
+      "line": 105,
+      "quote": "factory NaturalKey.fromSingle(String value) => NaturalKey(value);"
+    }
+  ],
+  "sites": 6,
+  "why": "The file's own doc comment claims these factories 'replac[e] ad-hoc `$a|$b` string concatenations that were scattered across the merger layer' — but a repo-wide grep of lib/ and test/ shows forTrackConfig, forStageDefinition, forSettings, forBookmark, forLearningOrder and fromSingle all have zero callers; only forCompletion is used (1 call site, in completion_event_merger.dart). The mergers still hand-roll the identical shapes instead: core/sync/merge/stage_definition_merger.dart:48 builds `'${decoded.curriculumId}|${decoded.trackId}|${decoded.stageOrder}'` by hand — the exact 3-column shape forStageDefinition exists for — and core/sync/merge/learning_order_merger.dart:35 does the same for the 2-column shape forLearningOrder exists for. Because DriftMergeStore decodes these keys by splitting on `|` (the documented invariant at line 13-14), the format is load-bearing for sync correctness but is maintained by convention across 8+ merger files instead of the one factory meant to own it — a future edit to one merger's key shape without updating the others would silently break natural-key matching (double-inserts or dropped LWW comparisons) with no compiler check to catch the drift.",
+  "recommendation": "Either route the unused-factory mergers (stage_definition, settings, track_config, bookmark, learning_order) through the matching NaturalKey.forX calls, or delete the unused factories and correct the misleading doc comment. Prefer adoption since it centralizes the `|`-separator invariant DriftMergeStore depends on.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Every core/sync/merge/*_merger.dart natural-key construction calls a NaturalKey.forX factory, or the doc comment at natural_key.dart:9-11 is corrected to stop claiming repo-wide adoption",
+    "A regression test asserts NaturalKey.forStageDefinition/forLearningOrder produce the exact strings the mergers currently hand-build, so a future format change breaks loudly in one place instead of silently"
+  ],
+  "labels": [
+    "duplication",
+    "sync",
+    "natural-key",
+    "dead-code"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "All 7 natural_key.dart quotes are exact and grep confirms only forCompletion has a caller; the other 6 are dead. Independently found 4 more mergers (bookmark/profile_program/settings/track_config_merger.dart) hand-rolling the identical single-column shape, corroborating the duplication claim beyond what the finding cited. However the 'why' chain's claim that 'DriftMergeStore splits on `|` to decode composite keys' does not hold: drift_merge_store.dart and sync_kv_dao.dart contain no `.split('|')` call anywhere — naturalKey is used only as an opaque SyncKv equality key, never decoded. That specific mechanism is stale/inaccurate (inherited uncritically from the source file's own doc comment), but the core dead-code + cross-file duplication claim is independently confirmed and still supports P2."
+    ]
+  },
+  "sourceBatch": "t1-core-small-a",
+  "chunk": "grp-024",
+  "normArea": "core/ids",
+  "id": "AUD-core-ids-01",
+  "linearPriority": "Medium"
+}

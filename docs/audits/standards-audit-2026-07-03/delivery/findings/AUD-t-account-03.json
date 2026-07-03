@@ -1,0 +1,60 @@
+{
+  "title": "Rewrite account_picker_an4_test.dart to exercise AccountPickerScreen's real sort/tap-guard code instead of a hand-copied replica",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (regression test must pin the actual fix) / Feathers seam",
+  "area": "features/account/presentation/screens/account_picker_an4_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/account/presentation/screens/account_picker_an4_test.dart",
+      "line": 15,
+      "quote": "// Test strategy: we test the ordering logic in isolation using the same sort\n// algorithm as the fix, and verify the _switching guard behavior via a minimal"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/screens/account_picker_an4_test.dart",
+      "line": 66,
+      "quote": "List<String> _sortedAccountDbFileNames({\n  required List<String> accountDbFileNames,"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/screens/account_picker_an4_test.dart",
+      "line": 31,
+      "quote": "class _TapGuardWidget extends StatefulWidget {"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+      "line": 69,
+      "quote": "...rawAccounts.where((a) => a.dbFileName == activeDbFileName),"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+      "line": 430,
+      "quote": "if (_switching) return;\n    if (mounted) setState(() => _switching = true);"
+    }
+  ],
+  "sites": 1,
+  "why": "The file never imports account_picker_screen.dart. AN-4 fixed two real bugs (unstable account ordering; no re-entrancy guard on rapid double-tap causing concurrent account switches — a genuine data-integrity risk for a local-first synced app). This test file instead hand-copies the sort comparator into `_sortedAccountDbFileNames` and hand-copies the `_switching` guard into `_TapGuardWidget`, then tests its own copies. If a future change to the real `_AccountTile._switching` guard or the real sort in AccountPickerScreen.build reintroduces either bug, this suite keeps passing because it never touches the production code — the regression protection is illusory.",
+  "recommendation": "Test the real AccountPickerScreen (as account_picker_screen_l1_test.dart and account_picker_local_data_missing_test.dart in this same batch correctly do): drive the ordering assertion by seeding accounts via the registry and pumping the real screen (asserting tile order), and drive the tap-guard assertion by tapping the real _AccountTile through the pumped widget tree with a slow-resolving fake switch action.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "account_picker_an4_test.dart imports and pumps the real AccountPickerScreen (no private replica of the sort comparator or the _switching guard).",
+    "Reverting the AN-4 fix in account_picker_screen.dart (either the sort or the guard) makes this test fail red."
+  ],
+  "labels": [
+    "test-quality",
+    "regression-test",
+    "feathers-seam"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p3",
+  "chunk": "grp-040",
+  "normArea": "tests/account",
+  "id": "AUD-t-account-03",
+  "linearPriority": "Medium"
+}

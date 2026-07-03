@@ -1,0 +1,40 @@
+{
+  "title": "Log SchedulerStageRepositoryImpl's schedule-JSON decode failure instead of silently swallowing it",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 [P log-less] — no log-less catch",
+  "area": "features/scheduler/data repositories",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart",
+      "line": 32,
+      "quote": "} catch (_) {\n      sched = {'type': 'delay', 'delay_days': 0};"
+    }
+  ],
+  "sites": 1,
+  "why": "If a stage's schedule JSON column is ever malformed (migration bug, manual DB edit, a bad sync-merge write), every read of that stage silently substitutes a hardcoded delay_days:0 default with zero AppLogger call — changing that stage's chazara/review timing with no diagnostic trail to explain a future 'my review schedule looks wrong' report. SchedulerStageRepositoryImpl also has no dedicated unit test file (grep across test/ confirms it is only exercised indirectly, with well-formed data, through SchedulerEngine/DailyTaskGenerator integration tests), so this fallback path is completely unexercised by the suite.",
+  "recommendation": "Log via AppLogger (including the row id and raw schedule string) in the catch before falling back, and add a unit test for the fallback path.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The catch in _rowToSchedulerStage calls AppLogger.warning/error with the stage row id and raw schedule string before falling back to the default.",
+    "New unit test constructs a StageDefinition row with malformed schedule JSON and asserts both the fallback SchedulerStage values and that the log call fired."
+  ],
+  "labels": [
+    "error-handling",
+    "EH-3",
+    "silent-failure"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "chunk": "grp-091",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-11",
+  "linearPriority": "Medium"
+}

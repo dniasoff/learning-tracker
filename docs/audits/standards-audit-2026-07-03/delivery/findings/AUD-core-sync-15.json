@@ -1,0 +1,115 @@
+{
+  "title": "Add per-row exception isolation to every EntityMerger except LearnerProfileMerger",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard: partial I/O failure containment",
+  "area": "core/sync/merge",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/merge/bookmark_merger.dart",
+      "line": 29,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/goal_merger.dart",
+      "line": 37,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/learning_ledger_merger.dart",
+      "line": 39,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/track_config_merger.dart",
+      "line": 32,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/stage_definition_merger.dart",
+      "line": 42,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/settings_merger.dart",
+      "line": 28,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/streak_event_merger.dart",
+      "line": 46,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/learning_order_merger.dart",
+      "line": 29,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/profile_program_merger.dart",
+      "line": 37,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/points_ledger_merger.dart",
+      "line": 36,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/reward_redemption_merger.dart",
+      "line": 32,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/completion_event_merger.dart",
+      "line": 29,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/study_day_config_merger.dart",
+      "line": 29,
+      "quote": "for (final row in rows) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/gamification_settings_merger.dart",
+      "line": 60,
+      "quote": "Future<void> merge({"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/notification_settings_merger.dart",
+      "line": 41,
+      "quote": "Future<void> merge({"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/ui_preferences_merger.dart",
+      "line": 43,
+      "quote": "Future<void> merge({"
+    }
+  ],
+  "sites": 16,
+  "why": "LearnerProfileMerger wraps each row's merge body in try/catch with an explicit rationale (learner_profile_merger.dart:35-37): 'a single malformed/FK-violating profile row must never abort the whole page... The per-row merger try/catch is the primary guard' — a claim echoed verbatim at the sync_orchestrator.dart call site. None of the other 16 merge implementations apply that pattern: any exception thrown while processing row 5 of a 200-row page (an FK violation — see the companion finding on stage_definition/settings/goal — or any malformed-field cast) propagates out of merge() and aborts the whole page. sync_orchestrator.dart's outer per-step catch keeps the app from crashing (it logs 'sync_pull_step_db_error_nonfatal' and returns), but the other 199 rows in that page are silently deferred to the next full sync instead of 199/200 succeeding immediately.",
+  "recommendation": "Generalize LearnerProfileMerger's per-row try/catch (log via AppLogger, continue to the next row) to the other 16 EntityMerger implementations, or centralize the isolation once inside MergeRouter.dispatch if it's restructured to iterate rows itself.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "A fault-injection test (parametrized over EntityKind.all where practical) merges a page containing one deliberately-malformed/throwing row alongside a valid row and asserts the valid row still applies and the bad one is logged, not that the whole page is dropped."
+  ],
+  "labels": [
+    "sync",
+    "merge",
+    "resilience",
+    "nygard"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-merge",
+  "chunk": "grp-030",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-15",
+  "linearPriority": "Medium"
+}

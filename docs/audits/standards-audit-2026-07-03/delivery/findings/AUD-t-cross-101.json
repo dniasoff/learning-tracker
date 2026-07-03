@@ -1,0 +1,46 @@
+{
+  "title": "listener_overflow_recovery_test.dart's per-channel throttle test bypasses the project's injectable clock seam, depending on real wall-clock proximity",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/sync/listener_overflow_recovery_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/listener_overflow_recovery_test.dart",
+      "line": 95,
+      "quote": "test('a second at-limit snapshot within 60 s does NOT retrigger the pull '\n        '(per-channel throttle)', () async {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/listener_supervisor.dart",
+      "line": 357,
+      "quote": "final now = DateTimeFactory.nowUtc();\n    final last = _lastRecoveryPull[channel];"
+    }
+  ],
+  "sites": 1,
+  "why": "ListenerSupervisor's recovery-pull throttle reads the wall clock through DateTimeFactory.nowUtc(), which the codebase built as an overridable seam (useLocalDayClock / localDayClockProvider.overrideWithValue) precisely so tests don't depend on real elapsed time. This test never overrides it, so 'within 60 s' is proven only by the test happening to execute in milliseconds, not by construction — and it forfeits the ability to assert the OTHER side of the boundary (a snapshot fired after 60s DOES retrigger), which cannot be tested without fast-forwarding a real clock.",
+  "recommendation": "Override the clock with a FakeLocalDayClock in setUp/tearDown (matching the pattern already used in learner_profile_delete_enqueue_profile0_test.dart) and advance it between the two at-limit snapshots to assert both 'inside window → coalesced' and 'past window → retriggers'.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "the throttle test overrides LocalDayClock and asserts both sides of the 60s boundary without a real wait"
+  ],
+  "labels": [
+    "testing",
+    "hygiene",
+    "clock-seam"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor: recommendation's 'matching the pattern in learner_profile_delete_enqueue_profile0_test.dart' is imprecise — that test injects a clock via constructor param, not the global useLocalDayClock seam ListenerSupervisor actually needs. Doesn't affect core claim."
+    ]
+  },
+  "sourceBatch": "t1-feat-sync-p2",
+  "chunk": "grp-109",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-101",
+  "linearPriority": "Low"
+}

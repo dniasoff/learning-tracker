@@ -1,0 +1,84 @@
+{
+  "title": "Add Locale('he') cases to onboarding_steps_overflow_test.dart's four overflow guards",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "features/onboarding/presentation/steps",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/steps/onboarding_steps_overflow_test.dart",
+      "line": 78,
+      "quote": "await expectNoOverflowAcrossDevices("
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/steps/onboarding_steps_overflow_test.dart",
+      "line": 92,
+      "quote": "() => const OnboardingAddAnotherPromptStep("
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/steps/onboarding_steps_overflow_test.dart",
+      "line": 135,
+      "quote": "await expectNoOverflowAcrossDevices("
+    },
+    {
+      "file": "learning_tracker/test/helpers/overflow_harness.dart",
+      "line": 179,
+      "quote": "Locale locale = const Locale('en'),"
+    },
+    {
+      "file": "docs/coding-standards.md",
+      "line": 464,
+      "quote": "**Enforce:** [Pending] `test/helpers/pump_app.dart` as the reviewed convention; CI golden/widget test of a key screen under Hebrew."
+    },
+    {
+      "file": "learning_tracker/test/helpers/overflow_harness.dart",
+      "line": 122,
+      "quote": "Widget _wrap({\n  required Widget child,"
+    },
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+      "line": 124,
+      "quote": "child: MaterialApp(\n      locale: locale,\n      localizationsDelegates: const ["
+    },
+    {
+      "file": "learning_tracker/test/helpers/overflow_harness.dart",
+      "line": 130,
+      "quote": "child: MaterialApp(\n      locale: locale,\n      debugShowCheckedModeBanner: false,"
+    }
+  ],
+  "sites": 8,
+  "why": "expectNoOverflowAcrossDevices accepts a locale override but none of this file's 4 cases pass one, so every case renders English-only in an RTL/bilingual app where Hebrew strings routinely run a different length than English (and, per the wizard finding above, several of these exact widgets currently render un-translated English anyway). The OnboardingProfileCreationStep case exists specifically to guard a tablet/keyboard-compressed-height regression (768x640) — exactly the tight corner where longer Hebrew text (interpolated names, the un-localized 'A profile with this name already exists' error) is most likely to newly overflow — yet it is never checked there.",
+  "recommendation": "Duplicate each case (or parametrize with a locale list) to also run at locale: const Locale('he'), at minimum for the OnboardingProfileCreationStep keyboard-compressed corner.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "each of the 4 expectNoOverflowAcrossDevices calls in this file also runs at Locale('he') and passes"
+  ],
+  "labels": [
+    "rtl",
+    "hebrew",
+    "overflow",
+    "test-coverage"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "chunk": "grp-071",
+  "mergedFrom": [
+    "Create test/helpers/pump_app.dart — the shared widget-test harness TQ-3 requires but which does not exist",
+    "dashboard_todays_missions_heading_test.dart: reuse test/helpers/overflow_harness.dart instead of hand-rolling _buildApp/pumpAt"
+  ],
+  "coDiscoverers": [
+    "t1-feat-dashboard-p3",
+    "t1-feat-onboarding-p3",
+    "t1-test-helpers"
+  ],
+  "normArea": "tests/onboarding",
+  "id": "AUD-t-onboarding-01",
+  "linearPriority": "Medium"
+}

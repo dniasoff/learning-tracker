@@ -1,0 +1,43 @@
+{
+  "title": "Fix ProfileEditFormDialog's doc comment claiming profile mode is not editable on edit",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Evans ubiquitous language / doc drift",
+  "area": "features/profiles/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
+      "line": 148,
+      "quote": "/// Mode is shown but not editable on edit (matching the existing Manage\n/// Learners behaviour — only name + avatar are persisted)."
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
+      "line": 37,
+      "quote": "// PP-2 fix: pass result.mode so that the selected mode (child/adult) is\n    // actually persisted. Previously mode was silently dropped..."
+    }
+  ],
+  "sites": 1,
+  "why": "The class doc comment on ProfileEditFormDialog says mode is 'shown but not editable on edit', but its SegmentedButton is fully interactive (onSelectionChanged sets state) and editProfileFlow explicitly persists `result.mode` via repo.updateProfile — a documented bugfix (PP-2) three lines below the call site. A maintainer trusting the stale comment could miss that changing a child's mode to adult also has a load-bearing side effect a few lines later (clearing that profile's stored PINs).",
+  "recommendation": "Update the doc comment to state mode IS editable and persisted, and cross-reference the PIN-clearing side effect in editProfileFlow.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Doc comment on ProfileEditFormDialog accurately describes current (editable) mode behavior"
+  ],
+  "labels": [
+    "docs-drift",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-076",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-13",
+  "linearPriority": "Low"
+}

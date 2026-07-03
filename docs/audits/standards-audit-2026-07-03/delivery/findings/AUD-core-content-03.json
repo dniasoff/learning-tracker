@@ -1,0 +1,45 @@
+{
+  "title": "Hoist the child-list sort out of the per-curriculum loop in ContentTree.fromCurricula",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler — hoist loop-invariant code",
+  "area": "core/content/content_tree.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/content/content_tree.dart",
+      "line": 93,
+      "quote": "for (final entry in byCurriculum.entries) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/content/content_tree.dart",
+      "line": 126,
+      "quote": "// Sort each child list by sortOrder so display is stable.\n      for (final list in childrenByContainerKey.values) {"
+    }
+  ],
+  "sites": 1,
+  "why": "The sort block at lines 126-129 iterates `childrenByContainerKey.values` — the map accumulated across ALL curricula processed so far — but it sits inside the outer `for (final entry in byCurriculum.entries)` loop (opens line 93, the sort closes at line 130 still inside it). For 9 curricula this re-sorts every earlier curriculum's already-sorted child lists up to 9 times each instead of once. contentTree is a keepAlive provider built synchronously (no isolate offload) the first time any screen reads it, so this redundant O(9x) work sits directly on that first-access latency, not merely a style nit.",
+  "recommendation": "Move the sort block outside the curriculum loop (one dedent) so each child list is sorted exactly once after all curricula are indexed.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The sort loop executes once, after the curriculum loop, in content_tree.dart.",
+    "Existing children()-ordering assertions in epic_25_schema_core_test.dart continue to pass."
+  ],
+  "labels": [
+    "core/content",
+    "performance",
+    "startup-latency"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-content",
+  "chunk": "grp-006",
+  "normArea": "core/content",
+  "id": "AUD-core-content-03",
+  "linearPriority": "Medium"
+}

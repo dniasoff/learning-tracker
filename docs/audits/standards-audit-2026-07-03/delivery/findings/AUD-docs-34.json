@@ -1,0 +1,51 @@
+{
+  "title": "Reconcile stale backlog/implementation-ready language in docs/scenarios/evolution/README.md with its own OBSOLETE banner",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-4 triage AREA NOTE — internal doc self-consistency for a point-in-time artifact",
+  "area": "docs/scenarios/evolution",
+  "evidence": [
+    {
+      "file": "docs/scenarios/evolution/README.md",
+      "line": 1,
+      "quote": "> **OBSOLETE — superseded 2026-05-19.** ... is **not being implemented**."
+    },
+    {
+      "file": "docs/scenarios/evolution/README.md",
+      "line": 9,
+      "quote": "status: backlog"
+    },
+    {
+      "file": "docs/scenarios/evolution/README.md",
+      "line": 22,
+      "quote": "> Use these docs as the implementation-ready spec when Epic 22 work starts."
+    }
+  ],
+  "sites": 1,
+  "why": "Line 1 says the design is obsolete and not being implemented, but the frontmatter (line 9) still claims `status: backlog` and line 22 tells the reader to treat the set as 'implementation-ready ... when Epic 22 work starts' — implying a future implementation that docs/linear-status.md confirms will not happen (Epic 22/DNI-255: all 22 stories Canceled). Risk is low only because the unambiguous top banner reads first; a reader skimming past line 1 into the frontmatter or body could still conclude Epic 22 is merely queued rather than abandoned.",
+  "recommendation": "Delete or rewrite the frontmatter `status: backlog` field and the line-22 'implementation-ready spec... when Epic 22 work starts' sentence so the whole file agrees with its own line-1 OBSOLETE/superseded banner.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "docs/scenarios/evolution/README.md contains no `status: backlog` or 'when Epic 22 work starts' language.",
+    "The file's frontmatter and body both agree with its own line-1 OBSOLETE/superseded banner."
+  ],
+  "labels": [
+    "docs",
+    "tier4-triage",
+    "internal-inconsistency",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p3",
+  "chunk": "grp-172",
+  "normArea": "docs",
+  "id": "AUD-docs-34",
+  "linearPriority": "Low"
+}

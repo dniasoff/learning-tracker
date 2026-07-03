@@ -1,0 +1,66 @@
+{
+  "title": "Replace wall-clock DateTime.now() calls in step_starting_position_l1_test.dart with fixed dates",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests: no wall-clock; use clockProvider/fixed DateTimeFactory only)",
+  "area": "test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart — StartingPositionCalendarMode B2 window group",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+      "line": 787,
+      "quote": "final today = DateTime.now();"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+      "line": 811,
+      "quote": "final today = DateTime.now();"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+      "line": 834,
+      "quote": "final today = DateTime.now();"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+      "line": 848,
+      "quote": "final today = DateTime.now();"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+      "line": 861,
+      "quote": "final today = DateTime.now();"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+      "line": 880,
+      "quote": "final today = DateTime.now();"
+    }
+  ],
+  "sites": 6,
+  "why": "Six tests in the 'StartingPositionCalendarMode — B2 date window' group read the real wall clock via DateTime.now() instead of a fixed date, even though the same file's section D ('ProgramStartingPosition.allowedWindow — B2 window contract', lines 1408-1509) already covers the identical invariants deterministically with DateTime(2026, 6, 1) literals, and the repo has a DateTimeFactory fixed-clock utility used elsewhere (e.g. drift_memory.dart, edit_track_screen.dart). Wall-clock reads in date-window-boundary logic are exactly the kind of test Nygard/TQ-6 flag as a latent flakiness risk (month/DST/leap-year boundaries), and they duplicate coverage the file's own section D already provides hermetically.",
+  "recommendation": "Replace `final today = DateTime.now();` with a fixed `DateTime(...)` literal (or DateTimeFactory override) in each of the 6 sites, matching the pattern already used in section D of the same file.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No DateTime.now() calls remain in step_starting_position_l1_test.dart",
+    "Tests still pass with a pinned/fixed date, proving the assertions don't depend on the actual current day"
+  ],
+  "labels": [
+    "testing",
+    "TQ-6",
+    "hermetic",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p5",
+  "chunk": "grp-121",
+  "normArea": "tests/tracks",
+  "id": "AUD-t-tracks-09",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,57 @@
+{
+  "title": "Add try/catch around onSendAgain/onVerified in EmailVerificationConfirmPanel and un-skip the C6/E5 regression tests",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2/EH-3 (typed exceptions handled at the boundary; no log-less catch) discovered via disclosed-but-unfixed test skips",
+  "area": "features/account/presentation/widgets/email_verification_confirm_panel.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+      "line": 165,
+      "quote": "Future<void> _wrapSendAgain() async {\n    setState(() => _sendingAgain = true);"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+      "line": 167,
+      "quote": "try {\n      await widget.onSendAgain();"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+      "line": 520,
+      "quote": "// BUG: _wrapSendAgain uses try/finally but not try/catch, so exceptions\n      // from onSendAgain propagate as unhandled async errors, crashing the"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+      "line": 525,
+      "quote": "skip: true,"
+    }
+  ],
+  "sites": 2,
+  "why": "`_wrapSendAgain`/`_wrapVerified` use try/finally with no catch, so any exception from the injected callback propagates as an unhandled async error instead of a graceful error state. The onVerified callback built in sign_in_controller.dart's buildVerificationCallback calls _refreshAndCheckVerified -> authRepo.reloadCurrentUser() with no surrounding try/catch, so a transient network error while the user is mid email-verification is a real, reachable path to this unhandled exception -- not just a theoretical one. Both regression tests that would catch this (C6, E5) are disclosed but left skip:true with no Linear id, so the gap is invisible to anyone not reading test source.",
+  "recommendation": "Add a catch clause to both wrapper methods that resets the loading flag and surfaces the failure (e.g. via a callback/snackbar, matching the pattern already used for signOut() failures elsewhere in this feature), then remove skip: true from C6 and E5.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_wrapSendAgain and _wrapVerified catch and handle exceptions from the injected callbacks (no bare try/finally).",
+    "C6 and E5 in email_verification_confirm_panel_test.dart run (skip: true removed) and pass."
+  ],
+  "labels": [
+    "error-handling",
+    "unhandled-exception",
+    "untracked-bug"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "EH-2/EH-3 rule-fit is a bit loose (no catch clause exists to call 'empty/log-less'; EH-2 is about layer-boundary conversion) but the underlying defect and reachability are independently confirmed."
+    ]
+  },
+  "sourceBatch": "t1-feat-account-p3",
+  "chunk": "grp-040",
+  "normArea": "features/account",
+  "id": "AUD-account-06",
+  "linearPriority": "Medium"
+}

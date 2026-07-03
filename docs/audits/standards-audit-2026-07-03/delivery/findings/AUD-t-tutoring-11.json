@@ -1,0 +1,41 @@
+{
+  "title": "Replace ws3_3e_dual_role_fix_test.dart's naive method-body string slice with depth-matched brace extraction",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Feathers-lens test robustness",
+  "area": "test/features/tutoring/ws3_3e_dual_role_fix_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/ws3_3e_dual_role_fix_test.dart",
+      "line": 53,
+      "quote": "methodStart,\n          textDisplaySrc.indexOf('\\n  }', methodStart) + 4,"
+    }
+  ],
+  "sites": 1,
+  "why": "The helper extracts a Dart method's body by finding the FIRST line that is exactly two spaces + '}' after the method start, instead of counting brace depth. It happens to work today only because _isTutorSession is a one-line method; the same fragile logic is duplicated a second time in the same file (AC2, ~line 72-75) instead of being factored out. The codebase already has the correct depth-counting version right next door — _extractRuleBlock in w3_41_tutor_security_rules_test.dart:438-459 — that this file doesn't reuse. If _isTutorSession ever grows a nested block whose closing brace lands at the same 2-space indent, the slice truncates early and the isNot(contains(...)) assertion would pass regardless of what the unseen remainder of the method does.",
+  "recommendation": "Extract _extractRuleBlock-style depth-counting into a shared test helper and use it for method-body extraction here instead of the raw indexOf heuristic; de-duplicate the two inline copies in this file.",
+  "acceptance_criteria": [
+    "ws3_3e_dual_role_fix_test.dart's method-body extraction uses depth-matched brace counting (or a shared helper), with a regression case where the target method contains a nested block closing at the same indent."
+  ],
+  "effort": "S",
+  "labels": [
+    "test-quality",
+    "fragile-test",
+    "tutoring"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Duplication (lines 53/74), _isTutorSession's 1-line body, and the unused _extractRuleBlock depth-counter (w3_41 file:438-459) are all verified real. But the stated trigger ('nested block lands at same 2-space indent') is inaccurate: dart format indents nested blocks to 4+ spaces inside a 2-space method, so they can't collide with '\\n  }'. A doc-comment or raw-string literal containing an embedded 2-space '}' is the realistic trigger instead. Core duplication/fragility defect still holds regardless."
+    ]
+  },
+  "sourceBatch": "t1-feat-tutoring-p4",
+  "chunk": "grp-128",
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-11",
+  "linearPriority": "Low"
+}

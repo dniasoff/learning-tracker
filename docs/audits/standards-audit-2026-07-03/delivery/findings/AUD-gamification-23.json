@@ -1,0 +1,45 @@
+{
+  "title": "TierStyle's ~80 hardcoded hex colors bypass the theme system and never adapt to dark mode",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "no_color_literal_outside_theme (custom_lint, currently broken) + AX-4",
+  "area": "features/gamification/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_style.dart",
+      "line": 58,
+      "quote": "cardBg: Color(0xFFF5E6D3),\n          borderColor: Color(0xFFE8D5C4),"
+    },
+    {
+      "file": "learning_tracker/lib/core/theme/app_theme.dart",
+      "line": 195,
+      "quote": "static ThemeData darkTheme([Color accent = brandBlueDark]) =>\n      _darkTheme(accent: accent);"
+    }
+  ],
+  "sites": 1,
+  "why": "TierStyle.forTitle takes no Brightness/ColorScheme parameter and returns fixed light-palette constants (cream/pastel card backgrounds, dark-on-light text) for all 8 tiers; the app has a real dark theme (AppTheme.darkTheme). A handful of entries do route through AppColors/AppTheme (e.g. AppColors.chartTeal, AppTheme.brandBlue) showing the theme system is reachable from this file, but the other ~90% of values are raw Color(0xFF...) literals. This may be an intentional 'badges always look the same' design choice, but nothing in the file states that, and if it is not intentional, achievement cards will look visually broken (light cards on a dark scaffold) whenever a user or parent switches to dark mode.",
+  "recommendation": "Either document that tier badges are intentionally theme-invariant, or thread Brightness/ColorScheme through TierStyle.forTitle and provide a dark variant per tier.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Manual check (or a golden test) of the achievements screen under ThemeMode.dark confirms tier cards are legible and intentional.",
+    "If not intentional, TierStyle exposes theme-aware colors and a regression golden pins both light and dark renders."
+  ],
+  "labels": [
+    "theming",
+    "dark-mode",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-054",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-23",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,45 @@
+{
+  "title": "Declare PointsLedger.redemptionId as a real FK to RewardRedemptions instead of a comment-only reference",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "profileId-in-PK-adjacent referential-integrity discipline / Evans (invariant enforced in one place, not just documented)",
+  "area": "core/database/tables/points_balance.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/tables/points_balance.dart",
+      "line": 54,
+      "quote": "/// Optional FK to [RewardRedemptions.id] for redemption-related entries."
+    },
+    {
+      "file": "learning_tracker/lib/core/database/tables/points_balance.dart",
+      "line": 55,
+      "quote": "IntColumn get redemptionId => integer().nullable()();"
+    }
+  ],
+  "sites": 1,
+  "why": "The comment asserts a foreign-key relationship the schema never declares. Nothing stops redemptionId from pointing at a nonexistent row, or (with no DB check) at a redemption belonging to a different profile if a future query bug wires the wrong id.",
+  "recommendation": "Add `.references(RewardRedemptions, #id)` in a schema migration (RewardRedemptions rows are never hard-deleted today, so KeyAction.noAction/restrict is reasonable).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Migration adds the FK; a new test asserts inserting a PointsLedger row with a bogus redemptionId fails."
+  ],
+  "labels": [
+    "data-integrity",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Same root-cause defect also exists at completion_events.dart:38 (trackId comment-FK to CurriculumTracks, no .references()) within this same batch's scope - should have been merged as sites:2 per digest rule 4 (learning_ledger.dart:47's trackId, by contrast, does use real .references())."
+    ]
+  },
+  "sourceBatch": "t1-core-database-tables",
+  "chunk": "grp-016",
+  "normArea": "core/database",
+  "id": "AUD-core-database-09",
+  "linearPriority": "Low"
+}

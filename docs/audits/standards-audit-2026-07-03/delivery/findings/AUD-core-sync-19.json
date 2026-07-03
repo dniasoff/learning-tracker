@@ -1,0 +1,69 @@
+{
+  "title": "Delete the dead duplicate syncStatusStreamProvider/syncStatusProvider in features/sync/presentation/providers/sync_providers.dart and fix the false 'delegates here' comment in sync_status_providers.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-4 duplicate top-level symbol names / dead code",
+  "area": "learning_tracker/lib/core/sync/providers/sync_status_providers.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/providers/sync_status_providers.dart",
+      "line": 18,
+      "quote": "UI can watch this directly; [syncStatusProvider] in sync_providers.dart\n/// also delegates here."
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/sync_status_providers.dart",
+      "line": 20,
+      "quote": "final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 25,
+      "quote": "final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 47,
+      "quote": "final syncStatusProvider = Provider<SyncStatus>((ref) {"
+    },
+    {
+      "file": "learning_tracker/test/features/sync/presentation/sync_status_provider_loading_state_test.dart",
+      "line": 15,
+      "quote": "// mirroring the core-layer canonical provider in"
+    }
+  ],
+  "sites": 5,
+  "why": "sync_status_providers.dart:17-19 and :34-36 both assert that sync_providers.dart's syncStatusProvider 'delegates here.' It doesn't: sync_providers.dart independently re-declares both syncStatusStreamProvider and syncStatusProvider with character-for-character identical bodies (same orchestrator watch, same late-subscriber loading-state workaround, same error mapping), under the same names. Grepping every consumer of these two symbol names across lib/ shows dashboard_screen.dart, backup_sync_section.dart and sync_status_indicator.dart all import exclusively from core/sync/providers/sync_status_providers.dart; nothing anywhere imports or references the copy in sync_providers.dart. It is fully dead code with a misleading doc comment, and it demonstrates the exact shotgun-surgery risk duplication creates: the 'late subscriber to a broadcast stream' loading-state fix (the loop-iter2/orchestrator.currentStatus fallback) had to be applied to both copies in parallel, and nothing prevents the next fix from being applied to only one.",
+  "recommendation": "Delete syncStatusStreamProvider/syncStatusProvider from features/sync/presentation/providers/sync_providers.dart (confirmed zero production consumers); any future consumer should import core/sync/providers/sync_status_providers.dart directly. Correct or remove the 'also delegates here' comment once the duplicate is gone.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "features/sync/presentation/providers/sync_providers.dart no longer defines syncStatusStreamProvider or syncStatusProvider.",
+    "grep -rn 'final syncStatusStreamProvider\\|final syncStatusProvider' lib/ returns exactly one definition site each.",
+    "flutter analyze and the existing sync-status widget tests (sync_status_indicator_l1_test.dart, backup_sync_section_l1_test.dart, sync_status_provider_loading_state_test.dart) still pass unchanged."
+  ],
+  "labels": [
+    "dead-code",
+    "duplication",
+    "riverpod",
+    "AG-4"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-providers",
+  "chunk": "grp-032",
+  "mergedFrom": [
+    "syncStatusProvider/syncStatusStreamProvider are duplicated verbatim between core/sync and features/sync -- the unread copy still needed its own bugfix"
+  ],
+  "coDiscoverers": [
+    "t1-core-sync-providers",
+    "t1-feat-sync-p1"
+  ],
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-19",
+  "linearPriority": "Medium"
+}

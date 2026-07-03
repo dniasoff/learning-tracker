@@ -1,0 +1,90 @@
+{
+  "title": "Surface a user-visible error when EditTrackScreen._save() swallows a non-'permission-denied' TutorWriteException",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 (effectively-empty catch) / AREA-NOTE lib+test gap",
+  "area": "features/tracks/setup/presentation/screens (edit_track_screen.dart)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "line": 296,
+      "quote": "} on TutorWriteException catch (e) {\n        if (mounted && e.code == 'permission-denied') {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "line": 302,
+      "quote": "        return;\n      }"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+      "line": 388,
+      "quote": "    ).thenAnswer((_) async {});"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/domain/services/curriculum_activation_service.dart",
+      "line": 220,
+      "quote": "} catch (e) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart",
+      "line": 150,
+      "quote": "} catch (_) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart",
+      "line": 903,
+      "quote": "} catch (_) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "line": 136,
+      "quote": "} catch (_) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart",
+      "line": 608,
+      "quote": "if (e.code == 'permission-denied') {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "line": 297,
+      "quote": "if (mounted && e.code == 'permission-denied') {"
+    }
+  ],
+  "sites": 9,
+  "why": "When the mocked/real trackEditService.editTrack() throws TutorWriteException with any code other than 'permission-denied' (e.g. 'internal', 'unavailable', 'deadline-exceeded' — all plausible on a tutor's flaky mobile connection, per the throw site in tutored_write_router.dart:355), the catch block's `if` is false, so it does nothing but `return`. The Save spinner clears (via the outer `finally`), the dialog is gone, and the user is left on the same screen with zero indication the edit failed — no snackbar, no navigation, no log call at this site. edit_track_and_detail_l1_test.dart is the only test file exercising EditTrackScreen's save flow, and its mockService.editTrack is stubbed with exactly one behavior file-wide (an unconditional `thenAnswer` success) — grepped for `thenThrow`/`TutorWriteException` and found none — so this silent-failure branch has never been exercised by any test.",
+  "recommendation": "Add an else/default branch to the catch that shows a generic error snackbar and logs via AppLogger for any code other than 'permission-denied'. Add a widget test that stubs mockService.editTrack to throw TutorWriteException('x', code: 'internal'), taps Save + Confirm, and asserts an error is surfaced to the user (must fail on current code).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "New widget test in edit_track_and_detail_l1_test.dart stubs mockService.editTrack to throw a TutorWriteException with a non-'permission-denied' code, taps Save Changes + confirms, and asserts a SnackBar/error message renders — red on current code, green after the fix",
+    "edit_track_screen.dart's catch block surfaces feedback (snackbar + AppLogger call) for every TutorWriteException code, not only 'permission-denied'"
+  ],
+  "labels": [
+    "error-handling",
+    "tracks-setup",
+    "tutoring",
+    "silent-failure"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Cited line numbers point to the first line of each multi-line quote (e.g. line 296 quote actually spans source lines 296-297, line 302 spans 302-303); content and meaning are otherwise exact."
+    ]
+  },
+  "sourceBatch": "t1-feat-tracks-p4",
+  "chunk": "high-095",
+  "mergedFrom": [
+    "Log or type the catch blocks that silently swallow errors across CurriculumActivationService/AddTrackFlow/EditTrackScreen"
+  ],
+  "coDiscoverers": [
+    "t1-feat-tracks-p1",
+    "t1-feat-tracks-p4"
+  ],
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-07",
+  "linearPriority": "High"
+}

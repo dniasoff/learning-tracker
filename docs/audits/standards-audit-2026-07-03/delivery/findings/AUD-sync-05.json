@@ -1,0 +1,49 @@
+{
+  "title": "Repositories/services constructed inline instead of injected via a provider at three sync-path call sites",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-7",
+  "area": "features/sync data",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+      "line": 106,
+      "quote": "final analytics = ParentAnalyticsRepositoryImpl(_database);"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+      "line": 141,
+      "quote": "final rewardService = RewardMilestoneService("
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/reward_settings_merge_delegate.dart",
+      "line": 35,
+      "quote": "final service = RewardMilestoneService(db, profileId: profileId);"
+    }
+  ],
+  "sites": 3,
+  "why": "SM-7 requires repositories/services/DAOs to be constructed only inside their @riverpod provider or a test override, so they stay swappable in tests without also having to fake the DB the constructor pulls in. All three sites construct a repository/service directly inside a plain method body, given only the already-available UserDatabase. A unit test of pushAllLocalData, buildGamificationSnapshot, or the reward-merge delegate cannot substitute a fake ParentAnalyticsRepositoryImpl/RewardMilestoneService without also faking the whole Drift database those classes read. This is a repo-wide pattern (23 similar sites exist outside this batch too, e.g. lib/core/navigation/guards/restore_guard.dart), not unique to these three, so the cost here is real but modest.",
+  "recommendation": "Where these services need independent test substitution, accept them as constructor parameters (defaulting to the real implementation) instead of instantiating inline; lower priority given the pattern is pervasive repo-wide and each site is already exercisable via a real in-memory DB, as this batch's own tests demonstrate.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "SM-7 Rule-0 checker (audit grep for direct Repository/Service/Dao construction outside provider/test files) either passes for these three sites or the finding is explicitly filed as backlog alongside the wider repo-wide pattern."
+  ],
+  "labels": [
+    "SM-7",
+    "testability",
+    "sync"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-107",
+  "normArea": "features/sync",
+  "id": "AUD-sync-05",
+  "linearPriority": "Low"
+}

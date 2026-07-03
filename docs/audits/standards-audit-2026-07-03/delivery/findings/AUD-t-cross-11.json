@@ -1,0 +1,58 @@
+{
+  "title": "Deduplicate near-identical CurriculumLabels test coverage spread across 3 test files",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ test-suite duplication / Fowler DRY",
+  "area": "learning_tracker/test/core/constants",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/constants/curriculum_defaults_extended_test.dart",
+      "line": 265,
+      "quote": "test('excludes level labels when includeLevelLabel is false', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/constants/curriculum_labels_extended_test.dart",
+      "line": 187,
+      "quote": "test('excludes level labels when includeLevelLabel=false', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/constants/curriculum_defaults_test.dart",
+      "line": 223,
+      "quote": "test('daily targets exist for all curricula', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/constants/curriculum_defaults_extended_test.dart",
+      "line": 322,
+      "quote": "test('defaultDailyTargets covers all 9 curricula', () {"
+    }
+  ],
+  "sites": 3,
+  "why": "curriculum_defaults_extended_test.dart and curriculum_labels_extended_test.dart both independently claim in their file-header doc comments to cover 'methods not yet tested' by the other files, but in fact both re-test CurriculumLabels.container, .containerSectionHeader, .level (RangeError for 0 and out-of-range), .valueWithLabel, and .fullPath (skip-null, custom-separator, includeLevelLabel=false) with near-identical test names and assertions — e.g. the 'excludes level labels' group exists verbatim in both files. curriculum_defaults_test.dart separately duplicates the CurriculumDefaults.defaultStages/defaultDailyTargets assertions that curriculum_defaults_extended_test.dart's last group re-covers. Net effect: ~1200 lines across 4 files test one 1270-line source file, with the same behavior asserted 2-3x under different names — any future change to e.g. fullPath's separator handling requires hunting through multiple files to update every duplicate, and CI burns time re-running equivalent assertions. (curriculum_label_variant_test.dart, the 4th file, was checked and found NOT to overlap — it covers distinct nusach/transliteration behavior only.)",
+  "recommendation": "Consolidate curriculum_defaults_extended_test.dart and curriculum_labels_extended_test.dart (partition cleanly by class — LevelLabels vs CurriculumLabels vs CurriculumDefaults — or merge into curriculum_defaults_test.dart), removing the 5+ duplicate assertion groups identified.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Merged suite passes `flutter test test/core/constants/`",
+    "No two test groups across the constants test directory assert the same production method+scenario combination",
+    "Consolidated suite's total line count is measurably smaller than the current 4-file total"
+  ],
+  "labels": [
+    "test-quality",
+    "duplication",
+    "tq"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "None needed — all cited evidence and derived counts verified accurate."
+    ]
+  },
+  "sourceBatch": "t1-core-small-a",
+  "chunk": "grp-025",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-11",
+  "linearPriority": "Medium"
+}

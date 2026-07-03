@@ -1,0 +1,44 @@
+{
+  "title": "Update BookmarkCodec's dual-key comment — it describes the pre-Phase-B bug as still live",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8-adjacent comment/code truth",
+  "area": "core/sync/codec",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/codec/bookmark_codec.dart",
+      "line": 39,
+      "quote": "// Dual-key: live writers (BookmarkEntity.toFirestore et al.) persist the ref"
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/domain/entities/bookmark.dart",
+      "line": 34,
+      "quote": "/// Phase B: routes through [BookmarkCodec.encode] so the write shape is"
+    }
+  ],
+  "sites": 1,
+  "why": "bookmark.dart's own comment confirms Phase B already made BookmarkEntity.toFirestore route through this exact codec, which writes sefaria_ref, not content_item_id. bookmark_codec.dart's comment still describes 'live writers... persist the ref under content_item_id' in the present tense, as if that writer still exists today. A future maintainer reading only this file would wrongly conclude content_item_id is still being actively written and might be reluctant to ever retire the read-side fallback, or misdiagnose which key is canonical.",
+  "recommendation": "Reword to past tense: 'Pre-Phase-B documents may still carry content_item_id; decode() accepts both for backward-compatible reads.'",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Comment reworded to past tense; no behavior change."
+  ],
+  "labels": [
+    "docs",
+    "hygiene",
+    "sync"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-codec",
+  "chunk": "grp-028",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-41",
+  "linearPriority": "Low"
+}

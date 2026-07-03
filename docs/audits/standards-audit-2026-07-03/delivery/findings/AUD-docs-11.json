@@ -1,0 +1,39 @@
+{
+  "title": "Flag docs/planning/sync-architecture-plan.md Part A as stale — its outbox-drain headline finding is now false",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs/planning",
+  "evidence": [
+    {
+      "file": "docs/planning/sync-architecture-plan.md",
+      "line": 105,
+      "quote": "grep for `\\.drain(` in `lib/` returns zero matches outside `outbox_processor.dart` itself ... The outbox is a write-only sink in production."
+    }
+  ],
+  "sites": 1,
+  "why": "Running the same grep today finds production callers at lib/core/sync/sync_orchestrator.dart:384 and lib/core/sync/providers/sync_orchestrator_providers.dart:200, consistent with the doc's own Phase-0 'Stop the bleeding' rollout item having shipped. The doc reads as a present-tense 'Current-state audit' with no date-of-validity caveat and is unlinked from docs/index.md, so a future contributor or AI agent (this repo runs many 'paste this prompt into a fresh session' orchestration flows) finding it via search could conclude a CRITICAL data-loss bug is still open in the most sync-sensitive subsystem in the app and misdirect effort.",
+  "recommendation": "Add a 'Part A verified current as of <date>' note, or append a resolved/open marker per ranked finding — mirroring the remediation-status table pattern already used well in tracks-and-completion-bug-report.md.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The doc states the date through which Part A's grep-based claims were last verified, or each of the 15 ranked findings carries a resolved/open marker."
+  ],
+  "labels": [
+    "docs",
+    "sync",
+    "drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p2",
+  "chunk": "grp-171",
+  "normArea": "docs",
+  "id": "AUD-docs-11",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,55 @@
+{
+  "title": "Replace throwsA(anything) with a typed matcher in 20 validateIntegrity insert tests",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7 (weakened assertion)",
+  "area": "test/core/database",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/user_database_dataclass_core_test.dart",
+      "line": 1042,
+      "quote": "() => db.into(db.accounts).insert(const AccountsCompanion()),\n        throwsA(anything),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_dataclass_core_test.dart",
+      "line": 1172,
+      "quote": "() => db.into(db.streakEvents).insert(const StreakEventsCompanion()),\n        throwsA(anything),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_companion_coverage_test.dart",
+      "line": 1086,
+      "quote": "() => db.into(db.outbox).insert(const OutboxCompanion()),\n        throwsA(anything),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_companion_coverage_test.dart",
+      "line": 1105,
+      "quote": "() => db\n            .into(db.sacredWindowEntries)"
+    }
+  ],
+  "sites": 20,
+  "why": "throwsA(anything) is satisfied by any thrown object — a NoSuchMethodError from an unrelated null-dereference, a StateError from wrong DB state, or the intended Drift required-field validation all pass identically. These 20 tests (17 in user_database_dataclass_core_test.dart, 3 in user_database_companion_coverage_test.dart) assert only that insert() didn't silently succeed, not that Drift's required-field validation is what actually fired; a regression that made that validation silently no-op while something else in the same call happened to throw would still report green.",
+  "recommendation": "Replace `throwsA(anything)` with `throwsA(isA<InvalidDataException>())` (or whatever concrete type Drift's generated validateIntegrity throws) at all 20 sites.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`grep -rn 'throwsA(anything)' learning_tracker/test/core/database/` returns zero matches in these two files.",
+    "Each replaced matcher is exercised by a corresponding red-first run (assert it still fails if the required-field check is removed from the source table)."
+  ],
+  "labels": [
+    "test-quality",
+    "weak-assertion",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-root-p2",
+  "chunk": "grp-013",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-92",
+  "linearPriority": "Low"
+}

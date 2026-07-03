@@ -1,0 +1,51 @@
+{
+  "title": "Split allow list from allow read in firestore.rules to cap request.query.limit",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SR-4",
+  "area": "firestore.rules",
+  "evidence": [
+    {
+      "file": "learning_tracker/firestore.rules",
+      "line": 193,
+      "quote": "allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);"
+    },
+    {
+      "file": "learning_tracker/firestore.rules",
+      "line": 219,
+      "quote": "allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);"
+    },
+    {
+      "file": "learning_tracker/firestore.rules",
+      "line": 246,
+      "quote": "allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);"
+    }
+  ],
+  "sites": 23,
+  "why": "`allow read` grants both `get` and `list` under the identical condition on every match block in the file (learner_profiles, completions, streak_events, learning_ledger, points_ledger, and every other subcollection); none constrains `request.query.limit`, so nothing stops an unbounded query. This matters most for the tutor cross-user read path: a compromised or custom client authenticated as an active tutor can issue one unlimited `.get()` query across a child's entire completions/learning_ledger history.",
+  "recommendation": "Split `allow read` into `allow get` (unchanged) and `allow list` (same condition && request.query.limit <= 500) on at least the per-profile event collections (completions, streak_events, learning_ledger, points_ledger).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "functions/test/firestore_rules.test.mjs asserts a list query with an unbounded/501+ limit against completions is denied while limit(500) succeeds."
+  ],
+  "labels": [
+    "security",
+    "firestore-rules",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "sites:23 overcounts; SR-4's actual scope ('per-profile event collections') is ~4–6 sites (completions, streak_events, learning_ledger, points_ledger, arguably reward_redemptions/diagnostic_logs), not all 23 allow-read clauses — most of the remaining ~17 are bounded config/snapshot/administrative collections where an unbounded list poses materially lower risk. This matches the finding's own recommendation, which already narrows to 4."
+    ]
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "chunk": "grp-156",
+  "normArea": "firebase",
+  "id": "AUD-firebase-09",
+  "linearPriority": "Medium"
+}

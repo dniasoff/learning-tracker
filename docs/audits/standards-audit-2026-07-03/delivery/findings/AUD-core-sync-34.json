@@ -1,0 +1,48 @@
+{
+  "title": "Extract the duplicated learnerProfiles FK-guard full-table-scan shared by three append-only mergers",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication",
+  "area": "core/sync/merge",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/merge/learning_ledger_merger.dart",
+      "line": 35,
+      "quote": "final existingProfileIds = (await _db.select(_db.learnerProfiles).get())\n        .map((p) => p.id)\n        .toSet();"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/points_ledger_merger.dart",
+      "line": 30,
+      "quote": "final existingProfileIds = (await _db.select(_db.learnerProfiles).get())\n        .map((p) => p.id)\n        .toSet();"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/reward_redemption_merger.dart",
+      "line": 28,
+      "quote": "final existingProfileIds = (await _db.select(_db.learnerProfiles).get())\n        .map((p) => p.id)\n        .toSet();"
+    }
+  ],
+  "sites": 3,
+  "why": "The identical 3-line 'load every learner_profiles row into a Set to guard an FK' snippet is copy-pasted across three mergers, each re-running the full scan once per merge() call. Harmless at today's family-sized profile counts, but three independent copies will silently diverge if the guard logic ever needs to change (e.g. excluding soft-deleted profiles).",
+  "recommendation": "Extract a shared `Future<Set<int>> existingProfileIds()` helper (on UserDatabase or a small mixin) and call it from all three mergers.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "One shared helper exists with its own unit test; the three call sites use it with no behavior change (existing points_sync_merger_test.dart and learning_ledger_merger_test.dart continue to pass)."
+  ],
+  "labels": [
+    "hygiene",
+    "duplication"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-merge",
+  "chunk": "grp-030",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-34",
+  "linearPriority": "Low"
+}

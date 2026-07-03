@@ -1,0 +1,56 @@
+{
+  "title": "Extract the duplicated ARB-loading helper out of 4 test/l10n regression tests",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler lens — duplicated code; no numbered TQ rule, but violates this repo's own test/helpers/ convention",
+  "area": "test/l10n (ARB regression tests)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/l10n/b1_vocab_keys_present_test.dart",
+      "line": 71,
+      "quote": "final file = File('lib/l10n/app_$locale.arb');"
+    },
+    {
+      "file": "learning_tracker/test/l10n/hebrew_shabbos_strings_il9_test.dart",
+      "line": 19,
+      "quote": "File('lib/l10n/app_$locale.arb'),\n    File('../lib/l10n/app_$locale.arb'),"
+    },
+    {
+      "file": "learning_tracker/test/l10n/icu_plural_il3_test.dart",
+      "line": 22,
+      "quote": "File('lib/l10n/app_$locale.arb'),\n    File('../lib/l10n/app_$locale.arb'),"
+    },
+    {
+      "file": "learning_tracker/test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart",
+      "line": 21,
+      "quote": "final arbFile = File('lib/l10n/app_$locale.arb');"
+    }
+  ],
+  "sites": 4,
+  "why": "Each file hand-rolls its own private _loadArb (or inlines the equivalent) instead of using the test/helpers/ pattern already established by test_database.dart, firestore_fake.dart, etc. The copies have already drifted: 2 of the 4 (hebrew_shabbos_strings_il9_test.dart, icu_plural_il3_test.dart) gained a `../lib/l10n/...` CWD-fallback candidate list, while b1_vocab_keys_present_test.dart and no_hardcoded_percent_in_chart_subtitle_test.dart still resolve only a single hardcoded path. If the test-invocation CWD convention ever changes (different `flutter test` working directory in CI, a monorepo restructure, running a single file from an IDE rooted elsewhere), half these tests fail with an unhelpful 'file must exist' error while the other half quietly cope — proof the duplication isn't being kept in sync today, let alone as more l10n regression tests get added (a 5th copy already exists in test/l10n/account_picker_subtitle_copy_test.dart, outside this batch).",
+  "recommendation": "Extract one `Map<String, dynamic> loadArb(String locale)` helper (using the two-candidate CWD-fallback) into a new test/helpers/arb_loader.dart, and have every test/l10n/*_test.dart import it instead of defining/inlining its own copy.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "test/helpers/arb_loader.dart exists and is the single definition of ARB-loading logic used by test/l10n/*_test.dart",
+    "grep -rn \"_loadArb(String locale)\\|final file = File('lib/l10n/app_\" learning_tracker/test/l10n/*.dart outside test/helpers/ returns zero matches (usable as a Rule-0 grep checker)"
+  ],
+  "labels": [
+    "tests",
+    "l10n",
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-app-l10n-p3",
+  "chunk": "grp-002",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-22",
+  "linearPriority": "Medium"
+}

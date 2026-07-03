@@ -1,0 +1,44 @@
+{
+  "title": "Move shipped hard-tier auth refactor out of README.md's Roadmap section",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "doc-accuracy",
+  "area": "README.md",
+  "evidence": [
+    {
+      "file": "README.md",
+      "line": 135,
+      "quote": "**Offline-First Architecture v2** — hard-tier auth refactor to simplify the offline-first model"
+    },
+    {
+      "file": "docs/architecture.md",
+      "line": 495,
+      "quote": "The hard-tier upgrade flow (`localBorn` → `cloudBorn`) is atomic."
+    }
+  ],
+  "sites": 1,
+  "why": "This Roadmap item's title/description is near-identical to Epic 23 ('Offline-First Architecture v2 — Hard-Tier Auth Refactor'), which V1_OUT_OF_SCOPE.md's epic table marks 'Done... just shipped 2026-04-15... canonical' and which architecture.md describes in the present tense as existing system behavior (Security Model section). README.md presents already-shipped work as a future roadmap item to an open-source visitor evaluating the project.",
+  "recommendation": "Remove the hard-tier auth line from README.md's Roadmap (it is done); keep only genuinely unshipped items (iOS support, Epic 20 dashboard redesign).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "README.md's Roadmap section lists only features not yet shipped per architecture.md/linear-status.md"
+  ],
+  "labels": [
+    "docs",
+    "drift",
+    "roadmap"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p1",
+  "chunk": "grp-167",
+  "normArea": "docs",
+  "id": "AUD-docs-33",
+  "linearPriority": "Low"
+}

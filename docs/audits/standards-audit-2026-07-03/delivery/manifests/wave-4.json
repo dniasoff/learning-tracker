@@ -1,0 +1,3521 @@
+[
+  {
+    "id": "AUD-docs-02",
+    "severity": "P2",
+    "effort": "L",
+    "normArea": "docs",
+    "files": [
+      "docs/coding-standards.md",
+      "learning_tracker/functions/test/firestore_rules.test.mjs"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-02.json"
+  },
+  {
+    "id": "AUD-docs-06",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "docs",
+    "files": [
+      "docs/linear-status.md",
+      "docs/status/linear-mapping.yaml",
+      "docs/status/sprint-status.yaml",
+      "docs/stories/implementation/18-3-track-management-hub.md",
+      "docs/stories/implementation/19-10-navigation-state-cleanup.md",
+      "docs/stories/implementation/19-2-two-database-split.md",
+      "learning_tracker/lib/features/content_browsing/presentation/providers/cloud_content_providers.dart",
+      "learning_tracker/lib/features/content_browsing/presentation/providers/text_display_providers.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-06.json"
+  },
+  {
+    "id": "AUD-docs-07",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "docs",
+    "files": [
+      "docs/api-contracts.md",
+      "docs/component-inventory.md",
+      "docs/deployment-guide.md",
+      "learning_tracker/functions/src/index.ts",
+      "learning_tracker/lib/core/providers/firebase_providers.dart",
+      "learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-07.json"
+  },
+  {
+    "id": "AUD-docs-09",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "docs",
+    "files": [
+      "docs/testing-guide.md",
+      "learning_tracker/lib/core/database/daos/completion_dao.dart",
+      "learning_tracker/test/helpers/test_database.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-09.json"
+  },
+  {
+    "id": "AUD-docs-10",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/planning/daf-unit-display-scope.md",
+      "docs/planning/e2e-test-suite-plan.md",
+      "docs/planning/epics.md",
+      "docs/planning/on-device-preflight-cheatsheet.md",
+      "docs/planning/overdue-refactor-architecture.md",
+      "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-10.json"
+  },
+  {
+    "id": "AUD-docs-12",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/planning/epics.md",
+      "docs/scenarios/dashboard-redesign-set/dashboard-redesign/00-scenario-overview.md",
+      "docs/scenarios/dashboard-redesign-set/dashboard-redesign/01-dashboard.md",
+      "docs/scenarios/dashboard-redesign-set/dashboard-redesign/06-progress-screen.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-12.json"
+  },
+  {
+    "id": "AUD-docs-14",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/development-guide.md",
+      "learning_tracker/Makefile"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-14.json"
+  },
+  {
+    "id": "AUD-docs-15",
+    "severity": "P2",
+    "effort": "L",
+    "normArea": "docs",
+    "files": [
+      ".github/workflows/ci.yml",
+      "CONTRIBUTING.md",
+      "Makefile",
+      "docs/architecture.md",
+      "docs/coding-standards.md",
+      "docs/data-models.md",
+      "docs/deployment-guide.md",
+      "docs/developer-handbook.md",
+      "docs/flows/add-track-flow.md",
+      "learning_tracker/lib/core/database/user/user_database.dart",
+      "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+      "learning_tracker/lib/features/dashboard/presentation/screens/dashboard_screen.dart",
+      "learning_tracker/lib/features/progress/presentation/providers/journey_providers.dart",
+      "learning_tracker/lib/features/sacred_time/presentation/screens/city_picker_screen.dart",
+      "learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart",
+      "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+      "learning_tracker/lib/features/tutoring/presentation/screens/tutor_audit_log_screen.dart",
+      "packages/custom_lints/lib/learning_tracker_lints.dart",
+      "packages/custom_lints/lib/src/rules/no_e_to_string_in_ui.dart",
+      "packages/custom_lints/lib/src/rules/no_hardcoded_domain_term.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-15.json"
+  },
+  {
+    "id": "AUD-docs-16",
+    "severity": "P2",
+    "effort": "L",
+    "normArea": "docs",
+    "files": [
+      "docs/explainers/content-database.md",
+      "docs/explainers/data-model.md",
+      "docs/index.md",
+      "docs/linear-status.md",
+      "docs/open-items.md",
+      "docs/product-rules.md",
+      "docs/project-overview.md",
+      "docs/source-tree-analysis.md",
+      "learning_tracker/lib/core/database/content/content_database.dart",
+      "learning_tracker/lib/core/database/user/user_database.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-16.json"
+  },
+  {
+    "id": "AUD-docs-21",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/linear-status.md",
+      "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-21.json"
+  },
+  {
+    "id": "AUD-docs-22",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "docs",
+    "files": [
+      "docs/scenarios/stitch-prompts/03-mode-selection.md",
+      "docs/scenarios/stitch-prompts/04-curriculum-selection.md",
+      "docs/scenarios/stitch-prompts/06-dashboard.md",
+      "learning_tracker/lib/app/router/app_shell.dart",
+      "learning_tracker/lib/core/enums/curriculum_id.dart",
+      "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-22.json"
+  },
+  {
+    "id": "AUD-docs-23",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/coding-standards.md",
+      "learning_tracker/lib/core/sync/codec/entity_codec.dart",
+      "learning_tracker/lib/core/sync/codec/track_codec.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-23.json"
+  },
+  {
+    "id": "AUD-docs-26",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/coding-standards.md",
+      "learning_tracker/analysis_options.yaml"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-26.json"
+  },
+  {
+    "id": "AUD-docs-27",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/coding-standards.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-27.json"
+  },
+  {
+    "id": "AUD-docs-29",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/deployment-guide.md",
+      "learning_tracker/test/golden/store_screenshots_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-29.json"
+  },
+  {
+    "id": "AUD-docs-30",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/flows/add-track-flow.md",
+      "learning_tracker/lib/core/enums/curriculum_id.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-30.json"
+  },
+  {
+    "id": "AUD-docs-32",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/hebrew-terms.md",
+      "learning_tracker/Makefile"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-32.json"
+  },
+  {
+    "id": "AUD-docs-33",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "README.md",
+      "docs/architecture.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-33.json"
+  },
+  {
+    "id": "AUD-docs-38",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/testing-guide.md",
+      "learning_tracker/lib/features/progress/presentation/providers/progress_providers.g.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-38.json"
+  },
+  {
+    "id": "AUD-t-account-04",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/account",
+    "files": [
+      "learning_tracker/test/features/account/presentation/notifiers/sign_in_wrong_password_no_callback_test.dart",
+      "learning_tracker/test/features/account/presentation/screens/account_picker_local_data_missing_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-account-04.json"
+  },
+  {
+    "id": "AUD-t-account-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/account",
+    "files": [
+      "learning_tracker/test/features/account/presentation/notifiers/sign_in_wrong_password_no_callback_test.dart",
+      "learning_tracker/test/features/account/presentation/screens/account_picker_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-account-05.json"
+  },
+  {
+    "id": "AUD-t-account-08",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/account",
+    "files": [
+      "learning_tracker/test/features/account/presentation/notifiers/sign_in_google_signout_throws_test.dart",
+      "learning_tracker/test/features/account/presentation/screens/account_picker_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-account-08.json"
+  },
+  {
+    "id": "AUD-t-content_browsing-02",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/content_browsing",
+    "files": [
+      "learning_tracker/lib/features/content_browsing/presentation/providers/cloud_content_providers.dart",
+      "learning_tracker/pubspec.yaml",
+      "learning_tracker/test/features/content_browsing/data/repositories/content_repository_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-content_browsing-02.json"
+  },
+  {
+    "id": "AUD-t-cross-03",
+    "severity": "P1",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/Makefile",
+      "learning_tracker/test/golden/store_screenshots_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-03.json"
+  },
+  {
+    "id": "AUD-t-cross-08",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/providers/database_provider.dart",
+      "learning_tracker/test/features/profiles/presentation/screens/parent_settings_screen_l1_test.dart",
+      "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+      "learning_tracker/test/features/profiles/presentation/screens/ts14_parent_track_management_copy_test.dart",
+      "learning_tracker/test/features/progress/recent_activity_and_hierarchy_panel_l1_test.dart",
+      "learning_tracker/test/features/progress/siyumim_timeline_and_lifetime_providers_test.dart",
+      "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+      "learning_tracker/test/features/tracks/setup/track_management_hub_screen_l1_test.dart",
+      "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart",
+      "learning_tracker/test/features/tracks/track_order/presentation/track_learning_order_reset_test.dart",
+      "learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart",
+      "learning_tracker/test/helpers/drift_memory.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-08.json"
+  },
+  {
+    "id": "AUD-t-cross-10",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/learning_p0_test.dart",
+      "learning_tracker/test/e2e/journeys/learning_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/learning_sched_gam_p2_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-10.json"
+  },
+  {
+    "id": "AUD-t-cross-12",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/helpers/drift_memory.dart",
+      "learning_tracker/test/helpers/test_database.dart",
+      "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-12.json"
+  },
+  {
+    "id": "AUD-t-cross-20",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/e2e/journeys/profiles_p0_test.dart",
+      "learning_tracker/test/e2e/journeys/profiles_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart",
+      "learning_tracker/test/e2e/journeys/progress_p0_test.dart",
+      "learning_tracker/test/e2e/journeys/progress_p1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-20.json"
+  },
+  {
+    "id": "AUD-t-cross-28",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-28.json"
+  },
+  {
+    "id": "AUD-t-cross-31",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "docs/planning/e2e-test-suite-plan.md",
+      "learning_tracker/test/e2e/harness/e2e_harness.dart",
+      "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/settings_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/tracks_p1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-31.json"
+  },
+  {
+    "id": "AUD-t-cross-32",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/enums/curriculum_id.dart",
+      "learning_tracker/lib/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart",
+      "learning_tracker/test/core/network/sefaria/fetcher_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-32.json"
+  },
+  {
+    "id": "AUD-t-cross-33",
+    "severity": "P2",
+    "effort": "L",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/golden/store_screenshots_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-33.json"
+  },
+  {
+    "id": "AUD-t-cross-34",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/features/tracks/setup/presentation/steps/starting_position_calendar_overflow_test.dart",
+      "learning_tracker/test/helpers/overflow_harness.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-34.json"
+  },
+  {
+    "id": "AUD-t-cross-39",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/golden/store_screenshots_test.dart",
+      "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-39.json"
+  },
+  {
+    "id": "AUD-t-cross-45",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-45.json"
+  },
+  {
+    "id": "AUD-t-cross-46",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart",
+      "learning_tracker/lib/l10n/app_he.arb",
+      "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+      "learning_tracker/test/features/onboarding/presentation/screens/onboarding_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-46.json"
+  },
+  {
+    "id": "AUD-t-cross-49",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-49.json"
+  },
+  {
+    "id": "AUD-t-cross-50",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/e2e/journeys/progress_p1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-50.json"
+  },
+  {
+    "id": "AUD-t-cross-51",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "docs/coding-standards.md",
+      "learning_tracker/test/flutter_test_config.dart",
+      "learning_tracker/test/helpers/golden_runner.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-51.json"
+  },
+  {
+    "id": "AUD-t-cross-52",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart",
+      "learning_tracker/test/features/tutor_pin_dialog_and_goal_setup_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-52.json"
+  },
+  {
+    "id": "AUD-t-cross-54",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+      "learning_tracker/test/e2e/journeys/progress_p0_test.dart",
+      "learning_tracker/test/e2e/journeys/scheduler_p0_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-54.json"
+  },
+  {
+    "id": "AUD-t-cross-55",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/features/content_browsing/presentation/screens/content_hierarchy_screen.dart",
+      "learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-55.json"
+  },
+  {
+    "id": "AUD-t-cross-60",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/fixtures/completion_fixtures.dart.skip",
+      "learning_tracker/test/fixtures/curriculum_fixtures.dart",
+      "learning_tracker/test/helpers/drift_memory.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-60.json"
+  },
+  {
+    "id": "AUD-t-cross-63",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/database/tables/stage_definitions.dart",
+      "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-63.json"
+  },
+  {
+    "id": "AUD-t-cross-69",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/database/user/user_database.dart",
+      "learning_tracker/test/helpers/migration_test_helper.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-69.json"
+  },
+  {
+    "id": "AUD-t-cross-73",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/features/account/presentation/notifiers/sign_in_controller_test.dart",
+      "learning_tracker/test/features/account/presentation/notifiers/sign_in_google_signout_throws_test.dart",
+      "learning_tracker/test/features/account/presentation/notifiers/sign_in_local_signout_throws_test.dart",
+      "learning_tracker/test/features/account/presentation/notifiers/sign_in_verify_signout_throws_test.dart",
+      "learning_tracker/test/features/account/presentation/notifiers/sign_in_wrong_password_no_callback_test.dart",
+      "learning_tracker/test/features/account/presentation/screens/account_picker_local_data_missing_test.dart",
+      "learning_tracker/test/features/account/presentation/screens/account_picker_screen_l1_test.dart",
+      "learning_tracker/test/mocks/mock_repositories.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-73.json"
+  },
+  {
+    "id": "AUD-t-cross-81",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "/home/daniel/flutter/packages/flutter_test/lib/src/binding.dart",
+      "learning_tracker/test/flutter_test_config.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-81.json"
+  },
+  {
+    "id": "AUD-t-cross-89",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/seed_manager_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-89.json"
+  },
+  {
+    "id": "AUD-t-dashboard-02",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/dashboard",
+    "files": [
+      "learning_tracker/lib/core/providers/database_provider.dart",
+      "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+      "learning_tracker/lib/features/dashboard/presentation/widgets/active_track_card.dart",
+      "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-dashboard-02.json"
+  },
+  {
+    "id": "AUD-t-dashboard-03",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/dashboard",
+    "files": [
+      "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-dashboard-03.json"
+  },
+  {
+    "id": "AUD-t-dashboard-06",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/dashboard",
+    "files": [
+      "learning_tracker/dart_test.yaml",
+      "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+      "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-dashboard-06.json"
+  },
+  {
+    "id": "AUD-t-onboarding-01",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/onboarding",
+    "files": [
+      "docs/coding-standards.md",
+      "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+      "learning_tracker/test/features/onboarding/presentation/steps/onboarding_steps_overflow_test.dart",
+      "learning_tracker/test/helpers/overflow_harness.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-onboarding-01.json"
+  },
+  {
+    "id": "AUD-t-profiles-01",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/profiles",
+    "files": [
+      "learning_tracker/lib/features/profiles/presentation/widgets/profile_switcher_sheet.dart",
+      "learning_tracker/test/e2e/journeys/profiles_p1_test.dart",
+      "learning_tracker/test/features/profiles/presentation/an2_switcher_pin_guard_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-profiles-01.json"
+  },
+  {
+    "id": "AUD-t-profiles-02",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/profiles",
+    "files": [
+      "learning_tracker/test/features/profiles/pin_flow_and_setup_dialog_l1_test.dart",
+      "learning_tracker/test/features/profiles/presentation/an2_switcher_pin_guard_test.dart",
+      "learning_tracker/test/features/profiles/presentation/profile_switcher_sheet_test.dart",
+      "learning_tracker/test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-profiles-02.json"
+  },
+  {
+    "id": "AUD-t-profiles-03",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/profiles",
+    "files": [
+      "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+      "learning_tracker/test/features/profiles/presentation/screens/profile_picker_screen_l1_test.dart",
+      "learning_tracker/test/features/profiles/presentation/screens/ts3_parent_track_archive_test.dart",
+      "learning_tracker/test/features/profiles/presentation/widgets/add_profile_dialog_test.dart",
+      "learning_tracker/test/features/profiles/presentation/widgets/parent_pin_keypad_dialog_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-profiles-03.json"
+  },
+  {
+    "id": "AUD-t-profiles-04",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/profiles",
+    "files": [
+      "learning_tracker/lib/features/profiles/presentation/widgets/profile_grid.dart",
+      "learning_tracker/test/features/profiles/presentation/screens/ts14_parent_track_management_copy_test.dart",
+      "learning_tracker/test/features/profiles/presentation/widgets/pp16_profile_grid_tablet_height_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-profiles-04.json"
+  },
+  {
+    "id": "AUD-t-profiles-06",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/profiles",
+    "files": [
+      "learning_tracker/test/features/profiles/presentation/screens/profile_picker_screen_l1_test.dart",
+      "learning_tracker/test/features/profiles/presentation/screens/rpr2_picker_offline_delete_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-profiles-06.json"
+  },
+  {
+    "id": "AUD-t-profiles-07",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/profiles",
+    "files": [
+      "learning_tracker/test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-profiles-07.json"
+  },
+  {
+    "id": "AUD-t-progress-01",
+    "severity": "P1",
+    "effort": "S",
+    "normArea": "tests/progress",
+    "files": [
+      "learning_tracker/lib/features/progress/domain/models/chart_data.dart",
+      "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+      "learning_tracker/test/features/progress/domain/models/chart_data_test.dart",
+      "learning_tracker/test/features/progress/recent_activity_overflow_test.dart",
+      "learning_tracker/test/helpers/overflow_harness.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-progress-01.json"
+  },
+  {
+    "id": "AUD-t-progress-02",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/progress",
+    "files": [
+      "learning_tracker/lib/core/database/daos/learning_ledger_dao.dart",
+      "learning_tracker/lib/features/progress/domain/services/lifetime_tree_builder.dart",
+      "learning_tracker/test/features/progress/siyumim_timeline_and_lifetime_providers_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-progress-02.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-02",
+    "severity": "P1",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+      "learning_tracker/test/story_acceptance/regression_invariants_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-02.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-04",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+      "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+      "learning_tracker/test/story_acceptance/epic_26_story_26_22_track_management_body_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-04.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-10",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/core/database/seed_manager_test.dart",
+      "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-10.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-11",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/lib/features/onboarding/presentation/screens/onboarding_screen.dart",
+      "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-11.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-12",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+      "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-12.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-14",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/Makefile",
+      "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+      "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-14.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-18",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-18.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-19",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/lib/features/dashboard/presentation/widgets/active_track_card.dart",
+      "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-19.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-20",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/lib/app/bootstrap/crashlytics_bootstrap.dart",
+      "learning_tracker/test/core/logging/logger_test.dart",
+      "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-20.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-21",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/lib/core/logging/crashlytics_service.dart",
+      "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-21.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-26",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/lib/core/database/daos/completion_dao.dart",
+      "learning_tracker/test/story_acceptance/epic_18_story_18x_track_restore_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-26.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-30",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/helpers/drift_memory.dart",
+      "learning_tracker/test/helpers/test_database.dart",
+      "learning_tracker/test/story_acceptance/epic_18_story_18x_track_restore_test.dart",
+      "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "learning_tracker/test/story_acceptance/epic_20_hard_tier_auth_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-30.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-33",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "learning_tracker/test/story_acceptance/epic_20_hard_tier_auth_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-33.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-37",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-37.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-38",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/mocks/mock_repositories.dart",
+      "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-38.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-39",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_03_learning_cycle_test.dart",
+      "learning_tracker/test/story_acceptance/regression_invariants_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-39.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-40",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-40.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-44",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-44.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-47",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-47.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-48",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-48.json"
+  },
+  {
+    "id": "AUD-t-track_setup-01",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "tests/track_setup",
+    "files": [
+      "learning_tracker/lib/features/tracks/setup/presentation/controllers/add_track_flow_state.dart",
+      "learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart",
+      "learning_tracker/test/features/track_setup/domain/entities/add_track_result_test.dart",
+      "learning_tracker/test/features/tracks/setup/presentation/screens/add_track_smart_label_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-track_setup-01.json"
+  },
+  {
+    "id": "AUD-t-tracks-02",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/tracks",
+    "files": [
+      "learning_tracker/test/features/tracks/setup/track_management_hub_last_curriculum_guard_test.dart",
+      "learning_tracker/test/features/tracks/setup/track_management_hub_screen_l1_test.dart",
+      "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tracks-02.json"
+  },
+  {
+    "id": "AUD-t-tracks-06",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/tracks",
+    "files": [
+      "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+      "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tracks-06.json"
+  },
+  {
+    "id": "AUD-t-tracks-09",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/tracks",
+    "files": [
+      "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tracks-09.json"
+  },
+  {
+    "id": "AUD-t-gamification-02",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/gamification",
+    "files": [
+      "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+      "learning_tracker/test/features/gamification/presentation/screens/reward_configuration_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-gamification-02.json"
+  },
+  {
+    "id": "AUD-t-gamification-04",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/gamification",
+    "files": [
+      "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+      "learning_tracker/test/features/gamification/presentation/screens/child_redemption_screen_l1_test.dart",
+      "learning_tracker/test/features/gamification/presentation/screens/reward_configuration_screen_l1_test.dart",
+      "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-gamification-04.json"
+  },
+  {
+    "id": "AUD-t-gamification-06",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/gamification",
+    "files": [
+      "learning_tracker/test/features/gamification/presentation/screens/child_redemption_screen_l1_test.dart",
+      "learning_tracker/test/features/gamification/presentation/screens/gamification_screen_l1_test.dart",
+      "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-gamification-06.json"
+  },
+  {
+    "id": "AUD-t-gamification-08",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/gamification",
+    "files": [
+      "learning_tracker/test/features/gamification/presentation/screens/gamification_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-gamification-08.json"
+  },
+  {
+    "id": "AUD-t-gamification-09",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/gamification",
+    "files": [
+      "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-gamification-09.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-01",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+      "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+      "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+      "learning_tracker/test/story_acceptance/epic_27_integration_lockout_redaction_atomic_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-01.json"
+  },
+  {
+    "id": "AUD-t-settings-02",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+      "learning_tracker/test/features/settings/presentation/screens/settings_screen_r5_regression_test.dart",
+      "learning_tracker/test/features/settings/presentation/screens/settings_screen_test.dart",
+      "learning_tracker/test/features/settings/presentation/screens/st3_settings_switch_a11y_test.dart",
+      "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+      "learning_tracker/test/features/settings/presentation/utils/account_actions_test.dart",
+      "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+      "learning_tracker/test/features/settings/presentation/widgets/an7_destructive_icon_contrast_test.dart",
+      "learning_tracker/test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-02.json"
+  },
+  {
+    "id": "AUD-t-settings-03",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/lib/features/settings/presentation/screens/lifetime_marking_screen.dart",
+      "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-03.json"
+  },
+  {
+    "id": "AUD-t-settings-05",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart",
+      "learning_tracker/test/features/settings/presentation/screens/st3_settings_switch_a11y_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-05.json"
+  },
+  {
+    "id": "AUD-t-settings-07",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/test/features/settings/presentation/settings_overflow_guard_test.dart",
+      "learning_tracker/test/features/settings/presentation/utils/account_actions_test.dart",
+      "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+      "learning_tracker/test/features/settings/presentation/widgets/an7_destructive_icon_contrast_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-07.json"
+  },
+  {
+    "id": "AUD-t-settings-11",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-11.json"
+  },
+  {
+    "id": "AUD-t-settings-12",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+      "learning_tracker/test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-12.json"
+  },
+  {
+    "id": "AUD-t-notifications-01",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/notifications",
+    "files": [
+      "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+      "learning_tracker/test/features/notifications/ws5_two_layers_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-notifications-01.json"
+  },
+  {
+    "id": "AUD-t-notifications-03",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/notifications",
+    "files": [
+      "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+      "learning_tracker/test/features/notifications/ws5_two_layers_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-notifications-03.json"
+  },
+  {
+    "id": "AUD-t-notifications-04",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/notifications",
+    "files": [
+      "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+      "learning_tracker/test/features/notifications/ws5_two_layers_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-notifications-04.json"
+  },
+  {
+    "id": "AUD-t-notifications-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/notifications",
+    "files": [
+      "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-notifications-05.json"
+  },
+  {
+    "id": "AUD-t-notifications-08",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/notifications",
+    "files": [
+      "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-notifications-08.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-08",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+      "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "learning_tracker/test/story_acceptance/epic_26_story_26_31_rtl_audit_test.dart",
+      "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+      "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-08.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-23",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-23.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-35",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_26_story_26_31_rtl_audit_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-35.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-36",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-36.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-42",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+      "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+      "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-42.json"
+  },
+  {
+    "id": "AUD-t-tutoring-05",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/test/features/tutoring/invite_tutor_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-05.json"
+  },
+  {
+    "id": "AUD-t-tutoring-06",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+      "learning_tracker/test/features/tutoring/firestore_tutor_grant_repository_test.dart",
+      "learning_tracker/test/features/tutoring/manage_grants_screen_l1_test.dart",
+      "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+      "learning_tracker/test/features/tutoring/ws3_3f_manage_remove_tutors_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-06.json"
+  },
+  {
+    "id": "AUD-t-tutoring-07",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/test/features/tutoring/invite_tutor_screen_l1_test.dart",
+      "learning_tracker/test/features/tutoring/manage_grants_screen_l1_test.dart",
+      "learning_tracker/test/features/tutoring/tutor_audit_log_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-07.json"
+  },
+  {
+    "id": "AUD-t-tutoring-09",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-09.json"
+  },
+  {
+    "id": "AUD-t-tutoring-10",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/test/features/tutoring/data/repositories/firestore_tutor_grant_repository_test.dart",
+      "learning_tracker/test/features/tutoring/firestore_audit_log_read_repository_test.dart",
+      "learning_tracker/test/features/tutoring/firestore_tutor_grant_repository_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-10.json"
+  },
+  {
+    "id": "AUD-docs-08",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/sync-conflict-resolution.md",
+      "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+      "learning_tracker/test/sync/merge/lww_symmetric_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-08.json"
+  },
+  {
+    "id": "AUD-t-cross-42",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "docs/sync-conflict-resolution.md",
+      "learning_tracker/test/integration/two_device_sync_test.dart",
+      "learning_tracker/test/sync/two_device_sync_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-42.json"
+  },
+  {
+    "id": "AUD-t-cross-43",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+      "learning_tracker/lib/core/sync/merge/goal_merger.dart",
+      "learning_tracker/test/sync/tutored_mirror_projection_inputs_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-43.json"
+  },
+  {
+    "id": "AUD-t-cross-98",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/sync/two_device_sync_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-98.json"
+  },
+  {
+    "id": "AUD-t-cross-07",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/e2e/journeys/gamification_p1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-07.json"
+  },
+  {
+    "id": "AUD-t-cross-21",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/e2e/journeys/auth_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/auth_sync_infra_p2_test.dart",
+      "learning_tracker/test/e2e/journeys/dashboard_p0_test.dart",
+      "learning_tracker/test/e2e/journeys/dashboard_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/gamification_p0_test.dart",
+      "learning_tracker/test/e2e/journeys/gamification_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/guards_p1_test.dart",
+      "learning_tracker/test/e2e/journeys/guards_sync_p0_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-21.json"
+  },
+  {
+    "id": "AUD-t-cross-35",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+      "learning_tracker/test/e2e/journeys/gamification_p0_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-35.json"
+  },
+  {
+    "id": "AUD-t-cross-77",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/e2e/journeys/gamification_p1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-77.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-17",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+      "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-17.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-22",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_14_settings_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-22.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-31",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_09_onboarding_test.dart",
+      "learning_tracker/test/story_acceptance/epic_10_parent_mode_test.dart",
+      "learning_tracker/test/story_acceptance/epic_12_notifications_test.dart",
+      "learning_tracker/test/story_acceptance/epic_14_settings_test.dart",
+      "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+      "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-31.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-46",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-46.json"
+  },
+  {
+    "id": "AUD-t-account-01",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/account",
+    "files": [
+      "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+      "learning_tracker/test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart",
+      "learning_tracker/test/features/account/onboarding/signup_screen_an10_test.dart",
+      "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-account-01.json"
+  },
+  {
+    "id": "AUD-t-onboarding-02",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/onboarding",
+    "files": [
+      "learning_tracker/test/features/onboarding/presentation/screens/permission_prompt_screen_l1_test.dart",
+      "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+      "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-onboarding-02.json"
+  },
+  {
+    "id": "AUD-t-onboarding-03",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/onboarding",
+    "files": [
+      "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-onboarding-03.json"
+  },
+  {
+    "id": "AUD-t-cross-06",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/docs/coding-standards.md",
+      "learning_tracker/lib/core/database/tables/track_learning_order.dart",
+      "learning_tracker/test/core/database/user_database_companion_coverage_test.dart",
+      "learning_tracker/test/core/database/user_database_dataclass_extended_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-06.json"
+  },
+  {
+    "id": "AUD-t-cross-13",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/user_database_companion_coverage_test.dart",
+      "learning_tracker/test/core/database/user_database_dataclass_core_test.dart",
+      "learning_tracker/test/core/database/user_database_dataclass_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-13.json"
+  },
+  {
+    "id": "AUD-t-cross-92",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/user_database_companion_coverage_test.dart",
+      "learning_tracker/test/core/database/user_database_dataclass_core_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-92.json"
+  },
+  {
+    "id": "AUD-t-cross-22",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/l10n/b1_vocab_keys_present_test.dart",
+      "learning_tracker/test/l10n/hebrew_shabbos_strings_il9_test.dart",
+      "learning_tracker/test/l10n/icu_plural_il3_test.dart",
+      "learning_tracker/test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-22.json"
+  },
+  {
+    "id": "AUD-t-cross-57",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-57.json"
+  },
+  {
+    "id": "AUD-t-cross-67",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/l10n/b1_vocab_keys_present_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-67.json"
+  },
+  {
+    "id": "AUD-t-cross-37",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+      "learning_tracker/test/core/database/daos/curriculum_scope_dao_extra_test.dart",
+      "learning_tracker/test/core/database/daos/curriculum_scope_dao_test.dart",
+      "learning_tracker/test/core/database/daos/daily_plan_dao_test.dart",
+      "learning_tracker/test/core/database/daos/goal_dao_extended_test.dart",
+      "learning_tracker/test/core/database/daos/goal_dao_extra_test.dart",
+      "learning_tracker/test/core/database/daos/goal_dao_test.dart",
+      "learning_tracker/test/core/database/daos/learning_ledger_dao_extended_test.dart",
+      "learning_tracker/test/core/database/daos/learning_ledger_dao_extra_test.dart",
+      "learning_tracker/test/core/database/daos/learning_ledger_dao_test.dart",
+      "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+      "learning_tracker/test/core/database/daos/stage_dao_extended_test.dart",
+      "learning_tracker/test/core/database/daos/stage_dao_extra_test.dart",
+      "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+      "learning_tracker/test/core/database/daos/study_day_config_dao_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-37.json"
+  },
+  {
+    "id": "AUD-t-cross-88",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+      "learning_tracker/test/core/database/daos/completion_event_dao_test.dart",
+      "learning_tracker/test/core/database/daos/curriculum_scope_dao_test.dart",
+      "learning_tracker/test/core/database/daos/goal_dao_test.dart",
+      "learning_tracker/test/core/database/daos/learning_ledger_dao_test.dart",
+      "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+      "learning_tracker/test/core/database/daos/profile_dao_test.dart",
+      "learning_tracker/test/core/database/daos/stage_dao_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-88.json"
+  },
+  {
+    "id": "AUD-t-cross-93",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/completion_dao_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-93.json"
+  },
+  {
+    "id": "AUD-t-cross-56",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/streak/streak_state_provider_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-56.json"
+  },
+  {
+    "id": "AUD-t-cross-78",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/streak/streak_state_provider_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-78.json"
+  },
+  {
+    "id": "AUD-t-cross-79",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/time/local_day_clock.dart",
+      "learning_tracker/lib/features/gamification/streak/streak_state_provider.dart",
+      "learning_tracker/test/core/streak/streak_state_provider_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-79.json"
+  },
+  {
+    "id": "AUD-t-learning-01",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "tests/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart",
+      "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "learning_tracker/test/features/learning/presentation/screens/learning_screen_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-learning-01.json"
+  },
+  {
+    "id": "AUD-t-learning-02",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/learning",
+    "files": [
+      "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "learning_tracker/test/features/learning/presentation/screens/learning_screen_test.dart",
+      "learning_tracker/test/features/tutoring/ws3_3d_tutor_permissions_surface_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-learning-02.json"
+  },
+  {
+    "id": "AUD-t-learning-04",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/learning",
+    "files": [
+      "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-learning-04.json"
+  },
+  {
+    "id": "AUD-t-tracks-01",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/tracks",
+    "files": [
+      "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+      "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tracks-01.json"
+  },
+  {
+    "id": "AUD-t-tracks-08",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/tracks",
+    "files": [
+      "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+      "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tracks-08.json"
+  },
+  {
+    "id": "AUD-t-tracks-10",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/tracks",
+    "files": [
+      "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+      "learning_tracker/test/features/tracks/setup/presentation/steps/step_chazara_goal_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tracks-10.json"
+  },
+  {
+    "id": "AUD-docs-03",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/stories/implementation/19-8-syncengine-conditional-activation.md",
+      "docs/stories/implementation/19-9-multi-device-sync.md",
+      "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-03.json"
+  },
+  {
+    "id": "AUD-t-cross-05",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "learning_tracker/test/sync/write_tee_status_update_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-05.json"
+  },
+  {
+    "id": "AUD-t-cross-01",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "/home/daniel/.pub-cache/hosted/pub.dev/fake_cloud_firestore-4.1.1/lib/src/mock_write_batch.dart",
+      "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "learning_tracker/test/core/sync/firestore_gateway_impl_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-01.json"
+  },
+  {
+    "id": "AUD-t-cross-02",
+    "severity": "P1",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "learning_tracker/test/core/sync/firestore_gateway_impl_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-02.json"
+  },
+  {
+    "id": "AUD-t-cross-16",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/user_database_managers_computed_fields2_test.dart",
+      "learning_tracker/test/core/database/user_database_managers_computed_fields_test.dart",
+      "learning_tracker/test/core/database/user_database_managers_create_update_test.dart",
+      "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+      "learning_tracker/test/core/database/user_database_managers_orderby_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-16.json"
+  },
+  {
+    "id": "AUD-t-cross-82",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-82.json"
+  },
+  {
+    "id": "AUD-t-cross-23",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/app/restore/device_restore_phase_l10n_test.dart",
+      "learning_tracker/test/app/restore/device_restore_screen_l1_test.dart",
+      "learning_tracker/test/app/restore/device_restore_screen_overflow_test.dart",
+      "learning_tracker/test/app/restore/sy2_device_restore_idle_blank_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-23.json"
+  },
+  {
+    "id": "AUD-t-cross-65",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/app/restore/sy2_device_restore_idle_blank_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-65.json"
+  },
+  {
+    "id": "AUD-t-cross-25",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/hebrew_migration_test.dart",
+      "learning_tracker/test/core/database/migration_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-25.json"
+  },
+  {
+    "id": "AUD-t-cross-84",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/hebrew_migration_test.dart",
+      "learning_tracker/test/core/database/migration_test.dart",
+      "learning_tracker/test/core/database/schema_v1_smoke_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-84.json"
+  },
+  {
+    "id": "AUD-t-cross-26",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/sync/sync_orchestrator_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-26.json"
+  },
+  {
+    "id": "AUD-t-cross-99",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/sync/sync_orchestrator_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-99.json"
+  },
+  {
+    "id": "AUD-t-cross-36",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/points_balance_dao_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-36.json"
+  },
+  {
+    "id": "AUD-t-cross-70",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/points_balance_dao_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-70.json"
+  },
+  {
+    "id": "AUD-t-cross-48",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/integration_test/app_test.dart",
+      "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-48.json"
+  },
+  {
+    "id": "AUD-t-cross-66",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/integration_test/.gitkeep",
+      "learning_tracker/integration_test/app_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-66.json"
+  },
+  {
+    "id": "AUD-t-cross-58",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/completion_dao_extended_test.dart",
+      "learning_tracker/test/core/database/daos/completion_dao_extra_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-58.json"
+  },
+  {
+    "id": "AUD-t-cross-71",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/completion_dao_extended_test.dart",
+      "learning_tracker/test/core/database/daos/completion_dao_extra_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-71.json"
+  },
+  {
+    "id": "AUD-t-cross-59",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/track_dao_deactivate_test.dart",
+      "learning_tracker/test/core/database/daos/track_dao_delete_test.dart",
+      "learning_tracker/test/core/database/daos/track_dao_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-59.json"
+  },
+  {
+    "id": "AUD-t-cross-83",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/track_dao_test.dart",
+      "learning_tracker/test/core/database/daos/track_scoped_dao_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-83.json"
+  },
+  {
+    "id": "AUD-t-cross-75",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/user_database_managers_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-75.json"
+  },
+  {
+    "id": "AUD-t-cross-80",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/user_database_managers_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-80.json"
+  },
+  {
+    "id": "AUD-t-cross-76",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/services/learning_program_repository_test.dart",
+      "learning_tracker/test/core/services/learning_program_service_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-76.json"
+  },
+  {
+    "id": "AUD-t-cross-90",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/features/scheduler/domain/services/learning_program_service.dart",
+      "learning_tracker/test/core/services/learning_program_service_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-90.json"
+  },
+  {
+    "id": "AUD-t-notifications-02",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/notifications",
+    "files": [
+      "learning_tracker/test/features/notifications/presentation/providers/notification_providers_deep_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-notifications-02.json"
+  },
+  {
+    "id": "AUD-t-notifications-06",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/notifications",
+    "files": [
+      "learning_tracker/test/features/notifications/presentation/providers/notification_providers_deep_test.dart",
+      "learning_tracker/test/features/notifications/presentation/providers/notification_providers_test.dart",
+      "learning_tracker/test/features/notifications/presentation/providers/reminder_enabled_cold_start_test.dart",
+      "learning_tracker/test/features/notifications/presentation/providers/reminder_time_cold_start_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-notifications-06.json"
+  },
+  {
+    "id": "AUD-t-scheduler-08",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/scheduler",
+    "files": [
+      "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+      "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_test.dart",
+      "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_integration_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-scheduler-08.json"
+  },
+  {
+    "id": "AUD-t-scheduler-09",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/scheduler",
+    "files": [
+      "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_test.dart",
+      "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_integration_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-scheduler-09.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-03",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-03.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-07",
+    "severity": "P2",
+    "effort": "L",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-07.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-15",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-15.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-25",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-25.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-16",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_27_story_4_widget_golden_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-16.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-27",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_27_story_4_widget_golden_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-27.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-32",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-32.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-41",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-41.json"
+  },
+  {
+    "id": "AUD-docs-05",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "learning_tracker/CLAUDE.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-05.json"
+  },
+  {
+    "id": "AUD-docs-11",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/planning/sync-architecture-plan.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-11.json"
+  },
+  {
+    "id": "AUD-docs-13",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "docs",
+    "files": [
+      "docs/planning/ux-patterns-quick-reference.md",
+      "docs/qa/legacy/05-multi-track.md",
+      "docs/qa/legacy/10-parent-mode.md",
+      "docs/qa/legacy/11-tutor-mode.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-13.json"
+  },
+  {
+    "id": "AUD-docs-17",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "docs",
+    "files": [
+      "docs/planning/architecture-offline-v2.md",
+      "docs/planning/architecture-quick-reference.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-17.json"
+  },
+  {
+    "id": "AUD-docs-18",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/explainers/sync-subsystem.md",
+      "learning_tracker/lib/core/sync/merge/merge_router.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-18.json"
+  },
+  {
+    "id": "AUD-docs-19",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "docs",
+    "files": [
+      "docs/planning/testing-quick-reference.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-19.json"
+  },
+  {
+    "id": "AUD-docs-20",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "docs",
+    "files": [
+      "docs/planning/ux-upgrade-flow-spec.md",
+      "docs/planning/ux-upgrade-flow-visual.md",
+      "docs/qa/legacy/01-product-overview.md",
+      "docs/qa/legacy/02-auth-and-accounts.md",
+      "docs/qa/legacy/03-onboarding.md",
+      "docs/qa/legacy/13-settings.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-20.json"
+  },
+  {
+    "id": "AUD-docs-24",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/stories/implementation/21-1-device-account-registry.md",
+      "docs/stories/implementation/21-10-signout-to-picker.md",
+      "docs/stories/implementation/21-11-add-account-from-picker.md",
+      "docs/stories/implementation/21-12-upgrade-multi-account.md",
+      "docs/stories/implementation/21-13-remove-cloud-from-device.md",
+      "docs/stories/implementation/21-14-delete-local-account.md",
+      "docs/stories/implementation/21-15-delete-cloud-account-full.md",
+      "docs/stories/implementation/21-16-cloud-function-deletion.md",
+      "docs/stories/implementation/21-2-per-account-database-isolation.md",
+      "docs/stories/implementation/21-3-session-auto-resume.md",
+      "docs/stories/implementation/21-4-session-persistence.md",
+      "docs/stories/implementation/21-5-unified-signup-email-password.md",
+      "docs/stories/implementation/21-6-unified-signup-google.md",
+      "docs/stories/implementation/21-7-unified-signin-smart-routing.md",
+      "docs/stories/implementation/21-8-unified-signin-google.md",
+      "docs/stories/implementation/21-9-account-picker-screen.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-24.json"
+  },
+  {
+    "id": "AUD-docs-25",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/seed-build.md",
+      "learning_tracker/lib/core/database/seed_version.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-25.json"
+  },
+  {
+    "id": "AUD-docs-28",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/qa/legacy/00-testing-methodology.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-28.json"
+  },
+  {
+    "id": "AUD-docs-31",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/qa/legacy/14-sync-and-offline.md",
+      "docs/qa/legacy/seed-content-db-build-guide.md",
+      "learning_tracker/lib/core/database/seed_manager.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-31.json"
+  },
+  {
+    "id": "AUD-docs-34",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/scenarios/evolution/README.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-34.json"
+  },
+  {
+    "id": "AUD-docs-35",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/test-options.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-35.json"
+  },
+  {
+    "id": "AUD-docs-36",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/planning/test-coverage-matrix.md",
+      "docs/planning/test-fix-bug-log.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-36.json"
+  },
+  {
+    "id": "AUD-docs-37",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "docs/delete-policy.md",
+      "learning_tracker/lib/core/database/tables/curriculum_tracks.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-37.json"
+  },
+  {
+    "id": "AUD-t-account-02",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/account",
+    "files": [
+      "learning_tracker/test/features/account/sign_in_context_reset_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-account-02.json"
+  },
+  {
+    "id": "AUD-t-account-03",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/account",
+    "files": [
+      "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+      "learning_tracker/test/features/account/presentation/screens/account_picker_an4_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-account-03.json"
+  },
+  {
+    "id": "AUD-t-account-06",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/account",
+    "files": [
+      "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_overflow_test.dart",
+      "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-account-06.json"
+  },
+  {
+    "id": "AUD-t-account-07",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/account",
+    "files": [
+      "learning_tracker/test/features/account/data/services/magic_link_service_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-account-07.json"
+  },
+  {
+    "id": "AUD-t-auth-01",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/auth",
+    "files": [
+      "learning_tracker/test/features/auth/domain/services/pending_local_registration_test.dart",
+      "learning_tracker/test/features/auth/domain/services/pending_local_signup_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-auth-01.json"
+  },
+  {
+    "id": "AUD-t-auth-02",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/auth",
+    "files": [
+      "learning_tracker/lib/features/account/presentation/screens/sign_in_screen.dart",
+      "learning_tracker/test/features/auth/presentation/screens/sign_in_screen_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-auth-02.json"
+  },
+  {
+    "id": "AUD-t-auth-03",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/auth",
+    "files": [
+      "learning_tracker/test/features/auth/domain/services/auth_exceptions_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-auth-03.json"
+  },
+  {
+    "id": "AUD-t-auth-04",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/auth",
+    "files": [
+      "learning_tracker/test/features/auth/auth_integration_test.dart",
+      "learning_tracker/test/features/auth/data/repositories/auth_repository_impl_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-auth-04.json"
+  },
+  {
+    "id": "AUD-t-auth-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/auth",
+    "files": [
+      "learning_tracker/test/features/auth/domain/models/auth_state_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-auth-05.json"
+  },
+  {
+    "id": "AUD-t-content_browsing-01",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/content_browsing",
+    "files": [
+      "learning_tracker/lib/features/content_browsing/presentation/screens/content_search_screen.dart",
+      "learning_tracker/test/features/content_browsing/presentation/screens/content_search_screen_test.dart",
+      "learning_tracker/test/features/content_browsing/presentation/screens/pp18_content_search_clear_button_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-content_browsing-01.json"
+  },
+  {
+    "id": "AUD-t-content_browsing-03",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/content_browsing",
+    "files": [
+      "learning_tracker/test/features/content_browsing/presentation/widgets/r2_panel_leaf_crumb_ellipsis_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-content_browsing-03.json"
+  },
+  {
+    "id": "AUD-t-content_browsing-04",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/content_browsing",
+    "files": [
+      "learning_tracker/test/features/content_browsing/content_tile_search_providers_test.dart",
+      "learning_tracker/test/features/content_browsing/data/repositories/content_repository_impl_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-content_browsing-04.json"
+  },
+  {
+    "id": "AUD-t-content_browsing-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/content_browsing",
+    "files": [
+      "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_deep_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-content_browsing-05.json"
+  },
+  {
+    "id": "AUD-t-content_browsing-06",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/content_browsing",
+    "files": [
+      "learning_tracker/test/features/content_browsing/data/repositories/text_cache_repository_extended_test.dart",
+      "learning_tracker/test/features/content_browsing/data/repositories/text_cache_repository_extra_test.dart",
+      "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-content_browsing-06.json"
+  },
+  {
+    "id": "AUD-t-content_browsing-07",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/content_browsing",
+    "files": [
+      "learning_tracker/test/features/content_browsing/integration/hierarchy_navigation_test.dart",
+      "learning_tracker/test/features/content_browsing/presentation/screens/curriculum_list_screen_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-content_browsing-07.json"
+  },
+  {
+    "id": "AUD-t-cross-04",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+      "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart",
+      "learning_tracker/test/sync/tutored_wipe_wrong_id_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-04.json"
+  },
+  {
+    "id": "AUD-t-cross-09",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "learning_tracker/test/scheduler/overdue_notifications_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-09.json"
+  },
+  {
+    "id": "AUD-t-cross-100",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/sync/lifecycle_observer_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-100.json"
+  },
+  {
+    "id": "AUD-t-cross-101",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/sync/listener_supervisor.dart",
+      "learning_tracker/test/sync/listener_overflow_recovery_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-101.json"
+  },
+  {
+    "id": "AUD-t-cross-11",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/constants/curriculum_defaults_extended_test.dart",
+      "learning_tracker/test/core/constants/curriculum_defaults_test.dart",
+      "learning_tracker/test/core/constants/curriculum_labels_extended_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-11.json"
+  },
+  {
+    "id": "AUD-t-cross-14",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/features/scheduler/domain/services/calendar_program_service.dart",
+      "learning_tracker/test/core/services/calendar_program_service_ref_extraction_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-14.json"
+  },
+  {
+    "id": "AUD-t-cross-15",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/providers/generated_providers_coverage_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-15.json"
+  },
+  {
+    "id": "AUD-t-cross-17",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/app_database_test.dart.skip",
+      "learning_tracker/test/core/database/dao_merge_methods_test.dart.skip"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-17.json"
+  },
+  {
+    "id": "AUD-t-cross-18",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "test/firestore-rules/firestore.rules.test.js",
+      "test/firestore-rules/package.json"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-18.json"
+  },
+  {
+    "id": "AUD-t-cross-19",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/sync/sync_rework_curriculum_completion_doc_id_test.dart",
+      "learning_tracker/test/sync/sync_rework_orchestrator_test.dart",
+      "learning_tracker/test/sync/sync_rework_profile_programs_pull_test.dart",
+      "learning_tracker/test/sync/sync_rework_push_test.dart",
+      "learning_tracker/test/sync/tutored_mirror_wipe_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-19.json"
+  },
+  {
+    "id": "AUD-t-cross-24",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "learning_tracker/test/track_setup/clear_overdue_button_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-24.json"
+  },
+  {
+    "id": "AUD-t-cross-27",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/track_dao_extended_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-27.json"
+  },
+  {
+    "id": "AUD-t-cross-29",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "learning_tracker/test/sync/new_listener_coverage_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-29.json"
+  },
+  {
+    "id": "AUD-t-cross-30",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/sync/sync_status_emission_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-30.json"
+  },
+  {
+    "id": "AUD-t-cross-38",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/user_database_managers_refs_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-38.json"
+  },
+  {
+    "id": "AUD-t-cross-40",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/app/router/app_shell_an6_test.dart",
+      "learning_tracker/test/app/router/persistent_switcher_scaffold_an8_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-40.json"
+  },
+  {
+    "id": "AUD-t-cross-41",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/network/connectivity_gateway.dart",
+      "learning_tracker/test/core/network/connectivity_service_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-41.json"
+  },
+  {
+    "id": "AUD-t-cross-44",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/.github/workflows/ci.yml",
+      "learning_tracker/test/l10n/app_localizations_coverage_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-44.json"
+  },
+  {
+    "id": "AUD-t-cross-47",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/fixtures/content_fixtures.dart",
+      "learning_tracker/test/infrastructure_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-47.json"
+  },
+  {
+    "id": "AUD-t-cross-53",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/l10n/app_localizations_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-53.json"
+  },
+  {
+    "id": "AUD-t-cross-61",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/logging/logger_extended_test.dart",
+      "learning_tracker/test/core/logging/logger_extra_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-61.json"
+  },
+  {
+    "id": "AUD-t-cross-62",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/migration/v15_to_v16_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-62.json"
+  },
+  {
+    "id": "AUD-t-cross-64",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/sync/sync_rework_engine_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-64.json"
+  },
+  {
+    "id": "AUD-t-cross-68",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/sync/merge/mergers_test.dart",
+      "learning_tracker/test/core/sync/merge/notification_settings_merger_round_trip_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-68.json"
+  },
+  {
+    "id": "AUD-t-cross-72",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/sync/firestore_listener_source_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-72.json"
+  },
+  {
+    "id": "AUD-t-cross-74",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/e2e/journeys/infra_p1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-74.json"
+  },
+  {
+    "id": "AUD-t-cross-85",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/database/daos/bookmark_dao_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-85.json"
+  },
+  {
+    "id": "AUD-t-cross-86",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/integration/stage_sync_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-86.json"
+  },
+  {
+    "id": "AUD-t-cross-87",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/utils/date_utils_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-87.json"
+  },
+  {
+    "id": "AUD-t-cross-91",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/sync/tutored_pull_isolation_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-91.json"
+  },
+  {
+    "id": "AUD-t-cross-94",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/lib/core/widgets/pin_entry_widget.dart",
+      "learning_tracker/test/core/widgets/pin_entry_widget_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-94.json"
+  },
+  {
+    "id": "AUD-t-cross-95",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/migration/v16_to_v17_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-95.json"
+  },
+  {
+    "id": "AUD-t-cross-96",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/sync/stage_definition_single_path_test.dart",
+      "learning_tracker/test/sync/tutored_listener_supervisor_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-96.json"
+  },
+  {
+    "id": "AUD-t-cross-97",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/cross",
+    "files": [
+      "learning_tracker/test/core/network/dio_client_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-cross-97.json"
+  },
+  {
+    "id": "AUD-t-dashboard-01",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/dashboard",
+    "files": [
+      "learning_tracker/test/features/dashboard/presentation/screens/dashboard_screen_test.dart",
+      "learning_tracker/test/features/dashboard/presentation/widgets/active_track_card_layout_test.dart",
+      "learning_tracker/test/features/dashboard/presentation/widgets/active_tracks_carousel_rtl_test.dart",
+      "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_body_stats_resolve_test.dart",
+      "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_body_streak_nav_test.dart",
+      "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_level_points_card_gating_test.dart",
+      "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_level_points_card_skeleton_pp15_test.dart",
+      "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_tier_row_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-dashboard-01.json"
+  },
+  {
+    "id": "AUD-t-dashboard-04",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/dashboard",
+    "files": [
+      "learning_tracker/test/features/dashboard/.gitkeep"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-dashboard-04.json"
+  },
+  {
+    "id": "AUD-t-dashboard-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/dashboard",
+    "files": [
+      "learning_tracker/test/features/dashboard/presentation/providers/dashboard_providers_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-dashboard-05.json"
+  },
+  {
+    "id": "AUD-t-gamification-01",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/gamification",
+    "files": [
+      "learning_tracker/test/features/gamification/presentation/providers/curriculum_breakdown_staleness_test.dart",
+      "learning_tracker/test/features/gamification/presentation/providers/points_providers_reactive_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-gamification-01.json"
+  },
+  {
+    "id": "AUD-t-gamification-03",
+    "severity": "P2",
+    "effort": "L",
+    "normArea": "tests/gamification",
+    "files": [
+      "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-gamification-03.json"
+  },
+  {
+    "id": "AUD-t-gamification-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/gamification",
+    "files": [
+      "learning_tracker/test/features/gamification/presentation/screens/parent_pending_redemptions_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-gamification-05.json"
+  },
+  {
+    "id": "AUD-t-gamification-07",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/gamification",
+    "files": [
+      "learning_tracker/test/features/gamification/presentation/screens/child_redemption_balance_reactive_test.dart",
+      "learning_tracker/test/features/gamification/presentation/screens/child_redemption_rewards_staleness_test.dart",
+      "learning_tracker/test/features/gamification/presentation/screens/pending_redemptions_reactive_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-gamification-07.json"
+  },
+  {
+    "id": "AUD-t-learning-03",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/learning",
+    "files": [
+      "learning_tracker/test/features/learning/data/completion_writer_test.dart",
+      "learning_tracker/test/features/learning/domain/use_cases/mark_completion_use_case_b1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-learning-03.json"
+  },
+  {
+    "id": "AUD-t-learning-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/learning",
+    "files": [
+      "learning_tracker/test/features/learning/data/repositories/bookmark_repository_impl_test.dart",
+      "learning_tracker/test/features/learning/data/repositories/completion_repository_impl_test.dart",
+      "learning_tracker/test/features/learning/domain/services/completion_detection_service_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-learning-05.json"
+  },
+  {
+    "id": "AUD-t-notifications-07",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/notifications",
+    "files": [
+      "learning_tracker/test/features/notifications/ws5_per_profile_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-notifications-07.json"
+  },
+  {
+    "id": "AUD-t-onboarding-04",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/onboarding",
+    "files": [
+      "learning_tracker/test/features/onboarding/domain/services/learning_process_wizard_service_test.dart",
+      "learning_tracker/test/features/onboarding/presentation/screens/onboarding_bulk_l1_test.dart",
+      "learning_tracker/test/features/onboarding/presentation/screens/onboarding_screen_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-onboarding-04.json"
+  },
+  {
+    "id": "AUD-t-onboarding-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/onboarding",
+    "files": [
+      "learning_tracker/test/features/onboarding/presentation/screens/bulk_mark_screen_test.dart",
+      "learning_tracker/test/features/onboarding/presentation/screens/empty_login_ws2_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-onboarding-05.json"
+  },
+  {
+    "id": "AUD-t-parent_mode-01",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/parent_mode",
+    "files": [
+      "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart",
+      "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_extended_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-parent_mode-01.json"
+  },
+  {
+    "id": "AUD-t-parent_mode-02",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/parent_mode",
+    "files": [
+      "learning_tracker/test/features/parent_mode/pin_service_extended_test.dart",
+      "learning_tracker/test/features/parent_mode/pin_service_profile_test.dart",
+      "learning_tracker/test/features/parent_mode/pin_service_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-parent_mode-02.json"
+  },
+  {
+    "id": "AUD-t-parent_mode-03",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/parent_mode",
+    "files": [
+      "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-parent_mode-03.json"
+  },
+  {
+    "id": "AUD-t-parent_mode-04",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/parent_mode",
+    "files": [
+      "learning_tracker/test/features/parent_mode/presentation/providers/pin_flow_controller_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-parent_mode-04.json"
+  },
+  {
+    "id": "AUD-t-profiles-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/profiles",
+    "files": [
+      "learning_tracker/test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-profiles-05.json"
+  },
+  {
+    "id": "AUD-t-progress-03",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/progress",
+    "files": [
+      "learning_tracker/test/features/progress/domain/services/chart_data_service_extended_test.dart",
+      "learning_tracker/test/features/progress/domain/services/chart_data_service_extra_test.dart",
+      "learning_tracker/test/features/progress/domain/services/chart_data_service_migration_test.dart",
+      "learning_tracker/test/features/progress/domain/services/chart_data_service_sentinel_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-progress-03.json"
+  },
+  {
+    "id": "AUD-t-progress-04",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/progress",
+    "files": [
+      "learning_tracker/test/features/progress/lifetime_folder_styled_and_notif_providers_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-progress-04.json"
+  },
+  {
+    "id": "AUD-t-progress-05",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/progress",
+    "files": [
+      "learning_tracker/test/features/progress/presentation/providers/curriculum_progress_reactivity_test.dart",
+      "learning_tracker/test/features/progress/presentation/providers/items_learned_reactivity_test.dart",
+      "learning_tracker/test/features/progress/presentation/providers/pp4_lifetime_chazaros_count_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-progress-05.json"
+  },
+  {
+    "id": "AUD-t-progress-06",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/progress",
+    "files": [
+      "learning_tracker/test/features/progress/presentation/providers/track_dual_progress_reactivity_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-progress-06.json"
+  },
+  {
+    "id": "AUD-t-progress-07",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/progress",
+    "files": [
+      "learning_tracker/lib/features/progress/domain/services/pace_calculator.dart",
+      "learning_tracker/test/features/progress/domain/services/pace_calculator_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-progress-07.json"
+  },
+  {
+    "id": "AUD-t-progress-08",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/progress",
+    "files": [
+      "learning_tracker/test/features/progress/presentation/widgets/siyumim_timeline_month_key_ts13_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-progress-08.json"
+  },
+  {
+    "id": "AUD-t-progress-09",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/progress",
+    "files": [
+      "learning_tracker/test/features/progress/presentation/widgets/progress_widgets_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-progress-09.json"
+  },
+  {
+    "id": "AUD-t-progress-10",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/progress",
+    "files": [
+      "learning_tracker/test/features/progress/domain/services/curriculum_progress_service_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-progress-10.json"
+  },
+  {
+    "id": "AUD-t-sacred_time-01",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/sacred_time",
+    "files": [
+      "learning_tracker/test/features/sacred_time/data/services/sacred_time_preferences_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-sacred_time-01.json"
+  },
+  {
+    "id": "AUD-t-scheduler-01",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/scheduler",
+    "files": [
+      "learning_tracker/test/features/scheduler/data/repositories/scheduler_content_repository_impl_test.dart",
+      "learning_tracker/test/features/scheduler/domain/models/goal_entity_extended_test.dart",
+      "learning_tracker/test/features/scheduler/domain/models/goal_entity_extra_test.dart",
+      "learning_tracker/test/features/scheduler/domain/repositories/scheduler_content_repository_test.dart",
+      "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_extended_test.dart",
+      "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_generate_all_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-scheduler-01.json"
+  },
+  {
+    "id": "AUD-t-scheduler-02",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/scheduler",
+    "files": [
+      "learning_tracker/test/features/scheduler/domain/study_day_chazara_gate_test.dart",
+      "learning_tracker/test/features/scheduler/domain/study_day_toggle_write_test.dart",
+      "learning_tracker/test/features/scheduler/domain/study_day_trackid_fallback_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-scheduler-02.json"
+  },
+  {
+    "id": "AUD-t-scheduler-03",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/scheduler",
+    "files": [
+      "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "learning_tracker/test/features/scheduler/presentation/providers/scheduler_contiguous_overdue_no_gap_test.dart",
+      "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_branches_test.dart",
+      "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-scheduler-03.json"
+  },
+  {
+    "id": "AUD-t-scheduler-04",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/scheduler",
+    "files": [
+      "learning_tracker/test/features/scheduler/domain/models/delta_value_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-scheduler-04.json"
+  },
+  {
+    "id": "AUD-t-scheduler-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/scheduler",
+    "files": [
+      "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_l1_test.dart",
+      "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-scheduler-05.json"
+  },
+  {
+    "id": "AUD-t-scheduler-06",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/scheduler",
+    "files": [
+      "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_performance_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-scheduler-06.json"
+  },
+  {
+    "id": "AUD-t-scheduler-07",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/scheduler",
+    "files": [
+      "learning_tracker/test/features/scheduler/domain/services/sefaria_ref_matcher_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-scheduler-07.json"
+  },
+  {
+    "id": "AUD-t-settings-01",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart",
+      "learning_tracker/test/features/settings/presentation/widgets/sign_out_dialog_l10n_test.dart",
+      "learning_tracker/test/features/settings/settings_utils_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-01.json"
+  },
+  {
+    "id": "AUD-t-settings-04",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/lib/features/settings/presentation/screens/upgrade_to_cloud_screen.dart",
+      "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_cancel_collision_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-04.json"
+  },
+  {
+    "id": "AUD-t-settings-06",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/test/features/settings/presentation/screens/lifetime_marking_screen_test.dart",
+      "learning_tracker/test/features/settings/presentation/screens/lifetime_marking_toggle_level_test.dart",
+      "learning_tracker/test/features/settings/presentation/screens/pp3_pp10_lifetime_marking_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-06.json"
+  },
+  {
+    "id": "AUD-t-settings-08",
+    "severity": "P3",
+    "effort": "M",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/test/features/settings/domain/services/data_export_extended_test.dart",
+      "learning_tracker/test/features/settings/domain/services/data_export_import_service_import_test.dart",
+      "learning_tracker/test/features/settings/domain/services/data_export_import_service_test.dart",
+      "learning_tracker/test/features/settings/domain/services/data_export_roundtrip_test.dart",
+      "learning_tracker/test/features/settings/domain/services/data_import_service_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-08.json"
+  },
+  {
+    "id": "AUD-t-settings-10",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/settings",
+    "files": [
+      "learning_tracker/lib/features/settings/presentation/widgets/backup_sync_section.dart",
+      "learning_tracker/test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-settings-10.json"
+  },
+  {
+    "id": "AUD-t-stages-01",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/stages",
+    "files": [
+      "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-stages-01.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-05",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-05.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-06",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+      "learning_tracker/test/story_acceptance/epic_02_content_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-06.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-09",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_26_story_15_composite_strategy_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-09.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-13",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_26_story_11_onboarding_controller_test.dart",
+      "learning_tracker/test/story_acceptance/epic_26_story_13_reader_purity_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-13.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-24",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_05_stages_order_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-24.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-28",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_25_story_21_multi_account_threading_test.dart",
+      "learning_tracker/test/story_acceptance/epic_25_story_25_9_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-28.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-29",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_26_story_23_data_export_round_trip_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-29.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-34",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_25_story_25_20_locale_theme_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-34.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-43",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_27_test_infrastructure_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-43.json"
+  },
+  {
+    "id": "AUD-t-story-acceptance-45",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/story-acceptance",
+    "files": [
+      "learning_tracker/test/story_acceptance/epic_27_story_14_analytics_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-story-acceptance-45.json"
+  },
+  {
+    "id": "AUD-t-sync-01",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/sync",
+    "files": [
+      "learning_tracker/test/features/sync/data/offline_queue_enqueue_test.dart",
+      "learning_tracker/test/features/sync/data/offline_queue_test.dart",
+      "learning_tracker/test/features/sync/data/sync_engine_test.dart.skip"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-sync-01.json"
+  },
+  {
+    "id": "AUD-t-sync-02",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/sync",
+    "files": [
+      "learning_tracker/test/features/sync/data/local_data_upload_service_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-sync-02.json"
+  },
+  {
+    "id": "AUD-t-sync-03",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/sync",
+    "files": [
+      "learning_tracker/test/features/sync/domain/profile_scoped_preference_keys_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-sync-03.json"
+  },
+  {
+    "id": "AUD-t-track_setup-02",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/track_setup",
+    "files": [
+      "learning_tracker/test/features/track_setup/presentation/widgets/curriculum_picker_step_test.dart",
+      "learning_tracker/test/features/track_setup/presentation/widgets/track_label_step_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-track_setup-02.json"
+  },
+  {
+    "id": "AUD-t-tracks-03",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/tracks",
+    "files": [
+      "learning_tracker/test/features/tracks/setup/edit_track_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tracks-03.json"
+  },
+  {
+    "id": "AUD-t-tracks-04",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/tracks",
+    "files": [
+      "learning_tracker/test/features/tracks/setup/domain/services/track_creation_service_atomicity_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tracks-04.json"
+  },
+  {
+    "id": "AUD-t-tracks-05",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/tracks",
+    "files": [
+      "learning_tracker/lib/features/tracks/setup/presentation/steps/step_goal.dart",
+      "learning_tracker/test/features/tracks/setup/presentation/steps/goal_step_ts10_state_preserve_test.dart",
+      "learning_tracker/test/features/tracks/setup/presentation/steps/self_paced_goal_step_scope_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tracks-05.json"
+  },
+  {
+    "id": "AUD-t-tracks-07",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/tracks",
+    "files": [
+      "learning_tracker/test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tracks-07.json"
+  },
+  {
+    "id": "AUD-t-tutoring-01",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/test/features/tutoring/tutor_pin_reset_screen_l1_test.dart",
+      "learning_tracker/test/features/tutoring/tutor_pin_setup_screen_l1_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-01.json"
+  },
+  {
+    "id": "AUD-t-tutoring-02",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+      "learning_tracker/test/features/tutoring/s1_tutored_write_router_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-02.json"
+  },
+  {
+    "id": "AUD-t-tutoring-03",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/test/features/tutoring/accept_invite_screen_l1_test.dart",
+      "learning_tracker/test/features/tutoring/accept_invite_screen_overflow_test.dart",
+      "learning_tracker/test/features/tutoring/decline_invite_screen_l1_test.dart",
+      "learning_tracker/test/features/tutoring/decline_invite_screen_overflow_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-03.json"
+  },
+  {
+    "id": "AUD-t-tutoring-04",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/test/features/tutoring/ga5_resignation_childname_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-04.json"
+  },
+  {
+    "id": "AUD-t-tutoring-08",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/test/features/tutoring/w3_41_tutor_security_rules_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-08.json"
+  },
+  {
+    "id": "AUD-t-tutoring-11",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/test/features/tutoring/ws3_3e_dual_role_fix_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-11.json"
+  },
+  {
+    "id": "AUD-t-tutoring-12",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "tests/tutoring",
+    "files": [
+      "learning_tracker/lib/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart",
+      "learning_tracker/test/features/tutoring/mark_live_completion_invariant_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-t-tutoring-12.json"
+  }
+]

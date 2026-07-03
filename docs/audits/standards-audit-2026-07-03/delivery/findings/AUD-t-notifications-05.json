@@ -1,0 +1,44 @@
+{
+  "title": "Rename the 'shows three Switch widgets' test in notifications_screen_l1_test.dart to match its findsNWidgets(4) assertion",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene (stale test naming)",
+  "area": "features/notifications/presentation/screens (tests, naming)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "line": 185,
+      "quote": "testWidgets('shows three Switch widgets (reminder, streak alert, reward)', ("
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "line": 192,
+      "quote": "expect(switches, findsNWidgets(4));"
+    }
+  ],
+  "sites": 1,
+  "why": "The test's own inline comment (line 190) admits the count is 4 (\"Three per-preference switches plus one in DeviceNotificationToggle\"), a leftover from before the device-level toggle (layer 1 / DEC-27) was added. Anyone reading the test name without the assertion gets the wrong mental model of the screen, and a future edit that trims the count back to 3 would pass the misleadingly-named test while silently dropping the device toggle.",
+  "recommendation": "Rename to something like \"shows four Switch widgets (reminder, streak alert, reward, device toggle)\".",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test title reflects the literal 4 in findsNWidgets(4); assertion unchanged."
+  ],
+  "labels": [
+    "testing",
+    "naming",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p2",
+  "chunk": "grp-066",
+  "normArea": "tests/notifications",
+  "id": "AUD-t-notifications-05",
+  "linearPriority": "Low"
+}

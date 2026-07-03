@@ -1,0 +1,47 @@
+{
+  "title": "Wire the tested D18 tutored-mirror-wipe fix (resolveOwnerAccountIdForWipe / wipeRevokedMirrors) into the real incoming-grants reconcile path, or delete it",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "AG-6 dead code / Evans: invariant re-derived instead of enforced once",
+  "area": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+      "line": 169,
+      "quote": "/// D18 fix: resolve the owning account id directly from the [accounts] table"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+      "line": 187,
+      "quote": "Future<int> resolveOwnerAccountIdForWipe(Ref ref) async {"
+    }
+  ],
+  "sites": 1,
+  "why": "resolveOwnerAccountIdForWipe exists solely to feed TutoredMirrorWipeService.wipeRevokedMirrors the tutor's real accounts.id instead of currentAccountIdProvider, which the docstring and test/sync/tutored_wipe_wrong_id_test.dart both claim 'during an active TUTORED session can resolve to the talmid's learner_profiles.id,' causing a revoked tutor's mirrored talmid data to silently survive (a real child-privacy concern if true). Grepping lib/ and test/ shows resolveOwnerAccountIdForWipe and wipeRevokedMirrors have zero callers anywhere except that one regression test — the fix was built and unit-tested but never wired into production. The actual revoke-reconcile path that runs today (incomingTutorGrantsProvider in features/tutoring/presentation/providers/manage_tutors_providers.dart:97/109) instead reconciles via `ref.watch(currentAccountIdProvider)` directly plus a per-grant wipeMirrorForGrant loop — the exact pattern the D18 docstring calls unsafe. Tracing currentAccountIdProvider (profile_providers.dart) and AuthStateNotifier (auth_state_provider.dart) shows currentUser is derived purely from the live Firebase uid + accounts/user_profiles lookup, with no dependency on activeProfileIdProvider or tutored-session selection — so the documented failure mode may no longer be reachable, meaning the D18 docstring/test could simply be stale. Either way, the tested fix and the shipped code have diverged and nobody has reconciled them.",
+  "recommendation": "Determine whether incomingTutorGrantsProvider's currentAccountIdProvider-based reconcile is actually safe now (it appears to be, since currentAccountIdProvider no longer varies with tutored-session state). If safe, delete resolveOwnerAccountIdForWipe/wipeRevokedMirrors and retire or rewrite tutored_wipe_wrong_id_test.dart to test the real path. If not safe (i.e. there's a code path where currentAccountIdProvider does vary during a tutored session), call resolveOwnerAccountIdForWipe from incomingTutorGrantsProvider instead of its current inline resolution.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Either incomingTutorGrantsProvider routes through resolveOwnerAccountIdForWipe/wipeRevokedMirrors, or resolveOwnerAccountIdForWipe and wipeRevokedMirrors are deleted along with their now-inaccurate docstrings.",
+    "grep -rn 'resolveOwnerAccountIdForWipe\\|wipeRevokedMirrors(' outside test/ is non-empty if kept, or the symbols no longer exist if removed.",
+    "tutored_wipe_wrong_id_test.dart is updated to exercise whichever path is actually shipped."
+  ],
+  "labels": [
+    "dead-code",
+    "tutoring",
+    "privacy",
+    "AG-6"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-providers",
+  "chunk": "grp-032",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-28",
+  "linearPriority": "Medium"
+}

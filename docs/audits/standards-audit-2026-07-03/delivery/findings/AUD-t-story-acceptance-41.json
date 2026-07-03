@@ -1,0 +1,44 @@
+{
+  "title": "Pin the LocalDayClock in epic_27_story_05_bulk_mark_prior_test.dart's second test instead of relying on real wall time",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/story_acceptance — gamification/streak",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart",
+      "line": 190,
+      "quote": "await repo.markComplete(\n        const CompletionRequest("
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart",
+      "line": 208,
+      "quote": "// The completion landed \"today\" (DateTimeFactory.nowUtc() at\n      // test execution time) — which is at most a few seconds before"
+    }
+  ],
+  "sites": 1,
+  "why": "No `useLocalDayClock(...)` call exists anywhere in this file, so `repo.markComplete(...)` writes `eventTimestamp` via `DateTimeFactory.nowUtc()` → the real `SystemLocalDayClock`, while `StreakStateProvider(..., clock: FakeLocalDayClock(today))` pins `today = DateTime.utc(2026, 5, 13, 9)` — violating TQ-6's no-wall-clock rule. The in-file comment claiming real 'now' is 'at most a few seconds before `today`' is already false (real time is ~7 weeks past 2026-05-13 as of this audit). The assertion (`state.maxStreak == 1`) only survives because streak_reducer.dart computes maxStreak from distinct-day count, independent of `today`, for a single-event list — confirmed by reading the reducer and by `flutter test` passing today. Any future addition of a currentStreak/lastCompletionDayLocal assertion here would go flaky depending on wall-clock date.",
+  "recommendation": "Call `useLocalDayClock(FakeLocalDayClock(today))` in setUp with `resetLocalDayClock()` in tearDown, matching the pattern already used in epic_27_integration_lockout_redaction_atomic_test.dart's AC1 group.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test pins the global LocalDayClock explicitly and passes independent of wall-clock date."
+  ],
+  "labels": [
+    "testing",
+    "TQ-6",
+    "hermeticity"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-27",
+  "chunk": "grp-136",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-41",
+  "linearPriority": "Low"
+}

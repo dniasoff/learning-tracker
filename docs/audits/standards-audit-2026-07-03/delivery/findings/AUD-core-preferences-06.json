@@ -1,0 +1,48 @@
+{
+  "title": "Guard _bindObserver's post-await 'state =' write with ref.mounted in preference_providers.dart",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "SM-4 (check ref.mounted after any await in a Notifier method/async callback before touching state)",
+  "area": "core/preferences (riverpod async safety)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 62,
+      "quote": "final sub = pref.observe(profileId).listen(onValue);\n  ref.onDispose(sub.cancel);"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 64,
+      "quote": "pref.read(profileId).then(onValue);"
+    }
+  ],
+  "sites": 1,
+  "why": "_bindObserver's pref.read(profileId).then(onValue) sets state after an unguarded await, with no ref.mounted check, inside a callback registered from build() by all 5 keepAlive preference notifiers. Per SM-4 this should no-op if the provider was disposed while the read was in flight (e.g. a test that builds one of these notifiers in a ProviderContainer and disposes the container immediately). Confirm by: build UseHebrewDate/ShowNikudPref/etc. in a ProviderContainer, dispose the container synchronously right after first read, and check whether an unhandled exception surfaces from the pending pref.read().then() callback.",
+  "recommendation": "Add 'if (!ref.mounted) return;' at the top of the onValue callback inside _bindObserver, before 'if (value != state) state = value;'.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_bindObserver's onValue callback no-ops when ref.mounted is false.",
+    "A test that disposes a ProviderContainer immediately after building one of the 5 keepAlive notifiers passes with no unhandled exception."
+  ],
+  "labels": [
+    "riverpod",
+    "SM-4",
+    "async-safety",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Standard's cited rationale (coding-standards.md:145) is specifically autoDispose teardown, not keepAlive — narrows real-world reachability but doesn't invalidate the concern given the already-low SUSPECTED/P3 rating."
+    ]
+  },
+  "sourceBatch": "t1-core-providers-prefs",
+  "chunk": "grp-023",
+  "normArea": "core/preferences",
+  "id": "AUD-core-preferences-06",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,45 @@
+{
+  "title": "Import the shared MockContentRepository fake instead of redeclaring it in epic_24_stop_bleeding_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / AG-4-adjacent",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+      "line": 27,
+      "quote": "class MockContentRepository extends Mock implements ContentRepository {}"
+    },
+    {
+      "file": "learning_tracker/test/mocks/mock_repositories.dart",
+      "line": 13,
+      "quote": "class MockContentRepository extends Mock implements ContentRepository {}"
+    }
+  ],
+  "sites": 1,
+  "why": "test/mocks/mock_repositories.dart:13 already defines the identical one-line MockContentRepository; this file re-declares it verbatim instead of importing it. Harmless today since mocktail scoping is per-file/per-library, but it's 1 of 11 files repo-wide carrying the exact same fork (checked via repo-wide grep, the other 10 are outside this batch) -- if ContentRepository's interface grows, updates to the shared fake won't reach files that forked their own copy, and a future author has no signal a shared version already exists.",
+  "recommendation": "Import MockContentRepository from test/mocks/mock_repositories.dart instead of redeclaring it; flag the other 10 repo-wide duplicates for a follow-up consolidation pass (out of this batch's scope).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "epic_24_stop_bleeding_test.dart imports MockContentRepository rather than declaring its own class of that name"
+  ],
+  "labels": [
+    "duplication",
+    "Fowler",
+    "DRY",
+    "test-mocks"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-21-24",
+  "chunk": "grp-141",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-38",
+  "linearPriority": "Low"
+}

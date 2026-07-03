@@ -1,0 +1,49 @@
+{
+  "title": "Delete the dead onCompleted callback chain from DailyTaskCard/GroupedDailyView/SchedulerScreen",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code",
+  "area": "scheduler/presentation (widgets + screens)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/daily_task_card.dart",
+      "line": 29,
+      "quote": "  final VoidCallback onCompleted;"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/screens/scheduler_screen.dart",
+      "line": 244,
+      "quote": "              ref.invalidate(allDailyTasksProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/grouped_daily_view.dart",
+      "line": 60,
+      "quote": "onDismissed: () => onTaskDismissed(curriculum, i),\n              onCompleted: () => onTaskCompleted(curriculum, i),"
+    }
+  ],
+  "sites": 4,
+  "why": "DailyTaskCard.onCompleted is `required` (every caller must supply it) but nothing inside DailyTaskCard ever invokes `onCompleted()` — its own doc comment even admits 'Kept for call-site compatibility; invoked externally', but no external invocation exists either. The real completion-triggered refresh path is `completionCommittedProvider`, incremented by text_display_screen.dart:696 and watched by allDailyTasksProvider (scheduler_providers.dart:321) — a reactive mechanism unrelated to this callback. daily_task_card_test.dart confirms this: every test passes `onCompleted: () {}` and none assert it fires. The whole chain (DailyTaskCard's param, SchedulerScreen._TaskList's and GroupedDailyView-wiring's invalidate closures, GroupedDailyView's pass-through) is vestigial from a pre-completionCommittedProvider design.",
+  "recommendation": "Remove the onCompleted parameter from DailyTaskCard and GroupedDailyView, and the corresponding dead closures in scheduler_screen.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "DailyTaskCard and GroupedDailyView no longer declare onCompleted/onTaskCompleted.",
+    "daily_task_card_test.dart and scheduler_screen tests updated accordingly and still pass."
+  ],
+  "labels": [
+    "dead-code",
+    "callback"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-093",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-22",
+  "linearPriority": "Low"
+}

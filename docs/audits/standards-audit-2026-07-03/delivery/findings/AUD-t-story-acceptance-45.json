@@ -1,0 +1,43 @@
+{
+  "title": "Rename or rewrite the crash_reported test in epic_27_story_14_analytics_test.dart to match its assertion",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance — analytics",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_14_analytics_test.dart",
+      "line": 438,
+      "quote": "'NullCrashlyticsService.recordError does NOT fire crash_reported',"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_14_analytics_test.dart",
+      "line": 444,
+      "quote": "expect(analytics.countOf(AnalyticsEvent.crashReported), 1);"
+    }
+  ],
+  "sites": 1,
+  "why": "The test name says the null crashlytics service does NOT fire the event; the body never constructs NullCrashlyticsService at all and instead calls `analytics.logCrashReported` directly, asserting the event DOES fire (count==1) — the opposite claim of the name. NullCrashlyticsService's real no-op behaviour is separately and correctly covered by test/core/logging/crashlytics_service_test.dart, so there's no coverage gap, but a reader trusting this acceptance test's name would draw the wrong conclusion about what it demonstrates.",
+  "recommendation": "Rename to describe what's actually asserted (e.g. 'logCrashReported records exactly one crash_reported event'), or rewrite the body to construct NullCrashlyticsService with a spy AnalyticsService and assert it's never called.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test name matches its assertion's actual subject and polarity."
+  ],
+  "labels": [
+    "testing",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-27",
+  "chunk": "grp-136",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-45",
+  "linearPriority": "Low"
+}

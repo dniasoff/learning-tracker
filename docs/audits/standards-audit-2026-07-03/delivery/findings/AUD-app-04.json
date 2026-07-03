@@ -1,0 +1,170 @@
+{
+  "title": "Land the AG-3 file-length checker and ratchet down the 327 files over 400 lines",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-3 / Fowler duplication",
+  "area": "test",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 40,
+      "quote": "class _AppShellScreenState extends ConsumerState<AppShellScreen> {"
+    },
+    {
+      "file": "learning_tracker/test/app/restore/device_restore_screen_l1_test.dart",
+      "line": 1,
+      "quote": "// L1 widget tests — DeviceRestoreScreen"
+    },
+    {
+      "file": "learning_tracker/test/core/auth/firebase_auth_gateway_impl_test.dart",
+      "line": 1,
+      "quote": "import 'dart:async';"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/completion_dao.dart",
+      "line": 1,
+      "quote": "(881 lines total, hand-written)"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_test.dart",
+      "line": 1,
+      "quote": "import 'package:drift/drift.dart' hide isNotNull, isNull;"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/track_dao_extended_test.dart",
+      "line": 1,
+      "quote": "/// Extended [TrackDao] tests covering paths not hit by track_dao_test.dart."
+    },
+    {
+      "file": "learning_tracker/test/core/database/content_database_companion_coverage_test.dart",
+      "line": 1,
+      "quote": "/// Companion-class coverage tests for content_database.g.dart."
+    },
+    {
+      "file": "learning_tracker/test/core/database/seed_manager_test.dart",
+      "line": 1,
+      "quote": "/// Logic tests for SeedManager."
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_computed_fields2_test.dart",
+      "line": 1308,
+      "quote": "} // EOF — 1308 lines total (3.3x the 400-line cap)"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+      "line": 1,
+      "quote": "/// Coverage for References getter classes and prefetchHooksCallback paths"
+    }
+  ],
+  "sites": 327,
+  "why": "Deterministic global scan: 327 hand-written Dart files exceed 400 lines (top: epic_15_multi_profile_test.dart 3588). Per-file list: _work/global/ag3-over400.txt. Representative per-area consequences: app_shell.dart is 834 lines — more than double the 400-line cap — and its single build() method interleaves auth-state l | AG-3 caps hand-written Dart files at 400 lines (generated files exempt) to bound the size of any single reviewable unit; | AG-3's checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) | All four are more than 2x the 400-line hand-written-file cap. completion_dao.dart mixes cross-profile-scope-guarded read",
+  "recommendation": "Fold the '(F1 extra)'/'(F2 variant)' groups into their same-behavior originals, keeping only assertions that exercise a genuinely new path (the multi-level _mishnaItems() hierarchy is a legitimately different fixture — keep one representative test per method against it, not a full repeat of every scenario).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No group names in this file contain '(F1 extra)' or '(F2 variant)'.",
+    "File is at or under 400 lines, or the remaining excess is a genuinely distinct scenario, not a repeat."
+  ],
+  "labels": [
+    "test-quality",
+    "duplication",
+    "AG-3",
+    "track-learning-order"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "fold:AG-3",
+  "chunk": "grp-112",
+  "mergedFrom": [
+    "Split app_shell.dart's 834-line build() into focused widgets — exceeds AG-3's 400-line cap by 2x",
+    "Split device_restore_screen_l1_test.dart (810L) and app_localizations_coverage_test.dart (1482L) under the AG-3 400-line cap",
+    "Split firebase_auth_gateway_impl_test.dart — 496 lines exceeds the 400-line AG-3 ratchet",
+    "Split completion_dao.dart, points_balance_dao.dart, track_dao.dart, and completion_dao_extended_test.dart under the 400-line AG-3 cap",
+    "Split learning_ledger_dao_test.dart and points_balance_dao_test.dart below the 400-line AG-3 cap",
+    "Split track_dao_test.dart, track_dao_extended_test.dart, and track_scoped_dao_test.dart under the 400-line AG-3 cap",
+    "Trim and de-duplicate the oversized Drift-codegen coverage tests for ContentDatabase and DeviceRegistryDatabase",
+    "Shrink 5 of 7 test/core/database files that exceed the AG-3 400-line ceiling by 2-4x",
+    "Split or delete the 5 oversized hand-written files in test/core/database/user_database_managers_*_test.dart (AG-3, 1.2x-6.1x the 400-line cap)",
+    "Split test/core/database/user_database_managers_test.dart and user_database_managers_refs_test.dart — both exceed the 400-line AG-3 cap",
+    "Split curriculum_label.dart (451 lines) and domain_term_labels.dart (435 lines) below the 400-line hand-written cap",
+    "Split app_shell_test.dart (1352 lines) and pin_guard_test.dart (646 lines) under the 400-line cap",
+    "Split or table-drive fetcher_test.dart — 831 hand-written lines, over 2x the 400-line cap",
+    "Split core/constants/curriculum_defaults.dart (1270 lines) — curriculum-label rendering engine misplaced outside core/labels/",
+    "Split the four hand-written files in core/sync/merge that exceed the 400-line AG-3 cap",
+    "Split outbox_processor.dart (599 ln) and outbox_processor_test.dart (1773 ln) below the AG-3 400-line ceiling",
+    "Split the four >400-line hand-written files in core/sync/ (AG-3)",
+    "Split the 4 oversized core/sync test files back under the 400-line AG-3 cap",
+    "Split app_theme.dart's duplicated _lightTheme/_darkTheme builders to bring the file under the 400-line AG-3 ceiling",
+    "Split the four hand-written account-feature files that exceed the 400-line AG-3 cap",
+    "Split the 5 account-feature test files that exceed AG-3's 400-line cap (up to 1017 lines)",
+    "auth_repository_impl_test.dart exceeds the 400-line AG-3 cap (536 lines)",
+    "Split hand-written content_browsing files that exceed the 400-line cap",
+    "Split hand-written dashboard files exceeding the 400-line cap (AG-3)",
+    "Split dashboard_providers_test.dart, dashboard_tier_row_test.dart and dashboard_completion_percentage_test.dart under the 400-line AG-3 cap",
+    "Split point_config_screen.dart and reward_configuration_screen.dart (and trim 3 more) below the 400-line hand-written file cap",
+    "3 gamification test files exceed the AG-3 400-line cap",
+    "Split the 6 gamification test files that exceed the 400-line AG-3 cap",
+    "Cut test/features/labels/domain_term_rendering_modes_test.dart from 1088 hand-written lines to the AG-3 400-line cap",
+    "Split completion_writer.dart and completion_repository_impl.dart under the 400-line AG-3 cap",
+    "Split the 5 hand-written Dart files in this batch that exceed the 400-line AG-3 cap",
+    "Split learning_screen_l1_test.dart (1021 lines) — exceeds AG-3's 400-line hand-written-file cap by 2.5x",
+    "Extract the 7 duplicated ProviderScope/MaterialApp blocks in notifications_screen_l1_test.dart into a shared helper to clear the 400-line cap",
+    "Split hand-written onboarding files that exceed the 400-line AG-3 cap",
+    "Split the 6 hand-written onboarding files that exceed the 400-line AG-3 cap",
+    "Split permission_prompt_screen_l1_test.dart, signup_screen_test.dart, and wizard_steps_l1_test.dart under the AG-3 400-line cap",
+    "Split four hand-written files in features/profiles that exceed the 400-line AG-3 cap",
+    "Split hand-written Dart files over the 400-line cap in the profiles feature slice",
+    "Split 4 oversized hand-written test files in features/profiles/presentation (805-1079 lines) — over the AG-3 400-line cap",
+    "Split the three oversized profiles test files under the 400-line AG-3 ceiling",
+    "Split the 6 progress-feature files that exceed the 400-line AG-3 cap",
+    "Split or trim hand-written progress widget files over the 400-line AG-3 cap",
+    "Split the 5 hand-written progress test files that exceed the AG-3 400-line cap",
+    "Split the six progress-feature files exceeding the 400-line hand-written Dart limit",
+    "Split recent_activity_and_hierarchy_panel_l1_test.dart and siyumim_timeline_and_lifetime_providers_test.dart under the AG-3 400-line cap",
+    "Split the 5 oversized hand-written scheduler files under the 400-line AG-3 cap",
+    "Split the four scheduler_engine test files that exceed AG-3's 400-line cap",
+    "Split the scheduler test files that exceed the AG-3 400-line hand-written-file cap",
+    "Split 6 oversized scheduler/notifications test files under the 400-line AG-3 cap",
+    "Split the 7 hand-written settings files that exceed AG-3's 400-line limit",
+    "Split the 3 hand-written files over the 400-line AG-3 ceiling encountered in this batch",
+    "Split 4 oversized settings-feature test files over the 400-line AG-3 cap",
+    "Split the 3 settings test files that exceed the 400-line AG-3 limit (866/1255/573 lines)",
+    "Four hand-written sync files exceed the 400-line AG-3 ceiling",
+    "Split test/sync/merge/lww_symmetric_test.dart (1237 lines) — 3x over the AG-3 400-line cap",
+    "Trim or split the 8 test/sync files exceeding the 400-line AG-3 cap",
+    "Extract a shared no-op FirestoreGateway/PushPipeline fake — hand-duplicated stubs push tutored_pull_isolation_test.dart to 767 lines",
+    "Consolidate the '(F1 extra)'/'(F2 variant)' duplicate groups in track_learning_order_repository_impl_test.dart",
+    "Split test files exceeding the AG-3 400-line cap: stage_definition_repository_impl_26_26_test.dart (874), track_learning_order_repository_impl_test.dart (675), stage_definition_repository_impl_test.dart (415)",
+    "Split the 4 hand-written tracks/setup files over the 400-line AG-3 cap",
+    "Split scope_views.dart, step_goal.dart, step_scope.dart, step_starting_position_calendar.dart, and stage_definition_repository_impl.dart under AG-3's 400-line cap",
+    "Split the four tracks/setup test files over the 400-line AG-3 cap",
+    "Split tracks/setup test files that exceed AG-3's 400-line cap",
+    "Split the four tutoring screens over the AG-3 400-line cap",
+    "Extract the duplicated PIN-numpad widget trio out of tutor_pin_entry_gate.dart and tutor_pin_setup_screen.dart",
+    "Split the 7 tutoring test files that exceed the AG-3 400-line cap",
+    "Split tutor_pin_entry_gate_l1_test.dart, tutor_pin_setup_screen_l1_test.dart and w3_41_tutor_security_rules_test.dart under the 400-line AG-3 cap",
+    "Split 6 story-acceptance test files that exceed the 400-line AG-3 cap",
+    "Split or exempt epic_26_story_23_data_export_round_trip_test.dart — 742 lines, 1.85x the AG-3 400-line cap",
+    "Reconcile AG-3's 400-line cap with the 'one file per epic' story-acceptance convention",
+    "Split epic_27_story_14_analytics_test.dart and epic_27_story_27_8_..._test.dart under the 400-line AG-3 cap",
+    "Split epic_18_track_overhaul_test.dart and epic_19_offline_first_test.dart under the 400-line AG-3 cap",
+    "Split oversized story-acceptance files over AG-3's 400-line cap: epic_21_multi_account_test.dart (1048 lines), epic_24_stop_the_bleeding_test.dart (423 lines)",
+    "Split epic_28_curriculum_overlap_test.dart under the 400-line hand-written Dart file cap (AG-3)",
+    "Split or ratchet-baseline the 9 test/e2e batch files that exceed AG-3's 400-line cap",
+    "Split 8 of 9 t1-test-cross-p2 e2e journey files under the AG-3 400-line cap",
+    "Split or trim 7 of 8 E2E journey test files exceeding the 400-line hand-written cap (AG-3)",
+    "Split or formally exempt the 7 oversized (>400-line) E2E journey test files in this batch from AG-3",
+    "Split the 5 oversized hand-written test files in batch t1-test-cross-p5 below the 400-line AG-3 cap",
+    "Dedupe firestore_wipe_install_test.dart's hand-rolled AuthRepository stub against test/mocks/mock_repositories.dart",
+    "Split or externalize tool/lib/sequences/halakhah_yomit_seq.dart — 1619-line hand-written Dart file violates the AG-3 400-line cap 4x over",
+    "Split tool/seed/lib/sefaria_mongo.dart (542), tool/seed_content_db.dart (809), tool/validate_seed_coverage.dart (401) under AG-3's 400-line cap"
+  ],
+  "normArea": "app",
+  "id": "AUD-app-04",
+  "linearPriority": "Medium"
+}

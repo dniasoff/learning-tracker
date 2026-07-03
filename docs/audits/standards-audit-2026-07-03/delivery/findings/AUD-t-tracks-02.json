@@ -1,0 +1,56 @@
+{
+  "title": "Extract the _HebrewTermsOff/_track/_perTrackOverrides test scaffolding duplicated across 3 track-management test files",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication lens (Extract Class/shared test helper) — cf. test/helpers/drift_memory.dart precedent",
+  "area": "test/features/tracks/setup/track_management_hub_*_test.dart + test/features/tracks/track_management_body_and_order_l1_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks/setup/track_management_hub_last_curriculum_guard_test.dart",
+      "line": 60,
+      "quote": "class _HebrewTermsOff extends UseHebrewTerms {"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/track_management_hub_screen_l1_test.dart",
+      "line": 63,
+      "quote": "class _HebrewTermsOff extends UseHebrewTerms {"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart",
+      "line": 83,
+      "quote": "class _HebrewTermsOff extends UseHebrewTerms {"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart",
+      "line": 125,
+      "quote": "List<Override> _perTrackOverrides(\n  List<CurriculumTrack> tracks, {"
+    }
+  ],
+  "sites": 3,
+  "why": "All three files independently redeclare identical private scaffolding: class _HebrewTermsOff extends UseHebrewTerms, a CurriculumTrack _track({...}) fixture builder, a _perTrackOverrides(...) helper, _MockStackRouter/_FakePageRouteInfo mocks, and _settle/_teardown pump helpers — none imported from a shared file, unlike DB helpers which already live centrally in test/helpers/drift_memory.dart. The copies have already drifted: track_management_body_and_order_l1_test.dart's _perTrackOverrides gained an extra chazaraEnabled parameter that the other two copies don't have, so a future change to CurriculumTrack's shape or to the per-track override set requires editing three files in lockstep, and it is easy to update one copy and miss the others (classic shotgun surgery).",
+  "recommendation": "Extract a shared test helper file (e.g. test/features/tracks/setup/helpers/track_hub_test_helpers.dart) providing _track(), _perTrackOverrides(), _HebrewTermsOff, _MockStackRouter, _FakePageRouteInfo, and the settle/teardown pump helpers; import it from all three call sites.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "_HebrewTermsOff, _track(), _perTrackOverrides(), and the mock classes are defined once and imported by the three test files",
+    "No behavioral change to existing passing tests"
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "fowler",
+    "tracks"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p5",
+  "chunk": "grp-121",
+  "normArea": "tests/tracks",
+  "id": "AUD-t-tracks-02",
+  "linearPriority": "Medium"
+}

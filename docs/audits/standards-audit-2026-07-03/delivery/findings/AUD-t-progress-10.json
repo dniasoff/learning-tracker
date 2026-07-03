@@ -1,0 +1,44 @@
+{
+  "title": "Replace DateTime.now() with a fixed date in curriculum_progress_service_test.dart track seeding",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/features/progress/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/progress/domain/services/curriculum_progress_service_test.dart",
+      "line": 30,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/domain/services/curriculum_progress_service_test.dart",
+      "line": 31,
+      "quote": "activatedAt: DateTime.now(),"
+    }
+  ],
+  "sites": 1,
+  "why": "TQ-6 bans wall-clock reads in tests. These two fields are never asserted on, so the file is not currently flaky, but the pattern is copy-pasted into the non-batch sibling test/features/progress/data/repositories/progress_repository_test.dart (15 further DateTime.now() occurrences), normalizing non-determinism that will bite the day someone adds a time-based assertion against this seed.",
+  "recommendation": "Replace both DateTime.now() calls with a fixed literal, e.g. DateTime.utc(2026, 1, 1), matching every other file in this batch.",
+  "acceptance_criteria": [
+    "grep 'DateTime.now()' on the file returns no matches."
+  ],
+  "effort": "S",
+  "labels": [
+    "hygiene",
+    "TQ-6",
+    "wall-clock"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p3",
+  "chunk": "grp-086",
+  "normArea": "tests/progress",
+  "id": "AUD-t-progress-10",
+  "linearPriority": "Low"
+}

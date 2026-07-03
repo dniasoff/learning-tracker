@@ -1,0 +1,46 @@
+{
+  "title": "Convert HierarchySelection and AdjacentItems to @freezed instead of hand-rolled/missing equality",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "coding-standards.md:584 — never hand-write ==/hashCode for data classes",
+  "area": "core/content",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/content/hierarchy_selection.dart",
+      "line": 19,
+      "quote": "bool operator ==(Object other) =>\n      identical(this, other) ||"
+    },
+    {
+      "file": "learning_tracker/lib/core/content/content_index.dart",
+      "line": 9,
+      "quote": "class AdjacentItems {\n  const AdjacentItems({this.prev, this.next});"
+    }
+  ],
+  "sites": 2,
+  "why": "coding-standards.md is explicit: 'hand-rolled equality drifts from the fields and silently breaks rebuild-skipping.' HierarchySelection is stored in `Set<HierarchySelection>` in production code (bulk_mark_screen.dart:68, hierarchy_selection_panel.dart:88) — Set.add/remove/contains rely directly on ==/hashCode. All 4 fields are covered today, but the next field added to the class (a plausible edit given it already models a 4-level hierarchy with headroom) will silently break selection dedup in the bulk-mark/lifetime-marking flows unless the two overrides are manually kept in sync. AdjacentItems has no equality at all (identity-only), so two structurally-equal instances never compare equal — currently harmless since it's only null-checked, but not an @freezed value type either.",
+  "recommendation": "Annotate both as @freezed (or add copyWith by hand and a comment justifying why not, matching the project's stated carve-out pattern) so equality/hashCode/copyWith stay generated and in sync with the fields.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "HierarchySelection and AdjacentItems are @freezed classes; all existing == /hashCode assertions in hierarchy_selection_test.dart and epic_25_schema_core_test.dart still pass unchanged.",
+    "Set<HierarchySelection> usage in bulk_mark_screen.dart and hierarchy_selection_panel.dart compiles and behaves identically."
+  ],
+  "labels": [
+    "core/content",
+    "freezed",
+    "equality",
+    "hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-content",
+  "chunk": "grp-005",
+  "normArea": "core/content",
+  "id": "AUD-core-content-01",
+  "linearPriority": "Medium"
+}

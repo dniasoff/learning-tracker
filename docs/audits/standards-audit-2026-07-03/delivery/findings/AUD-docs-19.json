@@ -1,0 +1,50 @@
+{
+  "title": "Rewrite docs/planning/testing-quick-reference.md — it teaches the banned mockito pattern and cites nonexistent files",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-4",
+  "area": "docs/planning",
+  "evidence": [
+    {
+      "file": "docs/planning/testing-quick-reference.md",
+      "line": 106,
+      "quote": "@GenerateMocks([CompletionDao])"
+    },
+    {
+      "file": "docs/planning/testing-quick-reference.md",
+      "line": 51,
+      "quote": "**File:** `test/features/learning/domain/models/completion_test.dart`"
+    },
+    {
+      "file": "docs/planning/testing-quick-reference.md",
+      "line": 615,
+      "quote": "import 'package:learning_tracker/features/content/data/adapters/mishnayos_adapter.dart';"
+    }
+  ],
+  "sites": 1,
+  "why": "coding-standards.md TQ-4 bans new mockito; the live suite has 0 mockito imports and 182 mocktail-based test files, so every worked example in this doc uses the disallowed framework. It is dated 2026-02-08 with no staleness marker and is linked from docs/index.md's 'Planning and design' section (described there as reflecting 'the current code'). None of the concrete files it cites (curriculum_card.dart, mishnayos_adapter.dart, the adapters/ directory) exist in lib/, and its 'API Tests (Sefaria)' section describes a runtime HTTP-fetch content architecture that contradicts the actual build-time-bundled content design confirmed in docs/qa/legacy/07-content-browsing.md (FR6). A contributor or AI agent following this doc would reintroduce a banned test framework and reference dead paths.",
+  "recommendation": "Rewrite against current mocktail-based test helpers and real file paths, or replace with a pointer to the current testing guide plus a superseded banner in the meantime.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "The doc contains zero `package:mockito` code examples.",
+    "Every **File:** path cited resolves to a real file under lib/ or test/."
+  ],
+  "labels": [
+    "docs",
+    "testing",
+    "drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p2",
+  "chunk": "grp-170",
+  "normArea": "docs",
+  "id": "AUD-docs-19",
+  "linearPriority": "Medium"
+}

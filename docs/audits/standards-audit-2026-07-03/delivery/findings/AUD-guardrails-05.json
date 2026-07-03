@@ -1,0 +1,58 @@
+{
+  "title": "Add lib/features/auth/ and core/providers/firebase_providers.dart to no_firebase_outside_core's whitelist per Rule 3",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 3 / AG-11",
+  "area": "custom_lints",
+  "evidence": [
+    {
+      "file": "packages/custom_lints/lib/src/rules/no_firebase_outside_core.dart",
+      "line": 44,
+      "quote": "if (path.contains('lib/core/auth/')) return true;\n    if (path.contains('lib/core/sync/')) return true;"
+    },
+    {
+      "file": "learning_tracker/lib/core/providers/firebase_providers.dart",
+      "line": 1,
+      "quote": "import 'package:firebase_storage/firebase_storage.dart';"
+    },
+    {
+      "file": "Makefile",
+      "line": 157,
+      "quote": "| grep -v '/features/auth/' || true); \\"
+    },
+    {
+      "file": "Makefile",
+      "line": 195,
+      "quote": "| grep -v '/core/auth/' \\"
+    }
+  ],
+  "sites": 2,
+  "why": "Three enforcement artifacts for the same rule disagree. docs/coding-standards.md Rule 3 and root Makefile audit check 6 (for firebase_auth) both authorize THREE directories, explicitly including `lib/features/auth/`. Root Makefile check 11 (for cloud_firestore/firebase_storage) and this custom_lint rule (for all three Firebase packages, uniformly) only authorize TWO. Concretely and currently: `lib/core/providers/firebase_providers.dart` — the exact file coding-standards.md Rule 3 names as the sanctioned Firebase-injection point, and which does `import 'package:firebase_storage/firebase_storage.dart'` directly — sits at `lib/core/providers/`, outside both `core/auth/` and `core/sync/`. This custom_lint rule would flag that canonical, standards-compliant file as a Rule-3 violation the moment custom_lint is unbricked; only the fact that custom_lint is currently broken is hiding this.",
+  "recommendation": "Add an explicit exemption for `lib/core/providers/firebase_providers.dart` (matching Makefile check 11's own extra exclusion) and decide whether `lib/features/auth/` should be whitelisted too (it doesn't exist yet, but the doc promises it will be exempt) — then make coding-standards.md Rule 3, both Makefile checks 6 and 11, and this rule agree on the same directory set.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "no_firebase_outside_core.dart's _isWhitelisted exempts core/providers/firebase_providers.dart.",
+    "no_firebase_outside_core_test.dart gains a case asserting firebase_providers.dart (or its path pattern) is allowed.",
+    "Rule 3's authorized-directory list is identical across docs/coding-standards.md, no_firebase_outside_core.dart, and Makefile checks 6 and 11."
+  ],
+  "labels": [
+    "guardrail",
+    "docs-drift",
+    "custom-lint",
+    "rule-3",
+    "false-positive"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-lints-hooks",
+  "chunk": "grp-160",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-05",
+  "linearPriority": "Medium"
+}

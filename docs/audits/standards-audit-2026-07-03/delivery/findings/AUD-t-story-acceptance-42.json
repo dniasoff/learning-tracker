@@ -1,0 +1,105 @@
+{
+  "title": "Remove 14 tautological expect(<Symbol>, isNotNull) compile-time-check tests across 4 epic-26 story files",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+      "line": 62,
+      "quote": "expect(StatCard, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "line": 52,
+      "quote": "expect(PreferenceListTile, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "line": 84,
+      "quote": "expect(PreferenceSegmentedTile, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+      "line": 46,
+      "quote": "expect(dashboardModelProvider, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+      "line": 52,
+      "quote": "expect(DashboardModel, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+      "line": 56,
+      "quote": "expect(DashboardHeaderModel, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+      "line": 60,
+      "quote": "expect(DashboardTasksModel, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+      "line": 64,
+      "quote": "expect(DashboardTracksModel, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+      "line": 68,
+      "quote": "expect(DashboardLifetimeModel, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+      "line": 101,
+      "quote": "expect(onTrackChanged, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+      "line": 28,
+      "quote": "expect(firstTaskInTrackForCategoryProvider, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+      "line": 66,
+      "quote": "expect(TrackTaskCategory.review, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+      "line": 70,
+      "quote": "expect(TrackTaskCategory.dueToday, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+      "line": 74,
+      "quote": "expect(TrackTaskCategory.overdue, isNotNull);"
+    }
+  ],
+  "sites": 14,
+  "why": "Each asserts isNotNull on a bare top-level class reference, a resolved provider identifier, or a non-nullable enum constant. None of these can ever be null if the file compiles — the import at the top of the same file already fails the build otherwise. The tests add zero information beyond 'this file compiles', which flutter analyze and every sibling test in the same group already guarantee; dashboard_model_provider_test.dart's AC1 group is 6 of 7 tests in this exact shape.",
+  "recommendation": "Delete these 14 tests, or replace each with the structural/behavioral check its AC actually promises — e.g. TrackTaskCategory's 'has exactly 3 values' test (already present alongside 3 of these) is the real assertion; the 3 existence checks beside it add nothing.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "no expect(<Identifier>, isNotNull) remains where <Identifier> is a class/type literal, top-level provider, or enum constant in the epic_26 story files",
+    "each affected group's test count decreases without decreasing branch coverage of the corresponding lib/ file"
+  ],
+  "labels": [
+    "testing",
+    "tautological",
+    "epic-26"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-131",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-42",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,118 @@
+{
+  "title": "Backfill or formally waive verification evidence on epic-21 'done' stories — 16 files ship an all-unchecked task list and an empty Dev Agent Record",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-9 (non-trivial changes carry verification evidence)",
+  "area": "docs/stories/implementation (epic 21 multi-account)",
+  "evidence": [
+    {
+      "file": "docs/stories/implementation/21-1-device-account-registry.md",
+      "line": 104,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-2-per-account-database-isolation.md",
+      "line": 148,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-3-session-auto-resume.md",
+      "line": 91,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-4-session-persistence.md",
+      "line": 97,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-5-unified-signup-email-password.md",
+      "line": 126,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-6-unified-signup-google.md",
+      "line": 103,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-7-unified-signin-smart-routing.md",
+      "line": 150,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-8-unified-signin-google.md",
+      "line": 66,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-9-account-picker-screen.md",
+      "line": 96,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-10-signout-to-picker.md",
+      "line": 74,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-11-add-account-from-picker.md",
+      "line": 78,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-12-upgrade-multi-account.md",
+      "line": 65,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-13-remove-cloud-from-device.md",
+      "line": 78,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-14-delete-local-account.md",
+      "line": 88,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-15-delete-cloud-account-full.md",
+      "line": 127,
+      "quote": "## Dev Agent Record"
+    },
+    {
+      "file": "docs/stories/implementation/21-16-cloud-function-deletion.md",
+      "line": 135,
+      "quote": "## Dev Agent Record"
+    }
+  ],
+  "sites": 16,
+  "why": "All 16 epic-21 stories carry 'Status: done' yet every Tasks/Subtasks checkbox in every file is unchecked ('- [ ]', never '- [x]') and every Dev Agent Record section is the unfilled template stub (blank 'Agent Model Used' / 'Completion Notes List' / 'Change Log' headers, no content) — in sharp contrast to every DNI-32x/33x/34x/35x/37x/38x story in this same batch, which carries a populated file list, dated change log, and test-run counts (e.g. 'flutter test — 1810 passing'). Grepping lib/ shows the epic-21 feature set (device registry, per-account DB isolation, session persistence, account picker, tiered deletion, the onUserDeleted cloud function) genuinely exists, so the work itself was not skipped — but the documents supply no verifiable completion trail a reviewer or future incident investigator could check the 'done' claim against, unlike every other done/review story in the folder.",
+  "recommendation": "Not worth rewriting 16 historical files retroactively. Forward-looking fix: make the story-authoring skill (or a docs-triage Rule-0 checker) refuse Status: done/review when Tasks/Subtasks still contain an unchecked '- [ ]' line or the Dev Agent Record section is the unfilled template — this is exactly the discipline the later Epic-25+ process already adopted by convention; enforce it instead of leaving it as convention.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A checker (doc-lint or make audit rule) fails when a docs/stories/implementation/*.md has Status: done/review and still contains an unchecked '- [ ]' line in Tasks/Subtasks, or a Dev Agent Record section with only empty headers.",
+    "New stories merged after this finding are not left with Status: done and a blank Dev Agent Record."
+  ],
+  "labels": [
+    "docs",
+    "process-hygiene",
+    "verification-evidence",
+    "tier4-triage"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor: the illustrative 'flutter test — 1810 passing' quote in the narrative isn't a literal citation (real DNI counts are 1766-1934); it's approximate color, not part of the structured evidence array, and doesn't affect the verified core claim."
+    ]
+  },
+  "sourceBatch": "t4-docs-triage-p5",
+  "chunk": "grp-173",
+  "normArea": "docs",
+  "id": "AUD-docs-24",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,57 @@
+{
+  "title": "Move DriftMergeStore's raw learner_profiles/curriculum_tracks/accounts/stage_definitions writes into DAOs under core/database",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-1 (Drift mutations only under **/data/** or core/database/; DAO-only writes)",
+  "area": "core/sync/merge",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+      "line": 339,
+      "quote": "await (_db.update(\n        _db.learnerProfiles,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+      "line": 404,
+      "quote": "return _db.into(_db.accounts).insert(seed);"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+      "line": 483,
+      "quote": "await (_db.update(\n        _db.curriculumTracks,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+      "line": 663,
+      "quote": "await (_db.update(\n        _db.stageDefinitions,"
+    }
+  ],
+  "sites": 6,
+  "why": "drift_merge_store.dart's own class doc claims 'Dispatches each MergeStore operation to the appropriate DAO... the DAO is responsible for the final SQLite write', but for learner_profiles, accounts, curriculum_tracks (both insert+update branches) and the stage_definitions update branch it writes the tables directly instead of routing through ProfileDao/TrackDao/StageDao — and the file lives in core/sync/merge/, not core/database/ or a feature **/data/** layer. DB-1's own rationale is single-source-of-truth: any non-sync code path that also writes these same tables (e.g. profile-edit or track-activation screens) now has a second, divergent write path that can silently apply different validation/defaults than the sync path's inline logic.",
+  "recommendation": "Add/extend DAO methods (e.g. ProfileDao.upsertFromRemote, TrackDao.upsertFromRemote) so drift_merge_store.dart calls a DAO for every entity kind, matching what it already does for bookmark/profile_program/learning_order/stage insert.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "DB-1 audit grep for direct `_db.into(`/`_db.update(` calls returns zero hits inside lib/core/sync/merge/.",
+    "drift_merge_store_test.dart's existing assertions pass unchanged (behavior-preserving refactor)."
+  ],
+  "labels": [
+    "sync",
+    "architecture",
+    "DB-1"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Strengthened, not corrected: grep confirms a genuine second production write path already exists for learner_profiles (ProfileDao.insertProfile/updateProfile via features/profiles) and TrackDao.upsertFromSync is a ready-made, tested, but production-dead DAO method — the exact fix the recommendation asks for already exists and is merely unused."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-merge",
+  "chunk": "grp-029",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-22",
+  "linearPriority": "Medium"
+}

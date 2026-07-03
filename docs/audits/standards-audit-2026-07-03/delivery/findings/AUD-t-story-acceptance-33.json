@@ -1,0 +1,47 @@
+{
+  "title": "Delete the superseded Story 19.5 AuthState test now that Story 20.5 fully re-covers it",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "line": 575,
+      "quote": "group('Story 19.5 — superseded by Epic 20 v2 unified AuthState', () {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_20_hard_tier_auth_test.dart",
+      "line": 143,
+      "quote": "group('Story 20.5 — AuthState', () {"
+    }
+  ],
+  "sites": 1,
+  "why": "The group's own name says the story is superseded, yet the test (asserting AuthState.signedOut/signedIn shape with tier: cloudBorn) was left in place instead of being removed when epic_20_hard_tier_auth_test.dart's Story 20.5 group added equivalent (localBorn-variant) coverage of the same AuthState contract. Both files must now be kept in sync by hand whenever AuthState's shape changes.",
+  "recommendation": "Delete the Story 19.5 group from epic_19_offline_first_test.dart; Story 20.5 in epic_20_hard_tier_auth_test.dart is the current owner of this contract.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "epic_19_offline_first_test.dart no longer contains a 'Story 19.5' group",
+    "The epic_20 story-acceptance run still passes, confirming Story 20.5 covers the same assertions"
+  ],
+  "labels": [
+    "hygiene",
+    "duplication",
+    "stale-test"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "20.5's group (epic_20_hard_tier_auth_test.dart:143) only asserts the localBorn variant, not cloudBorn as 19.5 does — not literally 'equivalent' coverage between just these two groups. The actual redundant/superseding coverage is test/features/auth/domain/models/auth_state_test.dart:133-304, which tests both tiers and wasn't cited."
+    ]
+  },
+  "sourceBatch": "t1-story-epics-17-20",
+  "chunk": "grp-139",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-33",
+  "linearPriority": "Low"
+}

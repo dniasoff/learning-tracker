@@ -1,0 +1,47 @@
+{
+  "title": "Route track_management_hub_screen's error text and edit_track_screen's validation sentinel through AppLocalizations",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2 (no hardcoded user-facing strings) / EH-5 (no pre-formatted human messages) / custom lint no_e_to_string_in_ui",
+  "area": "features/tracks/setup/presentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+      "line": 119,
+      "quote": "error: (e, _) => Center(child: Text('Error: $e')),"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "line": 43,
+      "quote": "name.trim().isEmpty ? 'Track name cannot be empty.' : null;"
+    }
+  ],
+  "sites": 2,
+  "why": "Text('Error: $e') renders a raw, untranslated exception string directly to Hebrew-locale users if activeTracksProvider's stream ever errors — exactly the shape the (currently non-functional) no_e_to_string_in_ui custom lint targets. validateTrackName's hardcoded return string is never actually displayed today (the only call site null-checks it and shows l10n.trackEditNameRequired instead), but returning a natural-language string from a validator invites a future direct-display bug.",
+  "recommendation": "Replace the error branch with a localized generic error string; change validateTrackName's signature to return bool (or a stable enum) instead of a message string.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No raw Text('Error: $e')-style interpolation remains in tracks/setup presentation code",
+    "validateTrackName no longer returns a natural-language string"
+  ],
+  "labels": [
+    "i18n",
+    "ax-2",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Site 2 (validateTrackName) quote matches but is provably dead: the file's own doc comment confirms only nullity is used by the caller, the string itself is never displayed — weaker than a live violation, though the finding itself discloses this honestly rather than overclaiming. Doesn't change P3."
+    ]
+  },
+  "sourceBatch": "t1-feat-tracks-p1",
+  "chunk": "grp-114",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-24",
+  "linearPriority": "Low"
+}

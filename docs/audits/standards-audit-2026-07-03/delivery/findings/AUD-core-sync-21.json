@@ -1,0 +1,42 @@
+{
+  "title": "Fix LearningLedgerMerger's fallback ULID generator to avoid a permanent same-millisecond collision loss",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "Nygard: silent, non-self-healing data loss on a manufactured natural-key collision",
+  "area": "core/sync/merge",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/merge/learning_ledger_merger.dart",
+      "line": 112,
+      "quote": "String _makeUlid(DateTime ts) =>\n      '${ts.millisecondsSinceEpoch.toRadixString(36).padLeft(10, '0').toUpperCase()}0000000000000000';"
+    }
+  ],
+  "sites": 1,
+  "why": "This fallback (only used when a pulled row has no `ulid` — 'legacy data' pre-migration docs, per the file's own comment) is deterministic with zero entropy: two ledger rows completed in the same millisecond with no ulid produce the IDENTICAL synthetic id. LearningLedgerDao dedups on ulid via INSERT OR IGNORE, so the second row is silently dropped — permanently, since a retry regenerates the same colliding id every time (unlike the rest of this merge layer's failures, which self-heal on the next pull because the underlying condition changes). A bulk-mark flow (bulk_mark_screen.dart is a named churn hotspot) writing several legacy-shaped completions together is a plausible trigger.",
+  "recommendation": "Add entropy to the fallback id (e.g. an index-within-batch or random suffix instead of a constant zero-padded tail), or skip rows with no ulid and no way to disambiguate instead of manufacturing a collidable one.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Unit test: merge two distinct legacy (no-ulid) rows sharing the same completed_at millisecond — assert both are inserted, not deduplicated into one."
+  ],
+  "labels": [
+    "sync",
+    "merge",
+    "data-loss",
+    "hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The bulk_mark_screen.dart trigger example is unsupported: local ledger writes always assign a real ULID via newUlid(now) (learning_ledger_repository_impl.dart:107,174), so bulk-marking today cannot produce a no-ulid row. Only genuine pre-ULID-migration Firestore docs can reach the _makeUlid fallback; the core collision mechanism itself is confirmed correct."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-merge",
+  "chunk": "grp-029",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-21",
+  "linearPriority": "Medium"
+}

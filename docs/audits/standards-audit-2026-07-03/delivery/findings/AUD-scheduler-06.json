@@ -1,0 +1,57 @@
+{
+  "title": "Delete dead StudyDayConfigRepositoryImpl/toggleStudyDay — live _toggleDay write path bypasses the repository layer (DB-1)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-1 (Notifiers/widgets mutate only via repository methods) + AG-6 (dead code)",
+  "area": "features/scheduler data/presentation boundary",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/screens/study_day_config_screen.dart",
+      "line": 277,
+      "quote": "await db.studyDayConfigDao.upsertDayConfig("
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/study_day_config_repository_impl.dart",
+      "line": 54,
+      "quote": "await _dao.upsertDayConfig("
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/study_day_config_providers.dart",
+      "line": 60,
+      "quote": "/// DEPRECATED / DEAD CODE — this provider has no call sites."
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/screens/study_day_config_screen_l1_test.dart",
+      "line": 269,
+      "quote": "await (db.select(db.studyDayConfigs)..where("
+    }
+  ],
+  "sites": 1,
+  "why": "grep -rn \"StudyDayConfigRepositoryImpl(\" lib/ and grep -rn \"toggleStudyDay\" lib/ (outside their own definitions) both return zero: a whole repository implementation and a whole @riverpod provider are unreachable, while the real production mutation (study_day_config_screen.dart:_toggleDay, tested by this batch's study_day_config_screen_l1_test.dart) calls the DAO directly from a widget method, violating DB-1. The dead repository/provider carry known uncorrected bugs (no sync push; invalidate fires before the write completes) per their own doc comments — a future agent who finds StudyDayConfigRepository via search and wires it in, believing that is the architecturally correct move, would silently reintroduce both bugs because the fixes were only ever applied to the screen's private duplicate.",
+  "recommendation": "Delete StudyDayConfigRepositoryImpl and toggleStudyDay (both self-documented as dead/buggy), or fix them and route _toggleDay through the repository so there is exactly one write path carrying the sync-push + invalidate-after-write-completes behavior.",
+  "acceptance_criteria": [
+    "grep -rn \"StudyDayConfigRepositoryImpl(\" lib/ returns zero (deleted) or one wired call site.",
+    "grep -rn \"toggleStudyDay\" lib/ returns zero (deleted) or a provider matching _toggleDay's sync-push/post-write-invalidate behavior.",
+    "study_day_config_screen_l1_test.dart continues passing unchanged (it asserts DB state, not call path)."
+  ],
+  "labels": [
+    "DB-1",
+    "dead-code",
+    "scheduler",
+    "architecture"
+  ],
+  "effort": "M",
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "chunk": "grp-098",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-06",
+  "linearPriority": "Medium"
+}

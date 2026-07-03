@@ -1,0 +1,43 @@
+{
+  "title": "Remove or justify PushPipeline.pushCompletion — OutboxProcessor never calls it",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler (speculative generality / dead code)",
+  "area": "core/sync/outbox",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/push_pipeline.dart",
+      "line": 14,
+      "quote": "Future<void> pushCompletion({"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/push_pipeline_impl.dart",
+      "line": 25,
+      "quote": "Future<void> pushCompletion({"
+    }
+  ],
+  "sites": 1,
+  "why": "OutboxProcessor's _dispatch switch has no case for OutboxEntityKind.completion — completions are handled exclusively via pushCompletionsBatch, consistent with the class doc's own warning ('Never call [pushCompletion] in a loop — that defeats the batching'). A repo-wide grep for `.pushCompletion(` shows the only caller of PushPipeline's (non-gateway) pushCompletion is test code calling it directly; production code never reaches it through the drain path. It's a fully implemented, individually tested, but currently unreachable interface method — dead surface area that invites drift (e.g. a future fix applied to pushCompletionsBatch but not mirrored here, or a future caller reintroducing the exact N-round-trip problem batching was built to eliminate).",
+  "recommendation": "Either delete pushCompletion from PushPipeline (and its implementation/tests) or add a doc comment on the interface method naming its actual sanctioned caller/purpose so the next reader doesn't mistake it for reachable code.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Grep confirms either the method is removed (and OutboxPushPipeline/tests updated) or a doc comment states its real caller."
+  ],
+  "labels": [
+    "hygiene",
+    "dead-code"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-outbox",
+  "chunk": "grp-031",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-36",
+  "linearPriority": "Low"
+}

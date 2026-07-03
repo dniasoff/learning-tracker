@@ -1,0 +1,40 @@
+{
+  "title": "Delete vestigial .gitkeep from core/database/tables/",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Hygiene (dead artifact)",
+  "area": "core/database/tables",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/tables/.gitkeep",
+      "line": 1,
+      "quote": "(empty file)"
+    }
+  ],
+  "sites": 1,
+  "why": ".gitkeep exists only to keep an otherwise-empty directory tracked; this directory holds 27 real table files, so the placeholder is pure clutter.",
+  "recommendation": "git rm the file.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "File removed; directory remains tracked (trivially true — it has real files)."
+  ],
+  "labels": [
+    "hygiene",
+    "dead-code"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Directory has 26 real .dart files, not 27 (27 = 26 dart + .gitkeep itself)."
+    ]
+  },
+  "sourceBatch": "t1-core-database-tables",
+  "chunk": "grp-016",
+  "normArea": "core/database",
+  "id": "AUD-core-database-11",
+  "linearPriority": "Low"
+}

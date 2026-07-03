@@ -1,0 +1,43 @@
+{
+  "title": "Assert account_picker_local_data_missing_test.dart's expected SnackBar text via the l10n getter, not a hardcoded English literal",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Test-fragility / consistency with sibling tests in this batch",
+  "area": "features/account/presentation/screens/account_picker_local_data_missing_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/account/presentation/screens/account_picker_local_data_missing_test.dart",
+      "line": 226,
+      "quote": "'This account\\'s local data is missing. '\n        'Connect to the internet to restore it.',"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/notifiers/sign_in_wrong_password_no_callback_test.dart",
+      "line": 260,
+      "quote": "(state as SignInError).message,\n          l10n.authErrWrongPassword,"
+    }
+  ],
+  "sites": 2,
+  "why": "Both C1 and C2 hardcode the expected SnackBar copy as an English literal instead of asserting against `l10n.authLocalDataMissing` the way sign_in_wrong_password_no_callback_test.dart (same batch) asserts against `l10n.authErrWrongPassword`. A future copy edit to the ARB string breaks this test for a cosmetic reason indistinguishable, in the failure output, from an actual regression in the local-data-missing handling logic.",
+  "recommendation": "Load AppLocalizations in the test (as done elsewhere in this batch) and assert find.text(l10n.authLocalDataMissing) instead of the literal string.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "C1/C2 assert against l10n.authLocalDataMissing rather than a literal string."
+  ],
+  "labels": [
+    "test-fragility",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p3",
+  "chunk": "grp-041",
+  "normArea": "tests/account",
+  "id": "AUD-t-account-04",
+  "linearPriority": "Low"
+}

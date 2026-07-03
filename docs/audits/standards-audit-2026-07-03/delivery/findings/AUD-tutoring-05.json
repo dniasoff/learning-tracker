@@ -1,0 +1,45 @@
+{
+  "title": "Convert TutorPermissions to @freezed instead of hand-writing ==/hashCode",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Naming/placement — \"never hand-write ==/hashCode for data classes\"",
+  "area": "features/tutoring/domain/models",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/models/tutor_permissions.dart",
+      "line": 137,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/models/tutor_permissions.dart",
+      "line": 151,
+      "quote": "int get hashCode => Object.hash("
+    }
+  ],
+  "sites": 1,
+  "why": "coding-standards.md is explicit: domain value objects must be `@freezed` with generated `==`/`hashCode`/`copyWith`, specifically because hand-rolled equality drifts from the field list. TutorPermissions — its own doc-comment calls it 'Immutable value object' / 'VO' — hand-writes both operators across 9 fields, plus a separately hand-written constructor, copyWith, toFirestore, and fromFirestore: 5 places a future field addition must be updated by hand. The drift risk is already visible today: `canMarkLiveCompletion` is deliberately excluded from both `==` and `hashCode` (harmless only because it is hardcoded false for every instance) — exactly the kind of silent omission @freezed generation would make structurally impossible.",
+  "recommendation": "Convert TutorPermissions to a @freezed class (keeping canMarkLiveCompletion as a computed getter rather than a constructor field, or a private default so it can't be set), and delete the hand-written ==/hashCode/copyWith.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "TutorPermissions.freezed.dart is generated; no hand-written operator == or hashCode remains in tutor_permissions.dart.",
+    "Existing TutorPermissions unit tests (defaults/readOnly/toFirestore round-trip) still pass unmodified."
+  ],
+  "labels": [
+    "freezed",
+    "value-object",
+    "hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "grp-122",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-05",
+  "linearPriority": "Medium"
+}

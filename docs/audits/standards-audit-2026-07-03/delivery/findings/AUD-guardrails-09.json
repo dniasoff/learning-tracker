@@ -1,0 +1,57 @@
+{
+  "title": "Delete or archive the dead Story-15.13 content-upload pipeline (tool/seed_content.dart, tool/seed_text_content.dart, tool/upload_to_firebase.{js,sh})",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code / Tier-2 dead-target",
+  "area": "tool/ content-seed pipeline (orphaned Story-15.13 branch)",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/seed_content.dart",
+      "line": 35,
+      "quote": "final outputDir = Directory('build/seeded_content');"
+    },
+    {
+      "file": "learning_tracker/tool/seed_text_content.dart",
+      "line": 49,
+      "quote": "final outputDir = Directory('build/text_content');"
+    },
+    {
+      "file": "learning_tracker/tool/upload_to_firebase.js",
+      "line": 18,
+      "quote": "const SEEDED_DIR = 'build/seeded_content';"
+    },
+    {
+      "file": "learning_tracker/tool/upload_to_firebase.sh",
+      "line": 24,
+      "quote": "ASSETS_DIR=\"build/seeded_content\""
+    }
+  ],
+  "sites": 4,
+  "why": "None of these 4 files appear anywhere in the Makefile (grep confirms only seed_content_db.dart and validate_seed_coverage.dart are wired in); docs/linear-status.md:167 shows the feature they serve, 'DNI-121 | 15.13: Cloud Content Storage & Multilingual Fetch', as Canceled; and the in-app consumer of the Firebase Storage path they write to (CloudContentServiceProvider in lib/features/content_browsing/presentation/providers/cloud_content_providers.dart) has zero callers outside its own generated .g.dart file. The bucket name they target ('torah-study-tracker.firebasestorage.app') matches the real production bucket in lib/firebase_options.dart:53, so anyone who trusts the still-present usage comments and re-runs this chain writes real, unused data into the production Storage bucket that ST-1 already flags as having no committed security rules. upload_to_firebase.js and upload_to_firebase.sh have also already drifted from each other while unmaintained: the .sh version supports --dry-run/--curriculum=X, the .js version has no argument parsing at all and always uploads everything for real.",
+  "recommendation": "Delete tool/seed_content.dart, tool/seed_text_content.dart, tool/upload_to_firebase.js, tool/upload_to_firebase.sh (or move them to a tool/_archive/ with a header banner citing DNI-121/Canceled if the team wants to keep them as reference). Update docs/explainers/content-database.md's 'Where the code lives' list and docs/api-contracts.md:92, which both still cite these files as active pipeline components.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "tool/seed_content.dart, tool/seed_text_content.dart, tool/upload_to_firebase.js, tool/upload_to_firebase.sh no longer exist at HEAD, or each carries a header stating they are retired (Story DNI-121, Canceled) and naming any current replacement",
+    "docs/explainers/content-database.md and docs/api-contracts.md:92 no longer list these files as active build-pipeline components",
+    "grep -rL 'DNI-121\\|retired' over any files kept returns empty"
+  ],
+  "labels": [
+    "dead-code",
+    "tool",
+    "hygiene",
+    "AG-6"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-app-tool-p2",
+  "chunk": "grp-152",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-09",
+  "linearPriority": "Medium"
+}

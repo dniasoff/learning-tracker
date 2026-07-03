@@ -1,0 +1,44 @@
+{
+  "title": "Remove the unused HierarchyLevelProgress.levelLabel field and its 'Level 1'/'Level 2' fallback computation",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead code (Fowler speculative generality)",
+  "area": "features/progress/domain (models + curriculum_progress_service.dart)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/domain/models/curriculum_progress_data.dart",
+      "line": 45,
+      "quote": "final String levelLabel;"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/domain/services/curriculum_progress_service.dart",
+      "line": 143,
+      "quote": "final level1Label = levelLabels.isNotEmpty ? levelLabels[0] : 'Level 1';"
+    }
+  ],
+  "sites": 1,
+  "why": "hierarchy_progress_card.dart (the only production consumer of HierarchyLevelProgress) reads level.level and level.levelName, never level.levelLabel — a whole-tree grep for '.levelLabel' turns up zero non-definitional reads outside this field's own computation and test call sites. The field, its threading through CurriculumProgressService's three private builder methods, and its hardcoded 'Level 1'/'Level 2' English fallback are all computed on every progress-screen load for no consumer; that fallback would itself have been an AX-2 violation had this field ever actually reached a Text widget.",
+  "recommendation": "Delete HierarchyLevelProgress.levelLabel, the levelLabel/levelLabels parameters through CurriculumProgressService's builder methods, and update the ~15 test call sites that currently pass/assert it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn '\\.levelLabel\\b' lib/ test/ (excluding the removed definition) returns no hits after the change; curriculum_progress_service_test.dart assertions are updated accordingly."
+  ],
+  "labels": [
+    "dead-code"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Recommendation cites '~15 test call sites'; exact grep for singular 'levelLabel:' colon-syntax finds 10, not 15. Cosmetic overcount, doesn't affect the verdict. Also, the acceptance-criteria grep '\\.levelLabel\\b' will still hit the unrelated CurriculumLabels.levelLabel( static method in curriculum_label_variant_test.dart:203 even after a correct fix — that AC needs a narrower pattern."
+    ]
+  },
+  "sourceBatch": "t1-feat-progress-p1",
+  "chunk": "grp-083",
+  "normArea": "features/progress",
+  "id": "AUD-progress-13",
+  "linearPriority": "Low"
+}

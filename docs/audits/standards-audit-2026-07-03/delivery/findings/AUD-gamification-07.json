@@ -1,0 +1,53 @@
+{
+  "title": "Replace TierStyle.forTitle's hardcoded-English-string switch with a stable tier identifier",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Evans (ubiquitous language / re-derived invariant) + TQ-1 (missing unit coverage)",
+  "area": "features/gamification/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_style.dart",
+      "line": 56,
+      "quote": "switch (t) {\n      case 'Bronze Star':"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_style.dart",
+      "line": 162,
+      "quote": "default:\n        return const TierStyle("
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+      "line": 230,
+      "quote": "(title: 'Bronze Star', thresholdPoints: 500),"
+    }
+  ],
+  "sites": 1,
+  "why": "TierStyle.forTitle keys its visual styling entirely off the exact English milestone title string produced elsewhere (reward_milestone_service.dart's hardcoded ladder). The 7 case labels currently match, but nothing enforces that: a future rename, typo fix, or localization of a milestone title silently falls through to the generic gray `default:` style for every achievement card using that tier — no exception, no log, no test failure. grep -rln TierStyle test/ confirms there is zero test coverage anywhere in the repo pinning this mapping or the default-fallback behavior, so this class of regression would ship undetected.",
+  "recommendation": "Key TierStyle off a stable identifier (an enum or the milestone's stored id/threshold) rather than the display title string; add a unit test asserting each tier maps to its distinct style and that an unmatched key is either unreachable or explicitly logged.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "TierStyle.forTitle (or its replacement) takes a stable, non-localizable key instead of the raw title string.",
+    "New test/features/gamification/presentation/widgets/tier_style_test.dart asserts all 7 tiers plus the legend/default cases."
+  ],
+  "labels": [
+    "fragile-coupling",
+    "testing",
+    "gamification"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "TQ-1 citation is a stretch (TQ-1 is about pyramid shape/ratio, not coverage gaps) but the primary Evans re-derived-invariant citation is solid and digest-sanctioned, so this doesn't undercut the finding.",
+      "TQ-1 ('pyramid-shaped suite') is not really about per-class unit coverage; Feathers' 'where's the seam' lens fits better than TQ-1 as cited. Does not change the verdict."
+    ]
+  },
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-054",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-07",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,47 @@
+{
+  "title": "Collapse duplicate equality/hashCode/toString assertions inside delta_value_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication (within-file)",
+  "area": "features/scheduler/domain/models tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/models/delta_value_test.dart",
+      "line": 27,
+      "quote": "test('equality: not equal to different type', () {\n      expect(const DateDelta(5) == const PaceDelta(5), isFalse);"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/models/delta_value_test.dart",
+      "line": 31,
+      "quote": "test('equality: DateDelta != PaceDelta with same numeric value', () {\n      expect(const DateDelta(5) == const PaceDelta(5), isFalse);"
+    }
+  ],
+  "sites": 1,
+  "why": "Within this single 290-line file, several test() blocks are byte-for-byte identical in body under different names — e.g. lines 27-29 and 31-33 both assert `DateDelta(5) == PaceDelta(5)` is false; lines 39-41 and 47-49 both assert DateDelta(5).hashCode equality the same way; lines 51-53 and 55-57 both assert DateDelta(7).toString() contains '7'. Harmless (both copies pass and are correct) but purely additive noise: roughly 6 of the file's ~50 tests contribute zero incremental coverage over their twin, inflating the file for a future reader trying to find what's actually pinned.",
+  "recommendation": "Delete one test from each identified duplicate pair, keeping the more descriptively-named one.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No two test() bodies in the file are textually identical (grep/diff check)."
+  ],
+  "labels": [
+    "test-quality",
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "'sites: 1' undercounts — the file actually has ~3 duplicate-body test pairs (lines 27-33, 39-49 functionally, 51-57), not 1. Still correctly filed as ONE finding per the one-finding-per-root-cause rule; just the count is off.",
+      "The hashCode example (lines 39-41 vs 47-49) is functionally but not textually identical (equals() wrapper differs), contradicting the finding's 'byte-for-byte identical' framing for that specific pair; the other two cited pairs (27-33, 51-57) ARE byte-for-byte identical as claimed, and the ~6-of-50 aggregate count is accurate."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "chunk": "grp-096",
+  "normArea": "tests/scheduler",
+  "id": "AUD-t-scheduler-04",
+  "linearPriority": "Low"
+}

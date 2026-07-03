@@ -1,0 +1,68 @@
+{
+  "title": "Wire RewardConfigController's async mutations to the RewardForm.loading/.error fields the screen already renders",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-5",
+  "area": "features/gamification/presentation/providers/reward_config_controller.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_form.dart",
+      "line": 16,
+      "quote": "    this.loading = false,\n    this.error,"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.dart",
+      "line": 74,
+      "quote": "      loading: false,\n      error: null,"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.dart",
+      "line": 189,
+      "quote": "    await svc.upsertMilestone(\n      trackId: trackId,"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+      "line": 280,
+      "quote": "    if (form.loading) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+      "line": 287,
+      "quote": "    if (form.error != null) {"
+    }
+  ],
+  "sites": 4,
+  "why": "RewardForm carries loading/error fields and reward_configuration_screen.dart fully renders them (full-screen CircularProgressIndicator for form.loading, a dedicated error Scaffold for form.error) — but grep-confirmed, the controller's 4 async mutation methods (saveReward, toggleEnabled, deleteMilestone, milestonesForCurrentLadder) never set either field to a non-default value anywhere in the file; only bootstrap() touches them, always resetting to false/null. The screen's own try/catch only catches TutorWriteException per call site (for the tutor-permission-denied case). Any OTHER DB failure during a save/toggle/delete (constraint violation, disk error) is an unhandled Future rejection: the user taps Save, sees no spinner (loading never flips true) and no error (error never gets set) — the operation silently fails with zero feedback, while the fully-built error UI remains permanently dead code.",
+  "recommendation": "In each of the 4 mutation methods, set `state = state.copyWith(loading: true)` before the DB call and wrap it in try/catch: on success `loading:false`; on any exception (not just TutorWriteException) `state.copyWith(loading:false, error: <mapped message>)`, or migrate the class to expose `AsyncValue<RewardForm>`-style guard semantics.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "saveReward/toggleEnabled/deleteMilestone/milestonesForCurrentLadder each leave state.error non-null (not an unhandled Future rejection) when the underlying DB call throws anything other than TutorWriteException.",
+    "Widget test: a fake RewardMilestoneService/DB that throws a generic exception from upsertMilestone; assert the screen renders the form.error branch instead of hanging or throwing past the test.",
+    "Rule-0 checker: a grep/lint that flags a state class with loading/error-shaped fields where the owning @riverpod class file contains zero `state.copyWith(error:` (or equivalent) assignment with a non-null literal — i.e., a 'declared-but-dead error field' detector."
+  ],
+  "labels": [
+    "sm-5",
+    "riverpod",
+    "error-handling",
+    "rewards",
+    "dead-code"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 3,
+    "refutations": [
+      "Evidence checks out (grep-verified: none of saveReward/toggleEnabled/deleteMilestone/milestonesForCurrentLadder ever set loading/error; screen catches only TutorWriteException at 3 call sites). But this duplicates an already-filed, UPHELD main-sweep finding: verified-findings-r3.json 'Delete or wire"
+    ],
+    "corrections": [
+      "No factual error in the cited evidence — form.loading/form.error are confirmed dead (only bootstrap() touches them) and the 4 async mutations are confirmed to lack try/catch beyond the screen's TutorWriteException-only wrappers. The defect is real; the problem is novelty/duplication and severity calibration relative to the already-filed twin P3 finding, not correctness of the grep evidence.",
+      "Site count should be 3 real mutation methods (saveReward, toggleEnabled, deleteMilestone), not 4 — milestonesForCurrentLadder is a read-only query consumed by a separate widget-local FutureBuilder and structurally cannot/should not be wired to form.loading/form.error without causing a UX regression (whole-form spinner over a small list refresh). The recommendation's primary fix (manual try/catch assigning state) contradicts the literal SM-5 text cited as the rule; genuine SM-5 compliance requires migrating to AsyncValue<RewardForm>, offered only as a secondary 'or' in the recommendation.",
+      "Two corrections: (1) Rule fit is weak — SM-5 mandates AsyncValue.guard and explicitly forbids \"hand-manage loading/error with a try/catch that assigns state,\" yet the finding's own primary recommended fix (wrap each method in try/catch, `state.copyWith(loading:..., error:...)`) is exactly that forbidden pattern; EH-2 (\"no raw exception reaches presentation\") fits the actual defect better than SM-5. (2) \"sites: 4\" overcounts: milestonesForCurrentLadder is a pure read consumed via independent FutureBuilder (manage_rewards_list.dart / _InlineRewardsSection), never wired to RewardForm.loading/error by design — only saveReward/toggleEnabled/deleteMilestone are genuine instances of the described root cause (3 sites, not 4). Also \"constraint violation\" is misleading — RewardMilestoneService persists via SharedPreferences, not SQL; the real failure surface is the Firestore push inside _persistAndSync."
+    ]
+  },
+  "sourceBatch": "sup-sm5",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-10",
+  "linearPriority": "Medium"
+}

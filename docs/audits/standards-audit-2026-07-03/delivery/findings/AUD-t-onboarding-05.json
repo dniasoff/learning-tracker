@@ -1,0 +1,45 @@
+{
+  "title": "Extract repeated MaterialApp/ProviderScope pump boilerplate in bulk_mark_screen_test.dart and empty_login_ws2_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "onboarding tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/bulk_mark_screen_test.dart",
+      "line": 42,
+      "quote": "ProviderScope("
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/empty_login_ws2_test.dart",
+      "line": 104,
+      "quote": "child: MaterialApp("
+    }
+  ],
+  "sites": 2,
+  "why": "No shared pumpApp test helper exists anywhere in the repo (a grep of test/helpers/ finds none), so TQ-3 has nothing to point tests at yet. bulk_mark_screen_test.dart hand-rolls the identical ProviderScope+MaterialApp+localizationsDelegates block 5 times in one file. empty_login_ws2_test.dart duplicates it 2 more times even though the same file already defines a _wrapWithProviders helper that isn't reused for those 2 tests. Every AppLocalizations delegate or supported-locale change has to be hand-edited at each duplicate site.",
+  "recommendation": "Add a shared test/helpers/pump_app.dart with a pumpApp(tester, child, {overrides, locale}) helper; migrate bulk_mark_screen_test.dart's 5 sites onto it and repoint empty_login_ws2_test.dart's 2 stray sites onto the file's own _wrapWithProviders.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "bulk_mark_screen_test.dart contains a single MaterialApp construction (via a helper), not 5",
+    "empty_login_ws2_test.dart's 2 profile-creation tests use _wrapWithProviders like the rest of the file"
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "onboarding"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-070",
+  "normArea": "tests/onboarding",
+  "id": "AUD-t-onboarding-05",
+  "linearPriority": "Low"
+}

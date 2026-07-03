@@ -1,0 +1,55 @@
+{
+  "title": "De-duplicate the TrackDetailScreen dual-progress and bulk-prior-tile assertions shared by track_detail_screen_test.dart and edit_track_and_detail_l1_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication / TQ-1",
+  "area": "features/tracks/setup/presentation/screens (test suite for TrackDetailScreen)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart",
+      "line": 214,
+      "quote": "expect(find.text('Track progress: 0%'), findsOneWidget);\n      expect(find.text('Lifetime: 0%'), findsOneWidget);"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+      "line": 1337,
+      "quote": "expect(find.text('Track progress: 0%'), findsOneWidget);\n      expect(find.text('Lifetime: 0%'), findsOneWidget);"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart",
+      "line": 521,
+      "quote": "expect(\n        bulkTile.shape,\n        isA<RoundedRectangleBorder>(),"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+      "line": 1582,
+      "quote": "expect(bulkTile.shape, isA<RoundedRectangleBorder>());"
+    }
+  ],
+  "sites": 2,
+  "why": "Two independent files pin the identical TrackDetailScreen behaviors — the zero-valued dual-progress labels and the bulk-prior tile's outlined/tileColor styling — with near line-for-line matching assertions. This is dead weight, not extra protection: any copy or styling change must be updated in two places using two different fixture-building helpers (_overridesFor vs _buildDetailApp), and it contributes ~200 of edit_track_and_detail_l1_test.dart's 1733 lines to content that already has a dedicated, purpose-built home. It also obscures which file is the canonical owner of TrackDetailScreen coverage going forward.",
+  "recommendation": "Keep track_detail_screen_test.dart (the Task #16-scoped file) as the sole owner of dual-progress/bulk-prior-tile assertions; delete the duplicate groups from edit_track_and_detail_l1_test.dart, retaining only scenarios unique to the combined edit+detail flow (B-EDIT-NAME title propagation across navigation, min-1-curriculum delete gating, chazara header wiring).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Only one test file asserts 'Track progress: 0%'/'Lifetime: 0%' and the bulk-prior tile's shape/tileColor properties",
+    "make test-story/epic runs for tracks/setup still pass after consolidation with no coverage loss for the removed duplicate assertions"
+  ],
+  "labels": [
+    "duplication",
+    "tracks-setup",
+    "test-maintenance"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p4",
+  "chunk": "grp-119",
+  "normArea": "tests/tracks",
+  "id": "AUD-t-tracks-01",
+  "linearPriority": "Medium"
+}

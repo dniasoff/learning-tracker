@@ -1,0 +1,44 @@
+{
+  "title": "local_data_upload_service_test.dart's 'existing completion is re-enqueued' test asserts nothing and contradicts its own name",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "features/sync test",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/sync/data/local_data_upload_service_test.dart",
+      "line": 213,
+      "quote": "test('existing completion is re-enqueued via CompletionWriter', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/sync/data/local_data_upload_service_test.dart",
+      "line": 234,
+      "quote": "// CompletionWriter.commitBatch will see the existing event and return"
+    }
+  ],
+  "sites": 1,
+  "why": "The test's name claims the completion 'is re-enqueued,' but its own trailing comment says the opposite ('The service only enqueues NEW completions' / no new outbox row) -- and the test body contains zero expect(...) calls, relying entirely on 'did not throw' to pass. The next test in the same group ('multiple completions each get an outbox row...') does assert completionRows is empty for the real idempotent-no-reenqueue behavior, so coverage exists elsewhere -- but under this specific test's name, nothing is verified, so a regression matching exactly what the name suggests it tests would not be caught here.",
+  "recommendation": "Either delete this test (its scenario is already covered by the next one) or rename it to match what it actually checks and add the missing expect(completionRows, isEmpty) assertion.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No test in the file has an empty assertion set combined with a name asserting the opposite of its own comment."
+  ],
+  "labels": [
+    "test-quality",
+    "TQ-8",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-107",
+  "normArea": "tests/sync",
+  "id": "AUD-t-sync-02",
+  "linearPriority": "Low"
+}

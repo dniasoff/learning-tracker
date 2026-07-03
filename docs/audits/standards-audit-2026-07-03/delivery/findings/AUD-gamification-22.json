@@ -1,0 +1,45 @@
+{
+  "title": "RewardForm is a hand-written state class with no @freezed/== override, so Riverpod can never skip a rebuild on it",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming/placement — 'Domain/state models are immutable @freezed classes... never hand-write ==/hashCode'",
+  "area": "features/gamification/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_form.dart",
+      "line": 7,
+      "quote": "class RewardForm {\n  const RewardForm({"
+    },
+    {
+      "file": "docs/coding-standards.md",
+      "line": 584,
+      "quote": "hand-rolled equality drifts from the fields and silently breaks rebuild-skipping."
+    }
+  ],
+  "sites": 1,
+  "why": "RewardForm is held directly as RewardConfigController's Notifier state (per its own doc comment) but has no @freezed codegen and no == /hashCode override anywhere in the file, so it falls back to identity equality. Every copyWith() call — including a no-op one — produces a referentially distinct instance that Riverpod's default identity-based updateShouldNotify always treats as changed, so any widget watching this provider rebuilds on every field mutation regardless of whether the visible state actually changed. This is exactly the failure mode coding-standards.md cites as the reason for the @freezed rule.",
+  "recommendation": "Convert RewardForm to @freezed, or at minimum hand-write a field-wise == / hashCode.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "RewardForm(...) == RewardForm(...) with identical field values returns true in a new unit test.",
+    "dart analyze / build_runner clean after the freezed conversion (if chosen)."
+  ],
+  "labels": [
+    "riverpod",
+    "equality",
+    "performance"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-054",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-22",
+  "linearPriority": "Low"
+}

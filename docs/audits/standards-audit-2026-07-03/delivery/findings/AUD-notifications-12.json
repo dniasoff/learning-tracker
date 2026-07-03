@@ -1,0 +1,51 @@
+{
+  "title": "Replace hardcoded hex Color literals with AppColors tokens in notifications UI",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "no_color_literal_outside_theme",
+  "area": "features/notifications/presentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/screens/notifications_screen.dart",
+      "line": 51,
+      "quote": "iconTint: const Color(0xFF2A4BB3),"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/screens/notifications_screen.dart",
+      "line": 176,
+      "quote": "color: Color(0x12061D56),"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/widgets/device_notification_toggle.dart",
+      "line": 122,
+      "quote": "activeTrackColor: const Color(0xFF123CA5),"
+    }
+  ],
+  "sites": 15,
+  "why": "Both files already import and correctly use AppColors/AppTheme for some colors, so the raw hex values are avoidable inconsistency, not a missing token system. A future theme change (dark mode, rebrand) requires hunting these two files for magic hex values instead of touching one theme file, and this violates the (currently non-enforcing, due to the custom_lint breakage) no_color_literal_outside_theme rule.",
+  "recommendation": "Promote the repeated literals to named AppColors tokens and reference those instead of inline Color(0x...) values.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Once custom_lint is fixed (tracked separately), dart run custom_lint reports zero no_color_literal_outside_theme hits in lib/features/notifications/."
+  ],
+  "labels": [
+    "theming",
+    "hygiene",
+    "notifications"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Claim 'both files already...correctly use AppColors' is false for device_notification_toggle.dart — it imports no theme tokens whatsoever (checked); only notifications_screen.dart mixes AppColors/AppTheme with raw hex as described."
+    ]
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-064",
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-12",
+  "linearPriority": "Low"
+}

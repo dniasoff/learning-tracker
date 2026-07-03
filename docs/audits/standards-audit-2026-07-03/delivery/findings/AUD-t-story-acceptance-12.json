@@ -1,0 +1,56 @@
+{
+  "title": "Make epic_28_curriculum_overlap_test.dart's subset-union helper exercise the real lifetimeDataProvider path instead of its diverged local duplicate",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart",
+      "line": 105,
+      "quote": "/// its subset curricula — mirrors the logic in [lifetimeDataProvider]."
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart",
+      "line": 120,
+      "quote": "refs = refs.union(subCompletions.map((c) => c.sefariaRef).toSet());"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+      "line": 212,
+      "quote": "// P0 (composite-credit) fix: completions are unioned across subsets above,"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+      "line": 244,
+      "quote": "completedRefs = completedRefs.union(subsetLearned);"
+    }
+  ],
+  "sites": 1,
+  "why": "The helper's own doc comment claims to mirror lifetimeDataProvider, but it only unions direct completion-event refs across subsets (getCompletionsByCurriculumAndProfile). Production lifetimeDataProvider — same file, same story (I-4) — was later hardened with a SECOND, ledger-derived subset union that the code explicitly labels a 'P0 (composite-credit) fix' for a real over/under-credit bug (a lifetime mark made in the standalone Chumash UI wasn't propagating to Tanach). This test's private duplicate never adopted that fix. Because the acceptance test calls its own copy of the algorithm rather than the production function, a future regression in the real union (dropping either union step, or breaking the synthetic-container-level1 filter above it) can ship with this suite fully green, since the test only re-verifies its own now-stale copy, not lifetimeDataProvider itself.",
+  "recommendation": "Either (a) drive the assertions through a real ProviderContainer.read(lifetimeDataProvider(...).future) with a fixture ContentRepository so the actual production algorithm executes, or (b) if the DAO-level check is intentionally a lower-layer test, narrow the doc comment at line 105 to state it covers only the completion-event union primitive, and add a case that seeds a ledger-only (no completion-event) subset mark and asserts it propagates to the superset via the real provider — closing the gap the current docstring implies is already closed.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A test in this file (or a cross-referenced file reachable from it) invokes the real lifetimeDataProvider — not a local reimplementation — and fails if the ledger-based subset union (lines 226-246 of lifetime_knowledge_providers.dart) is removed or short-circuited.",
+    "The doc comment at line 105 no longer claims full parity with lifetimeDataProvider unless the test genuinely exercises it end-to-end."
+  ],
+  "labels": [
+    "testing",
+    "TQ-8",
+    "story-acceptance",
+    "drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-28plus",
+  "chunk": "grp-142",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-12",
+  "linearPriority": "Medium"
+}

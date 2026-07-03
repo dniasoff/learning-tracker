@@ -1,0 +1,40 @@
+{
+  "title": "Remove or implement the dead 'hardcoded string audit' test in invite_tutor_screen_l1_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/features/tutoring",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/invite_tutor_screen_l1_test.dart",
+      "line": 819,
+      "quote": "final src = Uri.file('lib/.../invite_tutor_screen.dart').toString(); ... expect(src, isNotEmpty);"
+    }
+  ],
+  "sites": 1,
+  "why": "Uri.file(path).toString() never reads the filesystem — it only stringifies the path — so expect(src, isNotEmpty) is true for any non-empty path string regardless of what invite_tutor_screen.dart actually contains. The test's own comment admits it 'passes trivially.' A test named 'screen source contains no hardcoded English UI strings' that passes in CI creates false confidence that AX-2 is enforced for this file when it is not enforced at all — this is exactly the gap custom_lint's no_hardcoded_domain_term rule would otherwise catch if custom_lint were not currently broken (baselined separately).",
+  "recommendation": "Delete the test (the finding is already documented in the file's header comment) or make it real: read actual file contents via File(...).readAsStringSync() and assert against a regex for quoted English text outside l10n. calls.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The test either asserts on real file contents via File(...).readAsStringSync() or is removed",
+    "No test in the file can pass independent of the file it claims to check"
+  ],
+  "labels": [
+    "testing",
+    "tutoring",
+    "tautological-test"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "chunk": "grp-126",
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-05",
+  "linearPriority": "Medium"
+}

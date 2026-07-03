@@ -1,0 +1,58 @@
+{
+  "title": "Fail fast on missing key.properties instead of silently debug-signing release Android builds (build.gradle.kts)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-2 area note (security) — AG-11-adjacent CI guardrail soft-skip",
+  "area": "learning_tracker/android/app/build.gradle.kts",
+  "evidence": [
+    {
+      "file": "learning_tracker/android/app/build.gradle.kts",
+      "line": 54,
+      "quote": "signingConfig = if (keystorePropertiesFile.exists()) {"
+    },
+    {
+      "file": "learning_tracker/android/app/build.gradle.kts",
+      "line": 57,
+      "quote": "signingConfigs.getByName(\"debug\")"
+    },
+    {
+      "file": ".github/workflows/build.yml",
+      "line": 87,
+      "quote": "echo \"Warning: KEYSTORE_BASE64 secret not set.\""
+    },
+    {
+      "file": ".github/workflows/build.yml",
+      "line": 106,
+      "quote": "run: flutter build apk --release"
+    }
+  ],
+  "sites": 1,
+  "why": "When KEYSTORE_BASE64 is unset (misconfigured secret, or a maintainer manually dispatches the 'Build APK' workflow with build_type=release before secrets are wired up), build.yml prints a warning but does not fail — it proceeds to 'flutter build apk --release'. Because key.properties was never written, Gradle's fallback here silently signs the 'release' APK with the shared, publicly-known Flutter debug keystore, then uploads it as a GitHub Actions artifact literally named learning-tracker-release-apk. Anyone who installs that artifact believing it's a genuine release build gets a debug-signed binary; since the debug key is identical across virtually all Flutter/Android-Studio installs, another developer's debug-signed build could later 'update' over it without Android's signature check objecting.",
+  "recommendation": "Make the release signingConfig fail fast (e.g. error(\"release build requested but key.properties is missing\")) instead of silently substituting debug signing, or at minimum have build.yml's keystore-decode step exit 1 when build_type == 'release' and the secret is empty instead of only warning.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "flutter build apk --release (or ./gradlew assembleRelease) fails loudly when key.properties/keystore secret is absent, instead of producing a debug-signed 'release' artifact.",
+    "build.yml's release job aborts (non-zero exit) when KEYSTORE_BASE64 is empty and build_type=release."
+  ],
+  "labels": [
+    "android",
+    "signing",
+    "ci",
+    "security"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "docs/deployment-guide.md:25 documents the debug-signing fallback as intentional design ('falls back to debug signing if absent'), undercutting the 'silently' framing and the primary fail-hard-Gradle recommendation, which would break the documented local-dev flow. The 'debug key identical across installs' claim is also a common misconception: no shared debug.keystore is committed in this repo, and each machine/CI run auto-generates its own unique debug key, so there's no real cross-device signature-collision/update risk as described. The narrower, still-valid residual issue is that build.yml doesn't fail-fast when an explicit release dispatch is missing its secret, silently uploading a mislabeled artifact."
+    ]
+  },
+  "sourceBatch": "t2-platform-config-p1",
+  "chunk": "grp-161",
+  "normArea": "platform",
+  "id": "AUD-platform-03",
+  "linearPriority": "Low"
+}

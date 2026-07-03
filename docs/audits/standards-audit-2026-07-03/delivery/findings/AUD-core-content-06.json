@@ -1,0 +1,50 @@
+{
+  "title": "Correct or remove program_ref_resolver.dart's false production-integration doc claims",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Evans (ubiquitous language / doc-reality drift) + Fowler (speculative generality)",
+  "area": "core/content/program_ref_resolver.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/content/program_ref_resolver.dart",
+      "line": 6,
+      "quote": "/// calendar service. Production wires this to the local calendar engine\n/// (DNI-330)."
+    },
+    {
+      "file": "learning_tracker/lib/core/content/program_ref_resolver.dart",
+      "line": 17,
+      "quote": "/// Dashboard, scheduler, and reader all consume this same resolver so they\n/// agree on which `ContentItem` a calendar entry points to (FR16)."
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 108,
+      "quote": "final item = index.lookup(t.contentItemSefariaRef);"
+    }
+  ],
+  "sites": 1,
+  "why": "Two present-tense claims in this class's doc comment don't match the codebase. (1) 'Production wires this to the local calendar engine (DNI-330)' — docs/planning/epics.md:782 records DNI-330 as Story 25.9, 'core/labels/ rebuild — three new modes, ContentIndex consumer, static API deleted', unrelated to calendar-engine wiring. (2) 'Dashboard, scheduler, and reader all consume this same resolver' — scheduler_providers.dart:108 calls index.lookup() directly, bypassing ProgramRefResolver's whitespace/transliteration normalization entirely. Repo-wide grep for ProgramRefResolver(/ProgramRefSource confirms zero call sites outside this file and one story-acceptance test — the class is fully built, fully unit-tested, and has never been wired into any consumer. Whether the ad-hoc direct lookups in scheduler/dashboard/reader ever actually disagree (a live FR16 violation) is unverified — the calendar rows may be pre-canonicalized at seed time, which would make runtime resolution unnecessary in practice; that needs runtime/data confirmation, not just this static read.",
+  "recommendation": "Either wire the named consumers (starting with scheduler_providers.dart:108) through ProgramRefResolver.resolve() so the FR16 claim is true, or rewrite the doc comment to state plainly that it isn't wired yet and cite the real tracking ticket (not DNI-330).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "program_ref_resolver.dart's doc comment cites an accurate ticket for production wiring, or states it is not yet wired.",
+    "If FR16 sharing is the intended design, at least scheduler_providers.dart's calendar-derived ref lookups route through ProgramRefResolver instead of a raw index.lookup()."
+  ],
+  "labels": [
+    "core/content",
+    "dead-code",
+    "doc-drift"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-content",
+  "chunk": "grp-007",
+  "normArea": "core/content",
+  "id": "AUD-core-content-06",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,45 @@
+{
+  "title": "Tighten the granularity and pace-floor assertions in step_chazara_goal_l1_test.dart and edit_track_and_detail_l1_test.dart to match what their own titles/comments claim",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "features/tracks/setup/presentation/steps+screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_chazara_goal_l1_test.dart",
+      "line": 779,
+      "quote": "goal.rawLearningUnit,\n          isNotNull,"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+      "line": 791,
+      "quote": "// Just verifying the value \"1\" is visible (loading completed).\n        expect(find.text('1'), findsWidgets);"
+    }
+  ],
+  "sites": 2,
+  "why": "The chazara-goal test titled 'selecting coarse (perek) emits paceGranularity=perek' taps the 'Perakim' segment then only asserts goal.rawLearningUnit isNotNull — but _paceGranularity is set to a non-null default in initState() before any tap, so the assertion passes identically whether or not the tap actually changed anything. The edit-track test titled 'pace increment button is disabled when paceValue is 1 (minimum)' never inspects the stepper button's onPressed at all (its own comment admits 'Just verifying the value \"1\" is visible') — floor enforcement for EditTrackScreen's pace stepper is untested anywhere in the tree (grepped for 'remove_rounded'/'onPressed.*isNull' in the sibling edit_track_screen_l1_test.dart: no match).",
+  "recommendation": "Assert goal.rawLearningUnit equals the coarse key's storage value ('perek') rather than isNotNull. In the edit-track test, find the decrement IconButton (ancestor of Icons.remove_rounded) and assert its onPressed is null at paceValue==1, then non-null after an increment.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Granularity test asserts goal.rawLearningUnit == the expected coarse key, not just non-null",
+    "Pace-floor test asserts tester.widget<IconButton>(...).onPressed is null at value 1 and non-null after incrementing"
+  ],
+  "labels": [
+    "tests",
+    "weak-assertion",
+    "tracks-setup"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p4",
+  "chunk": "grp-119",
+  "normArea": "tests/tracks",
+  "id": "AUD-t-tracks-10",
+  "linearPriority": "Low"
+}

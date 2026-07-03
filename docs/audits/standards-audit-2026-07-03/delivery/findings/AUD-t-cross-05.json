@@ -1,0 +1,56 @@
+{
+  "title": "Add a test for OutboxSyncWriteFacade's onEnqueueDrain chain — write_tee_status_update_test.dart only unit-tests recordDrainAttempt() in isolation",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 / AG-5",
+  "area": "core/sync — tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/write_tee_status_update_test.dart",
+      "line": 6,
+      "quote": "/// `outboxProcessor.drain()` directly, bypassing the orchestrator's"
+    },
+    {
+      "file": "learning_tracker/test/sync/write_tee_status_update_test.dart",
+      "line": 191,
+      "quote": "await orchestrator.recordDrainAttempt();"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 105,
+      "quote": "onEnqueueDrain: () async {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 108,
+      "quote": "await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();"
+    }
+  ],
+  "sites": 1,
+  "why": "The file's own docstring names the bug precisely: OutboxSyncWriteFacade.onEnqueueDrain called drain() without the follow-up recordDrainAttempt(), so the sync badge stayed falsely 'Synced'. The fix — chaining recordDrainAttempt() after drain() — is correctly wired today at sync_providers.dart:105-108 (verified by reading it). But both tests in this file build a bare SyncOrchestratorImpl and call `orchestrator.recordDrainAttempt()` directly; neither constructs an OutboxSyncWriteFacade or exercises the onEnqueueDrain closure at all. recordDrainAttempt() is a one-line wrapper (`=> _recomputeOutboxStatus()`), so this mostly re-tests status computation, not the chaining bug. There is no test file for sync_providers.dart or outbox_sync_write_facade.dart anywhere in test/ (checked via `find`), so nothing would fail if a future provider refactor drops the recordDrainAttempt() call again — the exact original bug could silently reappear with this whole suite green.",
+  "recommendation": "Add a test (e.g. test/features/sync/presentation/providers/sync_providers_test.dart or test/features/sync/data/outbox_sync_write_facade_test.dart, mirroring AG-5) that builds the real OutboxSyncWriteFacade/onEnqueueDrain closure with a failing pipeline and asserts the sync-status badge updates without a manual recordDrainAttempt() call from the test body.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A test exists at a path mirroring lib/features/sync/presentation/providers/sync_providers.dart or lib/features/sync/data/outbox_sync_write_facade.dart.",
+    "That test drives OutboxSyncWriteFacade's write-tee (enqueue → onEnqueueDrain) end to end and asserts recordDrainAttempt() fires without the test calling it directly."
+  ],
+  "labels": [
+    "sync",
+    "tests",
+    "coverage-gap",
+    "AG-5"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p4",
+  "chunk": "grp-110",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-05",
+  "linearPriority": "Medium"
+}

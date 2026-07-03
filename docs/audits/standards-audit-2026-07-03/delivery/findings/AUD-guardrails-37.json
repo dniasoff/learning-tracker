@@ -1,0 +1,45 @@
+{
+  "title": "make audit's Rule 3/4 Firebase/Talker-confinement greps scan lib/ only, so tool/lib/dio_client.dart's raw Talker import is invisible to every gate",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Rule-4 / Rule-0 (checker coverage)",
+  "area": "tool/lib",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/lib/dio_client.dart",
+      "line": 2,
+      "quote": "import 'package:talker/talker.dart';"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 303,
+      "quote": "if grep -rn \"import 'package:talker/talker\\.dart'\" lib/ --include=\"*.dart\" \\"
+    }
+  ],
+  "sites": 1,
+  "why": "Rule 4 says raw Talker import is confined to core/logging/; tool/lib/dio_client.dart imports it directly to build a Talker-backed Dio logger. tool/lib/ is part of the same Dart package (it imports package:learning_tracker/core/... elsewhere in this batch), but the audit's Rule 1-4 checks are hardcoded `grep ... lib/ --include=\"*.dart\"` and custom_lint (the other enforcement path) is currently crashing entirely per the baseline — so nothing today, and nothing that will resume working once custom_lint is fixed unless its scope is also checked, would ever catch a Firebase- or Talker-misuse regression introduced under tool/.",
+  "recommendation": "Either extend the Rule 3/4 audit greps to also scan tool/lib/ (carving out this file with a stated justification — it's a dev-only CLI logger with no PII/Crashlytics surface), or add an explicit documented exemption for tool/ in coding-standards.md so the gap is a decision instead of a blind spot.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "coding-standards.md states whether tool/ is in scope for Rules 3/4",
+    "If in scope, make audit checks 2 and 4 cover tool/lib/ and dio_client.dart either routes through AppLogger or is added to a justified, named exemption"
+  ],
+  "labels": [
+    "checker-gap",
+    "rule0",
+    "tier2-tooling"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-app-tool-p1",
+  "chunk": "grp-151",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-37",
+  "linearPriority": "Low"
+}

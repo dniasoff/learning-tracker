@@ -1,0 +1,43 @@
+{
+  "title": "Convert ParentDashboardData/CurriculumSummary/RecentCompletion/EngagementMetrics to @freezed",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming-placement",
+  "area": "lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+      "line": 17,
+      "quote": "class ParentDashboardData {"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+      "line": 36,
+      "quote": "class CurriculumSummary {"
+    }
+  ],
+  "sites": 4,
+  "why": "These four domain-result classes are hand-rolled (final fields + const constructor, no ==/hashCode/copyWith) instead of @freezed, as the coding standard requires for domain/state models. No test in this batch currently compares whole-object equality, so this hasn't produced a false pass yet, but the first test that writes `expect(data.curricula.first, CurriculumSummary(...))` expecting structural equality will silently compare object identity instead.",
+  "recommendation": "Annotate the four classes with @freezed, or record a documented judgment-call exception if they're deliberately excluded.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The four classes are @freezed, or a coding-standards.md judgment-call entry documents why not."
+  ],
+  "labels": [
+    "naming-placement",
+    "freezed"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-parent_mode",
+  "chunk": "grp-074",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-10",
+  "linearPriority": "Low"
+}

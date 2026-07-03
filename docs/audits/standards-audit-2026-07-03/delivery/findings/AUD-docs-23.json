@@ -1,0 +1,49 @@
+{
+  "title": "Add `_codec.dart` to coding-standards.md's File Naming Conventions table — 15 files use it, no documented suffix fits",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Naming/placement convention gap, AG-8-adjacent",
+  "area": "docs/coding-standards.md + core/sync/codec",
+  "evidence": [
+    {
+      "file": "docs/coding-standards.md",
+      "line": 560,
+      "quote": "All Dart files use **snake_case**. The file suffix encodes its architectural role:"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/codec/track_codec.dart",
+      "line": 1,
+      "quote": "/// Codec for Firestore `curriculum_tracks/{id}` documents."
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/codec/entity_codec.dart",
+      "line": 1,
+      "quote": "/// Abstract base for per-entity Firestore ↔ Dart codecs."
+    }
+  ],
+  "sites": 1,
+  "why": "The suffix table (coding-standards.md lines 560-577) lists `_dto` ('Firestore / JSON boundary') and `_mapper` ('Converts between layers') as the two closest documented roles, but every file in core/sync/codec/ (15 files, ~1370 lines, entirely consistent) combines both responsibilities under `_codec` — a suffix absent from the table. The convention is clearly deliberate and repo-wide, not a one-off typo, so the table is what's stale, not the code.",
+  "recommendation": "Add a `_codec.dart` row to the table (role: combined Firestore wire-format encode/decode for one entity — a merged DTO+mapper) rather than proposing a 15-file rename with no behavioral benefit.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "coding-standards.md's File Naming Conventions table includes a `_codec.dart` row."
+  ],
+  "labels": [
+    "docs",
+    "naming",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-codec",
+  "chunk": "grp-028",
+  "normArea": "docs",
+  "id": "AUD-docs-23",
+  "linearPriority": "Low"
+}

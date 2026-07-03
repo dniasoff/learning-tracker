@@ -1,0 +1,45 @@
+{
+  "title": "Verify the W7.11 tutor_live_mark_blocked analytics event fires in mark_live_completion_invariant_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/features/tutoring",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/mark_live_completion_invariant_test.dart",
+      "line": 37,
+      "quote": "final useCase = MarkLiveCompletionUseCase<void>(session: _tutorSession());"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart",
+      "line": 62,
+      "quote": "await _analytics?.logEvent(LogEvents.tutor.liveMarkBlocked);"
+    }
+  ],
+  "sites": 1,
+  "why": "The forbidden-write branch deliberately fires an analytics event (W7.11) so tutor-boundary violations are visible in dashboards. The test never passes an AnalyticsService, so _analytics stays null and the `_analytics?.logEvent(...)` call is always a silent no-op — the test cannot distinguish 'analytics fired correctly' from 'analytics wiring is broken.' Repo-wide grep confirms liveMarkBlocked/tutor_live_mark_blocked is referenced nowhere under test/, so this dashboard signal has zero regression coverage.",
+  "recommendation": "Add a case that injects a hand-written fake or mocktail mock AnalyticsService and asserts logEvent(LogEvents.tutor.liveMarkBlocked) fires exactly once on the tutor-forbidden path and never on the owner/child-self path.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A test in mark_live_completion_invariant_test.dart injects an AnalyticsService fake and verifies logEvent(LogEvents.tutor.liveMarkBlocked) fires on the tutor-forbidden path"
+  ],
+  "labels": [
+    "testing",
+    "tutoring",
+    "analytics",
+    "observability"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "chunk": "grp-127",
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-12",
+  "linearPriority": "Low"
+}

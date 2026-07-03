@@ -1,0 +1,45 @@
+{
+  "title": "Use directional layout APIs instead of EdgeInsets.only(left/right) and Positioned(right:) in gamification widgets",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AX-1",
+  "area": "features/gamification/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_icon_box.dart",
+      "line": 49,
+      "quote": "Positioned(\n              right: 3,\n              bottom: 3,"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_config_header.dart",
+      "line": 29,
+      "quote": "padding: EdgeInsets.only(\n          top: topInset + 4,\n          left: 4,"
+    }
+  ],
+  "sites": 2,
+  "why": "tier_icon_box.dart's lock badge is pinned to the visual right/bottom corner with plain Positioned, which does not mirror under RTL — in Hebrew locale the badge renders on the leading (left) corner instead of the trailing corner. This is not hypothetical: the sibling file progress_summary_card.dart (same presentation/widgets/ directory) carries an explicit comment describing this exact bug ('With a plain Positioned(right:) it stayed on the visual right — the LEADING edge in Hebrew RTL — and collided with the right-aligned header text') that was fixed there with PositionedDirectional but never applied to tier_icon_box.dart. reward_config_header.dart's EdgeInsets.only(left:4, right:4) is currently symmetric so it renders identically in both directions today, but is one one-sided edit away from the same class of bug and still fails the AX-1 grep/lint intent.",
+  "recommendation": "Replace Positioned(right:, bottom:) with PositionedDirectional(end:, bottom:) in tier_icon_box.dart; replace EdgeInsets.only(left:, right:) with EdgeInsetsDirectional.only(start:, end:) in reward_config_header.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn 'Positioned(' lib/features/gamification/presentation/widgets/tier_icon_box.dart shows PositionedDirectional, not Positioned with right:/left:.",
+    "A widget test pumped under Locale('he')/TextDirection.rtl asserts the lock badge sits on the trailing (left-in-RTL) corner."
+  ],
+  "labels": [
+    "rtl",
+    "a11y",
+    "hebrew"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-053",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-09",
+  "linearPriority": "Medium"
+}

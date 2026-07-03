@@ -1,0 +1,70 @@
+{
+  "title": "Close every in-memory Drift UserDatabase created by gamification test factories",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 hermetic tests / drift_memory.dart's own documented contract",
+  "area": "features/gamification test helpers (4 files)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+      "line": 58,
+      "quote": "final db = inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/reward_configuration_screen_l1_test.dart",
+      "line": 137,
+      "quote": "final db = inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_screen_l1_test.dart",
+      "line": 108,
+      "quote": "final database = db ?? inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_screen_l1_test.dart",
+      "line": 161,
+      "quote": "final database = inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+      "line": 88,
+      "quote": "final db = createTestUserDatabase();"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+      "line": 272,
+      "quote": "final db = createTestUserDatabase();"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+      "line": 297,
+      "quote": "final db2 = createTestUserDatabase();"
+    }
+  ],
+  "sites": 7,
+  "why": "test/helpers/drift_memory.dart documents: 'Callers MUST await db.close() in tearDown to free the native resources.' These 7 factory call sites (used by ~1041+709+9+3 individual test invocations respectively) never do, so every test run leaves a live FFI-backed sqlite3 in-memory connection open until the file's isolate exits. 6 other files in this same batch (child_redemption_balance_reactive_test.dart, child_redemption_rewards_staleness_test.dart, pending_redemptions_reactive_test.dart, parent_pending_redemptions_screen_l1_test.dart, r_ga2_...test.dart, and 7 of 9 sites in child_redemption_screen_l1_test.dart) follow the contract correctly, proving it's practical here and making the gap inconsistent rather than structural.",
+  "recommendation": "Route each factory through addTearDown(db.close) (or the setUp/tearDown pattern parent_pending_redemptions_screen_l1_test.dart already uses correctly) so every inMemoryDb()/createTestUserDatabase() call in this feature is closed.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep-based Rule-0 checker: every `inMemoryDb()`/`createTestUserDatabase()` call site under test/ has a matching close() reachable from the same scope.",
+    "The 7 cited call sites each gain an addTearDown(..., .close) or equivalent."
+  ],
+  "labels": [
+    "hygiene",
+    "test-quality",
+    "resource-leak"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p3",
+  "chunk": "grp-056",
+  "normArea": "tests/gamification",
+  "id": "AUD-t-gamification-04",
+  "linearPriority": "Low"
+}

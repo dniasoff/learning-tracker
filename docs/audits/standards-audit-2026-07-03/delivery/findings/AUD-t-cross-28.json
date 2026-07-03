@@ -1,0 +1,63 @@
+{
+  "title": "Flip scheduler_p1_test.dart's R-SC1/R-SC2 assertions to match the project's own confirm-bug-to-skip contract",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "TQ-8",
+  "area": "test/e2e/journeys/scheduler_p1_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart",
+      "line": 334,
+      "quote": "// he locale — confirmed bug. The test asserts the picker opens and shows\n// the English strings (existing behaviour), marking R-SC1 as a known gap."
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart",
+      "line": 409,
+      "quote": "// R-SC1 — the title is hardcoded English even in he locale.\nh.expectOnScreen('Select Hebrew date');"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart",
+      "line": 931,
+      "quote": "//   \"N chazara tasks\") — these render in English even in he locale.\n//   Confirmed gap; document but keep test passing."
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+      "line": 30,
+      "quote": "/// CONFIRMED BUGS (kept as correct assertions, marked skip per the contract):"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+      "line": 559,
+      "quote": "// confirm-bug→skip contract the test is kept (correct assertion) but"
+    }
+  ],
+  "sites": 2,
+  "why": "scheduler_p1_test.dart documents two confirmed UI bugs (R-SC1: HebrewDatePicker's 4 hardcoded English strings; R-SC2: 3 hardcoded English summary templates) and asserts the CURRENT WRONG English strings as the expected, passing value — the test is green today and stays green whether or not the bug is ever fixed. This is the inverse of the convention the codebase documents and practices for the identical situation elsewhere: hebrew_rtl_p1_test.dart's header states confirmed bugs are 'kept as correct assertions, marked skip per the contract' (e.g. R-OB7), so that test is red-and-skipped until the fix lands, then self-activates — a true red-first regression test. Under scheduler_p1_test.dart's current pattern, the day someone localizes HebrewDatePicker's strings this test will start FAILING (a confusing false regression) instead of self-resolving, and until then nothing in CI or skip counts signals R-SC1/R-SC2 are open defects rather than intended behavior.",
+  "recommendation": "Rewrite the two assertions to expect the correct (localized/Hebrew) strings and mark each testWidgets skip: 'BUG R-SC1: ...' / skip: 'BUG R-SC2: ...', following the exact pattern already used for R-OB7 in hebrew_rtl_p1_test.dart, so both tests self-activate the moment HebrewDatePicker/_summaryForSection are localized.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "E2E-508's HebrewDatePicker assertions expect Hebrew strings (not 'Select Hebrew date'/'Hebrew year') and the test carries skip: 'BUG R-SC1: ...'.",
+    "E2E-516's section-summary assertion no longer accepts the hardcoded English template and carries skip: 'BUG R-SC2: ...' (or the affected assertion is split into its own skipped test).",
+    "No deterministic Rule-0 checker applies (assertion polarity is a judgment call); enforce via code review against the hebrew_rtl_p1_test.dart precedent."
+  ],
+  "labels": [
+    "testing",
+    "regression-signal",
+    "i18n"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "docs/planning/e2e-test-suite-plan.md:759 gives R-SC1 an explicit 'or flag as known gap' escape hatch that the current scheduler_p1_test.dart comment-based approach satisfies; only R-SC2 (line 760, no escape hatch) is a clean, unambiguous violation. The finding's framing of a single uniform 'confirm-bug-to-skip contract' is overstated but the underlying regression-blind-signal cost is real for R-SC2."
+    ]
+  },
+  "sourceBatch": "t1-test-cross-p4",
+  "chunk": "grp-146",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-28",
+  "linearPriority": "Medium"
+}

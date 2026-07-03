@@ -1,0 +1,51 @@
+{
+  "title": "Fix docs/sync-conflict-resolution.md's LWW tie-break rule — it contradicts the implemented and tested behavior",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8 (doc/code parity); FB-2/FB-3 (LWW ordering, clock-skew handling)",
+  "area": "docs/sync-conflict-resolution.md vs core/sync/merge/drift_merge_store.dart",
+  "evidence": [
+    {
+      "file": "docs/sync-conflict-resolution.md",
+      "line": 30,
+      "quote": "> strictly newer timestamp wins. If both timestamps are equal the remote row\n> is silently dropped (the LWW rule is `remoteTimestamp > localTimestamp`)."
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+      "line": 148,
+      "quote": "// The one true tie (equal `updated_at`, no decisive server timestamp) is\n    // resolved by preferring remote so two devices that wrote the same value"
+    },
+    {
+      "file": "learning_tracker/test/sync/merge/lww_symmetric_test.dart",
+      "line": 1228,
+      "quote": "test('exactly identical timestamps, no synced_at → remote wins', () {"
+    }
+  ],
+  "sites": 1,
+  "why": "The canonical doc says ties are dropped in favor of local (strict `remoteTimestamp > localTimestamp`) and never mentions a clock-skew window. The actual implementation and its exhaustive, intentional test coverage do the opposite for the common case: outside a ±5s skew window ties do stay local, but *inside* the window — the realistic case for near-simultaneous writes from a user's own two devices — an exact tie goes to REMOTE (code comment: 'prefer remote... converge instead of bouncing'), and a `synced_at` server-timestamp tie-break exists that the doc never describes at all. An engineer implementing a new merger or debugging a 'my edit got overwritten' report will read the doc, get the tie-break backwards for the realistic case, and either mis-implement a new merger or chase a phantom bug.",
+  "recommendation": "Rewrite the 'Push/pull invariant' section to describe the actual 3-tier rule in DriftMergeStore.remoteIsNewer: (1) outside ±5s skew, strict remote>local wins and ties stay local; (2) inside ±5s skew with both sides carrying synced_at, the server timestamp decides; (3) inside the window with no decisive synced_at, remote wins to force convergence. Point the doc at drift_merge_store.dart:113-152 so future changes are easy to diff against it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "docs/sync-conflict-resolution.md's tie-break wording matches lib/core/sync/merge/drift_merge_store.dart:113-152 exactly, confirmed by re-reading both side by side",
+    "the doc states the ±5s clock-skew window and the synced_at tie-break, matching DriftMergeStore.clockSkewTieBreakWindow"
+  ],
+  "labels": [
+    "docs",
+    "sync",
+    "lww",
+    "correctness-adjacent"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p2",
+  "chunk": "grp-108",
+  "normArea": "docs",
+  "id": "AUD-docs-08",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,64 @@
+{
+  "title": "Refresh stale audit-check/ARB-key/test-file counts in docs/development-guide.md",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs/development-guide.md",
+  "evidence": [
+    {
+      "file": "docs/development-guide.md",
+      "line": 94,
+      "quote": "make audit                          # 13 enforcement greps + custom_lint"
+    },
+    {
+      "file": "docs/development-guide.md",
+      "line": 42,
+      "quote": "app_en.arb, app_he.arb (~468 keys, keep in parity — see make arb-parity)"
+    },
+    {
+      "file": "docs/development-guide.md",
+      "line": 72,
+      "quote": "### Test layout (`learning_tracker/test/`, 359 files)"
+    },
+    {
+      "file": "docs/development-guide.md",
+      "line": 107,
+      "quote": "Firebase confined — firebase_auth/cloud_firestore/firebase_storage only in core/sync/ + features/auth/"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 482,
+      "quote": "echo \"22/22 — Every lib/core/labels/ file touching displayNameEn/He must be variant-aware...\""
+    }
+  ],
+  "sites": 4,
+  "why": "learning_tracker/Makefile's audit target runs 22 checks (not 13); lib/l10n/app_en.arb has 1421 translatable keys (not ~468 — a 3x undercount); learning_tracker/test/ has 770 *_test.dart files (not 359 — more than double). The Firebase-confinement summary also omits core/auth/, which legitimately imports firebase_auth (auth_gateway_user.dart, firebase_auth_gateway_impl.dart, etc.) alongside core/sync/ and features/auth/. This file is explicitly positioned (via CONTRIBUTING.md) as 'the authoritative reference for setup, testing, and conventions' — a contributor sizing the test suite or the audit gate off these numbers gets roughly 2-3x wrong figures.",
+  "recommendation": "Re-derive all four figures from the live repo (Makefile check count, arb key count via the arb-parity tool, test file count, and the core/auth/ Firebase-confinement location) and update development-guide.md.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "development-guide.md's stated audit check count matches the number of numbered checks in learning_tracker/Makefile's audit target",
+    "development-guide.md's ARB key count matches app_en.arb's non-metadata key count",
+    "development-guide.md's test file count matches `find learning_tracker/test -name '*_test.dart' | wc -l`"
+  ],
+  "labels": [
+    "docs",
+    "drift",
+    "counts",
+    "AG-8"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Test-file count: `find learning_tracker/test -name '*_test.dart' | wc -l` gives 768, not 770 as the finding states (verified 3 ways). Doc's stale '359' is still ~2.1x undercount regardless; core claim unaffected."
+    ]
+  },
+  "sourceBatch": "t4-docs-canonical-p1",
+  "chunk": "grp-166",
+  "normArea": "docs",
+  "id": "AUD-docs-14",
+  "linearPriority": "Medium"
+}

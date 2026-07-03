@@ -1,0 +1,53 @@
+{
+  "title": "Make scheduler STUDYDAY-* regression tests exercise the real screen/provider code they claim to guard",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (regression test must pin the actual bug, not a re-derivation) / Feathers testability lens",
+  "area": "learning_tracker/test/features/scheduler/domain",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/study_day_chazara_gate_test.dart",
+      "line": 69,
+      "quote": "final count = await db.stageDao.countStagesForTrack(trackId);"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/study_day_toggle_write_test.dart",
+      "line": 151,
+      "quote": "'upsertDayConfig result is immediately visible to getConfigsByTrack '"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/study_day_trackid_fallback_test.dart",
+      "line": 92,
+      "quote": "final trackId = track?.id;"
+    }
+  ],
+  "sites": 3,
+  "why": "Each file's docstring and reason: strings claim to prove/document a specific screen-layer bug fix — STUDYDAY-CHAZARA-GATE-12's threshold in the private `_curriculumTrackHasChazaraProvider`, STUDYDAY-TOGGLE-RACE-14's invalidate-after-write ordering in `_toggleDay`, STUDYDAY-COMPANION-10's null-trackId guard in `_toggleDay` (all in study_day_config_screen.dart) — but none of the three files ever reference `_toggleDay` or `_curriculumTrackHasChazaraProvider`. They call only the DAO directly, or re-type the guard's `if (trackId != null)` inline in the test itself. If a future edit changes the private provider's threshold (e.g. `count > 1` to `count >= 1`) or reintroduces `track?.id ?? 0`, these three files stay green — they would not notice. The real coverage for these exact code paths lives only in test/e2e/journeys/scheduler_p0_test.dart (E2E-509 genuinely drives `_curriculumTrackHasChazaraProvider` through a real widget tree) and settings_p1_test.dart, outside this directory. A maintainer reading only these three files' confident 'proves'/'documents' language would reasonably, but wrongly, treat them as sufficient regression coverage and could trim the e2e journey that is the actual guard.",
+  "recommendation": "Either rewrite the docstrings to describe what these files actually verify (DAO-contract behavior, not the screen fix), or make `_toggleDay` and `_curriculumTrackHasChazaraProvider` testable (drop the leading underscore or extract to a package-visible function, as sefaria_ref_matcher.dart already does for testability) and call them directly from these three files.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "study_day_chazara_gate_test.dart drives the real gate provider via ProviderContainer rather than re-deriving `count > 1`.",
+    "study_day_toggle_write_test.dart drives the actual `_toggleDay` callback (or a testable extraction) and asserts invalidation happens after the awaited write.",
+    "study_day_trackid_fallback_test.dart calls the real screen/provider guard rather than re-implementing `trackId != null` inline."
+  ],
+  "labels": [
+    "testing",
+    "scheduler",
+    "tq-8"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "test/features/scheduler/presentation/screens/study_day_config_screen_l1_test.dart (uncited) pumps the real StudyDayConfigScreen with DB-backed 1-stage vs 2-stage tracks, exercising the real _curriculumTrackHasChazaraProvider and _toggleDay happy path. It would catch the finding's own illustrative threshold regression, so 'real coverage lives only in e2e' is inaccurate for the CHAZARA-GATE-12 sub-claim specifically; the other two sub-claims (TOGGLE-RACE-14, COMPANION-10) remain unprotected by any real-code-path test."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p4",
+  "chunk": "grp-096",
+  "normArea": "tests/scheduler",
+  "id": "AUD-t-scheduler-02",
+  "linearPriority": "Medium"
+}

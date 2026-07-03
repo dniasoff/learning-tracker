@@ -1,0 +1,44 @@
+{
+  "title": "Extract the duplicated provider-ID mapping in FirebaseAuthGatewayImpl into one helper",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "lens:Fowler-duplication",
+  "area": "core/auth",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+      "line": 27,
+      "quote": "providers: user.providerData.map((i) => i.providerId).toList(),"
+    },
+    {
+      "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+      "line": 243,
+      "quote": "return _firebaseAuth.currentUser?.providerData\n            .map((info) => info.providerId)"
+    }
+  ],
+  "sites": 2,
+  "why": "The same providerData -> providerId-list projection is written twice with different lambda parameter names — once in _toAppUser (used by currentUser/authStateChanges/reload/sign-in results) and again, independently, in getLinkedProviders (which re-derives from _firebaseAuth.currentUser instead of reusing the mapper). A future change (filtering a synthetic provider id, normalizing case) has to be remembered in two places, and the two are already one accidental edit away from disagreeing about what 'linked providers' means for the same user.",
+  "recommendation": "Extract `List<String> _providerIds(Iterable<UserInfo> data) => data.map((i) => i.providerId).toList();` and call it from both _toAppUser and getLinkedProviders.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Single private helper used by both call sites.",
+    "Existing 'propagates linked-provider IDs' and 'returns provider IDs from the current user' tests stay green."
+  ],
+  "labels": [
+    "auth",
+    "duplication"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-auth",
+  "chunk": "grp-004",
+  "normArea": "core/auth",
+  "id": "AUD-core-auth-05",
+  "linearPriority": "Low"
+}

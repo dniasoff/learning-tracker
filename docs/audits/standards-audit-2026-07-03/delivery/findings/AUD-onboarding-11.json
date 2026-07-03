@@ -1,0 +1,41 @@
+{
+  "title": "Log the swallowed exception in BulkMarkScreen._loadPreExistingCompletions's catch block",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3",
+  "area": "features/onboarding/presentation/screens",
+  "sites": 1,
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+      "line": 149,
+      "quote": "} catch (_) {\n      // Non-fatal: if pre-tick loading fails just open with unticked state."
+    }
+  ],
+  "why": "The B7 pre-tick feature (pre-checking previously-completed items when the bulk-mark screen opens) fails completely silently on any exception -- DB error, malformed hierarchy data -- with zero telemetry. If pre-ticking breaks in production (e.g. after a schema change), nobody will know; users will see every item as unticked and may re-mark (and re-earn siyum credit for) content already completed, with no log line to diagnose why.",
+  "recommendation": "Log via AppLogger.instance.warning(event: ..., exception: e, stackTrace: st) before falling through to the unticked-state fallback, matching the pattern already used in _expungeRefs's .catchError a few lines below in the same file.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "a test that forces getContentForCurriculum/getCompletionsByCurriculum to throw asserts AppLogger.instance received a warning/error call",
+    "the log-less-catch half of the Rule-0 empty-catch checker (once shipped) flags any catch block in lib/ with no AppLogger call and no rethrow"
+  ],
+  "labels": [
+    "error-handling",
+    "EH-3",
+    "observability",
+    "onboarding"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "chunk": "grp-067",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-11",
+  "linearPriority": "Medium"
+}

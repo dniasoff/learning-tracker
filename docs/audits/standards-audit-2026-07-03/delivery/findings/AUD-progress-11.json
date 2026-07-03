@@ -1,0 +1,49 @@
+{
+  "title": "Localize MonthlyActivitySliverCalendar's hardcoded English strings",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2 (no hardcoded user-facing strings; AppLocalizations/ARB with ICU plurals)",
+  "area": "i18n",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+      "line": 106,
+      "quote": "return const Center(child: Text('No activity data'));"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+      "line": 193,
+      "quote": "'$monthLabel  —  ${rollup.activeDays} active '\n                '${rollup.activeDays == 1 ? 'day' : 'days'}',"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+      "line": 258,
+      "quote": "'${rollup.totalCompletions} '\n            '${rollup.totalCompletions == 1 ? 'completion' : 'completions'}',"
+    }
+  ],
+  "sites": 3,
+  "why": "Every other widget in this EN/HE batch routes text through AppLocalizations, but this file hand-rolls English-only pluralization with a raw ternary. It's currently unreachable (see the companion dead-code finding) so no Hebrew user sees it today — but if anyone wires this widget into a screen without noticing, it ships untranslated text into the Hebrew build silently, since no grep in this repo's audit checks widget files for bare Text('literal') calls.",
+  "recommendation": "If the widget is kept, replace the three literals with AppLocalizations getters and ICU plural messages before it is ever attached to a route.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No bare string literal is passed to Text(...) in this file; make arb-parity stays green after adding the new keys."
+  ],
+  "labels": [
+    "i18n",
+    "dead-code",
+    "ax-2"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p2",
+  "chunk": "grp-083",
+  "normArea": "features/progress",
+  "id": "AUD-progress-11",
+  "linearPriority": "Low"
+}

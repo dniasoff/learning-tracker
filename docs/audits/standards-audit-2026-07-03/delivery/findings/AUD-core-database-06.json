@@ -1,0 +1,62 @@
+{
+  "title": "Replace awaited per-row insert/update loops with Drift batch() in curriculum_scope_dao, stage_dao, and track_dao.purgeHistory",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-3",
+  "area": "core/database/daos",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/daos/curriculum_scope_dao.dart",
+      "line": 63,
+      "quote": "for (final value in scopeValues) {\n        await into(curriculumScopes).insert("
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/stage_dao.dart",
+      "line": 89,
+      "quote": "for (final stage in stages) {\n        await insertStageDefinition(stage);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/stage_dao.dart",
+      "line": 128,
+      "quote": "for (final stage in stages) {\n        await insertStageDefinition(stage);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+      "line": 417,
+      "quote": "for (final c in completionsForTrack) {\n        await (db.update(db.completionEvents)..where("
+    }
+  ],
+  "sites": 4,
+  "why": "These four loops are all already inside a db.transaction() (so DB-2 is satisfied — no partial-write risk), but each issues N sequential awaited statements where Drift's batch() would send one. track_dao.purgeHistory is the worst case: on 'delete and wipe history' for a track with hundreds of completions, it round-trips once per row to stamp purgedAt instead of one batched UPDATE. The three sites from the companion DB-2 finding (point_config_dao.seedDefaults, study_day_config_dao.seedDefaults, track_learning_order_dao.upsertOrder) share the identical pattern and compound this once they're wrapped in a transaction.",
+  "recommendation": "Convert each loop to `batch((b) { for (...) { b.insert(...)/b.update(...); } })`, which Drift supports for both inserts and per-row updates with distinct WHERE clauses inside one batch call.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "curriculum_scope_dao.setScopes, stage_dao.replaceStagesForTrack/replaceStagesForCurriculum, and track_dao.purgeHistory's tombstone step use batch() instead of a per-row await loop.",
+    "Existing tests for these methods pass unchanged (behavior-preserving refactor)."
+  ],
+  "labels": [
+    "DB-3",
+    "batch",
+    "performance"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "grp-007",
+  "mergedFrom": [
+    "Batch TrackDao.purgeHistory's per-completion purgedAt UPDATE loop instead of awaiting it row-by-row"
+  ],
+  "coDiscoverers": [
+    "t1-core-database-daos-p1",
+    "t1-core-database-daos-p3"
+  ],
+  "normArea": "core/database",
+  "id": "AUD-core-database-06",
+  "linearPriority": "Medium"
+}

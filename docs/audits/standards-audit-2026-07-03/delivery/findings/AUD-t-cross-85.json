@@ -1,0 +1,49 @@
+{
+  "title": "Replace DateTime.now() with fixed timestamps in bookmark_dao_test.dart for full hermeticity",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/core/database/daos/bookmark_dao_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/bookmark_dao_test.dart",
+      "line": 37,
+      "quote": "final now = DateTime.now();"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/bookmark_dao_test.dart",
+      "line": 56,
+      "quote": "final now = DateTime.now();"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/bookmark_dao_test.dart",
+      "line": 83,
+      "quote": "final now = DateTime.now();"
+    }
+  ],
+  "sites": 5,
+  "why": "5 occurrences (lines 37, 56, 83, 110, 129) use wall-clock DateTime.now() for insert timestamps. None is asserted against an exact value, so this isn't flaky today, but it violates TQ-6's hermetic-test requirement and is inconsistent with the sibling bookmark_dao_extra_test.dart, which uses fixed DateTime.utc(...) throughout in the same directory.",
+  "recommendation": "Replace `DateTime.now()` with a fixed `DateTime.utc(...)` constant, matching bookmark_dao_extra_test.dart's convention.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No DateTime.now() call remains in bookmark_dao_test.dart."
+  ],
+  "labels": [
+    "TQ-6",
+    "hermetic-tests",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "grp-009",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-85",
+  "linearPriority": "Low"
+}

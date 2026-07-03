@@ -1,0 +1,57 @@
+{
+  "title": "Extract the duplicated router/guard mock harness out of 4 test/app/restore/*_test.dart files into one shared helper",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3 (shared pump/harness helper) / Fowler duplicated code",
+  "area": "test/app/restore",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/app/restore/device_restore_phase_l10n_test.dart",
+      "line": 38,
+      "quote": "class _MockStackRouter extends Mock implements StackRouter {}"
+    },
+    {
+      "file": "learning_tracker/test/app/restore/device_restore_screen_l1_test.dart",
+      "line": 52,
+      "quote": "class _MockStackRouter extends Mock implements StackRouter {}"
+    },
+    {
+      "file": "learning_tracker/test/app/restore/device_restore_screen_overflow_test.dart",
+      "line": 66,
+      "quote": "class _MockStackRouter extends Mock implements StackRouter {}"
+    },
+    {
+      "file": "learning_tracker/test/app/restore/sy2_device_restore_idle_blank_test.dart",
+      "line": 39,
+      "quote": "class _MockStackRouter extends Mock implements StackRouter {}"
+    }
+  ],
+  "sites": 4,
+  "why": "_MockStackRouter, _MockRestoreGuard, _StubAppRouter, and the _makeRouter()/_buildHarness() pattern (ProviderScope overrides for restoreStatusProvider, deviceRestoreServiceProvider, routerProvider, userDatabaseProvider, currentAccountIdProvider, selectedProfileIdProvider wrapped in a MaterialApp with the same localizationsDelegates list) are copy-pasted near-byte-identically across all 4 restore test files in this batch — confirmed via direct text comparison, not just naming. The project already has a `pumpApp` helper convention used elsewhere (test/e2e/journeys/*), and test/helpers/ has no equivalent for this restore-specific harness, so each new restore test file re-derives it from scratch. Concrete cost: a change to AppRouter's or RestoreGuard's interface (e.g. a new method the screen calls) requires editing the same stub in 4+ places; the next restore test file will likely paste a 5th copy, and any router-mocking bug fixed in one copy silently persists in the other three.",
+  "recommendation": "Extract a shared test/app/restore/restore_test_harness.dart (or add to test/helpers/) exposing the mock classes, _makeRouter()/_makeAppRouter(), and a parameterized _buildHarness()/pumpApp()-style entry point; have all 4 files import it instead of redefining it.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A single shared helper file defines _MockStackRouter/_MockRestoreGuard/_StubAppRouter and the harness builder.",
+    "The 4 files in this batch (device_restore_phase_l10n_test.dart, device_restore_screen_l1_test.dart, device_restore_screen_overflow_test.dart, sy2_device_restore_idle_blank_test.dart) import it instead of each defining their own copy; grep for 'class _MockStackRouter' across test/app/restore/ returns exactly one hit."
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "tq-3"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor overstatement: only 3 of 4 files (phase_l10n, screen_l1, sy2_idle_blank) share the literal _buildHarness() function — device_restore_screen_overflow_test.dart uses a structurally different _statusOverride() list instead. Doesn't change viability of the fix."
+    ]
+  },
+  "sourceBatch": "t1-app-l10n-p2",
+  "chunk": "grp-002",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-23",
+  "linearPriority": "Medium"
+}

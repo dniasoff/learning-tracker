@@ -1,0 +1,62 @@
+{
+  "title": "reward_milestone_service_test.dart duplicates test coverage within itself and against reward_milestone_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler (duplicated code) / AG-5 (scattered tests cause duplicated coverage)",
+  "area": "test/features/gamification/domain",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+      "line": 469,
+      "quote": "group('removeMilestone', () {\n    test('removes milestone by id', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+      "line": 496,
+      "quote": "group('RewardMilestoneService.removeMilestone', () {\n    test('removes the milestone with the matching id', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+      "line": 920,
+      "quote": "group('stripStockTemplateMilestones', () {\n    test('returns false when no milestones exist', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+      "line": 978,
+      "quote": "group('RewardMilestoneService.stripStockTemplateMilestones', () {\n    test('returns false when no milestones exist', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+      "line": 96,
+      "quote": "group('RewardMilestone.fromJson / toJson', () {\n    test('round-trips all fields correctly', () {"
+    }
+  ],
+  "sites": 4,
+  "why": "This single 1337-line file re-tests the same methods twice under near-identical group names, added across separate fix waves that evidently never checked for existing coverage: removeMilestone (line 469 AND 496), stripStockTemplateMilestones (line 920 AND 978, with two more '(F2 variant)' echoes at 1024/1041 of the exact same 50/150/300-legacy-tier scenario), and mergeCloudPayload's null/empty no-op cases (1078/1083 duplicated at 1160/1165). Separately, lines 96-207 re-test RewardMilestone/RewardUnlockRecord fromJson/toJson/copyWith — coverage that already exists, more thoroughly, in the dedicated test/features/gamification/domain/models/reward_milestone_test.dart. This is the exact 'dumping ground... drives re-implementation elsewhere' failure the AG-3 rule rationale predicts, and it is not hypothetical here — it already happened four times over in this file.",
+  "recommendation": "Merge each duplicate group pair into one, keep the strongest assertions, delete the redundant ones; move the model round-trip tests out in favor of the dedicated reward_milestone_test.dart.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "grep -c \"group('.*removeMilestone\" / stripStockTemplateMilestones / mergeCloudPayload in the file each return 1, not 2.",
+    "dart test test/features/gamification/domain/services/reward_milestone_service_test.dart stays green with an equal-or-lower total test count covering the same unique scenarios."
+  ],
+  "labels": [
+    "duplication",
+    "testing",
+    "AG-3"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "sites:4 vs 5 formal evidence entries is a minor packaging mismatch (5 quotes map to 4 distinct duplicate incidents) — not a fabrication, all facts hold."
+    ]
+  },
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-054",
+  "normArea": "tests/gamification",
+  "id": "AUD-t-gamification-03",
+  "linearPriority": "Medium"
+}

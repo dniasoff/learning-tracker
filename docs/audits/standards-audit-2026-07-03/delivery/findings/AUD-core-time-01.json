@@ -1,0 +1,45 @@
+{
+  "title": "core/time/local_day_clock.dart's currentLocalDayClock global has no compiler-enforced set/reset pairing for tests",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "SM-7 spirit (no global/static mutable singletons) / TQ-6 hermetic tests",
+  "area": "learning_tracker/lib/core/time",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/time/local_day_clock.dart",
+      "line": 73,
+      "quote": "LocalDayClock currentLocalDayClock = const SystemLocalDayClock();"
+    },
+    {
+      "file": "learning_tracker/lib/core/time/local_day_clock.dart",
+      "line": 77,
+      "quote": "/// reset to the default in `tearDown`."
+    }
+  ],
+  "sites": 1,
+  "why": "This mutable top-level variable backs DateTimeFactory, which is called from 15+ production sites across DAOs/repositories/mergers (e.g. track_dao.dart, a churn hotspot, calls it 8 times). Test isolation relies entirely on every caller of useLocalDayClock() remembering to pair it with `tearDown(resetLocalDayClock)` per the doc comment's 'MUST' — nothing in the type system enforces this. A test file that calls useLocalDayClock() without the tearDown pairing would silently freeze time for every later test in that file/isolate, producing flaky failures unrelated to the code under test. I checked the two actual test files that use it (only outbox_processor_test.dart and one other) and both correctly pair set/reset via `tearDown(resetLocalDayClock)`, so this is a latent, convention-enforced risk rather than a demonstrated failure today.",
+  "recommendation": "Add a shared test helper (e.g. `withFakeClock(seed, body)`) that calls `addTearDown(resetLocalDayClock)` itself so individual tests can't forget the reset, and migrate the existing 2 call sites to it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A shared test helper pairs useLocalDayClock with an auto-registered tearDown reset",
+    "Existing call sites in outbox_processor_test.dart (and any sibling) migrated to the helper"
+  ],
+  "labels": [
+    "sm-7",
+    "test-hygiene",
+    "global-state"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-small-a",
+  "chunk": "grp-025",
+  "normArea": "core/time",
+  "id": "AUD-core-time-01",
+  "linearPriority": "Low"
+}

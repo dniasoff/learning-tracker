@@ -1,0 +1,71 @@
+{
+  "title": "Extract a shared pumpApp test helper — profiles feature hand-rolls the 4-delegate MaterialApp wrapper 13 times",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/features/profiles/**",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/profiles/pin_flow_and_setup_dialog_l1_test.dart",
+      "line": 151,
+      "quote": "localizationsDelegates: const ["
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/an2_switcher_pin_guard_test.dart",
+      "line": 76,
+      "quote": "localizationsDelegates: const ["
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/profile_switcher_sheet_test.dart",
+      "line": 83,
+      "quote": "localizationsDelegates: const ["
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart",
+      "line": 148,
+      "quote": "localizationsDelegates: const ["
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/profile_switcher_sheet_test.dart",
+      "line": 82,
+      "quote": "locale: const Locale('en'),"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/an2_switcher_pin_guard_test.dart",
+      "line": 75,
+      "quote": "locale: const Locale('en'),"
+    }
+  ],
+  "sites": 13,
+  "why": "TQ-3 calls for widget tests to pump via a shared pumpApp helper; test/helpers/ has no such file (verified contents: drift_memory.dart, firestore_fake.dart, golden_runner.dart, migration_test_helper.dart, overflow_harness.dart, test_database.dart). Each of the 4 widget-test files in this batch hand-rolls the identical MaterialApp+localizationsDelegates+supportedLocales block (6 separate occurrences inside pin_flow_and_setup_dialog_l1_test.dart alone; 13 total in this batch), and the same block appears in 146 test files repo-wide (grepped for GlobalCupertinoLocalizations.delegate). Any future change to the delegate list, theme, or a required test-only ancestor widget requires hand-editing every copy; a missed copy silently diverges from the rest.",
+  "recommendation": "Add test/helpers/pump_app.dart exposing a pumpApp({child, overrides, locale}) helper and migrate these call sites onto it, starting with this batch's 4 files.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and is used by at least the 4 files in this batch",
+    "A tracked grep count of GlobalCupertinoLocalizations.delegate outside test/helpers/ decreases as files migrate"
+  ],
+  "labels": [
+    "testing",
+    "tq-3",
+    "duplication"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-078",
+  "mergedFrom": [
+    "Add a Locale('he') RTL widget-test variant for ProfileSwitcherSheet and its AN-2 PIN guard"
+  ],
+  "coDiscoverers": [
+    "t1-feat-profiles-p2"
+  ],
+  "normArea": "tests/profiles",
+  "id": "AUD-t-profiles-02",
+  "linearPriority": "Medium"
+}

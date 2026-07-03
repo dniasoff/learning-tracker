@@ -1,0 +1,48 @@
+{
+  "title": "Fix mergeCloudPayload treating a non-empty remote payload with a missing/unparseable updated_at as unconditionally newer than local",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2 / Nygard lens (LWW ordering must not silently clobber on ambiguous input; mirrors FB-3's null-timestamp guard even though this path is SharedPreferences-based, not core/sync)",
+  "area": "features/gamification/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+      "line": 315,
+      "quote": "final remoteUpdatedAt = DateTime.tryParse(\n      (remote['updated_at'] ?? '').toString(),\n    );"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+      "line": 319,
+      "quote": "if (remoteUpdatedAt != null && !remoteUpdatedAt.isAfter(localUpdatedAt)) {\n      return;"
+    }
+  ],
+  "sites": 1,
+  "why": "The short-circuit `remoteUpdatedAt != null && ...` means: when the remote payload is non-empty but its 'updated_at' fails to parse (missing key, malformed string, cross-version format drift), the early-return guard never fires, so the method falls through and unconditionally overwrites local milestones/unlocks with the remote payload -- treating 'timestamp unknown' as 'always newer' instead of the safer 'cannot prove newer, keep local'. This is the exact malformed-timestamp branch never exercised by either reward_milestone_service_test.dart's mergeCloudPayload group (only null/empty/older/newer-with-valid-ISO-dates are tested) or test/sync/merge/gamification_reward_merge_test.dart (same gap, confirmed by grep -- only valid ISO8601 updated_at values appear in that file too).",
+  "recommendation": "Change the guard so a null/unparseable remoteUpdatedAt is treated as NOT provably newer (skip the merge, same as the older-timestamp branch) rather than falling through to an unconditional overwrite.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "mergeCloudPayload with a non-empty milestones/unlocks payload and a missing or garbage 'updated_at' leaves existing local data untouched",
+    "A new test in the mergeCloudPayload group covers this exact case and fails against the current code"
+  ],
+  "labels": [
+    "EH-2",
+    "sync",
+    "LWW",
+    "data-loss"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor: claim that gamification_reward_merge_test.dart has 'only valid ISO8601 updated_at values' is imprecise -- that file never exercises mergeCloudPayload at all (uses a fake callback stub), so reward_settings.updated_at never appears there in any form. Strengthens rather than weakens the zero-coverage claim."
+    ]
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-051",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-05",
+  "linearPriority": "Medium"
+}

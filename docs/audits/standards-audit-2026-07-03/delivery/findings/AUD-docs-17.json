@@ -1,0 +1,58 @@
+{
+  "title": "Retire or clearly re-header the pre-refactor code samples in docs/planning/architecture-quick-reference.md and the stale tech-debt callout in architecture-offline-v2.md",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs/planning",
+  "evidence": [
+    {
+      "file": "docs/planning/architecture-quick-reference.md",
+      "line": 269,
+      "quote": "leftOuterJoin(db.completions, db.completions.contentItemId.equalsExp(db.contentItems.id)"
+    },
+    {
+      "file": "docs/planning/architecture-quick-reference.md",
+      "line": 43,
+      "quote": "### D2: Authentication — Firebase Auth (Email/Password + Google Sign-In)"
+    },
+    {
+      "file": "docs/planning/architecture-quick-reference.md",
+      "line": 356,
+      "quote": "See [project-context.md](../../_bmad/bmm/data/project-context-template.md) for full 120+ rules."
+    },
+    {
+      "file": "docs/planning/architecture-offline-v2.md",
+      "line": 19,
+      "quote": "Production code in `learning_tracker/lib/` currently implements the deleted March architecture — sealed `AppAuthState`, `LocalAuthGuard`, anonymous `localUid`..."
+    }
+  ],
+  "sites": 2,
+  "why": "architecture-quick-reference.md is linked from docs/index.md as a current \"Reference doc\" (Last Updated 2026-04-19) but its Common-Queries/Key-Data-Models sections query a single unified `db` against `db.completions`/`db.contentItems` — the pre-three-database-split, pre-multi-profile schema (grep for `db\\.completions` in lib/ today returns zero hits; the Completion model shown has no profileId field at all, though profileId-in-PK is now an [E]nforced rule). D2 never mentions the cloudBorn/localBorn tiers the doc's own Project Overview names. The linked `_bmad/bmm/data/project-context-template.md` does not exist in the repo. Separately, architecture-offline-v2.md's own \"Deliberate tech debt\" box claims the code still implements AppAuthState/LocalAuthGuard/localUid — none of these symbols exist anywhere in lib/ (grep returns zero); the v2 target model (account_tier.dart, argon2id hash column, UpgradeToCloudService) is fully shipped. A contributor or agent following architecture-quick-reference.md's example queries would write code against a schema that no longer exists.",
+  "recommendation": "In architecture-quick-reference.md: delete or clearly quarantine the Common-Queries/Key-Data-Models code samples as \"Epic 1-5 historical, superseded\" (the way prd.md and architecture-design.md already do), add the cloudBorn/localBorn tier split to D2, and fix or remove the dead _bmad link. In architecture-offline-v2.md: update the \"Deliberate tech debt\" box to state the gap has closed (cite the shipped AccountTier/UpgradeToCloudService) rather than describing a mismatch that no longer exists.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "architecture-quick-reference.md no longer shows Drift query samples against db.completions/db.contentItems as if they are current code.",
+    "The _bmad/bmm/data/project-context-template.md link resolves or is removed.",
+    "architecture-offline-v2.md's tech-debt callout reflects that AppAuthState/LocalAuthGuard/localUid are gone (verifiable via `grep -rl 'AppAuthState\\|LocalAuthGuard\\|localUid' learning_tracker/lib` returning empty)."
+  ],
+  "labels": [
+    "docs",
+    "architecture-drift",
+    "auth"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor: the recommended acceptance-criteria grep for AppAuthState/LocalAuthGuard/localUid does not literally return empty — 6 hits remain (auth_state.dart, auth_state_provider.dart/.g.dart, auth_guard.dart), all explanatory doc-comments citing the replaced v1 names, not live classes. No `class AppAuthState`/`class LocalAuthGuard` definitions exist. Core claim still holds; recommendation's literal verification command needs adjusting."
+    ]
+  },
+  "sourceBatch": "t4-docs-triage-p1",
+  "chunk": "grp-169",
+  "normArea": "docs",
+  "id": "AUD-docs-17",
+  "linearPriority": "Medium"
+}

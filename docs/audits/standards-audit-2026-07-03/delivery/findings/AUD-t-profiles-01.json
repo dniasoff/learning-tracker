@@ -1,0 +1,52 @@
+{
+  "title": "Add AN-2 PIN-guard regression tests for switch-account, add-profile, and switch-to-adult-profile",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 / TQ-1",
+  "area": "test/features/profiles/presentation/an2_switcher_pin_guard_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/an2_switcher_pin_guard_test.dart",
+      "line": 2,
+      "quote": "/// (edit, delete, add profile, switch account, switch to adult profile) behind"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_switcher_sheet.dart",
+      "line": 59,
+      "quote": "/// AN-2: Escalating actions (switch to adult profile, edit, delete, switch"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/profiles_p1_test.dart",
+      "line": 911,
+      "quote": "// The sheet renders without crashing even with pinGuardRequired=true."
+    }
+  ],
+  "sites": 3,
+  "why": "Both the widget's own class doc and this test file's header promise PIN-guard coverage for 5 escalating actions, but the test bodies only tap the per-row edit and delete IconButtons (plus one no-guard control case). Nothing taps the 'Switch account' ListTile, the 'Add Profile' ListTile, or a non-active profile row while pinGuardRequired=true. test/e2e/journeys/profiles_p1_test.dart (E2E-718, outside this batch) independently confirms the gap: its own comment says 'Full PIN challenge drive requires device integration test' and only asserts the sheet renders without crashing, never that tapping Add Profile actually raises the PIN dialog. A future refactor of _guardEscalating's call sites for these 3 actions could silently let a child-context user reach account switching or profile creation with no test catching it.",
+  "recommendation": "Add 3 testWidgets to an2_switcher_pin_guard_test.dart mirroring the existing edit/delete cases: tap 'Switch account', tap 'Add Profile', and tap a non-active adult profile row, each with pinGuardRequired=true, asserting find.text('Enter Parent PIN') appears.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "an2_switcher_pin_guard_test.dart has passing tests for switch-account, add-profile, and switch-to-adult-profile with pinGuardRequired=true",
+    "Each new test fails (red) if its corresponding _guardEscalating wrapper is removed from profile_switcher_sheet.dart",
+    "The file's header outline accurately lists every covered action"
+  ],
+  "labels": [
+    "testing",
+    "tq-8",
+    "pin-guard",
+    "child-safety"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-077",
+  "normArea": "tests/profiles",
+  "id": "AUD-t-profiles-01",
+  "linearPriority": "Medium"
+}

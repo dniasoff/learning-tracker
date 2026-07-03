@@ -1,0 +1,67 @@
+{
+  "title": "Delete or merge user_database_dataclass_core_test.dart — it wholesale duplicates user_database_dataclass_test.dart's 8 DataClass groups",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1 (test-suite value) / Fowler duplication",
+  "area": "test/core/database",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/user_database_dataclass_core_test.dart",
+      "line": 73,
+      "quote": "group('Account DataClass', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_dataclass_test.dart",
+      "line": 77,
+      "quote": "group('Account DataClass', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_companion_coverage_test.dart",
+      "line": 346,
+      "quote": "group('CompletionEventsCompanion', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_companion_coverage_test.dart",
+      "line": 389,
+      "quote": "group('CompletionEventsCompanion', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_dataclass_core_test.dart",
+      "line": 1130,
+      "quote": "test('Completions insert without profileId throws', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_dataclass_core_test.dart",
+      "line": 1139,
+      "quote": "test('CompletionEvents insert without profileId throws', () {"
+    }
+  ],
+  "sites": 6,
+  "why": "user_database_dataclass_core_test.dart's own doc header claims to cover tables 'not yet covered' by user_database_dataclass_test.dart, but both files define groups named Account/LearnerProfile/CurriculumTrack/CurriculumScope/ProfileProgram/DailyPlan/LearningLedgerData/Goal DataClass and both exercise the same toJson/fromJson, copyWith, toCompanion/copyWithCompanion, equality/hashCode/toString, toColumns surface per table with only the seed data changed — the file's stated reason to exist is false, and it is the single biggest file in the batch (1176 lines). Two smaller copy-paste symptoms of the same root cause: user_database_companion_coverage_test.dart defines two different 'CompletionEventsCompanion' groups (346, 389) instead of one, and user_database_dataclass_core_test.dart has a 'Completions insert without profileId throws' test (1130) that is byte-for-byte identical to the 'CompletionEvents' test 9 lines below it (1139) — evidence the second was pasted without renaming the target. Separately, the manager-API tests for outbox, textDownloadStatuses and sacredWindowEntries are each written twice — once in user_database_companion_coverage_test.dart (lines 901-1079) and again in user_database_dataclass_extended_test.dart (lines 1526-1611). Every future schema change to these tables now requires edits in two places to stay in sync, and CI spends time re-running ~1200+ lines of assertions with zero incremental defect-catching power over the surviving file.",
+  "recommendation": "Diff user_database_dataclass_core_test.dart against user_database_dataclass_test.dart; port any assertion genuinely absent from the latter (if any), then delete user_database_dataclass_core_test.dart. Rename or remove the second 'CompletionEventsCompanion' group in user_database_companion_coverage_test.dart and fix the Completions/CompletionEvents copy-paste. Keep the outbox/textDownloadStatuses/sacredWindowEntries manager tests in exactly one file.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "user_database_dataclass_core_test.dart no longer exists (or contains zero groups whose name and table also appear in user_database_dataclass_test.dart).",
+    "`grep -c \"group('CompletionEventsCompanion'\" user_database_companion_coverage_test.dart` returns at most 1.",
+    "outbox/textDownloadStatuses/sacredWindowEntries manager tests exist in exactly one of the two files.",
+    "`flutter test test/core/database/` passes with the same or greater table coverage after the merge."
+  ],
+  "labels": [
+    "test-quality",
+    "duplication",
+    "maintenance-cost"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-root-p2",
+  "chunk": "grp-013",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-13",
+  "linearPriority": "Medium"
+}

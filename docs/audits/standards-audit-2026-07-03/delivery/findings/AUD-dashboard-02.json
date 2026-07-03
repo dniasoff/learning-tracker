@@ -1,0 +1,57 @@
+{
+  "title": "Guard ref.invalidate with a mounted check in SkippedOnboardingCtaBanner's dismiss handler",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "SM-4",
+  "area": "lib/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart",
+      "line": 164,
+      "quote": "await clearOnboardingSkipState();"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart",
+      "line": 165,
+      "quote": "ref.invalidate(onboardingSkipStateProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart",
+      "line": 146,
+      "quote": "if (!context.mounted) return;"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/add_profile_dialog.dart",
+      "line": 241,
+      "quote": "if (context.mounted) ref.invalidate(profileListProvider);"
+    }
+  ],
+  "sites": 1,
+  "why": "clearOnboardingSkipState() performs two awaited SharedPreferences.remove() platform-channel calls. If the widget is disposed during that window — e.g. the user taps Dismiss then immediately navigates away, a plausible fast-tap-and-swipe sequence — the following ref.invalidate() fires on an unmounted ref. Riverpod 3.3.1 (pinned in pubspec.yaml) throws UnmountedRefException in that case. The same file already demonstrates the correct guard two callbacks earlier (line 146), and the identical operation is guarded correctly in add_profile_dialog.dart:241, so this is a one-line omission, not a missing pattern.",
+  "recommendation": "Guard the invalidate call: await clearOnboardingSkipState(); if (!context.mounted) return; ref.invalidate(onboardingSkipStateProvider); — matching the pattern already used at line 146 and in add_profile_dialog.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "widget test: pump SkippedOnboardingCtaBanner, tap Dismiss, dispose the widget tree before the SharedPreferences future resolves, assert tester.takeException() is null / no UnmountedRefException"
+  ],
+  "labels": [
+    "riverpod",
+    "sm-4",
+    "crash-risk",
+    "dashboard"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The finding's 'why' claims Riverpod throws UnmountedRefException; that class is specific to Notifier-context Ref (riverpod core package). The WidgetRef used here (via ConsumerWidget) actually throws a plain StateError from ConsumerStatefulElement._assertNotDisposed() on invalidate() after unmount. This mislabeling is inherited from coding-standards.md's own SM-4 rationale text (which also says 'UnmountedRefException') rather than invented by the finding, and does not change the substance: an uncaught synchronous exception is still thrown when ref is touched post-unmount."
+    ]
+  },
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "chunk": "high-045",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-02",
+  "linearPriority": "High"
+}

@@ -1,0 +1,59 @@
+{
+  "title": "Wrap multi-statement Drift writes in transaction() in the wizard stage-apply and prior-completion expunge paths",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "DB-2",
+  "area": "features/onboarding/domain/services",
+  "sites": 2,
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/services/learning_process_wizard_service.dart",
+      "line": 92,
+      "quote": "await _stageDao.deleteStagesForTrack(trackId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/services/learning_process_wizard_service.dart",
+      "line": 144,
+      "quote": "await _stageDao.insertStageDefinition("
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/services/bulk_prior_completion_service.dart",
+      "line": 361,
+      "quote": "await (_database.update(_database.completionEvents)..where("
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/services/bulk_prior_completion_service.dart",
+      "line": 412,
+      "quote": "await _outboxDao.insertOutboxRow("
+    }
+  ],
+  "why": "A process death (OOM kill, backgrounding) between the delete and the insert loop in applyWizardResult leaves a track with zero or partial review stages, breaking the B6 'every configured stage needs a completion row' invariant documented in bulk_prior_completion_service.dart's own docstring -- for both first-run onboarding and the edit-track flow. StageDao already ships a transactional `replaceStagesForTrack` (stage_dao.dart:83-93, wraps the identical delete+insert in db.transaction()) and a generic `runTransaction` helper, but applyWizardResult calls the raw untransacted DAO methods instead. Separately, expungePriorCompletions tombstones completion_events, deletes prior_completion_imports, then loops outbox inserts as three independently-awaited steps with no enclosing transaction; a crash after the tombstone UPDATE but before the outbox inserts land leaves the local device showing an item as unmarked while every other synced device still shows it complete, because the tombstone never reaches Firestore.",
+  "recommendation": "Call the existing StageDao.replaceStagesForTrack/runTransaction helper from applyWizardResult instead of raw delete+insert; wrap expungePriorCompletions's update+delete+insert sequence in _database.transaction().",
+  "effort": "M",
+  "acceptance_criteria": [
+    "a test that throws inside the stage-insert loop (fake DAO) asserts zero stages remain afterward (rollback), not a partial set",
+    "a test that throws after the tombstone UPDATE in expungePriorCompletions asserts the prior_completion_imports row still exists (rollback) instead of a half-tombstoned state",
+    "a DB-2 Rule-0 grep checker flags >1 awaited mutation in a service method with no enclosing db.transaction()"
+  ],
+  "labels": [
+    "drift",
+    "transactions",
+    "data-integrity",
+    "onboarding"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "None needed; all cited file:line evidence is accurate."
+    ]
+  },
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "chunk": "high-060",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-06",
+  "linearPriority": "High"
+}

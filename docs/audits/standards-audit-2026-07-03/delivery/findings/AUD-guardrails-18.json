@@ -1,0 +1,42 @@
+{
+  "title": "Anchor no_raw_logevent's analytics_service.dart whitelist check to its directory, not just filename",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-11 (lens: bypassable gate)",
+  "area": "custom_lints",
+  "evidence": [
+    {
+      "file": "packages/custom_lints/lib/src/rules/no_raw_logevent.dart",
+      "line": 46,
+      "quote": "if (path.endsWith('analytics_service.dart')) return true;"
+    }
+  ],
+  "sites": 1,
+  "why": "Every sibling rule anchors its 'authorised owner' exemption to a directory path (lib/core/theme/, lib/core/labels/, lib/core/auth/, lib/core/sync/, lib/core/logging/) — no_raw_logevent is the only one that matches by bare filename suffix. Today there is exactly one file named analytics_service.dart (lib/core/analytics/analytics_service.dart), so this is latent, not live, but any future file anywhere in the tree named exactly analytics_service.dart (a copy, a per-feature override, a rewrite-in-progress) automatically inherits the exemption and can call raw logEvent() unchecked, silently defeating the rule's purpose of forcing typed AnalyticsEvent helpers (PV-5 territory).",
+  "recommendation": "Change the check to `path.endsWith('core/analytics/analytics_service.dart')` (or `path.contains('lib/core/analytics/')`) to match the directory-anchored pattern used by every other rule in this package.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "no_raw_logevent.dart's _isWhitelisted requires the core/analytics/ directory segment, not just the filename.",
+    "A regression test asserts a decoy lib/features/x/analytics_service.dart is NOT whitelisted (depends on the missing test file being added per the companion finding)."
+  ],
+  "labels": [
+    "custom-lint",
+    "bypass",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The 'exactly one file today... latent, not live' claim is inaccurate: learning_tracker/lib/core/analytics/firebase_analytics_service.dart also ends with 'analytics_service.dart' and already matches the loose whitelist today (its one logEvent call uses named args, so it isn't currently tripped by the rule, but the exemption itself is already live, not hypothetical)."
+    ]
+  },
+  "sourceBatch": "t2-lints-hooks",
+  "chunk": "grp-161",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-18",
+  "linearPriority": "Low"
+}

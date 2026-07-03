@@ -1,0 +1,102 @@
+{
+  "title": "Write server timestamps for LWW ordering fields in FirestoreGatewayImpl's push* methods (FB-2)",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "FB-2",
+  "area": "core/sync (push/gateway)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 337,
+      "quote": "..._stripInternalKeys(data),\n      'synced_at': FieldValue.serverTimestamp(),"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 316,
+      "quote": "..._stripInternalKeys(data),\n      'synced_at': FieldValue.serverTimestamp(),"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 369,
+      "quote": "..._stripInternalKeys(data),\n      'synced_at': FieldValue.serverTimestamp(),"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 562,
+      "quote": "..._stripInternalKeys(data),\n      'synced_at': FieldValue.serverTimestamp(),"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 417,
+      "quote": "..._stripInternalKeys(data),\n      'updated_at': FieldValue.serverTimestamp(),"
+    },
+    {
+      "file": "docs/sync-conflict-resolution.md",
+      "line": 16,
+      "quote": "| `learner_profiles` | **LWW** | `updatedAt` | |\n| `bookmarks` | **LWW** | `updatedAt` | |"
+    },
+    {
+      "file": "docs/coding-standards.md",
+      "line": 247,
+      "quote": "Every cross-device LWW ordering field is written as `FieldValue.serverTimestamp()`, never a client clock."
+    },
+    {
+      "file": "docs/sync-conflict-resolution.md",
+      "line": 29,
+      "quote": "the device with the\nstrictly newer timestamp wins."
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+      "line": 205,
+      "quote": "// remote document carries a valid LWW timestamp. The merger"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+      "line": 160,
+      "quote": "'updated_at': now.toIso8601String(),"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+      "line": 217,
+      "quote": "'updated_at': now.toIso8601String(),"
+    }
+  ],
+  "sites": 11,
+  "why": "docs/sync-conflict-resolution.md names `updatedAt` as the LWW comparison field for curriculum_tracks, goals, bookmarks and settings. pushTrack (line 337), pushSettings (316), pushBookmark (369) and pushGoal (562) all spread the caller's `data` -- which carries whatever client-clock `updated_at` the local write set -- straight through, and only add a separate `synced_at: FieldValue.serverTimestamp()` field that isn't the one the merger compares. pushLearnerProfile (line 417) shows the codebase already knows the right pattern: it explicitly overwrites `updated_at` itself with `FieldValue.serverTimestamp()` before sending. FB-2's own stated rationale is exact: 'two devices with skewed clocks writing client timestamps make last-write-wins non-deterministic -- the faster clock always wins and silently overwrites newer data.' A device with a fast or wrong clock editing a track/goal/bookmark/setting can have its stale edit incorrectly beat a genuinely later edit from another device, with the loss silent (no error, just the wrong value persisting until the next edit).",
+  "recommendation": "Apply the pushLearnerProfile pattern (server-side overwrite of the merger's LWW field) to pushTrack, pushSettings, pushBookmark, pushGoal and any other push* method whose entity is LWW-merged by a client-set timestamp field; confirm against core/sync/merge/*.dart which exact field each merger compares before changing it.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "Emulator test (per FB-2's own 'Enforce' note) asserts the persisted field each merger actually compares is a server Timestamp, not a client-supplied value, for tracks/goals/bookmarks/settings.",
+    "Audit grep: no client-clock value reaches a field a merger uses for cross-device LWW comparison, across firestore_gateway_impl.dart's push* methods."
+  ],
+  "labels": [
+    "FB-2",
+    "clock-skew",
+    "sync",
+    "data-integrity"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Two inaccuracies to correct, neither defeats the finding: (1) the docs/sync-conflict-resolution.md quote is real text but sits at lines 17-18, not line 16 (line 16 is the stage_definitions row). (2) The finding's 'why' says the doc names updatedAt as curriculum_tracks' LWW field, but the doc actually says max(activatedAt, deactivatedAt) and the live code (track_codec.dart, firestore_listener_source.dart:80) uses state_changed_at, not updated_at, for tracks. The same defect pattern still applies to pushTrack (it passes state_changed_at through unmodified), so the site count/recommendation stands but the field name for tracks in the writeup should read 'state_changed_at' not 'updatedAt'.",
+      "Two corrections, neither fatal to the finding: (1) docs/sync-conflict-resolution.md quote is actually at lines 17-18, not line 16 (off-by-one). (2) The finding's \"why\" overstates the gap slightly — the merger DOES read/compare `synced_at`, but only as a secondary tie-breaker within a ±5s clock-skew window (see DriftMergeStore.remoteIsNewer); outside that window it falls back to the unmodified client `updated_at`. The core defect (client clock reaches the field used for the dominant comparison branch, contra FB-2) still holds for skew beyond 5s.",
+      "None needed — all cited file:line quotes verified verbatim against the current tree."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-root-p1",
+  "chunk": "high-029",
+  "mergedFrom": [
+    "Sync push payloads embed client-clock timestamps as the cross-device LWW ordering field instead of FieldValue.serverTimestamp()"
+  ],
+  "coDiscoverers": [
+    "t1-core-sync-root-p1",
+    "t1-feat-sync-p1"
+  ],
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-13",
+  "linearPriority": "High"
+}

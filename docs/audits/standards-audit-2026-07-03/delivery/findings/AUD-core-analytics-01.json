@@ -1,0 +1,162 @@
+{
+  "title": "Constrain AnalyticsService.logEvent to the AnalyticsEvent catalog — LogEvents-sourced calls leak profile_id and content identifiers to Firebase Analytics",
+  "severity": "P0",
+  "confidence": "CONFIRMED",
+  "rule": "PV-1",
+  "area": "core/analytics (root cause) / core/sync, features/tutoring (manifestations)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/analytics/analytics_service.dart",
+      "line": 45,
+      "quote": "Future<void> logEvent(String name, {Map<String, Object?>? parameters});"
+    },
+    {
+      "file": "learning_tracker/lib/core/logging/log_events.dart",
+      "line": 3,
+      "quote": "// Typed string constants for structured log event names."
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/data/completion_writer.dart",
+      "line": 747,
+      "quote": "'${cmd.profileId}:${cmd.sefariaRef}:${cmd.stageId}:${cmd.trackType}:${cmd.curriculumId}';"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 267,
+      "quote": "'entity_key': row.entityKey,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 372,
+      "quote": "'entity_key': row.entityKey,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/pull_pipeline.dart",
+      "line": 437,
+      "quote": "'profile_id': profileId,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 967,
+      "quote": "'error': e.toString(),"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 1401,
+      "quote": "parameters: {'channel': channel, 'error': error.toString()},"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_pin_service.dart",
+      "line": 101,
+      "quote": "parameters: {'profile_id': profileId},"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_audit_log_writer.dart",
+      "line": 222,
+      "quote": "'target': target,"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_audit_log_writer.dart",
+      "line": 130,
+      "quote": "required String target, // e.g. \"profile/42.displayName\""
+    },
+    {
+      "file": "docs/privacy-policy.md",
+      "line": 30,
+      "quote": "- Analytics events or usage telemetry"
+    },
+    {
+      "file": "docs/privacy-policy.md",
+      "line": 31,
+      "quote": "- Crash reports"
+    },
+    {
+      "file": "learning_tracker/lib/core/analytics/analytics_provider.dart",
+      "line": 29,
+      "quote": "return FirebaseAnalyticsService();"
+    },
+    {
+      "file": "learning_tracker/lib/core/analytics/analytics_service.dart",
+      "line": 56,
+      "quote": "parameters: {'sefaria_ref': sefariaRef.value, 'track_type': trackType},"
+    },
+    {
+      "file": "learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart",
+      "line": 45,
+      "quote": "await fbCrashlytics.setCrashlyticsCollectionEnabled(true);"
+    },
+    {
+      "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+      "line": 68,
+      "quote": "_crashlytics.setUserIdentifier(profileId == null ? '' : '$profileId');"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 266,
+      "quote": "'entity_key': row.entityKey,"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_pin_service.dart",
+      "line": 100,
+      "quote": "parameters: {'profile_id': profileId},"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+      "line": 135,
+      "quote": "parameters: {'child_profile_id': childProfileId},"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+      "line": 162,
+      "quote": "parameters: {'grant_id': grant.grantId},"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+      "line": 191,
+      "quote": "parameters: {'grant_id': grant.grantId},"
+    }
+  ],
+  "sites": 22,
+  "why": "AnalyticsService.logEvent(String name, ...) accepts any bare string, so nothing stops a caller from importing LogEvents — documented in its own header as 'structured log event names' for AppLogger, not an analytics catalog — and piping it straight into real Firebase Analytics. Grepping every `.logEvent(` call site in lib/ shows ~15 places do exactly this, bypassing the audited 12-event AnalyticsEvent catalog and its PV-1 review entirely. At least 7 of those sites attach identifying data: outbox_processor.dart fires sync_outbox_dead_lettered with entity_key = '${profileId}:${sefariaRef}:${stageId}:${trackType}:${curriculumId}' (confirmed composition in completion_writer.dart:747) for every dead-lettered completion row — combining the per-child profile id with the exact Torah/Mishnah reference the child was studying in one string; pull_pipeline.dart fires sync_merge_router_halt with a bare profile_id; tutor_pin_service.dart fires tutor_pin_set with a bare profile_id; tutor_audit_log_writer.dart fires tutor_action_recorded with a 'target' field whose own documented shape is a resource path like 'profile/42.displayName' (line 130) — i.e. the profile id again, now attached to a description of what was changed; sync_orchestrator.dart fires sync_pull_failed and sync_listener_error with the raw exception's `.toString()`, which for Firestore permission/not-found errors routinely embeds the full document resource path (profiles/{id}/completions/{ref}). In release/profile builds analyticsServiceProvider resolves to the real FirebaseAnalyticsService (analytics_provider.dart), whose logEvent forwards `parameters` verbatim with zero redaction (firebase_analytics_service.dart:29-32) — so every one of these fires a real event to Google's servers. This is materially worse than the two baselined single-field leaks (bare sefaria_ref, bare profile_id in analytics_service.dart) because several of these sites combine per-child identity with content/action detail in one uncatalogued, unreviewed string, and remains a live COPPA/GDPR-K risk independent of the separately-baselined PV-3 consent-gating gap (fixing consent gating controls whether these fire at all, not what's inside them once a user has consented).",
+  "recommendation": "Change AnalyticsService.logEvent's name parameter from bare String to a closed type sourced only from AnalyticsEvent (e.g. an extension type/sealed wrapper), add a Rule-0 grep/lint that fails CI on any `.logEvent(` call whose first argument isn't `AnalyticsEvent.<x>`, and triage the 7 cited sites: either drop the identifying parameter and keep these as AppLogger-only structured logs (most already have a parallel LogEvents-based AppLogger call right next to the analytics one), or promote them into AnalyticsEvent with PV-1-safe parameters (counts/enums/booleans only) and route error detail through a stable EH-5 error-code enum instead of `.toString()`.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "A checker (grep in make audit, or a working custom_lint rule) fails with file:line on any AnalyticsService.logEvent(...)/.logEvent( call whose event-name argument is not an AnalyticsEvent member",
+    "entity_key/profile_id/target/error-text parameters are removed, hashed, or replaced with a coarse enum at all 7 cited call sites",
+    "A regression test asserts FakeAnalyticsService-captured params for outbox_dead_lettered, merge_router_halt, pull_failed, listener_error, tutor_pin_set, and tutor_action_recorded never contain a raw profileId, sefariaRef, or exception string",
+    "docs/coding-standards.md PV-1 known-gaps list is either cleared for these sites or explicitly extended to name them"
+  ],
+  "labels": [
+    "privacy",
+    "coppa",
+    "analytics",
+    "P0",
+    "child-privacy"
+  ],
+  "originalSeverity": "P0",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "TutorAuditLogWriter (tutor_audit_log_writer.dart, the 7th site, 'target'/'grant_id' leak) has no constructor call anywhere in lib/ or test/ — it is currently dead/unwired code, not reachable in production today. The finding's 'sites: 7' should read 6 confirmed-reachable + 1 dormant; this does not change the verdict or severity since 6 live production leak sites remain independently confirmed, including one (entity_key) that combines profile_id with content identifier in a single string."
+    ]
+  },
+  "sourceBatch": "t1-core-analytics-logging",
+  "chunk": "high-002",
+  "mergedFrom": [
+    "privacy-policy.md falsely claims no analytics/crash-report collection while release builds ship FirebaseAnalyticsService + unconditional Crashlytics",
+    "Strip row.entityKey out of the outbox dead-letter analytics event (leaks profileId + sefariaRef)",
+    "Strip profile_id / child_profile_id from tutor_pin_service.dart and tutor_invite_use_cases.dart analytics events"
+  ],
+  "coDiscoverers": [
+    "t1-core-analytics-logging",
+    "t1-core-sync-outbox",
+    "t1-feat-tutoring-p2",
+    "t4-docs-canonical-p2"
+  ],
+  "normArea": "core/analytics",
+  "id": "AUD-core-analytics-01",
+  "linearPriority": "Urgent"
+}

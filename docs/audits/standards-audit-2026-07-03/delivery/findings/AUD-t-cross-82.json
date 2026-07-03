@@ -1,0 +1,54 @@
+{
+  "title": "Rename the 2 duplicate-named test pairs inside crossref_filter_test.dart's 'Companion.toColumns with id present' group",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming hygiene / Fowler duplication (copy-paste without rename)",
+  "area": "test/core/database/user_database_managers_crossref_filter_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+      "line": 287,
+      "quote": "test('CompletionEventsCompanion id present in toColumns', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+      "line": 302,
+      "quote": "test('CompletionEventsCompanion id present in toColumns', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+      "line": 365,
+      "quote": "test('StreakEventsCompanion id present in toColumns', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+      "line": 371,
+      "quote": "test('StreakEventsCompanion id present in toColumns', () {"
+    }
+  ],
+  "sites": 4,
+  "why": "Both pairs sit in the same group() with identical printed names but different fixtures (the second CompletionEventsCompanion test drops trackId; the second StreakEventsCompanion test adds eventType/dayUtc). Confirmed live in this session's `flutter test` run of this file: the output lines '+13'/'+14' and '+18'/'+19' print the exact same fully-qualified name twice, so `dart test -n '<name>'` can't select just one, CI failure reports can't disambiguate which fixture broke, and a future reader can't tell from the test list that two different cases exist.",
+  "recommendation": "Rename the second test in each pair to state what varies, e.g. 'CompletionEventsCompanion id present in toColumns (no trackId)' and 'StreakEventsCompanion id present in toColumns (with eventType/dayUtc)'.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No two test('...') description strings are identical within the same group() in this file."
+  ],
+  "labels": [
+    "hygiene",
+    "naming",
+    "copy-paste"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-root-p3",
+  "chunk": "grp-014",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-82",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,61 @@
+{
+  "title": "account_lifecycle_service.dart removeCloudFromDevice() must verify the outbox is drained before deleting the local DB file",
+  "severity": "P0",
+  "confidence": "CONFIRMED",
+  "rule": "AU-3",
+  "area": "features/account/domain/services (offline-account / cloud-account lifecycle)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+      "line": 32,
+      "quote": "/// Firestore data and Firebase Auth are NOT touched — user can\n  /// sign back in on any device and recover everything."
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+      "line": 59,
+      "quote": "_deleteDbFile(account.dbFileName);\n    await _registry.removeAccount(accountId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+      "line": 829,
+      "quote": "await service.removeCloudFromDevice(account.accountId);"
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 1100,
+      "quote": "\"accountRemoveFromDeviceBody\": \"Your cloud data is safe — you can sign back in anytime.\","
+    }
+  ],
+  "sites": 2,
+  "why": "The outbox (tier-gated to cloud-born accounts, features/sync/presentation/providers/sync_providers.dart) queues Firestore writes locally until drained; those rows are the only copy of a mutation until push succeeds. removeCloudFromDevice() is reachable mid-session via swipe-to-dismiss in the Account Picker with zero connectivity check and zero OutboxDao.depth() check, then unconditionally deletes the account's entire local Drift file (which holds the outbox table) and the registry row. A child completing offline study sessions, then swiping 'Remove from device' while those completions are still queued, permanently loses that specific progress even though the confirmation dialog explicitly promises 'Your cloud data is safe — you can sign back in anytime,' and the method's own doc comment claims the same. This is exactly the credential-less/offline-account data-loss territory the standard calls out, just triggered by an explicit destructive action rather than a bare signOut().",
+  "recommendation": "Before _deleteDbFile in removeCloudFromDevice, sum OutboxDao.depth(profileId) across every profile under the account (the outbox is per-profile, the account can have multiple learner profiles) and block or force a bounded drain-and-wait when depth > 0, surfacing a clear 'N changes not backed up yet' warning instead of silently proceeding. Stop promising unconditional safety in the ARB copy until this is true.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Regression test: seed a cloud-born account with ≥1 undrained outbox row on any of its profiles, call AccountLifecycleService.removeCloudFromDevice, and assert it refuses/blocks rather than deleting the DB file.",
+    "Regression test: with outbox depth 0 for every profile under the account, removeCloudFromDevice still succeeds (no happy-path regression).",
+    "account_picker_screen.dart's swipe-to-remove flow surfaces the pending-outbox count (or blocks) before invoking removeCloudFromDevice for a cloud tile."
+  ],
+  "labels": [
+    "auth",
+    "AU-3",
+    "data-loss",
+    "outbox",
+    "offline-account"
+  ],
+  "originalSeverity": "P0",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Rule AU-3's exact text ('Never signOut() an anonymous (unlinked) user that still has unsynced outbox entries') does not literally cover this case: the account here is cloud-born/linked (account.accountTier.isCloud, has firebaseUid), and the destructive action is _deleteDbFile, not signOut(). The finding borrows AU-3's spirit (unsynced-outbox + unrecoverable action = permanent loss) rather than violating its letter. Recommend re-tagging as a new/adjacent rule (e.g. 'never delete a local DB file containing undrained outbox rows') rather than AU-3 proper — but this is a citation-precision issue, not grounds to reject the underlying, independently-verified data-loss finding.",
+      "Rule fidelity issue, not a fabrication: AU-3's literal text is scoped to signOut() on an anonymous (unlinked) user ('an anonymous session cannot be signed back into'). The account here is cloud-born/linked (account.accountTier.isCloud, has firebaseUid) -- it CAN sign back in, so this isn't literally an AU-3 violation. The finding stretches AU-3 by analogy to the broader 'don't destroy unsynced local data' theme rather than the rule's actual anonymous-user scope. The underlying defect is real, severe, reachable, and novel (not in the baselined AU-1/2/3 anonymous-conversion gaps or the 10 known-gap list), so it should stand as a P0 data-loss finding -- but it should be re-labeled as a general data-loss/offline-first violation (DB-6-adjacent or a new rule) rather than a strict AU-3 citation, since AU-3's stated rationale does not apply to this already-linked account tier.",
+      "The rule citation is imprecise. AU-3 (\"never signOut() an anonymous user with unsynced outbox entries\") targets anonymous/unlinked sessions that can never be recovered. removeCloudFromDevice() requires accountTier.isCloud (real Firebase credentials, sign-back-in genuinely works) — the opposite population from AU-3's anonymous-account concern, and the fix isn't \"block signOut,\" it's \"block/drain before deleting the local DB file.\" This is a real, distinct data-loss defect (undrained outbox rows destroyed by unconditional local-file deletion) that deserves its own rule tag rather than AU-3, but the underlying P0 data-loss claim, reachability, and evidence all survive scrutiny."
+    ]
+  },
+  "sourceBatch": "sup-au-family",
+  "normArea": "features/account",
+  "id": "AUD-account-01",
+  "linearPriority": "Urgent"
+}

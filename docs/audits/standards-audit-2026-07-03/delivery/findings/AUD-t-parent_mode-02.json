@@ -1,0 +1,57 @@
+{
+  "title": "Deduplicate PinService coverage and mock boilerplate across pin_service_extended_test.dart and pin_service_profile_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1",
+  "area": "test/features/parent_mode/pin_service_*.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/parent_mode/pin_service_extended_test.dart",
+      "line": 104,
+      "quote": "group('PinService profile PIN', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/parent_mode/pin_service_profile_test.dart",
+      "line": 96,
+      "quote": "group('PinService — profile PIN', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/parent_mode/pin_service_test.dart",
+      "line": 10,
+      "quote": "class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}"
+    },
+    {
+      "file": "learning_tracker/test/features/parent_mode/pin_service_profile_test.dart",
+      "line": 8,
+      "quote": "class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}"
+    }
+  ],
+  "sites": 3,
+  "why": "pin_service_extended_test.dart and pin_service_profile_test.dart independently re-test setProfilePin/verifyProfilePin/hasProfilePin/clearProfilePin, profile-scoped lockout (5-failure trigger, reset-on-success, getProfileLockoutRemainingMinutes), and the equivalent tutor-PIN surface — same scenarios, different profileId constants and wording, roughly 90% overlap. All three pin_service test files also copy-paste an identical ~35-line MockFlutterSecureStorage/createMockStorage fake instead of sharing one. If PinService's lockout-duration formula regresses, which copy a reviewer happens to update determines whether CI catches it; every change to the fake's stubbing has to be repeated three times or it silently drifts.",
+  "recommendation": "Merge pin_service_extended_test.dart and pin_service_profile_test.dart into one file, keeping the union of scenarios. Extract MockFlutterSecureStorage/createMockStorage into a shared test/helpers/fake_secure_storage.dart used by all PinService tests.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Only one PinService profile/tutor-PIN extended-coverage file remains, with zero scenario loss versus the union of both originals.",
+    "grep -rc 'class MockFlutterSecureStorage' test/ returns 1, not 3."
+  ],
+  "labels": [
+    "test-duplication",
+    "TQ",
+    "pin_service"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "TQ-1 is mistagged — that rule is about pyramid shape (unit>widget>integration), not scenario duplication. This is a Fowler duplication-lens finding, which the digest explicitly permits as in-scope beyond named rule IDs; substance unaffected."
+    ]
+  },
+  "sourceBatch": "t1-feat-parent_mode",
+  "chunk": "grp-072",
+  "normArea": "tests/parent_mode",
+  "id": "AUD-t-parent_mode-02",
+  "linearPriority": "Medium"
+}

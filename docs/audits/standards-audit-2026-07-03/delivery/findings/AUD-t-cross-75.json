@@ -1,0 +1,54 @@
+{
+  "title": "Merge duplicate Completion/CompletionEvent DataClass groups in user_database_managers_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / Evans ubiquitous-language drift",
+  "area": "learning_tracker/test/core/database/user_database_managers_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+      "line": 431,
+      "quote": "  group('Completion DataClass + managers', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+      "line": 493,
+      "quote": "  group('CompletionEvent DataClass + managers', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+      "line": 480,
+      "quote": "    test('CompletionEventsCompanion.copyWith', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+      "line": 540,
+      "quote": "    test('CompletionEventsCompanion.copyWith', () {"
+    }
+  ],
+  "sites": 2,
+  "why": "'Completion DataClass + managers' (line 431-489) and 'CompletionEvent DataClass + managers' (line 493-549) both insert a CompletionEventsCompanion, fetch it back via db.managers.completionEvents, and assert toJson/fromJson/copyWith/equality/hashCode/toString/toCompanion/copyWithCompanion on the exact same generated class — under two names, one of which (\"Completion\") is the pre-rename table name that test/helpers/drift_memory.dart documents as dropped (\"NOTE (W3.20): The `completions` legacy table was dropped\"). ~60 lines of redundant assertions run on every CI pass for zero incremental coverage, and a reader cannot tell whether the split is deliberate (e.g. with/without trackId) or a leftover from the rename.",
+  "recommendation": "Delete one group (or merge into one using current completionEvents/CompletionEvent terminology); if both variants are intentionally kept to cover trackId-present vs trackId-absent, add a one-line comment saying so.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one group asserts the CompletionEvent DataClass round-trip, or a comment explains why two remain."
+  ],
+  "labels": [
+    "duplication",
+    "stale-naming",
+    "test-quality"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-root-p4",
+  "chunk": "grp-015",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-75",
+  "linearPriority": "Low"
+}

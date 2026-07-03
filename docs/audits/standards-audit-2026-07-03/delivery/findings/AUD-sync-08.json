@@ -1,0 +1,53 @@
+{
+  "title": "outboxSyncWriteFacadeProvider mutates DAO state and fires a network re-enqueue from inside its Provider build function",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-2",
+  "area": "features/sync presentation providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 147,
+      "quote": "ref.read(userDatabaseProvider).pointsBalanceDao.syncSink = null;"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 172,
+      "quote": "database.pointsBalanceDao.syncSink = facade;"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 176,
+      "quote": "unawaited(database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(profileId));"
+    }
+  ],
+  "sites": 3,
+  "why": "The code directly inside `Provider<OutboxSyncWriteFacade?>((ref) {...})` mutates pointsBalanceDao.syncSink and unawaited-fires reEnqueueUnsyncedLedgerRows(profileId) unconditionally on every build. This provider watches authStateProvider, activeTutoredProfileSelectionProvider, userDatabaseProvider, activeProfileIdProvider, and localDayClockProvider -- any of which changing (e.g. every profile switch in this multi-child app) reruns build and refires the recovery scan, which its own D14 comment says is meant to run once. SM-2 exists precisely because 'side effects in build race and get skipped or duplicated on rebuild' -- here they duplicate on every rebuild instead of running once.",
+  "recommendation": "Move syncSink wiring and the one-time ledger-recovery call out of build into a ref.listen/onDispose pairing or an explicit one-shot recovery triggered on cloud-conversion, leaving build to only construct and return the facade.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "riverpod_lint/custom_lint rule flagging DAO field mutation or unawaited async calls directly inside a Provider build body (SM-2 Enforce backstop).",
+    "Regression test with a spy DAO asserting reEnqueueUnsyncedLedgerRows is invoked at most once per profile per session, not once per rebuild (simulate two profile switches)."
+  ],
+  "labels": [
+    "SM-2",
+    "riverpod",
+    "side-effects",
+    "sync"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The finding's 'why' misquotes sync_providers.dart:175's own comment (actual text: 'Idempotent + fire-and-forget so it never blocks the UI', not 'meant to run once'). points_balance_dao.dart:559-567's doc comment on reEnqueueUnsyncedLedgerRows explicitly states it is idempotent and should be 'call[ed] right after wiring syncSink (cloud session start / profile switch)' — refiring on every profile switch is the designed behavior, not the duplication bug SM-2 warns about. The bare side-effect-in-build pattern smell is still real, but there is no demonstrated concrete cost, so this is hygiene not design debt."
+    ]
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-105",
+  "normArea": "features/sync",
+  "id": "AUD-sync-08",
+  "linearPriority": "Low"
+}

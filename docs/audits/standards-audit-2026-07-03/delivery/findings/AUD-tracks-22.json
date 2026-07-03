@@ -1,0 +1,48 @@
+{
+  "title": "Extract the repeated reorder-amnesty confirm-dialog preamble in the tracks reorder screens",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication (Extract Method)",
+  "area": "lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart; lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+      "line": 166,
+      "quote": "final overdueCount = await ref.read("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+      "line": 193,
+      "quote": "final overdueCount = await ref.read("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+      "line": 126,
+      "quote": "final overdueCount = await ref.read("
+    }
+  ],
+  "sites": 3,
+  "why": "The same ~10-line block (fetch overdueCount, bail if unmounted, show ReorderConfirmDialog.showIfNeeded, bail if declined/unmounted) is copy-pasted 3 times across 2 files. A future change to the amnesty-guard contract has to be found and edited in 3 places; missing one leaves that screen silently skipping the guard.",
+  "recommendation": "Extract a shared helper (mixin or top-level function taking WidgetRef/BuildContext/CurriculumId) used by all three call sites.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Single shared implementation; all three call sites delegate to it"
+  ],
+  "labels": [
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "grp-118",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-22",
+  "linearPriority": "Low"
+}

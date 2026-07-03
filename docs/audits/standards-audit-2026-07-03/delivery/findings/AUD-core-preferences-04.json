@@ -1,0 +1,74 @@
+{
+  "title": "Wrap the unguarded SharedPreferences/service writes in 9 plain-value Notifier mutation methods across 6 files",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-5",
+  "area": "core/preferences, features/notifications, features/sacred_time, features/scheduler, features/tracks/setup, features/onboarding (presentation/providers)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 120,
+      "quote": "    state = value;\n    await _writeAndPushSnapshot(ref, pref, profileId, value);"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 79,
+      "quote": "    final prefs = await SharedPreferences.getInstance();\n    await prefs.setBool("
+    },
+    {
+      "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+      "line": 89,
+      "quote": "    final prefs = await SharedPreferences.getInstance();\n    await SacredTimePreferences.writeLocation(prefs, loc);"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 219,
+      "quote": "    final prefs = await SharedPreferences.getInstance();\n    await prefs.setStringList(_skippedRefsKey, state.toList());"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/controllers/add_track_controller.dart",
+      "line": 188,
+      "quote": "    };\n    _persist();"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/controllers/add_track_controller.dart",
+      "line": 69,
+      "quote": "    if (scopeJson != null) {\n      final list = jsonDecode(scopeJson) as List<dynamic>;"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/providers/onboarding_controller.dart",
+      "line": 69,
+      "quote": "    await current.save(ref);"
+    }
+  ],
+  "sites": 21,
+  "why": "The identical idiom repeats across 9 Notifier classes in 6 files: the class holds a plain-value (non-AsyncValue) state type, an async mutation method optimistically assigns `state` (or navigates state via copyWith), then `await`s a persistence/service call (SharedPreferences write, step.save(ref), jsonDecode of stored JSON) with NO enclosing try/catch anywhere in the call chain. Concretely: (1) preference_providers.dart's 5 `set()` methods and notification_providers.dart's 5 `toggle()`/`setTime()` methods write to SharedPreferences after already showing the new value — a write failure is an unhandled Future rejection and the change is silently lost, reverting on next launch with zero explanation to the user who believed they had already saved it; (2) sacred_location_provider.dart's detect()/setManualCity/setManualCoords/setInIsrael have the same gap, with the added wrinkle that a lost write means the in-Israel/location flag used for Sacred-Time window calculations silently reverts; (3) scheduler_providers.dart's SkippedTasks.skip/undoSkip repeat it despite the SAME file's _loadFromPrefs() correctly demonstrating the fix (full try/catch + AppLogger.error) two methods away; (4) add_track_controller.dart's _advance()/goBack() fire `_persist()` without await or unawaited(), and tryRestore() runs jsonDecode on stored JSON with no try/catch, so a corrupt or stale-schema persisted wizard state throws uncaught instead of falling back to a fresh wizard; (5) onboarding_controller.dart's init()/advance()/jumpTo() await arbitrary OnboardingStep.save/load(ref) implementations with no error channel at all, and the sole caller (learning_process_wizard_screen.dart) does not catch either, so a DB write failure inside any wizard step crashes the flow rather than showing a recoverable error.",
+  "recommendation": "Introduce a shared helper (e.g. `Future<void> guardedPersist(Ref ref, Future<void> Function() write, {required VoidCallback onFailure})`) that every listed mutation method routes its persistence call through, catching and logging via AppLogger and rolling back or surfacing the optimistic state change on failure; apply it at all 21 sites.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "None of the listed methods leaves a bare unguarded `await prefs.setXxx(...)`/`await step.save/load(...)`/`_persist()` (unawaited) as the last unprotected statement of a public mutation method — every persistence call is wrapped in try/catch (or the equivalent AsyncValue.guard) that logs via AppLogger on failure.",
+    "Regression test (one representative site per file, full parity recommended): override SharedPreferences (or the relevant service/DAO) with a throwing fake for ShowNikudPref.set, ReminderEnabled.toggle, SacredLocationNotifier.setManualCity, SkippedTasks.skip, AddTrackController's _persist (via goBack()), and OnboardingController.advance(); assert the returned Future does not silently reject unobserved and that in-memory state does not diverge from persisted truth without a logged/surfaced failure.",
+    "Rule-0 checker: add a tool/audit grep flagging `Future<void>` methods on `@riverpod`/`Notifier` classes that contain an `await <prefs-or-dao-call>` not preceded by an open `try` earlier in the same method body — a cheap textual first pass ahead of a real custom_lint AST rule."
+  ],
+  "labels": [
+    "sm-5",
+    "riverpod",
+    "error-handling",
+    "preferences",
+    "systemic"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "add_track_controller.dart's tryRestore() (cited L69) has zero call sites anywhere in lib/ or test/ (grepped repo-wide) — it is dead code, so the jsonDecode-without-try/catch cannot presently throw in production; the _persist()-unguarded claim for the same file via _advance()/goBack() (L188-189) IS reachable and stands. onboarding_controller.dart's init/advance/jumpTo (cited L69) call OnboardingStep.save/load, but all 5 production steps in wizard_steps.dart inherit the no-op default (none override save/load) — 'a DB write failure inside any wizard step crashes the flow' is not yet a live scenario, only latent design debt for a future step. The other 4 files (preference_providers.dart 5 sites, notification_providers.dart 5 sites, sacred_location_provider.dart 4 sites, scheduler_providers.dart 2 sites = 16 sites) are fully confirmed live, reachable, and unguarded, which alone sustains the P2 finding. Rule tag SM-5 is a stretch: SM-5's text bans hand-rolled try/catch *replacing* AsyncValue.guard on AsyncValue-shaped state; these are plain-value Notifiers with NO try/catch at all (the opposite failure mode) — EH-2 ('a raw exception must never propagate') or a Nygard-lens I/O-failure observation is the more precise tag. Also the title's '9' doesn't reconcile with its own 'sites: 21' or the per-file method tallies (5+5+4+2+~3+3 ≈ 21-22) — internally inconsistent count, though immaterial to the underlying defect."
+    ]
+  },
+  "sourceBatch": "sup-sm5",
+  "normArea": "core/preferences",
+  "id": "AUD-core-preferences-04",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,147 @@
+{
+  "title": "Regenerate index.md/project-overview.md/source-tree-analysis.md's DB-schema, feature-list and file-count inventory — frozen before the Epic 24-27 rebuild",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs (index.md, project-overview.md, source-tree-analysis.md) vs core/database, features/",
+  "evidence": [
+    {
+      "file": "docs/index.md",
+      "line": 16,
+      "quote": "Three-database schema (User DB 23 tables, Content DB 3 tables, Device Registry DB 2 tables)"
+    },
+    {
+      "file": "docs/project-overview.md",
+      "line": 29,
+      "quote": "Three databases: User DB (23 tables, schema v4) + Content DB (3 tables, read-only, v3) + Device Registry DB (2 tables, v1)"
+    },
+    {
+      "file": "docs/project-overview.md",
+      "line": 19,
+      "quote": "**Codebase snapshot:** ~366 source files, 182 test files, 18 feature modules."
+    },
+    {
+      "file": "docs/source-tree-analysis.md",
+      "line": 34,
+      "quote": "├── app_database.dart # Main database class (schema v15)"
+    },
+    {
+      "file": "docs/source-tree-analysis.md",
+      "line": 116,
+      "quote": "- **User DB** — schema v4, 23 tables, 20 DAOs, read-write, per-account file."
+    },
+    {
+      "file": "docs/source-tree-analysis.md",
+      "line": 66,
+      "quote": "├── story_acceptance/         # Epic-based acceptance tests (15 files, 401 tests)"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/user/user_database.dart",
+      "line": 159,
+      "quote": "int get schemaVersion => 32;"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/content/content_database.dart",
+      "line": 28,
+      "quote": "tables: [TextCache, CalendarCycles, DailyContent, SeedMetadata],"
+    },
+    {
+      "file": "docs/project-overview.md",
+      "line": 126,
+      "quote": "| Epics delivered (production) | 1–14, 16, 19, 21, 23 |"
+    },
+    {
+      "file": "docs/project-overview.md",
+      "line": 122,
+      "quote": "**As of 2026-04-19** — sourced from [`docs/linear-status.md`](./linear-status.md), which is the canonical epic/story status document."
+    },
+    {
+      "file": "docs/linear-status.md",
+      "line": 49,
+      "quote": "| DNI-238 | 21 — Multi-Account Device — Account Switching, Session Management & Deletion | 0 | Backlog |"
+    },
+    {
+      "file": "docs/linear-status.md",
+      "line": 51,
+      "quote": "| DNI-278 | 23 — Manual QA Verification | 18 | Canceled (all stories Canceled) |"
+    },
+    {
+      "file": "docs/explainers/data-model.md",
+      "line": 18,
+      "quote": "Pick --> User[(User DB<br/>schema v23<br/>read-write<br/>one file per account)]"
+    },
+    {
+      "file": "docs/explainers/data-model.md",
+      "line": 149,
+      "quote": "**User DB** (22 tables + 1 view) — accounts, learner profiles, curriculum tracks..."
+    },
+    {
+      "file": "docs/explainers/data-model.md",
+      "line": 138,
+      "quote": "make audit                           # 13 enforcement greps"
+    },
+    {
+      "file": "docs/explainers/content-database.md",
+      "line": 157,
+      "quote": "│   └── tables/                         # text_cache, calendar_cycles, daily_content, seed_metadata"
+    },
+    {
+      "file": "docs/open-items.md",
+      "line": 14,
+      "quote": "only. The `completions` physical table is retained as an empty legacy artifact (no rows\nwritten post-C1)."
+    },
+    {
+      "file": "learning_tracker/lib/core/database/user/user_database.dart",
+      "line": 57,
+      "quote": "/// - Dropped legacy tables: completions, streaks, sync_queue."
+    },
+    {
+      "file": "docs/product-rules.md",
+      "line": 169,
+      "quote": "- **Q-Term.** Code-side `UserMode.parent` → `adult` rename — bundled with Stream C or separate cleanup pass."
+    },
+    {
+      "file": "learning_tracker/lib/core/database/user/user_database.dart",
+      "line": 213,
+      "quote": "// (a) learner_profiles → add CHECK (mode IN ('adult','child'))."
+    }
+  ],
+  "sites": 20,
+  "why": "These three docs (all required 'read in this order' reading per index.md itself) describe a codebase that no longer exists: there is no app_database.dart (it is lib/core/database/user/user_database.dart, class UserDatabase, schemaVersion 32 with 24 tables and 24 registered DAOs, not v4/v15 with 23 tables/20 DAOs); the Content DB has 4 tables (daily_content is missing from every doc's list) at schema v5, not 3 at v3; the feature list is 18 old names (auth, parent_mode, learning_order, stages, test_tracking, track_setup, tutor_mode) when lib/features/ actually has 15 (account, sacred_time, tracks, tutoring, etc. — several renamed/merged); test/story_acceptance/ has 57 files today, not 15; and the ~366/182 file counts are roughly half the current 720 hand-written lib files / 780 test files. A contributor or agent using these docs to reason about the schema, DAOs, or feature boundaries will build a wrong mental model and can violate layering rules unknowingly (e.g. importing a dropped table's companion class, as testing-guide.md's own examples do — see the paired finding).",
+  "recommendation": "Re-run the document-project/architecture-scan workflow that originally produced these three files against current HEAD (it already exists and was used once, per docs/project-scan-report.json) rather than hand-patching individual numbers, since nearly every count in the DB/feature/file sections has drifted.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "schema table counts, DAO counts, and feature list in all three docs match the @DriftDatabase tables:/daos: lists and lib/features/ directory at time of merge",
+    "add these three files to the AG-8 'update paired doc in the same PR' checklist for schema/feature-reorg changes"
+  ],
+  "labels": [
+    "docs",
+    "architecture",
+    "stale-docs"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "docs/source-tree-analysis.md 'story_acceptance/ ... (15 files, 401 tests)' quote is at line 69, not the cited line 66; text itself matches verbatim."
+    ]
+  },
+  "sourceBatch": "t4-docs-canonical-p2",
+  "chunk": "grp-167",
+  "mergedFrom": [
+    "Reconcile project-overview.md's Project-status table with linear-status.md — Epics 21 and 23 wrongly shown 'delivered'",
+    "Correct schema-version, table-count, and audit-check numbers in docs/explainers/data-model.md and the file-tree diagram in content-database.md",
+    "Correct open-items.md's C1 entry — the `completions` table was dropped outright, not 'retained as an empty legacy artifact'",
+    "Resolve or delete product-rules.md's stale Q-Term item — the UserMode.parent→adult rename already shipped and is DB-enforced"
+  ],
+  "coDiscoverers": [
+    "t4-docs-canonical-p2",
+    "t4-docs-triage-p1"
+  ],
+  "normArea": "docs",
+  "id": "AUD-docs-16",
+  "linearPriority": "Medium"
+}

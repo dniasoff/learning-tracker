@@ -1,0 +1,44 @@
+{
+  "title": "Guard int.parse(sel.profileId) in tutored_write_router.dart",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "EH-3/EH-4 (unhandled exception type breaks the class's stated contract)",
+  "area": "features/tutoring/data/routers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+      "line": 84,
+      "quote": "profileId: int.parse(sel.profileId),"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+      "line": 231,
+      "quote": "final profileIdInt = int.parse(sel.profileId);"
+    }
+  ],
+  "sites": 10,
+  "why": "The class doc says 'CF failures... are re-thrown as TutorWriteException so callers can surface a clear snackbar,' but int.parse(sel.profileId) is called unguarded at 10 sites before any CF call happens. If profileId is ever non-numeric (malformed TutoredProfileSelection, future ID-scheme change), a raw uncaught FormatException propagates instead of the documented TutorWriteException — no AppLogger context, and callers that specifically catch TutorWriteException per this class's contract won't catch it. No test in s1_tutored_write_router_test.dart exercises a non-numeric profileId, so this is unconfirmed in practice.",
+  "recommendation": "Parse once via a small helper (e.g. `_profileIdOrThrow(sel)`) that logs via AppLogger and throws a typed TutorWriteException on failure, matching the class's documented error contract; call it once instead of int.parse at each of the 10 sites.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A test that constructs a TutoredProfileSelection with a non-numeric profileId and calls any pushX method asserts a TutorWriteException (not FormatException) is thrown and logged."
+  ],
+  "labels": [
+    "error-handling",
+    "robustness",
+    "duplication"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "grp-123",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-17",
+  "linearPriority": "Low"
+}

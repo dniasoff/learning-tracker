@@ -1,0 +1,45 @@
+{
+  "title": "Inject FakeLocalDayClock into TrackCreationService's B3 back-date tests instead of reading the wall clock",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests: no wall-clock)",
+  "area": "test/features/tracks/setup/domain/services/track_creation_service_atomicity_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks/setup/domain/services/track_creation_service_atomicity_test.dart",
+      "line": 131,
+      "quote": "final before = DateTimeFactory.nowUtc();"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/domain/services/track_creation_service_atomicity_test.dart",
+      "line": 157,
+      "quote": "expect(daysBack, 5, reason: 'offset:5 must be exactly 5 days in the past');"
+    }
+  ],
+  "sites": 2,
+  "why": "Neither B3 test overrides LocalDayClock, so DateTimeFactory.nowUtc() reads the real system clock both for the test's 'before' and again inside the SUT's _parseProgramStartingRef moments later. Duration.inDays truncates: (Duration(days:5) - Duration(microseconds:1)).inDays == 4, verified directly in this Dart VM; an empirical 200k-iteration back-to-back DateTime.now() sample in this same environment showed roughly 4% of pairs returning a non-zero gap (up to 70us), meaning daysBack can legitimately compute to 4 instead of 5 and fail expect(daysBack, 5, ...) for reasons unrelated to any real regression. This is exactly the flakiness class LocalDayClock/FakeLocalDayClock exists to eliminate, and the sibling provision_track_use_case_test.dart correctly uses FakeLocalDayClock for the equivalent B3 assertions — this file is the outlier.",
+  "recommendation": "Thread a FakeLocalDayClock(seed) into TrackCreationService/_parseProgramStartingRef so the test's 'before' and the SUT's 'now' are the identical fixed instant, making daysBack deterministic.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Test passes across many repeated runs with an artificial delay inserted between test setup and SUT invocation",
+    "Test no longer depends on two independent real-clock reads landing in the same tick"
+  ],
+  "labels": [
+    "test-quality",
+    "flaky-test",
+    "clock"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "grp-117",
+  "normArea": "tests/tracks",
+  "id": "AUD-t-tracks-04",
+  "linearPriority": "Medium"
+}

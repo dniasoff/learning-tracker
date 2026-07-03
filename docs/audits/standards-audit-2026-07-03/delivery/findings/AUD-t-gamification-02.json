@@ -1,0 +1,57 @@
+{
+  "title": "Stop testing RewardSaveNoTrack/RewardSaveDuplicateThreshold — both sealed variants are unreachable post-DEC-32/GA-3",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tests must exercise the branch they claim) / Fowler speculative generality",
+  "area": "features/gamification/presentation/providers, presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+      "line": 231,
+      "quote": "// Manually inject a track into the state so setGlobalReward respects\n      // the parameter. We can do this by mutating state via the notifier's"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+      "line": 850,
+      "quote": "test('returns empty list when per-track mode but no track selected', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+      "line": 956,
+      "quote": "isGlobalReward: false,\n          selectedTrackId: null,"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/reward_configuration_screen_l1_test.dart",
+      "line": 353,
+      "quote": "saveResult: const RewardSaveDuplicateThreshold(),"
+    }
+  ],
+  "sites": 4,
+  "why": "reward_config_controller.dart's bootstrap() hardcodes `tracks: const []` (comment: 'the form is always global and no track list is loaded'), so RewardForm.usesGlobalLadder is always true and the per-track/no-track-selected code in saveReward() is unreachable; separately, GA-3 removed the duplicate-threshold rejection entirely ('the old RewardSaveDuplicateThreshold result is no longer returned'). Despite that, 3 tests in reward_config_controller_test.dart claim to cover 'allows non-global when tracks is non-empty', 'per-track mode but no track selected', and 'RewardSaveNoTrack' but either exercise the identical tracks-empty branch under a different name or never call saveReward() at all (they assert on a hand-built RewardForm instead); a 4th test in reward_configuration_screen_l1_test.dart renders UI for a RewardSaveDuplicateThreshold result the real controller can never produce. A future revert or refactor that mangles these dead branches would ship with zero real regression coverage despite the suite appearing to test exactly that.",
+  "recommendation": "Remove the dead tracks/selectedTrackId/RewardSaveNoTrack/RewardSaveDuplicateThreshold machinery (and the screen's switch arm for it) now that DEC-32/GA-3 are final, deleting these 4 tests with it; or if per-track rewards are coming back, rewrite the tests to actually seed RewardForm.tracks through a real bootstrap path.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "`grep -rn \"RewardSaveNoTrack\\|RewardSaveDuplicateThreshold\" lib/` returns no hits after cleanup, or a new test drives RewardForm.tracks non-empty via the real controller and asserts the branch.",
+    "No test in reward_config_controller_test.dart asserts on a hand-constructed RewardForm as a substitute for calling the notifier method the test's group() claims to cover."
+  ],
+  "labels": [
+    "dead-code",
+    "test-quality",
+    "gamification"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Quote 'isGlobalReward: false,\\n selectedTrackId: null,' cited at line 956; actual file has 'const form = RewardForm(' at 956 and the quoted fields at 959-960. Text is verbatim correct just a few lines later than cited."
+    ]
+  },
+  "sourceBatch": "t1-feat-gamification-p3",
+  "chunk": "grp-056",
+  "normArea": "tests/gamification",
+  "id": "AUD-t-gamification-02",
+  "linearPriority": "Medium"
+}

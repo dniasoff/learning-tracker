@@ -1,0 +1,55 @@
+{
+  "title": "Extract a shared pump helper in learning_screen_l1_test.dart instead of 4 inline MaterialApp/localizationsDelegates blocks",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/features/learning/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "line": 220,
+      "quote": "child: MaterialApp(\n      locale: locale,"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "line": 812,
+      "quote": "ProviderScope(\n          overrides: ["
+    },
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "line": 861,
+      "quote": "ProviderScope(\n          retry: (_, __) => null, // disable retry so error state persists"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "line": 958,
+      "quote": "ProviderScope(\n          overrides: overrides,"
+    }
+  ],
+  "sites": 4,
+  "why": "The R6-4 AsyncLoading test, the R6-4 AsyncError test, and the E4 regression test each re-declare their own ProviderScope + MaterialApp + the full 4-delegate localizationsDelegates list inline instead of extending _buildScreen (which already exists in the same file) with a streakStream/router parameter. Any future change to the delegates list or supportedLocales must be replicated across 4 places in this one file; the pattern in test/e2e/harness/e2e_harness.dart (pumpApp(...)) shows the repo already knows how to centralize this, it just isn't used at the widget-test tier.",
+  "recommendation": "Add optional streakStream and router parameters to _buildScreen and route all 4 call sites through it, or adopt a shared test/helpers/pump_app.dart per TQ-3's stated convention.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "localizationsDelegates/supportedLocales list appears exactly once in learning_screen_l1_test.dart",
+    "All testWidgets in the file that pump LearningScreen go through _buildScreen or a shared helper"
+  ],
+  "labels": [
+    "TQ-3",
+    "duplication",
+    "pump-helper"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-learning-p3",
+  "chunk": "grp-062",
+  "normArea": "tests/learning",
+  "id": "AUD-t-learning-04",
+  "linearPriority": "Low"
+}

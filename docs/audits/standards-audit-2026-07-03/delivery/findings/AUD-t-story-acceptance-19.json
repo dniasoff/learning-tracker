@@ -1,0 +1,69 @@
+{
+  "title": "Rewrite Epic-7 dashboard tests whose bodies don't exercise the behavior their titles claim",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance/epic_07_dashboard_test.dart (Story 7.1)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+      "line": 207,
+      "quote": "test('points summary is excluded from state when userMode is adult', () {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+      "line": 213,
+      "quote": "expect(userMode == ProfileMode.child, isFalse);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+      "line": 350,
+      "quote": "test('pull-to-refresh triggers provider invalidation pattern', () {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+      "line": 351,
+      "quote": "// This tests the invalidation pattern — in the real app, ref.invalidate()"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+      "line": 1192,
+      "quote": "/// Mirror of the private `_trimSederFromBreadcrumb` function in\n    /// `active_track_card.dart`. Kept here as a pure-logic unit test..."
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/active_track_card.dart",
+      "line": 38,
+      "quote": "String _trimSederFromBreadcrumb(String breadcrumb) {"
+    }
+  ],
+  "sites": 6,
+  "why": "'points summary is excluded from state when userMode is adult' never touches the dashboard provider or screen that decides whether to render PointsSummaryWidget for a given mode — it only checks ProfileMode.adult != ProfileMode.child, true by enum definition regardless of any dashboard logic. 'pull-to-refresh triggers provider invalidation pattern' never calls ref.invalidate() or touches any Riverpod provider — it calls the pure CrossCurriculumAggregator.aggregate() function twice with different literal inputs, which trivially returns different output. If the dashboard's actual mode-gating logic or its pull-to-refresh/ref.invalidate() wiring regresses, neither test detects it, despite both titles claiming to cover exactly that.",
+  "recommendation": "Either move these under a widget/provider test that pumps the real dashboard screen or provider and drives the claimed interaction (mode gating via ConsumerWidget + ProviderScope, or ref.invalidate() via the actual pull-to-refresh callback), or rename the tests to describe what they actually verify (enum comparison, aggregator purity) so the suite stops overstating its coverage.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test titled around dashboard/provider behavior drives that behavior directly, or is renamed to match what it verifies"
+  ],
+  "labels": [
+    "test-quality",
+    "misleading-title"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-01-08",
+  "chunk": "grp-132",
+  "mergedFrom": [
+    "Test breadcrumb trimming through the real _trimSederFromBreadcrumb, not a hand-copied mirror"
+  ],
+  "coDiscoverers": [
+    "t1-story-epics-01-08"
+  ],
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-19",
+  "linearPriority": "Medium"
+}

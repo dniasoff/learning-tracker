@@ -1,0 +1,38 @@
+{
+  "title": "Inject ParentAnalyticsRepository into RestoreGuard instead of constructing it inline",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-7 (repositories/services/DAOs constructed only inside their @riverpod provider or a test override)",
+  "area": "lib/core/navigation/guards/restore_guard.dart (DI)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/navigation/guards/restore_guard.dart",
+      "line": 77,
+      "quote": "final analytics = ParentAnalyticsRepositoryImpl(db);"
+    }
+  ],
+  "sites": 1,
+  "why": "RestoreGuard._resolve() hand-constructs ParentAnalyticsRepositoryImpl(db) directly inside the navigation-check method rather than receiving it as an injected dependency — a literal SM-7 violation. ParentAnalyticsRepository has no Riverpod provider anywhere in the codebase (it's hand-constructed at 2 more sites outside this batch: local_data_upload_service.dart and device_restore_service.dart), so today nothing lets a test or a future caller swap this repository via ProviderScope; a test that wants to fake it has to fake the whole UserDatabase instead. Real-world cost is low today (the class is a thin, stateless DAO wrapper, and RestoreGuard's closure-based constructor is otherwise a deliberately Riverpod-free, easily-testable design — see its excellent test suite), but if SM-7 ships a checker this line (and its 2 siblings) will need either a wrapping provider or a documented exception.",
+  "recommendation": "Either add a parentAnalyticsRepositoryProvider (@riverpod, takes UserDatabase) and inject it into RestoreGuard's constructor alongside getDatabase, or explicitly document ParentAnalyticsRepositoryImpl as an intentional non-Riverpod infra helper exempt from SM-7.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Once SM-7 has a checker, ParentAnalyticsRepositoryImpl( outside core/analytics/ appears only inside a @riverpod provider body, or is allowlisted with a stated reason."
+  ],
+  "labels": [
+    "sm-7",
+    "di"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-nav-utils",
+  "chunk": "grp-020",
+  "normArea": "core/navigation",
+  "id": "AUD-core-navigation-04",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,61 @@
+{
+  "title": "Replace fixed-millisecond delay polling with emitsInOrder stream matchers in points_balance_dao_test.dart watchBalance tests",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/core/database/daos/points_balance_dao_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+      "line": 90,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 20));"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+      "line": 100,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+      "line": 113,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+      "line": 140,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 20));"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+      "line": 146,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    }
+  ],
+  "sites": 5,
+  "why": "The two watchBalance tests collect stream emissions into a list via `.listen(emissions.add)` then assert on `emissions.last` after fixed 20ms/50ms sleeps. Under CI contention (parallel shards, a throttled runner) the reactive Drift query stream may not have emitted the post-write value before the sleep expires, producing an intermittent failure on `expect(emissions.last, 50)` that has nothing to do with a real regression — the classic flaky-test pattern that gets 'fixed' by rerunning rather than investigated. profile_dao_test.dart in this same batch (watchProfilesByAccount test) shows the deterministic alternative already in use elsewhere: `expect(stream, emitsInOrder([...]))`, which waits for the actual emission instead of racing a clock.",
+  "recommendation": "Rewrite both watchBalance tests to assert via `expect(db.pointsBalanceDao.watchBalance(1), emitsInOrder([0, 50, ...]))` (or expectLater) registered before the mutating calls, matching the pattern already used by profile_dao_test.dart's watchProfilesByAccount test, instead of manually collecting emissions behind a fixed sleep.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both watchBalance tests in points_balance_dao_test.dart use emitsInOrder/expectLater with no fixed-millisecond Future.delayed used purely to wait for a stream emission",
+    "Tests pass repeatedly under both default and constrained (--concurrency=1, or CI-like throttled) runs",
+    "Rule-0 checker: grep test/**/*_test.dart for `Future<void>.delayed(const Duration(milliseconds` occurring in the same test body as a preceding `.listen(` call"
+  ],
+  "labels": [
+    "testing",
+    "flaky-test",
+    "hermeticity"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-daos-p2",
+  "chunk": "grp-009",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-36",
+  "linearPriority": "Medium"
+}

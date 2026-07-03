@@ -1,0 +1,157 @@
+{
+  "title": "Filter LearningOrderDao.getLearningOrderByCurriculum/deleteAllForCurriculum by profileId to stop cross-sibling data leak and silent deletion",
+  "severity": "P0",
+  "confidence": "CONFIRMED",
+  "rule": "profileId-in-PK (Naming/placement/invariants) + TQ-8 (test pins wrong behavior)",
+  "area": "lib/core/database/daos/learning_order_dao.dart — consumed by features/tracks/whole_curriculum_order, features/learning, features/scheduler",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+      "line": 34,
+      "quote": "..where((t) => t.curriculumId.equals(curriculumId))"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+      "line": 110,
+      "quote": ")..where((t) => t.curriculumId.equals(curriculumId))).go();"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+      "line": 17,
+      "quote": "int profileId = 0,"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+      "line": 57,
+      "quote": "final rows = await _database.learningOrderDao.getLearningOrderByCurriculum("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+      "line": 163,
+      "quote": "await _database.learningOrderDao.deleteAllForCurriculum("
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/bookmark_repository_impl.dart",
+      "line": 234,
+      "quote": "final customOrder = await _database.learningOrderDao\n        .getLearningOrderByCurriculum(curriculumId.storageKey);"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart",
+      "line": 16,
+      "quote": "final rows = await _learningOrderDao.getLearningOrderByCurriculum("
+    },
+    {
+      "file": "learning_tracker/test/features/learning_order/data/repositories/learning_order_repository_impl_test.dart",
+      "line": 103,
+      "quote": "profileId: 1,\n            curriculumId: 'mishnayos',"
+    },
+    {
+      "file": "learning_tracker/test/features/learning_order/data/repositories/learning_order_repository_impl_test.dart",
+      "line": 184,
+      "quote": ".getLearningOrderByCurriculum('mishnayos');\n        expect(rows, isEmpty);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/base_dao.dart",
+      "line": 43,
+      "quote": "Future<Row?> getById(int id) {\n    final query = select(table)..where((t) => idColumn(t).equals(id))"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/goal_dao.dart",
+      "line": 55,
+      "quote": "Future<bool> updateGoal(GoalsCompanion entry) => update(goals).replace(entry);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/goal_dao.dart",
+      "line": 57,
+      "quote": "Future<int> deleteGoal(int id) =>\n      (delete(goals)..where((t) => t.id.equals(id))).go();"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/bookmark_dao.dart",
+      "line": 44,
+      "quote": "Future<int> deleteBookmark(int id) =>\n      (delete(bookmarks)..where((t) => t.id.equals(id))).go();"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+      "line": 44,
+      "quote": "Future<int> deleteLearningOrder(int id) =>\n      (delete(learningOrder)..where((t) => t.id.equals(id))).go();"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/stage_dao.dart",
+      "line": 36,
+      "quote": "Future<int> deleteStageDefinition(int id) =>\n      (delete(stageDefinitions)..where((t) => t.id.equals(id))).go();"
+    },
+    {
+      "file": "docs/coding-standards.md",
+      "line": 689,
+      "quote": "**Enforcement:** `make audit` flags any user-DB table without a `profileId` column."
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart",
+      "line": 21,
+      "quote": "Future<List<SchedulerOrderItem>> getOrder(CurriculumId curriculumId);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+      "line": 30,
+      "quote": "Future<List<LearningOrderData>> getLearningOrderByCurriculum(\n    String curriculumId,"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+      "line": 511,
+      "quote": "final customOrderMap = {\n        for (final item in customOrder) item.sefariaRef: item.userSortOrder,"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 140,
+      "quote": "learningOrderRepository: SchedulerLearningOrderRepositoryImpl(\n      learningOrderDao: db.learningOrderDao,"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+      "line": 1587,
+      "quote": "learningOrderRepository: SchedulerLearningOrderRepositoryImpl(\n          learningOrderDao: db.learningOrderDao,"
+    }
+  ],
+  "sites": 21,
+  "why": "docs/architecture.md:105 confirms UserDatabase is per-ACCOUNT (user_acc_<id>.db), holding ALL sibling profiles' rows in the same tables — profileId is the only thing separating Child A's data from Child B's. LearningOrderDao.getLearningOrderByCurriculum() and .deleteAllForCurriculum() query only by curriculumId with no profileId predicate, even though the table's own uniqueKeys and every write path (upsertLearningOrder) correctly key on (profileId, curriculumId, sefariaRef). I wrote and ran a throwaway probe test (deleted after, not committed): seeded profile 1 with a custom Mishnayos row, then exercised profile 0's LearningOrderRepositoryImpl — profile 0's getOrder() returned profile 1's row (cross-sibling read leak) and profile 0's resetToDefault() then deleted profile 1's row (cross-sibling silent data loss), both runtime-confirmed. This fires whenever two children under one account share a curriculum — a mainstream scenario for a family Torah-study app (e.g. two kids both on Mishnah Yomi). The same unscoped call also feeds BookmarkRepositoryImpl._getNextItemId (bookmark 'next item' can jump per a sibling's order) and SchedulerLearningOrderRepositoryImpl.getOrder (the scheduler can sequence a child's next task using a sibling's custom order). Worse: this batch's own learning_order_repository_impl_test.dart doesn't just fail to catch this — its 'custom order' test and its 'resetToDefault' test both seed fixture rows under profileId:1 while exercising a repo instance defaulted to profileId:0, and both pass today only because the DAO ignores profileId; a correct fix would turn these two tests red until their fixtures are corrected.",
+  "recommendation": "Add a required profileId parameter to LearningOrderDao.getLearningOrderByCurriculum and .deleteAllForCurriculum, AND-ing t.profileId.equals(profileId) into the where clause. Thread the caller's profileId through LearningOrderRepositoryImpl.getOrder/resetToDefault, both BookmarkRepositoryImpl._getNextItemId call sites, and SchedulerLearningOrderRepositoryImpl.getOrder. Update the ~10 existing DAO-level tests (learning_order_dao_test.dart, learning_order_dao_extra_test.dart, learning_order_dao_extended_test.dart, drift_merge_store_test.dart, reorder_amnesty_test.dart, learning_order_roundtrip_test.dart, epic_02/epic_05/epic_26 acceptance tests) that call these methods without a profileId, and fix this batch's own fixtures to seed the same profileId the repository-under-test uses.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "LearningOrderDao.getLearningOrderByCurriculum(curriculumId, {required int profileId}) and .deleteAllForCurriculum(curriculumId, {required int profileId}) filter on t.profileId.equals(profileId).",
+    "LearningOrderRepositoryImpl, BookmarkRepositoryImpl, and SchedulerLearningOrderRepositoryImpl pass the active profileId at every call site listed in evidence.",
+    "New regression test seeds profileId 0 and profileId 1 with distinct rows for the same curriculumId; asserts getOrder(profileId 0) excludes profileId-1 rows and resetToDefault(profileId 0) leaves profileId-1 rows intact.",
+    "learning_order_repository_impl_test.dart's 'custom order' and 'resetToDefault' tests seed fixtures under the same profileId (0) the LearningOrderRepositoryImpl instance under test uses, not a mismatched profileId (1)."
+  ],
+  "labels": [
+    "P0",
+    "multi-profile",
+    "data-loss",
+    "DAO",
+    "test-masks-bug"
+  ],
+  "originalSeverity": "P0",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Minor: the cited rule 'profileId-in-PK' literally concerns Drift primaryKey overrides; LearningOrder's actual PK is a bare autoincrement `id` with profileId only in a uniqueKeys constraint, not the primaryKey itself. The substantive claim (DAO methods bypass profileId isolation, causing cross-sibling leak/deletion) is independently verified and stands regardless of this labeling nuance."
+    ]
+  },
+  "sourceBatch": "t1-feat-learning_order",
+  "chunk": "high-054",
+  "mergedFrom": [
+    "Scope LearningOrderDao.getLearningOrderByCurriculum/deleteAllForCurriculum by profileId to stop cross-sibling data leak",
+    "Scope DAO id-based get/update/delete methods to profileId — goal_dao, bookmark_dao, learning_order_dao, stage_dao, and BaseDao.getById all mutate by bare row id",
+    "Scope SchedulerLearningOrderRepository.getOrder by profileId — sibling profiles' custom content order leaks into each other's daily plan"
+  ],
+  "coDiscoverers": [
+    "t1-core-database-daos-p1",
+    "t1-feat-learning_order",
+    "t1-feat-scheduler-p1",
+    "t1-feat-tracks-p3"
+  ],
+  "normArea": "core/database",
+  "id": "AUD-core-database-02",
+  "linearPriority": "Urgent"
+}

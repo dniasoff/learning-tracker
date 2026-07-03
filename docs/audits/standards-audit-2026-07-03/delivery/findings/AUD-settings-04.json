@@ -1,0 +1,122 @@
+{
+  "title": "Batch DataExportImportService.importData()'s 16 per-row insert loops instead of awaiting each row individually",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-3",
+  "area": "features/settings/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 538,
+      "quote": "for (final u in data['userProfiles'] as List) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 717,
+      "quote": "for (final e in (data['completionEvents'] as List? ?? [])) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 887,
+      "quote": "for (final e in (data['streakEvents'] as List? ?? [])) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 558,
+      "quote": "for (final p in (data['learnerProfiles'] as List? ?? [])) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 581,
+      "quote": "for (final t in data['curriculumTracks'] as List) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 621,
+      "quote": "for (final s in (data['curriculumScopes'] as List? ?? [])) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 638,
+      "quote": "for (final p in (data['profilePrograms'] as List? ?? [])) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 658,
+      "quote": "for (final s in data['stageDefinitions'] as List) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 678,
+      "quote": "for (final p in data['pointConfigs'] as List) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 694,
+      "quote": "for (final c in (data['studyDayConfigs'] as List? ?? [])) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 749,
+      "quote": "for (final p in (data['dailyPlans'] as List? ?? [])) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 777,
+      "quote": "for (final e in (data['learningLedger'] as List? ?? [])) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 802,
+      "quote": "for (final b in data['bookmarks'] as List) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 818,
+      "quote": "for (final l in data['learningOrder'] as List) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 838,
+      "quote": "for (final t in (data['trackLearningOrder'] as List? ?? [])) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 852,
+      "quote": "for (final g in data['goals'] as List) {"
+    }
+  ],
+  "sites": 16,
+  "why": "Every one of the 16 imported tables is inserted row-by-row with an individual `await ...insert(...)` inside a for loop instead of Drift's batch()/insertAll for same-shape bulk writes (lines 538-901). The whole thing is correctly wrapped in one _database.transaction() (DB-2 satisfied), but each row still pays its own round-trip; a family with several years of daily completions (thousands of completionEvents/learningLedger rows) multiplies import wall-clock time by roughly the row count instead of running as a handful of batched statements. Same dormant-code caveat as the delete-scoping finding in this file: no production caller exists yet, so this is a design defect ready to bite the first real user of a to-be-built restore feature, not an active incident.",
+  "recommendation": "Replace each per-table loop with _database.batch((b) => b.insertAll(_database.<table>, rows)) inside the existing transaction.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Import of a large fixture (1,000+ completionEvents) uses batch()/insertAll, verifiable by code review confirming no remaining bare `for` + `await ...insert(` loop in importData(), or by an insert-call-count assertion in a test."
+  ],
+  "labels": [
+    "performance",
+    "settings",
+    "drift",
+    "dormant-code"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-settings-p1",
+  "chunk": "grp-099",
+  "mergedFrom": [
+    "Batch DataExportImportService.importData's 16 per-row insert loops instead of awaiting each row individually (DB-3)"
+  ],
+  "coDiscoverers": [
+    "t1-feat-settings-p1",
+    "t1-feat-settings-p2"
+  ],
+  "normArea": "features/settings",
+  "id": "AUD-settings-04",
+  "linearPriority": "Medium"
+}

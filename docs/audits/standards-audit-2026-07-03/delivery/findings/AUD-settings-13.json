@@ -1,0 +1,46 @@
+{
+  "title": "Throw a typed ValidationException, not dart:core FormatException, from DataExportImportService.validateAndPreview",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2 / Evans ubiquitous-language consistency",
+  "area": "features/settings/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 463,
+      "quote": "throw const FormatException('Invalid JSON format');"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 474,
+      "quote": "throw FormatException('Missing required section: $section');"
+    }
+  ],
+  "sites": 4,
+  "why": "Every other domain exception in this batch (e.g. LastActiveCurriculumException) extends the project's AppException/ValidationException hierarchy in core/exceptions/app_exception.dart, letting callers catch by stable project type and letting presentation map to a localized message by type. validateAndPreview instead throws bare dart:core FormatException at 4 sites (463, 468, 474, 477), indistinguishable from the FormatException json.decode itself can throw two lines above -- a caller can't tell 'malformed JSON' from 'well-formed JSON missing a required section' without string-matching the message, and can't localize it the way the rest of the domain layer does.",
+  "recommendation": "Introduce a typed exception (e.g. ImportValidationException extends ValidationException) and throw it in place of FormatException at all 4 sites; update the tests currently asserting throwsA(isA<FormatException>()).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "validateAndPreview/importData throw the new typed exception, not FormatException; existing malformed-import tests updated to assert the new type."
+  ],
+  "labels": [
+    "error-handling",
+    "settings",
+    "consistency"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "DataExportImportService (validateAndPreview/importData) has zero callers anywhere in lib/ outside itself — confirmed via repo-wide grep. The 'propagates to presentation, can't localize' framing is currently hypothetical since nothing calls it in production, but this doesn't change the P3 floor severity already assigned."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p1",
+  "chunk": "grp-100",
+  "normArea": "features/settings",
+  "id": "AUD-settings-13",
+  "linearPriority": "Low"
+}

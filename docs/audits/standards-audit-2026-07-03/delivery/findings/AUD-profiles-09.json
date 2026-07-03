@@ -1,0 +1,65 @@
+{
+  "title": "Replace string-matched PIN error localization with typed error codes (EH-5/AX-2)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5",
+  "area": "lib/features/profiles/presentation/{providers/pin_flow_controller.dart,screens/pin_flow_screen.dart}, lib/features/profiles/domain/services/pin_service.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 413,
+      "quote": "String _incorrectPin() => 'Incorrect PIN';"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/services/pin_service.dart",
+      "line": 327,
+      "quote": "'Too many failed attempts. Try again in $remainingMinutes minute(s).',"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/screens/pin_flow_screen.dart",
+      "line": 198,
+      "quote": "_ => raw,"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/screens/pin_flow_screen.dart",
+      "line": 194,
+      "quote": "'Incorrect PIN' => l10n.incorrectPin,\n    'PINs do not match' => l10n.pinsDoNotMatch,"
+    }
+  ],
+  "sites": 4,
+  "why": "PinFlowController.errorMessage carries raw English sentinel text (EH-5: domain/data errors must carry codes/enums, never pre-formatted messages), and PinFlowScreen._resolveError maps it back to ARB strings by exact string match, with a silent `_ => raw` fallback that renders raw English verbatim on any miss. The coupling has already drifted once undetected: the switch's 'Failed to save PIN' case matches nothing PinFlowController ever produces (only the dead pin_flow_machine.dart emitted that string — see companion dead-code finding). No test in the 628-line pin_flow_controller_test.dart or the screen test exercises _resolveError, so the next wording tweak to one file without the other silently regresses Hebrew (or English) users to wrong/raw text in a security-sensitive PIN-entry flow, undetected by CI.",
+  "recommendation": "Replace the free-text errorMessage field with a sealed PinFlowError enum/code on PinFlowState; have the screen switch on the enum (exhaustive switch expression, compiler-enforced) instead of string-matching English sentinels. Give PinLockoutException a stable code alongside its message. Add a widget test asserting the Locale('he') text renders for each error code.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "PinFlowState's error field is a closed enum/sealed type, not a String; pin_flow_screen.dart's switch has no fallback arm.",
+    "A test drives each PinFlowController error path and asserts the Locale('he') rendered text, not just non-null errorMessage."
+  ],
+  "labels": [
+    "EH-5",
+    "AX-2",
+    "i18n",
+    "pin_flow"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The claim 'no test... exercises _resolveError' is false: test/features/profiles/pin_flow_and_setup_dialog_l1_test.dart:539-574 (B4-he) explicitly drives the Incorrect-PIN branch in Locale('he') and asserts no English leak. Remaining branches (PINs-do-not-match, No-active-profile, the ArgumentError path) are still untested for he-locale, so the core risk and P2 severity still stand, just narrower than claimed."
+    ]
+  },
+  "sourceBatch": "t1-feat-parent_mode",
+  "chunk": "grp-073",
+  "mergedFrom": [
+    "Replace PinFlowController's raw-English error-string matching with a stable error code"
+  ],
+  "coDiscoverers": [
+    "t1-feat-parent_mode",
+    "t1-feat-profiles-p1"
+  ],
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-09",
+  "linearPriority": "Medium"
+}

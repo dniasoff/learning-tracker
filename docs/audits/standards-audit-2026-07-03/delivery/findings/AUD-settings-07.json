@@ -1,0 +1,50 @@
+{
+  "title": "Replace raw e.toString() exception text in settings error messages with the project's own ST-4 friendly-error pattern",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5 / custom_lint no_e_to_string_in_ui (currently non-enforcing per tooling gap)",
+  "area": "features/settings/presentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/curriculum_settings_screen.dart",
+      "line": 79,
+      "quote": ")!.curriculumSettingsProgramError(e.toString()),"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/lifetime_marking_screen.dart",
+      "line": 606,
+      "quote": "SnackBar(content: Text(l10n.lifetimeMarkSaveError(e.toString()))),"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart",
+      "line": 468,
+      "quote": "_error!,"
+    }
+  ],
+  "sites": 5,
+  "why": "curriculum_settings_screen.dart:79, lifetime_marking_screen.dart:606, account_actions.dart:401(state)/468(render), account_actions.dart:579, and send_logs_service.dart:104 all interpolate the raw Dart exception's toString() into a message shown to the user -- account_actions.dart:468 has no l10n wrapper at all. A Hebrew-speaking parent or child sees a half-English, technical string (exception class names, network error codes) instead of a real message. This is inconsistent with the SAME batch's own upgrade_to_cloud_screen.dart, which explicitly names and implements the pattern to avoid this ('Never surface the raw exception... mirrors the ST-4 friendly-error pattern', upgrade_to_cloud_screen.dart:198-200) -- proving the project already knows how to do this correctly elsewhere.",
+  "recommendation": "Replace each e.toString() interpolation with a fixed, already-localized fallback string per the ST-4 pattern used in upgrade_to_cloud_screen.dart/backup_sync_section.dart; log the real exception via AppLogger for diagnostics instead of showing it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "None of the 5 sites pass exception content into Text(...)/ARB placeholders; a grep-based check for `.toString())` inside `l10n.`/`Text(` call sites in lib/features/settings can gate regressions once custom_lint's no_e_to_string_in_ui rule is repaired.",
+    "Widget test with Locale('he') asserts each error surface renders only ARB-sourced Hebrew text, never a mocked exception's message."
+  ],
+  "labels": [
+    "i18n",
+    "error-handling",
+    "settings"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-settings-p1",
+  "chunk": "grp-099",
+  "normArea": "features/settings",
+  "id": "AUD-settings-07",
+  "linearPriority": "Medium"
+}

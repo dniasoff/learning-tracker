@@ -1,0 +1,44 @@
+{
+  "title": "Repair the broken custom_lint toolchain so the nine custom lints enforce again",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 0 / AG-11",
+  "area": "guardrails",
+  "evidence": [
+    {
+      "file": "learning_tracker/pubspec.yaml",
+      "line": 1,
+      "quote": "custom_lint 0.8.1 vs analyzer 9.0.0 — `dart run custom_lint` exits 255 with compile errors in custom_lint_core (Element2 isn't a type)"
+    }
+  ],
+  "sites": 1,
+  "why": "All nine custom lint rules (layering, Firebase confinement, raw Talker, RTL geometry, color literals, e.toString-in-UI, raw logEvent) currently enforce NOTHING: the tool crashes before analysis locally, and CI runs it warn-only. docs/coding-standards.md line 766 tells developers 'local make audit + dart run custom_lint are the real gate — run them', which is impossible for the lint half; only the audit greps remain as a hard gate, and they cover fewer rules.",
+  "recommendation": "Upgrade custom_lint/custom_lint_core to an analyzer-9-compatible release (or pin analyzer ^8 in the workspace) so `dart run custom_lint` runs clean; then correct the doc's claim or flip CI custom_lint to hard-fail. First mechanical step: `dart pub upgrade custom_lint --major-versions` in packages/custom_lints and learning_tracker, run the tool, fix API breakage in the 9 rules.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "`cd learning_tracker && dart run custom_lint` exits 0 and reports per-file diagnostics",
+    "CI custom_lint step hard-fails on violations (warn-only removed) or the standards doc states the real status"
+  ],
+  "labels": [
+    "guardrails",
+    "tooling",
+    "rule-0"
+  ],
+  "origin": "orchestrator-baseline",
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Evidence citation \"learning_tracker/pubspec.yaml:1\" is imprecise — the actual analyzer/custom_lint incompatibility comment is at pubspec.yaml:145-160, and the \"exits 255\" detail comes from the baseline tooling run (digest.md), not from the pubspec.yaml file itself. The underlying claim is nonetheless independently confirmed by directly executing `dart run custom_lint`.",
+      "The cited evidence (pubspec.yaml:1, quote about \"custom_lint 0.8.1 vs analyzer 9.0.0...\") is a paraphrase, not a literal quote at that line — pubspec.yaml line 1 is actually `name: learning_tracker`. The real supporting evidence is: docs/audits/standards-audit-2026-07-03/_work/baseline/custom-lint.txt (the crash transcript, reproduced live), docs/coding-standards.md:762 and :766 (documents the conflict and the now-false \"real gate\" claim), and pubspec.yaml:145-149/156-160 (comments describing the intended-but-inoperative separation of analyzer environments). The finding's core claim is fully supported by these; only the file:line pointer in the evidence array is imprecise."
+    ]
+  },
+  "sourceBatch": "orchestrator",
+  "chunk": "high-103",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-03",
+  "linearPriority": "High"
+}

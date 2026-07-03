@@ -1,0 +1,44 @@
+{
+  "title": "Fix golden-screenshot file path in docs/deployment-guide.md (missing test/ segment)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "doc-accuracy",
+  "area": "docs/deployment-guide.md",
+  "evidence": [
+    {
+      "file": "docs/deployment-guide.md",
+      "line": 84,
+      "quote": "`learning_tracker/golden/store_screenshots_test.dart` generates Play Store screenshots..."
+    },
+    {
+      "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+      "line": 1,
+      "quote": "(actual file location)"
+    }
+  ],
+  "sites": 1,
+  "why": "The real path is learning_tracker/test/golden/store_screenshots_test.dart — the doc's path is missing the test/ directory component and would fail a direct file lookup.",
+  "recommendation": "Insert 'test/' into the path at deployment-guide.md:84.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "deployment-guide.md's golden screenshot path resolves to a real file"
+  ],
+  "labels": [
+    "docs",
+    "drift",
+    "path"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p1",
+  "chunk": "grp-167",
+  "normArea": "docs",
+  "id": "AUD-docs-29",
+  "linearPriority": "Low"
+}

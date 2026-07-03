@@ -1,0 +1,49 @@
+{
+  "title": "Extract onboarding intro-page Color(0x...) literals into core/theme constants",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "no_color_literal_outside_theme",
+  "area": "onboarding/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart",
+      "line": 6,
+      "quote": "const _kNavy = Color(0xFF1A36A5);"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_page_indicator.dart",
+      "line": 18,
+      "quote": "static const _kNavy = Color(0xFF1A36A5);"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart",
+      "line": 9,
+      "quote": "const _kNavy = Color(0xFF1A36A5);"
+    }
+  ],
+  "sites": 3,
+  "why": "The same navy (0xFF1A36A5) is hand-typed as a private constant independently in all 3 files (19 raw Color literals total: 6+2+11), instead of one shared source. A future rebrand or dark-mode pass for the intro carousel requires finding and updating every hex literal by hand, with no compile-time link tying the copies together if one drifts out of sync. This is exactly the pattern the (currently non-functional) no_color_literal_outside_theme custom lint targets.",
+  "recommendation": "Add the ~8 distinct hex values used across the 3 files to AppColors/AppTheme (or an onboarding-scoped palette class in core/theme/) and import it instead of redefining per file.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Once custom_lint is fixed, dart run custom_lint reports zero no_color_literal_outside_theme violations under lib/features/onboarding/presentation/widgets/"
+  ],
+  "labels": [
+    "theming",
+    "duplication",
+    "onboarding"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-069",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-13",
+  "linearPriority": "Low"
+}

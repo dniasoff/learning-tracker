@@ -1,0 +1,55 @@
+{
+  "title": "Move sign-in/account-picker test cleanup into addTearDown so a failed assertion doesn't leak the ProviderContainer/Drift DB",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-2 (fresh, reliably-torn-down ProviderContainer per test)",
+  "area": "features/account presentation test suite",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/account/presentation/screens/account_picker_screen_l1_test.dart",
+      "line": 251,
+      "quote": "Future<void> _tearDown(WidgetTester tester, _Fixture fixture) async {"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/screens/account_picker_screen_l1_test.dart",
+      "line": 312,
+      "quote": "await _tearDown(tester, fixture);"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/notifiers/sign_in_wrong_password_no_callback_test.dart",
+      "line": 161,
+      "quote": "Future<void> _tearDownContainer(\n  WidgetTester tester,"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/notifiers/sign_in_wrong_password_no_callback_test.dart",
+      "line": 272,
+      "quote": "await _tearDownContainer(tester, container);\n        await registry.close();"
+    }
+  ],
+  "sites": 2,
+  "why": "Both files call their cleanup helper (_tearDown / _tearDownContainer + registry.close()) as the last statement inside each test body, after several `expect()` calls. If any expect() throws (the exact moment a real regression would be caught), cleanup is skipped and the in-memory Drift registry/userDb connections and ProviderContainer leak for the rest of the suite run — the opposite of TQ-2's 'never share state between tests' guarantee, and the failure that most needs a clean teardown is the one that gets skipped. Sibling files in this exact batch (account_picker_local_data_missing_test.dart's tearDown(), and the notifier tests' addTearDown(container.dispose)) show the correct, already-established pattern.",
+  "recommendation": "Replace the manual end-of-test _tearDown/_tearDownContainer calls with addTearDown(...) registered immediately after the container/registry/userDb are created, matching account_picker_local_data_missing_test.dart's tearDown() in this same batch.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Cleanup (container dispose, registry.close(), userDb.close()) is registered via addTearDown/tearDown() immediately after creation, not as the final statement of the test body.",
+    "A deliberately-failing expect() inserted mid-test still leaves the Drift databases closed."
+  ],
+  "labels": [
+    "tq-2",
+    "test-hygiene",
+    "resource-leak"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p3",
+  "chunk": "grp-041",
+  "normArea": "tests/account",
+  "id": "AUD-t-account-05",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,121 @@
+{
+  "title": "Close or auto-close inMemoryDb() in profiles _buildApp test helpers — 3 files leak native Drift handles whenever db: is omitted",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/features/profiles/presentation/screens/{parent_settings_screen_l1_test,parent_track_management_screen_l1_test,ts14_parent_track_management_copy_test}.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/helpers/drift_memory.dart",
+      "line": 40,
+      "quote": "/// Callers MUST `await db.close()` in `tearDown` to free the native\n/// resources."
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/parent_settings_screen_l1_test.dart",
+      "line": 114,
+      "quote": "final resolvedDb = db ?? inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+      "line": 129,
+      "quote": "final database = db ?? inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+      "line": 167,
+      "quote": "final database = inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/ts14_parent_track_management_copy_test.dart",
+      "line": 71,
+      "quote": "final database = db ?? inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart",
+      "line": 142,
+      "quote": "userDatabaseProvider.overrideWith((ref) => inMemoryDb()),"
+    },
+    {
+      "file": "learning_tracker/lib/core/providers/database_provider.dart",
+      "line": 37,
+      "quote": "final database = UserDatabase(driftDatabase(name: dbName));\n  ref.onDispose(database.close);"
+    },
+    {
+      "file": "learning_tracker/test/helpers/drift_memory.dart",
+      "line": 36,
+      "quote": "/// Callers MUST `await db.close()` in `tearDown` to free the native"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+      "line": 222,
+      "quote": "final db = inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart",
+      "line": 158,
+      "quote": "final database = db ?? inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/track_management_hub_screen_l1_test.dart",
+      "line": 120,
+      "quote": "final database = db ?? inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/track_order/presentation/track_learning_order_reset_test.dart",
+      "line": 103,
+      "quote": "userDatabaseProvider.overrideWith((ref) => inMemoryDb()),"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/recent_activity_and_hierarchy_panel_l1_test.dart",
+      "line": 110,
+      "quote": "_db ??= inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/recent_activity_and_hierarchy_panel_l1_test.dart",
+      "line": 589,
+      "quote": "final db = inMemoryDb();"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/siyumim_timeline_and_lifetime_providers_test.dart",
+      "line": 187,
+      "quote": "userDatabaseProvider.overrideWith((ref) => db_helper.inMemoryDb()),"
+    }
+  ],
+  "sites": 15,
+  "why": "drift_memory.dart's own contract says callers MUST close inMemoryDb(). In these 3 files, _buildApp (and _buildAppLoading/_buildAppError, which have no db: parameter at all) construct one via `db ?? inMemoryDb()` whenever the optional db: is omitted, and the large majority of testWidgets in parent_settings_screen_l1_test.dart and parent_track_management_screen_l1_test.dart (~30 of ~40 across the two files) do omit it, so each test run leaks a native sqlite3 in-memory connection nothing ever closes — the caller has no reference to the db, so it can't be closed even in a teardown. At the scale of this test suite (dozens of files following the same pattern), this is a plausible contributor to CI slowness or file-descriptor/memory pressure.",
+  "recommendation": "Make db a required parameter (as ts3_parent_track_archive_test.dart already does correctly, forcing every call site to own+close it), or have _buildApp itself call addTearDown(() => resolvedDb.close()) so omitting db: is automatically safe.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Every _buildApp/_buildAppLoading/_buildAppError variant in these 3 files either requires db: or internally registers addTearDown to close the database it created."
+  ],
+  "labels": [
+    "resource-leak",
+    "test-quality",
+    "drift",
+    "profiles"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p3",
+  "chunk": "grp-080",
+  "mergedFrom": [
+    "Register onDispose when overriding userDatabaseProvider with inMemoryDb() in tracks_studydays_and_content_hierarchy_l1_test.dart",
+    "Close every inMemoryDb() Drift database opened by tracks/setup and track_order widget tests",
+    "Close every inMemoryDb() opened in the progress test suite via addTearDown per drift_memory.dart's documented contract"
+  ],
+  "coDiscoverers": [
+    "t1-feat-profiles-p3",
+    "t1-feat-progress-p5",
+    "t1-feat-tracks-p5",
+    "t1-test-cross-p5"
+  ],
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-08",
+  "linearPriority": "Medium"
+}

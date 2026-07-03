@@ -1,0 +1,45 @@
+{
+  "title": "Remove or wire up the dead MonthlyActivitySliverCalendar spike before its placeholder class collides with the real Drift companion",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "dead code / AG-4 (future duplicate top-level name)",
+  "area": "lib/features/progress/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+      "line": 13,
+      "quote": "class MonthlyActivityRollup {"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/tables/monthly_activity_rollups.dart",
+      "line": 16,
+      "quote": "@DataClassName('MonthlyActivityRollup')"
+    }
+  ],
+  "sites": 2,
+  "why": "grep across lib/ and test/ shows MonthlyActivitySliverCalendar is imported nowhere except its own file and its own 171-line test (monthly_activity_sliver_calendar_test.dart) — 404 + 171 = 575 lines maintained since commit 2b2eeb54 (2026-05-20) for zero product value; the widget's own doc comment admits 'not wired into any screen yet'. Worse, its hand-rolled `class MonthlyActivityRollup` is explicitly a stand-in 'until build_runner generates the companion' — but the real monthly_activity_rollups Drift table (already committed, not yet added to UserDatabase's table list) declares @DataClassName('MonthlyActivityRollup'), the identical name. The day someone finishes wiring that table into UserDatabase and runs build_runner, this hand-written class and the generated one collide.",
+  "recommendation": "Either finish wiring MonthlyActivityRollups into UserDatabase now and switch the widget onto the generated class, or delete the spike widget, its table, and its test until the feature is scheduled.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "MonthlyActivitySliverCalendar is either reachable from a real screen route or removed along with its test and orphaned table",
+    "No hand-written class reuses a name reserved by a table's @DataClassName annotation"
+  ],
+  "labels": [
+    "dead-code",
+    "progress",
+    "tech-debt"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p4",
+  "chunk": "grp-086",
+  "normArea": "features/progress",
+  "id": "AUD-progress-07",
+  "linearPriority": "Medium"
+}

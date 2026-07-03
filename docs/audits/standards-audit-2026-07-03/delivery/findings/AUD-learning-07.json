@@ -1,0 +1,49 @@
+{
+  "title": "Wire BatchPlan into CompletionWriter.commitBatch or delete the unused sealed hierarchy and its test",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code",
+  "area": "learning/domain/entities",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/domain/entities/batch_plan.dart",
+      "line": 7,
+      "quote": "/// [CompletionWriter.commitBatch] receives a [BatchPlan] so it knows which"
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/data/completion_writer.dart",
+      "line": 86,
+      "quote": "Future<List<CompletionWriteResult>> commitBatch(\n    List<CompletionCommand> commands,"
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "line": 475,
+      "quote": "static CompletionSource _bulkSourceFor(BulkCompletionRequest request) {"
+    }
+  ],
+  "sites": 1,
+  "why": "batch_plan.dart's own doc comment asserts CompletionWriter.commitBatch takes a BatchPlan; the real signature takes a raw List<CompletionCommand> and never references BatchPlan anywhere in lib/ — grep confirms the only non-doc-comment usages of BatchPlan/LiveBatchPlan/BulkInTrackPlan/LifetimeOnlyPlan are inside batch_plan_test.dart itself (132 lines exercising a class nothing production calls). The same three-tier classification BatchPlan.classify already encodes is instead re-derived independently via CompletionRepositoryImpl._bulkSourceFor — an Evans-lens 'invariant re-derived instead of enforced once' split that could silently diverge (e.g. a fourth CompletionSource value added later would need updating in two unconnected places). MarkCompletionResult.newMilestoneUnlocks is a related vestige of the same pre-DEC-32 design — it is now hard-coded to `const []` at every call site since the auto-unlock ladder was replaced by the spend economy.",
+  "recommendation": "Either make CompletionWriter.commitBatch accept a BatchPlan and delete _bulkSourceFor in favor of BatchPlan.classify, or delete batch_plan.dart and batch_plan_test.dart as speculative generality that was superseded before it shipped.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep for `BatchPlan` in lib/ returns either a real call site inside completion_writer.dart/completion_repository_impl.dart, or zero results (type and test deleted); the doc comment on the class matches what actually calls it."
+  ],
+  "labels": [
+    "dead-code",
+    "fowler",
+    "evans"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-learning-p1",
+  "chunk": "grp-059",
+  "normArea": "features/learning",
+  "id": "AUD-learning-07",
+  "linearPriority": "Medium"
+}

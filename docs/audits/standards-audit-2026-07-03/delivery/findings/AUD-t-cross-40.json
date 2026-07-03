@@ -1,0 +1,55 @@
+{
+  "title": "Rewrite AN-6/AN-8 regression tests to exercise real app_shell.dart / persistent_switcher_scaffold.dart instead of hand-copied replicas",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (regression test must actually guard the fix)",
+  "area": "test/app/router",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/app/router/app_shell_an6_test.dart",
+      "line": 23,
+      "quote": "class _ShellNavItemReplica extends StatelessWidget {"
+    },
+    {
+      "file": "learning_tracker/test/app/router/app_shell_an6_test.dart",
+      "line": 18,
+      "quote": "import 'package:flutter/material.dart';"
+    },
+    {
+      "file": "learning_tracker/test/app/router/persistent_switcher_scaffold_an8_test.dart",
+      "line": 26,
+      "quote": "const _authRouteNames = {"
+    },
+    {
+      "file": "learning_tracker/test/app/router/persistent_switcher_scaffold_an8_test.dart",
+      "line": 23,
+      "quote": "import 'package:flutter_test/flutter_test.dart';"
+    }
+  ],
+  "sites": 2,
+  "why": "Both files were written to pin fixes for shipped, user-visible bugs (AN-6: DASHBOARD nav label truncates at font_scale 1.3; AN-8: a signed-in account chip overlays the sign-in screen), but neither imports the file it claims to guard. app_shell_an6_test.dart's only imports are flutter/material.dart and flutter_test.dart — it defines and tests _ShellNavItemReplica, a hand-copied literal duplicate of the real (private) _ShellNavItem in lib/app/router/app_shell.dart:341-365; today the two happen to share the same padding/margin values, but nothing keeps them in sync. persistent_switcher_scaffold_an8_test.dart's only import is flutter_test.dart — its _authRouteNames set duplicates the literal set inside the real _isAuthSurface() at lib/app/router/persistent_switcher_scaffold.dart:92-98, and every assertion (e.g. expect(_authRouteNames.contains('SignInRoute'), isTrue)) is tautologically true by construction, since the test built the set itself. Repo-wide grep confirms no other test imports persistent_switcher_scaffold.dart for this scenario, so this is the ONLY regression coverage for AN-8, and it is vacuous: if a future edit drops 'SignInRoute' from the real _isAuthSurface() set (reintroducing AN-8), both this test and app_shell_an6_test.dart's counterpart would stay green while the bug ships again.",
+  "recommendation": "For AN-6, pump the real AppShell/_ShellNavItem widget tree (as test/core/navigation/app_shell_test.dart already does for other AppShell scenarios) instead of a private replica class. For AN-8, either widget-test PersistentSwitcherScaffold directly with a router stub set to each route name, or extract _isAuthSurface's route-name set into a small @visibleForTesting top-level constant the test imports, so an edit to the real set changes the test's actual input.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "app_shell_an6_test.dart imports and pumps the real _ShellNavItem/AppShell widget, not a private replica.",
+    "persistent_switcher_scaffold_an8_test.dart imports persistent_switcher_scaffold.dart, and temporarily removing 'SignInRoute' from the real _isAuthSurface() set turns the test red."
+  ],
+  "labels": [
+    "testing",
+    "regression-test",
+    "false-confidence"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-app-l10n-p2",
+  "chunk": "grp-001",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-40",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,65 @@
+{
+  "title": "Fix testing-guide.md's copy-paste test examples — they import AppDatabase/CompletionsCompanion/UserMode, all deleted in the schema-v1 rebuild",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs (testing-guide.md) vs core/database, core/enums",
+  "evidence": [
+    {
+      "file": "docs/testing-guide.md",
+      "line": 112,
+      "quote": "import 'package:learning_tracker/core/database/app_database.dart';"
+    },
+    {
+      "file": "docs/testing-guide.md",
+      "line": 136,
+      "quote": "return db.completionDao.insertCompletion(\n      CompletionsCompanion.insert("
+    },
+    {
+      "file": "docs/testing-guide.md",
+      "line": 213,
+      "quote": "import 'package:learning_tracker/core/enums/user_mode.dart';"
+    },
+    {
+      "file": "docs/testing-guide.md",
+      "line": 421,
+      "quote": "// test/helpers/test_database.dart\nAppDatabase createTestDatabase() {"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/completion_dao.dart",
+      "line": 56,
+      "quote": "/// Write methods ([insertCompletion], [insertCompletionsBatch]) have been\n/// removed.  New completions are written exclusively through"
+    },
+    {
+      "file": "learning_tracker/test/helpers/test_database.dart",
+      "line": 12,
+      "quote": "UserDatabase createTestDatabase() {"
+    }
+  ],
+  "sites": 5,
+  "why": "testing-guide.md is required reading (index.md step 5) and its 'How to Write a Unit Test', 'How to Write a Widget Test', 'How to Write a Story Acceptance Test', 'How to Write an Integration Test' sections, plus the 'Test Infrastructure Details' section that quotes test/helpers/test_database.dart verbatim, all use `AppDatabase`/`CompletionsCompanion.insert(...)`/`db.completionDao.insertCompletion(...)`/`UserMode` — every one of which was deleted in the schema-v1 rebuild (the DB class is now UserDatabase in core/database/user/user_database.dart; the `completions` table and CompletionDao's write methods were removed outright per the DAO's own doc comment; UserMode was replaced by ProfileMode in core/domain/value_objects/). A contributor or AI agent copy-pasting the guide's primary teaching example gets an immediate compile failure against a non-existent API surface — the exact opposite of what a 'how to write a test' doc should do. The quoted 'test/helpers/test_database.dart' snippet is also simply not what that file contains today.",
+  "recommendation": "Rewrite all four code samples and the Test Infrastructure Details snippet against the current UserDatabase/CompletionEventDao/CompletionWriter/ProfileMode APIs; also refresh the '531+ tests across 167 files' and '14 epic tags and 62 story tags' counts (actual: dart_test.yaml has 20 epic tags / 97 story tags, and ~10,353 test()/testWidgets() calls across 780 files, per test-options.md's already-accurate figure).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "every code block in testing-guide.md compiles against current lib/ (spot-checked by pasting into a scratch test file)",
+    "epic/story tag counts and the test_database.dart snippet match dart_test.yaml and test/helpers/test_database.dart"
+  ],
+  "labels": [
+    "docs",
+    "testing",
+    "stale-docs"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p2",
+  "chunk": "grp-168",
+  "normArea": "docs",
+  "id": "AUD-docs-09",
+  "linearPriority": "Medium"
+}

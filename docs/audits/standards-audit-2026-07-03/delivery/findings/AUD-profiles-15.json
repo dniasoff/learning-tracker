@@ -1,0 +1,42 @@
+{
+  "title": "Log TutoredChildrenSection's AsyncValue error branch instead of swallowing it silently",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 (no log-less catch)",
+  "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 47,
+      "quote": "error: (_, __) => const SizedBox.shrink(),"
+    }
+  ],
+  "sites": 1,
+  "why": "AppLogger is already imported in this file (line 6) but the error branch of incomingTutorGrantsProvider's AsyncValue.when discards both the error and stack trace with no log call. Hiding the section on a load failure is a defensible UX call (the batch's own test even labels it 'silent fail' intentionally), but the total absence of a log means a persistently failing grants query — e.g. a Firestore rule regression on the tutoring collection — leaves zero trace in AppLogger/Crashlytics breadcrumbs for anyone to diagnose.",
+  "recommendation": "Add an AppLogger.instance.warning(event: ..., exception: error, stackTrace: stack) call in the error branch before returning SizedBox.shrink().",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The error branch of TutoredChildrenSection's AsyncValue.when logs via AppLogger.instance before rendering SizedBox.shrink()"
+  ],
+  "labels": [
+    "profiles",
+    "error-handling",
+    "logging",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Rule EH-3 literally targets try/catch; applying it to an AsyncValue.when error callback is a reasonable but non-literal extension worth flagging for the orchestrator."
+    ]
+  },
+  "sourceBatch": "t1-feat-profiles-p4",
+  "chunk": "grp-081",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-15",
+  "linearPriority": "Low"
+}

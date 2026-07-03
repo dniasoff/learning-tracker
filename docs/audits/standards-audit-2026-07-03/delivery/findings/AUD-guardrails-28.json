@@ -1,0 +1,43 @@
+{
+  "title": "Fix stale password_hasher.dart path printed by tool/argon2id_benchmark.dart — file moved from features/auth to features/account",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8-adjacent (stale reference)",
+  "area": "tool/",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/argon2id_benchmark.dart",
+      "line": 154,
+      "quote": "stdout.writeln('    lib/features/auth/domain/services/password_hasher.dart');"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/password_hasher.dart",
+      "line": 28,
+      "quote": "static const production = Argon2idParams("
+    }
+  ],
+  "sites": 1,
+  "why": "The benchmark tool prints instructions telling whoever runs it to 'Update Argon2idParams.production in lib/features/auth/domain/services/password_hasher.dart', but Argon2idParams and PasswordHasher actually live under lib/features/account/ — the feature was evidently renamed/relocated after this script was written and the printed path was never updated. Anyone following the tool's own output would open a path that doesn't exist.",
+  "recommendation": "Update the stdout.writeln call to print lib/features/account/domain/services/password_hasher.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "argon2id_benchmark.dart's printed path matches the real location of Argon2idParams.production"
+  ],
+  "labels": [
+    "stale-doc",
+    "tier2-tooling"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-app-tool-p1",
+  "chunk": "grp-152",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-28",
+  "linearPriority": "Low"
+}

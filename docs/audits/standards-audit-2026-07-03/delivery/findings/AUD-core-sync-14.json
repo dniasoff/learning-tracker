@@ -1,0 +1,53 @@
+{
+  "title": "Add error handling and logging to resetFirestoreNetwork's disable/enable sequence in firestore_instance_provider.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard-lens: unguarded I/O fails halfway",
+  "area": "learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart",
+      "line": 30,
+      "quote": "Future<void> resetFirestoreNetwork() async {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart",
+      "line": 32,
+      "quote": "await fs.disableNetwork();\n  await fs.enableNetwork();"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/lifecycle_observer.dart",
+      "line": 147,
+      "quote": "final reset = resetFirestoreNetwork;\n      if (reset != null) await reset();"
+    }
+  ],
+  "sites": 1,
+  "why": "resetFirestoreNetwork disables then re-enables the Firestore network with no try/catch and no AppLogger call. If enableNetwork() throws after disableNetwork() succeeds (plugin channel error, terminated instance, or exactly the flaky-network condition this function exists to recover from), the network is left force-disabled with no automatic retry and zero diagnostic trail. The connectivity-trigger caller in sync_orchestrator.dart (line ~611) does wrap this in try/catch+log, but the lifecycle/foreground-resume caller in lifecycle_observer.dart:147-148 does not — an exception there aborts the rest of the resume sequence (redetectTimezone, invalidateSacredCache, triggerPull) as an unhandled async error, silently skipping the resume pull.",
+  "recommendation": "Wrap the disable/enable pair in try/catch inside resetFirestoreNetwork itself (so every caller gets the protection for free), log failures via AppLogger with a stable event code, and consider a bounded retry for enableNetwork() specifically so a mid-sequence failure doesn't leave the channel permanently disabled.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "resetFirestoreNetwork catches and logs failures from disableNetwork()/enableNetwork() instead of letting them propagate unhandled.",
+    "Unit test: stub FirebaseFirestore so enableNetwork() throws after disableNetwork() succeeds; assert the exception is caught/logged and does not abort the lifecycle-resume sequence (timezone redetect, sacred-cache invalidation, resume pull still run)."
+  ],
+  "labels": [
+    "sync",
+    "nygard",
+    "error-handling",
+    "connectivity"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "EH-1 global handlers ARE installed (logger.dart:86-93, crashlytics_bootstrap.dart:26-30), so an escaping exception is NOT 'zero diagnostic trail' — it gets generically logged via AppLogger.handle. The core claim (resume steps silently skipped) still holds; only the diagnostics framing is overstated."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-providers",
+  "chunk": "grp-032",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-14",
+  "linearPriority": "Medium"
+}

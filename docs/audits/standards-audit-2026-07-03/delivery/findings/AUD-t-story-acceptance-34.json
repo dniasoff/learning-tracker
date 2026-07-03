@@ -1,0 +1,50 @@
+{
+  "title": "Extract the 3x-duplicated 4-path file-candidate search in epic_25_story_25_20_locale_theme_test.dart into one helper",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_story_25_20_locale_theme_test.dart",
+      "line": 103,
+      "quote": "final candidates = [\n          File('lib/app/learning_tracker_app.dart'),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_story_25_20_locale_theme_test.dart",
+      "line": 395,
+      "quote": "final candidates = [\n          File('lib/app/learning_tracker_app.dart'),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_story_25_20_locale_theme_test.dart",
+      "line": 422,
+      "quote": "final candidates = [\n          File('lib/app/learning_tracker_app.dart'),"
+    }
+  ],
+  "sites": 3,
+  "why": "The identical 4-item candidate list (lib/app/learning_tracker_app.dart, learning_tracker/lib/app/..., lib/main.dart, learning_tracker/lib/main.dart) plus a near-identical linear-search-and-read loop is pasted three times in one file: once in the AC2/AC3 setUpAll (which caches the result as mainSource) and again inside two separate AC9 tests that re-scan and re-read the same files from disk instead of reusing mainSource. A future path change has to be applied in three places in this file alone; missing one silently leaves a structural AC check reading stale content without failing loudly.",
+  "recommendation": "Factor the candidate list and search loop into one shared helper (or simply reuse the cached mainSource from the AC2/AC3 group) and call it from all three sites.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "only one copy of the 4-path candidate list remains in the file",
+    "AC9's two tests reuse the same source read as AC2/AC3 instead of re-scanning disk"
+  ],
+  "labels": [
+    "fowler-duplication",
+    "test-quality",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-25",
+  "chunk": "grp-130",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-34",
+  "linearPriority": "Low"
+}

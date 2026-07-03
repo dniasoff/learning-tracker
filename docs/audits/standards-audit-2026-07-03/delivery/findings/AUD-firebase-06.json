@@ -1,0 +1,65 @@
+{
+  "title": "Delete tutor_active_access in onUserDeleted's parent-deletion cascade (Step 2), matching Step 3",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "functions correctness / index integrity",
+  "area": "functions/onUserDeleted",
+  "evidence": [
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 62,
+      "quote": "const parentGrantsSnap = await db\n    .collection(\"tutor_grants\")"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 95,
+      "quote": "// V2-R3 C2: also delete the tutor_active_access lookup doc so the\n    // tutor immediately loses subcollection read access."
+    },
+    {
+      "file": "learning_tracker/functions/test/cf_triggers.test.mjs",
+      "line": 129,
+      "quote": "test('W6.23: active grant where deleted user is parent → revoked_by_parent', async () => {"
+    },
+    {
+      "file": "learning_tracker/functions/test/cf_triggers.test.mjs",
+      "line": 178,
+      "quote": "test('W6.24: tutor_active_access doc is deleted when tutor grant is resigned', async () => {"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 451,
+      "quote": "if (\n      typeof completion.points !== \"number\" ||\n      completion.points < 0 ||"
+    }
+  ],
+  "sites": 5,
+  "why": "hasActiveTutorAccess() in firestore.rules grants a tutor read access purely by the existence of a tutor_active_access doc, so its correctness depends on every code path that ends an active grant also deleting that doc. Step 3 (tutor account deleted) does this explicitly. Step 2 (parent account deleted) revokes the same kind of active grant but never deletes the corresponding tutor_active_access doc -- it is orphaned permanently. The underlying data is already gone (Step 1's recursiveDelete), so this is low-blast-radius today, but it's a genuine, silent asymmetry the test suite confirms: the Step-2 test only asserts on grant.state, while the symmetric Step-3 test explicitly asserts the access doc is gone.",
+  "recommendation": "In Step 2's loop, also delete tutor_active_access/{buildAccessId(grant.tutor_uid, uid, grant.child_profile_id)} for each active grant, mirroring Step 3.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "cf_triggers.test.mjs gains a 'W6.23: tutor_active_access doc is deleted when parent grant is revoked' test symmetric to the existing W6.24 one, and it passes."
+  ],
+  "labels": [
+    "cloud-functions",
+    "correctness",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "chunk": "grp-157",
+  "mergedFrom": [
+    "Reject NaN points in tutorBulkPriorCompletions' range check"
+  ],
+  "coDiscoverers": [
+    "t2-firebase-rules-functions-p1"
+  ],
+  "normArea": "firebase",
+  "id": "AUD-firebase-06",
+  "linearPriority": "Medium"
+}

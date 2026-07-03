@@ -1,0 +1,72 @@
+{
+  "title": "Log the caught exception at 7 silent/overbroad catch sites across tool/ fetch-and-resolve helpers",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 (log-less catch) / EH-4 (Error-subtype catch) — general lens applied to tool/",
+  "area": "tool/ fetch & ref-resolution helpers",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/seed_text_content.dart",
+      "line": 141,
+      "quote": "} catch (_) {"
+    },
+    {
+      "file": "learning_tracker/tool/seed_text_content.dart",
+      "line": 146,
+      "quote": "} catch (_) {"
+    },
+    {
+      "file": "learning_tracker/tool/verify_seed_calendar.dart",
+      "line": 202,
+      "quote": "} on Object {"
+    },
+    {
+      "file": "learning_tracker/tool/text_extract/extract_books.py",
+      "line": 184,
+      "quote": "except Exception:"
+    },
+    {
+      "file": "learning_tracker/tool/text_extract/extract_books.py",
+      "line": 199,
+      "quote": "except Exception:"
+    },
+    {
+      "file": "learning_tracker/tool/text_extract/extract_books.py",
+      "line": 207,
+      "quote": "except Exception:"
+    },
+    {
+      "file": "learning_tracker/tool/text_extract/main.py",
+      "line": 78,
+      "quote": "except Exception:"
+    }
+  ],
+  "sites": 7,
+  "why": "None of these seven catch/except blocks log the caught error before discarding it — Dart sites return a generic error flag, Python sites `pass`/`continue`/`return None`. When a fetch or ref-resolution genuinely fails, the operator sees only an aggregate 'N errors'/'SKIP' count, never why (network error vs. malformed data vs. a real bug in the resolver itself), making failures expensive to diagnose. verify_seed_calendar.dart:202 additionally catches `Object` — broader than even `Error` — so it would also swallow a `TypeError`/`RangeError` from a bug in the tool's own JSON-parsing code and silently retry it up to 4 times before reporting the day as a generic 'live fetch failed', masking a real programming defect as a transient network blip.",
+  "recommendation": "Add a log line (print/stderr.writeln/sys.stderr.write) with the caught exception's message and ref/date context at each of the 7 sites before falling through to the existing error-flag return. Narrow verify_seed_calendar.dart:202's `on Object` to the specific exception types the HTTP client/JSON decoder can actually throw.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Each of the 7 cited sites logs the caught exception before returning its existing failure value",
+    "verify_seed_calendar.dart:202 no longer catches bare Object"
+  ],
+  "labels": [
+    "EH-3",
+    "EH-4",
+    "tool",
+    "hygiene",
+    "log-less-catch"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-app-tool-p2",
+  "chunk": "grp-153",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-32",
+  "linearPriority": "Low"
+}

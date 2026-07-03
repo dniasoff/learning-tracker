@@ -1,0 +1,75 @@
+{
+  "title": "Route HebrewDatePicker's 5 hardcoded English strings through AppLocalizations",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2",
+  "area": "scheduler/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/hebrew_date_picker.dart",
+      "line": 150,
+      "quote": "'Select Hebrew date',"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/hebrew_date_picker.dart",
+      "line": 176,
+      "quote": "'Hebrew year',"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/hebrew_date_picker.dart",
+      "line": 246,
+      "quote": "decoration: _fieldDecoration('Month'),"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/hebrew_date_picker.dart",
+      "line": 276,
+      "quote": "decoration: _fieldDecoration('Day'),"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/hebrew_date_picker.dart",
+      "line": 321,
+      "quote": "'English: ${HebrewCalendarUtils.formatEnglishDate(gregorian, ...)}',"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/widgets/hebrew_date_picker_test.dart",
+      "line": 33,
+      "quote": "expect(find.text('Select Hebrew date'), findsOneWidget);"
+    }
+  ],
+  "sites": 6,
+  "why": "HebrewDatePicker is opened from GoalSetupForm._pickHebrewDate() whenever useHebrewDateProvider is true — exactly the users who most want a Hebrew-first UI see 'Select Hebrew date', 'Hebrew year', 'Month', 'Day' and 'English: ...' in raw English, while the Cancel button and confirm button in the SAME dialog correctly use AppLocalizations. This isn't a deliberate all-English widget: it's an inconsistent half-migration. Worse, test/features/scheduler/widgets/hebrew_date_picker_test.dart:33 and :46 assert `find.text('Select Hebrew date')` and `find.textContaining('English:')`, locking the English strings in as 'correct' — any future fix that localizes these strings will fail that test until it is also updated, so the bug is actively defended by its own test suite.",
+  "recommendation": "Add ARB keys (EN+HE) for the 5 strings and swap them in; update hebrew_date_picker_test.dart to assert against the localized value (or a semantics/key lookup) instead of the literal English text.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No literal English string literals remain in hebrew_date_picker.dart's build tree (dialog title, year label, Month/Day field labels, English-date prefix).",
+    "`make arb-parity` still reports full EN/HE key parity with the new keys added.",
+    "hebrew_date_picker_test.dart asserts on localized text (or l10n keys), not hardcoded English literals."
+  ],
+  "labels": [
+    "AX-2",
+    "i18n",
+    "hebrew"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Near-duplicate: verify-chunks/high-079.json (sourceBatch t1-feat-scheduler-p5, findingIndex 0) reports the identical root-cause defect on the same file (same 4 of 5 quoted lines, same test-pins-bug narrative, same recommendation). These two candidates arose from separate harvest batches (t1-feat-scheduler-p2 vs -p5) targeting the same defect. Individual finding survives verification on its own merits, but flagging for orchestrator-level global dedup/merge (per the AG-4 precedent in the digest: 'report candidates, orchestrator dedups globally') so only one ticket is filed for this defect."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "high-078",
+  "mergedFrom": [
+    "Route hebrew_date_picker.dart's dialog title/labels through AppLocalizations — hardcoded English leaks into Hebrew locale"
+  ],
+  "coDiscoverers": [
+    "t1-feat-scheduler-p2",
+    "t1-feat-scheduler-p5"
+  ],
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-02",
+  "linearPriority": "High"
+}

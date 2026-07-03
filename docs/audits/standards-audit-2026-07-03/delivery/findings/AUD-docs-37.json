@@ -1,0 +1,43 @@
+{
+  "title": "Update docs/delete-policy.md — curriculum_tracks moved from deletedAt to state/stateChangedAt in W3.28/W3.29",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8 (schema diffs update their paired doc in the same PR) / Tier-4 canonical-doc factual drift",
+  "area": "docs/delete-policy.md vs core/database/tables/curriculum_tracks.dart",
+  "evidence": [
+    {
+      "file": "docs/delete-policy.md",
+      "line": 7,
+      "quote": "| `curriculum_tracks` | Soft-delete | `deletedAt` — null = active; non-null = deleted |"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/tables/curriculum_tracks.dart",
+      "line": 9,
+      "quote": "replaced ad-hoc `isActive`/`deletedAt`/`deactivatedAt` tombstone columns with a single unified `state` enum column"
+    }
+  ],
+  "sites": 1,
+  "why": "curriculum_tracks has no `deletedAt` column at all today — it was replaced by `state`/`stateChangedAt`. A reader implementing new delete-policy-adjacent code from this doc would query/write a column that doesn't exist. The same doc's coverage table also never mentions daily_plans/point_configs/profile_programs/study_day_configs/outbox/curriculum_scopes/prior_completion_imports, all of which track_dao.dart and profile_repository_impl.dart delete explicitly.",
+  "recommendation": "Update the table row to 'state = deleted + stateChangedAt'; consider adding rows for the other tables track_dao.dart/profile_repository_impl.dart already delete explicitly so the doc is a complete map of delete behavior.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Doc's column-name claim matches an actual column in the current schema (grep-checkable)."
+  ],
+  "labels": [
+    "docs-drift",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-tables",
+  "chunk": "grp-016",
+  "normArea": "docs",
+  "id": "AUD-docs-37",
+  "linearPriority": "Low"
+}

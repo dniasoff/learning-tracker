@@ -1,0 +1,45 @@
+{
+  "title": "Tag pace_calculator.dart's TODOs with real DNI-#### Linear ids",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6",
+  "area": "scheduler/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/pace_calculator.dart",
+      "line": 7,
+      "quote": "// TODO(Epic-12): Wire this callback into the notification system (DNI notification story)."
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/pace_calculator.dart",
+      "line": 25,
+      "quote": "  // TODO(Epic-12): Epic 12 notification system should pass an [onPaceBehind]"
+    }
+  ],
+  "sites": 2,
+  "why": "AG-6 requires every TODO/FIXME to carry a Linear id in `DNI-####` form so it's traceable and greppable; `Epic-12` is not that id (an epic isn't a specific tracked issue). Repo-wide only 4 TODO comments exist in lib/ at all, and none use the DNI-#### format — half of the entire repo's TODO population lives in this one file within my batch.",
+  "recommendation": "Replace `TODO(Epic-12)` with `TODO(DNI-####)` referencing the actual Linear issue for wiring the notification callback.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both TODOs reference a real DNI-#### id.",
+    "A grep-based Rule-0 checker for `TODO(?!DNI-)` could catch future regressions (currently no such checker exists)."
+  ],
+  "labels": [
+    "AG-6",
+    "hygiene",
+    "todo"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-094",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-25",
+  "linearPriority": "Low"
+}

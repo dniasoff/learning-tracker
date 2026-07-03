@@ -1,0 +1,49 @@
+{
+  "title": "Remove committed build artifacts (build/) and the accidental 'clear' file from git",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene / AG-6-adjacent",
+  "area": "repo-root",
+  "evidence": [
+    {
+      "file": "build/calendar_build.log",
+      "line": 1,
+      "quote": "tracked build log"
+    },
+    {
+      "file": "build/seed.db",
+      "line": 1,
+      "quote": "tracked EMPTY database file (+ seed.db.xz binary)"
+    },
+    {
+      "file": "clear",
+      "line": 1,
+      "quote": "Unicode text with terminal escape sequences — accidentally committed command output"
+    }
+  ],
+  "sites": 4,
+  "why": "Build outputs and a stray terminal-dump are version-controlled at the repo root. They confuse agents scanning the manifest ('is build/seed.db the canonical seed?'), bloat the repo (binary .xz), and signal that .gitignore doesn't cover the root build/ directory.",
+  "recommendation": "git rm build/ and clear; add root build/ (and *.log at root) to .gitignore; verify tool scripts regenerate seed artifacts under an ignored path.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "git ls-files shows no build/ entries and no 'clear' file",
+    ".gitignore covers root build/"
+  ],
+  "labels": [
+    "hygiene"
+  ],
+  "origin": "orchestrator-baseline",
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "orchestrator",
+  "chunk": "grp-134",
+  "normArea": "repo",
+  "id": "AUD-repo-04",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,49 @@
+{
+  "title": "Override the injectable LocalDayClock in backup_sync_section_l1_test.dart's relative-time assertions",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "features/settings (test suite) — presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart",
+      "line": 179,
+      "quote": "final now = DateTime.now(); / final lastSynced = now.subtract(const Duration(seconds: 30));"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/backup_sync_section.dart",
+      "line": 478,
+      "quote": "final diff = DateTimeFactory.nowLocal().difference(dateTime);"
+    }
+  ],
+  "sites": 5,
+  "why": "_formatTimeAgo reads DateTimeFactory.nowLocal(), which resolves through the overridable localDayClockProvider — a FakeLocalDayClock already exists in lib/core/time/local_day_clock.dart for exactly this purpose. This file never overrides it: it seeds 'just now'/'Xm ago' assertions from real DateTime.now() at 5 call sites (lines 155, 179, 201, 227, 657), then the widget independently re-reads the clock a pump later. Today's margins (e.g. a 30s buffer under the 60s 'just now' cliff) make an actual flake unlikely, but the suite is non-deterministic by construction and the gap between test-now and widget-build-now is unbounded on a loaded/slow CI runner.",
+  "recommendation": "In _buildHarness, call useLocalDayClock(FakeLocalDayClock(fixedInstant)) (or override localDayClockProvider) and derive lastSynced from that same fixed instant, removing the wall-clock dependency entirely.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "backup_sync_section_l1_test.dart's relative-time tests construct lastSyncedAt from a fixed instant and override localDayClockProvider/useLocalDayClock to that same instant.",
+    "The suite still passes with no bare DateTime.now() feeding a time-relative text assertion."
+  ],
+  "labels": [
+    "testing",
+    "settings",
+    "hermeticity",
+    "flake-risk"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Line 657's test ('cloud-born already synced on mount does NOT kick another pull') asserts only verifyNever(pullOnLaunch), not relative-time text, so 'sites:5' overcounts by one for the specific 'just now'/'Xm ago' assertion claim. Also, DateTimeFactory.nowLocal() is gated by the global currentLocalDayClock (set via useLocalDayClock()), not by the Riverpod localDayClockProvider — overriding the latter alone would not fix this widget's read.",
+      "'sites: 5' overcounts by one — line 657's DateTime.now() feeds a test that only asserts pullOnLaunch is NOT called again (verified lines 654-678); it makes no relative-time text assertion, so it isn't one of the wall-clock-sensitive sites the 'why' claims. True count is 4 (155, 179, 201, 227); the underlying defect and recommendation stand unaffected."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p4",
+  "chunk": "grp-105",
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-10",
+  "linearPriority": "Low"
+}

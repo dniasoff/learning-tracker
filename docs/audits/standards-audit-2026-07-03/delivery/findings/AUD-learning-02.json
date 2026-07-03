@@ -1,0 +1,200 @@
+{
+  "title": "Reconcile the Rule 2 barrel filename (providers.dart vs Y.dart) and fix the dead cross-feature-import checker",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 2 (cross-feature deep-import ban) + Rule 0 (deterministic checker requirement)",
+  "area": "lib/features/learning/presentation/screens/learning_screen.dart + Makefile audit + feature barrels",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart",
+      "line": 17,
+      "quote": "import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart",
+      "line": 21,
+      "quote": "import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 378,
+      "quote": "match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/tutoring.dart",
+      "line": 34,
+      "quote": "export 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';"
+    },
+    {
+      "file": "docs/coding-standards.md",
+      "line": 82,
+      "quote": "the feature's public surface file `lib/features/Y/providers.dart`. If that file does not exist yet..."
+    },
+    {
+      "file": "learning_tracker/CLAUDE.md",
+      "line": 63,
+      "quote": "the barrel file `lib/features/Y/Y.dart` (the feature's public surface)."
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_chazara.dart",
+      "line": 7,
+      "quote": "import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_info_card.dart",
+      "line": 16,
+      "quote": "import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+      "line": 21,
+      "quote": "import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/account.dart",
+      "line": 28,
+      "quote": "export 'presentation/providers/auth_providers.dart'\n    hide AuthStateProvider, authStateProvider;"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 380,
+      "quote": "awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}'"
+    },
+    {
+      "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+      "line": 6,
+      "quote": "import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/sacred_time/sacred_time.dart",
+      "line": 7,
+      "quote": "library sacred_time;"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart",
+      "line": 23,
+      "quote": "import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/screens/permission_prompt_screen.dart",
+      "line": 8,
+      "quote": "import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_scheduler.dart",
+      "line": 7,
+      "quote": "import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_stage_repository.dart",
+      "line": 2,
+      "quote": "import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart",
+      "line": 7,
+      "quote": "import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/tracks.dart",
+      "line": 4,
+      "quote": "All external consumers MUST import via this barrel — deep imports into\n/// tracks/* sub-packages are forbidden (no_feature_cross_import lint)."
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/tracks.dart",
+      "line": 25,
+      "quote": "export 'stages/domain/models/schedule_type.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 14,
+      "quote": "import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 17,
+      "quote": "import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 18,
+      "quote": "import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/siyumim_grouped_view.dart",
+      "line": 10,
+      "quote": "import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/content_browsing.dart",
+      "line": 7,
+      "quote": "library content_browsing;"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+      "line": 11,
+      "quote": "import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_schedule_types_test.dart",
+      "line": 12,
+      "quote": "import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/screens/content_hierarchy_screen.dart",
+      "line": 18,
+      "quote": "import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';"
+    }
+  ],
+  "sites": 28,
+  "why": "The two docs governing Rule 2 name different sanctioned barrel files (providers.dart vs Y.dart), and no lib/features/*/providers.dart exists anywhere in the repo, so nobody can currently tell which convention is authoritative. The only mechanical check (make audit 15/15) has an awk bug: it matches `features/([^/]+)/` against both $1 (the file path) and $0 (which starts with that same file path), so a[1] always equals b[1] and the WARN branch can never fire -- confirmed empirically (0 output against 478 real cross-feature deep imports repo-wide, reproduced live against a genuine violation line). learning_screen.dart deep-imports 5 files across 4 other features; one of them (tutoring.dart) is a fully populated, correct barrel that already exports the exact symbol imported -- proving compliance was free and simply wasn't checked. A rename inside tutoring/dashboard/profiles/scheduler internals will silently break learning_screen.dart with zero warning at review or CI time.",
+  "recommendation": "Pick one barrel filename convention and update the other doc to match (or state a formal migration plan); fix the Makefile awk to compare the SECOND features/.../ match in the grep line (the import target), not the source path against itself; route learning_screen.dart's tutoring import through features/tutoring/tutoring.dart; either populate dashboard.dart/profiles.dart/scheduler.dart/learning.dart or apply coding-standards.md's documented fallback (route through a core provider/service).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Adding a synthetic cross-feature deep import to a throwaway fixture makes `make audit` check 15/15 print WARN/fail; removing it restores a clean pass",
+    "learning_screen.dart's tutoring import resolves through features/tutoring/tutoring.dart",
+    "coding-standards.md and learning_tracker/CLAUDE.md name the same barrel file pattern for Rule 2"
+  ],
+  "labels": [
+    "layering",
+    "rule-0",
+    "tooling",
+    "architecture"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The finding's \"why\" cites \"478 real cross-feature deep imports repo-wide\" as the reproduction count; my independent rerun of the actual check-15 grep/awk pipeline found 1186 candidate lines pass the pre-awk filter (and still 0 WARN output). The 478 figure appears to use a different/narrower count method, but this doesn't affect the core claim — the awk bug is real and the check-15 output is empirically 0 regardless of which count is used."
+    ]
+  },
+  "sourceBatch": "t1-feat-learning-p2",
+  "chunk": "high-050",
+  "mergedFrom": [
+    "Fix the awk field-split bug in `make audit` check 15/15 that makes cross-feature-import detection a permanent no-op",
+    "Fix tutor_pin_reset_screen.dart's Rule-2 barrel bypass and repair the no-op cross-feature-import checker that missed it",
+    "Fix vacuous cross-feature deep-import check (Makefile check 15) and route Sacred Time's cross-feature imports through a real barrel",
+    "Route SchedulerStageRepository's ScheduleType import through the tracks.dart barrel instead of deep-importing tracks/stages internals",
+    "Fix Makefile check 15/15's self-comparison bug and route tutored_children_section.dart's tutoring imports through tutoring.dart",
+    "Fix Makefile check-15 cross-feature-import grep — it can structurally never detect a violation",
+    "Fix make audit check 15/15's awk logic — it can never detect a cross-feature deep import",
+    "Fix Makefile check-15 cross-feature-import grep — its awk logic can never report a violation"
+  ],
+  "coDiscoverers": [
+    "t1-feat-content_browsing-p1",
+    "t1-feat-learning-p2",
+    "t1-feat-profiles-p2",
+    "t1-feat-progress-p2",
+    "t1-feat-sacred_time",
+    "t1-feat-scheduler-p1",
+    "t1-feat-scheduler-p3",
+    "t1-feat-tracks-p2",
+    "t1-feat-tutoring-p2"
+  ],
+  "normArea": "features/learning",
+  "id": "AUD-learning-02",
+  "linearPriority": "High"
+}

@@ -1,0 +1,54 @@
+{
+  "title": "Close the in-memory UserDatabase created inline in settings test ProviderScope overrides",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6-adjacent (test resource hygiene / Nygard: unreleased I/O resource)",
+  "area": "features/settings (test infrastructure)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/presentation/settings_overflow_guard_test.dart",
+      "line": 201,
+      "quote": "userDatabaseProvider.overrideWithValue(\n      UserDatabase(NativeDatabase.memory()),"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/utils/account_actions_test.dart",
+      "line": 185,
+      "quote": "userDatabaseProvider.overrideWithValue(\n        UserDatabase(NativeDatabase.memory()),"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+      "line": 135,
+      "quote": "userDatabaseProvider.overrideWithValue(\n        UserDatabase(NativeDatabase.memory()),"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/an7_destructive_icon_contrast_test.dart",
+      "line": 112,
+      "quote": "userDatabaseProvider.overrideWithValue(\n        UserDatabase(NativeDatabase.memory()),"
+    }
+  ],
+  "sites": 4,
+  "why": "_sheetOverrides / _buildApp in these 4 files each construct `UserDatabase(NativeDatabase.memory())` inline and never capture a reference to close it — unlike the `DeviceRegistryDatabase` created in the same functions, which is correctly torn down via `addTearDown(registry.close)` (verified by grep: registry.close appears, db.close never does, in any of the 4 files). account_actions_test.dart alone calls its factory from ~19 separate testWidgets cases, so a single run of just this batch leaks on the order of 25+ native SQLite (FFI) connections that are never released.",
+  "recommendation": "Capture the constructed UserDatabase into a local variable in each factory and close it via addTearDown(db.close) or the existing tearDown, mirroring the registry.close() pattern already present in the same 4 functions.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Each of the 4 files' UserDatabase(NativeDatabase.memory()) instances is closed by the end of every test that constructs one."
+  ],
+  "labels": [
+    "resource-leak",
+    "hygiene",
+    "test-infrastructure"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-103",
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-07",
+  "linearPriority": "Low"
+}

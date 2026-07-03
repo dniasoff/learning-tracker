@@ -1,0 +1,10 @@
+# Delivery decisions - approved 2026-07-03 by PO (Daniel)
+
+- (a) Scope: ALL waves 0-4 this sitting. AUD-progress-01 (P0, roadmap-uncited) pulled into Wave 1 so all 10 P0s retire together. The 198 roadmap-uncited findings are PARKED (status parked in ledger), surfaced in the final report with a recommendation - not silently dropped, not silently included.
+- (b) Concurrency: 16 parallel builders (tool cap), reviews pipelined behind.
+- (c) Budget/stop: NO token/budget ceiling - run to done. Per-item bounce cap 3 and no-progress checkpoint (2 dry rounds) retained as quality/anti-spin mechanisms; they block items, never the run.
+- (d) Linear mirror: ON, at wave boundaries (team DNI): one wave-summary issue per wave + individual issues for blocked residue only. Mirroring never blocks the engine.
+- (e) Non-product ambiguity: sensible default + ledger log + proceed; only genuine product/infra blockers stop an item and escalate.
+- (f) Merge policy: NO named per-item branches (builders work in ephemeral worktrees, commits tracked by SHA). Serialized merges land on audit-fix/2026-07-03. dev FAST-FORWARDS to audit-fix at every certified wave boundary and origin/dev is pushed then. At sitting end audit-fix is deleted (local + origin) and worktrees pruned - final state: everything on dev, no branch residue. No PRs.
+
+Engine mechanics: work items are file-overlap components computed per round over remaining findings (union-find on evidence paths); Wave 4 clustering excludes hub reference files (docs/coding-standards.md, Makefile, learning_tracker/Makefile) as overlap keys; builders are sonnet in isolated worktrees, red-first for behavioral findings, one logical fix per commit, never commit red; every diff gets an adversarial opus review that re-runs gates and verifies each acceptance criterion; deterministic merge gate (rebase onto audit-fix, re-run audit+analyze+item tests, merge --no-ff); custom_lint joins the gate set after Wave 0 repairs it; full make ci (learning_tracker target ONLY - the root ci target runs a write-mode formatter and is banned) at wave close plus opus closing-gate certification with 10% AC re-sampling.

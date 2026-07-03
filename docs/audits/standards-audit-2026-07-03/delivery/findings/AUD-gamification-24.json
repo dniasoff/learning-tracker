@@ -1,0 +1,46 @@
+{
+  "title": "Use ICU-parameterized l10n instead of raw 'label: value' string interpolation for chip/subtitle text",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2 (no hardcoded user-facing strings; everything via AppLocalizations/ARB with ICU placeholders)",
+  "area": "features/gamification/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/manage_rewards_list.dart",
+      "line": 113,
+      "quote": "'${l10n.rewardConfigPointsThresholdLabel}: ${milestone.thresholdPoints}',"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/points_display_widget.dart",
+      "line": 49,
+      "quote": "'${curriculumLabelText(ref, curriculum: e.key)}: '\n                        '${e.value}',"
+    }
+  ],
+  "sites": 2,
+  "why": "Both build a 'label: value' string by concatenating a localized label with a hardcoded ': ' separator and a raw number, rather than passing the value into an ICU-parameterized ARB string. The same feature already has the correct pattern for an almost identical 'reward cost' display (`l10n.pendingRedemptionsCost(redemption.pointsCost)` in parent_pending_redemptions_screen.dart, `l10n.achievementsMilestonePoints(...)` in achievement_tier_card.dart) -- these two sites are the odd ones out. Low practical impact (colon separators are largely locale-invariant) but genuinely inconsistent with the feature's own established i18n discipline.",
+  "recommendation": "Add/reuse an ICU-parameterized ARB entry (e.g. a 'labelWithValue' string) for both sites instead of raw interpolation.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both sites use an AppLocalizations method with a placeholder instead of raw string interpolation for the label/value pair"
+  ],
+  "labels": [
+    "AX-2",
+    "i18n",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "First evidence entry's line should be 114, not 113 — line 113 is 'subtitle: Text(', the quoted interpolation string itself starts on 114."
+    ]
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-053",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-24",
+  "linearPriority": "Low"
+}

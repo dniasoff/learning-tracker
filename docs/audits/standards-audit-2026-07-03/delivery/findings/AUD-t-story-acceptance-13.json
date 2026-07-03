@@ -1,0 +1,51 @@
+{
+  "title": "Make reader-purity and onboarding-prefs story tests check the files they claim to guard, not an unrelated proxy",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_13_reader_purity_test.dart",
+      "line": 100,
+      "quote": "test('text_display_screen.dart contains zero ref.invalidate() calls '\n          '(reader purity)', () {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_13_reader_purity_test.dart",
+      "line": 112,
+      "quote": "completionCommittedProvider,\n          isNotNull,"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_11_onboarding_controller_test.dart",
+      "line": 256,
+      "quote": "container.read(onboardingControllerProvider).toString(),\n              isNot(contains(key)),"
+    }
+  ],
+  "sites": 2,
+  "why": "text_display_screen.dart lives at lib/features/content_browsing/presentation/screens/. Its test's own title promises 'zero ref.invalidate() calls' but the body only asserts an unrelated keepAlive provider is non-null (always true). The comment claims this is 'enforced by the make lint / grep step in CI (Makefile target audit)' — grepping Makefile and tool/ for 'invalidate' or 'text_display' finds nothing, so that guardrail does not exist. A PR that reintroduces ref.invalidate() calls into the reader screen (the exact regression Story 26.13 fixed, replacing 14 manual invalidations) would pass this suite and CI cleanly. The onboarding sibling test is the same shape at lower stakes: it checks state.toString() for two deleted SharedPreferences key names instead of grepping onboarding_screen.dart or the persistence call sites that would actually write them.",
+  "recommendation": "Make the story_13 test read lib/features/content_browsing/presentation/screens/text_display_screen.dart and assert zero 'ref.invalidate(' matches, matching the file-grep pattern already used by sibling tests (26.15 AC2, 26.20 AC3/4, 26.31, 26.7). Either add that grep to `make audit` too so the comment becomes true, or delete the comment. Fix the onboarding test the same way against onboarding_screen.dart / its step files.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "epic_26_story_13_reader_purity_test.dart fails if ref.invalidate( is reintroduced anywhere in text_display_screen.dart",
+    "make audit (or an equivalent Dart test) greps text_display_screen.dart for ref.invalidate and exits non-zero on a match",
+    "epic_26_story_11's dead-key test greps onboarding_screen.dart / step files for the two deleted preference key strings instead of stringifying provider state"
+  ],
+  "labels": [
+    "testing",
+    "epic-26",
+    "false-guardrail"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-130",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-13",
+  "linearPriority": "Medium"
+}

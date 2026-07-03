@@ -1,0 +1,41 @@
+{
+  "title": "OutboxSyncWriteFacade._enqueue swallows every drain-tee failure with no log and no AppLogger field in the class",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3",
+  "area": "features/sync data",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+      "line": 291,
+      "quote": "unawaited(tee().catchError((Object _) {}));"
+    }
+  ],
+  "sites": 1,
+  "why": "OutboxSyncWriteFacade never declares an AppLogger field, so this catchError has no way to log even if it wanted to. Any exception from the drain tee -- including the UnmountedRefException from the companion SM-4 finding, or a genuine permission-denied/network failure -- is discarded with zero trace. Every push*/enqueue* method in this class, used for every sync write in the app, funnels through this one _enqueue, making it the single choke point where all fire-and-forget drain failures currently vanish silently. No test in this batch (including the 1184-line local_data_upload_service_test.dart, which never wires onEnqueueDrain) exercises this path either.",
+  "recommendation": "Inject an AppLogger into OutboxSyncWriteFacade (mirroring LocalDataUploadService's existing nullable _logger field) and log the swallowed exception at warn/error level inside catchError before discarding it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "EH-3 Rule-0 checker (log-less catch grep) reports no hits in outbox_sync_write_facade.dart.",
+    "Unit test that stubs onEnqueueDrain to throw and asserts the logger receives the error."
+  ],
+  "labels": [
+    "EH-3",
+    "error-handling",
+    "observability",
+    "sync"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-105",
+  "normArea": "features/sync",
+  "id": "AUD-sync-03",
+  "linearPriority": "Medium"
+}

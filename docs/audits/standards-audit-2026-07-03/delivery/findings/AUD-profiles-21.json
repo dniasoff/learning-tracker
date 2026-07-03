@@ -1,0 +1,46 @@
+{
+  "title": "Stop autoSelectedProfileId's build() from writing to the DB and mutating sibling providers",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-2 (provider build must be pure)",
+  "area": "features/profiles/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/profile_providers.dart",
+      "line": 98,
+      "quote": "// Stale id — clear it and fall through to the auto-select/self-heal path.\n    ref.read(selectedProfileIdProvider.notifier).clear();"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/profile_providers.dart",
+      "line": 109,
+      "quote": "id = await repo.ensureDefaultProfile(\n      accountId: accountId,"
+    }
+  ],
+  "sites": 1,
+  "why": "autoSelectedProfileId's build() function calls `selectedProfileIdProvider.notifier.clear()`/`.select(id)` (mutating a sibling provider), `ref.invalidate(profileListProvider)`, and `repo.ensureDefaultProfile(...)` (which inserts a new learner_profiles row and re-parents orphaned rows) — all from inside a provider's build(). This is a deliberate, heavily-commented fix for BUG D1 (self-healing a profile-less authenticated account), and the fast path is idempotent, so it is not causing an active bug. But it does mean merely watching/reading this provider can trigger a database write, which is surprising for what looks like a plain derived value and makes the provider harder to unit-test without a real (or faked) UserDatabase.",
+  "recommendation": "Move the self-heal side effect out of build() into an explicit ref.listen-driven effect (e.g. in app_shell.dart, which already watches auth state) or a widget-triggered callback, keeping build() a pure read.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "autoSelectedProfileId's build() (or its replacement) contains no writes to other providers or the database; existing BUG D1 self-heal tests keep passing"
+  ],
+  "labels": [
+    "sm-2",
+    "riverpod",
+    "testability"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Both evidence line numbers are off by one: comment '// Stale id...' is at line 97 not 98 (clear() is at 98); 'id = await repo.ensureDefaultProfile(' is at line 110 not 109. Quoted text is verbatim-correct, just a citation slip, not fabrication."
+    ]
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-076",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-21",
+  "linearPriority": "Low"
+}

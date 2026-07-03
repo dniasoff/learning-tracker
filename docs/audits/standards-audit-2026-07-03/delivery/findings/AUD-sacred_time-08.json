@@ -1,0 +1,49 @@
+{
+  "title": "Reduce precision of persisted/synced SacredLocation coordinates and confirm the Sacred Time card is parent-gated",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "PV / child-privacy (judgment call, no exact numbered rule)",
+  "area": "privacy",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sacred_time/data/services/sacred_time_preferences.dart",
+      "line": 41,
+      "quote": "await prefs.setDouble(_latKey, loc.latitude);\n    await prefs.setDouble(_longKey, loc.longitude);"
+    },
+    {
+      "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+      "line": 115,
+      "quote": "Future<void> _pushSnapshot() async {\n    await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();"
+    }
+  ],
+  "sites": 1,
+  "why": "Full-precision GPS coordinates (LocationAccuracy.medium, still well under 100m) flow from Geolocator into SharedPreferences and then into Firestore via pushUiPreferencesSnapshot with no rounding step anywhere in this batch. The card sits in Settings' DEVICE section (settings_screen.dart) with no PIN gate visible in the code around it, so on a shared family device a child profile may be able to trigger 'Detect location' itself. This batch alone can't confirm whether the settings screen restricts DEVICE-section actions to an authenticated parent, or how firestore.rules scope the synced ui_preferences document — if either already fully mitigates this, the finding should be downgraded/closed. Precise home-location coordinates are exactly the class of data COPPA singles out.",
+  "recommendation": "Round latitude/longitude to ~2-3 decimal places (about 1km, plenty for zmanim purposes) before persisting/syncing as defense in depth; separately confirm (or add) a parent-PIN gate on the Sacred Time card's location actions, and confirm firestore.rules scope the synced document to the account only.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "SacredTimePreferences.writeLocation stores/syncs coordinates rounded to a documented precision",
+    "Settings DEVICE section location actions are confirmed (or made) to require parent authentication for child profiles",
+    "product-rules.md or coding-standards.md records the decision either way"
+  ],
+  "labels": [
+    "privacy",
+    "coppa",
+    "child-data",
+    "needs-confirmation"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Coordinates do NOT sync to Firestore — outbox_sync_write_facade.dart:247-255 explicitly documents (DEC-26) their exclusion from the ui_preferences payload (to avoid cross-profile LWW clobber of the device-global location). Drop the rounding-for-sync recommendation; the only surviving defect is the missing pinGuard/childModeGuard on SettingsRoute (app_router.dart:139 vs :234), not a cloud-privacy leak."
+    ]
+  },
+  "sourceBatch": "t1-feat-sacred_time",
+  "chunk": "grp-089",
+  "normArea": "features/sacred_time",
+  "id": "AUD-sacred_time-08",
+  "linearPriority": "Low"
+}

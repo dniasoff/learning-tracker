@@ -1,0 +1,45 @@
+{
+  "title": "Batch OutboxProcessor's post-commit deleteRow/markAttempted cleanup instead of awaiting it per row",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-3",
+  "area": "core/sync/outbox",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 344,
+      "quote": "for (final id in ids) {\n            await _dao.deleteRow(id);"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 351,
+      "quote": "for (final id in ids) {\n            await _dao.markAttempted(id, error: failedError.toString());"
+    }
+  ],
+  "sites": 2,
+  "why": "pushCompletionsBatch exists specifically 'to eliminate the N-round-trip problem' by pushing up to _completionDrainCeiling=100000 rows in ≤500-op Firestore batches, but the local cleanup after that push still runs one awaited Drift statement per outbox row. For the large backlogs this ceiling anticipates (bulk_prior_completion_service / bulk_mark_screen can enqueue hundreds of completions at once, or a long offline stretch), this reintroduces the exact per-row round-trip cost DB-3 exists to prevent — now against the local DB — and materially lengthens the drain, which (per the concurrency finding above) increases the odds of tripping the drainStaleAfter race.",
+  "recommendation": "Add a bulk DAO method (e.g. deleteRows(List<int> ids) / markAttemptedBulk(List<int> ids, {required String error})) backed by a single batch()/DELETE...WHERE id IN(...) statement and call it once per commit/failure group instead of per row.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "New bulk DAO method(s) wrapped in a single transaction()/batch(); OutboxProcessor calls it once per outcome group.",
+    "Existing K3/K4 BatchPushException accounting tests continue to pass; add a test asserting the bulk DAO method is invoked exactly once for a multi-row commit/failure group."
+  ],
+  "labels": [
+    "sync",
+    "performance",
+    "db"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-outbox",
+  "chunk": "grp-031",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-17",
+  "linearPriority": "Medium"
+}

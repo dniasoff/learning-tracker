@@ -1,0 +1,65 @@
+{
+  "title": "Add points_ledger and reward_redemptions to write_payloads.json and the PHASE D zero-denial oracle in firestore_rules.test.mjs",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (oracle/fixture completeness)",
+  "area": "firestore-rules-tests (functions/test/fixtures)",
+  "evidence": [
+    {
+      "file": "learning_tracker/functions/test/fixtures/write_payloads.json",
+      "line": 2,
+      "quote": "\"_comment\": \"Canonical per-collection write-payload fixtures derived from Dart codec encode() outputs...\","
+    },
+    {
+      "file": "learning_tracker/functions/test/firestore_rules.test.mjs",
+      "line": 767,
+      "quote": "// 15. curriculum_scopes — open write + delete"
+    },
+    {
+      "file": "learning_tracker/functions/test/firestore_rules.test.mjs",
+      "line": 267,
+      "quote": "test('update and delete are denied even for owner (append-only)', async () => {"
+    },
+    {
+      "file": "learning_tracker/functions/test/firestore_rules.test.mjs",
+      "line": 271,
+      "quote": "// update is deny:false in rules"
+    }
+  ],
+  "sites": 4,
+  "why": "write_payloads.json's own header calls PAYLOADS 'the single source of truth for valid doc shapes, consumed by Phase D and E,' and PHASE D's comment claims 'a legitimate owner must be able to write every whitelisted collection without a single permission-denied error... the zero-denial oracle catches it before it reaches production.' In reality the fixture enumerates 12 collections and PHASE D enumerates 15 (ending at curriculum_scopes, line 767-768) — points_ledger and reward_redemptions are absent from both, and (verified in tool/emit_fixture_payloads.dart, not in this batch) the generator's payloads map has no entry for either, confirming the omission is systematic. Neither collection has a hasOnly whitelist today so nothing is silently broken right now, but this exact rules file has independently hit the 'hasOnly whitelist drops a real field → permission-denied in production' bug three times for other collections (profile_programs.updated_at, curriculum_tracks.purged/purged_at, bookmarks.track_type — all documented in this file's own comments). Since points_ledger/reward_redemptions are the most obvious remaining candidates for a future hasOnly addition (every sibling snapshot/ledger collection already has one), the safety net built specifically to catch that failure mode has a blind spot exactly where the next occurrence is most likely.",
+  "recommendation": "Add points_ledger and reward_redemptions payloads to tool/emit_fixture_payloads.dart's map, regenerate write_payloads.json via `make emit-fixtures`, and add both to PHASE D's oracle list and PHASE E's round-trip table.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "write_payloads.json gains `points_ledger` and `reward_redemptions` keys after `make emit-fixtures`",
+    "PHASE D's owner-write-succeeds test includes both new PAYLOADS entries",
+    "`make test-rules` still passes"
+  ],
+  "labels": [
+    "test-coverage",
+    "fixtures",
+    "zero-denial-oracle",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor: 'documented in this file's own comments' blends firestore.rules (profile_programs.updated_at, curriculum_tracks.purged — confirmed there) with firestore_rules.test.mjs (bookmarks.track_type, confirmed there); substance of all 3 precedents independently verified regardless."
+    ]
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p2",
+  "chunk": "grp-159",
+  "mergedFrom": [
+    "Assert update (not just delete) fails in the diagnostic_logs append-only test in firestore_rules.test.mjs"
+  ],
+  "coDiscoverers": [
+    "t2-firebase-rules-functions-p2"
+  ],
+  "normArea": "firebase",
+  "id": "AUD-firebase-05",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,41 @@
+{
+  "title": "Use `is TalkerDioLogger` instead of a runtimeType.toString() string match in dio_client_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Feathers/hygiene — type-safe test assertions",
+  "area": "test/core/network (test quality)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/network/dio_client_test.dart",
+      "line": 51,
+      "quote": "dio.interceptors.any(\n          (i) => i.runtimeType.toString() == 'TalkerDioLogger',"
+    }
+  ],
+  "sites": 1,
+  "why": "Comparing runtimeType.toString() to a string literal bypasses the type system: a rename or a subclass would silently break or falsely pass this check with a confusing failure message, where `is TalkerDioLogger` (talker_dio_logger is already a transitive dependency of tool/lib/dio_client.dart) is both safer and clearer.",
+  "recommendation": "Import package:talker_dio_logger/talker_dio_logger.dart and replace the check with `dio.interceptors.any((i) => i is TalkerDioLogger)`.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test uses an `is` type check, no runtimeType.toString() comparison remains, test still passes"
+  ],
+  "labels": [
+    "test-quality",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "talker_dio_logger is a direct (non-dev) pubspec dependency, not merely transitive as the finding states — makes the fix even easier, doesn't weaken the finding.",
+      "Finding calls talker_dio_logger a 'transitive dependency' but it's actually a direct pubspec dependency already imported by the file under test — doesn't change the finding's validity."
+    ]
+  },
+  "sourceBatch": "t1-core-network",
+  "chunk": "grp-022",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-97",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,62 @@
+{
+  "title": "Replace hand-rolled ==/hashCode in TrackBlueprint's value objects with @freezed",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Naming/placement/invariants — never hand-write ==/hashCode for data classes",
+  "area": "features/tracks/setup/domain",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/aggregates/track_blueprint.dart",
+      "line": 33,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/aggregates/track_blueprint.dart",
+      "line": 314,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/entities/add_track_result.dart",
+      "line": 27,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/repositories/track_blueprint_draft_repository.dart",
+      "line": 66,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/repositories/track_blueprint_draft_repository.dart",
+      "line": 73,
+      "quote": "other.trackLabel == trackLabel);"
+    }
+  ],
+  "sites": 8,
+  "why": "coding-standards.md is explicit: hand-rolled equality drifts from the fields and silently breaks rebuild-skipping. AddTrackDraft's hand-rolled == (track_blueprint_draft_repository.dart:66-73) proves it: it omits scopeSelectionsJson and studyDays from both == and hashCode, so two drafts differing only in scope or study-days compare equal; its own test (track_blueprint_draft_repository_impl_test.dart:95-113) only exercises equality on navStepIndex/curriculumKey/programId and never asserts inequality on the omitted fields, so the gap is untested. track_blueprint.dart repeats the same hand-rolled pattern across 6 classes and add_track_result.dart's BulkMarkIntent makes 8 sites total, even though the codebase already has a working @freezed sealed-union convention elsewhere (goal_entity.dart, sync_status.dart, restore_status.dart). Two of the three files are currently dead code (see the migration-trio finding), which caps today's practical blast radius, but the pattern remains a trap for anyone who revives them or copies the style into new code.",
+  "recommendation": "Convert TrackBlueprint's value objects and AddTrackDraft to @freezed sealed classes/records; add a test asserting inequality on the currently-omitted fields before/while converting.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "track_blueprint.dart and track_blueprint_draft_repository.dart's value types are @freezed with generated ==/hashCode",
+    "A test asserts two AddTrackDraft/TrackBlueprint instances differing only in a previously-omitted field are NOT equal"
+  ],
+  "labels": [
+    "freezed",
+    "equality-bug",
+    "domain-models"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Stronger than claimed: TrackBlueprint's own ==/hashCode (track_blueprint.dart:314-333, evidence already cited) has the identical omission bug (drops studyDays AND scopeSelections), not just AddTrackDraft's — finding under-states rather than over-states its case."
+    ]
+  },
+  "sourceBatch": "t1-feat-tracks-p1",
+  "chunk": "grp-113",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-23",
+  "linearPriority": "Low"
+}

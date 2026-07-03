@@ -1,0 +1,51 @@
+{
+  "title": "Add a Hebrew/RTL locale test variant for the Lifetime Marking screens (TQ-3)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/features/settings/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/lifetime_marking_screen_test.dart",
+      "line": 35,
+      "quote": "child: const MaterialApp("
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/lifetime_marking_toggle_level_test.dart",
+      "line": 110,
+      "quote": "child: MaterialApp("
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/pp3_pp10_lifetime_marking_test.dart",
+      "line": 73,
+      "quote": "child: MaterialApp("
+    }
+  ],
+  "sites": 3,
+  "why": "The settings feature's own convention -- established in this same batch by curriculum_settings_screen_l1_test.dart and curriculum_settings_and_change_password_l1_test.dart, both of which pump a Locale('he') variant and assert Directionality.rtl -- is that key screens get an RTL smoke test (TQ-3). None of the 3 files that pump LifetimeMarkingScreen/LifetimeCurriculumMarkingScreen (a 986-line screen with hierarchical drill-down navigation) ever set `locale:` on their MaterialApp, so Hebrew string rendering and RTL layout for this screen are completely unverified by the automated suite despite being explicitly load-bearing elsewhere in this same feature.",
+  "recommendation": "Add a Locale('he') smoke-render test (renders without crash, Directionality.rtl) to lifetime_marking_screen_test.dart at minimum, matching the pattern already used in curriculum_settings_screen_l1_test.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "At least one Locale('he') test exists for LifetimeMarkingScreen and asserts Directionality.rtl."
+  ],
+  "labels": [
+    "tq-3",
+    "i18n",
+    "rtl"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Slight overstatement: of the two comparison files cited as both asserting Directionality.rtl, only curriculum_settings_screen_l1_test.dart actually does; curriculum_settings_and_change_password_l1_test.dart pumps Locale('he') but only smoke-renders (no Directionality assertion found). Doesn't change the core finding — target files still have zero Hebrew coverage."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p2",
+  "chunk": "grp-101",
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-06",
+  "linearPriority": "Low"
+}

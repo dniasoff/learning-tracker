@@ -1,0 +1,41 @@
+{
+  "title": "Decode xz's stderr before interpolating it in seed_content_db.dart's failure message (currently prints a raw byte list)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard I/O-failure lens / general correctness",
+  "area": "tool/seed_content_db.dart (seed build finalize/compress phase)",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/seed_content_db.dart",
+      "line": 319,
+      "quote": "throw StateError('xz failed: ${xzResult.stderr}');"
+    }
+  ],
+  "sites": 1,
+  "why": "Process.runSync is called at line 312-317 with `stderrEncoding: null`, so ProcessResult.stderr holds raw bytes (a Uint8List), not a decoded String. String-interpolating it at line 319 invokes List.toString(), producing something like 'xz failed: [120, 122, 58, 32, ...]' instead of xz's actual human-readable stderr text — exactly when a maintainer most needs a readable error, during a failing release build.",
+  "recommendation": "Pass `stderrEncoding: systemEncoding` (or explicit `utf8`) to this Process.runSync call, or explicitly `utf8.decode(xzResult.stderr as List<int>)` before interpolating it into the thrown StateError.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Triggering an xz failure (e.g. temporarily pointing dbPath at a nonexistent file, or aliasing xz unavailable) prints a human-readable message, not a numeric byte-list",
+    "seed_content_db.dart's xz Process.runSync call sets stderrEncoding to a real Encoding, or decodes stderr before use"
+  ],
+  "labels": [
+    "correctness",
+    "tool",
+    "hygiene",
+    "error-handling"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-app-tool-p2",
+  "chunk": "grp-153",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-20",
+  "linearPriority": "Low"
+}

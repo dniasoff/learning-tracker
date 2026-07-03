@@ -1,0 +1,43 @@
+{
+  "title": "Delete the two orphaned .gitkeep files in now-populated guards/ and test/core/utils/ dirs",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene (dead placeholder files)",
+  "area": "lib/core/navigation/guards, test/core/utils (hygiene)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/navigation/guards/.gitkeep",
+      "line": 1,
+      "quote": "(0-byte empty file)"
+    },
+    {
+      "file": "learning_tracker/test/core/utils/.gitkeep",
+      "line": 1,
+      "quote": "(0-byte empty file)"
+    }
+  ],
+  "sites": 2,
+  "why": ".gitkeep exists solely to keep an otherwise-empty directory tracked by git. lib/core/navigation/guards/ now holds 5 real guard files and test/core/utils/ holds 7 real test files, so both placeholders are vestigial clutter left over from before those directories had content.",
+  "recommendation": "git rm both .gitkeep files.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`find learning_tracker/lib/core/navigation/guards learning_tracker/test/core/utils -name .gitkeep` returns nothing."
+  ],
+  "labels": [
+    "hygiene",
+    "dead-code"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-nav-utils",
+  "chunk": "grp-020",
+  "normArea": "core/navigation",
+  "id": "AUD-core-navigation-03",
+  "linearPriority": "Low"
+}

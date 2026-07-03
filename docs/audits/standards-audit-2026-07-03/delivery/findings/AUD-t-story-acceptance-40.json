@@ -1,0 +1,44 @@
+{
+  "title": "Log the empty catch(_) blocks swallowing temp-dir cleanup failures in epic_19_offline_first_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "line": 274,
+      "quote": "} catch (_) {}"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "line": 324,
+      "quote": "} catch (_) {}"
+    }
+  ],
+  "sites": 2,
+  "why": "EH-3 bans empty and log-less catches repo-wide. If Directory.delete(recursive: true) fails here — e.g. a held SQLite file handle on the just-closed content/read-only DB — the failure is silently discarded, leaving stray temp dirs with no breadcrumb that cleanup ever failed, exactly the swallowed-exception debugging dead-end EH-3 exists to prevent.",
+  "recommendation": "At minimum print/log the caught error instead of a bare catch (_) {} in both addTearDown blocks.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -n 'catch (_) {}' learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart returns no match, or each site logs the caught error"
+  ],
+  "labels": [
+    "hygiene",
+    "error-handling",
+    "EH-3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-17-20",
+  "chunk": "grp-139",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-40",
+  "linearPriority": "Low"
+}

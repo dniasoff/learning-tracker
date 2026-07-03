@@ -1,0 +1,44 @@
+{
+  "title": "Fix hand-rolled test _FakeMergeStore.remoteIsNewer implementations to match DriftMergeStore's clock-skew/D15 semantics",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-4/TQ-8 fake fidelity; Fowler duplication",
+  "area": "test/core/sync/merge",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/sync/merge/mergers_test.dart",
+      "line": 94,
+      "quote": "// Mirror DriftMergeStore semantics: strict `remote > local` outside\n    // the ±5 s window; inside the window, server timestamp decides."
+    },
+    {
+      "file": "learning_tracker/test/core/sync/merge/notification_settings_merger_round_trip_test.dart",
+      "line": 69,
+      "quote": "return remoteUpdatedAt.isAfter(localUpdatedAt);"
+    }
+  ],
+  "sites": 2,
+  "why": "mergers_test.dart's fake claims to 'Mirror DriftMergeStore semantics' but omits the D15 fallback (drift_merge_store.dart:140-146): inside the clock-skew window with no decisive synced_at on both sides, the fake unconditionally prefers remote, whereas the real store first falls back to comparing raw updated_at (protecting a newer un-pushed local edit from being clobbered by an older remote). notification_settings_merger_round_trip_test.dart's fake is simpler still — no clock-skew window at all. Neither test currently uses timestamps close enough to trigger the divergent branch, so the suite passes today, but any future near-tie/clock-skew test added against these fakes would silently validate the WRONG (pre-D15) behavior, hiding exactly the bug class DriftMergeStoreTest exists to pin down.",
+  "recommendation": "Replace both hand-rolled remoteIsNewer bodies with a delegate to the real DriftMergeStore.remoteIsNewer (construct a throwaway DriftMergeStore over an in-memory DB inside the fake, or extract the pure comparison so both share one implementation) instead of re-deriving the algorithm by hand.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A within-skew-window / no-syncedAt / older-remote test case added to either file fails before the fix and passes after, or the fake is proven identical to DriftMergeStore.remoteIsNewer by delegation (making such drift structurally impossible)."
+  ],
+  "labels": [
+    "testing",
+    "test-fidelity",
+    "TQ-4"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-merge",
+  "chunk": "grp-030",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-68",
+  "linearPriority": "Low"
+}

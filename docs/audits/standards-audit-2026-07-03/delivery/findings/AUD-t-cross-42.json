@@ -1,0 +1,56 @@
+{
+  "title": "Route two_device_sync_test.dart's S1/S3 through the real MergeRouter instead of hand-decoding outbox JSON",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "core/sync — tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/two_device_sync_test.dart",
+      "line": 76,
+      "quote": "final data = jsonDecode(row.payload) as Map<String, dynamic>;"
+    },
+    {
+      "file": "learning_tracker/test/sync/two_device_sync_test.dart",
+      "line": 1,
+      "quote": "/// I-5: Two-device sync end-to-end tests."
+    },
+    {
+      "file": "learning_tracker/test/integration/two_device_sync_test.dart",
+      "line": 14,
+      "quote": "@Tags(['i5', 'two_device_sync'])"
+    },
+    {
+      "file": "docs/sync-conflict-resolution.md",
+      "line": 67,
+      "quote": "`test/integration/two_device_sync_test.dart` covers:"
+    }
+  ],
+  "sites": 1,
+  "why": "test/sync/two_device_sync_test.dart and test/integration/two_device_sync_test.dart share the exact same name and the same group label ('I-5: two-device sync scenarios' / 'Two-device convergence test harness (I-5)'), created about an hour apart on the same day. The integration version carries @Tags(['i5','two_device_sync']) and drives the real MergeRouter/CompletionEventMerger/EntityMerger stack — it is the file docs/sync-conflict-resolution.md names as the canonical I-5 harness (completion set-union, track-deactivation LWW, idempotent re-merge). The file in this batch has no tags at all and, for S1 ('completion propagates to Device B'), never imports MergeRouter/EntityMerger — it hand-decodes the outbox JSON payload and calls completionEventDao.appendEvent directly, bypassing every line of the actual merge/dispatch code Device B's real pull uses. A regression in CompletionEventMerger's field mapping or LWW comparison would not be caught here; a reader trusting the group name would believe cross-device merge logic is under test when it isn't, and it also doesn't cover track-deactivation LWW at all (only the integration twin does).",
+  "recommendation": "Either delete test/sync/two_device_sync_test.dart's S1/S3 in favor of the tag-carrying, merge-router-driven test/integration/two_device_sync_test.dart (keeping S2's soft-delete-outbox scenario, relocated since it's not duplicated there), or rewrite S1's simulated pull to dispatch through the real MergeRouter/CompletionEventMerger so the test exercises production code and add the i5/two_device_sync tags for consistency.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Only one file covers I-5 two-device completion propagation end-to-end through MergeRouter/CompletionEventMerger, or the two files are clearly differentiated in name and purpose.",
+    "Any surviving two_device_sync_test.dart file carries @Tags(['i5','two_device_sync']) matching its sibling."
+  ],
+  "labels": [
+    "sync",
+    "tests",
+    "duplication",
+    "false-confidence"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p4",
+  "chunk": "grp-110",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-42",
+  "linearPriority": "Medium"
+}

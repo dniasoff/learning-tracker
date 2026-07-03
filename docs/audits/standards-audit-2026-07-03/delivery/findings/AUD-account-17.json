@@ -1,0 +1,52 @@
+{
+  "title": "Stop leaking raw English InvalidInputException.reason to users; unify the diverged 6-vs-8 password-length rule",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5 (stable codes, never pre-formatted human messages) + Evans invariant-in-one-place",
+  "area": "features/account/domain + i18n",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/local_auth_service.dart",
+      "line": 129,
+      "quote": "throw const InvalidInputException('email', 'invalid format');"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart",
+      "line": 24,
+      "quote": "if (value.length < 6) {\n    return 'Password must be at least 6 characters';"
+    },
+    {
+      "file": "learning_tracker/test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart",
+      "line": 805,
+      "quote": "expect(find.textContaining('invalid format'), findsOneWidget);"
+    }
+  ],
+  "sites": 2,
+  "why": "InvalidInputException.reason is a hardcoded English string ('invalid format', 'must be at least 8 characters') and signup_screen.dart's `on InvalidInputException catch (e) { _showError(e.reason); }` (used by both _signUpCloud and _signUpLocal) renders it straight to the UI with no AppLocalizations pass — proven by this batch's own test asserting the literal English substring appears. For a bilingual EN/HE app, a Hebrew-locale user hitting this path sees untranslated English. The bug is latent today only because the sole live caller of LocalAuthService.signUp (_createOfflineAccount) always supplies a synthetic, always-valid UUID email/password — but the underlying invariant has already drifted: the form-level validator (auth_validators.validatePassword) accepts 6+ characters while LocalAuthService._minPasswordLength requires 8, so a form-valid 6-7 character password fed through any future real caller of LocalAuthService.signUp would throw this untranslated exception.",
+  "recommendation": "Give InvalidInputException (and siblings) a stable code/enum instead of a free-text reason, and have signup_screen.dart resolve it via AppLocalizations the same way _mapAuthError already does for Firebase codes; extract one shared minimum-password-length constant used by both auth_validators.dart and local_auth_service.dart.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "InvalidInputException exposes a typed code instead of (or alongside) a raw English reason string",
+    "signup_screen.dart resolves the code via AppLocalizations before showing it",
+    "auth_validators.dart and local_auth_service.dart reference one shared minimum-password-length constant",
+    "regression test: a 6-7 character password does not throw InvalidInputException through any LocalAuthService.signUp caller"
+  ],
+  "labels": [
+    "i18n",
+    "eh-5",
+    "duplication"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p2",
+  "chunk": "grp-038",
+  "normArea": "features/account",
+  "id": "AUD-account-17",
+  "linearPriority": "Medium"
+}

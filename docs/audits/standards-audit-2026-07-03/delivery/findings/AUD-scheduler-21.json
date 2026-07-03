@@ -1,0 +1,45 @@
+{
+  "title": "Delete or wire in the dead scheduler PaceIndicator/ProjectedCompletionText widget file",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code / AG-4",
+  "area": "scheduler/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/pace_indicator.dart",
+      "line": 9,
+      "quote": "class PaceIndicator extends StatelessWidget {"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/pace_indicator.dart",
+      "line": 16,
+      "quote": "const PaceIndicator({super.key, required this.pace, this.subtitleCaption});"
+    }
+  ],
+  "sites": 1,
+  "why": "Grepping lib/ for `PaceIndicator(` and `ProjectedCompletionText(` shows the scheduler version is instantiated nowhere in production code — only its own dedicated widget test (pace_indicator_test.dart) exercises it. The app's real pace indicator on curriculum_progress_screen.dart uses a DIFFERENT, differently-shaped `PaceIndicator` class from features/progress/presentation/widgets/pace_indicator.dart (different constructor: `pace`+`subtitleCaption` vs `paceStatus`). Two same-named top-level classes (AG-4 duplicate) strongly suggests the scheduler one was superseded and simply never deleted, along with its fully-passing but functionally pointless test file.",
+  "recommendation": "Delete lib/features/scheduler/presentation/widgets/pace_indicator.dart and its test, or if a scheduler-local pace badge is genuinely still wanted, rename the class to avoid the AG-4 collision and wire it into a screen.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one public `PaceIndicator` class exists in lib/, or the two are clearly distinctly named.",
+    "No orphaned widget file with zero production call sites remains."
+  ],
+  "labels": [
+    "dead-code",
+    "AG-4",
+    "duplicate-name"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-093",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-21",
+  "linearPriority": "Low"
+}

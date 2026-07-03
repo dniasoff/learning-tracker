@@ -1,0 +1,44 @@
+{
+  "title": "Seed fixed timestamps in sign_in_google_signout_throws_test.dart instead of DateTime.now() in device-account fixtures",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests: no wall-clock)",
+  "area": "features/account/presentation/notifiers/sign_in_google_signout_throws_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/account/presentation/notifiers/sign_in_google_signout_throws_test.dart",
+      "line": 77,
+      "quote": "createdAt: DateTime.now(),\n        lastUsedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/screens/account_picker_screen_l1_test.dart",
+      "line": 87,
+      "quote": "final _kNow = DateTime.utc(2026, 1, 1);"
+    }
+  ],
+  "sites": 1,
+  "why": "`_seedAccounts` and the inline local-conflict account both call `DateTime.now()` for createdAt/lastUsedAt. No assertion in this file currently depends on the exact value, so it isn't causing flakiness today, but it's an unseeded wall-clock read in a test file, and the exact sibling problem (device-account fixture timestamps) is already solved with a fixed clock constant one directory over in account_picker_screen_l1_test.dart and sign_in_wrong_password_no_callback_test.dart within this same batch.",
+  "recommendation": "Replace DateTime.now() with a fixed constant (e.g. `final _kNow = DateTime.utc(2026, 1, 1);`), matching the convention already used by sibling files in this batch.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No DateTime.now() call remains in sign_in_google_signout_throws_test.dart; fixture timestamps use a fixed constant."
+  ],
+  "labels": [
+    "tq-6",
+    "hermetic",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p3",
+  "chunk": "grp-041",
+  "normArea": "tests/account",
+  "id": "AUD-t-account-08",
+  "linearPriority": "Low"
+}

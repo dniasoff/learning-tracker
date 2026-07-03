@@ -1,0 +1,61 @@
+{
+  "title": "Stop showing raw e.toString() as the device-restore error message in RestoreStatus/DeviceRestoreService",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5 / AX-2 (no pre-formatted human messages; ARB-only user text)",
+  "area": "app/restore",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/app/restore/device_restore_service.dart",
+      "line": 252,
+      "quote": "_updateStatus(RestoreStatus.error(message: e.toString()));"
+    },
+    {
+      "file": "learning_tracker/lib/app/restore/device_restore_screen.dart",
+      "line": 219,
+      "quote": "Text(\n  message,"
+    },
+    {
+      "file": "learning_tracker/lib/app/restore/device_restore_service.dart",
+      "line": 164,
+      "quote": "phase: 'Restoring your data...',"
+    },
+    {
+      "file": "learning_tracker/lib/app/restore/device_restore_service.dart",
+      "line": 193,
+      "quote": "phase: 'Loading curricula...',"
+    },
+    {
+      "file": "learning_tracker/lib/app/restore/device_restore_screen.dart",
+      "line": 140,
+      "quote": "'Restoring your data...' => l10n.deviceRestorePhaseRestoring,"
+    }
+  ],
+  "sites": 5,
+  "why": "RestoreStatus.error(message: String) is a raw String, not a code/enum, and DeviceRestoreService feeds it e.toString() directly — a raw exception message (e.g. 'Exception: Data pull failed: [firebase_firestore/unavailable] ...'). device_restore_screen.dart renders this string verbatim next to a properly-localized l10n.deviceRestoreFailed headline (lines 214-222), so any restore failure — plausible on flaky mobile networks, which this cloud-restore flow specifically targets — shows raw, untranslated, technical English text to Hebrew-locale users today, live, with no masking guard. Separately, RestoreStatus.restoring's `phase` field is a hardcoded English sentence matched by string equality in _localizePhase(); the two files' string literals must stay in lockstep by convention only — if either drifts, the fallback silently renders the raw English phase instead of erroring.",
+  "recommendation": "Replace RestoreStatus.error's free-text `message` with a stable error code/enum resolved via AppLocalizations in the screen (mirroring how `phase` already works, but with a sealed type instead of string matching so drift is a compile error).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "RestoreStatus.error carries a typed code (enum or sealed subtype), not a raw String built from e.toString().",
+    "A Locale('he') widget test pumps a forced restore failure and asserts the rendered error text is 100% ARB-sourced (no raw exception text).",
+    "phase and the error code share one sealed type/enum between DeviceRestoreService and the screen so an unmapped case fails to compile instead of silently falling back to English."
+  ],
+  "labels": [
+    "l10n",
+    "error-handling",
+    "hebrew-rtl"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-app-l10n-p1",
+  "chunk": "high-000",
+  "normArea": "app",
+  "id": "AUD-app-02",
+  "linearPriority": "High"
+}

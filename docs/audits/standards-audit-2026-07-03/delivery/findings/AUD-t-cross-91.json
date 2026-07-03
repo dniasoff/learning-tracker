@@ -1,0 +1,44 @@
+{
+  "title": "Replace the two raw DateTime.now() calls in tutored_pull_isolation_test.dart with DateTimeFactory.nowUtc()",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "core/sync tutoring — tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/tutored_pull_isolation_test.dart",
+      "line": 662,
+      "quote": "now: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/sync/tutored_pull_isolation_test.dart",
+      "line": 701,
+      "quote": "clock: FakeLocalDayClock(DateTime.now()),"
+    }
+  ],
+  "sites": 2,
+  "why": "This file otherwise sources every timestamp through DateTimeFactory.nowUtc() (9 other call sites, e.g. lines 470-482, 673) — the project's clock abstraction. Lines 662 and 701 call DateTime.now() directly instead. Harmless for the two specific assertions today (neither test reads the seeded timestamp back), but it breaks the file's own hermeticity convention, and line 701 seeds a FakeLocalDayClock — a deterministic double — with a non-deterministic wall-clock value, defeating the point of injecting a fake clock. It's copy-paste bait for a future edit that does assert on the seeded time, which would then be flaky under slow CI or clock skew.",
+  "recommendation": "Replace both call sites with DateTimeFactory.nowUtc(), matching every other timestamp in the file.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -n 'DateTime.now()' learning_tracker/test/sync/tutored_pull_isolation_test.dart returns no matches."
+  ],
+  "labels": [
+    "tests",
+    "TQ-6",
+    "determinism"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p4",
+  "chunk": "grp-111",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-91",
+  "linearPriority": "Low"
+}

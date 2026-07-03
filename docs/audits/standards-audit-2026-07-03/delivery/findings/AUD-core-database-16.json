@@ -1,0 +1,57 @@
+{
+  "title": "Type and log the swallowed catch blocks in content_database.dart, seed_manager.dart, and DeviceAccountX",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3",
+  "area": "learning_tracker/lib/core/database",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/content/content_database.dart",
+      "line": 84,
+      "quote": "} catch (_) {\n            // no-op: CREATE IF NOT EXISTS is defensive; failure here is non-fatal"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/content/content_database.dart",
+      "line": 104,
+      "quote": "} catch (_) {\n            // no-op: ALTER TABLE fails if column already exists (prior upgrade path); non-fatal"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/seed_manager.dart",
+      "line": 336,
+      "quote": "} catch (_) {\n        // Best effort"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/registry/device_registry_database.dart",
+      "line": 22,
+      "quote": "} on ArgumentError {\n      return AccountTier.local;"
+    }
+  ],
+  "sites": 6,
+  "why": "content_database.dart's 4 migration catches use untyped `catch (_)` with only a comment, no AppLogger call — if an ALTER/CREATE fails for a real reason (disk full, corrupt file) rather than the anticipated 'already exists' case, the content DB silently proceeds on a half-migrated schema with zero diagnostic trail; contrast with ContentDbHealthChecker in this same batch, which does this correctly with typed `on SqliteException catch (e, st)` plus logger calls, but never gets a chance to react because no exception escapes here. seed_manager.dart's _rollback() catch(_) is a log-less outlier inside a file where every other catch (_extractSeedDb, _atomicReplace, _readSchemaVersion, _readInstalledVersion, _stampInstalledVersion) does call _logger?.error — a reader following this file's own dominant convention would log here too. DeviceAccountX.accountTier catches ArgumentError, an Error subtype EH-4 explicitly says never to catch (Errors are meant to crash loudly on programming bugs); here a malformed/legacy tier string in the DB silently downgrades to AccountTier.local with no signal that stored data is bad.",
+  "recommendation": "Give the content_database.dart and seed_manager.dart catches typed `on SqliteException`/`on Exception` clauses plus an AppLogger call (matching content_db_health_checker.dart's pattern). Change AccountTier.fromStorageKey to expose a non-throwing tryFromStorageKey returning null (or throw a non-Error type) so accountTier doesn't catch Error.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No catch block in these 3 files is both untyped and log-less; EH-3's Pending tightened log-less-catch checker returns zero for them.",
+    "DeviceAccountX.accountTier no longer catches an Error subtype (EH-4's Pending avoid_catching_errors)."
+  ],
+  "labels": [
+    "EH-3",
+    "EH-4",
+    "logging"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Evidence array quotes only 4 of the 6 counted sites (misses content_database.dart:90,121); the sites:6 count and 'why' text are still numerically accurate per my independent grep."
+    ]
+  },
+  "sourceBatch": "t1-core-database-root-p1",
+  "chunk": "grp-011",
+  "normArea": "core/database",
+  "id": "AUD-core-database-16",
+  "linearPriority": "Low"
+}

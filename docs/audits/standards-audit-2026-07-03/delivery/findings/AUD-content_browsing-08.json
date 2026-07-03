@@ -1,0 +1,54 @@
+{
+  "title": "Replace raw Colors.* literals with theme colors in content_browsing widgets",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "lens:theme-consistency (beyond no_color_literal_outside_theme's Color(0x..) scope; extend lint or document statics-allowed)",
+  "area": "features/content_browsing/presentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart",
+      "line": 231,
+      "quote": "color: Colors.grey,"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+      "line": 567,
+      "quote": "color: Colors.white,"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+      "line": 937,
+      "quote": "foregroundColor: Colors.white,"
+    }
+  ],
+  "sites": 3,
+  "why": "Every other color reference in this batch routes through AppTheme.brand*/Theme.of(context).colorScheme.*; these three raw Colors.* literals won't repaint with a future theme/brand change, and since dart run custom_lint is currently broken (baselined separately), nothing catches new instances of this today.",
+  "recommendation": "Swap Colors.grey for theme.colorScheme.onSurfaceVariant (matching the sibling separator in breadcrumb_navigation.dart) and the two Colors.white for the equivalent theme token used elsewhere in text_display_screen.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "once dart run custom_lint is repaired, no_color_literal_outside_theme reports zero hits in these 2 files"
+  ],
+  "labels": [
+    "theming",
+    "hygiene",
+    "custom-lint"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 2,
+    "refutations": [
+      "Read packages/custom_lints/lib/src/rules/no_color_literal_outside_theme.dart: it only flags Color(0x…) hex-literal constructor calls, never Colors.* static constants. Its own test suite has an explicit case 'does not flag named Color constants (e.g. Colors.white)'. The cited rule and acceptance crit"
+    ],
+    "corrections": [
+      "no_color_literal_outside_theme.dart lines 71-84 only match InstanceCreationExpression of type 'Color' with a hex IntegerLiteral argument — Colors.grey/Colors.white are PrefixedIdentifier static field accesses, structurally untouched by this rule (confirmed by test 'does not flag named Color constants'). The acceptance criterion 'reports zero hits ... once repaired' is already and always true, fix or no fix."
+    ],
+    "adjudicated": "chair"
+  },
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "chunk": "grp-045",
+  "normArea": "features/content_browsing",
+  "id": "AUD-content_browsing-08",
+  "linearPriority": "Low"
+}

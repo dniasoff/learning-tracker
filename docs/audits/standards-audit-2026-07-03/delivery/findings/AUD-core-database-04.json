@@ -1,0 +1,53 @@
+{
+  "title": "Make SacredWindowDao's cache replace atomic — clearAll()+insertAll() must be one transaction, not the caller's fire-and-forget chain",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "DB-1 / DB-2",
+  "area": "core/database/daos/sacred_window_dao.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/daos/sacred_window_dao.dart",
+      "line": 19,
+      "quote": "Future<void> clearAll() => delete(sacredWindowEntries).go();"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/sacred_window_dao.dart",
+      "line": 23,
+      "quote": "Future<void> insertAll(List<SacredWindowEntriesCompanion> entries) =>\n      batch((b) => b.insertAll(sacredWindowEntries, entries));"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/data/services/sacred_window_repository.dart",
+      "line": 167,
+      "quote": "dao.clearAll().then((_) => dao.insertAll(companions)).ignore();"
+    }
+  ],
+  "sites": 2,
+  "why": "The DAO's own doc comment says '[clearAll] + [insertAll] are called together... Expects the caller to have called [clearAll] first so the table stays coherent' — but the DAO exposes no atomic way to do that, and the only caller (SacredWindowRepository._persistToDb) chains them with `.then(...).ignore()`: unawaited, no transaction, errors silently discarded. If the process dies (routine on mobile backgrounding) between clearAll() completing and insertAll() completing, sacred_window_entries is left empty. That table is the documented source of truth for 'background notification-fire-time checks... without the Flutter engine' (DNI-367) — an empty table means Sacred Time notification suppression silently fails open on next cold-start check, with no error anywhere (`.ignore()` explicitly suppresses it). invalidate() → _persistToDb runs on every location/timezone change and app resume, so the window isn't rare.",
+  "recommendation": "Add a single `SacredWindowDao.replaceAll(List<SacredWindowEntriesCompanion> entries)` that wraps clearAll+insertAll in one `db.transaction()`, and have sacred_window_repository.dart call that instead of the `.then().ignore()` chain. If fire-and-forget is intentional, at minimum log the failure via AppLogger instead of `.ignore()`.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "SacredWindowDao exposes an atomic replaceAll(); sacred_window_repository.dart no longer calls clearAll()/insertAll() separately.",
+    "A test makes insertAll throw mid-write inside replaceAll and asserts the table still holds the PREVIOUS rows (no empty-table window), not a partially-cleared state."
+  ],
+  "labels": [
+    "DB-2",
+    "atomicity",
+    "notifications",
+    "silent-failure"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Downgrade P1 -> P2: the 'silent notification-suppression failure' consequence is aspirational, not live — grep confirms `sacredWindowDao.getAll()` is called nowhere in lib/ outside its own DAO/tests; isWindowActive() only consults the in-memory cache. The DB-2 violation itself (non-transactional, unawaited, .ignore()'d clear+insert) is real and should stay filed, but as design debt tied to the AC-26.24-req-4 background-read feature landing later, not as a currently reachable user-visible defect."
+    ]
+  },
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "high-006",
+  "normArea": "core/database",
+  "id": "AUD-core-database-04",
+  "linearPriority": "High"
+}

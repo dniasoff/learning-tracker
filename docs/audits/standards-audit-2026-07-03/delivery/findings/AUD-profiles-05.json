@@ -1,0 +1,70 @@
+{
+  "title": "Add ref.mounted guards after awaits in PinFlowController before touching state",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-4",
+  "area": "features/profiles/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 274,
+      "quote": "try {\n      await pinService.setProfilePin(profileId, pin);"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 310,
+      "quote": "try {\n          final ok = await pinService.verifyProfilePin(profileId, pin);"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 350,
+      "quote": "state = state.copyWith(busy: true, errorMessage: null);\n        await pinService.setProfilePin(profileId, pin);"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 379,
+      "quote": "try {\n      final ok = await pinService.verifyProfilePin(profileId, pin);"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 380,
+      "quote": "final ok = await pinService.verifyProfilePin(profileId, pin);"
+    }
+  ],
+  "sites": 5,
+  "why": "Per SM-4 (and the digest's own note that Riverpod 3 throws UnmountedRefException), every `await` in a Notifier method must be followed by a `ref.mounted` check before touching `state`. None of the four PIN-transition handlers in this @Riverpod(keepAlive:true) notifier do this — `_handleSetup`, `_handleChange` (twice), and `_handleVerify` all assign `state = state.copyWith(...)` immediately after an `await pinService.*Pin(...)` with no guard. The confirm-step of `_handleChange` (line 350-351) is worse: it has no try/catch at all around `setProfilePin`, unlike its own sibling handlers. If the provider is invalidated/torn down while a bcrypt hash/secure-storage write is in flight (e.g. rapid navigation away, container disposal), the resulting exception is unguarded and, for the confirm-step case, has no catch clause to even convert it to a value.",
+  "recommendation": "After each await in _handleSetup/_handleChange/_handleVerify, add `if (!ref.mounted) return;` before assigning state; wrap the confirm-step setProfilePin call in the same try/catch pattern used by _handleSetup.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Every await in pin_flow_controller.dart's four handlers is followed by a ref.mounted check before state is touched",
+    "A regression test disposes the ProviderContainer mid-await and asserts no UnmountedRefException escapes",
+    "_handleChange's confirm step catches the same exception types as _handleSetup"
+  ],
+  "labels": [
+    "riverpod",
+    "sm-4",
+    "pin-flow"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "keepAlive:true (per the file's own doc comment) defeats the 'rapid navigation away' trigger cited in the why-text; only container disposal (app teardown/tests) remains a realistic trigger. Doesn't kill the finding — rule is violated regardless of trigger frequency."
+    ]
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-075",
+  "mergedFrom": [
+    "Guard ref.mounted after awaits in PinFlowController._handleSetup/_handleChange/_handleVerify (SM-4)"
+  ],
+  "coDiscoverers": [
+    "t1-feat-parent_mode",
+    "t1-feat-profiles-p1"
+  ],
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-05",
+  "linearPriority": "Medium"
+}

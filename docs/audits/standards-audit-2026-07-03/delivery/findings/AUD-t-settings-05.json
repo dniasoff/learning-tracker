@@ -1,0 +1,47 @@
+{
+  "title": "Tighten st3_settings_switch_a11y_test.dart to assert the Hebrew-Terms Switch specifically, not any labelled Switch",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (assertion weaker than what the source can do wrong)",
+  "area": "features/settings/presentation/screens (accessibility regression)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/st3_settings_switch_a11y_test.dart",
+      "line": 135,
+      "quote": "if (semanticsNode.label.isNotEmpty) {\n          foundLabelledSwitch = true;"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart",
+      "line": 401,
+      "quote": "child: Switch(\n          value: useHebrew,"
+    }
+  ],
+  "sites": 1,
+  "why": "S1's assertion loops every `Switch` widget found in SettingsScreen and passes as soon as ANY of them has a non-empty semantics label — it never isolates the Hebrew-Terms tile's own Switch. Today settings_screen.dart has exactly one bare `Switch(` (confirmed by grep), so the test is currently equivalent to the intended check, but that equivalence is accidental, not encoded. A second labelled Switch added anywhere else on the (816-line, HOTSPOT) SettingsScreen in a future change would make this ST-3 regression guard keep passing even if `_HebrewTermsTile`'s own `Semantics(label: ...)` wrapper were removed or broken.",
+  "recommendation": "Locate the Switch that is a descendant of the PreferenceListTile carrying l10n.hebrewTermsPreference (or add a Key to _HebrewTermsTile's Switch) and assert that specific Switch's semantics label contains/equals l10n.hebrewTermsPreference, not 'any switch in the screen has a label'.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The test fails if a second, unrelated, labelled Switch is added to SettingsScreen while _HebrewTermsTile's Semantics wrapper is removed."
+  ],
+  "labels": [
+    "TQ-8",
+    "accessibility",
+    "weak-assertion"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Cited line 135 should be 136; the quoted 'if (semanticsNode.label.isNotEmpty) {' / 'foundLabelledSwitch = true;' pair is actually lines 136-137 per grep -n.",
+      "Evidence item 1 cites line 135; the quoted text ('if (semanticsNode.label.isNotEmpty) {') actually begins at line 136. Quote text itself is accurate and easily located."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-102",
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-05",
+  "linearPriority": "Medium"
+}

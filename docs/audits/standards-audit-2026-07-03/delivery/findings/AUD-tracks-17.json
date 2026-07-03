@@ -1,0 +1,49 @@
+{
+  "title": "Add semantics/tooltip to the icon-only close and back buttons in step_starting_position.dart and track_management_body.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-3",
+  "area": "presentation/tracks-setup",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+      "line": 219,
+      "quote": "IconButton("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+      "line": 220,
+      "quote": "icon: const Icon(Icons.close),"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+      "line": 69,
+      "quote": "icon: const Icon(Icons.arrow_back_ios_new_rounded),"
+    }
+  ],
+  "sites": 2,
+  "why": "Both IconButtons carry no `tooltip` (nor an explicit Semantics label), unlike every other icon-only button in this batch (scope_tiles.dart, scope_views.dart, curriculum_picker_step.dart all set tooltip). A screen-reader user hits an unlabeled 'button' for the selection-clear action and for the track-management screen's primary back action.",
+  "recommendation": "Add tooltip: l10n.<key> to both, mirroring the pattern already used for the other IconButtons in the same files.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both IconButtons have a non-null, localized tooltip.",
+    "A semantics test (find.bySemanticsLabel or similar) locates each button by its new label."
+  ],
+  "labels": [
+    "accessibility",
+    "semantics"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "grp-117",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-17",
+  "linearPriority": "Low"
+}

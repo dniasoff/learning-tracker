@@ -1,0 +1,55 @@
+{
+  "title": "Replace the hardcoded trackId:1 literal with the captured track id in two scheduler tests",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Feathers fragile-test / general test hygiene",
+  "area": "features/scheduler/domain/services tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_test.dart",
+      "line": 52,
+      "quote": "trackId = trackRow.id;"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_test.dart",
+      "line": 108,
+      "quote": "trackId: 1,"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_integration_test.dart",
+      "line": 55,
+      "quote": "trackId = trackRow.id;"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_integration_test.dart",
+      "line": 105,
+      "quote": "trackId: 1,"
+    }
+  ],
+  "sites": 2,
+  "why": "Both files insert a real curriculumTracks row and capture its autoincrement id into a `trackId` local specifically so downstream code can reference the real id — and both then ignore that variable and hardcode `trackId: 1` in the ScheduleConfig/generator.generate() calls that drive the assertions, while still correctly using the captured `trackId` variable a few lines away for the StageDefinitions/CompletionEvents inserts. It works today only because a fresh in-memory DB's first insert is always id 1 (verified: neither seedProfile nor seedProfileZero touch curriculumTracks). If either helper is ever extended to seed a track, or a second track is inserted earlier in a shared setUp, config.trackId/DailyTask.trackId would silently diverge from the row the stages/completions actually reference, and no assertion in either file would catch it since nothing currently checks task.trackId's value.",
+  "recommendation": "Replace the `trackId: 1` literals with the captured `trackId` variable in both files; add one assertion per file that a produced DailyTask.trackId equals the seeded track's real id, so the variable is load-bearing rather than decorative.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`grep -n 'trackId: 1,'` in both files returns nothing after the fix.",
+    "At least one test per file asserts DailyTask.trackId against the captured trackId variable."
+  ],
+  "labels": [
+    "test-quality",
+    "fragile-test",
+    "magic-number"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "chunk": "grp-095",
+  "normArea": "tests/scheduler",
+  "id": "AUD-t-scheduler-09",
+  "linearPriority": "Low"
+}

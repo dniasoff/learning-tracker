@@ -1,0 +1,51 @@
+{
+  "title": "onEnqueueDrain closures in sync_providers.dart read ref after an await with no ref.mounted guard",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-4",
+  "area": "features/sync presentation providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 105,
+      "quote": "onEnqueueDrain: () async {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 108,
+      "quote": "await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 165,
+      "quote": "await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();"
+    }
+  ],
+  "sites": 2,
+  "why": "Both onEnqueueDrain closures (in syncWriteFacadeProvider and outboxSyncWriteFacadeProvider) do a ref.read after an await with no ref.mounted check, violating SM-4. Riverpod 3 throws UnmountedRefException if ref is used after its provider has rebuilt. Both providers watch activeProfileIdProvider/authStateProvider, which change on every profile switch or sign-out -- realistic during the network round-trip a drain takes. If that happens between the two awaits, the second ref.read(syncOrchestratorProvider)?.recordDrainAttempt() throws on a stale ref. The surrounding comment (sync_providers.dart:100-104) spells out the user-visible cost of skipping recordDrainAttempt: 'the badge stays at its old value (e.g. a stale Synced) ... a false-Synced when the push failed.' Because this closure runs inside unawaited(tee().catchError((Object _) {})) in outbox_sync_write_facade.dart, the resulting exception is silently swallowed (see the companion EH-3 finding), so this failure currently has zero observability.",
+  "recommendation": "Check ref.mounted after the first await in both closures before the second ref.read call, per SM-4; extract the duplicated closure body into one shared helper to fix both sites at once.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "custom_lint/riverpod_lint rule flagging ref use after an await without a mounted check (SM-4 Enforce backstop).",
+    "Provider test that rebuilds/switches the active profile mid-drain and asserts no UnmountedRefException reaches the caller and recordDrainAttempt either completes or is safely skipped."
+  ],
+  "labels": [
+    "SM-4",
+    "riverpod",
+    "race-condition",
+    "sync"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-105",
+  "normArea": "features/sync",
+  "id": "AUD-sync-04",
+  "linearPriority": "Medium"
+}

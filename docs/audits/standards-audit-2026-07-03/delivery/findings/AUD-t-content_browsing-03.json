@@ -1,0 +1,41 @@
+{
+  "title": "Replace tautological ConstrainedBox-ancestor check in r2_panel_leaf_crumb_ellipsis_test.dart with a real width-bound assertion",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (weakened/tautological assertion)",
+  "area": "test/features/content_browsing/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/content_browsing/presentation/widgets/r2_panel_leaf_crumb_ellipsis_test.dart",
+      "line": 197,
+      "quote": "of: find.byWidget(leaf),\n              matching: find.byType(ConstrainedBox),"
+    }
+  ],
+  "sites": 1,
+  "why": "Empirically verified via mutation testing: with the real fix in place, `flutter test` passes 4/4. Reverting hierarchy_selection_panel.dart's leaf-crumb Text to a bare `Text(label)` (no overflow/maxLines/ConstrainedBox) makes the suite RED as expected — but reverting only the `ConstrainedBox(maxWidth: maxLeafCrumbWidth)` wrapper while leaving `overflow: TextOverflow.ellipsis, maxLines: 1, softWrap: false` on the Text keeps all 4 cases GREEN. Instrumenting the finder shows why: it matches TextButton's own internal minimum-tap-target box (`ConstrainedBox(64.0<=w<=Infinity, 40.0<=h<=Infinity)`), not the fix's width cap. So a future regression that removes the actual width bound — exactly the failure mode the test's own `reason:` string names (\"leaf crumb must be width-capped so ellipsis engages\") — would ship undetected even though this file is tagged as the regression test for that bug.",
+  "recommendation": "Assert on the rendered geometry instead of \"any ConstrainedBox exists\": either read the leaf Text's `RenderBox` size via `tester.getSize(find.byWidget(leaf))` and assert its width is bounded (e.g. <= panel width), or use `find.ancestor(matching: find.byWidgetPredicate((w) => w is ConstrainedBox && w.constraints.maxWidth < double.infinity))` so TextButton's own unrelated min-size box can't satisfy the finder.",
+  "acceptance_criteria": [
+    "Re-running the test against a widget with the ConstrainedBox width-cap stripped (overflow/maxLines left in place) fails RED on the updated assertion.",
+    "All 4 parametrized LTR/RTL x scale cases stay GREEN with the real fix in place."
+  ],
+  "labels": [
+    "testing",
+    "content_browsing",
+    "TQ-8",
+    "tautological-assertion"
+  ],
+  "effort": "S",
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p3",
+  "chunk": "grp-046",
+  "normArea": "tests/content_browsing",
+  "id": "AUD-t-content_browsing-03",
+  "linearPriority": "Medium"
+}

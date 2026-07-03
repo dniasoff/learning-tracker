@@ -1,0 +1,56 @@
+{
+  "title": "Convert ContentItem/CurriculumHierarchyConfig/FetchResult to @freezed instead of hand-rolled or absent equality",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Naming/placement/invariants — 'Domain/state models are immutable @freezed classes ... never hand-write ==/hashCode for data classes — hand-rolled equality drifts from the fields and silently breaks rebuild-skipping.'",
+  "area": "core/network/sefaria/models",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/network/sefaria/models/content_item.dart",
+      "line": 51,
+      "quote": "other is ContentItem &&\n          runtimeType == other.runtimeType &&"
+    },
+    {
+      "file": "learning_tracker/lib/core/network/sefaria/models/content_item.dart",
+      "line": 55,
+      "quote": "curriculumId == other.curriculumId &&\n          sefariaRef == other.sefariaRef;"
+    },
+    {
+      "file": "learning_tracker/lib/core/network/sefaria/models/curriculum_hierarchy_config.dart",
+      "line": 18,
+      "quote": "final List<String> levelLabels;"
+    },
+    {
+      "file": "learning_tracker/lib/core/network/sefaria/curriculum_content_fetcher.dart",
+      "line": 6,
+      "quote": "class FetchResult {"
+    }
+  ],
+  "sites": 3,
+  "why": "ContentItem's == compares only curriculumId+sefariaRef, silently ignoring level1-4/displayNameHe/displayNameEn/sortOrder/isLeaf — two items differing only in display text or sort order compare equal, so any future Set/Map-keyed-by-item or equality-based diff would silently drop a real change. CurriculumHierarchyConfig has no == at all (falls back to identity), so two field-identical instances are never equal, AND exposes a directly-mutable List<String> levelLabels with no defensive copy — content_repository_impl.dart caches these instances in _configCache and hands the same object to every reader, so one caller mutating the list would corrupt it for all subsequent readers. FetchResult (the public return type of fetchAllContent()) has the same gap.",
+  "recommendation": "Make all three @freezed with generated ==/hashCode/copyWith; for CurriculumHierarchyConfig use an immutable list wrapper (e.g. List.unmodifiable or IList) for levelLabels.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "dart run build_runner build --delete-conflicting-outputs regenerates these as @freezed with no manual ==/hashCode remaining",
+    "a regression test proves two ContentItems differing only in sortOrder/displayNameHe are NOT ==",
+    "levelLabels cannot be mutated through the public CurriculumHierarchyConfig API"
+  ],
+  "labels": [
+    "freezed",
+    "equality",
+    "immutability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-network",
+  "chunk": "grp-021",
+  "normArea": "core/network",
+  "id": "AUD-core-network-01",
+  "linearPriority": "Medium"
+}

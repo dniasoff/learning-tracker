@@ -1,0 +1,44 @@
+{
+  "title": "tool/merge_arb.py silently no-ops because all 4 hardcoded source branches (r1-tracks2 etc.) no longer exist",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard lens: silent failure on missing input",
+  "area": "tool (ARB merge, one-off R1 fix-wave helper)",
+  "evidence": [
+    {
+      "file": "tool/merge_arb.py",
+      "line": 10,
+      "quote": "BRANCHES = [\"r1-tracks2\", \"r1-content2\", \"r1-locale\", \"r1-gamif2\"]"
+    },
+    {
+      "file": "tool/merge_arb.py",
+      "line": 18,
+      "quote": "if out.returncode != 0:\n        return {}"
+    }
+  ],
+  "sites": 1,
+  "why": "`git branch -a` confirms none of the 4 branches this script reads from still exist locally or on the remote — they were the ephemeral R1 fix-wave worktree branches, presumably merged and deleted. load_branch_arb() swallows a failing `git show <branch>:<path>` into an empty dict with no warning, so running this script today prints '<path>: no new keys' for both ARBs — which reads as 'already in sync' when the real reason is 'none of the source branches exist.' A future dev who reruns this expecting it to pick up some other branches' ARB changes gets silent, misleading success.",
+  "recommendation": "Either delete this one-off script now that its job (the R1 merge) is done (git history preserves it), or make it fail loudly when a listed branch doesn't resolve via `git rev-parse --verify <branch>` before attempting `git show`.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Running the script against a nonexistent branch either exits non-zero with a clear error, or the script (and its stale branch list) is removed."
+  ],
+  "labels": [
+    "dead-code",
+    "silent-failure",
+    "tooling"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-root-tool",
+  "chunk": "grp-164",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-39",
+  "linearPriority": "Low"
+}

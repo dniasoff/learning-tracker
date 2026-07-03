@@ -1,0 +1,44 @@
+{
+  "title": "Refresh learning_tracker/dart_test.yaml's stale tag registry",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-1 (tooling hygiene) / Rule 0",
+  "area": "test tooling",
+  "evidence": [
+    {
+      "file": "learning_tracker/dart_test.yaml",
+      "line": 2,
+      "quote": "# Prevents \"unknown tag\" warnings when running flutter test --tags."
+    },
+    {
+      "file": "learning_tracker/dart_test.yaml",
+      "line": 21,
+      "quote": "  epic_16:"
+    }
+  ],
+  "sites": 1,
+  "why": "Comparing every tag declared in dart_test.yaml against every tag actually used via `@Tags([...])`/`tags: [...]` across learning_tracker/test/ (`comm -23` on the two sorted sets) shows 295 of 400 used tags are undeclared — including entire epics that clearly exist and have Makefile targets (epic_18, epic_20, epic_24, epic_28) plus dozens of story tags (story_15_2/4/7/9/11/13/15/16/17, story_18_*, story_25_2/9/22, story_26_23/31, story_27_5/14, story_i3/i4, and ~200 ad-hoc descriptive tags like `widget`, `unit`, `a11y`, `rtl`). The file's stated one job — suppressing 'unknown tag' warnings — now fails for most of the suite, defeating its purpose and adding warning noise that makes genuine problems easy to miss in CI logs.",
+  "recommendation": "Regenerate the tags: block from a script that scans test/ for all @Tags()/tags: usages, or drop the file if package:test's current version no longer warns on undeclared tags.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`comm -23` between tags used in test/ and tags declared in dart_test.yaml is empty."
+  ],
+  "labels": [
+    "hygiene",
+    "test-tooling",
+    "dart-test-yaml"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-155",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-34",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,43 @@
+{
+  "title": "Remove tautological 'DashboardStats model' test in parent_dashboard_aggregator_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/features/parent_mode/domain/services/parent_dashboard_aggregator_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_test.dart",
+      "line": 65,
+      "quote": "// ParentDashboardData has no mostRecentlyActive, but we test data construction"
+    },
+    {
+      "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_test.dart",
+      "line": 66,
+      "quote": "expect(data.curricula, isEmpty);"
+    }
+  ],
+  "sites": 1,
+  "why": "The test constructs a ParentDashboardData literal and then asserts its fields equal the literal values it was just given — it exercises no aggregator logic. Its own inline comment admits the field it was meant to check (mostRecentlyActive) doesn't exist on the class. A broken aggregator would never fail this test.",
+  "recommendation": "Delete the 'DashboardStats model' group, or replace it with a real assertion against ParentDashboardAggregator.compute() output if a 'most recently active curriculum' feature is still wanted.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No remaining test that only re-asserts constructor inputs back at itself."
+  ],
+  "labels": [
+    "tautological-test",
+    "TQ-8"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-parent_mode",
+  "chunk": "grp-073",
+  "normArea": "tests/parent_mode",
+  "id": "AUD-t-parent_mode-03",
+  "linearPriority": "Low"
+}

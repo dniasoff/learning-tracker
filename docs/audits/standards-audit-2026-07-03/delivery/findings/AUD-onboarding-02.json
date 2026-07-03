@@ -1,0 +1,54 @@
+{
+  "title": "Fix WizardCustomStep2 Slider crash when a 5th custom review round defaults delayDays to 90 (slider max is 60)",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "features/onboarding/presentation/steps",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/steps/wizard_steps.dart",
+      "line": 31,
+      "quote": "const defaults = [1, 7, 30, 60, 90];"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/steps/wizard_steps.dart",
+      "line": 763,
+      "quote": "max: 60,"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+      "line": 683,
+      "quote": "stepData.chazarahRounds = 3;"
+    }
+  ],
+  "sites": 1,
+  "why": "CustomRoundState.withDefault(4) seeds the 5th review round's delayDays at 90, but _RoundTimingCard's delay Slider is capped at max:60. WizardCustomStep1's own slider allows chazarahRounds up to 5; advancing to WizardCustomStep2 renders all 5 timing cards immediately (ListView.builder over the full list), so the 5th Slider is constructed with value:90 outside [1,60]. Verified empirically with a throwaway flutter-test render: 'Failed assertion: ... `value >= min && value <= max`: Value 90.0 is not between minimum 1.0 and maximum 60.0' (package:flutter/src/material/slider.dart) — this fires in every debug/profile build and in `flutter test`, making the custom-review-builder path unusable for anyone who picks 5 rounds. No test anywhere sets chazarahRounds above 3 (line 683 is the batch's own highest), so nothing catches it.",
+  "recommendation": "Clamp the Slider's max to 90 (adjust divisions accordingly) or clamp state.delayDays when building the Slider's value; add a WizardCustomStep2 test that renders all 5 rounds (chazarahRounds=5) and asserts tester.takeException() is null.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Slider value stays within [min,max] for every roundIndex 0..4 CustomRoundState.withDefault can produce",
+    "a regression test renders WizardCustomStep2 with 5 rounds and asserts no exception is thrown"
+  ],
+  "labels": [
+    "crash",
+    "boundary-condition",
+    "onboarding-wizard",
+    "slider"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Minor, non-fatal quibbles only: (1) the cited rule TQ-8 ('every bug fix lands with a regression test... every audit finding states its repro') is a process/meta-rule about the audit and fix workflow, not a rule the code itself directly violates — a closer-fitting citation would reference the missing widget-test coverage angle, but the underlying crash is undisputed regardless of rule-tag precision. (2) The 'why' field's claim that ListView.builder 'renders all 5 timing cards immediately' overstates it slightly — Flutter's ListView.builder is lazy and only the 5th item's Slider throws once it is scrolled into the viewport/cache extent, not necessarily on first frame; this does not affect reachability since scrolling to the last round is normal usage for anyone selecting 5 rounds.",
+      "The 'why' section overstates immediacy: WizardCustomStep2 uses a lazy ListView.builder, so the 5th _RoundTimingCard (and its out-of-range Slider) is not built on the first frame — only 3 of 5 cards build initially in a standard test viewport. The crash requires the user to scroll down to the 5th round card, not merely 'advance to WizardCustomStep2.' I reproduced the assertion failure myself after scrolling, confirming the defect is real and reachable, just slightly mis-described as instantaneous.</evidence_correction>\n"
+    ]
+  },
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "chunk": "high-064",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-02",
+  "linearPriority": "High"
+}

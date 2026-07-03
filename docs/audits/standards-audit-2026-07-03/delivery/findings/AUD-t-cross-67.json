@@ -1,0 +1,46 @@
+{
+  "title": "Drop or wire up dead ARB keys milestoneAggregate/recentActivityShort pinned by b1_vocab_keys_present_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6-adjacent dead code / Evans ubiquitous language (vocabulary the app doesn't actually speak)",
+  "area": "learning_tracker/test/l10n/b1_vocab_keys_present_test.dart + lib/l10n ARB",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/l10n/b1_vocab_keys_present_test.dart",
+      "line": 37,
+      "quote": "'milestoneAggregate',"
+    },
+    {
+      "file": "learning_tracker/test/l10n/b1_vocab_keys_present_test.dart",
+      "line": 40,
+      "quote": "'recentActivityShort',"
+    }
+  ],
+  "sites": 2,
+  "why": "grep -rn '\\bmilestoneAggregate\\b' and '\\brecentActivityShort\\b' across lib/ match only the generated lib/l10n/app_localizations*.dart files — no screen or widget calls either getter. This test locks both into the ARB contract forever, and a sibling test's comment (test/core/labels/domain_term_labels_vocab_test.dart:114-116: 'milestone, milestoneAggregate, ... — removed from DomainTermLabels ... tested through widget-level integration tests, not here') claims coverage that doesn't exist for these two keys, so translators keep maintaining EN/HE strings nobody reads and nothing actually exercises the values this test pins.",
+  "recommendation": "Either wire milestoneAggregate/recentActivityShort into the screen(s) they were written for, or delete them from both ARBs, this test's _b1VocabKeys list, and the stale comment in domain_term_labels_vocab_test.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn '\\bmilestoneAggregate\\b\\|\\brecentActivityShort\\b' lib/ --include=*.dart shows a call site outside lib/l10n/, OR both keys are removed from app_en.arb, app_he.arb, and this test's _b1VocabKeys list"
+  ],
+  "labels": [
+    "dead-code",
+    "l10n",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The 'why' prose cites domain_term_labels_vocab_test.dart:114-116 for a quote that actually conflates two separate comment blocks: lines 86-89 (covers milestone/milestoneAggregate, has the 'tested through widget-level integration tests, not here' phrase) and lines 114-116 (covers tierLens*/recentActivityShort, but only says 'served as structural strings via AppLocalizations', no testing claim). The composite quote as attributed to :114-116 doesn't exist verbatim there. Core dead-key claim is unaffected — independently verified true regardless of this mis-citation."
+    ]
+  },
+  "sourceBatch": "t1-app-l10n-p3",
+  "chunk": "grp-002",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-67",
+  "linearPriority": "Low"
+}

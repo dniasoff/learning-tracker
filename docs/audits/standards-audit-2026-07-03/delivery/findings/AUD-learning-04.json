@@ -1,0 +1,40 @@
+{
+  "title": "Inject BookmarkRepository (with its ContentIndex) into CompletionRepositoryImpl instead of ad-hoc-constructing it for delegated profiles",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-8",
+  "area": "learning/data/repositories",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "line": 801,
+      "quote": "bookmarkRepo = BookmarkRepositoryImpl(\n        database: _database,"
+    }
+  ],
+  "sites": 1,
+  "why": "_advanceBookmark only uses the DI-injected BookmarkRepository (wired with a ContentIndex for O(1) adjacent-item lookups via bookmarkRepositoryProvider) when the target profile equals the active session profile. For any delegated-profile completion — BulkCompletionRequest.profileId is documented for exactly this: 'add track for a child while the session active profile differs' and bulk_prior_completion_service.dart exercises it from onboarding — the code instead `new`s a fresh BookmarkRepositoryImpl without passing contentIndex:, silently falling onto the documented O(N) full-curriculum scan fallback on every bookmark advance. completion_repository_impl.dart also directly imports another feature repository (bookmark_repository_impl.dart), the pattern SM-8 exists to prevent. completion_repository_impl_test.dart's setUp never injects a bookmarkRepository at all, so this branch (and the fast/slow-path difference) is exercised by every test in the file yet never asserted — a regression here would ship silently.",
+  "recommendation": "Thread a `BookmarkRepository Function(int profileId)` factory (or the ContentIndex itself) into CompletionRepositoryImpl via its constructor/provider, matching how completionRepositoryProvider already injects CompletionDetectionService, instead of constructing BookmarkRepositoryImpl by hand inside _advanceBookmark.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "completion_repository_impl_test.dart gains a case with bookmarkProfileId != activeProfileId that asserts the ContentIndex fast path is used (e.g. mockContentRepository.getContentForCurriculum is not called when a ContentIndex is supplied)."
+  ],
+  "labels": [
+    "sm-8",
+    "sm-7",
+    "performance",
+    "di"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-learning-p1",
+  "chunk": "grp-058",
+  "normArea": "features/learning",
+  "id": "AUD-learning-04",
+  "linearPriority": "Medium"
+}

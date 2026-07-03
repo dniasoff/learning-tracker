@@ -1,0 +1,39 @@
+{
+  "title": "Watch reactive auth state instead of ref.read-ing currentUser inside _AccountTileState.build()",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-3",
+  "area": "features/account/presentation/screens/account_picker_screen.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+      "line": 274,
+      "quote": "final fbUser = ref.read(authRepositoryProvider).currentUser;"
+    }
+  ],
+  "sites": 1,
+  "why": "SM-3 requires ref.watch in build and ref.read only in callbacks, precisely because a ref.read snapshot of a mutable getter (`.currentUser`, which changes on sign-in/out/re-auth without the authRepositoryProvider instance itself changing) is only re-evaluated when something else this widget DOES watch happens to force a rebuild — not when the underlying session actually changes. The tile's 'valid session' vs 'sign in again' pill/warning-icon can go stale after an auth event (e.g. a sibling tile's re-auth flow) that doesn't independently invalidate this tile.",
+  "recommendation": "Replace with a watched, narrow selector, e.g. `ref.watch(authStateProvider.select((s) => s.currentUser?.firebaseUid))`, so the tile is reactive to session changes.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A widget test changes the live Firebase session via a provider override while the picker is mounted and asserts the affected tile's badge updates without an unrelated rebuild trigger"
+  ],
+  "labels": [
+    "sm-3",
+    "riverpod",
+    "stale-ui"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p1",
+  "chunk": "grp-037",
+  "normArea": "features/account",
+  "id": "AUD-account-18",
+  "linearPriority": "Medium"
+}

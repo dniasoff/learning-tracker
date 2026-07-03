@@ -1,0 +1,49 @@
+{
+  "title": "Add a mounted guard after the awaited date-picker calls in SelfPacedGoalStep._pickDeadline",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "SM-4 (widget analog)",
+  "area": "presentation/tracks-setup",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_goal.dart",
+      "line": 184,
+      "quote": "final picked = await HebrewDatePicker.show("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_goal.dart",
+      "line": 188,
+      "quote": "if (picked != null) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_goal.dart",
+      "line": 197,
+      "quote": "final picked = await showLearningAppDatePicker("
+    }
+  ],
+  "sites": 2,
+  "why": "Both branches of _pickDeadline call setState() straight after an awaited date-picker dialog with no `if (!mounted) return;` guard, unlike every other async-gap-then-setState in this same batch (step_starting_position.dart:89/114, step_starting_position_calendar.dart:97-98/100, step_scope.dart:150) which all check mounted first. If the user backs out of the Add-Track wizard while the date picker is open, the awaited Future resolves after State.dispose(), and setState() throws (framework error, not silently ignored) instead of the no-op the mounted guard would produce. This needs a runtime repro (rapid back-navigation during either date picker) to confirm it fires in practice, but the code path is unambiguous.",
+  "recommendation": "Add `if (!mounted) return;` immediately after each `await ...Picker.show/showLearningAppDatePicker(...)`, matching the guard style already used elsewhere in this batch.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both await sites in _pickDeadline check mounted before calling setState.",
+    "A widget test that disposes SelfPacedGoalStep while the picker Future is pending does not throw."
+  ],
+  "labels": [
+    "state-management",
+    "widget-lifecycle"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "grp-116",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-09",
+  "linearPriority": "Medium"
+}

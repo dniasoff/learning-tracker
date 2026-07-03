@@ -1,0 +1,51 @@
+{
+  "title": "Delete or wire up the dead stage-editor mutation path (StageEditorNotifier, StageValidator, Protected/LimitExceeded exceptions)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler dead-code / AG-6",
+  "area": "data+domain+presentation/tracks-stages",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/stages/presentation/providers/stage_providers.dart",
+      "line": 73,
+      "quote": "Future<void> addStage("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart",
+      "line": 93,
+      "quote": "throw StageLimitExceededException(maxStages: _maxStages);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/stages/domain/services/stage_validator.dart",
+      "line": 16,
+      "quote": "return 'Weekly stages require at least one day of week';"
+    }
+  ],
+  "sites": 6,
+  "why": "A repo-wide grep for `.addStage(`, `.updateStage(`, `.deleteStage(`, `.reorderStages(` finds callers only inside stage_providers.dart itself (the notifier calling its own repository) and stage_definition_repository_impl.dart/stage_definition_repository.dart (the definitions) — StageEditorNotifier's five mutation methods have zero external callers (stageEditorProvider's only other reference, in curriculum_settings_screen.dart, is a bare ref.invalidate). That makes StageEditorNotifier.addStage/updateStage/deleteStage/reorderStages/resetToDefaults (stage_providers.dart), the repository's addStage/updateStage/deleteStage/reorderStages (stage_definition_repository_impl.dart + .../repositories/stage_definition_repository.dart), all of StageValidator, and both ProtectedStageException/StageLimitExceededException dead: ~200 lines of validated, exception-typed, individually-tested code that no screen can currently reach. It also means the EH-5 raw-English-message design smell in these exceptions (and in ArgumentError(validationError)) has zero live blast radius today, but would need fixing the moment anyone wires a stage-editor UI to this path.",
+  "recommendation": "Either delete the whole unreachable path (StageEditorNotifier's 5 methods, the repository's 4 corresponding methods, StageValidator, and the two exception classes) if the feature was superseded by the chazara wizard's applyWizardResult, or — if a stage-editor screen is actually planned — wire it up now and fix EH-5 (stable error codes, not raw strings) and SM-5 (state = AsyncLoading()/AsyncValue.guard around the mutation itself, not just the refetch) before shipping it.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep for `.addStage(`/`.updateStage(`/`.deleteStage(`/`.reorderStages(` on StageDefinitionRepository either returns a real UI caller, or the dead methods/files are removed.",
+    "If kept: StageEditorNotifier's mutation methods wrap the repository call itself in AsyncValue.guard with a preceding AsyncLoading, and the exceptions carry stable codes resolved via AppLocalizations at the presentation boundary.",
+    "Existing tests (stage_exceptions_test.dart, stage_definition_repository_impl_test.dart) still pass after whichever choice is made."
+  ],
+  "labels": [
+    "dead-code",
+    "error-handling",
+    "state-management"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "grp-115",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-12",
+  "linearPriority": "Medium"
+}

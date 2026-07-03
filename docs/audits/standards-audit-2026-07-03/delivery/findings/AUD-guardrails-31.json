@@ -1,0 +1,48 @@
+{
+  "title": "Hoist the triplicated screenshot names[] list in tool/upload_store_assets.py to one constant",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication (extract constant)",
+  "area": "tool (Play Store asset upload)",
+  "evidence": [
+    {
+      "file": "tool/upload_store_assets.py",
+      "line": 141,
+      "quote": "names = [\"dashboard\", \"learning\", \"progress\", \"scheduler\", \"gamification\"]"
+    },
+    {
+      "file": "tool/upload_store_assets.py",
+      "line": 150,
+      "quote": "names = [\"dashboard\", \"learning\", \"progress\", \"scheduler\", \"gamification\"]"
+    },
+    {
+      "file": "tool/upload_store_assets.py",
+      "line": 159,
+      "quote": "names = [\"dashboard\", \"learning\", \"progress\", \"scheduler\", \"gamification\"]"
+    }
+  ],
+  "sites": 3,
+  "why": "The same 5-element screenshot-name list is retyped verbatim inside the phone, 7-inch-tablet, and 10-inch-tablet upload loops. If a screenshot is ever added/renamed/reordered, all 3 copies must be updated in lockstep by hand; missing one silently mislabels an upload (the loop just indexes names[i-1] against whatever list is present) with no error since the script only checks os.path.exists implicitly via MediaFileUpload's own failure mode.",
+  "recommendation": "Define `SCREENSHOT_NAMES = [\"dashboard\", \"learning\", \"progress\", \"scheduler\", \"gamification\"]` once at module scope (near PACKAGE_NAME/LANGUAGE) and reference it in all 3 loops.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The literal list `[\"dashboard\", \"learning\", \"progress\", \"scheduler\", \"gamification\"]` appears exactly once in the file."
+  ],
+  "labels": [
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-root-tool",
+  "chunk": "grp-164",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-31",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,45 @@
+{
+  "title": "Replace hardcoded English fallback strings in TutoredChildrenSection's error snackbars",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2",
+  "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 638,
+      "quote": "AppLocalizations.of(context)?.tutoredEntryPermissionDenied ??\n    'Access denied — the grant may have been revoked.',"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 655,
+      "quote": "AppLocalizations.of(context)?.tutoredEntryError ??\n    'Could not load talmid data. Please try again.',"
+    }
+  ],
+  "sites": 2,
+  "why": "Both snackbar messages fall back to raw, un-ARB'd English literals if AppLocalizations.of(context) returns null. That fallback would render untranslated on a Hebrew device in the (defensive-only) case it triggers. The same idiom exists at text_display_screen.dart:900 outside this batch, so it's a small but repeated pattern, not a one-off typo.",
+  "recommendation": "Drop the ?? fallback (AppLocalizations.of(context) is non-null under the app's own MaterialApp) or route the fallback through a second ARB key instead of an inline literal.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No `AppLocalizations.of(context)?.<key> ?? '<literal>'` pattern remains in tutored_children_section.dart",
+    "The hardcoded-string audit grep is extended to catch this null-coalescing idiom"
+  ],
+  "labels": [
+    "i18n",
+    "ax-2",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-079",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-19",
+  "linearPriority": "Low"
+}

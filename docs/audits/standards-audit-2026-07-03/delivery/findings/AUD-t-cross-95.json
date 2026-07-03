@@ -1,0 +1,38 @@
+{
+  "title": "Tighten v16_to_v17_test.dart's FK-violation assertion beyond throwsA(anything)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/migration",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/migration/v16_to_v17_test.dart",
+      "line": 121,
+      "quote": "throwsA(anything),"
+    }
+  ],
+  "sites": 1,
+  "why": "The test's stated purpose is \"C2: FK enforcement must reject completion with non-existent profileId\", but `throwsA(anything)` is satisfied by ANY thrown object — a coincidental exception from unrelated test-setup breakage would make this pass without the FK constraint under test ever being exercised, silently losing the regression coverage it claims to provide. Every later migration-gate test in this same directory that checks a similar constraint (v25_to_v27_test.dart, v27_to_v28_test.dart) uses a typed matcher (`isA<SqliteException>()`/`isA<Exception>()`), so this is a real regression in assertion discipline, not a stylistic choice.",
+  "recommendation": "Narrow to `throwsA(isA<SqliteException>())` (or the concrete exception type Drift/sqlite3 raises for an FK violation), matching the pattern used elsewhere in this same test directory.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "v16_to_v17_test.dart's FK test asserts a specific exception type, not `anything`"
+  ],
+  "labels": [
+    "test-quality",
+    "weak-assertion"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p6",
+  "chunk": "grp-148",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-95",
+  "linearPriority": "Low"
+}

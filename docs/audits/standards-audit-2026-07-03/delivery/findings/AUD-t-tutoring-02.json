@@ -1,0 +1,52 @@
+{
+  "title": "Add TutoredWriteRouter coverage for the 4 always-pass-through methods in s1_tutored_write_router_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/features/tutoring",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/s1_tutored_write_router_test.dart",
+      "line": 1,
+      "quote": "// S1 — TutoredWriteRouter unit tests ... AC1..AC4 (no mention of pushSettings/pushLearningOrder/pushUiPreferencesSnapshot/deleteLearnerProfile)"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+      "line": 30,
+      "quote": "//   deleteLearnerProfile (talmid's profile deletion is not a tutor right)."
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+      "line": 344,
+      "quote": "Future<void> deleteLearnerProfile(int profileId) => _delegate.deleteLearnerProfile(profileId);"
+    }
+  ],
+  "sites": 4,
+  "why": "The router's own comment says deleteLearnerProfile is deliberately excluded from tutor routing because talmid profile deletion is not a tutor right — a documented access-control decision. This 1003-line test file (tagged 'keystone') exhaustively covers the other 10 intercepted entity kinds across tutored/non-tutored/CF-failure branches, but grep confirms zero calls to pushSettings, pushLearningOrder, pushUiPreferencesSnapshot, or deleteLearnerProfile anywhere in the file (or anywhere else in test/features/tutoring). If a future edit accidentally applied the `if (sel == null) return _delegate.X(...)` interception pattern to deleteLearnerProfile with the condition backwards, a tutor could trigger deletion of the talmid's profile via a CF call and nothing in this suite would fail.",
+  "recommendation": "Add an 'always pass-through' group mirroring the existing tutored/non-tutored pattern: call each of the 4 methods via _tutored(record, delegate) and assert record.wasCalled is false and the matching delegate counter incremented.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "s1_tutored_write_router_test.dart asserts deleteLearnerProfile in tutored mode never invokes the CF invoker and always reaches the delegate",
+    "Same coverage added for pushSettings, pushLearningOrder, pushUiPreferencesSnapshot"
+  ],
+  "labels": [
+    "testing",
+    "tutoring",
+    "coverage-gap"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Comment quote cited at line 30 actually starts at line 31 (line 30 is 'pushSettings, pushLearningOrder, pushUiPreferencesSnapshot,'); adjacent line, content unaffected."
+    ]
+  },
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "chunk": "grp-126",
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-02",
+  "linearPriority": "Medium"
+}

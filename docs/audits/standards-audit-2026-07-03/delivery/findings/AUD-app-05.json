@@ -1,0 +1,130 @@
+{
+  "title": "Land the AG-5 test-mirroring checker — 537/715 lib files lack a mirrored test",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-5 (test/ mirrors lib/ 1:1); Fowler duplication",
+  "area": "test/sync/** (this batch) vs test/core/sync/**",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/app/bootstrap/account_bootstrap.dart",
+      "line": 13,
+      "quote": "Future<String> bootstrapAccount({"
+    },
+    {
+      "file": "learning_tracker/lib/core/auth/google_sign_in_gateway_impl.dart",
+      "line": 12,
+      "quote": "class GoogleSignInGatewayImpl implements GoogleSignInGateway {"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/domain/services/hierarchy_selection_test.dart",
+      "line": 1,
+      "quote": "// Tests for HierarchySelection — covers == and hashCode (lines 218-228)."
+    },
+    {
+      "file": "learning_tracker/lib/core/content/content_grouping.dart",
+      "line": 19,
+      "quote": "List<ContentItem> groupItemsByNextLevel({"
+    },
+    {
+      "file": "learning_tracker/test/core/l10n/app_localizations_test.dart",
+      "line": 32,
+      "quote": "test('appTitle is non-empty', () => expect(en.appTitle, isNotEmpty));"
+    },
+    {
+      "file": "learning_tracker/lib/core/labels/curriculum_label_providers.dart",
+      "line": 18,
+      "quote": "Future<String> renderedDisplayForRef(Ref ref, String sefariaRef) async {"
+    },
+    {
+      "file": "learning_tracker/test/core/network/connectivity_service_test.dart",
+      "line": 5,
+      "quote": "group('ConnectivityGateway', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/preferences/hebrew_terms_sentinel_test.dart",
+      "line": 88,
+      "quote": "final hasSentinelGuard =\n            source.contains('profileId == 0') ||"
+    },
+    {
+      "file": "learning_tracker/test/core/services/calendar_program_registry_test.dart",
+      "line": 2,
+      "quote": "import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';"
+    },
+    {
+      "file": "learning_tracker/test/core/streak/streak_event_test.dart",
+      "line": 3,
+      "quote": "import 'package:learning_tracker/features/gamification/streak/streak_event.dart';"
+    }
+  ],
+  "sites": 537,
+  "why": "Deterministic global scan; list: _work/global/ag5-unmirrored.txt. Rule as written is aspirational — checker should ratchet (new files hard-fail, backlog burn-down). Representative per-area consequences: A repo-wide grep for bootstrapAccount, bootstrapAnalytics, bootstrapCrashlyticsHandlers, bootstrapFirebase, bootstrapNot | Its sibling in the same directory, FirebaseAuthGatewayImpl, has a 496-line test suite covering every branch (test/core/a | git log shows commit ee270013 ('extract ContentBrowserTree widget; move HierarchySelection to core') relocated the class | Repo-wide grep for groupItemsByNextLevel(, collapseAmudLeaf(, itemDisplayName(, levelValueAt(, and HierarchyBrowser( ins",
+  "recommendation": "Pick test/core/sync/ as canonical (per AG-5's own 1:1 rule). For each duplicate pair, fold any scenario unique to the era-1 file (e.g. mergers_test.dart's fake-MergeStore isolation, if it adds value beyond the real-store versions) into the era-2 roundtrip test, then delete the superseded file. Update docs/test-options.md's test/sync/** references to match wherever coverage ends up.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "an AG-5 unmirrored-test audit shows zero lib/core/sync/merge/*.dart or lib/core/sync/codec/*.dart entries once consolidation lands",
+    "the consolidated LearningLedgerMerger/StreakEventMerger/TrackConfigMerger/SettingsMerger/LearnerProfileMerger/StageDefinitionMerger/UiPreferencesMerger suites keep every distinct scenario from both current suites while removing exact duplicates (test count is not simply additive)"
+  ],
+  "labels": [
+    "ag-5",
+    "duplication",
+    "test-structure",
+    "sync"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "fold:AG-5",
+  "chunk": "grp-108",
+  "mergedFrom": [
+    "Add unit tests for lib/app/bootstrap/** — the entire app-startup sequence has zero automated test coverage",
+    "Add regression tests for GoogleSignInGatewayImpl — currently zero coverage anywhere in the repo",
+    "Move hierarchy_selection_test.dart to its AG-5-mirrored path under test/core/content/",
+    "Add direct unit/widget tests for content_grouping.dart's groupItemsByNextLevel and for HierarchyBrowser",
+    "Move test/core/l10n/app_localizations_test.dart to test/l10n/ — it has no lib/core/l10n/ mirror and duplicates app_localizations_coverage_test.dart",
+    "Add missing mirrored unit tests for curriculum_label_providers.dart, curriculum_level_name.dart, curriculum_visuals.dart",
+    "Rename connectivity_service_test.dart to connectivity_gateway_test.dart to match its renamed source class",
+    "Add ProviderContainer-based tests for core/preferences notifiers; replace the string-grep sentinel test; fix the misplaced/illegitimate profile_scoped_preference_keys_test.dart barrel import",
+    "Move test/core/services/*_test.dart to mirror their real lib/features/scheduler/domain/services/ location (AG-5)",
+    "Relocate test/core/streak/*_test.dart to mirror lib/features/gamification/streak/ (AG-5)",
+    "Add test/core/sync/providers/ unit tests mirroring lib/core/sync/providers/",
+    "Move codecs_and_mergers_test.dart's two suites to their AG-5-mirrored paths under test/core/sync/codec/ and test/core/sync/merge/",
+    "Move account_picker_switch_test.dart into test/.../presentation/screens/ to match its siblings",
+    "Move test/features/auth/** to mirror lib/features/account/** (orphaned test directory)",
+    "Move parent_dashboard_aggregator tests from test/features/parent_mode/ to the AG-5 mirrored path",
+    "Fix regression-test provenance drift in ga4/ga8 gamification test files",
+    "Delete or consolidate the 11 duplicate coverage groups in test/features/labels/domain_term_rendering_modes_test.dart",
+    "Rename track_repository_test.dart and bookmark_entity_test.dart to mirror their source file names",
+    "Remove the third copy of the tutor-write-block invariant from completion_writer_test.dart",
+    "Rename/relocate completion_button_optimistic_test.dart to presentation/providers/optimistic_completion_provider_test.dart",
+    "Move test/features/learning_order/** to mirror lib/features/tracks/whole_curriculum_order/** per AG-5",
+    "Relocate test/features/parent_mode/** to mirror lib/features/profiles and lib/features/dashboard (AG-5 orphan test tree)",
+    "Delete stale, narrower duplicate test/features/parent_mode/child_mode_guard_test.dart",
+    "Relocate profiles feature test files to their AG-5-mirrored paths",
+    "Move ProfileSwitcherBar out of app/router/app_shell.dart to restore AG-5 test mirroring",
+    "Remove or relocate the notifications-feature Part B tests duplicated inside lifetime_folder_styled_and_notif_providers_test.dart",
+    "Give pace_indicator.dart, stage_breakdown_row.dart and hierarchy_progress_card.dart their own mirrored test files",
+    "Mirror scheduler's domain/projection tests under test/features/scheduler/domain/projection per AG-5",
+    "Move overdue_from_elapsed_study_days_test.dart to mirror its domain/projection lib target",
+    "Relocate test/scheduler/*.dart into the mirrored test/features/ tree (AG-5) — no lib/scheduler/ exists to mirror",
+    "Move goal_setup_screen_test.dart and hebrew_date_picker_test.dart out of test/features/scheduler/widgets/ into their mirrored presentation/ paths (AG-5)",
+    "Move account_management_service_test.dart and curriculum_activation_service_test.dart to their mirrored feature test paths (AG-5)",
+    "Move PointConfigScreen and send_logs_service tests off the settings grab-bag files onto AG-5-mirrored paths",
+    "streak_reducer_test.dart tests gamification streak logic but is filed under the sync feature's test tree with no lib/ counterpart",
+    "Consolidate test/sync/'s merger and round-trip tests into the AG-5-mirrored test/core/sync/ location — they duplicate existing coverage",
+    "Delete or merge stage_definition_repository_impl_26_26_test.dart — it duplicates the mirrored test file and smuggles ScheduleSpec coverage that belongs elsewhere",
+    "Move curriculum_activation_service_test.dart to mirror its lib path under features/tracks",
+    "Consolidate the tracks/{setup,stages,track_order} test suite onto mirrored paths under test/features/tracks/** (AG-5)",
+    "Move test/track_setup/*_test.dart into the AG-5-mirrored lib/features/tracks/setup test path",
+    "Reconcile tutoring test-file naming and duplication with AG-5 mirroring",
+    "Delete or merge the misplaced, redundant firestore_tutor_grant_repository_test.dart at test/features/tutoring/",
+    "Move tutor-PIN screen L1 tests to mirror lib/features/tutoring/presentation/screens/ path"
+  ],
+  "normArea": "app",
+  "id": "AUD-app-05",
+  "linearPriority": "Medium"
+}

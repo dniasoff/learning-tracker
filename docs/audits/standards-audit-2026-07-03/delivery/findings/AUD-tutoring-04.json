@@ -1,0 +1,53 @@
+{
+  "title": "Catch and log exceptions around TutorPinService calls in the PIN entry/setup async handlers",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2 / EH-3",
+  "area": "features/tutoring/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+      "line": 90,
+      "quote": "try {\n      final service = ref.read(tutorPinServiceProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+      "line": 117,
+      "quote": "} finally {\n      if (mounted) setState(() => _isVerifying = false);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart",
+      "line": 118,
+      "quote": "try {\n      final service = ref.read(tutorPinServiceProvider);"
+    }
+  ],
+  "sites": 2,
+  "why": "_onPinComplete (gate) and _onConfirmPinEntered (setup) wrap their await in try/finally with no catch clause. TutorPinService.verifyTutorPin/setTutorPin only converts PinLockoutException — an underlying secure-storage failure (a real class of Android keystore/PlatformException issue this environment has hit before per the App Check debug-token flakiness on wipes) propagates as a raw, uncaught exception. Because _onPinComplete is invoked fire-and-forget (not awaited) from _appendDigit, the failure is swallowed by whatever global handler exists, with zero AppLogger call from this site and zero user feedback: _isVerifying resets to false in the finally block but _errorMessage stays null and _digits stays at 4 filled dots, leaving the user staring at a stalled numpad with no explanation and no way to retype until they notice backspace still works.",
+  "recommendation": "Add a typed catch around the await that logs via AppLogger and sets a generic, localized _errorMessage (consistent with EH-2's 'no raw exception reaches presentation').",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_onPinComplete and _onConfirmPinEntered both have a catch block that calls AppLogger.instance.error and sets a localized _errorMessage",
+    "a test that makes the stubbed TutorPinService throw confirms the screen shows an error state instead of a silent stall"
+  ],
+  "labels": [
+    "EH-2",
+    "EH-3",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Minor: 'setTutorPin only converts PinLockoutException' overstates it — setTutorPin has zero exception handling (no lockout check exists for set), so it's worse than stated, not misleading in finder's favor.",
+      "EH-3's text addresses existing catch blocks that are empty/log-less; here there is no catch at all, so EH-2 (raw exception must not reach presentation) is the precise fit and alone fully supports the finding — citing EH-3 is a minor stretch, not a defect in the underlying claim."
+    ]
+  },
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "grp-124",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-04",
+  "linearPriority": "Medium"
+}

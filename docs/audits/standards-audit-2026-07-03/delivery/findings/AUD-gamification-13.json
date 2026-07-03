@@ -1,0 +1,46 @@
+{
+  "title": "Add .autoDispose to points_providers.dart's family providers",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-6 (parameterized/family providers stay autoDispose)",
+  "area": "features/gamification/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/providers/points_providers.dart",
+      "line": 16,
+      "quote": "final curriculumPointsProvider = FutureProvider.family<int, CurriculumId>(("
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/providers/points_providers.dart",
+      "line": 61,
+      "quote": "FutureProvider.family<List<PointsHistoryEntry>, CurriculumId?>(("
+    }
+  ],
+  "sites": 2,
+  "why": "Both are classic (non-@riverpod) family providers with no `.autoDispose` -- in this Riverpod version, a manually-declared provider not marked autoDispose is kept alive for the container's lifetime once first read. Because CurriculumId is a small finite enum, the leak is bounded (at most ~15-20 cached results per provider), so the practical memory cost is small, but it's inconsistent with every other parameterized provider this same feature declares (achievementsOverviewProvider, _pointConfigDataProvider, pendingRedemptionsProvider are all explicitly .autoDispose), suggesting an oversight rather than a deliberate choice.",
+  "recommendation": "Add `.autoDispose` to both curriculumPointsProvider and pointsHistoryProvider.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both family providers in points_providers.dart are declared with .autoDispose"
+  ],
+  "labels": [
+    "SM-6",
+    "riverpod",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Line 61 citation for pointsHistoryProvider is off by one (quoted factory text is on line 62; 61 is the var name). Also achievementsOverviewProvider/_pointConfigDataProvider/pendingRedemptionsProvider are plain zero-arg autoDispose providers, not actually parameterized/family — the \"inconsistent with every other parameterized provider\" framing overstates that comparison, though the underlying SM-6 violation stands on its own."
+    ]
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-052",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-13",
+  "linearPriority": "Low"
+}

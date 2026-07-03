@@ -1,0 +1,47 @@
+{
+  "title": "Add inline // keepAlive: justification comments to auth_providers.dart's two singleton providers",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-6",
+  "area": "core/auth",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/auth/auth_providers.dart",
+      "line": 13,
+      "quote": "@Riverpod(keepAlive: true)"
+    },
+    {
+      "file": "learning_tracker/lib/core/auth/auth_providers.dart",
+      "line": 22,
+      "quote": "@Riverpod(keepAlive: true)"
+    }
+  ],
+  "sites": 2,
+  "why": "SM-6 requires every keepAlive: true to carry an inline `// keepAlive:` justification comment, specifically because the planned [Pending] audit grep keys off that literal tag beside the annotation (docs/coding-standards.md:156). Both providers here only have an ordinary doc comment above the function ('Provides the singleton ... used app-wide'), not the tagged comment the future checker looks for — when that grep ships, these two will false-positive as unjustified even though the reasoning is already documented in prose. (The same gap recurs at other keepAlive sites repo-wide, e.g. content_index.dart, registry_provider.dart, preference_providers.dart — those are outside this batch, noted here only for the orchestrator's dedup.)",
+  "recommendation": "Add a one-line `// keepAlive: <reason>` comment immediately above each @Riverpod(keepAlive: true), e.g. '// keepAlive: stateless singleton facade, cheap to keep for app lifetime'.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both providers carry a `// keepAlive:` tagged comment.",
+    "Future SM-6 audit grep (once shipped) passes for this file."
+  ],
+  "labels": [
+    "auth",
+    "SM-6",
+    "riverpod"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "SM-6's 'why' paragraph illustrates the requirement only via family-leak scenarios, so applying the comment mandate to non-family singleton providers is a plausible but not airtight reading of the rule; worth flagging as interpretive."
+    ]
+  },
+  "sourceBatch": "t1-core-auth",
+  "chunk": "grp-005",
+  "normArea": "core/auth",
+  "id": "AUD-core-auth-04",
+  "linearPriority": "Low"
+}

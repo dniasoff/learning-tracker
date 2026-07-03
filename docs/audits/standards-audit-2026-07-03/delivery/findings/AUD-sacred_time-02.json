@@ -1,0 +1,41 @@
+{
+  "title": "Localize CityPickerScreen's hardcoded English idle-hint text (_IdleHint)",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2",
+  "area": "presentation/i18n",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sacred_time/presentation/screens/city_picker_screen.dart",
+      "line": 125,
+      "quote": "'Start typing to search ~33,000 cities.\\n'\n          'Type at least 2 letters.',"
+    }
+  ],
+  "sites": 1,
+  "why": "This paragraph is the screen's default state (shown whenever the query is under 2 chars) — every Hebrew-locale user sees it first, not as an edge case. No ARB key exists for it in app_en.arb/app_he.arb, so make arb-parity can't catch it. The file's own RTL smoke test ('idle hint renders without overflow under he locale') only asserts no overflow/ErrorWidget, never the text itself, so the defect has zero regression coverage despite the rest of the screen being fully localized.",
+  "recommendation": "Add a cityPickerIdleHint-style ICU string to app_en.arb/app_he.arb and render it via AppLocalizations instead of the literal; extend the he-locale test to assert the Hebrew string renders (and the English literal does not).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "New ARB key added to app_en.arb and app_he.arb and used in _IdleHint",
+    "make arb-parity still passes",
+    "city_picker_screen_l1_test.dart's he-locale idle-hint test asserts the Hebrew string is shown, not just absence of overflow"
+  ],
+  "labels": [
+    "i18n",
+    "hebrew",
+    "hardcoded-string"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sacred_time",
+  "chunk": "high-073",
+  "normArea": "features/sacred_time",
+  "id": "AUD-sacred_time-02",
+  "linearPriority": "High"
+}

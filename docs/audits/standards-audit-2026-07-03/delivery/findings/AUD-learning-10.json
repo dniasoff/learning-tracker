@@ -1,0 +1,46 @@
+{
+  "title": "Inject RewardMilestoneService into CompletionRepositoryImpl instead of constructing it ad hoc per call",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "SM-7",
+  "area": "learning/data/repositories",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "line": 134,
+      "quote": "final rewardService = RewardMilestoneService(\n          _database,"
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "line": 512,
+      "quote": "final rewardService = RewardMilestoneService(\n      _database,"
+    }
+  ],
+  "sites": 2,
+  "why": "Both markComplete and _markCompleteSingleInTransaction build a fresh RewardMilestoneService with `new` instead of receiving it via the constructor, unlike CompletionDetectionService which completionRepositoryProvider correctly injects. There is no seam to substitute a fake reward-milestone evaluator in a repository-level test without exercising the real Drift-backed class (Feathers), and any future dependency added to RewardMilestoneService must be threaded through by hand at both call sites.",
+  "recommendation": "Accept RewardMilestoneService as an optional constructor parameter on CompletionRepositoryImpl (defaulting to a provider-supplied instance), matching the existing pattern for CompletionDetectionService/BookmarkRepository in the same class.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "RewardMilestoneService is injected via CompletionRepositoryImpl's constructor; no `RewardMilestoneService(...)` construction remains inside markComplete or _markCompleteSingleInTransaction."
+  ],
+  "labels": [
+    "sm-7",
+    "di",
+    "testability"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "RewardMilestoneService(db, profileId: X) is constructed ad hoc at ~15 sites codebase-wide (dashboard_providers.dart:320,347; reward_config_controller.dart x4; points_service.dart:139; achievements_overview_provider.dart:86; outbox_sync_write_facade.dart:141; reward_settings_merge_delegate.dart:35; child_redemption_screen.dart:53), not just the 2 cited here — this is an established (if non-compliant) codebase-wide pattern, and profileId genuinely varies per call (BulkCompletionRequest.profileId can differ from the session's active profile), so a naive single constructor-injected instance would be a correctness regression, not just a testability fix."
+    ]
+  },
+  "sourceBatch": "t1-feat-learning-p1",
+  "chunk": "grp-059",
+  "normArea": "features/learning",
+  "id": "AUD-learning-10",
+  "linearPriority": "Low"
+}

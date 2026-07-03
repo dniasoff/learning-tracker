@@ -1,0 +1,51 @@
+{
+  "title": "Add an AnalyticsEvent.outboxDeadLettered constant instead of reusing LogEvents.sync.outboxDeadLettered for analytics",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "PV-5",
+  "area": "core/sync/outbox",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 263,
+      "quote": "LogEvents.sync.outboxDeadLettered,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 369,
+      "quote": "LogEvents.sync.outboxDeadLettered,"
+    },
+    {
+      "file": "learning_tracker/lib/core/logging/log_events.dart",
+      "line": 6,
+      "quote": "// All [AppLogger] call sites MUST use a constant from this file (or from a"
+    }
+  ],
+  "sites": 2,
+  "why": "PV-5 requires every Analytics event to route through an AnalyticsEvent constant so one regex/format check and one searchable catalog cover all analytics traffic. LogEvents is documented (log_events.dart:6) as the AppLogger structured-log catalog, not the analytics one, and AnalyticsEvent (analytics_service.dart) does not list sync_outbox_dead_lettered at all — this analytics event is invisible to anyone auditing 'every analytics event we send' via AnalyticsEvent, and once custom_lint's no_raw_logevent check is un-broken it needs to catch this cross-catalog case, not just raw string literals.",
+  "recommendation": "Add `static const outboxDeadLettered = 'sync_outbox_dead_lettered';` to AnalyticsEvent and reference that at both call sites instead of LogEvents.sync.outboxDeadLettered.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The PV-5 audit grep (or no_raw_logevent once custom_lint is fixed) confirms every logEvent( call site in this file references AnalyticsEvent.*."
+  ],
+  "labels": [
+    "hygiene",
+    "analytics",
+    "pv-5"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "First evidence entry cites outbox_processor.dart:263 for quote \"LogEvents.sync.outboxDeadLettered,\" but that text is actually at line 264; line 263 is \"final future = _analytics?.logEvent(\". Second citation (line 369) is exact. Underlying claim still holds."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-outbox",
+  "chunk": "grp-031",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-30",
+  "linearPriority": "Low"
+}

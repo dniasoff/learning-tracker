@@ -1,0 +1,78 @@
+{
+  "title": "Extract the E2E journey files' byte-identical duplicated override helpers into one shared module",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication",
+  "area": "test/e2e/journeys (8 of this batch's files)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/dashboard_p0_test.dart",
+      "line": 41,
+      "quote": "CurriculumTrack _stubTrack({\n  required int id,"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/dashboard_p1_test.dart",
+      "line": 51,
+      "quote": "CurriculumTrack _stubTrack({\n  required int id,"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/gamification_p0_test.dart",
+      "line": 181,
+      "quote": "Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {\n  unawaited(h.router.push(route));"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/gamification_p1_test.dart",
+      "line": 184,
+      "quote": "Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {\n  unawaited(h.router.push(route));"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/auth_p1_test.dart",
+      "line": 80,
+      "quote": "Override _sacredWindowNullOverride() =>\n    currentSacredWindowProvider.overrideWithValue(null);"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/auth_sync_infra_p2_test.dart",
+      "line": 122,
+      "quote": "Override _sacredWindowNullOverride() =>\n    currentSacredWindowProvider.overrideWithValue(null);"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/guards_p1_test.dart",
+      "line": 108,
+      "quote": "Override _sacredWindowNullOverride() =>\n    currentSacredWindowProvider.overrideWithValue(null);"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/guards_sync_p0_test.dart",
+      "line": 88,
+      "quote": "Override _sacredWindowNullOverride() =>\n    currentSacredWindowProvider.overrideWithValue(null);"
+    }
+  ],
+  "sites": 8,
+  "why": "`_sacredWindowNullOverride`, `_stubTrack`, `_navigateTo` (plus `_incomingGrantsEmpty(Override)`, `_pendingInvitesEmpty(Override)`, `_connectivityOnline(Override)`, `_dashboardActiveTracksOverrides`, `_activeTracksOneShotOverride`, `_pendingRedemptionsOneShotOverride`) are diff-verified byte-identical private top-level functions copy-pasted across 8 of this batch's 10 files, instead of living once in e2e_harness.dart — which already has exactly this precedent (`dashboardSilenceOverrides` is a shared harness getter). Copy-paste has already drifted: the identical one-line connectivity-online body is named `_connectivityOnlineOverride` in two files and `_connectivityOnline` in a third; `_incomingGrantsEmptyOverride` vs `_incomingGrantsEmpty`. If any underlying provider signature changes, all 8 files need the same hand-fix — shotgun surgery, and the naming drift shows nobody is doing that consistently today.",
+  "recommendation": "Move the duplicated helpers onto E2EHarness (matching the existing dashboardSilenceOverrides pattern) or into a new test/e2e/harness/e2e_common_overrides.dart, and have all 8 files import rather than redefine them.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "One canonical definition each for the sacred-window/tutor-grant/connectivity/track-stub/navigate-to helpers, imported by the 8 affected files instead of redefined",
+    "No byte-identical private top-level function bodies remain duplicated across test/e2e/journeys/*.dart for these symbols"
+  ],
+  "labels": [
+    "Fowler",
+    "duplication",
+    "test-infra",
+    "shotgun-surgery"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Only 3 of the ~9 parenthetically-named duplicated helpers carry explicit evidence citations; the rest (_activeTracksOneShotOverride etc.) are asserted, not cited — spot-checked one (gamification_p0/p1_test.dart) and it does duplicate, so the broader claim holds, but evidence array is thinner than the prose implies."
+    ]
+  },
+  "sourceBatch": "t1-test-cross-p1",
+  "chunk": "grp-143",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-21",
+  "linearPriority": "Medium"
+}

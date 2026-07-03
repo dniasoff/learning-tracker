@@ -1,0 +1,57 @@
+{
+  "title": "Add semantic labels to icon-only pace/chazara stepper buttons",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AX-3 (icon-only buttons carry semantics)",
+  "area": "features/tracks/setup/presentation (edit_track_screen.dart, chazara_widgets.dart)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "line": 949,
+      "quote": "class _StepperButton extends StatelessWidget {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "line": 964,
+      "quote": "child: Icon("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/chazara_widgets.dart",
+      "line": 214,
+      "quote": "class TinyCircleButton extends StatelessWidget {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/chazara_widgets.dart",
+      "line": 233,
+      "quote": "child: Icon(icon, size: 14, color: AppTheme.brandInkMuted),"
+    }
+  ],
+  "sites": 2,
+  "why": "_StepperButton (the pace +/- control in Edit Track's goal editor, wired to onPaceDecrease/onPaceIncrease) and TinyCircleButton (the chazara review-round +/- control used from chazara_widgets.dart's CustomDayEditorChip in both Add Track and Edit Track) are bare Material+InkWell+Icon with no Semantics/tooltip/label. A screen-reader user gets no spoken description — not even 'button' — for either control, so they cannot set a pace goal's numeric target or adjust a chazara delay day count with TalkBack/VoiceOver. The correct pattern already exists in the same batch: goal_cards.dart's BlurInactiveGoalOption wraps its tap target in `Semantics(button: true, label: hint, ...)`.",
+  "recommendation": "Wrap both widgets' InkWell in Semantics(button: true, label: <localized increase/decrease description>) or add a tooltip, matching goal_cards.dart's existing pattern.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_StepperButton and TinyCircleButton each expose a non-empty Semantics label for their increase/decrease actions",
+    "A widget test finds a Semantics node with a button role and non-empty label at each control's location"
+  ],
+  "labels": [
+    "accessibility",
+    "ax-3",
+    "semantics"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "'wired to onPaceDecrease/onPaceIncrease' overstates precision — actual code uses anonymous closures `() => setState(() => _paceValue--)` / `++`, no such named callbacks exist. Cosmetic only."
+    ]
+  },
+  "sourceBatch": "t1-feat-tracks-p1",
+  "chunk": "grp-113",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-10",
+  "linearPriority": "Medium"
+}

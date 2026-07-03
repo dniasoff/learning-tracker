@@ -1,0 +1,60 @@
+{
+  "title": "Add a Locale('he') behavioral variant to StatCard's interactive widget tests (epic_26_story_26_16)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+      "line": 77,
+      "quote": "locale: const Locale('en'),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+      "line": 101,
+      "quote": "locale: const Locale('en'),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+      "line": 127,
+      "quote": "locale: const Locale('en'),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+      "line": 152,
+      "quote": "locale: const Locale('en'),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+      "line": 177,
+      "quote": "locale: const Locale('en'),"
+    }
+  ],
+  "sites": 5,
+  "why": "StatCard is a core/widgets/ primitive explicitly built for a bilingual RTL app (its own AC6 wants 'golden tests in 3 visual variants, en + he each'), but all 5 interactive testWidgets (text rendering, tap handling) hardcode Locale('en'); only the 3 golden-smoke tests touch 'he', and those skip the actual matchesGoldenFile compare via skipGolden: true. A regression that breaks hit-testing or layout specifically under RTL mirroring (e.g. the tap target shifting when Directionality flips) would not be caught anywhere in this file.",
+  "recommendation": "Parameterize the 5 testWidgets over both locales, or add an 'he' counterpart for at least the tap-behavior test.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "at least one StatCard testWidgets test in this file pumps with Locale('he') and asserts tap/render behavior, not just a skipped golden compare"
+  ],
+  "labels": [
+    "testing",
+    "i18n",
+    "rtl",
+    "epic-26"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-131",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-23",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Construct StreakAlertService only through its @riverpod provider (SM-7)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-7",
+  "area": "features/notifications/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 552,
+      "quote": "return StreakAlertService(\n    db: db,"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 681,
+      "quote": "final streakService = StreakAlertService(\n      db: db,"
+    }
+  ],
+  "sites": 1,
+  "why": "streakAlertServiceProvider is locked to activeProfileIdProvider's profile, so allProfilesReminderBootstrap, which must handle every inactive profile, can't use it and hand-constructs a second instance instead. A test that overrides streakAlertServiceProvider with a fake has no effect on inactive-profile scheduling, and any future required dependency added to StreakAlertService's constructor must be kept in sync by hand at both call sites.",
+  "recommendation": "Convert to a family-style provider parameterized by profileId and use it at both call sites.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A test overriding the family provider for a specific inactive profileId observably changes allProfilesReminderBootstrap's behavior for that profile."
+  ],
+  "labels": [
+    "sm-7",
+    "riverpod",
+    "notifications"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-064",
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-03",
+  "linearPriority": "Medium"
+}

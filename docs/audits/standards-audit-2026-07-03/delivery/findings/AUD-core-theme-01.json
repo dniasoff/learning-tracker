@@ -1,0 +1,62 @@
+{
+  "title": "Retire or theme-align text_styles.dart's AppTextStyles, which hardcodes Roboto and diverges from AppTheme's Plus Jakarta Sans",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / dead code (no direct rule ID)",
+  "area": "core/theme",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/theme/text_styles.dart",
+      "line": 18,
+      "quote": "static const String _englishFontFamily = 'Roboto';"
+    },
+    {
+      "file": "learning_tracker/lib/core/theme/app_theme.dart",
+      "line": 147,
+      "quote": "final sans = GoogleFonts.plusJakartaSansTextTheme();"
+    },
+    {
+      "file": "learning_tracker/lib/core/theme/text_styles.dart",
+      "line": 14,
+      "quote": "// NOTE: 'Noto Sans Hebrew' font files must be placed in assets/fonts/ and"
+    },
+    {
+      "file": "learning_tracker/lib/core/theme/text_styles.dart",
+      "line": 146,
+      "quote": "static TextDirection getTextDirection(String text) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/widgets/hebrew_text.dart",
+      "line": 38,
+      "quote": ").style.copyWith(fontFamily: AppTextStyles.hebrewFontFamily);"
+    }
+  ],
+  "sites": 1,
+  "why": "AppTheme.textTheme (the app's real Material typography, wired into every themed widget via Theme.of(context)) uses GoogleFonts Plus Jakarta Sans; AppTextStyles is a second, parallel static typography table hardcoding 'Roboto' with no colour/brightness awareness. It is consumed directly (bypassing Theme) by lib/features/content_browsing/presentation/screens/text_display_screen.dart — a churn-hotspot screen — at 6 call sites, meaning that screen's text visibly renders in a different typeface family than the rest of the themed app. 'Roboto' also isn't a bundled font asset (only Noto Sans Hebrew is declared in pubspec.yaml), so the family isn't even guaranteed cross-platform (no Roboto on iOS). The file's own comment claiming the Hebrew font 'must be placed in assets/fonts/... until then' is stale — pubspec.yaml:211-222 already bundles all 5 Noto Sans Hebrew weights. getTextDirection/getStyleForContent (lines 146-164) have zero callers anywhere outside their own test file.",
+  "recommendation": "Either retire AppTextStyles in favour of Theme.of(context).textTheme at its 2 call sites, or derive it from the active theme/GoogleFonts.plusJakartaSans* instead of a hardcoded 'Roboto' literal so the two systems can't drift further; delete the 2 dead helper methods or wire them to a real caller; fix the stale font-availability comment.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "text_display_screen.dart and hebrew_text.dart render with the same font family as the rest of the themed app (Plus Jakarta Sans), verified by a widget test reading the resolved TextStyle.fontFamily.",
+    "getTextDirection/getStyleForContent removed (with their now-orphaned tests) or given a real caller.",
+    "Stale asset-bundling comment corrected or removed."
+  ],
+  "labels": [
+    "typography",
+    "duplication",
+    "core-theme",
+    "dead-code"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-theme-widgets",
+  "chunk": "grp-035",
+  "normArea": "core/theme",
+  "id": "AUD-core-theme-01",
+  "linearPriority": "Medium"
+}

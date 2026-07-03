@@ -1,0 +1,209 @@
+{
+  "title": "Replace inline CurriculumTracksCompanion.insert() boilerplate with the existing seedTrack() helper across DAO tests",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "Fowler-duplication (lens pass); TQ hermetic-fixture hygiene",
+  "area": "test/core/database/daos — shared fixtures",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+      "line": 20,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_extra_test.dart",
+      "line": 29,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_extra_test.dart",
+      "line": 73,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_test.dart",
+      "line": 22,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_test.dart",
+      "line": 211,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/daily_plan_dao_test.dart",
+      "line": 16,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/daily_plan_dao_test.dart",
+      "line": 150,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/daily_plan_dao_test.dart",
+      "line": 205,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/goal_dao_extended_test.dart",
+      "line": 49,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/goal_dao_extra_test.dart",
+      "line": 48,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/goal_dao_extra_test.dart",
+      "line": 106,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/goal_dao_extra_test.dart",
+      "line": 154,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/goal_dao_extra_test.dart",
+      "line": 194,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/goal_dao_test.dart",
+      "line": 17,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_extended_test.dart",
+      "line": 23,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_extended_test.dart",
+      "line": 33,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_extra_test.dart",
+      "line": 127,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_extra_test.dart",
+      "line": 186,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_extra_test.dart",
+      "line": 219,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_test.dart",
+      "line": 29,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+      "line": 34,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+      "line": 259,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+      "line": 269,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_extended_test.dart",
+      "line": 31,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_extended_test.dart",
+      "line": 139,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_extended_test.dart",
+      "line": 170,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_extended_test.dart",
+      "line": 251,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_extra_test.dart",
+      "line": 20,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_extra_test.dart",
+      "line": 92,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_extra_test.dart",
+      "line": 125,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+      "line": 17,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+      "line": 113,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+      "line": 156,
+      "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/study_day_config_dao_test.dart",
+      "line": 17,
+      "quote": "CurriculumTracksCompanion.insert("
+    }
+  ],
+  "sites": 34,
+  "why": "test/helpers/drift_memory.dart already defines seedTrack() with a docstring stating it 'replaces the old pattern of constructing CurriculumTracksCompanion.insert inline in each test' — yet only 1 of 15 files in this batch that seed a track uses it; the other 34 sites hand-roll the companion. curriculum_tracks' shape has already changed 3 times (W3.22, W3.25, W3.28 per in-file comments removing trackType, renaming isActive/deletedAt to state/stateChangedAt), and each change required manually revisiting every inline call site. Call sites routed through seedTrack() get such fixes for free from one place; the other 34 do not, so the next schema change repeats the same N-site shotgun-surgery risk (a site missed during a mass edit silently keeps stale field values rather than failing loudly).",
+  "recommendation": "Replace `db.into(db.curriculumTracks).insert(CurriculumTracksCompanion.insert(...))` with `seedTrack(db, profileId: ..., curriculumId: ..., activatedAt: ...)` at all 34 listed sites, following the pattern completion_dao_tier_filter_test.dart already uses correctly. Mechanical, no behavior change expected.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "All 34 listed call sites replaced with seedTrack(...); test suite still green",
+    "No remaining `CurriculumTracksCompanion.insert(` under test/core/database/daos/**, except inside test/helpers/drift_memory.dart itself",
+    "Optional Rule-0 checker: add a warn-only grep to make audit for `CurriculumTracksCompanion.insert(` under test/core/database/daos/**/*.dart excluding drift_memory.dart"
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "drift",
+    "maintainability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The 'why' implies 3 separate historical rework passes over the 34 sites. git log -p on curriculum_tracks.dart shows commit 4a43cbdd ('Drift schema rebuild') landed W3.19 through W3.29 — including the cited W3.22 (drop trackType) and W3.28/29 (state/stateChangedAt) — as ONE consolidated commit; W3.25 was FKs on other tables, not curriculum_tracks. So the 34 sites were not actually revisited 3 separate times; the forward-looking 'next change touches up to 34 sites' cost is the part that actually holds and still justifies P2."
+    ]
+  },
+  "sourceBatch": "t1-core-database-daos-p2",
+  "chunk": "grp-009",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-37",
+  "linearPriority": "Medium"
+}

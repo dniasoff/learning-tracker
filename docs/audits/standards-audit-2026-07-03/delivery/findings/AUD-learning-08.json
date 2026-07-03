@@ -1,0 +1,51 @@
+{
+  "title": "Wire up or delete the dead CompletionAnimation / CompletionFeedbackController widgets",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Dead code (Fowler / digest 'Everything' sweep) -- feature never reaches its documented purpose",
+  "area": "lib/features/learning/presentation/widgets/completion_animation.dart, completion_feedback_controller.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/presentation/widgets/completion_animation.dart",
+      "line": 6,
+      "quote": "/// Animation widget shown when a completion is successfully marked.\n/// In child mode: celebratory checkmark burst with confetti particles."
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/presentation/widgets/completion_feedback_controller.dart",
+      "line": 40,
+      "quote": "class CompletionFeedbackController extends ChangeNotifier {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_08_gamification_test.dart",
+      "line": 257,
+      "quote": "controller = CompletionFeedbackController();"
+    }
+  ],
+  "sites": 2,
+  "why": "grep across all of lib/ turns up zero references to CompletionAnimation or CompletionFeedbackController outside their own definition files; the only place CompletionFeedbackController is constructed anywhere in the repo is the epic_08 story-acceptance test, which exercises the class in isolation, never through a real screen. No screen calls .start(), so the 'checkmark burst + confetti + points popup + streak bump' sequence the docstring promises never renders for any user, yet the epic_08 'Story 8.4 -- Completion Feedback & Animations' suite passes and reads as if the feature shipped and is covered.",
+  "recommendation": "Either wire CompletionFeedbackController.start() into the real mark-completion flow (text_display_screen/bulk_mark_screen) and mount CompletionAnimation there, or delete both widget files plus the epic_08 Story 8.4 controller-only test groups and track the feature as not-yet-shipped.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -rn 'CompletionAnimation(\\|CompletionFeedbackController(' lib/features shows a call site inside a real screen, OR the two widget files and their epic_08 groups are removed together"
+  ],
+  "labels": [
+    "dead-code",
+    "gamification",
+    "hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "text_display_screen.dart imports and uses AchievementUnlockCelebration (features/gamification/presentation/widgets/achievement_unlock_celebration.dart, confetti package) plus a SnackBar for completion feedback — confirms CompletionAnimation/CompletionFeedbackController were superseded, not merely unfinished."
+    ]
+  },
+  "sourceBatch": "t1-feat-learning-p2",
+  "chunk": "grp-060",
+  "normArea": "features/learning",
+  "id": "AUD-learning-08",
+  "linearPriority": "Medium"
+}

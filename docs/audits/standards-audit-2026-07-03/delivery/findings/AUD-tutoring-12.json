@@ -1,0 +1,49 @@
+{
+  "title": "Stop misreporting a failed local PIN clear as a failed reset email in TutorPinResetScreen",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard-partial-failure",
+  "area": "features/tutoring/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+      "line": 76,
+      "quote": "await authRepo.sendPasswordResetEmail(email);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+      "line": 80,
+      "quote": "await pinService.clearTutorPin(widget.profileId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+      "line": 91,
+      "quote": ")!.tutorPinResetSendFailed,"
+    }
+  ],
+  "sites": 1,
+  "why": "sendPasswordResetEmail and clearTutorPin are two sequential awaits inside one try block with one shared catch that always sets the l10n key tutorPinResetSendFailed ('Failed to send reset email...'). If the email send succeeds but the subsequent local-PIN-clear throws (a real possibility given documented secure-storage flakiness in this environment), the user is told the email failed when it actually sent — they will retry, triggering a second real password-reset email, while the actual failure (local PIN not cleared) goes unaddressed and unreported.",
+  "recommendation": "Split the two operations into separate try/catch blocks (or at minimum track which step failed) so the error message and retry behavior match what actually happened.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "a failure in clearTutorPin after a successful sendPasswordResetEmail does not show the 'send failed' string",
+    "a regression test simulates clearTutorPin throwing after a successful email send and asserts the UI does not claim the email failed"
+  ],
+  "labels": [
+    "error-handling",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "grp-124",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-12",
+  "linearPriority": "Medium"
+}

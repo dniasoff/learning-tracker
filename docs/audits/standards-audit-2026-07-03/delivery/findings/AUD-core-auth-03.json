@@ -1,0 +1,58 @@
+{
+  "title": "Replace hardcoded English StateError messages in FirebaseAuthGatewayImpl with typed error codes",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5",
+  "area": "core/auth",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+      "line": 103,
+      "quote": "throw StateError('No authenticated user found');"
+    },
+    {
+      "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+      "line": 175,
+      "quote": "throw StateError('No authenticated user found');"
+    },
+    {
+      "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+      "line": 184,
+      "quote": "throw StateError('No authenticated user found');"
+    },
+    {
+      "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+      "line": 198,
+      "quote": "throw StateError('No authenticated user found');"
+    }
+  ],
+  "sites": 4,
+  "why": "EH-5 requires domain/data errors to carry a stable code/enum, never a pre-formatted human sentence, because the app ships EN+Hebrew and a raw exception.message/.toString() renders untranslated and un-RTL-shaped. This StateError carries no `.code` field at all — contrast with the codebase's own established pattern for exactly this kind of condition: 4 presentation files (account_actions.dart, sign_in_controller.dart, signup_screen.dart, account_picker_screen.dart) all switch on `GoogleSignInException.code`, never `.message`. The one caller I traced for this specific StateError (sign_in_controller.dart `_extractFirebaseCode`) happens to fall back safely to a translated generic string because its `[plugin/code]` regex doesn't match a StateError's toString() — but that's incidental to that call site's defensive regex, not a guarantee, and the other 3 call sites (deleteAccount/changePassword/reauthenticateWithEmail flows in features/account) are outside this batch and unverified. The lint meant to catch a raw .toString() reaching UI (no_e_to_string_in_ui) is currently non-functional (custom_lint crashes — baselined), so nothing today would catch a future regression at those sites.",
+  "recommendation": "Introduce a small typed exception (e.g. NotAuthenticatedException) or a stable error-code enum instead of StateError('...'); have presentation resolve display text via AppLocalizations, matching the .code-switch pattern already used for GoogleSignInException elsewhere in the codebase.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No throw StateError('<english sentence>') remains in firebase_auth_gateway_impl.dart; a typed exception without a baked-in human sentence is thrown instead.",
+    "Existing 'throws when no user is signed in' tests updated to assert the new exception type.",
+    "A grep/test confirms no caller of deleteAccount/changePassword/reauthenticateWithEmail/sendEmailVerification renders the exception's raw message/toString() in a widget."
+  ],
+  "labels": [
+    "auth",
+    "EH-5",
+    "i18n"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "All 4 StateError quotes/lines (103,175,184,198) exact, and the 4-file GoogleSignInException.code-switch pattern is real. But the 'traced caller' claim is wrong: sign_in_controller.dart's resendVerificationEmail (the only caller of sendEmailVerification traced) never calls _extractFirebaseCode at all — it swallows the error into AppLogger.warning with nothing shown to the user, not a regex-fallback to generic text as narrated."
+    ]
+  },
+  "sourceBatch": "t1-core-auth",
+  "chunk": "grp-004",
+  "normArea": "core/auth",
+  "id": "AUD-core-auth-03",
+  "linearPriority": "Medium"
+}

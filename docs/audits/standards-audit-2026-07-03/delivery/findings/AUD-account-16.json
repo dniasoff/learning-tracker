@@ -1,0 +1,51 @@
+{
+  "title": "Route features/account/* imports of onboarding validators/screens through the onboarding barrel, not deep paths",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 2",
+  "area": "layering",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+      "line": 25,
+      "quote": "import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/screens/sign_in_screen.dart",
+      "line": 18,
+      "quote": "import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/onboarding.dart",
+      "line": 3,
+      "quote": "// Import this barrel (features/onboarding/onboarding.dart) from outside this"
+    }
+  ],
+  "sites": 2,
+  "why": "features/onboarding/onboarding.dart is the designated public surface ('Do NOT import deep paths directly') but it is an 8-line stub with zero export statements. Two account-feature screens (both audit HOTSPOT files) have no compliant way to reach auth_validators.dart and instead reach 2-3 directories deep into another feature's domain/ internals. A repo-wide grep shows this same pattern recurring ~26 times across 15 other files reaching into features/onboarding/, so this batch's file is one instance of a feature with an effectively non-functional barrel.",
+  "recommendation": "Populate features/onboarding/onboarding.dart with real exports (at minimum auth_validators.dart's public surface and whatever of onboarding_screen.dart is legitimately consumed cross-feature) and repoint the 2 importers at the barrel.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Once the check-15/15 fix (paired finding) is in place, `make audit` reports zero cross-feature deep imports into lib/features/onboarding/ from signup_screen.dart and sign_in_screen.dart"
+  ],
+  "labels": [
+    "layering",
+    "architecture",
+    "onboarding"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "coding-standards.md Rule 2 prose literally says the sanctioned barrel is lib/features/Y/providers.dart, not Y.dart — no providers.dart file exists anywhere in the repo, while all 15 features use the <feature>.dart pattern (matching the Makefile check-15 regex's own \\1.dart backreference). The finding's identification of onboarding.dart as the intended barrel is corroborated by actual repo convention/tooling, not by the literal doc text; treat as a doc-drift caveat, not a defect in this finding."
+    ]
+  },
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-068",
+  "normArea": "features/account",
+  "id": "AUD-account-16",
+  "linearPriority": "Medium"
+}

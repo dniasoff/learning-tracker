@@ -1,0 +1,53 @@
+{
+  "title": "Assert completion_events rows survive purgeHistory with purgedAt set, not just that the tombstone view is empty",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_story_18x_track_restore_test.dart",
+      "line": 112,
+      "quote": "// Completions are tombstoned (purgedAt set), not deleted."
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_story_18x_track_restore_test.dart",
+      "line": 114,
+      "quote": "final after = await db.completionDao.getCompletionsByTrack(trackId);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/completion_dao.dart",
+      "line": 581,
+      "quote": "completionsView,\n    )..where((t) => t.trackId.equals(trackId))).get();"
+    }
+  ],
+  "sites": 1,
+  "why": "getCompletionsByTrack reads completionsView, which already filters purgedAt IS NULL. A regression that hard-deletes completion_events rows inside TrackDao.purgeHistory — instead of tombstoning them, breaking the C3/N8 append-only invariant documented at track_dao.dart:404-406 — would produce the exact same empty result from this test. The test's own comment claims to verify 'tombstoned, not deleted' but its assertions cannot distinguish the two outcomes.",
+  "recommendation": "Add a raw query against completion_events (bypassing completionsView) asserting the row count for the track is unchanged from before the purge and that purgedAt is non-null on every row.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test additionally selects raw completion_events rows for trackId after purgeHistory and asserts row count is unchanged and purgedAt is non-null on each",
+    "Changing purgeHistory's tombstone UPDATE to a DELETE causes this test to fail"
+  ],
+  "labels": [
+    "test-quality",
+    "weak-assertion",
+    "append-only-invariant",
+    "epic-18"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "learning_tracker/test/core/database/daos/track_dao_test.dart:336-408 (group 'R6-11: purgeHistory curriculumId isolation') already exercises purgeHistory via a raw select on completionEvents (bypassing the view) and asserts purgedAt isNotNull/isNull — this would catch a hard-delete regression in purgeHistory even though the cited epic_18 test would not. Downgrading P2→P3 accordingly."
+    ]
+  },
+  "sourceBatch": "t1-story-epics-17-20",
+  "chunk": "grp-138",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-26",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,46 @@
+{
+  "title": "Mirror the daily-task-card chevron icon for RTL (Icons.chevron_right_rounded needs matchTextDirection)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AX-3 (directional glyphs mirror in RTL) -- the IL-7 breadcrumb-chevron defect class",
+  "area": "lib/features/learning/presentation/screens/learning_screen.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart",
+      "line": 509,
+      "quote": "const Icon(\n                Icons.chevron_right_rounded,"
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart",
+      "line": 615,
+      "quote": "const Icon(\n                Icons.chevron_right_rounded,"
+    }
+  ],
+  "sites": 2,
+  "why": "Icon.matchTextDirection defaults to false and Flutter never auto-mirrors an arbitrary Material glyph; grep -rn matchTextDirection lib returns zero hits anywhere in the app. In the Hebrew (RTL) locale, the Row ambient Directionality already moves these 'go to detail' chevrons to the visual left edge of the daily-task card and curriculum-browse card, but the glyph itself keeps pointing right -- so the arrow points back into the card instead of toward the forward-navigation direction, exactly the defect the standards doc names IL-7 to prevent recurrence.",
+  "recommendation": "Add matchTextDirection: true to both Icon(Icons.chevron_right_rounded, ...) call sites (or swap to a locale-aware chevron keyed off Directionality.of(context)).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A widget test pumps _LearnTaskCard/_CurriculumBrowseCard at Locale('he') and asserts the chevron Icon has matchTextDirection: true or is rendered horizontally mirrored"
+  ],
+  "labels": [
+    "accessibility",
+    "i18n",
+    "rtl"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "docs/test-artifacts/bulk-fix-plan-2026-06-11.md:342 rates the original IL-7 breadcrumb-chevron defect itself as 'P2' — direct in-repo precedent supporting this defect class's severity."
+    ]
+  },
+  "sourceBatch": "t1-feat-learning-p2",
+  "chunk": "grp-060",
+  "normArea": "features/learning",
+  "id": "AUD-learning-05",
+  "linearPriority": "Medium"
+}

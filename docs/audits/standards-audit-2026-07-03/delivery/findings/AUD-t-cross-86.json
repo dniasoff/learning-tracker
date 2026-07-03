@@ -1,0 +1,44 @@
+{
+  "title": "Replace DateTime.now() with the DateTimeFactory clock seam in stage_sync_test.dart's track fixture",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/integration",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/integration/stage_sync_test.dart",
+      "line": 21,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/integration/stage_sync_test.dart",
+      "line": 22,
+      "quote": "activatedAt: DateTime.now(),"
+    }
+  ],
+  "sites": 2,
+  "why": "The `_insertTrack` helper calls the real wall clock instead of `DateTimeFactory.nowUtc()` — the established deterministic seam (routes through the swappable `LocalDayClock`) that every sibling file in this same batch uses (v16_to_v17_test.dart, v17_to_v18_test.dart, restore_skip_onboarding_test.dart, etc.). Neither field is currently asserted on so it doesn't flake today, but it's a landmine: the moment an assertion is added against stateChangedAt/activatedAt, or stage-scheduling logic branches on track age, the test becomes wall-clock-dependent and can fail non-deterministically near day/DST boundaries or under a frozen-clock CI harness.",
+  "recommendation": "Swap both fields to `DateTimeFactory.nowUtc()` (or a fixed `DateTime.utc(...)` literal), matching every other file in this batch.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep for `DateTime.now()` in test/integration/stage_sync_test.dart returns zero hits"
+  ],
+  "labels": [
+    "test-quality",
+    "hermetic",
+    "wall-clock"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p6",
+  "chunk": "grp-148",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-86",
+  "linearPriority": "Low"
+}

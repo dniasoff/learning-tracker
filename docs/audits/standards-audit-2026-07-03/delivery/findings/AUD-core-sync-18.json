@@ -1,0 +1,61 @@
+{
+  "title": "Close the TutoredListenerSource channel gap and de-duplicate the two hand-maintained channelToKind switches",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / parity-with-pull-set",
+  "area": "core/sync (tutored)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/tutored_listener_source.dart",
+      "line": 11,
+      "quote": "// The channel set mirrors the pull set in PullPipeline.pullForTutoredProfile\n// (same collections, same order-field conventions) so listeners and the initial"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/pull_pipeline.dart",
+      "line": 276,
+      "quote": "('learning_order', EntityKind.learningOrder),"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/tutored_listener_source.dart",
+      "line": 67,
+      "quote": "'goals': coll('goals'),\n      'learning_ledger': coll('learning_ledger'),"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 1406,
+      "quote": "static String? _channelToKind(String channel) => switch (channel) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/tutored_listener_supervisor.dart",
+      "line": 115,
+      "quote": "static String? _channelToKind(String channel) => switch (channel) {"
+    }
+  ],
+  "sites": 3,
+  "why": "TutoredListenerSource's own doc comment claims its channel set 'mirrors the pull set in PullPipeline.pullForTutoredProfile' -- but PullPipeline's tutored collection list includes `learning_order` (pull_pipeline.dart:276) while TutoredListenerSource.openChannels()'s returned map does not. This is not hypothetical: it is a confirmed, present gap -- a child's learning-order changes reach a tutored mirror only on the next explicit pull/refresh, never in real time, unlike every other Phase 2 collection. The proximate cause is structural: sync_orchestrator.dart and tutored_listener_supervisor.dart each hand-maintain their own channel-name-to-EntityKind switch with no shared source of truth, so adding a collection to one wiring point (the pull list) and forgetting another (the tutored channel map) compiles cleanly and fails silently -- exactly the class of 'real-time gap' bug this codebase's own Phase 2 comments describe having fixed before for the own-profile path.",
+  "recommendation": "Add the missing 'learning_order' channel + EntityKind.learningOrder case to the tutored wiring; longer term, extract one shared channel -> (orderField, EntityKind) registry consumed by both firestore_listener_source.dart/sync_orchestrator.dart and tutored_listener_source.dart/tutored_listener_supervisor.dart so a new collection is wired in one place.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Test asserting TutoredListenerSource.openChannels().keys and PullPipeline.pullForTutoredProfile's collection set are identical -- fails today on learning_order, passes after the fix.",
+    "TutoredListenerSupervisor._channelToKind gains a 'learning_order' => EntityKind.learningOrder case."
+  ],
+  "labels": [
+    "duplication",
+    "sync",
+    "tutored",
+    "maintainability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-root-p1",
+  "chunk": "grp-033",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-18",
+  "linearPriority": "Medium"
+}

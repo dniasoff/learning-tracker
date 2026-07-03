@@ -1,0 +1,50 @@
+{
+  "title": "Stop LearningOrderRepositoryImpl.getOrder from writing to the DB as a side effect of a FutureProvider build call",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "SM-2 (provider build is pure — no writes/side effects)",
+  "area": "lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart; lib/features/tracks/whole_curriculum_order/presentation/providers/learning_order_providers.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+      "line": 69,
+      "quote": "if (savedVersion != _currentContentVersion) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+      "line": 76,
+      "quote": "await _stampReorderAt(curriculumId, DateTimeFactory.nowUtc());"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/providers/learning_order_providers.dart",
+      "line": 66,
+      "quote": "return repository.getOrder(curriculumId);"
+    }
+  ],
+  "sites": 2,
+  "why": "getOrder is invoked directly from learningOrderProvider's FutureProvider.family build callback, yet it performs a DB write (_stampReorderAt) whenever the stored learningOrderVersion is stale — and nothing else ever updates learningOrderVersion except an explicit user reorder/reset. So on every cold start or provider invalidation while the version mismatch persists, merely reading the curriculum's order silently re-stamps lastReorderAt = now, which is exactly the reorder-amnesty trigger — overdue-item detection for that curriculum stays silently suppressed after any content reseed until the user happens to manually reorder or reset, defeating a named product invariant via a function that looks like a pure read.",
+  "recommendation": "Move the version-mismatch re-amnesty write out of getOrder into an explicit, one-shot repair step (run once at app start or as part of the content-reseed pipeline) so provider build stays a pure read.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Test: call getOrder() twice in a row with a stale learningOrderVersion and assert lastReorderAt is stamped at most once, not on every call",
+    "Provider build functions in learning_order_providers.dart contain no DB write calls"
+  ],
+  "labels": [
+    "riverpod",
+    "state-management",
+    "tracks"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "high-093",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-06",
+  "linearPriority": "High"
+}

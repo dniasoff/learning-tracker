@@ -1,0 +1,45 @@
+{
+  "title": "Batch trackDualProgressMetricsProvider's per-track sequential DB reads (N+1 left un-fixed by sibling F13)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-5 / Fowler N+1",
+  "area": "lib/features/progress/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+      "line": 370,
+      "quote": "for (final track in tracks) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+      "line": 618,
+      "quote": "var scopes = await db.curriculumScopeDao.getScopesByTrack(trackId);"
+    }
+  ],
+  "sites": 1,
+  "why": "Each loop iteration awaits _safeLoadLeavesForTrack (itself up to 4 sequential DAO calls: getScopesByTrack, getScopes x1-2, getActiveTracksForProfile, lines 618-648), then completionPercent (397), getCompletionsByTrackAndProfile (406), getEntriesByTrack (408), getProgramForProfileAndCurriculum (421), and conditionally programCalendarPositionProvider (430-431) — up to 9 sequential DB round-trips per track, none parallelized via Future.wait. A profile with 5 active tracks does ~40-45 sequential awaits to render the Progress-hub/Dashboard per-track section, and this provider re-runs on every completionCommittedProvider tick (line 357, i.e. after every single completion mark). The very same file already fixed this exact N+1 shape for the sibling lifetimeDataProvider under the F13 label (completionsByProfileForLifetimeProvider / priorImportsByProfileProvider, lines 78-138) but the batching was never extended here. Actual latency impact is unmeasured (SUSPECTED) — the un-batched pattern itself is CONFIRMED by static reading.",
+  "recommendation": "Batch the per-track queries the way F13 batched lifetimeDataProvider's — one profile-wide query per DAO partitioned in memory by trackId — or parallelize the independent per-track work with Future.wait.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "trackDualProgressMetricsProvider issues O(1) queries per DAO (or explicitly parallelizes per-track work), not O(tracks) sequential awaits",
+    "A ProviderObserver-based test mirroring lifetime_knowledge_screen_test.dart's F13 test asserts each batched provider builds once across N tracks"
+  ],
+  "labels": [
+    "performance",
+    "progress",
+    "riverpod"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p4",
+  "chunk": "grp-086",
+  "normArea": "features/progress",
+  "id": "AUD-progress-03",
+  "linearPriority": "Medium"
+}

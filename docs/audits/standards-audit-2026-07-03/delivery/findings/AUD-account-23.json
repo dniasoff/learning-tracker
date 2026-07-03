@@ -1,0 +1,46 @@
+{
+  "title": "Reconcile AccountManagementService.signOut()'s documented 'soft sign-out' with its always-hard-sign-out callers",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AU-4",
+  "area": "features/account/domain/services (sign-out semantics)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
+      "line": 29,
+      "quote": "/// Soft sign-out — clears the in-app session so the user sees the\n  /// account picker on next launch, but leaves Firebase's cached"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart",
+      "line": 188,
+      "quote": "// Hard sign-out: clear Firebase session so the user must re-authenticate\n    // on next launch rather than being silently resumed via cached token."
+    }
+  ],
+  "sites": 2,
+  "why": "AccountManagementService.signOut()'s doc comment claims it deliberately keeps the Firebase token cached specifically so Epic 21.9 AC2 (tap an account tile → dashboard in <200ms) keeps working. Its only two callers (showSignOutConfirmation, showDeleteLocalAccountFlow, both in account_actions.dart) immediately follow it with a genuinely hard authRepositoryProvider.signOut()/authStateProvider.notifier.signOut(), so the fast-resume behavior the comment describes is unreachable from Settings > Sign Out today. This is a stale/misleading comment rather than a functional bug (the actual hard sign-out is arguably the safer choice for an explicit Sign Out action), but it risks a future edit assuming the token survives this call, and no sign-out path anywhere in this batch tells the user whether unsynced changes are pending before ending the session.",
+  "recommendation": "Update the doc comment to reflect that Settings > Sign Out is always hard, and note where (if anywhere) the soft path is actually exercised — or restore the soft path for the scenario it was designed for.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Doc comment on AccountManagementService.signOut() matches an actual, tested call path, or the soft/hard distinction is removed from the comment."
+  ],
+  "labels": [
+    "auth",
+    "AU-4",
+    "hygiene",
+    "doc-drift"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "AU-4 tag is a loose fit — this is a stale-comment/doc-accuracy issue, not stream-vs-bare-currentUser session routing; no AU-1..5 rule precisely covers 'keep doc comments in sync with behavior.' Doesn't undermine the finding's accuracy or appropriately-minimal severity."
+    ]
+  },
+  "sourceBatch": "sup-au-family",
+  "normArea": "features/account",
+  "id": "AUD-account-23",
+  "linearPriority": "Low"
+}

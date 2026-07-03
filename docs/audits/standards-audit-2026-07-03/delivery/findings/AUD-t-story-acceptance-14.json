@@ -1,0 +1,67 @@
+{
+  "title": "Merge or clearly disambiguate epic_24_stop_bleeding_test.dart and epic_24_stop_the_bleeding_test.dart; make test-epic-24 run both",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-1 / CLAUDE.md test-file convention",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+      "line": 1,
+      "quote": "/// Story acceptance tests for Epic 24 -- Stop-the-Bleeding (Phase 0)."
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+      "line": 1,
+      "quote": "/// Story acceptance tests for Epic 24 — Stop-the-Bleeding (Phase 0)."
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 119,
+      "quote": "test-epic-24: ## Run all Epic 24 (Stop-the-Bleeding) acceptance tests"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 120,
+      "quote": "\tflutter test test/story_acceptance/epic_24_stop_bleeding_test.dart"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 20,
+      "quote": "PATH=/home/daniel/flutter/bin:$$PATH dart run tool/emit_fixture_payloads.dart 2>/dev/null > functions/test/fixtures/write_payloads.json"
+    }
+  ],
+  "sites": 5,
+  "why": "make test-epic-24's own doc-comment claims to run 'all Epic 24' tests but only executes epic_24_stop_bleeding_test.dart (Stories 24.7/24.8); Stories 24.1 and 24.4's 423 lines of tests, living in the near-identically-named epic_24_stop_the_bleeding_test.dart, are silently excluded, and there is no test-story-24.1/test-story-24.4 target at all. A developer following CLAUDE.md's documented loop ('Run make test-epic-N to check you didn't break sibling stories') gets a false all-clear for 24.1/24.4 while iterating on 24.7/24.8. Git history confirms this isn't an in-progress rename: both files were independently created the same day (2026-05-13) by different work streams (DNI-310 vs DNI-316/319), each assuming it owned 'the' epic-24 file -- the exact 'divergent parallel copy' failure mode AG-4/AG-5's rationale warns about. (The tests still execute under `make ci` -> `flutter test --coverage`'s whole-directory discovery, so the CI hard gate itself isn't bypassed -- only the convenience per-epic/per-story targets are broken.)",
+  "recommendation": "Rename/merge into one canonical, clearly-named file (or split by story with unambiguous suffixes the way epic_25+ do, e.g. epic_24_story_24_1_rules_test.dart), then add test-story-24.1/test-story-24.4 Makefile targets and fix test-epic-24 to cover all four stories.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`make test-epic-24` output shows Stories 24.1, 24.4, 24.7, and 24.8 all executing",
+    "Only one file (or a story-suffixed set) matches `test/story_acceptance/epic_24_*_test.dart` with no name differing from another only by an article/qualifier word"
+  ],
+  "labels": [
+    "test-organization",
+    "make-target",
+    "dev-workflow"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-21-24",
+  "chunk": "grp-140",
+  "mergedFrom": [
+    "Remove the hardcoded personal PATH and silenced stderr in emit-fixtures"
+  ],
+  "coDiscoverers": [
+    "t1-story-epics-21-24",
+    "t2-build-ci-guardrails"
+  ],
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-14",
+  "linearPriority": "Medium"
+}

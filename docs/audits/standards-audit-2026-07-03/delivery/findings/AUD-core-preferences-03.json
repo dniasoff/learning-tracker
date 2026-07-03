@@ -1,0 +1,59 @@
+{
+  "title": "Delete the dead TextDisplayPreferences singleton; repoint the tests that exercise it onto CurrentFontSize/ShowNikudPref",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "SM-7 (no global mutable singleton) + TQ-8 (test exercises the wrong code path)",
+  "area": "core/preferences (dead code / testing)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/preferences/text_display_preferences.dart",
+      "line": 39,
+      "quote": "static final TextDisplayPreferences instance = TextDisplayPreferences._();"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/text_display_preferences.dart",
+      "line": 41,
+      "quote": "static const _fontSizeKey = 'text_display_font_size';"
+    },
+    {
+      "file": "learning_tracker/test/core/preferences/text_display_preferences_test.dart",
+      "line": 15,
+      "quote": "TextDisplayPreferences.instance.reset();"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+      "line": 307,
+      "quote": "final prefs = TextDisplayPreferences.instance;\n      prefs.reset();"
+    }
+  ],
+  "sites": 2,
+  "why": "TextDisplayPreferences.instance is a global mutable singleton that reads/writes the UNSCOPED legacy keys text_display_font_size / text_display_show_nikud directly, bypassing the per-profile-scoping design the rest of core/preferences/ implements. grep confirms zero references from lib/ outside its own file (text_display_screen.dart imports this file only for the FontSize enum; the real state flows through fontSizeProvider -> currentFontSizeProvider -> TextDisplayPreference, entirely outside this class). Yet it has a dedicated 184-line test file, and story_acceptance/epic_02_content_test.dart's 'AC: font size adjustable' test (plus text_display_screen_test.dart's setUp) exercise this dead class instead of the code the screen actually runs, so that acceptance test can pass while the real font-size/nikud feature is broken — undermining the make test-story-X.Y gate this project's own CLAUDE.md treats as the definition of done. It is also a live landmine: any future dev who greps 'setShowNikud' lands on this unscoped API first and, if they wire it back in, reintroduces cross-profile preference bleed on shared devices.",
+  "recommendation": "Delete the TextDisplayPreferences class (keep the FontSize enum, which is genuinely used). Rewrite text_display_preferences_test.dart to test only the enum. Fix epic_02_content_test.dart's AC and text_display_screen_test.dart's setUp to go through currentFontSizeProvider/showNikudPrefProvider (or a ProviderContainer override) instead of the deleted singleton.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn \"TextDisplayPreferences\" lib/ returns nothing.",
+    "epic_02_content_test.dart's 'AC: font size adjustable' test drives CurrentFontSize/currentFontSizeProvider (or the real screen) and would fail if that provider's persistence broke."
+  ],
+  "labels": [
+    "dead-code",
+    "testing",
+    "preferences",
+    "P1"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Secondary rule citation TQ-8 is a loose fit (that rule's literal text concerns bug-fix regression tests, not identifying that an existing test exercises the wrong code path); the finding stands fully on the SM-7 dead global-singleton violation, which is precisely and verifiably matched.",
+      "The \"sites\": 2 count undercounts by one -- a third exercise of the dead singleton exists at epic_02_content_test.dart:904-919 (\"TextDisplayPreferences.showNikud defaults to true and persists\"), and text_display_screen_test.dart:41 setUp is a fourth minor touch-point (harmless no-op but still worth folding into the fix). The recommendation already anticipates text_display_screen_test.dart's setUp needing a fix, so remediation scope is correct even though the evidence list under-cites it."
+    ]
+  },
+  "sourceBatch": "t1-core-providers-prefs",
+  "chunk": "high-016",
+  "normArea": "core/preferences",
+  "id": "AUD-core-preferences-03",
+  "linearPriority": "High"
+}

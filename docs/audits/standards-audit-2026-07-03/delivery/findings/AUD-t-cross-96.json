@@ -1,0 +1,51 @@
+{
+  "title": "Use FakeLocalDayClock instead of wall-clock (SystemLocalDayClock/DateTime.now()) in test/sync hermetic tests",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (pending: extend hermetic-test check to test/)",
+  "area": "test/sync",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/stage_definition_single_path_test.dart",
+      "line": 58,
+      "quote": "clock: const SystemLocalDayClock(),"
+    },
+    {
+      "file": "learning_tracker/test/sync/stage_definition_single_path_test.dart",
+      "line": 118,
+      "quote": "clock: const SystemLocalDayClock(),"
+    },
+    {
+      "file": "learning_tracker/test/sync/tutored_listener_supervisor_test.dart",
+      "line": 191,
+      "quote": "'updated_at': DateTime.now().toIso8601String(),"
+    }
+  ],
+  "sites": 5,
+  "why": "stage_definition_single_path_test.dart wires the real system clock into OutboxSyncWriteFacade under test; its sibling study_day_config_sync_test.dart uses FakeLocalDayClock(DateTime.utc(...)) for the identical facade, showing the fixed-clock convention exists and was simply not followed here. tutored_listener_supervisor_test.dart uses DateTime.now() three times (lines 191, 313, 354) for filler payload values. Neither instance drives a flaky assertion today, but both stand as standing violations of the hermetic-test rule the moment a future edit asserts against the timestamp, and both make the test's inputs non-reproducible from a bug report.",
+  "recommendation": "Replace `const SystemLocalDayClock()` with `FakeLocalDayClock(DateTime.utc(...))` in stage_definition_single_path_test.dart; replace the three DateTime.now() payload fillers in tutored_listener_supervisor_test.dart with a fixed ISO string.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep for 'SystemLocalDayClock' and 'DateTime.now()' in stage_definition_single_path_test.dart and tutored_listener_supervisor_test.dart returns empty"
+  ],
+  "labels": [
+    "testing",
+    "determinism",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "None needed — all cited evidence verified accurate."
+    ]
+  },
+  "sourceBatch": "t1-feat-sync-p3",
+  "chunk": "grp-110",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-96",
+  "linearPriority": "Low"
+}

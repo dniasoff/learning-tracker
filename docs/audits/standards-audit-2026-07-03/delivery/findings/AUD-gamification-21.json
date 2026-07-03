@@ -1,0 +1,86 @@
+{
+  "title": "Replace hardcoded Color(0x...) literals with theme/AppColors tokens across gamification presentation widgets",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "custom_lint no_color_literal_outside_theme (currently non-functional since dart run custom_lint crashes; not covered by any make audit grep)",
+  "area": "features/gamification/presentation (screens, widgets)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/point_config_screen.dart",
+      "line": 25,
+      "quote": "const Color _kScreenBg = Color(0xFFF8F9FB);"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/pro_tip_card.dart",
+      "line": 15,
+      "quote": "color: const Color(0xFFFFEFD5),"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/achievement_unlock_celebration.dart",
+      "line": 177,
+      "quote": "Color(0xFFFF6B6B),\n  Color(0xFFFFD93D),"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+      "line": 242,
+      "quote": "Color(0xFF1E52D4), // kChildRewardsCardBlueTop"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/achievement_tier_card.dart",
+      "line": 187,
+      "quote": "colors: [Color(0xFF1A237E), Color(0xFF4A148C)],"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/locked_achievement_shell.dart",
+      "line": 58,
+      "quote": "? const Color(0xFF455A64)\n                            : const Color(0xFF37474F),"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/progress_summary_card.dart",
+      "line": 29,
+      "quote": "color: Color(0x330038A8),"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+      "line": 23,
+      "quote": "const Color _kPreviewBg = Color(0xFFEEF3FA);"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart",
+      "line": 227,
+      "quote": "color: Color(0xFFEEF3FA),"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/avatar_picker_row.dart",
+      "line": 6,
+      "quote": "const Color _kFieldFill = Color(0xFFF2F4F8);"
+    }
+  ],
+  "sites": 38,
+  "why": "38 raw Color(0x...) literals across these 10 files bypass the design-token system entirely (contrast with achievement_unlock_celebration.dart:179-180, which correctly reuses AppColors.chartGreen/chartBlue in the same list). This is exactly the pattern the no_color_literal_outside_theme custom_lint rule exists to catch, but that lint currently can't run at all (custom_lint_core/analyzer version mismatch, already flagged by the orchestrator), so nothing today prevents new color literals from being added or flags the existing ones. Concrete cost: no single place to retheme/dark-mode this feature, and visually-identical colors (e.g. several near-duplicate blues/creams) are redefined independently per file instead of shared.",
+  "recommendation": "Extract the repeated literals into named constants in core/theme/app_colors.dart (or reuse existing ones where a near-duplicate already exists) and reference those from all 10 files; once dart run custom_lint is repaired, let no_color_literal_outside_theme enforce this going forward.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "No lib/features/gamification/**/*.dart file (excluding generated) contains a Color(0x...) literal outside core/theme",
+    "no_color_literal_outside_theme reports zero violations in this feature once custom_lint is functional again"
+  ],
+  "labels": [
+    "design-tokens",
+    "theming",
+    "P3",
+    "custom-lint"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-052",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-21",
+  "linearPriority": "Low"
+}

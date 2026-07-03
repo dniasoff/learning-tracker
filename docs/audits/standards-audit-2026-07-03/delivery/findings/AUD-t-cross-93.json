@@ -1,0 +1,45 @@
+{
+  "title": "Rewrite completion_dao_test.dart null-scope test — the null-check operator throws before the DAO method is ever called",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/core/database/daos/completion_dao_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+      "line": 233,
+      "quote": "test('getAllCompletions throws AssertionError in debug when scope is null '"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+      "line": 243,
+      "quote": "scope: nullableScope!,"
+    }
+  ],
+  "sites": 1,
+  "why": "Dart evaluates argument expressions before invoking the function, so `scope: nullableScope!` throws TypeError the instant the null-check operator runs — internalGetAllCompletionsCrossProfile (and any internal _assertCrossProfileScope guard inside it) is never entered. The test's own docstring claims it 'verifies the assert fires in debug mode,' but it actually only verifies core Dart null-safety semantics, unrelated to any code in completion_dao.dart. If the DAO's internal scope guard were deleted entirely, this test would still pass unchanged, so it provides zero regression coverage for the behavior it claims to protect.",
+  "recommendation": "Delete this test (Dart's null-safety already makes a null CrossProfileScope unreachable through the typed public API, so there is nothing left to regress) or rewrite it to genuinely exercise the DAO's internal guard via a testable seam.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test either removed with a comment explaining the language-level reason, or rewritten so it demonstrably enters completion_dao.dart code before throwing",
+    "No remaining test claims to verify an internal assert that it cannot actually reach"
+  ],
+  "labels": [
+    "testing",
+    "tautological-test",
+    "coverage-gap"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-daos-p2",
+  "chunk": "grp-010",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-93",
+  "linearPriority": "Low"
+}

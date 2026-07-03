@@ -1,0 +1,44 @@
+{
+  "title": "Defensively copy SyncPushException.committed so the partial-commit invariant can't be violated by a future caller",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "Evans lens — invariant enforced in one place, not by caller convention",
+  "area": "core/sync/exceptions",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/exceptions/sync_push_exception.dart",
+      "line": 21,
+      "quote": "final List<String> committed;"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 278,
+      "quote": "committed: List.unmodifiable(pushed),"
+    }
+  ],
+  "sites": 1,
+  "why": "SyncPushException.committed exists specifically so OutboxProcessor can tell which outbox rows genuinely landed before a batch failed, so committed rows are 'never re-pushed or dead-lettered' (per this file's own docstring, H3). That invariant currently holds only because the single production call site remembers to wrap the list in List.unmodifiable(pushed) before throwing — the exception class itself accepts any List<String>, including a live mutable reference, with no internal defensive copy. A future call site (or a test double standing in for one) that passes a growable list it keeps appending to after constructing the exception would silently corrupt the partial-commit accounting this type exists to protect, with no compiler or runtime signal that anything went wrong.",
+  "recommendation": "Copy defensively inside the constructor (e.g. an initializer that wraps committed in List.unmodifiable(committed)) so the guarantee doesn't depend on every future caller remembering to do it themselves.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "a new unit test constructs SyncPushException with a growable list, mutates the original list after construction, and asserts .committed is unaffected"
+  ],
+  "labels": [
+    "defensive-programming",
+    "sync",
+    "data-integrity"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-exceptions",
+  "chunk": "grp-029",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-33",
+  "linearPriority": "Low"
+}

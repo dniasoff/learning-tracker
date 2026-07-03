@@ -1,0 +1,53 @@
+{
+  "title": "Inject an overridable clock into streakMilestoneAnalyticsObserverProvider instead of hardcoding SystemLocalDayClock",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 / Feathers testability lens",
+  "area": "core/analytics",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/analytics/streak_milestone_analytics_observer.dart",
+      "line": 47,
+      "quote": "clock: const SystemLocalDayClock(),"
+    },
+    {
+      "file": "learning_tracker/test/core/analytics/streak_milestone_analytics_observer_test.dart",
+      "line": 129,
+      "quote": "final todayUtc = DateTime.now().toUtc();"
+    },
+    {
+      "file": "learning_tracker/test/core/analytics/streak_milestone_analytics_observer_test.dart",
+      "line": 168,
+      "quote": "while (DateTime.now().isBefore(deadline) &&"
+    }
+  ],
+  "sites": 1,
+  "why": "The observer instantiates `const SystemLocalDayClock()` directly rather than watching an injectable clock — the codebase already has this seam elsewhere (e.g. outbox_providers.dart reads `ref.watch(localDayClockProvider)`). Because the observer can't be handed a fixed clock in tests, the happy-path test has to anchor seeded data to real `DateTime.now()` and then poll every 20ms for up to 5 real seconds waiting for the milestone to fire, instead of asserting deterministically against a fixed instant. The test's own comment documents this was already a source of past flakiness ('silently breaks the moment the calendar advances', 'failed in isolation') — the current polling approach is less likely to fail, not deterministic, and burns up to 5 real seconds per run.",
+  "recommendation": "Thread a LocalDayClock through the provider (watch a clock provider, mirroring outbox_providers.dart) so tests can override with a fixed clock and assert the milestone fires on an exact expected tick without polling.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "streak_milestone_analytics_observer_test.dart's happy-path test uses a fixed/injected clock instead of DateTime.now(), with no wall-clock polling loop",
+    "Test runtime for that test drops from a up-to-5s poll to near-instant"
+  ],
+  "labels": [
+    "testability",
+    "P2",
+    "flaky-test",
+    "analytics"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "StreakStateProvider.watch() drives the wait via a Drift .watch() stream plus async restoreIfEmpty, independent of clock source. Injecting a fixed clock fixes the DateTime.now() seed-anchoring (real, valid benefit) but likely won't make the test 'near-instant' as the acceptance criteria states — some bounded wait for the DB stream's first emission would still be needed. Core rule violation stands; recommendation's stated payoff is optimistic."
+    ]
+  },
+  "sourceBatch": "t1-core-analytics-logging",
+  "chunk": "grp-003",
+  "normArea": "core/analytics",
+  "id": "AUD-core-analytics-02",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,52 @@
+{
+  "title": "Add the required `// keepAlive:` justification comment to Sacred Time's 6 keepAlive providers",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-6",
+  "area": "state-management/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sacred_time/presentation/providers/cities_provider.dart",
+      "line": 7,
+      "quote": "@Riverpod(keepAlive: true)\nCitiesRepository citiesRepository(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+      "line": 12,
+      "quote": "@Riverpod(keepAlive: true)\nLocationService locationService(Ref ref) => const LocationService();"
+    },
+    {
+      "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_windows_provider.dart",
+      "line": 13,
+      "quote": "@Riverpod(keepAlive: true)\nList<SacredWindow> sacredWindows(Ref ref) {"
+    }
+  ],
+  "sites": 6,
+  "why": "coding-standards.md SM-6 requires every keepAlive: true to carry an inline // keepAlive: comment; these 6 declarations (cities_provider.dart:7, sacred_location_provider.dart:12/17/123, sacred_windows_provider.dart:13/33) have nearby doc comments explaining rationale but none use the required tag, so a future audit grep for the literal marker (as SM-6's own Enforce plan proposes) would still flag all 6 as unjustified even though they are reasoned. This mirrors a repo-wide gap (only ~6/86 keepAlive sites in lib/ use the tag), not something unique to this feature.",
+  "recommendation": "Prefix each keepAlive declaration's existing rationale with the literal `// keepAlive: ...` tag so the future audit grep can find it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "All 6 keepAlive providers in this batch carry a // keepAlive:-prefixed comment",
+    "A grep for 'keepAlive: true' paired with a check for the tag on the preceding line finds no gaps in this feature"
+  ],
+  "labels": [
+    "hygiene",
+    "riverpod",
+    "documentation"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "2 of the 6 cited sites (cities_provider.dart:7 citiesRepository, sacred_location_provider.dart:12 locationService) have no preceding doc comment whatsoever, so the recommendation to 'prefix each keepAlive declaration's existing rationale' doesn't apply to them — new rationale would need to be written, not just tagged."
+    ]
+  },
+  "sourceBatch": "t1-feat-sacred_time",
+  "chunk": "grp-089",
+  "normArea": "features/sacred_time",
+  "id": "AUD-sacred_time-07",
+  "linearPriority": "Low"
+}

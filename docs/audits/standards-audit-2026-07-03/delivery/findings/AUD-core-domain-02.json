@@ -1,0 +1,50 @@
+{
+  "title": "Fix SefariaRef.titlePart/addressPart to match the documented chapter:verse split (or fix the docs)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Evans (ubiquitous-language contract) / TQ-7-TQ-8 spirit (test encodes the bug instead of catching it)",
+  "area": "core/domain/value_objects (sefaria)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/sefaria_ref.dart",
+      "line": 66,
+      "quote": "/// For `\"Mishnah Berakhot 1:1\"` this is `\"Mishnah Berakhot\"`."
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/sefaria_ref.dart",
+      "line": 133,
+      "quote": "r'^(.*?)(\\d+[a-z]?)$',"
+    },
+    {
+      "file": "learning_tracker/test/core/domain/value_objects/sefaria_ref_test.dart",
+      "line": 67,
+      "quote": "expect(ref.titlePart, 'Mishnah Berakhot 1:');"
+    }
+  ],
+  "sites": 1,
+  "why": "The class docstring's own worked example says titlePart of \"Mishnah Berakhot 1:1\" is \"Mishnah Berakhot\" (address \"1:1\"). The `_splitTail` regex only strips a single trailing digit run (optionally +1 letter), so it can never cross the ':' in a chapter:verse address — for that exact documented example it actually produces titlePart == \"Mishnah Berakhot 1:\" and addressPart == \"1\". The test file's own inline comment ('let's assert what we actually produce... The SefariaRef titlePart splits on the LAST pure-numeric token') shows the author noticed the mismatch and wrote the test to lock in the wrong output rather than fix the regex or the docs. Mishnah/Tanach chapter:verse is the single most common ref shape in this Torah-study app, so any future caller of titlePart/addressPart (currently unused in production) inherits silently wrong output for the primary case, with a green regression test giving false confidence.",
+  "recommendation": "Either extend `_splitTail` to also recognize a `\\d+:\\d+` chapter:verse tail as one address token, or correct the docstring to describe the actual single-digit-run behavior — then update the test to assert the corrected contract, not the current output.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "SefariaRef.parse('Mishnah Berakhot 1:1').titlePart equals whatever the corrected docstring promises (either 'Mishnah Berakhot' with the regex fixed, or the docstring rewritten to match current behavior).",
+    "sefaria_ref_test.dart's titlePart test for chapter:verse refs no longer contains a comment acknowledging the assertion doesn't match the documented contract."
+  ],
+  "labels": [
+    "dead-code",
+    "contract-mismatch",
+    "test-quality"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-domain-learning",
+  "chunk": "grp-016",
+  "normArea": "core/domain",
+  "id": "AUD-core-domain-02",
+  "linearPriority": "Medium"
+}

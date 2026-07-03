@@ -1,0 +1,38 @@
+{
+  "title": "Type the catch clause in CurriculumImportService._activateOne so Error subtypes aren't swallowed as activation failures",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-4",
+  "area": "onboarding/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/services/curriculum_import_service.dart",
+      "line": 66,
+      "quote": "} catch (e) {"
+    }
+  ],
+  "sites": 1,
+  "why": "A bare `catch (e)` also catches Error subtypes (StateError, TypeError, a failed assertion). A genuine programming bug during activation is silently reported to the onboarding UI as an ordinary 'this curriculum failed to activate' result instead of surfacing as a crash, masking the real defect behind a plausible-looking user-facing failure. (This bare-catch pattern recurs ~54 times repo-wide; only this batch's site is counted here.)",
+  "recommendation": "Narrow to `on Exception catch (e)` (or the specific exception types _activationService.activate can throw) and let Error subtypes propagate.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A test that makes the mocked activationService throw a StateError confirms it propagates out of _activateOne/importSingle instead of becoming a CurriculumImportResult(success: false)"
+  ],
+  "labels": [
+    "error-handling",
+    "onboarding"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-070",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-17",
+  "linearPriority": "Low"
+}

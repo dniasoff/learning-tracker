@@ -1,0 +1,55 @@
+{
+  "title": "Delete the 4 unused SCREENS_*_ARCHIVED dead-code arrays from tool/vision_find_pass.js",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-2 AREA NOTE: dead code",
+  "area": "tool (vision-audit orchestration prompt)",
+  "evidence": [
+    {
+      "file": "tool/vision_find_pass.js",
+      "line": 11,
+      "quote": "const SCREENS_FR1_ARCHIVED = ["
+    },
+    {
+      "file": "tool/vision_find_pass.js",
+      "line": 29,
+      "quote": "const SCREENS_E2E_R1_ARCHIVED = ["
+    },
+    {
+      "file": "tool/vision_find_pass.js",
+      "line": 53,
+      "quote": "const SCREENS_E2E_R2_ARCHIVED = ["
+    },
+    {
+      "file": "tool/vision_find_pass.js",
+      "line": 71,
+      "quote": "const SCREENS_E2E_R3_ARCHIVED = ["
+    }
+  ],
+  "sites": 4,
+  "why": "These 4 top-level consts (lines 11-87, roughly a third of the file) are grepped nowhere else in the file — only the separate `SCREENS` const at line 89 feeds the actual orchestration loop at line 224. Git history already preserves prior rounds' screen lists, so keeping ~180 lines of never-executed array literals in the live script is pure clutter that makes the file 3x longer than its live logic and risks a future editor mistaking one of the ARCHIVED arrays for the active one.",
+  "recommendation": "Delete SCREENS_FR1_ARCHIVED, SCREENS_E2E_R1_ARCHIVED, SCREENS_E2E_R2_ARCHIVED, and SCREENS_E2E_R3_ARCHIVED; rely on git log/blame for historical reference instead of committed dead arrays.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "None of SCREENS_FR1_ARCHIVED / SCREENS_E2E_R1_ARCHIVED / SCREENS_E2E_R2_ARCHIVED / SCREENS_E2E_R3_ARCHIVED remain defined in the file."
+  ],
+  "labels": [
+    "dead-code",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The 'why' overstates magnitude: dead span is ~77 lines (33% of file, matching its own 'roughly a third' claim), not the '~180 lines'/'3x longer than its live logic' also asserted in the same paragraph — internally inconsistent but doesn't change the core dead-code verdict."
+    ]
+  },
+  "sourceBatch": "t2-root-tool",
+  "chunk": "grp-164",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-23",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,57 @@
+{
+  "title": "Rewrite tests that don't actually exercise the repository/provider they claim to test",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/features/content_browsing",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/content_browsing/data/repositories/content_repository_impl_test.dart",
+      "line": 46,
+      "quote": "skip: 'Bundled JSON removed — content now fetched from cloud storage',"
+    },
+    {
+      "file": "learning_tracker/test/features/content_browsing/data/repositories/content_repository_impl_test.dart",
+      "line": 228,
+      "quote": "final filtered = testItems.where((item) => item.level1 == 'Seder Zeraim').toList();"
+    },
+    {
+      "file": "learning_tracker/test/features/content_browsing/data/repositories/content_repository_impl_test.dart",
+      "line": 280,
+      "quote": "if (query.isEmpty) { expect(<ContentItem>[], isEmpty); }"
+    },
+    {
+      "file": "learning_tracker/test/features/content_browsing/content_tile_search_providers_test.dart",
+      "line": 938,
+      "quote": "final container = ProviderContainer(\n          overrides: [contentRepositoryProvider.overrideWithValue(repo)],\n        );"
+    }
+  ],
+  "sites": 2,
+  "why": "content_repository_impl_test.dart's 'in-memory operations' group re-implements ContentRepositoryImpl's filter/search logic with local .where() calls instead of calling filterByLevel/search/getContentByRef — a regression in the real nikud-stripping cache or level-matching would not be caught here. Its 'empty search returns empty list' test is a pure tautology that doesn't reference the repository at all. Its entire 'JSON parsing contract' group is skipped with a now-false premise (ContentRepositoryImpl.getContentForCurriculum still loads rootBundle.loadString('assets/content/hierarchy/$key.json'), and 14 such files exist) and even unskipped would fail immediately since its own File('assets/content/$filename') omits the 'hierarchy/' path segment. Separately, content_tile_search_providers_test.dart's 'P2. empty query' test allocates a ProviderContainer and disposes it but never calls container.read(...) — its assertion only exercises the hand-written fake repository directly, not contentSearchProvider as the test name claims. The sibling file content_repository_impl_logic_test.dart (also in this batch) shows the correct pattern — a fake subclass that only stubs asset loading and calls the real repository methods — so real coverage exists elsewhere, but these weaker duplicates sit alongside it giving false confidence.",
+  "recommendation": "Delete the 'in-memory operations' and skipped 'JSON parsing contract' groups from content_repository_impl_test.dart (superseded by content_repository_impl_logic_test.dart); add one small always-on smoke test that loads and parses every assets/content/hierarchy/*.json file; fix the P2 test to call container.read(contentSearchProvider(...).future) with an empty query.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "mutating ContentRepositoryImpl.search's nikud-stripping or filterByLevel's level-matching logic causes a red test in this suite after the rewrite",
+    "dart test shows 0 permanently-skipped groups in content_repository_impl_test.dart, or the skip reason is corrected and carries a Linear id"
+  ],
+  "labels": [
+    "test-quality",
+    "tq-8",
+    "false-confidence"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Finding states '14 such files exist' under assets/content/hierarchy/*.json; actual count via find is 15. Does not affect the core claim that the skip reason is false and the code path is live."
+    ]
+  },
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "chunk": "grp-044",
+  "normArea": "tests/content_browsing",
+  "id": "AUD-t-content_browsing-04",
+  "linearPriority": "Medium"
+}

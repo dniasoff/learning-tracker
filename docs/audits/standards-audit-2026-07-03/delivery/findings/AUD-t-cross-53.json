@@ -1,0 +1,45 @@
+{
+  "title": "Assert digit interpolation in he.todaysLearning(5) test — it only checks isNotEmpty while the EN counterpart checks contains('3')",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "learning_tracker/test/core/l10n/app_localizations_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/l10n/app_localizations_test.dart",
+      "line": 49,
+      "quote": "expect(en.todaysLearning(3), contains('3'));"
+    },
+    {
+      "file": "learning_tracker/test/core/l10n/app_localizations_test.dart",
+      "line": 81,
+      "quote": "expect(he.todaysLearning(5), isNotEmpty);"
+    }
+  ],
+  "sites": 1,
+  "why": "The EN test explicitly verifies the {count} placeholder is substituted into the rendered string; the HE test for the identical method only checks isNotEmpty. If a translator or a bad ARB edit drops the {count} placeholder from lib/l10n/app_he.arb's todaysLearning message (leaving a static 'לימוד היום' with no digit), the HE test still passes while the equivalent EN regression would fail. In a bilingual app where Hebrew is the RTL-primary locale, the weaker locale currently gets the weaker regression check.",
+  "recommendation": "Change line 81 to `expect(he.todaysLearning(5), contains('5'))` to match the rigor of the EN test at line 49.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "he.todaysLearning(5) test asserts contains('5') (or an equivalent digit-presence check), not just isNotEmpty",
+    "Test fails if lib/l10n/app_he.arb's todaysLearning message loses its {count} placeholder on regeneration"
+  ],
+  "labels": [
+    "test-quality",
+    "l10n",
+    "TQ-8"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-l10n",
+  "chunk": "grp-018",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-53",
+  "linearPriority": "Low"
+}

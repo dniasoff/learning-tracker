@@ -1,0 +1,100 @@
+{
+  "title": "Replace raw DateTime.now() with DateTimeFactory.nowUtc() in DAO test fixture setup",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/core/database/daos — fixture setup",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+      "line": 23,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_event_dao_test.dart",
+      "line": 12,
+      "quote": "final now = DateTime.now();"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_test.dart",
+      "line": 25,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_test.dart",
+      "line": 214,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/goal_dao_test.dart",
+      "line": 20,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_test.dart",
+      "line": 13,
+      "quote": "final now = DateTime.now();"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+      "line": 27,
+      "quote": "createdAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+      "line": 262,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/profile_dao_test.dart",
+      "line": 23,
+      "quote": "createdAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/profile_dao_test.dart",
+      "line": 117,
+      "quote": "updatedAt: Value(DateTime.now()),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+      "line": 20,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+      "line": 116,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+      "line": 159,
+      "quote": "stateChangedAt: DateTime.now(),"
+    }
+  ],
+  "sites": 30,
+  "why": "TQ-6 requires hermetic tests with no wall-clock reliance. This exact suite's own shared helpers (seedProfile/seedTrack in test/helpers/drift_memory.dart) already route every timestamp through the injectable DateTimeFactory.nowUtc() specifically so the clock can eventually be pinned — but 30 sites across 8 files in this batch bypass it and call DateTime.now() directly for FK-filler timestamp columns. Today the values are unasserted so this is inert, but every raw call site is a future flake waiting to happen the first time a test asserts against 'inserted recently' or a snapshot equality, and none of these 30 sites are routed through any override point.",
+  "recommendation": "Replace `DateTime.now()` with `DateTimeFactory.nowUtc()` (already available via the existing import chain, or add `import 'package:learning_tracker/core/utils/date_utils.dart';`) or a fixed literal `DateTime.utc(...)` at all 30 sites across the 8 listed files.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "All 30 listed DateTime.now() call sites replaced with DateTimeFactory.nowUtc() or a fixed literal",
+    "Rule-0 checker: grep test/core/database/daos/**/*.dart for `DateTime.now()`; expect 0 hits"
+  ],
+  "labels": [
+    "testing",
+    "hermeticity",
+    "wall-clock"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-daos-p2",
+  "chunk": "grp-009",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-88",
+  "linearPriority": "Low"
+}

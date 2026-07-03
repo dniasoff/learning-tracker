@@ -1,0 +1,55 @@
+{
+  "title": "Add semantics to PIN numpad icon-only controls and remove the fixed-height digit-key wrapper",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "AX-3 / AX-4",
+  "area": "features/tutoring/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+      "line": 189,
+      "quote": "icon: const Icon(Icons.close_rounded),\n          onPressed: widget.onCancel,"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+      "line": 404,
+      "quote": "Icons.backspace_outlined,\n                  color: Theme.of(context).colorScheme.error,"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+      "line": 432,
+      "quote": "child: SizedBox(height: 52, child: Center(child: child)),"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart",
+      "line": 372,
+      "quote": "Icons.backspace_outlined,\n            color: Theme.of(context).colorScheme.error,"
+    }
+  ],
+  "sites": 5,
+  "why": "The AppBar close IconButton and the numpad's backspace key are icon-only with no tooltip/Semantics label, so a screen-reader user cannot identify either control (the digit keys are fine — their Text child is auto-exposed). Separately, _TutorPinKey wraps its child (a 24sp digit Text at default scale) in a fixed SizedBox(height: 52); no global TextScaler clamp exists in this app (verified via grep), so at large accessibility text-scale settings the digit glyph can exceed the fixed box and clip or overflow visually.",
+  "recommendation": "Add `tooltip:` to the close IconButton and wrap the backspace Icon in Semantics(label: ...) or give it a tooltip; remove the fixed height on _TutorPinKey (let it size to content with padding, or clamp textScale for the digit only).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "the close button and backspace key have non-empty semantic labels verifiable via a Semantics-tree widget test",
+    "a widget test at textScale 2.0+ confirms no RenderFlex overflow/clip on the numpad (would confirm the AX-4 half of this finding at runtime)"
+  ],
+  "labels": [
+    "AX-3",
+    "AX-4",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "grp-125",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-15",
+  "linearPriority": "Low"
+}

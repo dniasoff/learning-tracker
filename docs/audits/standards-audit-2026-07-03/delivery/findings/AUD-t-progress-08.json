@@ -1,0 +1,41 @@
+{
+  "title": "Fix the stale 'fr-FR test below' comment in siyumim_timeline_month_key_ts13_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7 / test-comment documentation drift",
+  "area": "test/features/progress/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/progress/presentation/widgets/siyumim_timeline_month_key_ts13_test.dart",
+      "line": 91,
+      "quote": "// rely on the fr-FR test below to catch the regression."
+    }
+  ],
+  "sites": 1,
+  "why": "The file's 3 tests are all pinned to en_US / default locale; no fr-FR or any other non-English-locale test exists anywhere in the file. The comment claims a locale-switch test 'below' catches the TS-13 regression, but the actual detection comes from test 2's format-string comparison (abbreviated 'Jan 2026' vs the old hardcoded 'January 2026'), not a locale switch. A reader trusting the comment would wrongly believe the DateFormat.yMMM(locale) fix is verified against an actual non-English locale (e.g. Hebrew), when it is not — only date-format granularity is tested.",
+  "recommendation": "Either add the promised non-English-locale test (Locale('he') or Locale('fr')) or delete the stale comment so it stops overstating coverage.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Comment matches actual test content, or a real non-English-locale test is added and asserts a locale-specific month header"
+  ],
+  "labels": [
+    "testing",
+    "documentation",
+    "progress"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Rule tag 'TQ-7' is a loose fit — TQ-7 governs weakening/deleting assertions, not comment accuracy. This is better framed as a lens-pass documentation-drift finding (permitted by the digest's Fowler/Evans lens pass) than a literal TQ-7 violation; doesn't change the defect's reality or severity."
+    ]
+  },
+  "sourceBatch": "t1-feat-progress-p4",
+  "chunk": "grp-087",
+  "normArea": "tests/progress",
+  "id": "AUD-t-progress-08",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,43 @@
+{
+  "title": "Replace scheduler_providers.dart's duplicate _localDateOnly with the existing DateUtils.extractLocalDate",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication",
+  "area": "scheduler/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 1333,
+      "quote": "DateTime _localDateOnly(DateTime utc) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/utils/date_utils.dart",
+      "line": 63,
+      "quote": "  static DateTime extractLocalDate(DateTime utcDateTime) {"
+    }
+  ],
+  "sites": 1,
+  "why": "_localDateOnly (`final l = utc.toLocal(); return DateTime(l.year, l.month, l.day);`) is a byte-for-byte reimplementation of DateUtils.extractLocalDate, which is already imported and used dozens of times elsewhere in this exact file (e.g. line 543 `DateUtils.extractLocalDate(now)`). Two near-identical local-date helpers in the same file is exactly the kind of drift that produced the R4-1 class of bugs this feature has repeatedly had to fix — a future edit to one 'extract local date' helper (e.g. a DST or leap-second fix) won't automatically apply to the other.",
+  "recommendation": "Delete _localDateOnly and call DateUtils.extractLocalDate at its two call sites instead.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_localDateOnly is removed from scheduler_providers.dart; its call sites use DateUtils.extractLocalDate."
+  ],
+  "labels": [
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-094",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-24",
+  "linearPriority": "Low"
+}

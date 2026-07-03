@@ -1,0 +1,69 @@
+{
+  "title": "Wire up or delete the 4 unused core/domain/value_objects/ types (Pin, StageOrder, ScopeLevel/ScopeValue/CurriculumScope, CalendarSystem)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-speculative-generality / AG-6 dead code",
+  "area": "core/domain/value_objects",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/pin.dart",
+      "line": 24,
+      "quote": "class Pin {"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/stage_order.dart",
+      "line": 25,
+      "quote": "class StageOrder {"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/scope.dart",
+      "line": 80,
+      "quote": "class CurriculumScope {"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/calendar_system.dart",
+      "line": 10,
+      "quote": "enum CalendarSystem {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/use_cases/set_parent_pin_use_case.dart",
+      "line": 55,
+      "quote": "bool _isNumeric(String s) => RegExp(r'^\\d{4}$').hasMatch(s);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/user/user_database.g.dart",
+      "line": 2038,
+      "quote": "class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {"
+    }
+  ],
+  "sites": 4,
+  "why": "A repo-wide grep for constructor/import usage of Pin, StageOrder, ScopeLevel, ScopeValue, CurriculumScope (the domain VO), and CalendarSystem finds zero call sites in lib/ outside their own files — each is exercised only by its own unit test. This isn't a harmless unused-import: it has a concrete duplication cost (set_parent_pin_use_case.dart independently hand-rolls the exact same `^\\d{4}$` regex Pin.parse already implements, so the 4-digit PIN invariant now has two unlinked sources of truth) and a naming-collision cost (the domain `CurriculumScope` in scope.dart and the Drift-generated row class `CurriculumScope` in user_database.g.dart are two unrelated types with the identical name, which is exactly what would happen if the intended repository→domain mapping was never implemented). Each of these 4 files also drags a full unit-test file along for code that provides zero runtime value today, inflating the maintenance surface with no compensating benefit.",
+  "recommendation": "For each: either finish the primitive-obsession migration the docstrings reference (route set_parent_pin_use_case.dart through Pin, route curriculum_scope_dao.dart mapping through ScopeLevel/ScopeValue/CurriculumScope, adopt StageOrder/CalendarSystem at their intended call sites) or delete the type and its test if there is no near-term plan to adopt it.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "For each of Pin/StageOrder/ScopeLevel-ScopeValue-CurriculumScope/CalendarSystem: at least one production (non-test) import exists, or the file + its test are removed.",
+    "set_parent_pin_use_case.dart's hand-rolled `_isNumeric` regex is replaced by (or asserted equivalent to) Pin.parse's validation once a decision is made.",
+    "No two public top-level classes in lib/ share the name CurriculumScope (AG-4)."
+  ],
+  "labels": [
+    "dead-code",
+    "speculative-generality",
+    "AG-4",
+    "AG-6"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "SetParentPinUseCase (not just Pin) is unreferenced anywhere in lib/ or test/ — fully dead, so the cited duplication pairing has no live exposure; the real live duplicate is pin_service.dart:261 _isNumeric (RegExp ^\\d+$, distinct from Pin.parse's ^\\d{4}$)."
+    ]
+  },
+  "sourceBatch": "t1-core-domain-learning",
+  "chunk": "grp-017",
+  "normArea": "core/domain",
+  "id": "AUD-core-domain-05",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,47 @@
+{
+  "title": "Resolve the ambiguous stageId/stageOrder dual-interpretation in SchedulerCompletionRepositoryImpl.resolveStageOrder",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Evans lens — a single field pattern-matched against two overlapping ID spaces with no way to tell them apart",
+  "area": "features/scheduler/data repositories",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart",
+      "line": 33,
+      "quote": "final stageOrderMap = {for (final s in stages) s.id: s.stageOrder};\n    final knownStageOrders = {for (final s in stages) s.stageOrder};"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart",
+      "line": 39,
+      "quote": "if (knownStageOrders.contains(rawStageId)) return rawStageId;"
+    }
+  ],
+  "sites": 1,
+  "why": "The comment says newer completion rows store a stage's stageOrder in c.stageId while older rows store the stage's DB id; resolveStageOrder tries to guess which format a given row used by checking 'does rawStageId match some CURRENT stage's stageOrder' first. Stage id (a table-wide autoincrement) and stageOrder (a small 1..N per-curriculum ordinal) share the same small-integer space, especially for the first curriculum/stages ever created in a fresh install or test DB (id and stageOrder can be identical by coincidence, e.g. 1,2,3). When they collide, an OLD-format row that really means 'stage id 3' gets misread as 'stageOrder 3' and silently resolves to the wrong stage — which would misreport a chazara/review stage as complete (or vice versa) with no error. I have not constructed a concrete seed scenario proving the collision fires against real data (id values grow globally across curricula, so the window narrows over an install's lifetime), so this is reported as SUSPECTED, not CONFIRMED — a runtime/unit test seeding a stage whose id equals a different stage's stageOrder plus an old-format completion would confirm or rule it out.",
+  "recommendation": "Give completion rows an explicit format marker (or normalize all stored stageId values to stageOrder in a one-time migration) instead of guessing per-row from an ambiguous value.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A targeted unit test seeds two stages where one stage's DB id equals another (or the same) stage's stageOrder, adds an old-format completion using the id, and asserts resolveStageOrder resolves to the correct stage rather than the coincidentally-matching one.",
+    "If the test confirms a collision, resolveStageOrder no longer disambiguates by value coincidence (explicit format tag, or a completed one-time backfill removes the dual-format need)."
+  ],
+  "labels": [
+    "data-migration",
+    "ambiguous-id-space",
+    "completion-mapping"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Quoted lines are at 37-38 and 43 in current HEAD, not 33/39 as cited — content verified identical, only line offset is wrong (likely stale snapshot vs. a dart-format pass)."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "chunk": "grp-091",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-15",
+  "linearPriority": "Medium"
+}

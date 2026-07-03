@@ -1,0 +1,84 @@
+{
+  "title": "Wrap TrackLearningOrderDao.upsertOrder's per-row insert loop and its repository call sites in one transaction/batch",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "DB-2, DB-3",
+  "area": "core/database/daos + features/tracks/track_order (drift)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/daos/track_learning_order_dao.dart",
+      "line": 18,
+      "quote": "Future<void> upsertOrder(int trackId, List<String> refs) async {\n    for (var i = 0; i < refs.length; i++) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart",
+      "line": 124,
+      "quote": "await _database.trackLearningOrderDao.upsertOrder(trackId, refs);\n    await _database.trackDao.stampReorderAt(trackId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart",
+      "line": 136,
+      "quote": "await _database.trackLearningOrderDao.upsertOrder(trackId, refs);\n    await _database.trackDao.stampReorderAt(trackId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart",
+      "line": 144,
+      "quote": "await _database.trackLearningOrderDao.deleteByTrack(trackId);\n    await _database.trackDao.stampReorderAt(trackId);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/point_config_dao.dart",
+      "line": 136,
+      "quote": "for (final d in fallbackDefaults) {\n        await insertConfig("
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/study_day_config_dao.dart",
+      "line": 69,
+      "quote": "for (var day = 1; day <= 7; day++) {\n      await into(studyDayConfigs).insertOnConflictUpdate("
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/track_learning_order_dao.dart",
+      "line": 19,
+      "quote": "for (var i = 0; i < refs.length; i++) {\n      await into(trackLearningOrder).insert("
+    }
+  ],
+  "sites": 7,
+  "why": "upsertOrder writes N rows via an awaited for-loop with no db.transaction()/db.batch() wrapper, and its only callers (saveSedarimOrder/saveMasechtosOrder/resetToDefault) then make a second, entirely separate write (stampReorderAt) with no shared transaction either. A user reordering a full masechta/seder (which can be dozens to hundreds of refs) who has the app killed mid-reorder (OS memory pressure, backgrounding kill — routine on mobile) is left with a partially-old/partially-new sortOrder sequence and no error anywhere. getByTrack() then feeds that corrupted order straight into the daily learning projection, producing skipped or repeated study segments with zero user-visible signal that anything went wrong. Even when upsertOrder itself completes, dying before the separate stampReorderAt call leaves a stale lastReorderAt, breaking the reorder-amnesty logic documented at architecture §10.1. This is discovered via track_learning_order_dao_test.dart (in this batch), which covers the happy path only and has no test for interrupted/partial writes.",
+  "recommendation": "Replace the for-loop in upsertOrder with a single db.batch((b) { for (...) b.insert(trackLearningOrder, ..., onConflict: ...); }) — Drift batches are atomic, satisfying DB-2 and DB-3 in one change. In the repository, wrap the order-write + stampReorderAt call of saveSedarimOrder/saveMasechtosOrder/resetToDefault in one _database.transaction(...) so the pair commits or rolls back together.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "TrackLearningOrderDao.upsertOrder issues one db.batch() instead of an awaited per-row loop.",
+    "saveSedarimOrder, saveMasechtosOrder, and resetToDefault each wrap their order-write + stampReorderAt call in a single db.transaction().",
+    "New regression test asserts the reorder write is all-or-nothing (e.g. inject a failure partway through a multi-ref batch and assert zero rows changed / the pre-reorder order is intact).",
+    "No Rule-0 checker exists yet for this class of bug (DB-2/DB-3 are [P]ending) — note the gap; a grep for `for (` followed within a few lines by `await into(` or `await (db.update`/`await (db.delete` inside lib/core/database/daos/**/*.dart would catch this pattern cheaply."
+  ],
+  "labels": [
+    "drift",
+    "atomicity",
+    "dao",
+    "data-integrity"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Note for orchestrator (not a reason to kill): a closely related/possibly overlapping finding exists elsewhere in the audit (grp-117 'Wrap saveOrder/resetToDefault's reorder-amnesty stamp in the same transaction as the order write', and grp-115) covering the same stampReorderAt-not-in-transaction defect from a different chunk -- worth deduping against high-007's DB-2 portion during merge, though high-007 additionally and correctly captures the distinct DB-3 per-row-loop defect in upsertOrder that those do not."
+    ]
+  },
+  "sourceBatch": "t1-core-database-daos-p3",
+  "chunk": "high-007",
+  "mergedFrom": [
+    "Wrap point_config_dao.seedDefaults, study_day_config_dao.seedDefaults, and track_learning_order_dao.upsertOrder in a transaction",
+    "Wrap TrackLearningOrderRepositoryImpl's save/reset methods' two DAO writes in a single transaction (DB-2)"
+  ],
+  "coDiscoverers": [
+    "t1-core-database-daos-p1",
+    "t1-core-database-daos-p3",
+    "t1-feat-tracks-p2"
+  ],
+  "normArea": "core/database",
+  "id": "AUD-core-database-05",
+  "linearPriority": "High"
+}

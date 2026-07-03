@@ -1,0 +1,40 @@
+{
+  "title": "Remove or wire up SettingsCodec.encode — zero callers in lib/ or test/",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler dead code / YAGNI",
+  "area": "core/sync/codec",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/codec/settings_codec.dart",
+      "line": 73,
+      "quote": "Map<String, dynamic> encode(SettingsRow model) => {"
+    }
+  ],
+  "sites": 1,
+  "why": "grep -rn 'SettingsCodec()' across lib/ and test/ finds only the decode-side caller in settings_merger.dart — nothing calls .encode(), unlike bookmark/track/goal/etc. where encode() is the live push path. A symmetric but unreachable encode() looks load-bearing to a reader and invites either a false assumption that it's exercised, or silent drift from the real settings push shape with nothing to notice if it ever changes.",
+  "recommendation": "Either wire SettingsCodec.encode into whatever currently constructs the settings push payload, or delete it and note in the class doc that settings is currently pull/decode-only.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep for 'SettingsCodec().encode' or 'SettingsCodec.encode' in lib/ returns at least one production call site, OR the method is removed with a comment explaining decode-only status."
+  ],
+  "labels": [
+    "dead-code",
+    "sync"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "encode() is an abstract override required by EntityCodec<T> (entity_codec.dart:59) — SettingsCodec cannot simply delete the method without breaking the interface contract; a throwing stub with an explanatory comment is the realistic 'delete' path, not literal removal. Minor recommendation imprecision only, doesn't undermine the core dead-code finding."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-codec",
+  "chunk": "grp-027",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-38",
+  "linearPriority": "Low"
+}

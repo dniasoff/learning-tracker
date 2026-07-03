@@ -1,0 +1,46 @@
+{
+  "title": "Close the leaked DeviceRegistryDatabase in signup_screen_test.dart's createTestWidgetWithDatabase helper",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "features/onboarding/presentation/screens (test)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+      "line": 82,
+      "quote": "final testRegistry = DeviceRegistryDatabase(NativeDatabase.memory());"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+      "line": 202,
+      "quote": "addTearDown(() async => db.close());"
+    }
+  ],
+  "sites": 1,
+  "why": "createTestWidgetWithDatabase creates a fresh in-memory DeviceRegistryDatabase on every call (3 call sites: lines 205, 247, 395) but never closes it, unlike the sibling UserDatabase two lines away that IS correctly torn down via addTearDown. Each leaked Drift NativeDatabase leaves a dangling native sqlite3 resource for the life of the test process; the file's own driftRuntimeOptions.dontWarnAboutMultipleDatabases = true suppresses the warning class of symptom this would otherwise surface.",
+  "recommendation": "Add addTearDown(() async => testRegistry.close()); immediately after constructing testRegistry inside createTestWidgetWithDatabase.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "every DeviceRegistryDatabase created in signup_screen_test.dart is closed via addTearDown"
+  ],
+  "labels": [
+    "test-hygiene",
+    "resource-leak",
+    "TQ-6"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Rule cite is imprecise: TQ-6 covers hermeticity (wall-clock/randomness/shared state), not resource cleanup per se; no exact-fit rule ID exists, but finding is valid as general test-hygiene per digest's 'include the small stuff.'"
+    ]
+  },
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "chunk": "grp-072",
+  "normArea": "tests/onboarding",
+  "id": "AUD-t-onboarding-03",
+  "linearPriority": "Low"
+}

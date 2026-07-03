@@ -1,0 +1,47 @@
+{
+  "title": "Type streak_milestone_analytics_observer.dart's two catch blocks to Exception — bare Object catches swallow Error subtypes as warnings",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "EH-4",
+  "area": "core/analytics",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/analytics/streak_milestone_analytics_observer.dart",
+      "line": 74,
+      "quote": "} catch (e, st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/analytics/streak_milestone_analytics_observer.dart",
+      "line": 83,
+      "quote": "} catch (e, st) {"
+    }
+  ],
+  "sites": 2,
+  "why": "Neither catch has an `on X` clause, so both also catch Dart Error subtypes (NoSuchMethodError, TypeError, RangeError, StateError) that signal genuine programming bugs, not recoverable runtime conditions — exactly what EH-4 says never to catch. A bug in StreakStateProvider or an unexpected state shape gets downgraded to a single logger.warning(...) call (not even error/critical) and the loop or stream quietly continues or ends — no crash, no Crashlytics report, nothing but a line in a 2000-entry ring buffer nobody reviews outside 'Send Diagnostic Logs'. This provider runs unconditionally in the app shell every session (per its own doc comment), so a regression here has zero blast-radius signal to catch it.",
+  "recommendation": "Narrow both catches to `on Exception catch (e, st)` (or the specific exception types StreakStateProvider/AnalyticsService can throw) and let Error subtypes propagate to the zone's onError handler like the rest of the app.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both catch clauses in streak_milestone_analytics_observer.dart use `on Exception catch` (or a named typed exception), not bare `catch (e, st)`",
+    "streak_milestone_analytics_observer_test.dart's existing R6-3 tests still pass unchanged (they throw plain Exception, not Error)"
+  ],
+  "labels": [
+    "error-handling",
+    "P2",
+    "analytics"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Ran a probe test: querying a closed Drift NativeDatabase throws StateError (e is Error==true, e is Exception==false) — the exact scenario R6-3's stream-error test triggers via db.close(). Narrowing line 83's catch to `on Exception` lets that StateError escape and flips state.hasError to true, breaking the existing green test the finding claims 'still pass unchanged.' Doc comment (lines 34-37) also documents the swallow-all behavior as deliberate, not accidental. Downgrading severity/confidence accordingly; the inner catch (line 74) is a cleaner, lower-stakes instance of the same rule violation."
+    ]
+  },
+  "sourceBatch": "t1-core-analytics-logging",
+  "chunk": "grp-003",
+  "normArea": "core/analytics",
+  "id": "AUD-core-analytics-04",
+  "linearPriority": "Low"
+}

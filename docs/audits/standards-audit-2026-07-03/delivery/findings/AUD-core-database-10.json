@@ -1,0 +1,43 @@
+{
+  "title": "Delete or wire up dead code kept alive only by its own tests: ContentResult and CalendarCycleDao's legacy methods",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code",
+  "area": "learning_tracker/lib/core/database",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/content_result.dart",
+      "line": 2,
+      "quote": "sealed class ContentResult<T> {"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/content/daos/calendar_cycle_dao.dart",
+      "line": 55,
+      "quote": "Future<CalendarCycle?> getCycleForProgramAndDate(\n    String programKey,"
+    }
+  ],
+  "sites": 2,
+  "why": "grep for ContentResult/ContentLoaded/ContentNotFound outside content_result.dart finds only test/story_acceptance/epic_19_offline_first_test.dart, which constructs and pattern-matches the type in isolation — no repository, service, or provider in lib/ ever returns or consumes a ContentResult; the content DAOs in this same batch (text_cache_dao.dart, daily_content_dao.dart) return plain nullable Future<T?> instead, exactly the shape ContentResult looks built to replace per EH-2's 'convert to a value at the data-layer boundary'. Likewise getCycleForProgramAndDate/getCyclesForDate/getCyclesForDateRange in calendar_cycle_dao.dart have zero callers anywhere in lib/ (grep confirms) — only content_database_comprehensive_test.dart's 'legacy method ... delegates' tests call them. In both cases a green test suite hides that the code has no real consumer; deleting either wouldn't be caught by any user-facing behavior change, only by the tests written specifically to keep them alive.",
+  "recommendation": "Delete ContentResult/ContentLoaded/ContentNotFound and its test, or wire it into the content DAOs' return types if the EH-2 result-type pattern is actually wanted there. Delete calendar_cycle_dao.dart's 3 legacy methods and their delegate tests, or confirm via a repo-wide symbol search that nothing external depends on them before the next release.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep for ContentResult/ContentLoaded/ContentNotFound and for getCycleForProgramAndDate/getCyclesForDate/getCyclesForDateRange outside their own definition+test either returns a real production call site, or the symbols are deleted."
+  ],
+  "labels": [
+    "dead-code",
+    "speculative-generality"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-root-p1",
+  "chunk": "grp-012",
+  "normArea": "core/database",
+  "id": "AUD-core-database-10",
+  "linearPriority": "Low"
+}

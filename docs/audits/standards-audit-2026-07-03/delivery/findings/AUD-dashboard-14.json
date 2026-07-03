@@ -1,0 +1,45 @@
+{
+  "title": "Route PointsSummaryWidget's 'pts'/'Current Balance' strings through AppLocalizations",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2",
+  "area": "lib/features/dashboard/presentation/widgets/points_summary_widget.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/points_summary_widget.dart",
+      "line": 39,
+      "quote": "'$totalPoints pts',"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/points_summary_widget.dart",
+      "line": 45,
+      "quote": "'Current Balance',"
+    }
+  ],
+  "sites": 2,
+  "why": "This is a bilingual EN/HE app where AX-2 requires every user-facing string through AppLocalizations/ARB (1421-key EN/HE parity enforced by make arb-parity). These two literals never got that treatment. The widget is currently dead (see the companion dead-code finding) so today's blast radius is zero, but the moment anyone reconnects it, Hebrew-locale users see raw untranslated English with no ARB-parity check able to catch it, since arb-parity only validates keys that exist — it cannot detect a literal that was never turned into one.",
+  "recommendation": "Route both strings through AppLocalizations (reuse the existing pointsAbbrev key used by DashboardLevelPointsCard, and add a currentBalance key) before this widget is ever reconnected, or delete it per the companion finding.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "no bare string literal remains in points_summary_widget.dart's build() — l10n replaces both Text('...') literals",
+    "make arb-parity stays green"
+  ],
+  "labels": [
+    "i18n",
+    "hardcoded-string",
+    "dashboard"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "chunk": "grp-049",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-14",
+  "linearPriority": "Low"
+}

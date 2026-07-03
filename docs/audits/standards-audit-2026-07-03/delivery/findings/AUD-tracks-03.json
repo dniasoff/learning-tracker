@@ -1,0 +1,66 @@
+{
+  "title": "Localize the hardcoded English preset/fallback strings in the track-setup wizard (step_chazara, step_scope, step_starting_position*)",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2",
+  "area": "presentation/tracks-setup",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_chazara.dart",
+      "line": 52,
+      "quote": "_ChazaraPreset(label: 'Learn Only', delays: []),"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_chazara.dart",
+      "line": 338,
+      "quote": "0 => 'No scheduled reviews.',"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+      "line": 237,
+      "quote": "tooltip: 'Back to $containerLabel list',"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+      "line": 170,
+      "quote": ": 'Item';"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_scope.dart",
+      "line": 80,
+      "quote": "return 'Level $level';"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart",
+      "line": 426,
+      "quote": "'No local calendar entry found for this date.',"
+    }
+  ],
+  "sites": 6,
+  "why": "This app ships full EN/HE parity (1421 ARB keys) everywhere else, but these six literals never go through AppLocalizations. The two step_chazara.dart sites are the worst: ChazaraInlineSetup's four preset cards ('Learn Only' / '1 day' / '1 + 7 days' / '1 + 7 + 30 days' as titles, plus 'No scheduled reviews.' / 'The recommended starter.' etc. as subtitles, confirmed rendered via ReviewPresetCard's Text(title)/Text(subtitle)) are shown on EVERY self-paced-track chazara-setup screen — a Hebrew-locale user seeing an otherwise-Hebrew wizard hits four cards of plain English text on a step every family using the app passes through. The other four are lower-traffic fallback/error strings (a tooltip, two level-label fallbacks, and a 'no calendar entry' error message) but are equally un-translatable.",
+  "recommendation": "Add ARB keys (with EN+HE translations) for the four preset titles + four preset descriptions, the 'Back to {level} list' tooltip, the generic 'Item' level fallback, the 'Level {n}' fallback, and the 'no calendar entry' message; thread AppLocalizations through _presetDescription/_ChazaraPreset and the two fallback sites the same way the rest of each file already does.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "root `make arb-parity` still reports 100% EN/HE key coverage after the new keys are added.",
+    "A grep for single-quoted literal Latin-alphabet strings passed to `title:`/`subtitle:`/`tooltip:`/`Text(` in these four files returns nothing.",
+    "A Locale('he') widget test on ChazaraInlineSetup asserts none of the four preset card texts render in Latin script."
+  ],
+  "labels": [
+    "i18n",
+    "l10n",
+    "hardcoded-string"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "high-089",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-03",
+  "linearPriority": "High"
+}

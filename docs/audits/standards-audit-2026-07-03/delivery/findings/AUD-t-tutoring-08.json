@@ -1,0 +1,39 @@
+{
+  "title": "Delete the dead permanently-skipped test in w3_41_tutor_security_rules_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1 / dead-code hygiene",
+  "area": "test/features/tutoring/w3_41_tutor_security_rules_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/w3_41_tutor_security_rules_test.dart",
+      "line": 341,
+      "quote": "skip:\n            'Structural check superseded by allow create: if isOwner(uid) '"
+    }
+  ],
+  "sites": 1,
+  "why": "The test 'completions write is still owner-only despite tutor read access' (lines 331-345) is permanently skipped with a comment saying it is superseded by the very next test ('...guard is not weakened by C2 change', line 347+), which already covers the same invariant. It carries no Linear id, so it sits inert in CI output forever; a reader scanning for security-boundary coverage sees a 'skipped' result next to a security-sounding name and cannot tell at a glance whether that indicates a real unverified gap or accepted redundancy.",
+  "recommendation": "Delete the skipped test block; the following test already asserts the same isOwner(uid)-only invariant.",
+  "acceptance_criteria": [
+    "grep for 'skip:' in w3_41_tutor_security_rules_test.dart returns nothing."
+  ],
+  "effort": "S",
+  "labels": [
+    "hygiene",
+    "dead-code",
+    "tutoring"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p4",
+  "chunk": "grp-128",
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-08",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,46 @@
+{
+  "title": "Assert the actual curriculum chip, not generic Container count, in tracks_studydays_and_content_hierarchy_l1_test.dart test #20",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "TQ-8",
+  "area": "test/features (widget)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart",
+      "line": 763,
+      "quote": "expect(find.byType(Container), findsAtLeastNWidgets(1));"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/screens/content_hierarchy_screen.dart",
+      "line": 578,
+      "quote": "final chip = Container("
+    }
+  ],
+  "sites": 1,
+  "why": "Test #20 is named 'curriculum chip visible in breadcrumb area' but only checks that at least one Container widget exists anywhere on screen. Any full Scaffold/AppBar-based screen contains multiple unrelated Containers, so this assertion is true regardless of whether _RootCurriculumChip (the widget it claims to test, which wraps CurriculumLabel.curriculum(...) in a Container) renders at all — if the chip were deleted entirely the test would still pass.",
+  "recommendation": "Assert on the chip specifically, e.g. find.byKey(const Key('content_hierarchy_root_chip')) when interactive, or find.byType(CurriculumLabel) / the rendered curriculum text, instead of find.byType(Container).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "test #20 fails if _RootCurriculumChip is removed from the widget tree (verified by temporarily deleting it and observing red)"
+  ],
+  "labels": [
+    "TQ-8",
+    "weak-assertion",
+    "widget-test"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The stated failure scenario ('if the chip were deleted entirely the test would still pass') is factually wrong: static grep confirms _RootCurriculumChip's Container is the ONLY Container in the rendered subtree (screen file has exactly one `Container(` literal; Scaffold/AppBar/MaterialApp source contains none), so removing it would zero out find.byType(Container) and fail the test as intended. The real, narrower gap is that the assertion doesn't verify the chip's rendered curriculum text/content — it would pass even if CurriculumLabel.curriculum() rendered the wrong or empty label, since the wrapping Container is unconditional. Severity and confidence lowered accordingly."
+    ]
+  },
+  "sourceBatch": "t1-test-cross-p5",
+  "chunk": "grp-147",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-55",
+  "linearPriority": "Low"
+}

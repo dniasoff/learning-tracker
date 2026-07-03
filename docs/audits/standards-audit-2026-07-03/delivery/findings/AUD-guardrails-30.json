@@ -1,0 +1,55 @@
+{
+  "title": "Hoist duplicated seder-Hebrew-name and Torah-title static tables from sibling *_fetcher.dart classes into SefariaFetcherBase",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-DuplicatedCode",
+  "area": "tool/lib/sefaria",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/lib/sefaria/bavli_fetcher.dart",
+      "line": 152,
+      "quote": "static String _sederHebrewName(String english) {"
+    },
+    {
+      "file": "learning_tracker/tool/lib/sefaria/mishna_fetcher.dart",
+      "line": 119,
+      "quote": "static String _sederHebrewName(String sederName) {"
+    },
+    {
+      "file": "learning_tracker/tool/lib/sefaria/chumash_fetcher.dart",
+      "line": 133,
+      "quote": "static const _torahTitles = ["
+    },
+    {
+      "file": "learning_tracker/tool/lib/sefaria/nach_fetcher.dart",
+      "line": 97,
+      "quote": "static const _torahTitles = ["
+    }
+  ],
+  "sites": 4,
+  "why": "bavli_fetcher.dart and mishna_fetcher.dart each carry their own byte-identical 6-entry seder-name Hebrew map; chumash_fetcher.dart and nach_fetcher.dart each carry their own identical 5-book Torah-title list. All four subclasses extend SefariaFetcherBase, which is the natural single home for this static reference data, but it exposes neither — so a spelling fix or a new entry has to be applied in two files with nothing enforcing they stay in sync.",
+  "recommendation": "Add a shared `torahTitles` list and a `sederHebrewName(String)` lookup to SefariaFetcherBase (or a small shared sefaria_reference_data.dart) and have the four fetchers reference it instead of their private copies.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one definition each of the seder-name map and the Torah-title list exists under tool/lib/sefaria/",
+    "bavli/mishna/chumash/nach fetcher output is unchanged after switching to the shared constant"
+  ],
+  "labels": [
+    "duplication",
+    "fowler",
+    "tier2-tooling"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-app-tool-p1",
+  "chunk": "grp-151",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-30",
+  "linearPriority": "Low"
+}

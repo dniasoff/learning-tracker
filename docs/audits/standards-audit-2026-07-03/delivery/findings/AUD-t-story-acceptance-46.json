@@ -1,0 +1,54 @@
+{
+  "title": "Replace fixed 50ms Future.delayed polling with stream.first awaits in epic_15's curriculum-scope watch-stream test",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/story_acceptance/epic_15 (curriculum scope watch, Story 15.15)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+      "line": 3549,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+      "line": 3561,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+      "line": 3572,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+      "line": 3578,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    }
+  ],
+  "sites": 4,
+  "why": "'scope watch stream emits on every change for provider reactivity' uses a fixed 50ms sleep 4 times as a stand-in for 'the stream has emitted by now', when the same test group already shows the deterministic alternative 100 lines earlier ('watchScopes emits updates when scopes change', lines 3439-3462, uses `await stream.first`). A timed sleep is a generic flakiness anti-pattern (no upper bound is ever truly safe under load) even though the practical risk here is low since the stream is backed by an in-memory NativeDatabase.memory() with no real I/O latency.",
+  "recommendation": "Replace the 4 Future.delayed calls with `await emissions stream.first` / a captured StreamQueue read, consistent with the pattern already used at lines 3446 and 3459 in the same test group.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The test contains no Future.delayed/sleep-based synchronization; each emission is awaited directly from the stream.",
+    "Test still asserts the same 4 transitions (initial empty, set, change, clear)."
+  ],
+  "labels": [
+    "TQ-6",
+    "flaky-test-pattern"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-09-16",
+  "chunk": "grp-137",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-46",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,50 @@
+{
+  "title": "Delete dead test fixtures: completion_fixtures.dart.skip (removed schema) and unused StageFixtures",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Dead code (general 'Everything' sweep; no single named rule ID)",
+  "area": "learning_tracker/test/fixtures",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/fixtures/completion_fixtures.dart.skip",
+      "line": 6,
+      "quote": "import 'package:learning_tracker/core/database/app_database.dart';"
+    },
+    {
+      "file": "learning_tracker/test/helpers/drift_memory.dart",
+      "line": 21,
+      "quote": "NOTE (W3.20): The `completions` legacy table was dropped."
+    },
+    {
+      "file": "learning_tracker/test/fixtures/curriculum_fixtures.dart",
+      "line": 29,
+      "quote": "class StageFixtures {"
+    }
+  ],
+  "sites": 2,
+  "why": "completion_fixtures.dart.skip imports lib/core/database/app_database.dart and references CompletionsCompanion/class Completions — none of which exist anywhere in the repo (grep confirms zero matches for app_database.dart, CompletionsCompanion, or CompletionFixtures outside this one file). drift_memory.dart's own comment confirms the `completions` table was dropped in favor of completion_events. This file cannot be revived by simply renaming it back to .dart — the schema it targets is gone — so it is not 'paused', it is unsalvageable dead weight sitting since Feb 2026 (git log) with no tooling anywhere that tracks or revisits *.dart.skip files. Separately, StageFixtures (curriculum_fixtures.dart) has zero callers anywhere in the repo (grep-confirmed) despite CurriculumFixtures in the same file being actively used by infrastructure_test.dart — it's dead code sitting in an otherwise-live file.",
+  "recommendation": "Delete completion_fixtures.dart.skip and the StageFixtures class outright; git history preserves them if the completions-table fixture pattern is ever needed again for a genuinely revivable feature.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "completion_fixtures.dart.skip is removed from the tree.",
+    "StageFixtures is removed from curriculum_fixtures.dart, or gains a real caller."
+  ],
+  "labels": [
+    "dead-code",
+    "hygiene",
+    "test-fixtures"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-helpers",
+  "chunk": "grp-150",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-60",
+  "linearPriority": "Low"
+}

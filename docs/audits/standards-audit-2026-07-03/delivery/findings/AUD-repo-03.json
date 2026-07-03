@@ -1,0 +1,41 @@
+{
+  "title": "Archive legacy _bmad-output/ reports per the CLAUDE.md output-path policy",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8 / repo hygiene",
+  "area": "repo-root",
+  "evidence": [
+    {
+      "file": "_bmad-output/refactor-task-tracker.md",
+      "line": 1,
+      "quote": "30 legacy refactor-wave outputs still live in _bmad-output/"
+    }
+  ],
+  "sites": 30,
+  "why": "Root CLAUDE.md states BMAD outputs now write into docs/, not _bmad-output/. The 30 files there are point-in-time wave logs that predate the policy; leaving them at a top-level path agents scan invites them to be read as current guidance.",
+  "recommendation": "Move _bmad-output/** into docs/_archive/ (they are historical logs) and delete the directory.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_bmad-output/ no longer exists in git; files live under docs/_archive/ with a README pointer"
+  ],
+  "labels": [
+    "hygiene",
+    "docs"
+  ],
+  "origin": "orchestrator-baseline",
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "sites should read 29 files (+1 subdirectory) rather than 30 files; trivial miscount, doesn't affect the finding's validity."
+    ]
+  },
+  "sourceBatch": "orchestrator",
+  "chunk": "grp-134",
+  "normArea": "repo",
+  "id": "AUD-repo-03",
+  "linearPriority": "Low"
+}

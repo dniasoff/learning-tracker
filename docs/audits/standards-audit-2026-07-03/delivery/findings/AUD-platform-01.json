@@ -1,0 +1,66 @@
+{
+  "title": "Fix unverifiable Android App Link intent-filters for sign-in/invite deep links (AndroidManifest.xml)",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-2 correctness (no numbered rule ID; auth/deep-link infra consistency)",
+  "area": "learning_tracker/android/app/src/main/AndroidManifest.xml",
+  "evidence": [
+    {
+      "file": "learning_tracker/android/app/src/main/AndroidManifest.xml",
+      "line": 48,
+      "quote": "<intent-filter android:autoVerify=\"true\">"
+    },
+    {
+      "file": "learning_tracker/android/app/src/main/AndroidManifest.xml",
+      "line": 54,
+      "quote": "android:host=\"torah-study-tracker.firebaseapp.com\""
+    },
+    {
+      "file": "learning_tracker/android/app/src/main/AndroidManifest.xml",
+      "line": 64,
+      "quote": "android:host=\"torah-study-tracker.firebaseapp.com\""
+    },
+    {
+      "file": "firebase.json",
+      "line": 1,
+      "quote": "{ \"firestore\": { \"rules\": \"firestore.rules\", ... } }"
+    },
+    {
+      "file": "learning_tracker/firebase.json",
+      "line": 1,
+      "quote": "{ \"functions\": { \"source\": \"functions\", \"runtime\": \"nodejs22\" },"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/data/repositories/auth_repository_impl.dart",
+      "line": 86,
+      "quote": "continueUrl: '$_linkDomain/sign-in',"
+    }
+  ],
+  "sites": 2,
+  "why": "Live verification (2026-07-03): https://torah-study-tracker.firebaseapp.com/.well-known/assetlinks.json returns HTTP 404, the domain root '/' returns HTTP 404, and '/sign-in' returns HTTP 404 — only Firebase's built-in /__/auth/action handler responds. Neither firebase.json (root or learning_tracker/) declares a \"hosting\" block, so nothing can ever serve assetlinks.json or these custom paths as currently configured. Android only honors autoVerify=\"true\" intent-filters after validating that file, so it never marks the app as the verified handler for /sign-in or /invite. A parent tapping 'finish sign-in' in their email, or a tutor tapping an invite link (PP-7 wave-B, AndroidManifest.xml:57), gets sent to the system browser instead of the app — which then also 404s, since no Hosting deployment serves those paths either. Both flows dead-end on an error page.",
+  "recommendation": "Either deploy Firebase Hosting with a committed .well-known/assetlinks.json (declaring package name + release SHA-256 cert fingerprint) and add the \"hosting\" block to firebase.json in the same change, or drop the autoVerify/pathPrefix App Links approach for a mechanism that doesn't need host-level verification. Add a deploy/CI smoke check that curls the assetlinks URL and fails the pipeline on non-200.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "curl -f https://torah-study-tracker.firebaseapp.com/.well-known/assetlinks.json returns 200 with correct package_name/sha256_cert_fingerprints, wired into a deploy or CI check that fails the pipeline on regression.",
+    "Tapping the sign-in continuation link and a tutor-invite link on a real or emulated Android device opens the app directly, not the browser or a 404 page."
+  ],
+  "labels": [
+    "android",
+    "deep-link",
+    "firebase-auth",
+    "tutor-invite"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-platform-config-p1",
+  "chunk": "high-113",
+  "normArea": "platform",
+  "id": "AUD-platform-01",
+  "linearPriority": "High"
+}

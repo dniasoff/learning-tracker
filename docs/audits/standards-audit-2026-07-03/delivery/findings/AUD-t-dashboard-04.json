@@ -1,0 +1,38 @@
+{
+  "title": "Remove the redundant test/features/dashboard/.gitkeep placeholder",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene (dead file)",
+  "area": "test/features/dashboard/.gitkeep",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/dashboard/.gitkeep",
+      "line": 1,
+      "quote": "(0-byte placeholder file)"
+    }
+  ],
+  "sites": 1,
+  "why": "The file exists solely to keep an otherwise-empty directory tracked in git, but test/features/dashboard/ has had non-empty domain/ and presentation/ subdirectories (dozens of tracked test files) for a long time — git already tracks the tree via that real content, so the .gitkeep is inert clutter a new contributor has to notice and mentally discard.",
+  "recommendation": "git rm learning_tracker/test/features/dashboard/.gitkeep.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "file removed; test discovery/CI stays green with no dependency on the placeholder"
+  ],
+  "labels": [
+    "hygiene",
+    "dead-file"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "chunk": "grp-050",
+  "normArea": "tests/dashboard",
+  "id": "AUD-t-dashboard-04",
+  "linearPriority": "Low"
+}

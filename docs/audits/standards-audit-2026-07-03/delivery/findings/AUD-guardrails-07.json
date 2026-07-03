@@ -1,0 +1,72 @@
+{
+  "title": "Consolidate the two divergent arb_parity_check.dart implementations",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-1 (route through committed scripts; no ad-hoc variants) / Rule 0",
+  "area": "tool/ scripts / Makefile drift",
+  "evidence": [
+    {
+      "file": "Makefile",
+      "line": 222,
+      "quote": "@dart run tool/arb_parity_check.dart"
+    },
+    {
+      "file": "tool/arb_parity_check.dart",
+      "line": 24,
+      "quote": "    'learning_tracker/lib/l10n/app_en.arb';"
+    },
+    {
+      "file": "learning_tracker/tool/arb_parity_check.dart",
+      "line": 15,
+      "quote": "  const enPath = 'lib/l10n/app_en.arb';"
+    },
+    {
+      "file": "hooks/pre-commit",
+      "line": 19,
+      "quote": "if ! dart format --set-exit-if-changed .; then"
+    },
+    {
+      "file": "hooks/pre-commit",
+      "line": 27,
+      "quote": "if ! dart analyze --fatal-infos; then"
+    },
+    {
+      "file": "Makefile",
+      "line": 90,
+      "quote": "@echo \"Running dart analyze...\"\n\t@cd learning_tracker && dart analyze"
+    }
+  ],
+  "sites": 6,
+  "why": "Two independently-maintained copies of the same nominal checker exist: root Makefile's `arb-parity` target runs tool/arb_parity_check.dart (repo-root paths, --en/--he flags, try/catch around JSON parse errors returning exit 2 with a clear message), while .github/workflows/ci.yml's arb-parity job runs `dart run tool/arb_parity_check.dart` from `working-directory: learning_tracker`, resolving to the DIFFERENT learning_tracker/tool/arb_parity_check.dart (learning_tracker-relative paths, no flags, uncaught jsonDecode exceptions crash with a raw stack trace instead of a clean exit(2)+message). Both currently pass because each is correctly paired with its own CWD, but a future fix to one (e.g. better error messages, a new --strict flag) has no reason to land in the other, and the two already silently diverge in behavior on the identical malformed-JSON failure mode.",
+  "recommendation": "Delete one copy and have both call sites invoke the same script (e.g. keep only learning_tracker/tool/arb_parity_check.dart and have the root Makefile's arb-parity target `cd learning_tracker &&` into it).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Exactly one arb_parity_check.dart exists in the repo, and both the root Makefile target and CI's arb-parity job invoke it."
+  ],
+  "labels": [
+    "ag-1",
+    "duplication",
+    "makefile",
+    "tooling"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-154",
+  "mergedFrom": [
+    "Route hooks/pre-commit's format/analyze calls through committed make targets instead of inlining them"
+  ],
+  "coDiscoverers": [
+    "t2-build-ci-guardrails",
+    "t2-lints-hooks"
+  ],
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-07",
+  "linearPriority": "Medium"
+}

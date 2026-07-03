@@ -1,0 +1,49 @@
+{
+  "title": "Add keepAlive justification comments to live content_browsing providers",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-6",
+  "area": "features/content_browsing/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/providers/content_providers.dart",
+      "line": 35,
+      "quote": "@Riverpod(keepAlive: true)\nFuture<Map<String, String>> curriculumHeNames("
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/providers/text_display_providers.dart",
+      "line": 35,
+      "quote": "@Riverpod(keepAlive: true)\nclass FontSizeNotifier extends _$FontSizeNotifier {"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/providers/text_display_providers.dart",
+      "line": 46,
+      "quote": "@Riverpod(keepAlive: true)\nclass ShowNikud extends _$ShowNikud {"
+    }
+  ],
+  "sites": 3,
+  "why": "SM-6 requires an inline justification beside every keepAlive: true so a reviewer can tell a deliberate cache-lifetime decision from a copy-pasted default. None of these three explain why losing the cached value on last-listener-disappear would be wrong — contrast with contentRepositoryProvider 3 lines above curriculumHeNames in the same file, which does explain it ('rebuilding this provider would discard cached data').",
+  "recommendation": "Add a one-line '// keepAlive: <reason>' per the pattern already used in sync_orchestrator_providers.dart, e.g. for FontSizeNotifier/ShowNikud: 'font-size/nikud toggles must survive navigating away from the reader and back.'",
+  "effort": "S",
+  "acceptance_criteria": [
+    "the [Pending] audit grep requiring a justification comment beside keepAlive: true (coding-standards.md SM-6) finds a comment within 2 lines of each @Riverpod(keepAlive: true) in this feature"
+  ],
+  "labels": [
+    "sm-6",
+    "riverpod",
+    "documentation"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "chunk": "grp-044",
+  "normArea": "features/content_browsing",
+  "id": "AUD-content_browsing-07",
+  "linearPriority": "Low"
+}

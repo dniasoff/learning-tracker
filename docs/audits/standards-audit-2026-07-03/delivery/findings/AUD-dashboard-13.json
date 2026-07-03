@@ -1,0 +1,43 @@
+{
+  "title": "Rename one of the two top-level CurriculumSummary classes (AG-4 duplicate)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-4",
+  "area": "learning_tracker/lib/features/dashboard, learning_tracker/lib/features/scheduler",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+      "line": 36,
+      "quote": "class CurriculumSummary {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/cross_curriculum_aggregator.dart",
+      "line": 5,
+      "quote": "class CurriculumSummary {"
+    }
+  ],
+  "sites": 2,
+  "why": "Two unrelated top-level classes share the name CurriculumSummary: parent_dashboard_aggregator.dart's version has fields (curriculum, completionPercentage, paceStatus: PaceStatusType, points); cross_curriculum_aggregator.dart's version has different fields (curriculumId, completionPercentage, paceStatus: PaceStatus?, nextDueItem, todayTaskCount, lastCompletionAt). A future unqualified import or IDE auto-import can silently pick the wrong shape, and grepping for 'the CurriculumSummary type' returns two different contracts with overlapping field names.",
+  "recommendation": "Rename one — e.g. ParentDashboardCurriculumSummary in parent_dashboard_aggregator.dart — to make the two types textually distinct.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "An AG-4 uniqueness checker (grep for duplicate `^class <Name>` across lib/) is added to make audit and reports zero duplicates for this pair."
+  ],
+  "labels": [
+    "AG-4",
+    "naming"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "grp-047",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-13",
+  "linearPriority": "Low"
+}

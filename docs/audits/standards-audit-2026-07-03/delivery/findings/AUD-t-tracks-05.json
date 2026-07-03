@@ -1,0 +1,51 @@
+{
+  "title": "Make the TS-10 and TS-2 SelfPacedGoalStep regression tests pump the widget instead of only checking constructor storage",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "features/tracks/setup/presentation/steps (step_goal.dart tests)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/goal_step_ts10_state_preserve_test.dart",
+      "line": 22,
+      "quote": "test('SelfPacedGoalStep constructor accepts initialGoal', () {\n      // If this test compiles, the parameter exists."
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/self_paced_goal_step_scope_test.dart",
+      "line": 24,
+      "quote": "test('SelfPacedGoalStep constructor accepts scopeSelections', () {\n      // If this test compiles the parameter exists."
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_goal.dart",
+      "line": 77,
+      "quote": "if (prev != null &&\n        prev.goalType == 'deadline' && prev.targetDate != null) {"
+    }
+  ],
+  "sites": 2,
+  "why": "Both files' docstrings describe real, previously-shipped user-visible bugs (TS-10: Back+Forward through the wizard silently discarded the user's deadline choice; TS-2: the goal step showed the full-curriculum item count instead of the wizard-selected scope). Neither test ever calls tester.pumpWidget — they only construct the widget object and assert the constructor stored the field verbatim, which Dart's own field assignment guarantees trivially. A future refactor that keeps the field but breaks the `initState`/`build` logic that actually consumes it (step_goal.dart:76-88 for TS-10, :351-359 for TS-2) would leave both tests green while silently reintroducing the exact bugs they claim to guard. Confirmed via repo-wide grep: no other test file in the tree pumps SelfPacedGoalStep with a non-null initialGoal or scopeSelections and asserts on the rendered/emitted result.",
+  "recommendation": "Rewrite both as widget tests: for TS-10, pump SelfPacedGoalStep with initialGoal set to a deadline-type GoalEntity and assert the deadline card renders active (not blurred) and/or that tapping Continue immediately emits goalType=='deadline' with the restored targetDate. For TS-2, pump with non-empty scopeSelections and content items outside the selection, and assert the rendered item-count/estimate reflects only the selected scope, not the full set.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "goal_step_ts10_state_preserve_test.dart pumps the widget with a deadline initialGoal and asserts observable deadline-mode state (not just constructor storage) — fails if initState stops reading widget.initialGoal",
+    "self_paced_goal_step_scope_test.dart pumps the widget with scopeSelections + a mixed content fixture and asserts the rendered/emitted count is scoped, not the full-curriculum total — fails if the scoping logic regresses"
+  ],
+  "labels": [
+    "tests",
+    "tautological-test",
+    "tracks-setup",
+    "regression-test-quality"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p4",
+  "chunk": "grp-118",
+  "normArea": "tests/tracks",
+  "id": "AUD-t-tracks-05",
+  "linearPriority": "Medium"
+}

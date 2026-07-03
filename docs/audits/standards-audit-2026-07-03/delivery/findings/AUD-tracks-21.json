@@ -1,0 +1,53 @@
+{
+  "title": "Delete the dead TrackOrder aggregate/OrderingLevel enum or fix its doc comment's false repository contract",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler dead-code / naming-placement (@freezed rule)",
+  "area": "domain/tracks-track_order",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/domain/aggregates/track_order.dart",
+      "line": 42,
+      "quote": "/// [TrackLearningOrderRepository] returns a [TrackOrder] from"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/domain/repositories/track_learning_order_repository.dart",
+      "line": 7,
+      "quote": "Future<List<LearningOrderItem>> getSedarimOrder("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/domain/aggregates/track_order.dart",
+      "line": 83,
+      "quote": "bool operator ==(Object other) =>"
+    }
+  ],
+  "sites": 1,
+  "why": "TrackOrder and OrderingLevel have zero references anywhere else in lib/ (grep confirms) — the actual TrackLearningOrderRepository interface returns bare List<LearningOrderItem> from getSedarimOrder/getMasechtosOrder, never a TrackOrder. But track_order.dart's own doc comment asserts '[TrackLearningOrderRepository] returns a [TrackOrder] from getSedarimOrder / getMasechtosOrder' — a confident, specific, and false description of the current contract. A future maintainer (e.g. picking up the W4.22 refactor referenced in masechta_ordering_policy.dart) who trusts this comment will build against an aggregate the real code never produces. Separately, TrackOrder hand-writes ==/hashCode/toString instead of using @freezed like every other domain model in this batch (StageDefinition, GoalEntity), and its hashCode only hashes items.length, so any two same-length differently-ordered TrackOrders collide.",
+  "recommendation": "Delete the file if the two-method-pair API is staying; if TrackOrder is genuinely planned to replace it, land that refactor (repository returns TrackOrder, callers updated) in the same change as the doc comment, and convert it to @freezed while doing so.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Either track_order.dart is removed, or TrackLearningOrderRepository's methods actually return TrackOrder and the doc comment is true.",
+    "If kept, TrackOrder is a @freezed class with generated ==/hashCode, not hand-written ones.",
+    "`flutter analyze` and existing track_order tests stay green."
+  ],
+  "labels": [
+    "dead-code",
+    "doc-drift",
+    "freezed"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "docs/planning/tech-debt-remediation-plan.md lines 88 ('W4.12-W4.15 ... TrackOrder'), 404 ('□ W4.15 ... TrackOrder aggregate, OrderingLevel'), 413 ('□ W4.22 ... MasechtaOrderingPolicy (already W4.15)') show this is a tracked, partially-executed refactor step, not abandoned dead code as the title implies. The finding's own hedged alternative ('if genuinely planned, land the refactor') is actually the correct branch — the primary 'Delete the dead...' framing/title is misleading given this evidence, even though the false present-tense doc comment and non-@freezed hand-rolled equality are independently real and worth fixing."
+    ]
+  },
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "grp-116",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-21",
+  "linearPriority": "Low"
+}

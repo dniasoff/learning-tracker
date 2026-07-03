@@ -1,0 +1,44 @@
+{
+  "title": "Delete or rewrite bulk_prior_completion_b6_b8_test.dart's stale AC3 test now that supersededAt was dropped",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/integration",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+      "line": 329,
+      "quote": "// W3.29 dropped `supersededAt`. The helper still inserts 3 stages (2"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/tables/stage_definitions.dart",
+      "line": 16,
+      "quote": "/// W3.29: dropped `supersededAt` — lifecycle managed via `state`."
+    }
+  ],
+  "sites": 1,
+  "why": "AC3 (lines 325-397) and its helper _seedStagesWithSuperseded (lines 216-239) were written to prove superseded stages are excluded from bulk-mark-prior. W3.29 removed the supersededAt column entirely, so the helper can no longer create a 'superseded' row, and the test's own comment admits 'the only 2 active expectation was outdated' — it now just re-proves AC1's '3 stages => 3 completions' with extra indirection. The test still reads as coverage for supersession filtering to anyone skimming the group, which is misleading, and the dead helper is pure maintenance cost.",
+  "recommendation": "Remove AC3 and _seedStagesWithSuperseded (their coverage is already fully subsumed by AC1), or repurpose the test name/comment to state plainly it is a duplicate-of-AC1 regression check for the schema migration itself.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "no test or helper in this file references a superseded-stage scenario that the current schema (no supersededAt column) cannot represent"
+  ],
+  "labels": [
+    "TQ-8",
+    "stale-test",
+    "schema-drift"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p5",
+  "chunk": "grp-147",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-63",
+  "linearPriority": "Low"
+}

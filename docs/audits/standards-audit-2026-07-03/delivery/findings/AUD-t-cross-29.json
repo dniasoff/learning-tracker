@@ -1,0 +1,50 @@
+{
+  "title": "Give new_listener_coverage_test.dart a real seam into SyncOrchestratorImpl._channelToKind instead of a hand-copied duplicate switch",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Feathers testability seam; Fowler duplication; TQ-8 (test-signal integrity)",
+  "area": "test/sync/new_listener_coverage_test.dart + core/sync channel routing",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/new_listener_coverage_test.dart",
+      "line": 97,
+      "quote": "/// Mirrors `SyncOrchestratorImpl._channelToKind`. Public copy used by the\n/// supervisor's onEvent handler in this test. If the production switch"
+    },
+    {
+      "file": "learning_tracker/test/sync/new_listener_coverage_test.dart",
+      "line": 101,
+      "quote": "String? _channelToKind(String channel) => switch (channel) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 1406,
+      "quote": "static String? _channelToKind(String channel) => switch (channel) {"
+    }
+  ],
+  "sites": 1,
+  "why": "The test file's own comment admits the risk: 'If the production switch changes, this duplicate will diverge.' Because SyncOrchestratorImpl._channelToKind is private, the test cannot call the real one, so it wires its own copy into the ListenerSupervisor under test and then verifies that copy against itself. If a future change re-routes a channel to a different EntityKind in production (not just adds a new channel) without a matching edit here, this suite keeps passing against its own stale copy while production sync silently misroutes — the exact failure mode the file exists to prevent. This isn't hypothetical: lib/core/sync/tutored_listener_supervisor.dart already carries an independent third copy of the same switch, textually different from both (it omits 'learner_profiles' and 'tutor_grants'), showing this table has already drifted once in this codebase.",
+  "recommendation": "Mark SyncOrchestratorImpl._channelToKind @visibleForTesting (or extract it to a small shared top-level function, e.g. core/sync/sync_channel_kind.dart, imported by both sync_orchestrator.dart and tutored_listener_supervisor.dart) and have new_listener_coverage_test.dart import and call the real function instead of maintaining its own switch.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "new_listener_coverage_test.dart no longer defines its own _channelToKind; it imports and calls the production mapping function",
+    "adding a channel to FirestoreListenerSource without a matching production routing entry fails this suite (spot-checked by temporarily adding a mismatched channel)"
+  ],
+  "labels": [
+    "testability",
+    "duplication",
+    "sync-routing"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p2",
+  "chunk": "grp-108",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-29",
+  "linearPriority": "Medium"
+}

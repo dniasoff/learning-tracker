@@ -1,0 +1,45 @@
+{
+  "title": "Merge duplicate LearningProgramRepository test suites (learning_program_repository_test.dart + learning_program_service_test.dart)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication lens + TQ-1 (pyramid/test-suite hygiene, avoid redundant suites)",
+  "area": "test/core/services (redundant coverage)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/services/learning_program_repository_test.dart",
+      "line": 27,
+      "quote": "test('programs have sequential ids starting at 1', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/services/learning_program_service_test.dart",
+      "line": 39,
+      "quote": "test('program ids are sequential starting from 1', () {"
+    }
+  ],
+  "sites": 2,
+  "why": "Both files exist purely to test LearningProgramRepository (a ~60-line class) via LearningProgramRepository.instance, and both independently cover getAllPrograms, getActivePrograms, getProgramById (valid/0/out-of-range), getProgramByName (found/missing) and getProgramsByCurriculumType/getActiveProgramsByCurriculumType with near-identical assertions restated in different words. 329 combined lines maintain one class's coverage in two places that can silently drift — one file hardcodes 'daf_yomi'/'bavli' fixture literals the other lacks — and a reviewer who finds only one of the two would reasonably (and wrongly) believe it is the sole coverage. This is the concrete cost the AG-5 mispathing finding predicted: because neither test sits at the discoverable mirrored path, whoever wrote the second file evidently didn't find the first.",
+  "recommendation": "Merge into a single file at the mirrored path test/features/scheduler/domain/services/learning_program_service_test.dart, keeping the union of unique cases (the daf_yomi/bavli literal checks, testConfig/displayName field checks) and dropping exact duplicates.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Exactly one test file covers LearningProgramRepository, at the mirrored path",
+    "flutter test green; no unique assertion from either original file is lost"
+  ],
+  "labels": [
+    "test-quality",
+    "duplication",
+    "maintenance-cost"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-services",
+  "chunk": "grp-024",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-76",
+  "linearPriority": "Low"
+}

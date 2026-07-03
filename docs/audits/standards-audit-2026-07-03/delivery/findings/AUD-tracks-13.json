@@ -1,0 +1,81 @@
+{
+  "title": "Fix AX-1's EdgeInsets.only(left:/right:) grep to match multi-line dart-format output, and fix the resulting hit in track_management_body.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AX-1 / Rule 0",
+  "area": "tooling (root Makefile) — presentation/tracks-setup",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+      "line": 102,
+      "quote": "padding: const EdgeInsets.only("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+      "line": 103,
+      "quote": "left: 16,"
+    },
+    {
+      "file": "Makefile",
+      "line": 184,
+      "quote": "HITS=$$(grep -rn 'EdgeInsets\\.only([^)]*\\(left\\|right\\):' \"$$LIB/\" \\"
+    },
+    {
+      "file": "packages/custom_lints/lib/src/rules/no_hardcoded_text_direction.dart",
+      "line": 38,
+      "quote": "'Alignment': {'centerLeft', 'centerRight'},\n    'TextAlign': {'left', 'right'},"
+    },
+    {
+      "file": "Makefile",
+      "line": 183,
+      "quote": "echo \"[10/12] EdgeInsets.only(left:|right:) — RTL violation (NFR16/UX-DR5)\"; \\"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+      "line": 126,
+      "quote": "padding: const EdgeInsets.only("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+      "line": 127,
+      "quote": "left: 16,"
+    }
+  ],
+  "sites": 7,
+  "why": "track_management_body.dart:102-107 uses EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 96) — the exact pattern AX-1 bans. The root Makefile's check 10/12 grep is single-line only (`[^)]*` cannot span the newline dart format inserts after 4+ named args), so `grep -rn 'EdgeInsets\\.only([^)]*\\(left\\|right\\):' lib/` returns zero hits repo-wide even though this exact violation exists; a `-Pzo` multiline reproduction confirms the hit. Because left==right==16 here there's no live RTL rendering bug today, but the checker gives false confidence: a future edit that makes left != right (a real RTL mirror bug) would ship silently, and this is the only file in the batch with this shape so the blind spot is real, not hypothetical.",
+  "recommendation": "Rewrite the grep to be multiline-aware (e.g. `grep -Pzo` or a small Dart/Python AST-ish scan) so it catches EdgeInsets.only(...) regardless of formatting, then replace this instance with EdgeInsetsDirectional.only(start:, end:, top:, bottom:).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The root Makefile's AX-1 check flags a deliberately-added multi-line EdgeInsets.only(left:...) fixture.",
+    "track_management_body.dart's padding is EdgeInsetsDirectional.only(start:, end:, top:, bottom:).",
+    "`make audit` (root) still exits 0 after the fix."
+  ],
+  "labels": [
+    "accessibility",
+    "rtl",
+    "rule-0",
+    "false-negative"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "grp-115",
+  "mergedFrom": [
+    "Extend the Makefile RTL audit grep to cover Alignment.centerLeft/Right and TextAlign.left/right, not just EdgeInsets.only",
+    "Replace EdgeInsets.only(left:/right:) with EdgeInsetsDirectional in track_management_hub_screen"
+  ],
+  "coDiscoverers": [
+    "t1-feat-tracks-p1",
+    "t1-feat-tracks-p2",
+    "t2-lints-hooks"
+  ],
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-13",
+  "linearPriority": "Medium"
+}

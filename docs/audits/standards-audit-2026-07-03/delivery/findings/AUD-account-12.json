@@ -1,0 +1,72 @@
+{
+  "title": "Handle account-exists-with-different-credential and credential-already-in-use for the Google sign-in / link-provider paths",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "AU-2",
+  "area": "features/account (Google credential collision handling)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/data/repositories/auth_repository_impl.dart",
+      "line": 47,
+      "quote": "final result = await _google.authenticate();\n    await _auth.signInWithGoogleIdToken(idToken: result.idToken);"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+      "line": 114,
+      "quote": "default:\n        return l10n.authErrSignInGeneric;"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+      "line": 488,
+      "quote": "default:\n        return l10n.signUpErrGeneric;"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+      "line": 940,
+      "quote": "final localMatch = await registry.findByEmail(googleUser.email ?? '');\n      if (localMatch != null && localMatch.accountTier.isLocal) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+      "line": 118,
+      "quote": "final syntheticEmail =\n        'offline_${id.replaceAll('-', '').substring(0, 12)}@offline.local';"
+    }
+  ],
+  "sites": 5,
+  "why": "A repo-wide grep for 'account-exists-with-different-credential' and 'credential-already-in-use' returns zero hits anywhere in lib/. A user who already has a password-based Firebase account under an email and taps 'Sign in with Google' (or 'Link Google' in Settings) using the same address will hit one of these two Firebase codes; neither auth_repository_impl.dart's Google methods nor either screen's _mapAuthError switch has a case for them, so both fall to the generic default branch ('Sign-in failed' / 'Google sign-in failed') with zero guidance to use the existing password and no merge option — unlike the parallel email-already-in-use case in upgrade_to_cloud_service.dart, which has a complete EmailCollisionException-driven merge flow (executeUploadLocalIntoCloud / executeKeepCloudDiscardLocal). AU-2 explicitly names both codes as requiring an explicit merge flow.",
+  "recommendation": "Add both codes to both _mapAuthError switches with an actionable message ('this email already has a password — sign in that way'), and extend the merge machinery upgrade_to_cloud_service.dart already has for the password path to cover the Google-credential collision (e.g. capture the pending OAuth credential, prompt for the existing password, then link).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Regression test: stub the auth gateway to throw account-exists-with-different-credential from signInWithGoogle(), assert SignInController/SignupScreen surface a specific actionable message (not the generic fallback).",
+    "Regression test: same for credential-already-in-use thrown from linkGoogleProvider()."
+  ],
+  "labels": [
+    "auth",
+    "AU-2",
+    "merge-flow",
+    "google-sign-in"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 3,
+    "refutations": [
+      "AU-2's text/\"why\" scope it to the linkWithCredential/offline-merge flow (protecting anonymous users' data during AU-1 conversion), sourced from Firebase's account-linking docs. All 3 cited evidence sites (auth_repository_impl.dart:47 signInWithGoogle, sign_in_controller.dart:114, signup_screen.dart:"
+    ],
+    "corrections": [
+      "Drop credential-already-in-use and the \"'Link Google' in Settings\" claim — linkGoogleProvider() has no UI caller (dead code), and that code is genuinely uninstrumented but currently unreachable, so it carries no user-visible severity today. The real, reachable gap is narrower: account-exists-with-different-credential falls to the generic default branch in sign_in_controller.dart:114 and signup_screen.dart:488 for a user whose email already has a password account and taps \"Sign in with Google\" — poor UX, but no data-loss risk (not an offline/anonymous conversion), so AU-2's \"never drop offline data\" rationale doesn't transfer; this is closer to a message-quality/EH-5-adjacent gap than a violated AU-2 invariant.",
+      "The actual 'on link' code path AU-2 targets (linkGoogleProvider/linkWithGoogleIdToken) has zero call sites in lib/ outside the repository/service layer — no Settings screen wires it to a button, so the 'Link Google in Settings' scenario is unreachable in the shipped app. The 3 evidence lines are all plain signInWithCredential sign-in/sign-up paths, and 'credential-already-in-use' cannot occur there since that code is link-exclusive.",
+      "The finding's why-section claims a user can hit this via 'Link Google in Settings' — no such UI exists; linkGoogleProvider()/linkWithGoogleIdToken (auth_repository_impl.dart:133-136, account_management_service.dart:155-157) have no callers anywhere under lib/features/settings/presentation or lib/features/account/presentation (grep confirms only test callers), so that path is dead code, not a live site. The 3 cited evidence lines themselves are accurate and reachable (verified via signInWithGoogle at sign_in_controller.dart:849-970 and _signUpWithGoogle at signup_screen.dart:329-465, both funnelling unmatched Firebase codes into the default branch)."
+    ]
+  },
+  "sourceBatch": "sup-au-family",
+  "mergedFrom": [
+    "Local-born-account Google-collision detector can never match now that offline accounts use synthetic emails"
+  ],
+  "coDiscoverers": [
+    "sup-au-family"
+  ],
+  "normArea": "features/account",
+  "id": "AUD-account-12",
+  "linearPriority": "Medium"
+}

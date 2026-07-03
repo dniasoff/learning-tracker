@@ -1,0 +1,47 @@
+{
+  "title": "Populate the scheduler feature barrel (scheduler.dart) with real exports",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule-2 / naming-placement",
+  "area": "scheduler (feature barrel)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/scheduler.dart",
+      "line": 4,
+      "quote": "// feature. Do NOT import deep paths directly."
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/scheduler.dart",
+      "line": 7,
+      "quote": "library scheduler;"
+    }
+  ],
+  "sites": 1,
+  "why": "The entire file is a library declaration plus a comment claiming to be the feature's public surface — it contains zero `export` statements, so importing it gives a consumer nothing usable. Grepping the whole repo confirms no file anywhere imports `features/scheduler/scheduler.dart`; every cross-feature consumer (e.g. lib/core/labels/curriculum_label.dart, lib/core/providers/calendar_providers.dart) is forced into deep imports of internal scheduler files because there is nothing else to import. The same empty-barrel pattern exists in learning.dart and profiles.dart and settings.dart (0 exports each) versus tracks.dart (26 exports, a real barrel) — so Rule 2 is currently unimplementable for scheduler even by a well-intentioned contributor, independent of the separate checker bug (see the awk finding).",
+  "recommendation": "Either populate scheduler.dart with `export` statements for the types/providers other features legitimately need (services, providers, models used cross-feature) and migrate the deep-import call sites, or formally scope down Rule 2's claim until barrels are built out feature-by-feature.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "scheduler.dart exports the symbols currently deep-imported by other features (calendar_program_service.dart, local_calendar_engine.dart, learning_program_service.dart, calendar_program_registry.dart at minimum).",
+    "Once check 15 (see companion finding) is fixed, a grep for `features/scheduler/(?!scheduler\\.dart)` from outside lib/features/scheduler/ returns zero matches."
+  ],
+  "labels": [
+    "Rule-2",
+    "layering",
+    "barrel"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "coding-standards.md lines 80/82/84/744 literally name the barrel 'providers.dart', not '<feature>.dart' — a doc/tooling drift the finding doesn't flag. Also, check-15's awk logic (Makefile lines 374-385) is tautologically broken (always compares a file's own feature name to itself), so the digest's '~32 known baselined edges' is entirely check-14/Rule-1 content, not check-15/Rule-2 — this reinforces rather than undermines the finding's novelty."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-092",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-14",
+  "linearPriority": "Medium"
+}

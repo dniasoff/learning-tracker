@@ -1,0 +1,65 @@
+{
+  "title": "Replace DateTime.now() with a fixed clock in stage_definition_repository_impl_26_26_test.dart seed helpers",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+      "line": 54,
+      "quote": "stateChangedAt: DateTime.now(),\n          activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+      "line": 661,
+      "quote": "stateChangedAt: DateTime.now(),\n              activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+      "line": 671,
+      "quote": "stateChangedAt: DateTime.now(),\n              activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+      "line": 790,
+      "quote": "stateChangedAt: DateTime.now(),\n                activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+      "line": 803,
+      "quote": "stateChangedAt: DateTime.now(),\n                activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+      "line": 114,
+      "quote": "updatedAt: DateTime.utc(2026, 1, 1),"
+    }
+  ],
+  "sites": 10,
+  "why": "TQ-6 requires hermetic tests with a fixed clock. Ten DateTime.now() calls (5 curriculumTracks inserts x 2 columns) seed stateChangedAt/activatedAt in this file, while the same file's own _makeRow helper (line 114) correctly uses a fixed DateTime.utc(2026, 1, 1) — an inconsistent pattern within one file. No current assertion reads these two columns back, so today this is latent rather than flaky, but it is one accidental expect(row.stateChangedAt, ...) away from an intermittent CI failure, and it breaks the deterministic-clock convention the rest of the file follows.",
+  "recommendation": "Replace the DateTime.now() call sites with the same fixed DateTime.utc(2026, 1, 1) (or a named constant) already used elsewhere in the file.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -n 'DateTime.now()' on this file returns nothing."
+  ],
+  "labels": [
+    "hygiene",
+    "determinism",
+    "TQ-6",
+    "stages"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-extras",
+  "chunk": "grp-112",
+  "normArea": "tests/stages",
+  "id": "AUD-t-stages-01",
+  "linearPriority": "Low"
+}

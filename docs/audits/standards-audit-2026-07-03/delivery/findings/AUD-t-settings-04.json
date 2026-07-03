@@ -1,0 +1,51 @@
+{
+  "title": "Replace upgrade_to_cloud_cancel_collision_test.dart's synthetic phase simulator with a test that drives the real _CollisionBlock",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (regression test must fail without the fix, red-first)",
+  "area": "features/settings/presentation/screens (upgrade-to-cloud)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_cancel_collision_test.dart",
+      "line": 21,
+      "quote": "// Because we cannot instantiate private sealed classes from outside the\n// library, we test via a custom widget that exposes the phase transition"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_cancel_collision_test.dart",
+      "line": 119,
+      "quote": "'FIXED behavior (AN-5): cancel returns to form phase (form-visible appears)',"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/upgrade_to_cloud_screen.dart",
+      "line": 544,
+      "quote": "onCancel: () {\n                        setState(() => _phase = const _PhaseForm());"
+    }
+  ],
+  "sites": 1,
+  "why": "Both the 'BUGGY' and 'FIXED' tests pump a hand-written `_CollisionCancelSimulator` whose behaviour is selected entirely by a `buggyBehavior` flag the test itself sets — neither test imports, renders, or interacts with `upgrade_to_cloud_screen.dart`'s real `_CollisionBlock`/`_UpgradeToCloudScreenState`. Reverting the actual AN-5 fix at upgrade_to_cloud_screen.dart:544-546 (e.g. changing `_PhaseForm()` back to `_PhaseCollision()`) would not fail this suite — it tests a parallel reimplementation, not the fixed code, so it provides zero regression protection despite its name and file header claiming otherwise. The sibling file upgrade_to_cloud_screen_l1_test.dart honestly `skip: true`s the same scenario with a documented Isolate limitation instead of faking a pass.",
+  "recommendation": "Add a `@visibleForTesting` seam (e.g. an injectable PasswordHasher/verification hook that resolves without Isolate.spawn) so the real _CollisionBlock can be reached and its onCancel exercised directly in a widget test; until that seam exists, rename this file/tests to make clear they validate a simulated model only, and don't count them as AN-5 regression coverage in the suite inventory.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A test exists that pumps the real UpgradeToCloudScreen (or _CollisionBlock via an exposed seam), and reverting upgrade_to_cloud_screen.dart:544-546 to the pre-AN-5 behavior makes that test fail."
+  ],
+  "labels": [
+    "TQ-8",
+    "fake-test",
+    "regression-coverage"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Quote for line 544 splices lines 544+546, silently skipping line 545 (`_cloudPasswordController.clear();`) with no ellipsis — minor, doesn't change substance."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-102",
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-04",
+  "linearPriority": "Medium"
+}

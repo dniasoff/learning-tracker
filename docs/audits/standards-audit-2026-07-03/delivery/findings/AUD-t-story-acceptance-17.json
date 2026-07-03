@@ -1,0 +1,94 @@
+{
+  "title": "Replace tautological literal-vs-literal assertions in epic_15/epic_16 story-acceptance tests with real checks against the code under test",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance (epic_15, epic_16)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+      "line": 1318,
+      "quote": "expect(p1.id, isNot(p2.id));"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+      "line": 2896,
+      "quote": "() => throw const ChildSelfMarkException(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+      "line": 1007,
+      "quote": "expect(0 <= 0, isTrue); // Badge guard condition"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+      "line": 1013,
+      "quote": "expect('${11}x', '11x');"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+      "line": 1226,
+      "quote": "expect(const Duration(milliseconds: 800).inMilliseconds, 800);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+      "line": 1253,
+      "quote": "expect(1 >= 1, isTrue); // triggers \"Great start!\""
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+      "line": 1260,
+      "quote": "expect(0 <= 0, isTrue);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+      "line": 1293,
+      "quote": "expect(const Duration(milliseconds: 300).inMilliseconds, 300);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+      "line": 1087,
+      "quote": "expect(studyDaysIdx, wizardIdx + 1);\n          expect(scopeIdx, studyDaysIdx + 1);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+      "line": 1146,
+      "quote": "expect(phases.contains('studyDays'), isTrue);"
+    }
+  ],
+  "sites": 10,
+  "why": "Each of these 8 test() blocks asserts a Dart-literal identity (0<=0, '${11}x'=='11x', Duration(milliseconds:800).inMilliseconds==800, 1>=1) or throws-and-catches a locally-constructed exception, instead of pumping ReviewCountBadge/AnimatedProgressBar, calling the satisfaction-message function, invoking the real manual-completion use case, or exercising reward-isolation logic. Every one of these is mathematically incapable of failing regardless of what the corresponding production code does: delete ReviewCountBadge, change the satisfaction-cue thresholds, or reintroduce a reward-isolation bug, and all 8 stay green. CI reports these ACs (16.4 badge/format, 16.6 progress-bar/satisfaction/animation, 15.11/15.16 reward-isolation/child-self-mark) as covered when they provide zero regression protection.",
+  "recommendation": "For each site, either (a) pump/construct the real widget or call the real function and assert on its output, or (b) mark the test/group skip: with a reason, matching the convention this same file already uses for retired ACs (e.g. epic_15's 'ContentVersionCheckService removed' skips).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Each of the 8 listed tests either asserts against a real widget/service call (ReviewCountBadge, AnimatedProgressBar, the satisfaction-cue function, the manual-completion use case, reward-isolation logic) or is skip:-wrapped with a stated reason.",
+    "No test in story_acceptance/ asserts a boolean/string/Duration literal against itself as its only check.",
+    "No deterministic Rule-0 checker exists for this pattern; verify by code review that each assertion's left-hand side traces to a call into lib/, not a value constructed entirely within the test."
+  ],
+  "labels": [
+    "TQ-8",
+    "tautological-test",
+    "test-quality"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "expect(p1.id, isNot(p2.id)) (line 1318) calls real profileRepo.createProfile, so it's a weak/stale assertion (rewards feature removed, per its own comment) rather than a pure literal tautology like the other 7 — don't count it as 'mathematically incapable of failing.'"
+    ]
+  },
+  "sourceBatch": "t1-story-epics-09-16",
+  "chunk": "grp-137",
+  "mergedFrom": [
+    "Fix epic_16 AC-4/AC-7 tests asserting against a fabricated, already-drifted copy of the onboarding phase order"
+  ],
+  "coDiscoverers": [
+    "t1-story-epics-09-16"
+  ],
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-17",
+  "linearPriority": "Medium"
+}

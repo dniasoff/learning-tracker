@@ -1,0 +1,44 @@
+{
+  "title": "Clean up stale dashboard feature scaffolding: unpopulated barrel + redundant .gitkeep files",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene",
+  "area": "learning_tracker/lib/features/dashboard",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/dashboard.dart",
+      "line": 6,
+      "quote": "// Populated in Wave 5 (W5.x) — dashboard domain and UI cleanup."
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/.gitkeep",
+      "line": 1,
+      "quote": ""
+    }
+  ],
+  "sites": 5,
+  "why": "dashboard.dart claims to be 'Populated in Wave 5' and to be the required cross-feature entry point, but exports nothing — confirmed by repo-wide grep, nothing imports it, so today it's a documentation claim rather than an enforced boundary. Separately, four .gitkeep placeholders (domain/use_cases, presentation/providers, presentation/screens, presentation/widgets) exist purely to keep an empty directory tracked in git, but each of those directories has held real source files since the feature was built out (presentation/widgets alone now has 20 real files) — the placeholders are leftover noise in every directory listing.",
+  "recommendation": "Either populate dashboard.dart's exports (if/when another feature needs the barrel) or delete it and remove the header comment's claim; git rm the four stale .gitkeep files in now-nonempty directories.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "find lib/features/dashboard -name .gitkeep only matches directories that ls shows as otherwise empty.",
+    "dashboard.dart either has at least one export or is deleted."
+  ],
+  "labels": [
+    "hygiene",
+    "dashboard"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "grp-048",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-09",
+  "linearPriority": "Low"
+}

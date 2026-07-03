@@ -1,0 +1,47 @@
+{
+  "title": "Deduplicate the CurriculumId storageKey→enum linear scan repeated in curriculum_label_providers.dart and curriculum_label_renderer.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / misplaced responsibility (no numbered standards-doc rule)",
+  "area": "lib/core/labels",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/labels/curriculum_label_providers.dart",
+      "line": 188,
+      "quote": "CurriculumId? _curriculumIdFromStorageKey(String key) {\n  for (final id in CurriculumId.values) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/labels/curriculum_label_renderer.dart",
+      "line": 275,
+      "quote": "static CurriculumId? _resolveCurriculumId(String storageKey) {\n    for (final id in CurriculumId.values) {"
+    }
+  ],
+  "sites": 2,
+  "why": "CurriculumId has no fromStorageKey() factory, so every consumer that only has the raw DB/ContentItem storageKey string re-implements the same 4-line linear scan. Two independent copies live inside core/labels itself — the module that is supposed to own curriculum-identity resolution — and a repo-wide grep for the same loop shape turns up 12 more files (content_index.dart, content_tree.dart, dashboard_screen.dart, curriculum_progress_screen.dart, achievement_unlock_celebration.dart, achievements_overview_provider.dart, learning_track_card.dart, curriculum_progress_service.dart, chart_data_service.dart, text_display_screen.dart, after_track_change_invalidation.dart) outside this batch, for context only. If storageKey matching semantics ever change (legacy key aliasing during a future curriculum migration, case-insensitivity, etc.) every copy must be found and fixed by hand; miss one and it silently keeps stale behavior.",
+  "recommendation": "Add a static CurriculumId.fromStorageKey(String key) (or extension getter) beside CurriculumId.storageKey in core/enums/curriculum_id.dart; replace both in-batch call sites with it as the reference fix, then sweep the other 12 call sites.",
+  "acceptance_criteria": [
+    "curriculum_label_providers.dart and curriculum_label_renderer.dart both call a single shared CurriculumId.fromStorageKey().",
+    "grep -rn \"for (final id in CurriculumId.values)\\|for (final c in CurriculumId.values)\" lib/ returns zero hits outside the new factory's own implementation."
+  ],
+  "labels": [
+    "duplication",
+    "core-labels",
+    "curriculum-id"
+  ],
+  "effort": "S",
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The context list of external call sites has 11 entries, not 12 as stated; trivial miscount that doesn't affect the sites:2 finding itself."
+    ]
+  },
+  "sourceBatch": "t1-core-labels",
+  "chunk": "grp-018",
+  "normArea": "core/labels",
+  "id": "AUD-core-labels-02",
+  "linearPriority": "Medium"
+}

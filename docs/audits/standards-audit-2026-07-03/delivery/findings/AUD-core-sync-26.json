@@ -1,0 +1,120 @@
+{
+  "title": "Type the catch/catchError clauses across sync_orchestrator.dart, pull_pipeline.dart and tutored_listener_supervisor.dart (EH-4)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-4",
+  "area": "core/sync",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 389,
+      "quote": "} catch (e, st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 503,
+      "quote": "} catch (e, st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 529,
+      "quote": "} catch (e, st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 543,
+      "quote": "} catch (e, st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 621,
+      "quote": "} catch (e, st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 931,
+      "quote": "} catch (e, stackTrace) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 1074,
+      "quote": "} catch (e, st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 1141,
+      "quote": "} catch (e, st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 1178,
+      "quote": "} catch (e, st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 1289,
+      "quote": "supervisor.restart().catchError((Object e, StackTrace stackTrace) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 1315,
+      "quote": "} catch (e, stackTrace) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 1375,
+      "quote": ".catchError((Object e, StackTrace st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 1456,
+      "quote": "} catch (e, st) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/pull_pipeline.dart",
+      "line": 299,
+      "quote": "} catch (e, stackTrace) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/pull_pipeline.dart",
+      "line": 327,
+      "quote": "} catch (e, stackTrace) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/tutored_listener_supervisor.dart",
+      "line": 158,
+      "quote": ".catchError((Object err, StackTrace st) {"
+    },
+    {
+      "file": "docs/coding-standards.md",
+      "line": 189,
+      "quote": "[Pending] enable `avoid_catches_without_on_clauses` + `avoid_catching_errors`"
+    }
+  ],
+  "sites": 16,
+  "why": "All 16 sites catch without an `on <Type>` clause, so each also catches Error subtypes (TypeError, StateError, RangeError, NoSuchMethodError) as if they were the transient I/O failures the surrounding code is designed to shrug off. Every one of these swallows-and-logs (the pull_pipeline.dart and tutored_listener_supervisor.dart sites don't rethrow at all; most of the sync_orchestrator.dart sites log a warning and return/fall through). Concrete cost: if a future change introduces a null-dereference or bad cast inside a merger reached from the 60s periodic drain, a recovery-pull trigger, or a listener dispatch, it gets caught here, logged once per occurrence as an ordinary 'drain failed'/'listener error' warning, and never crashes or reaches Crashlytics as a fatal -- masking a real regression indefinitely instead of surfacing it. (Two other sites -- sync_orchestrator.dart:768 and :939 -- were deliberately excluded from this list: :768 delegates to a typed `_isLocalDatabaseError` classifier before deciding to swallow, and :939 rethrows after converting to a status; both already behave like the fix this finding asks for elsewhere.)",
+  "recommendation": "Narrow each listed catch to `on Exception catch` (Exception still covers FirebaseException/TimeoutException/SocketException etc.) so Error subtypes propagate to the zone's uncaught-error handler instead of being absorbed; use sync_orchestrator.dart:768's classifier-based pattern as the template for guards that need to stay broad on purpose.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Enable avoid_catches_without_on_clauses + avoid_catching_errors once dart run custom_lint is unblocked; all 16 sites pass.",
+    "A test that injects a StateError into a merger/dispatch call reached from one of these paths shows the error propagating (not silently logged-and-continued)."
+  ],
+  "labels": [
+    "EH-4",
+    "error-handling",
+    "sync"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-root-p1",
+  "chunk": "grp-033",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-26",
+  "linearPriority": "Medium"
+}

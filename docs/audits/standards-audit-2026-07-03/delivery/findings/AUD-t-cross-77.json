@@ -1,0 +1,39 @@
+{
+  "title": "Narrow the swallow-all catch in gamification_p1_test.dart's _loadMilestones test helper",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3",
+  "area": "test/e2e/journeys/gamification_p1_test.dart (_loadMilestones helper, used by E2E-605/606/607/613)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/gamification_p1_test.dart",
+      "line": 136,
+      "quote": "  } catch (_) {\n    return const [];"
+    }
+  ],
+  "sites": 1,
+  "why": "_loadMilestones backs the final assertion of 4 tests (E2E-605/606/607/613) that all compare SharedPreferences-persisted reward milestones against expected titles. A bare `catch (_) { return const []; }` around the JSON decode+map turns ANY exception — a genuine RewardMilestone.fromJson schema-mismatch bug, JSON corruption, a typo in the config key — into a silently-returned empty list. A real production regression here would surface only as a confusing 'expected isNotEmpty, got []' failure, with the actual exception and stack trace discarded, instead of pointing at the real defect.",
+  "recommendation": "Let the exception propagate (test helpers should fail loudly), or catch only the specific expected type (e.g. FormatException from jsonDecode) and rethrow anything else.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_loadMilestones no longer has a bare `catch (_)`; either no catch, or a narrowly-typed catch that rethrows for unexpected exceptions"
+  ],
+  "labels": [
+    "EH-3",
+    "test-helper",
+    "swallowed-exception"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p1",
+  "chunk": "grp-143",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-77",
+  "linearPriority": "Low"
+}

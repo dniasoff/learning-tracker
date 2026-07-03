@@ -1,0 +1,67 @@
+{
+  "title": "Update or disclaim docs/scenarios/stitch-prompts/{03-mode-selection,04-curriculum-selection,06-dashboard}.md — describe a product IA the shipped app doesn't have",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-4 triage AREA NOTE — presents-as-current classification; egregious contradiction with reality",
+  "area": "docs/scenarios/stitch-prompts",
+  "evidence": [
+    {
+      "file": "docs/scenarios/stitch-prompts/03-mode-selection.md",
+      "line": 4,
+      "quote": "First onboarding screen where user selects their learning mode (Self-Learner, Parent, or Tutor)."
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart",
+      "line": 356,
+      "quote": "title: AppLocalizations.of(context)!.childModeCardTitle,"
+    },
+    {
+      "file": "docs/scenarios/stitch-prompts/04-curriculum-selection.md",
+      "line": 37,
+      "quote": "3. **Curriculum Cards (5 Scrollable Cards)**"
+    },
+    {
+      "file": "learning_tracker/lib/core/enums/curriculum_id.dart",
+      "line": 16,
+      "quote": "enum CurriculumId {"
+    },
+    {
+      "file": "docs/scenarios/stitch-prompts/06-dashboard.md",
+      "line": 126,
+      "quote": "- 5 navigation items"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 298,
+      "quote": "(icon: Icons.space_dashboard_rounded, label: l10n.tabBarDashboard),"
+    }
+  ],
+  "sites": 3,
+  "why": "These prompts are literal AI-image-generation inputs for the WDS/Stitch design workflow (docs/index.md calls the folder 'AI-generated UI design prompts'; see the bmad-wds-stitch-generation skill) — their whole purpose is to be re-run to produce mockups. Three of them describe a product model the app doesn't have: onboarding mode selection is framed as Self-Learner/Parent/Tutor here vs. the actual child/adult-per-profile choice in code; curriculum selection lists exactly 5 curricula ('5 Scrollable Cards') vs. the real 9-value CurriculumId enum (missing Nach, Tanach, Mishneh Torah, Mussar); and the dashboard bottom nav lists 5 tabs (Home/Browse/Progress/Calendar/More) vs. the real 4-tab app_shell.dart (Dashboard/Learn/Progress/Settings). Unlike every file in the dashboard-redesign-set and evolution-set, none of the 7 stitch-prompts carry any staleness/inspiration-only disclaimer, so re-running them today would generate polished mockups for the wrong information architecture.",
+  "recommendation": "Update 03-mode-selection.md, 04-curriculum-selection.md, and 06-dashboard.md to match the current onboarding (child/adult mode), the full 9-curriculum roster, and the real 4-tab nav — or add a one-line 'early concept, not current IA' disclaimer to the whole stitch-prompts set the way dashboard-redesign-set and evolution/ already do.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "03-mode-selection.md describes child/adult mode selection, or is explicitly marked as a superseded early concept.",
+    "04-curriculum-selection.md's curriculum list matches lib/core/enums/curriculum_id.dart (9 values), or is marked non-exhaustive/example-only.",
+    "06-dashboard.md's bottom-nav section matches lib/app/router/app_shell.dart (4 tabs: Dashboard, Learn, Progress, Settings), or is marked as an earlier concept."
+  ],
+  "labels": [
+    "docs",
+    "tier4-triage",
+    "design-prompt",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p3",
+  "chunk": "grp-172",
+  "normArea": "docs",
+  "id": "AUD-docs-22",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,48 @@
+{
+  "title": "Guard ref.read calls after the cached-profile await in TutoredChildrenSection._fireEntryPullAndNavigate",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "SM-4",
+  "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 503,
+      "quote": "final cachedProfile = await ref"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 515,
+      "quote": ".read(resolvedTutoredLocalProfileIdProvider.notifier)"
+    }
+  ],
+  "sites": 2,
+  "why": "showProfileSwitcherSheet (profile_switcher_sheet.dart:43-50) calls showModalBottomSheet with neither isDismissible nor enableDrag overridden, so the sheet stays swipe/backdrop-dismissible for the whole window between the user's tap and the loading dialog appearing. The cached-mirror check at line 503 is a local DB read awaited BEFORE any dialog/barrier goes up; if the user swipes the sheet away during that window, _TutoredChildRow (a ConsumerWidget) unmounts, and the very next lines (514-516) call ref.read on a WidgetRef whose element is gone, outside any try/catch, so the exception would be unhandled. The same risk exists after the second await (svc.pull(...), up to 15s) at ~595. The author was clearly aware of this exact class of bug elsewhere in the same method (router is captured eagerly at line 487 specifically to survive unmounting; context.mounted is checked before every Navigator/ScaffoldMessenger call afterward) but the same treatment wasn't applied to these ref.read calls.",
+  "recommendation": "Check context.mounted (or capture the needed notifiers before the await) before touching ref post-await, matching the pattern already used for `router` in the same method.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A widget test drives _enterTalmidView, dismisses the switcher sheet while the getTutoredProfile future is pending, completes the future, and asserts no uncaught exception is thrown",
+    "ref is not touched after an await without a liveness check anywhere in _fireEntryPullAndNavigate"
+  ],
+  "labels": [
+    "riverpod",
+    "sm-4",
+    "lifecycle",
+    "tutoring"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Evidence line 515 quote '.read(resolvedTutoredLocalProfileIdProvider.notifier)' is actually on line 516; line 515 is the bare 'ref' token."
+    ]
+  },
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-078",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-14",
+  "linearPriority": "Low"
+}

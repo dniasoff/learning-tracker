@@ -1,0 +1,79 @@
+{
+  "title": "Make MergeStore.upsert + persistUpdatedAt atomic to stop a stale LWW shadow-timestamp surviving a mid-merge crash",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "DB-2 (>1 write runs inside a single transaction()) / Nygard: process death mid-write",
+  "area": "core/sync/merge",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/merge/bookmark_merger.dart",
+      "line": 52,
+      "quote": "await _store.upsert(kind: kind, profileId: profileId, fields: row);\n      await _store.persistUpdatedAt("
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/track_config_merger.dart",
+      "line": 57,
+      "quote": "await _store.upsert(kind: kind, profileId: profileId, fields: row);\n      await _store.persistUpdatedAt("
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/learner_profile_merger.dart",
+      "line": 64,
+      "quote": "await _store.upsert(kind: kind, profileId: profileId, fields: row);"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/stage_definition_merger.dart",
+      "line": 68,
+      "quote": "await _store.upsert(kind: kind, profileId: profileId, fields: row);\n      await _store.persistUpdatedAt("
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/goal_merger.dart",
+      "line": 86,
+      "quote": "await _db.goalDao.upsertGoalByTrack("
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/learning_order_merger.dart",
+      "line": 54,
+      "quote": "await _store.upsert(kind: kind, profileId: profileId, fields: row);\n      await _store.persistUpdatedAt("
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/profile_program_merger.dart",
+      "line": 87,
+      "quote": "await _store.upsert(kind: kind, profileId: profileId, fields: row);"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/settings_merger.dart",
+      "line": 53,
+      "quote": "await _store.upsert(kind: kind, profileId: profileId, fields: row);\n      await _store.persistUpdatedAt("
+    }
+  ],
+  "sites": 8,
+  "why": "Every natural-key LWW merger applies the remote row (_store.upsert, which writes the entity table including its own updatedAt column) and THEN separately persists the SyncKv shadow timestamp (_store.persistUpdatedAt) as two independent awaited Drift writes with no enclosing db.transaction(). If the process dies between the two — an OS kill or force-quit on mobile is routine, not exotic — the entity row is left holding the remote's updatedAt while SyncKv still holds the pre-merge value. Any local edit made before the next successful sync now races a STALE local timestamp: a re-pulled, unchanged remote row will look newer than the stale SyncKv record and DriftMergeStore.remoteIsNewer will silently let it overwrite the user's genuinely-newer local edit — no exception, no log, nothing to retry against. This is DB-2's 'crash mid-sequence leaves the DB half-written' failure applied to the LWW bookkeeping itself.",
+  "recommendation": "Add a MergeStore.applyRemote(...) that wraps the entity write and its SyncKv persistUpdatedAt in one db.transaction() (or expose a transaction-scoped variant), and switch all 8 callers to it.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Fault-injection/unit test: call upsert() alone (simulating a crash before persistUpdatedAt commits), then perform a legitimately-newer local edit to the same row, then re-merge the identical stale remote row — assert the local edit survives.",
+    "New transaction-wrapped MergeStore method has a unit test asserting both writes roll back together when the second write is forced to fail."
+  ],
+  "labels": [
+    "sync",
+    "merge",
+    "data-integrity",
+    "transactions",
+    "nygard"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "3 of the 8 sites (bookmark_merger.dart, goal_merger.dart, learning_order_merger.dart) have a redundant per-DAO LWW guard (e.g. BookmarkDao.upsertBookmarkByProfile checks `updatedAt.isAfter(existing.updatedAt)`) that partially mitigates the concrete overwrite outcome for those entities even though the transactional gap is real; the other 5 sites (trackConfig, learnerProfile, stageDefinition, profileProgram, settings) have no such backstop and are fully exposed to the described silent-overwrite failure. This does not change the verdict but the acceptance-criteria fault-injection test should target one of the unguarded 5 to reliably reproduce the failure."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-merge",
+  "chunk": "high-021",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-08",
+  "linearPriority": "High"
+}

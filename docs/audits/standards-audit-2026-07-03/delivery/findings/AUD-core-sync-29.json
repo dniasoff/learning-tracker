@@ -1,0 +1,47 @@
+{
+  "title": "Add a ref.mounted check after the await in resolveOwnerAccountIdForWipe (tutored_pull_providers.dart)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-4",
+  "area": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+      "line": 189,
+      "quote": "final rows = await db.userProfileDao.getAllUserProfiles();"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+      "line": 192,
+      "quote": "return ref.read(currentAccountIdProvider);"
+    }
+  ],
+  "sites": 1,
+  "why": "resolveOwnerAccountIdForWipe(Ref ref) awaits a DB query and then, on the fallback path, calls ref.read(currentAccountIdProvider) with no ref.mounted guard in between. Per SM-4/Riverpod 3, if the provider or notifier that owns this `ref` is disposed while the getAllUserProfiles() query is in flight (e.g. the reconcile fires during a sign-out or account switch that tears down the owning provider), this throws an uncaught UnmountedRefException from inside a bare async function with no surrounding try/catch at this call site.",
+  "recommendation": "Add `if (!ref.mounted) return <safe fallback, e.g. -1 or rethrow a typed error>;` immediately after the awaited query, before the ref.read(currentAccountIdProvider) fallback.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "resolveOwnerAccountIdForWipe checks ref.mounted before any post-await ref access.",
+    "Regression test: dispose the owning container/provider during the awaited DB call and assert no UnmountedRefException escapes uncaught."
+  ],
+  "labels": [
+    "riverpod",
+    "SM-4",
+    "async"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Severity lowered P2→P3: the function is dead code (test-only caller), so the described failure has zero current production cost — not a reachable/live SM-4 gap as framed. Should be resolved alongside whichever fix finding 4 lands (wire up or delete), not tracked as a standalone reachable risk."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-providers",
+  "chunk": "grp-032",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-29",
+  "linearPriority": "Low"
+}

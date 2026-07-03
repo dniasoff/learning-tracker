@@ -1,0 +1,71 @@
+{
+  "title": "Reconcile the first AVD entry across avd-setup.ps1, emulators-start.ps1, and adb-connect-wsl.sh",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-2 AREA NOTE: drift between duplicated configs",
+  "area": "tool (Windows/WSL2 emulator bring-up trio)",
+  "evidence": [
+    {
+      "file": "tool/avd-setup.ps1",
+      "line": 70,
+      "quote": "name      = \"lt_api24_nexus5\"\n        port      = 5554"
+    },
+    {
+      "file": "tool/emulators-start.ps1",
+      "line": 44,
+      "quote": "lt_api28_pixel2  = 5554"
+    },
+    {
+      "file": "tool/adb-connect-wsl.sh",
+      "line": 39,
+      "quote": "EXPECTED_NAMES=(lt_api28_pixel2 lt_api29_pixel3 lt_api31_pixel5 lt_api34_pixel7 lt_api36_tablet)"
+    },
+    {
+      "file": "tool/device_e2e/driver.py",
+      "line": 44,
+      "quote": "ADB = \"/home/daniel/Android/Sdk/platform-tools/adb\""
+    },
+    {
+      "file": "tool/adb-connect-wsl.sh",
+      "line": 29,
+      "quote": "ADB=\"$ANDROID_SDK_WIN/platform-tools/adb.exe\""
+    },
+    {
+      "file": "tool/vision_find_pass.js",
+      "line": 7,
+      "quote": "const ADB = '/home/daniel/bin/adb'"
+    }
+  ],
+  "sites": 6,
+  "why": "avd-setup.ps1's own $MATRIX creates the port-5554 device as API 24 on a 'Nexus 5' profile named `lt_api24_nexus5`. But emulators-start.ps1's $ALL_AVDS and adb-connect-wsl.sh's EXPECTED_NAMES/EXPECTED_APIS both expect an AVD literally named `lt_api28_pixel2` (API 28, Pixel 2) at that same port — and both agree with EACH OTHER, only avd-setup.ps1 disagrees. All 4 other matrix rows (29/31/34/36.1) match perfectly across all 3 scripts. Following avd-setup.ps1's own documented next step ('Start all 5: .\\tool\\emulators-start.ps1') on a fresh machine launches `emulator -avd lt_api28_pixel2`, which was never created — that emulator slot fails to boot, and adb-connect-wsl.sh's health check for it reports NOT FOUND.",
+  "recommendation": "Pick one name/API/device-profile for the port-5554 slot and make all 3 scripts agree — most likely revert avd-setup.ps1's first matrix row back to api=28/device='Pixel 2'/name='lt_api28_pixel2' to match the other two (already-agreeing) scripts, unless the API-24 floor change was intentional, in which case propagate it to emulators-start.ps1 and adb-connect-wsl.sh instead.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The AVD name/API/port for the first device slot is identical across avd-setup.ps1, emulators-start.ps1, and adb-connect-wsl.sh.",
+    "Running avd-setup.ps1 followed by emulators-start.ps1 boots all 5 emulators, verified by adb-connect-wsl.sh reporting 5/5 ONLINE."
+  ],
+  "labels": [
+    "drift",
+    "tooling",
+    "windows-wsl2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-root-tool",
+  "chunk": "grp-163",
+  "mergedFrom": [
+    "Consolidate the 3 different hardcoded ADB binary paths across driver.py, adb-connect-wsl.sh, and vision_find_pass.js"
+  ],
+  "coDiscoverers": [
+    "t2-root-tool"
+  ],
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-15",
+  "linearPriority": "Medium"
+}

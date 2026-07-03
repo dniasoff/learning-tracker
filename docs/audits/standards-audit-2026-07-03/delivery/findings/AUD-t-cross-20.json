@@ -1,0 +1,61 @@
+{
+  "title": "Extract duplicated E2E fixture helpers (_EmptyContentRepository, _navigateTo, silence overrides) into a shared file instead of copy-pasting across 5 journey files",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication lens (no numbered standards-doc rule; general quality)",
+  "area": "learning_tracker/test/e2e/journeys/{profiles_p0,profiles_p1,profiles_tutoring_p2,progress_p0,progress_p1}_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/progress_p0_test.dart",
+      "line": 64,
+      "quote": "class _EmptyContentRepository implements ContentRepository {"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+      "line": 55,
+      "quote": "class _EmptyContentRepository implements ContentRepository {"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/profiles_p0_test.dart",
+      "line": 135,
+      "quote": "Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/profiles_p1_test.dart",
+      "line": 134,
+      "quote": "Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart",
+      "line": 158,
+      "quote": "Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {"
+    }
+  ],
+  "sites": 5,
+  "why": "diff confirms progress_p0_test.dart:64-107 and progress_p1_test.dart:55-98 hold a byte-identical 44-line _EmptyContentRepository stub; _navigateTo and six silence-override one-liners (_sacredWindowNullOverride, _connectivitySilenceOverride, _incomingGrantsEmptyOverride, _pendingInvitesEmptyOverride, _pendingRedemptionsZeroOverride, _pointsBalanceZeroOverride, _dashboardSilence) are duplicated 2-3x across profiles_p0/p1/tutoring_p2_test.dart. When a provider's override shape changes, every copy needs an independent, easy-to-miss update — several in-file comments (e.g. profiles_p0_test.dart:110-128) already document discovering the SAME Drift-timer-leak workaround independently per file, which is the exact 'dumping ground / re-implementation elsewhere' cost AG-3's own rationale warns oversized, uncentralized files produce.",
+  "recommendation": "Move these into E2EHarness itself (alongside the existing dashboardSilenceOverrides getter) or a new test/e2e/helpers/e2e_overrides.dart, and have all 5 files import the shared version — Fowler's 'Extract Class' / 'Pull Up Method'.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "One canonical implementation of _EmptyContentRepository, _navigateTo, and the silence-override helpers exists under test/e2e/harness/ or test/e2e/helpers/.",
+    "The 5 files import it instead of redefining it; dart analyze is clean and all existing tests in the 5 files still pass unmodified."
+  ],
+  "labels": [
+    "e2e",
+    "duplication",
+    "fowler",
+    "maintainability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p3",
+  "chunk": "grp-144",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-20",
+  "linearPriority": "Medium"
+}

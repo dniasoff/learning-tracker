@@ -1,0 +1,54 @@
+{
+  "title": "Wrap DeviceRegistryDatabase.removeAccount's delete + state-clear in a transaction()",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-2",
+  "area": "learning_tracker/lib/core/database/registry",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/registry/device_registry_database.dart",
+      "line": 111,
+      "quote": "final deleted = await (delete(\n      deviceAccounts,"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/registry/device_registry_database.dart",
+      "line": 114,
+      "quote": "if (await getLastActiveAccountId() == accountId) {\n      await setLastActiveAccountId(null);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/registry/device_registry_database.dart",
+      "line": 185,
+      "quote": "for (var i = 1; i < group.length; i++) {\n        removed += await removeAccount(group[i].accountId);"
+    }
+  ],
+  "sites": 2,
+  "why": "removeAccount's own docstring says it clears lastActiveAccountId 'so the next launch does NOT silently auto-activate an arbitrary fallback account against a dangling pointer (D10)' — but the delete and the pointer-clear are two separately-awaited statements with no db.transaction() around them. If the process dies between them (routine on Android when a backgrounded app is reclaimed, and account removal is exactly the kind of action a user triggers then backgrounds), the delete commits but the clear never runs, leaving deviceState.lastActiveAccountId pointing at a row that no longer exists — the exact D10 state device_registry_test.dart's 'removeAccount clears it when removing the ACTIVE account (D10)' test checks for, just reached through a crash path the in-memory test can't simulate. dedupeByEmail compounds this by calling removeAccount N times in an unwrapped loop, so a mid-run crash also leaves a partially-merged duplicate-account state. Every other multi-write DAO in this codebase (stage_dao.dart, curriculum_scope_dao.dart, user_profile_dao.dart, track_dao.dart, points_balance_dao.dart) wraps its writes in transaction() — this file is the outlier.",
+  "recommendation": "Wrap removeAccount's body in `await transaction(() async { ... })`; wrap dedupeByEmail's per-group removal loop in one enclosing transaction (or a single batched delete) so a crash mid-merge can't leave a partially-deduped state.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "removeAccount and dedupeByEmail are wrapped in transaction()/batch(); a new test forces an exception between the delete and the state-clear and asserts neither write applied.",
+    "DB-2's Pending checker (audit grep for ≥2 awaited writes with no enclosing transaction() in a DAO method body) returns zero for this file."
+  ],
+  "labels": [
+    "DB-2",
+    "transactions",
+    "D10"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Third evidence line cites device_registry_database.dart:185 but the quoted two-line snippet actually starts at line 184 (`for (var i = 1; ...)`) with line 185 being the second line only — off-by-one, not load-bearing.",
+      "The finding's \"why\" overstates impact: it claims the dangling lastActiveAccountId reaches \"the exact D10 state\" with harmful auto-activation, but session_persistence_service.dart:79-110 (resolveActiveAccountId) validates the pointer via findById() before trusting it and safely falls back otherwise — identical behavior to the properly-cleared case. Likewise dedupeByEmail's partial-merge risk is self-healing via the \"One-shot per sign-in\" re-scan at sign_in_controller.dart:428-433, not a lasting corruption. The rule violation (missing transaction wrap) is real; the claimed severity of harm is not.",
+      "Quotes/lines at device_registry_database.dart:111,114,185 are accurate (185 is the 2nd line of a 2-line quote starting at 184 — trivial). The 'why' section's central claim — that the transaction gap causes silent auto-activation of an arbitrary fallback account on a dangling D10 pointer — is refuted by session_persistence_service.dart:79-110 (resolveActiveAccountId), called from account_bootstrap.dart:30 at every launch: it validates the pointer via findById() and falls back to an arbitrary account identically regardless of whether the pointer is null or dangling. Severity corrected from P1 to P3; acceptance criteria's crash-injection test would need to additionally show a behavioral difference from the existing fallback path to justify anything higher than hygiene-level."
+    ]
+  },
+  "sourceBatch": "t1-core-database-root-p1",
+  "chunk": "high-009",
+  "normArea": "core/database",
+  "id": "AUD-core-database-08",
+  "linearPriority": "Medium"
+}

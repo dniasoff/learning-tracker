@@ -1,0 +1,39 @@
+{
+  "title": "Remove stray .gitkeep placeholder files from non-empty lib/ directories",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Repo hygiene",
+  "area": "learning_tracker/lib (repo-wide; batch representative: core/constants)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/constants/.gitkeep",
+      "line": 1,
+      "quote": "(empty file, 0 bytes)"
+    }
+  ],
+  "sites": 1,
+  "why": ".gitkeep files exist only to make git track an otherwise-empty directory. lib/core/constants/ has held 3 real source files this whole time, so this .gitkeep serves no purpose. An informal repo-wide grep (context only, not a full audit) found the same stale pattern in roughly 103 other lib/ directories, e.g. core/database/daos/.gitkeep sitting alongside 48 real files — almost certainly leftover from an initial scaffold generator never cleaned up once real files landed. Zero functional risk; it's noise in `git status`/`find` output and a minor signal that scaffold cleanup isn't part of the standard workflow.",
+  "recommendation": "Delete .gitkeep from any lib/ directory that already contains another tracked file; keep it only where a directory is genuinely still empty.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A `make audit` (or pre-commit) check flags any .gitkeep whose directory contains another tracked file",
+    "lib/core/constants/.gitkeep removed"
+  ],
+  "labels": [
+    "hygiene",
+    "repo-cleanup"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-small-a",
+  "chunk": "grp-026",
+  "normArea": "core/constants",
+  "id": "AUD-core-constants-02",
+  "linearPriority": "Low"
+}

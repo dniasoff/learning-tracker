@@ -1,0 +1,56 @@
+{
+  "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "SM-5",
+  "area": "features/account/presentation/providers/auth_state_provider.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/presentation/providers/auth_state_provider.dart",
+      "line": 21,
+      "quote": "    _init();\n    return const AuthState.initializing();"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/providers/auth_state_provider.dart",
+      "line": 32,
+      "quote": "    if (firebaseUser != null) {\n      final refreshed = await authRepo.reloadCurrentUser();"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/models/auth_state.dart",
+      "line": 9,
+      "quote": "  /// App has not yet resolved the initial session (splash window).\n  /// Must not hang — see 19.6 startup hardening."
+    }
+  ],
+  "sites": 1,
+  "why": "build() kicks _init() fire-and-forget and returns AuthState.initializing() immediately; _init() then awaits 4+ Firebase/DAO calls (reloadCurrentUser, findCloudBornByFirebaseUid, getUserProfileByFirebaseUid, upgradeLocalToCloud, findByTier) with zero try/catch anywhere in the method. AuthState has exactly 3 statuses (initializing/signedOut/signedIn) — there is no error state — so any exception during _init() (a DB read failure, a Firebase reload throwing) is an unhandled Future rejection that leaves sessionStatus permanently stuck at `initializing`. This directly contradicts the domain model's own doc comment: 'Must not hang — see 19.6 startup hardening.' Every screen gating on authStateProvider (router, app_shell, sign-in flows) would show a permanent splash/loading state with no retry path, recoverable only by force-killing the app. EH-1's global PlatformDispatcher.onError would log the exception, but nothing resets `state`, so the hang persists regardless of logging.",
+  "recommendation": "Wrap _init()'s body in try/catch (or convert the class to a plain function-style Future<AuthState> build via AsyncNotifier<AuthState> + AsyncValue.guard); on any caught exception, log via AppLogger and fall back to `state = const AuthState.signedOut()` rather than leaving `initializing` unresolved.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_init() cannot leave sessionStatus at initializing on any exception path — it resolves to signedIn or signedOut every time, with the failure logged via AppLogger.",
+    "Regression test: override authRepositoryProvider/userDatabaseProvider with a fake that throws from reloadCurrentUser() (and separately from the DAO) during _init(); assert authStateProvider settles to a terminal state within the test, not stuck at initializing.",
+    "Rule-0 checker: none exists yet; add a heuristic grep/custom_lint (once custom_lint is unbroken) flagging a Notifier's build() that calls an unawaited private async method with zero try/catch in that method's body."
+  ],
+  "labels": [
+    "sm-5",
+    "riverpod",
+    "error-handling",
+    "auth",
+    "startup-hang"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Cited rule SM-5 governs AsyncValue<T>-typed provider state (AsyncLoading/AsyncValue.guard) and explicitly bans manual try/catch state assignment; AuthStateNotifier's state is a custom AuthState (not AsyncValue), confirmed by auth_state_provider.g.dart:28 (`$NotifierProvider<AuthStateNotifier, AuthState>`). Correct citation is SM-2 (build must be pure/no side effects — build() kicks _init() fire-and-forget). The finding's primary recommendation (manual try/catch assigning state) contradicts the very SM-5 clause it invokes; only its parenthetical AsyncNotifier+AsyncValue.guard alternative is actually SM-5-compliant.",
+      "isInitializing (auth_state.dart:75) is never read by any router guard or screen except its own domain test — confirmed by grep across app/router/**, features/**/screens/**. This contradicts the finding's 'permanent splash/loading state ... recoverable only by force-killing the app' claim. Also: rule citation SM-5 is a misfit — SM-5 governs AsyncValue<T>-based AsyncNotifier mutations ('let build throw; never hand-manage loading/error with try/catch that assigns state'), but AuthStateNotifier's state is a plain custom AuthState (not AsyncValue), and the finding's own recommendation (add try/catch, manually assign state) is the literal opposite of what SM-5 mandates. EH-2 ('raw exception must never propagate into presentation... convert to a value at the data-layer boundary') is the better-fitting rule for this defect.",
+      "The claim 'every screen gating on authStateProvider ... would show a permanent splash/loading state' is false: `AuthState.isInitializing` (auth_state.dart:75) has no callers in lib/ — no widget, guard, or splash screen branches on SessionStatus.initializing. All real consumers (app_shell.dart:140,152,453; profile_providers.dart:23,79; auth_guard.dart) read isSignedIn/isCloudBorn/currentUser, which are identical for initializing and signedOut states, so a failed _init() silently degrades to signed-out-equivalent behavior rather than hanging any UI. Recommend re-filing at P2 citing SM-2 (side-effectful build) rather than SM-5, with corrected consequence: silent session-restore failure treated as signed-out, not a permanent splash/force-kill hang."
+    ]
+  },
+  "sourceBatch": "sup-sm5",
+  "normArea": "features/account",
+  "id": "AUD-account-11",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,112 @@
+{
+  "title": "overflow_sweep_p2_test.dart: 14 skipped overflow tests claim 'swept on device' coverage that does not exist anywhere in the repo",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (weak/false test claim) + AG-8 (doc must not lie)",
+  "area": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1035,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1076,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1099,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1118,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1169,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1193,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1219,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1260,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1299,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1334,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1373,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1422,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1460,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+      "line": 1501,
+      "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+      "file": "learning_tracker/integration_test/app_test.dart",
+      "line": 14,
+      "quote": "testWidgets('app launches without crashing', (tester) async {"
+    }
+  ],
+  "sites": 14,
+  "why": "Anyone reading these skip reasons reasonably concludes overflow coverage for ParentSettingsScreen, PointConfigScreen, RewardConfigurationScreen, StudyDayConfigScreen, CurriculumProgressScreen, CurriculumSettingsScreen, LearningOrderScreen, ParentTrackManagementScreen, TutorAuditLogScreen, InviteTutorScreen, AcceptInviteScreen, DeclineInviteScreen, PinFlowSetupRoute and PinFlowVerifyRoute is handled by a device sweep. It is not: integration_test/app_test.dart is the ONLY on-device test file in the repo (no other file exists under integration_test/, no flutter-drive/Firebase-Test-Lab target in the Makefile or .github/workflows) and it only asserts the app widget mounts after launch. These 14 screens — several of them PIN-gated parent/reward-money surfaces — have zero automated overflow verification anywhere, contrary to what the comment tells the next reader.",
+  "recommendation": "Either write the actual on-device sweep (integration_test/ + flutter drive/Test Lab target) and point the comment at its file:line, or replace 'swept on device' with an honest 'untested — DNI-#### tracks the device sweep' per AG-6, or find a headless workaround the way the file already did for screens 11-27.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Each of the 14 skip reasons either links to a real, currently-passing on-device test file:line, or is replaced with an accurate gap description plus a DNI-#### ticket.",
+    "A repo-wide grep for 'swept on device' in test/ resolves to an actual test file when followed."
+  ],
+  "labels": [
+    "e2e",
+    "test-quality",
+    "coverage-gap",
+    "false-claim",
+    "overflow"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p3",
+  "chunk": "grp-144",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-48",
+  "linearPriority": "Medium"
+}

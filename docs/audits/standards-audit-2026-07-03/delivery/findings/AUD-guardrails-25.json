@@ -1,0 +1,52 @@
+{
+  "title": "Extract duplicated CI bootstrap steps into a shared composite action",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-11 / Fowler duplication",
+  "area": "GitHub Actions",
+  "evidence": [
+    {
+      "file": ".github/workflows/ci.yml",
+      "line": 9,
+      "quote": "# Shared Flutter + pub setup extracted via composite action pattern (inline reuse via YAML anchors)\n# GitHub Actions does not support YAML anchors natively, so setup steps are duplicated per job."
+    },
+    {
+      "file": ".github/workflows/build.yml",
+      "line": 69,
+      "quote": "      - name: Decode google-services.json"
+    },
+    {
+      "file": ".github/workflows/deploy-play-store.yml",
+      "line": 111,
+      "quote": "      - name: Decode google-services.json"
+    }
+  ],
+  "sites": 3,
+  "why": "ci.yml's own comment justifies duplicating checkout/Flutter-setup/pub-cache/codegen/secret-decode steps ACROSS ITS OWN JOBS because 'GitHub Actions does not support YAML anchors natively' — true, but the actual GHA-native fix (composite actions / reusable workflows via `uses:`) is never used, and the same six-to-eight-step bootstrap sequence is copy-pasted a further two times whole across build.yml and deploy-play-store.yml (which the stated per-job-isolation rationale doesn't even apply to — they're separate files, not parallel jobs needing independent runners). A future change to how secrets are decoded or how the seed asset is prepared requires finding and editing this sequence in up to 6 places (4 ci.yml jobs + build.yml + deploy-play-store.yml) with no mechanism to catch a missed one.",
+  "recommendation": "Create `.github/actions/flutter-bootstrap/action.yml` (checkout+setup+cache+codegen+asset-prep+secret-decode) and reference it via `uses: ./.github/actions/flutter-bootstrap` from all three workflow files.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "A single composite action exists and build.yml, ci.yml, and deploy-play-store.yml all invoke it instead of repeating the step sequence inline."
+  ],
+  "labels": [
+    "ci",
+    "duplication",
+    "fowler",
+    "maintainability"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "'4 ci.yml jobs' duplicate the full secret-decode/asset-prep sequence -- actual count is 2 (analyze, test); 6 jobs (format-check, analyze, audit, lint, test, arb-parity) share the shorter checkout+setup+cache+install subset instead. The 'up to 6 places' total is therefore off, though real duplication across ci.yml/build.yml/deploy-play-store.yml is confirmed regardless."
+    ]
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-155",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-25",
+  "linearPriority": "Low"
+}

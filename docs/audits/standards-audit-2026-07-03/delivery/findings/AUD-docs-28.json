@@ -1,0 +1,43 @@
+{
+  "title": "Fix docs/qa/legacy/00-testing-methodology.md §9 document index — none of the listed filenames exist",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs/qa/legacy",
+  "evidence": [
+    {
+      "file": "docs/qa/legacy/00-testing-methodology.md",
+      "line": 404,
+      "quote": "| 01 | `01-auth.md` | Authentication | Cloud-born and local-born signup/signin"
+    },
+    {
+      "file": "docs/qa/legacy/00-testing-methodology.md",
+      "line": 417,
+      "quote": "| 14 | `14-tutor-mode.md` | Tutor Mode | Tutor read-only access"
+    }
+  ],
+  "sites": 1,
+  "why": "The actual files in the same directory are 01-product-overview.md, 02-auth-and-accounts.md, 03-onboarding.md ... 13-settings.md, 14-sync-and-offline.md — a different naming scheme, order, and count than the table's 18 rows (01-auth.md through 18-settings.md). §9's own instruction ('open 01-auth.md and begin') sends a tester to a file that exists nowhere in the repo.",
+  "recommendation": "Regenerate §9's table from the real docs/qa/legacy/ directory listing.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Every filename in §9's table exists at docs/qa/legacy/<name> and the row order matches the numeric prefix."
+  ],
+  "labels": [
+    "docs",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p2",
+  "chunk": "grp-171",
+  "normArea": "docs",
+  "id": "AUD-docs-28",
+  "linearPriority": "Low"
+}

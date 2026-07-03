@@ -1,0 +1,50 @@
+{
+  "title": "Register needs_flutter/notifications/notifications_screen_l1 tags in dart_test.yaml to silence unknown-tag warnings",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene (test config drift)",
+  "area": "features/notifications (tests, config)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+      "line": 1,
+      "quote": "@Tags(['needs_flutter'])"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/ws5_two_layers_test.dart",
+      "line": 9,
+      "quote": "@Tags(['needs_flutter'])"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "line": 29,
+      "quote": "@Tags(['notifications', 'notifications_screen_l1'])"
+    }
+  ],
+  "sites": 3,
+  "why": "learning_tracker/dart_test.yaml's `tags:` block enumerates ~60 epic/story/misc tags but not `needs_flutter`, `notifications`, or `notifications_screen_l1`. Running any of these 3 files (verified for 2 of them) prints \"Warning: A tag was used that wasn't specified in dart_test.yaml\" on every invocation. It's non-fatal today, but a growing pile of unregistered-tag warnings trains developers/agents to ignore the warning stream, which is exactly where a genuine typo'd or newly-broken tag filter would also hide.",
+  "recommendation": "Add `needs_flutter:`, `notifications:`, and `notifications_screen_l1:` to dart_test.yaml's tags: block (and any other in-use-but-unregistered tags found elsewhere in the suite).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "dart_test.yaml lists needs_flutter, notifications, and notifications_screen_l1.",
+    "`flutter test test/features/notifications/` runs with no \"A tag was used that wasn't specified in dart_test.yaml\" warning."
+  ],
+  "labels": [
+    "testing",
+    "config",
+    "dart_test.yaml"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p2",
+  "chunk": "grp-066",
+  "normArea": "tests/notifications",
+  "id": "AUD-t-notifications-04",
+  "linearPriority": "Low"
+}

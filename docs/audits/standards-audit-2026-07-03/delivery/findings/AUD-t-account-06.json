@@ -1,0 +1,49 @@
+{
+  "title": "Remove the stale skip and stale RTL-overflow comment from email_verification_confirm_panel_test.dart's H1 test",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7 (stale-test hygiene / lost coverage)",
+  "area": "features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+      "line": 973,
+      "quote": "// BUG: The Send-Again + Cancel Row overflows 16 px on the right under\n      // RTL layout (he locale).  The Row uses two Expanded children with a"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+      "line": 979,
+      "quote": "skip: true,"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_overflow_test.dart",
+      "line": 51,
+      "quote": "'EmailVerificationConfirmPanel does not overflow in Hebrew (RTL) — the '\n        'former H1 action-Row overflow',"
+    }
+  ],
+  "sites": 1,
+  "why": "I ran the H1 test with `skip: true` removed (scratch copy, `flutter test ... --plain-name H1`) and it passes today. The sibling overflow-matrix test in this same batch (email_verification_confirm_panel_overflow_test.dart) independently confirms the RTL Row overflow was fixed by wrapping the button labels in Flexible+ellipsis, and its own docstring calls it 'the former H1 action-Row overflow.' The skip and its bug description in email_verification_confirm_panel_test.dart were simply never cleaned up after the fix landed, so a real, currently-passing RTL layout+content assertion sits permanently disabled.",
+  "recommendation": "Remove skip: true and the stale BUG comment from the H1 test.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "H1 in email_verification_confirm_panel_test.dart runs (no skip) and passes in CI."
+  ],
+  "labels": [
+    "stale-skip",
+    "test-hygiene",
+    "coverage-gap"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p3",
+  "chunk": "grp-040",
+  "normArea": "tests/account",
+  "id": "AUD-t-account-06",
+  "linearPriority": "Low"
+}

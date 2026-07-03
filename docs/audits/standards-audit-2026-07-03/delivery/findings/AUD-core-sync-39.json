@@ -1,0 +1,43 @@
+{
+  "title": "Remove the dead no-op catchError in OutboxPushPipeline._runValue",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler dead code",
+  "area": "core/sync (push/gateway)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/push_pipeline_impl.dart",
+      "line": 272,
+      "quote": "if (removed != null) unawaited(removed.catchError((_) {}));"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/push_pipeline_impl.dart",
+      "line": 276,
+      "quote": "ourSlot = result.then<void>((_) {}, onError: (Object _) {});"
+    }
+  ],
+  "sites": 1,
+  "why": "`removed` is the same Future as `ourSlot`, which is built via `.then<void>((_) {}, onError: (Object _) {})` -- the onError handler there already converts any failure into a normal completion, so ourSlot/removed can never complete with an error. The later `unawaited(removed.catchError((_) {}))` is defensive code guarding against something that cannot happen.",
+  "recommendation": "Delete the no-op catchError call, or add a one-line comment if there's a reason (e.g. future-proofing against a refactor) to keep it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Line removed, or a comment explains why an unreachable catchError is intentionally retained."
+  ],
+  "labels": [
+    "dead-code",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-root-p1",
+  "chunk": "grp-034",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-39",
+  "linearPriority": "Low"
+}

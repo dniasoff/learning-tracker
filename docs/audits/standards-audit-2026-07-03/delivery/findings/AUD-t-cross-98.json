@@ -1,0 +1,44 @@
+{
+  "title": "Use the OutboxEntityKind.track constant instead of the 'track' string literal in two_device_sync_test.dart:109",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming (magic literal vs. named constant)",
+  "area": "core/sync — tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/two_device_sync_test.dart",
+      "line": 109,
+      "quote": "final outboxRows = await deviceA.outboxDao.getPendingByKind('track', 1);"
+    },
+    {
+      "file": "learning_tracker/test/sync/two_device_sync_test.dart",
+      "line": 70,
+      "quote": "OutboxEntityKind.completion,"
+    }
+  ],
+  "sites": 1,
+  "why": "The file already imports outbox_processor.dart and uses the named OutboxEntityKind.completion constant at line 70, but line 109 hardcodes 'track' instead of the already-available OutboxEntityKind.track. The value happens to match today, but the constant exists precisely so a future rename of the underlying string doesn't silently desync a call site like this one.",
+  "recommendation": "Change 'track' to OutboxEntityKind.track at line 109.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "learning_tracker/test/sync/two_device_sync_test.dart:109 reads OutboxEntityKind.track instead of the string literal 'track'."
+  ],
+  "labels": [
+    "tests",
+    "hygiene",
+    "naming"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p4",
+  "chunk": "grp-111",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-98",
+  "linearPriority": "Low"
+}

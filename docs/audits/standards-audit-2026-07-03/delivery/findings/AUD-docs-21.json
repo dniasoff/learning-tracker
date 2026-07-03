@@ -1,0 +1,54 @@
+{
+  "title": "Update linear-status.md — Epics 25-27 marked 'all Backlog' despite dozens of implemented, non-skipped story-acceptance tests",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs (linear-status.md) vs test/story_acceptance/",
+  "evidence": [
+    {
+      "file": "docs/linear-status.md",
+      "line": 113,
+      "quote": "22 stories: 25.1–25.22. All Backlog. Highlights:"
+    },
+    {
+      "file": "docs/linear-status.md",
+      "line": 125,
+      "quote": "35 stories. Eight feature areas reorganized to consume the new core."
+    },
+    {
+      "file": "docs/linear-status.md",
+      "line": 138,
+      "quote": "17 stories (16 Backlog, 1 Canceled). Test pyramid, CI gates, observability, docs."
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+      "line": 11,
+      "quote": "@Tags(['epic_25'])"
+    }
+  ],
+  "sites": 3,
+  "why": "linear-status.md (self-dated 'last reconciled 2026-05-13', ~7 weeks stale relative to the audit date) states all of Epic 25 (22 stories), Epic 26 (35 stories) and Epic 27 (17 stories) are 'Backlog'. But test/story_acceptance/ already contains 31 distinct epic_25/26/27 story-numbered test files (e.g. epic_25_story_25_20_locale_theme_test.dart, epic_26_story_26_7_dashboard_model_provider_test.dart, epic_27_story_14_analytics_test.dart) totaling well over 150 test groups with a single `skip:` marker among them — i.e. these are live, executing acceptance suites, not scaffolded placeholders. Anyone using this doc to plan work risks re-scoping or re-implementing stories that already shipped.",
+  "recommendation": "Re-sync against status/sprint-status.yaml (the doc's own stated source of truth) and, as a cheap proxy check going forward, cross-reference `grep -L 'skip:' test/story_acceptance/epic_2[567]_*.dart` against the Backlog list before publishing a status doc.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Epic 25/26/27 story statuses in linear-status.md match sprint-status.yaml",
+    "no story shown 'Backlog' has a fully un-skipped acceptance test file in test/story_acceptance/"
+  ],
+  "labels": [
+    "docs",
+    "project-status"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p2",
+  "chunk": "grp-168",
+  "normArea": "docs",
+  "id": "AUD-docs-21",
+  "linearPriority": "Medium"
+}

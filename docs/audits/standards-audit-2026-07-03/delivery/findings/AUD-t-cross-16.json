@@ -1,0 +1,83 @@
+{
+  "title": "Delete or rewrite the 474 row-existence-only Drift Manager-API tests in test/core/database/user_database_managers_*_test.dart — none can detect an ordering or filtering regression",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological tests / assertions weaker than what the source can do wrong) + Feathers lens (test has no seam to the behavior it claims to cover)",
+  "area": "test/core/database (Drift generated Manager API coverage tests)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_orderby_test.dart",
+      "line": 1,
+      "quote": "/// OrderBy + filter coverage for all remaining uncovered ColumnOrderings and\n/// ColumnFilters getters in user_database.g.dart."
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_orderby_test.dart",
+      "line": 1119,
+      "quote": "// createdAt defaults to currentDateAndTime; just verify the filter compiles and executes"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_orderby_test.dart",
+      "line": 93,
+      "quote": "expect(rows, hasLength(1));"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_computed_fields2_test.dart",
+      "line": 1,
+      "quote": "/// Additional coverage for annotation composer getters that were missed in\n/// the first computed fields test — focuses on fields like id, profileId,"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_computed_fields2_test.dart",
+      "line": 84,
+      "quote": "expect(await db.managers.accounts.withFields([field]).get(), isNotEmpty);"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_computed_fields_test.dart",
+      "line": 1,
+      "quote": "/// Coverage for annotation composer ($$XxxAnnotationComposer) getters\n/// in user_database.g.dart."
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_computed_fields_test.dart",
+      "line": 91,
+      "quote": "expect(rows, isNotEmpty);"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_create_update_test.dart",
+      "line": 100,
+      "quote": "expect(rows, isNotEmpty);"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+      "line": 165,
+      "quote": "expect(rows, isNotEmpty);"
+    }
+  ],
+  "sites": 474,
+  "why": "Every one of these 474 tests inserts exactly one row in setUp, then calls orderBy/filter/computedField/withFields and asserts only `hasLength(1)`/`isNotEmpty`/`isA<List<...>>`. Confirmed by exhaustive grep: zero occurrences anywhere in the 2435-line orderby file of `hasLength(0)`, `hasLength(2)`, or `equals([...])` — no test ever inserts a second, differently-ordered or non-matching row, so a broken `.asc()`/`.desc()` (or a filter predicate that matches everything, or one that silently no-ops) still returns the single seeded row and the test stays green. Ran both the smallest (crossref_filter_test.dart) and largest (orderby_test.dart) files in this session: 26/26 and 283/283 pass today, so this is 474 currently-green CI checkmarks that give zero regression protection for the very ordering/filtering behavior their names promise. Compounding it: `grep -rl '\\.managers\\.' lib/` returns 0 files — the Drift-generated Manager API under test (`db.managers.*`) has no caller anywhere in production code; the app queries through hand-written DAOs instead. This is ~5900 lines of test code (this batch alone) written to drive `flutter test --coverage` numbers up against a generated-code surface the app never exercises, at real cost: CI/build time on every run, and reviewer/agent attention budget on every future change to user_database.dart (per AG-3's own rationale about per-file read budgets).",
+  "recommendation": "Delete this suite — `db.managers.*` has no production caller, so there is no behavior left to protect. If the underlying goal was raising `user_database.g.dart` line-coverage numbers, exclude generated files from the coverage gate instead (e.g. `lcov --remove coverage/lcov.info '*.g.dart' '*.freezed.dart'` in the coverage make target) rather than writing assertion-free tests. If any ordering/filtering behavior here genuinely needs protecting because a DAO wraps it, move that coverage to the DAO's own test file with real assertions: insert ≥2 rows with distinct sort keys and assert exact order via `equals([...])`, and insert ≥1 matching + ≥1 non-matching row per filter test and assert the non-matching row is excluded.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "`grep -rn 'db.managers' test/core/database/user_database_managers_*_test.dart` returns nothing (files deleted), OR every remaining orderBy test seeds ≥2 rows with distinct values and asserts exact order, and every remaining filter test seeds ≥1 excluded row and asserts it's excluded.",
+    "Coverage tooling (`make test` / CI) excludes `*.g.dart` and `*.freezed.dart` from the coverage report, removing the incentive that produced this suite.",
+    "`flutter test --coverage` line count for `test/core/database/` drops by roughly the amount removed, verifiable via `wc -l` before/after in the PR diff."
+  ],
+  "labels": [
+    "testing",
+    "tech-debt",
+    "coverage-padding",
+    "drift",
+    "false-confidence"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-root-p3",
+  "chunk": "grp-013",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-16",
+  "linearPriority": "Medium"
+}

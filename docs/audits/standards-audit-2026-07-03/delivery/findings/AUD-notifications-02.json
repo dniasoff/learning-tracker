@@ -1,0 +1,77 @@
+{
+  "title": "Stop returning a hardcoded default from build() in the 5 notification preference providers (SM-2)",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "SM-2",
+  "area": "features/notifications/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 62,
+      "quote": "_loadFromPrefs(profileId);\n    return true; // synchronous default; overwritten once prefs load completes"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 150,
+      "quote": "_loadFromPrefs(profileId);\n    return true; // synchronous default; overwritten once prefs load completes"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 238,
+      "quote": "_loadFromPrefs(profileId);\n    return true; // synchronous default; overwritten once prefs load completes"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/providers/reminder_sync_sacred_time_test.dart",
+      "line": 260,
+      "quote": "// reminderEnabledProvider returns the default `true` synchronously and\n      // then async-loads the persisted `false`. That state change invalidates"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/providers/reminder_sync_sacred_time_test.dart",
+      "line": 267,
+      "quote": "for (var i = 0; i < 10; i++) {\n        try {"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 463,
+      "quote": "// M3 fix: the pref notifiers return defaults (enabled=true, 19:00)\n  // synchronously, then async-load the real values."
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 725,
+      "quote": "final enabled = ref.watch(streakAlertEnabledProvider);\n  final time = ref.watch(streakAlertTimeProvider);"
+    }
+  ],
+  "sites": 7,
+  "why": "ReminderEnabled, ReminderTime, StreakAlertEnabled, StreakAlertTime and RewardNotificationEnabled all fire an async SharedPreferences load from build() and return a hardcoded default first. reminder_sync_sacred_time_test.dart's own comment documents the real consequence: this oscillation 'invalidates this effect mid-flight, disposing the first in-flight future (Riverpod throws \"disposed during loading\")' for any dependent FutureProvider whenever the persisted value differs from the default -- the test only passes by retrying up to 10 times. The M3 fix (lines 463-467) patches only reminderSyncEffect's symptom by re-reading SharedPreferences directly; the root defect reaches every other consumer (UI switches, streakAlertSyncEffect, future code) unmitigated.",
+  "recommendation": "Convert these 5 providers to AsyncNotifier<T> (or an equivalent that actually awaits SharedPreferences before emitting) so there is no synchronous-default race; then delete the M3 workaround in reminderSyncEffect.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A unit test asserts reminderEnabledProvider (and siblings) never emits the hardcoded default when a differing persisted value exists for the resolved profile.",
+    "reminder_sync_sacred_time_test.dart's retry-loop workaround (lines 265-274) is deleted once the fix lands and the test still passes on the first attempt."
+  ],
+  "labels": [
+    "riverpod",
+    "sm-2",
+    "notifications",
+    "hotspot"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "high-057",
+  "mergedFrom": [
+    "Give streakAlertSyncEffect the same cold-start defense and test coverage as reminderSyncEffect"
+  ],
+  "coDiscoverers": [
+    "t1-feat-notifications-p1"
+  ],
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-02",
+  "linearPriority": "High"
+}

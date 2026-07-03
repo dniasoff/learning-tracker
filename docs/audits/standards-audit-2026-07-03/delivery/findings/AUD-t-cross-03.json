@@ -1,0 +1,51 @@
+{
+  "title": "Replace the hardcoded /home/daniel font path in store_screenshots_test.dart's loadFonts() with a portable source",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-5",
+  "area": "test/golden",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+      "line": 25,
+      "quote": "const fontDir =\n      '/home/daniel/fvm/versions/stable/bin/cache/artifacts/material_fonts';"
+    },
+    {
+      "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+      "line": 44,
+      "quote": "if (File(path).existsSync()) {"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 10,
+      "quote": "flutter test --coverage"
+    }
+  ],
+  "sites": 1,
+  "why": "loadFonts() is called from setUpAll and guards every font file with existsSync(), so on any machine other than this one developer's laptop (CI, any teammate) the path simply doesn't exist, real Roboto/MaterialIcons silently never load, and all 5 matchesGoldenFile comparisons render with fallback glyphs against the checked-in pixel-pinned PNGs (test/golden/goldens/*.png, last regenerated on this same machine). `make ci`'s `test:` target runs bare `flutter test --coverage` (no path/tag filter) and ci.yml runs `make ci` on a GitHub-hosted runner that never has this path, so this is exactly the 'platform font differences make cross-machine goldens randomly red' failure TQ-5 exists to prevent — and it defeats the file's own stated purpose (real Play Store screenshots) everywhere but one machine.",
+  "recommendation": "Load fonts the same way test/flutter_test_config.dart already handles GoogleFonts (bundled asset / offline mode), or resolve the Material fonts directory dynamically (e.g. via the Flutter SDK root the test runner already knows about) instead of a hardcoded absolute path tied to one developer's home directory and FVM install.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "flutter test test/golden/store_screenshots_test.dart passes on a fresh checkout/container with no /home/daniel path present",
+    "Rule-0 grep in the audit/CI script rejects hardcoded /home/<user>/ (or any non-repo-relative) absolute paths under test/"
+  ],
+  "labels": [
+    "TQ-5",
+    "golden",
+    "portability",
+    "ci"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p5",
+  "chunk": "high-106",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-03",
+  "linearPriority": "High"
+}

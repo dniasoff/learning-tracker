@@ -1,0 +1,49 @@
+{
+  "title": "sign_in_screen_test.dart never exercises the registry-mode / forgot-password logic on this churn-hotspot screen",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "TQ-8 (regression coverage) / AREA NOTE test-pins-behavior",
+  "area": "test/features/auth/presentation/screens/sign_in_screen_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/auth/presentation/screens/sign_in_screen_test.dart",
+      "line": 18,
+      "quote": "group('SignInScreen', () {\n    setUp(debugResetLastKnownOnline);"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/screens/sign_in_screen.dart",
+      "line": 153,
+      "quote": "SignInModeHint _effectiveSignInMode({required bool isOnline}) {"
+    }
+  ],
+  "sites": 1,
+  "why": "Every test in this file only varies the connectivity stream (true/false/empty) and reads static widget output; grepping the whole test/ tree for RegistryMatchKind returns zero hits anywhere in the repo, so the debounced device-registry lookup (Epic 21.7: _onEmailChanged/_effectiveSignInMode/_registrySubtitle) that decides which mode card and hint text a returning user sees is completely unverified. The file also never calls tester.enterText or tester.tap, so the documented SI-WP-01 regression (error snackbar silently dropped because the show-error callback was wired inside a postFrameCallback) and the AN-11 forgot-password flow (deliberately shows the same snackbar on success and failure to avoid email enumeration) have no regression test — the next edit to this hotspot can reintroduce either bug with nothing to catch it.",
+  "recommendation": "Add widget tests that enter an email to trigger the 300ms registry debounce and assert the rendered mode card/hint for at least localBorn, cloudBorn, and notOnDevice x online/offline; add an interaction test that submits sign-in and asserts the error snackbar appears (locks in SI-WP-01); add a forgot-password test asserting identical snackbar copy on a resolving vs. throwing authRepositoryProvider override.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "New tests fail against a reverted _effectiveSignInMode (or a reverted SI-WP-01 initState fix) and pass against current code",
+    "RegistryMatchKind (or its rendered effect) is asserted by at least one test in this file",
+    "A forgot-password test exists asserting identical success/failure snackbar text"
+  ],
+  "labels": [
+    "testing",
+    "coverage-gap",
+    "hotspot",
+    "auth"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "learning_tracker/test/features/account/presentation/notifiers/sign_in_wrong_password_no_callback_test.dart lines 201-396 already contain three explicitly-labeled tests (SI-WP-01, SI-WP-02, SI-WP-03) covering exactly the postFrameCallback/showError regression at the controller level, including a 'callbacks NOT set' scenario simulating the original race. sign_in_screen.dart:65-90 confirms the initState fix (synchronous setCallbacks, comment cites SI-WP-01) is already in place. The finding's claim that this regression has 'no regression test' anywhere is incorrect — narrow the finding to the registry-mode-selection logic (_effectiveSignInMode/_registrySubtitle, untested at the widget level) and the AN-11 forgot-password snackbar-parity behavior (_handleForgotPassword in sign_in_screen.dart:226-246, also untested — the existing AN-11 test in sign_in_form_an9_an11_an12_test.dart only checks the link's presence/tap, not the snackbar-parity anti-enumeration behavior)."
+    ]
+  },
+  "sourceBatch": "t1-feat-auth",
+  "chunk": "grp-042",
+  "normArea": "tests/auth",
+  "id": "AUD-t-auth-02",
+  "linearPriority": "Medium"
+}

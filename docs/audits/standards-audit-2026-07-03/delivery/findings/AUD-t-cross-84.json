@@ -1,0 +1,49 @@
+{
+  "title": "Replace DateTime.now() with a fixed clock in UserDatabase migration/smoke test setup",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "learning_tracker/test/core/database",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/migration_test.dart",
+      "line": 21,
+      "quote": "stateChangedAt: DateTime.now(),\n              activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/schema_v1_smoke_test.dart",
+      "line": 43,
+      "quote": "final now = DateTime.now().toUtc();"
+    },
+    {
+      "file": "learning_tracker/test/core/database/hebrew_migration_test.dart",
+      "line": 23,
+      "quote": "stateChangedAt: DateTime.now(),\n              activatedAt: DateTime.now(),"
+    }
+  ],
+  "sites": 3,
+  "why": "29 wall-clock DateTime.now() calls across these 3 files (6 + 17 + 6) stamp createdAt/activatedAt/stateChangedAt instead of using a fixed constant. None currently assert date-boundary behavior, so today it's inert risk rather than an active flake — but TQ-6 requires hermetic tests specifically so a later change elsewhere in the same file doesn't silently start comparing against a moving 'now' (e.g. a future staleness/ordering assertion would flake once a day near a UTC boundary, and CI's randomized test ordering would make the failure look like it came from an unrelated test).",
+  "recommendation": "Replace DateTime.now()/DateTime.now().toUtc() with a fixed DateTime.utc(...) constant, matching the pattern already used elsewhere in these same files (e.g. schema_v1_smoke_test.dart's DateTime.utc(2026, 1, 1) at line 258).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep for 'DateTime.now(' in these 3 files returns zero.",
+    "TQ-6's Pending checker (currently lib/-only via inner audit check 6) is extended to cover test/."
+  ],
+  "labels": [
+    "TQ-6",
+    "hermetic-tests"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-root-p1",
+  "chunk": "grp-012",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-84",
+  "linearPriority": "Low"
+}

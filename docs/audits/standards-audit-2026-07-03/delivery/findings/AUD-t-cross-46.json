@@ -1,0 +1,68 @@
+{
+  "title": "Un-skip hebrew_rtl_p1_test.dart E2E-1510 — R-OB7 onboarding hardcoded-English bug is already fixed",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7 / TQ-8 (stale test)",
+  "area": "test/e2e/journeys/hebrew_rtl_p1_test.dart + features/onboarding",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+      "line": 548,
+      "quote": "'BUG R-OB7: onboarding profile-mode card text is hardcoded English '"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart",
+      "line": 356,
+      "quote": "title: AppLocalizations.of(context)!.childModeCardTitle,"
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_he.arb",
+      "line": 640,
+      "quote": "\"childModeCardTitle\": \"מצב ילדים\","
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_screen_l1_test.dart",
+      "line": 314,
+      "quote": "expect(find.text('מה מביא אותך לכאן?'), findsNothing);"
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_he.arb",
+      "line": 2657,
+      "quote": "\"onboardingIntentHeading\": \"מה הביא אותך לכאן?\","
+    }
+  ],
+  "sites": 5,
+  "why": "The file's docstring (lines 30-33) and the E2E-1510 group's skip reason claim OnboardingProfileCreationStep hardcodes English mode-card copy ('Child Mode'/'Adult Mode'/'Fun & Rewards'/'Deep & Scholarly'/'ACTIVE'/'What should we call you?'). Every one of those UI strings in the current source routes through AppLocalizations (childModeCardTitle, adultModeCardTitle, childModeCardSubtitleFunRewards, onboardingNamePrompt, pointSettingsActiveBadge, ...), and app_he.arb carries real Hebrew translations, not English placeholders — the bug is fixed. The docstring's cited copy ('Deep & Scholarly') doesn't even match the current EN string ('Focused'), showing the annotation predates a later copy change too. Because the test stays skipped, nobody is regression-testing RTL/i18n correctness for the onboarding profile step, and anyone reading the skip reason is told a bug exists that doesn't — the exact opposite of the file's own 'confirm-bug→skip contract' (contrast with E2E-1511 in the same file, which correctly marks R-IC3 FIXED once the underlying bug was resolved).",
+  "recommendation": "Remove the skip parameter from the E2E-1510 group, run the test to confirm it passes under he locale, and update/delete the stale R-OB7 docstring block (mirroring how R-IC3 is marked FIXED elsewhere in the same file); also close R-OB7 in docs/planning/e2e-test-suite-plan.md's risk register.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "test/e2e/journeys/hebrew_rtl_p1_test.dart E2E-1510 group runs unskipped and passes.",
+    "R-OB7 row in docs/planning/e2e-test-suite-plan.md marked fixed or removed."
+  ],
+  "labels": [
+    "stale-test",
+    "i18n",
+    "onboarding",
+    "TQ-7"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p2",
+  "chunk": "grp-143",
+  "mergedFrom": [
+    "Fix onboarding_screen_l1_test.dart's intentChooser Hebrew assertion to match the real ARB string"
+  ],
+  "coDiscoverers": [
+    "t1-feat-onboarding-p2",
+    "t1-test-cross-p2"
+  ],
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-46",
+  "linearPriority": "Medium"
+}

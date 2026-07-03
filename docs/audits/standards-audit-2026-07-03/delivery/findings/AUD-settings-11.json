@@ -1,0 +1,50 @@
+{
+  "title": "Route UserProfileHeaderCard's 9 raw Color literals through AppColors tokens (no_color_literal_outside_theme)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "custom_lint: no_color_literal_outside_theme",
+  "area": "features/settings/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 142,
+      "quote": "const Color(0xFFE65100),"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 136,
+      "quote": "const Color(0xFFE8F4FD),"
+    },
+    {
+      "file": "learning_tracker/lib/core/theme/app_colors.dart",
+      "line": 188,
+      "quote": "static const Color accentBurntOrange = Color(0xFFE65100);"
+    }
+  ],
+  "sites": 9,
+  "why": "The custom_lint rule no_color_literal_outside_theme currently enforces nothing repo-wide (dart run custom_lint is broken -- baselined), but the underlying violations are still real and reportable per the audit digest. This widget already imports and uses AppColors.inkMidGrey/AppColors.surfaceE9 (lines 231, 277) for some colors, yet inlines 9 fresh Color(0x...) hex literals for the parent/tutor badge pair, the avatar ring, two shadow tints, and the cloud-off icon/text -- one of which (0xFFE65100, line 142) is byte-for-byte identical to the already-defined AppColors.accentBurntOrange (app_colors.dart:188). A future rebrand of that accent color would silently miss this usage.",
+  "recommendation": "Add named tokens to AppColors for the badge-pair and shadow-tint colors, replace all 9 literals with AppColors.* references (reusing accentBurntOrange for the 0xFFE65100 case).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "0 raw Color(0x literals remain in user_profile_header_card.dart.",
+    "no_color_literal_outside_theme passes on this file once custom_lint is repaired."
+  ],
+  "labels": [
+    "theme-tokens",
+    "custom-lint",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-settings-p2",
+  "chunk": "grp-102",
+  "normArea": "features/settings",
+  "id": "AUD-settings-11",
+  "linearPriority": "Low"
+}

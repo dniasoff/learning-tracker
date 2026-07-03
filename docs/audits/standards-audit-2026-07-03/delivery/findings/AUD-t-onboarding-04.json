@@ -1,0 +1,54 @@
+{
+  "title": "Consolidate duplicate onboarding test coverage instead of maintaining parallel suites",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1, Fowler duplication",
+  "area": "onboarding tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_screen_test.dart",
+      "line": 62,
+      "quote": "testWidgets('starts at combined new profile phase', (tester) async {"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_bulk_l1_test.dart",
+      "line": 268,
+      "quote": "testWidgets('starts at profileCreation: name field + mode pills visible', ("
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/domain/services/learning_process_wizard_service_test.dart",
+      "line": 57,
+      "quote": "group('getPresetsForCurriculum', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/domain/services/learning_process_wizard_service_test.dart",
+      "line": 76,
+      "quote": "group('LearningProcessWizardService.getPresetsForCurriculum', () {"
+    }
+  ],
+  "sites": 3,
+  "why": "onboarding_screen_test.dart's testWidgets + childAwareText tests are near-line-for-line duplicates of onboarding_bulk_l1_test.dart's 'profileCreation phase' and 'childAwareText helper' groups (same button text, same disabled-state check, same ACTIVE-badge tap, same substitution cases) — it reads like the pre-L1 file the L1 rewrite was meant to replace but never deleted. learning_process_wizard_service_test.dart runs the same scenario (e.g. noReview creates one לימוד stage) through two differently-named group blocks repeatedly, several pairs marked '(F2 variant)' — roughly half of its 31 tests are redundant with the other half. Every future behavior change to these services must be updated in 2 places or the suites silently diverge.",
+  "recommendation": "Delete onboarding_screen_test.dart (fully superseded) or trim it to whatever the L1 suite doesn't cover. In learning_process_wizard_service_test.dart, merge each '(F2 variant)'/second-group pair into the first, keeping the more specific assertions from each.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Total test count in the 2 files drops by the number of confirmed-duplicate cases with no coverage regression on the 2 lib files under test"
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "onboarding"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-069",
+  "normArea": "tests/onboarding",
+  "id": "AUD-t-onboarding-04",
+  "linearPriority": "Low"
+}

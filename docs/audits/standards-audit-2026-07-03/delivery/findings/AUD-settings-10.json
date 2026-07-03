@@ -1,0 +1,51 @@
+{
+  "title": "Remove UserProfileHeaderCard's redundant _user field and de-duplicate/select-narrow the active-profile lookup",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / PF-1 narrow reads",
+  "area": "features/settings/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 54,
+      "quote": "AppUser? _user;"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 112,
+      "quote": "final activeProfileId = ref.watch(activeProfileIdProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+      "line": 346,
+      "quote": "final activeProfileId = ref.watch(activeProfileIdProvider);"
+    }
+  ],
+  "sites": 3,
+  "why": "_UserProfileHeaderCardState is a ConsumerStatefulWidget solely to hold _user, which initState/didUpdateWidget always sets to exactly widget.user -- functionally identical to reading widget.user directly, which would let this be a plain ConsumerWidget. Separately, the 3-line 'resolve active profile from the profile-list stream' expression (ref.watch(activeProfileIdProvider) + ref.watch(profileListStreamProvider) + .where(...).firstOrNull) is copy-pasted verbatim between this build method (lines 112-119) and _LocalBornProfileRow.build (lines 346-350), and neither uses `.select()` to narrow the read to just the active profile -- both widgets rebuild on any change to the full profile list, not just the active one.",
+  "recommendation": "Delete _user/initState/didUpdateWidget and convert to ConsumerWidget; extract the active-profile lookup into one shared helper/derived provider (ideally using .select) used by both build methods.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "user_profile_header_card_l1_test.dart passes unchanged after the refactor."
+  ],
+  "labels": [
+    "fowler",
+    "duplication",
+    "pf-1"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor: second evidence line cited as 112 is actually 113 (activeProfileId line); the 346 citation is exact. 'Copy-pasted verbatim' slightly overstates since the state version has an extra 'widget.activeProfile ??' prefix, but the duplicated core lookup logic is real."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p2",
+  "chunk": "grp-101",
+  "normArea": "features/settings",
+  "id": "AUD-settings-10",
+  "linearPriority": "Low"
+}

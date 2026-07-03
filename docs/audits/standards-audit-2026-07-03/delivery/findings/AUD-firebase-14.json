@@ -1,0 +1,46 @@
+{
+  "title": "Remove or repair the dead root firebase.json/.firebaserc pointing at missing files",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-1 (dead config)",
+  "area": "Firebase config",
+  "evidence": [
+    {
+      "file": "firebase.json",
+      "line": 3,
+      "quote": "    \"rules\": \"firestore.rules\","
+    },
+    {
+      "file": ".firebaserc",
+      "line": 3,
+      "quote": "    \"default\": \"torah-study-tracker\""
+    }
+  ],
+  "sites": 2,
+  "why": "Root firebase.json references firestore.rules and firestore.indexes.json relative to the repo root, but neither file exists there — both live only under learning_tracker/. `firebase deploy`/`firebase emulators:start` run from the repo root (a natural instinct since .firebaserc's project default lives there too) would fail immediately with a file-not-found error. Git history confirms firestore.rules used to live at repo root and was moved under learning_tracker/ during a restructure, with the root firebase.json/.firebaserc never cleaned up. Compounding this, no Makefile or CI workflow in the repo contains a `firebase deploy` or `firebase use` command anywhere — there is no committed, automated path from the source-controlled firestore.rules to the real deployed ruleset at all.",
+  "recommendation": "Delete the root firebase.json/.firebaserc (or repoint them at learning_tracker/), and document (or automate via CI on tag/release) the actual firestore.rules deploy process.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Root firebase.json's referenced paths exist, or the file is removed."
+  ],
+  "labels": [
+    "firebase",
+    "dead-config",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The 'git history confirms firestore.rules used to live at repo root and was moved under learning_tracker/' claim is backwards: learning_tracker/firestore.rules (fd0a1f25) predates the root copy, which was added later in f3777e8e as a duplicate (likely from running `firebase init` at repo root) and only partially cleaned up, leaving firebase.json/.firebaserc orphaned. Core dead-config conclusion is unaffected."
+    ]
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-155",
+  "normArea": "firebase",
+  "id": "AUD-firebase-14",
+  "linearPriority": "Low"
+}

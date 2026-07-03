@@ -1,0 +1,57 @@
+{
+  "title": "Fix clear_overdue_button_test.dart's push-spy test to verify SyncWriteFacade, the collaborator EditTrackScreen actually calls",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Feathers seam lens / TQ-8 (does the test exercise the real production code path?)",
+  "area": "test/track_setup/clear_overdue_button_test.dart — F-C1 regression test for EditTrackScreen._clearOverdue",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/track_setup/clear_overdue_button_test.dart",
+      "line": 79,
+      "quote": "  String? todayRef,\n  FirestoreGateway? gateway,"
+    },
+    {
+      "file": "learning_tracker/test/track_setup/clear_overdue_button_test.dart",
+      "line": 91,
+      "quote": "await gateway?.pushProfileProgram(\n    profileId: profileId,"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "line": 387,
+      "quote": "final syncFacade = ref.read(syncWriteFacadeProvider);\n      await syncFacade?.pushProfileProgram({"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "line": 28,
+      "quote": "import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';"
+    }
+  ],
+  "sites": 1,
+  "why": "edit_track_screen.dart never imports or touches FirestoreGateway (grep confirms only sync_providers.dart is imported); its real _clearOverdue() calls SyncWriteFacade.pushProfileProgram(Map payload) — a single-arg interface that for non-tutored profiles is enqueued to the outbox (OutboxSyncWriteFacade.pushProfileProgram -> enqueueProfileProgram) and only reaches FirestoreGateway.pushProfileProgram(profileId:, data:) two layers later, asynchronously, via PushPipelineImpl. Test E instead hand-builds a parallel 'reanchorProgramTrack' helper (explicitly documented as 'mirrors the logic in edit_track_screen.dart's _clearOverdue() ... extracted here') that calls a mocked FirestoreGateway directly with named params. This is the ONLY test in the repo referencing _clearOverdue/clearOverdue (grep -rl over test/ returns just this file), so it is the sole regression coverage for the F-C1 fix (a documented past bug: the push to Firestore was missing). The helper's copy has already drifted from production — the real payload includes 'updated_at' (edit_track_screen.dart:394) but the test's reimplemented payload and its assertions omit that key entirely — proving the duplication is not being kept in sync. If _clearOverdue stops calling syncFacade?.pushProfileProgram, calls the wrong facade, or drops a payload field, this test suite stays green.",
+  "recommendation": "Drive the real EditTrackScreen widget (pump + tap the Clear Overdue button + confirm dialog) with syncWriteFacadeProvider overridden to a mock/fake SyncWriteFacade, and assert on the Map payload SyncWriteFacade.pushProfileProgram receives (including updated_at) instead of hand-mocking FirestoreGateway from a reimplemented helper.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Test fails (red) if edit_track_screen.dart's _clearOverdue() stops calling syncWriteFacadeProvider/pushProfileProgram",
+    "Test asserts the actual SyncWriteFacade.pushProfileProgram(Map) interface, not FirestoreGateway.pushProfileProgram(profileId:, data:)",
+    "Payload assertion includes every key the production code sends (profile_id, curriculum_id, program_id, tracking_start_date, tracking_start_ref, updated_at)"
+  ],
+  "labels": [
+    "testing",
+    "seam-mismatch",
+    "sync",
+    "tracks"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p5",
+  "chunk": "grp-120",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-24",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,74 @@
+{
+  "title": "Extract a shared L1 pump helper to remove 8 duplicated ProviderScope/MaterialApp blocks in onboarding presentation tests",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "features/onboarding/presentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/permission_prompt_screen_l1_test.dart",
+      "line": 90,
+      "quote": "Widget _buildApp({"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+      "line": 53,
+      "quote": "Widget createTestWidget({Locale locale = const Locale('en')}) {"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+      "line": 77,
+      "quote": "Widget createTestWidgetWithDatabase({"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+      "line": 132,
+      "quote": "Widget buildDirect({"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+      "line": 347,
+      "quote": "Widget buildDirect({"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+      "line": 583,
+      "quote": "Widget buildDirect({"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+      "line": 725,
+      "quote": "Widget buildDirect({"
+    },
+    {
+      "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+      "line": 884,
+      "quote": "Widget buildDirect({"
+    }
+  ],
+  "sites": 8,
+  "why": "TQ-3 calls for a shared pumpApp helper; the only pumpApp in the repo is a method on the E2E harness class (test/e2e/harness/e2e_harness.dart:304), unusable for lightweight L1 widget tests. Every L1 file in this batch hand-rolls its own ProviderScope > MaterialApp(locale, 4 l10n delegates, supportedLocales) > Scaffold scaffold instead, and wizard_steps_l1_test.dart repeats the identical ~20-line block 5 times in the same file, one per step group. onboarding_steps_overflow_test.dart is the one file in this batch that does this correctly via the shared expectNoOverflowAcrossDevices/_wrap helper, proving the pattern is achievable. Any future change (new l10n delegate, new supportedLocales source) requires touching 8 call sites in this batch alone.",
+  "recommendation": "Extract a shared, parameterized pump helper (e.g. test/helpers/pump_l1_widget.dart) taking a Widget-building function plus optional locale/overrides, matching overflow_harness.dart's _wrap shape; migrate these 8 sites onto it.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "a single shared L1 pump helper exists under test/helpers/ and all 8 call sites in this batch use it"
+  ],
+  "labels": [
+    "duplication",
+    "test-infrastructure",
+    "fowler"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "chunk": "grp-071",
+  "normArea": "tests/onboarding",
+  "id": "AUD-t-onboarding-02",
+  "linearPriority": "Medium"
+}

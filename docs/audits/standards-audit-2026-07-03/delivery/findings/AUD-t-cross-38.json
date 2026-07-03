@@ -1,0 +1,74 @@
+{
+  "title": "Replace vacuous isNotNull/isNotEmpty assertions in user_database_managers_refs_test.dart with relationship-verifying checks",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+      "line": 211,
+      "quote": "      final manager = refs.curriculumScopesRefs;\n      expect(manager, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+      "line": 253,
+      "quote": "      final manager = refs.bookmarksRefs;\n      expect(manager, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+      "line": 290,
+      "quote": "      final rows = await db.managers.curriculumTracks.withFields([field]).get();\n      expect(rows, isNotEmpty);"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+      "line": 375,
+      "quote": "          .withReferences((p) => p(curriculumScopesRefs: true))\n          .get();"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+      "line": 441,
+      "quote": "          .get();\n      expect(rows, isNotEmpty);"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+      "line": 456,
+      "quote": "      final rows = await db.managers.curriculumScopes.withReferences().get();\n      expect(rows, isNotEmpty);"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+      "line": 573,
+      "quote": "          .get();\n      expect(rows, isNotEmpty);"
+    }
+  ],
+  "sites": 41,
+  "why": "41 of the file's 42 tests (every test except 'filter by displayName' at line 175-183) assert only isNotNull on a getter whose return type is non-nullable ($$XTableProcessedTableManager, confirmed by grepping user_database.g.dart — never `?`), or isNotEmpty on rows that come from the base table regardless of the specific ref/prefetch-flag/computedField under test. Verified line 23 (`import 'package:drift/drift.dart' hide isNotNull, isNull;`) confirms these are flutter_test's boolean matchers, not SQL builders. Concretely: deleting `curriculumScopesRefs: true` from the prefetch call at line 374, or breaking the FK the getter filters on in user_database.dart, would not fail any of these tests — the isNotNull can only fail via an exception (impossible given the type), and isNotEmpty is satisfied by the parent row alone. The file's own header claims this suite 'covers' the References/prefetch classes; it cannot detect a broken relationship or prefetch join.",
+  "recommendation": "Rewrite assertions to depend on the specific thing under test: e.g. call `.get()` on the returned manager and assert the rows' FK column equals the parent id used in setUp, or assert a real row count/field value through the prefetched cache, or compare a flag-on vs flag-off query to show the flag changed behavior.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Each affected test fails if the specific relationship/prefetch flag it names is broken or removed (verify by temporarily deleting one `xxxRefs: true` flag or its underlying FK reference and confirming exactly the corresponding test — not an unrelated one — turns red).",
+    "No automated checker exists for this class of test-rigor defect; acceptance is code-review confirmation the assertion depends on the parameter under test."
+  ],
+  "labels": [
+    "TQ-8",
+    "test-quality",
+    "drift",
+    "false-coverage"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Evidence lines 375 and 456 are off by one: the quoted 2-line text actually starts at lines 374 and 455 respectively (verified by direct read). Content itself is accurate and present.",
+      "Evidence items 4 and 6 (cited lines 375, 456) are off by one line — the quoted text's first line actually starts at 374 and 455 respectively. The quoted text itself is verbatim-accurate and trivially locatable; does not affect the finding's substance."
+    ]
+  },
+  "sourceBatch": "t1-core-database-root-p4",
+  "chunk": "grp-014",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-38",
+  "linearPriority": "Medium"
+}

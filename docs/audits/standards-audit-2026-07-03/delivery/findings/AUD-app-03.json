@@ -1,0 +1,61 @@
+{
+  "title": "Centralize app_shell.dart / persistent_switcher_scaffold.dart color literals into AppTheme instead of scattering/duplicating hex values",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "no_color_literal_outside_theme (custom_lint, currently non-functional) / Fowler (duplicated knowledge)",
+  "area": "app/router",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 25,
+      "quote": "const _tutorAccentColor = Color(0xFFD97706); // Amber-600"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 367,
+      "quote": "color: selected ? const Color(0xFF0038A8) : Colors.transparent,"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 436,
+      "quote": "const barBackground = Color(0xFFF1F3FA); // opaque pale blue"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 437,
+      "quote": "const barBorder = Color(0xFFD7DEF0);"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/persistent_switcher_scaffold.dart",
+      "line": 157,
+      "quote": "color: const Color(0xFFF1F3FA),"
+    }
+  ],
+  "sites": 9,
+  "why": "app_shell.dart has 8 raw Color(0x...) literals and persistent_switcher_scaffold.dart has 1 more — all outside lib/core/theme/, exactly what the (currently non-functional, custom_lint is broken repo-wide) no_color_literal_outside_theme rule targets. Worse, the SAME hex value (0xFFF1F3FA, 'opaque pale blue') is hand-copied in both files as an unrelated local constant rather than a shared AppTheme token, and 0xFF0038A8 is a bespoke blue never defined in AppTheme at all (AppTheme.brandBlueDeep is a different value, 0xFF3F41AB). The file's own comments document this exact bar going through TWO rounds of contrast bugs ('Bug 7' and 'Bug 7 (re-fix)') — duplicated, untracked magic colors are precisely what makes a third recurrence likely, since a future contrast fix to one copy can silently miss the other.",
+  "recommendation": "Move _tutorAccentColor, _childViewAccentColor, barBackground/barBorder, and the nav-item selected-color into AppTheme/AppColors named constants; have persistent_switcher_scaffold.dart reference the same constant app_shell.dart uses.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "All Color(0x...) literals in app_shell.dart and persistent_switcher_scaffold.dart are replaced with AppTheme/AppColors named constants.",
+    "Once custom_lint's analyzer-version incompatibility is fixed, `dart run custom_lint` reports zero no_color_literal_outside_theme violations in these two files.",
+    "0xFFF1F3FA exists as exactly one named constant referenced from both files."
+  ],
+  "labels": [
+    "theming",
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-app-l10n-p1",
+  "chunk": "grp-000",
+  "normArea": "app",
+  "id": "AUD-app-03",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,43 @@
+{
+  "title": "Fix stale 'PENDING (1)' test description in manage_tutors_screen_l1_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene",
+  "area": "test/features/tutoring",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+      "line": 959,
+      "quote": "'shows \"PENDING (1)\" section header when there is one pending grant',"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+      "line": 977,
+      "quote": "expect(find.text('Pending (1)'), findsOneWidget);"
+    }
+  ],
+  "sites": 1,
+  "why": "The test name and its own inline comment ('PENDING (1)') don't match the actual asserted string 'Pending (1)' — a leftover from the sibling GA-8 title-case fix mentioned two tests earlier. The assertion is correct and passes; only the description/comment is stale, which could mislead a reader about current UI copy.",
+  "recommendation": "Update the test description and comment to 'Pending (1)' to match the assertion.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test name and comment at manage_tutors_screen_l1_test.dart:959-977 read 'Pending (1)', matching the asserted string"
+  ],
+  "labels": [
+    "hygiene",
+    "tutoring"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "chunk": "grp-127",
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-09",
+  "linearPriority": "Low"
+}

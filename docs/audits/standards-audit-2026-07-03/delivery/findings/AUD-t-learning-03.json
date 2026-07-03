@@ -1,0 +1,44 @@
+{
+  "title": "De-duplicate the CompletionSource 3x3 credit-tier matrix tests out of completion_writer_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1 / Fowler duplication",
+  "area": "test/features/learning/data/completion_writer_test.dart (duplicates test/features/learning/domain/use_cases/mark_completion_use_case_b1_test.dart)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/learning/data/completion_writer_test.dart",
+      "line": 829,
+      "quote": "group('three-tier credit policy (CompletionSource)', () {\n    test('CompletionSource.live.creditsEngagement is true', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/domain/use_cases/mark_completion_use_case_b1_test.dart",
+      "line": 32,
+      "quote": "group('CompletionSourceX — tier predicates (3×3 matrix)', () {\n    test('[live] creditsEngagement = true', () {"
+    }
+  ],
+  "sites": 1,
+  "why": "Both groups assert the exact same 9 facts (CompletionSource.{live,bulkInTrack,lifetimeOnly}.{creditsEngagement,creditsAchievement,creditsLifetime}). Git history shows mark_completion_use_case_b1_test.dart added them first (2026-05-20, W4.18); completion_writer_test.dart re-added an equivalent group ten days later (2026-05-30). Two files must now be kept in lockstep for one policy fact, contributing ~50 redundant lines to completion_writer_test.dart's AG-3 overage for zero added coverage.",
+  "recommendation": "Delete the 'three-tier credit policy (CompletionSource)' group from completion_writer_test.dart; leave a one-line comment pointing readers at mark_completion_use_case_b1_test.dart for the matrix.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "completion_writer_test.dart no longer asserts CompletionSource.creditsEngagement/Achievement/Lifetime directly; mark_completion_use_case_b1_test.dart retains full 9-fact coverage"
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-learning-p2",
+  "chunk": "grp-061",
+  "normArea": "tests/learning",
+  "id": "AUD-t-learning-03",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,41 @@
+{
+  "title": "De-duplicate the Hebrew-script detection regex in TrackLearningOrderScreen",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication",
+  "area": "lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+      "line": 161,
+      "quote": "static final RegExp _hebrewScript = RegExp('[֐-׿]');"
+    }
+  ],
+  "sites": 1,
+  "why": "The adjacent comment admits this is a copy of CurriculumLabel's private _hebrew regex (core/labels/curriculum_label.dart:364); the same literal also appears in core/theme/text_styles.dart and core/enums/curriculum_id.dart, for four independent copies repo-wide of one RTL-detection regex. A future Unicode-range fix (e.g. extending to Hebrew presentation forms) has to be found and applied in all four places; missing one silently reintroduces a mis-directioned label in only that spot.",
+  "recommendation": "Expose CurriculumLabel's Hebrew-detection as a small public helper in core/labels and call it here instead of a private copy.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one canonical Hebrew-script RegExp definition remains in core/labels; this screen calls it"
+  ],
+  "labels": [
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "curriculum_id.dart does not contain a Hebrew-detection RegExp; it only has per-enum displayNameHe string literals (unicode escapes), a different concern. Duplication is 3 sites (track_learning_order_screen.dart, curriculum_label.dart, text_styles.dart), not 4.",
+      "core/enums/curriculum_id.dart does not contain any Hebrew-script regex (verified full 61-line file — only a doc comment mentioning 'Display name in Hebrew'). Real copies are 3: track_learning_order_screen.dart:161, curriculum_label.dart:364, core/theme/text_styles.dart:150 — not 4."
+    ]
+  },
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "grp-118",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-18",
+  "linearPriority": "Low"
+}

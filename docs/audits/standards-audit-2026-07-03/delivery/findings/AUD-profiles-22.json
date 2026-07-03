@@ -1,0 +1,56 @@
+{
+  "title": "Tag every keepAlive:true provider in features/profiles with the grep-able // keepAlive: justification SM-6 requires",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-6",
+  "area": "features/profiles/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/active_profile_provider.dart",
+      "line": 17,
+      "quote": "@Riverpod(keepAlive: true)\nclass ActiveProfileId extends _$ActiveProfileId {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/parent_pin_session_provider.dart",
+      "line": 9,
+      "quote": "@Riverpod(keepAlive: true)\nclass ParentPinAuthenticatedProfileId"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/profile_providers.dart",
+      "line": 21,
+      "quote": "@Riverpod(keepAlive: true)\nint currentAccountId(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/profile_providers.dart",
+      "line": 77,
+      "quote": "@Riverpod(keepAlive: true)\nFuture<int?> autoSelectedProfileId(Ref ref) async {"
+    }
+  ],
+  "sites": 8,
+  "why": "SM-6 requires every `keepAlive: true` to carry an inline `// keepAlive:` comment so a checker can grep for compliance. All 8 keepAlive providers in this batch (active_profile_provider.dart:17, parent_pin_session_provider.dart:9, pin_flow_controller.dart:130, profile_providers.dart:21/28/36/77/161) instead use prose `///` doc comments that don't match the required grep pattern — the same pattern holds nearly everywhere else in the codebase (only sync_orchestrator_providers.dart uses the literal tag), so a Rule-0 checker for SM-6 could not be written against the current codebase without a mass rename.",
+  "recommendation": "Add a literal `// keepAlive: <reason>` line next to each @Riverpod(keepAlive: true) in this batch (can keep the existing prose doc comment alongside it).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Each of the 8 listed keepAlive providers has an inline `// keepAlive:` comment a grep-based checker can match"
+  ],
+  "labels": [
+    "sm-6",
+    "riverpod",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "2 of the 8 sites (active_profile_provider.dart:17, pin_flow_controller.dart:130) do carry some keepAlive-specific prose justification, just not the grep-matchable `//` tag format — slightly weaker than the finding's 'all 8 use unrelated prose' framing, but doesn't change the verdict since none would pass a literal Rule-0 grep."
+    ]
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-076",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-22",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Wire up or delete the unused SharedPrefsNotificationPreferencesRepository",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler dead code / SM-7",
+  "area": "features/notifications/data/repositories",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/data/repositories/shared_prefs_notification_preferences_repository.dart",
+      "line": 5,
+      "quote": "/// All key strings and default values are centralised here rather than\n/// being scattered across multiple Riverpod notifiers."
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 67,
+      "quote": "final prefs = await SharedPreferences.getInstance();"
+    }
+  ],
+  "sites": 1,
+  "why": "SharedPrefsNotificationPreferencesRepository is constructed nowhere in lib/ outside its own constructor declaration -- a repo-wide grep confirms zero call sites. Its doc comment claims prefs are centralised here instead of being scattered across notifiers, but every one of the 5 preference providers in notification_providers.dart still reads/writes SharedPreferences key-by-key inline via the static key helpers, exactly the scattered pattern the class claims to replace. It has zero test coverage and misleads a reader into believing there is a repository DI seam here when there isn't one.",
+  "recommendation": "Either finish the migration (route the 5 providers' load/save through a provider constructing this repository) or delete the class and the interface's now-pointless abstract load()/save(), keeping only the static key helpers that are actually used.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Either a provider constructs SharedPrefsNotificationPreferencesRepository and the 5 notifiers call load()/save() through it with a test exercising both methods; or the class and abstract methods are removed and dart analyze stays clean."
+  ],
+  "labels": [
+    "dead-code",
+    "notifications",
+    "repository-pattern"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-063",
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-08",
+  "linearPriority": "Medium"
+}

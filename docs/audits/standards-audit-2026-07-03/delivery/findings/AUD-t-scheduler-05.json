@@ -1,0 +1,58 @@
+{
+  "title": "Delete scheduler_screen_test.dart — its scenarios duplicate scheduler_screen_l1_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication lens / AG-5 mirrored-test-path ambiguity",
+  "area": "learning_tracker/test/features/scheduler/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_test.dart",
+      "line": 58,
+      "quote": "expect(find.text('All caught up! Great work!'), findsOneWidget);"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_l1_test.dart",
+      "line": 164,
+      "quote": "expect(find.text('All caught up! Great work!'), findsOneWidget);"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_test.dart",
+      "line": 90,
+      "quote": "expect(find.text('3 tasks today'), findsOneWidget);"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_l1_test.dart",
+      "line": 325,
+      "quote": "expect(find.text('3 tasks today'), findsOneWidget);"
+    }
+  ],
+  "sites": 1,
+  "why": "8 of scheduler_screen_test.dart's 9 tests (empty state, task-card rendering, summary count, singular count, loading indicator, error+retry, swipe-dismiss snackbar) assert the identical hardcoded English strings against the identical widget (SchedulerScreen) as tests already present in scheduler_screen_l1_test.dart (@Tags(['scheduler','l1'])), which is a strict superset: it additionally covers section filters, no-track-type-label checks, an he-locale smoke test, an R6-6 raw-exception-leak regression, and — unlike the older file, which only checks an InkWell exists — actually drives the view-toggle into GroupedDailyView and back. Every future copy change to the shared strings (e.g. an ARB wording tweak) must land in both files or one silently goes stale, and both files pay CI time re-testing the same states.",
+  "recommendation": "Delete scheduler_screen_test.dart after folding its one non-duplicated assertion (DailyTaskCard renders the correct per-curriculum ref label text, e.g. 'Mishnah Berakhot 1.1' / 'Bavli Berakhot 2a') into scheduler_screen_l1_test.dart's flat-list test if that content check isn't covered elsewhere.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one *_test.dart file exercises SchedulerScreen top-to-bottom, or the two files have non-overlapping, clearly-named scopes.",
+    "Diff review confirms no asserted behavior is lost after removal."
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "scheduler",
+    "hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "File has exactly 8 testWidgets (grep -c confirms), not 9 as the 'why' states ('8 of scheduler_screen_test.dart's 9 tests'). Also, the 'renders task cards' test's specific text checks ('Mishnah Berakhot 1.1'/'Bavli Berakhot 2a') are genuinely absent from l1 (which uses generic Ref_1/Ref_2), so it isn't quite a strict superset pre-fold."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p4",
+  "chunk": "grp-097",
+  "normArea": "tests/scheduler",
+  "id": "AUD-t-scheduler-05",
+  "linearPriority": "Low"
+}

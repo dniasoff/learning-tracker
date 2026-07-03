@@ -1,0 +1,58 @@
+{
+  "title": "Consolidate the near-duplicate chart_data_service test files spawned across fix waves",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / AG-5 (one mirrored test suite per source file)",
+  "area": "test quality",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/progress/domain/services/chart_data_service_extended_test.dart",
+      "line": 88,
+      "quote": "test('returns null when goal has no targetDate', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/domain/services/chart_data_service_extra_test.dart",
+      "line": 77,
+      "quote": "test('returns null when the goal has no targetDate', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/domain/services/chart_data_service_migration_test.dart",
+      "line": 153,
+      "quote": "test('bulkInTrack rows: INCLUDED on the chart (W1-B / Phase A)', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/domain/services/chart_data_service_sentinel_test.dart",
+      "line": 116,
+      "quote": "'bulkInTrack rows are charted (new trackAchievement tier)',"
+    }
+  ],
+  "sites": 4,
+  "why": "chart_data_service.dart (697 lines) is covered by FIVE test files totalling ~1,643 lines, and two independent near-duplicate pairs formed inside that set. extended_test.dart and extra_test.dart both claim to add getTargetLine coverage and reimplement the same five cases (null-no-goal, null-no-targetDate, zero-days, happy-path length, monotonic-increase) with their own copies of the same setUp/insertGoal helpers. migration_test.dart and sentinel_test.dart both re-verify the identical W1-B trackAchievement-tier behavior (bulkInTrack charted, lifetimeOnly excluded, live+bulk mixed) for the same two methods, down to near-identical doc-comment framing of the same fix wave. Each pair has exactly one genuinely unique case (extra_test's baselineCount-excludes-pre-goal-completions; sentinel_test's sentinel-timestamp-without-import-record test). This is fix-wave churn: a coverage request spawned a new file instead of extending the existing suite, so the service now needs two files edited in lockstep for the same behavior and the copies can silently drift apart.",
+  "recommendation": "Fold extra_test.dart's one unique case into chart_data_service_extended_test.dart and delete extra_test.dart; fold sentinel_test.dart's sentinel-timestamp case into chart_data_service_migration_test.dart and delete sentinel_test.dart.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "chart_data_service has at most 3 test files after consolidation.",
+    "The two currently-unique cases (baselineCount-excludes-pre-goal completions; sentinel-without-import treated as live) still exist and pass in the retained files.",
+    "No expect( count regresses across the merge (TQ-7 ratchet)."
+  ],
+  "labels": [
+    "test-quality",
+    "duplication",
+    "fowler"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "chart_data_service actually has 7 test files totaling 2276 lines, not '5... ~1,643' as claimed (that total silently excludes chart_data_service_w1b_test.dart, 633 lines, and omits chart_data_service_test.dart/recent_activity_test.dart from the file count). w1b_test.dart duplicates the identical 'bulkInTrack charted, lifetimeOnly excluded' W1-B behavior tested in migration_test.dart and sentinel_test.dart — a third overlapping file the finding never mentions. Consequently the acceptance criterion 'at most 3 test files after consolidation' is unreachable via the stated fix (deleting only extra_test.dart and sentinel_test.dart leaves 5 files, not 3)."
+    ]
+  },
+  "sourceBatch": "t1-feat-progress-p2",
+  "chunk": "grp-084",
+  "normArea": "tests/progress",
+  "id": "AUD-t-progress-03",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,47 @@
+{
+  "title": "Register StartingPositionCalendarMode with the shared expectNoOverflowAcrossDevices harness instead of the ad hoc single-viewport check",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-reuse / TQ-1",
+  "area": "features/tracks/setup/presentation/steps (starting_position_calendar_overflow_test.dart)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/helpers/overflow_harness.dart",
+      "line": 24,
+      "quote": "// To add a new dialog/screen to the guard, add a `testWidgets` case in\n// `test/overflow/overflow_guard_test.dart` that calls this helper"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/steps/starting_position_calendar_overflow_test.dart",
+      "line": 132,
+      "quote": "find.descendant(\n            of: find.byType(StartingPositionCalendarMode),\n            matching: find.byType(SingleChildScrollView),"
+    }
+  ],
+  "sites": 1,
+  "why": "The repo already built and documented expectNoOverflowAcrossDevices specifically for this class of regression (RenderFlex overflow at extreme device/text-scale corners), with an explicit extension point at test/overflow/overflow_guard_test.dart. StartingPositionCalendarMode — the exact widget that shipped a 'BOTTOM OVERFLOWED BY 59 PIXELS' bug — was never added there (grepped test/overflow/overflow_guard_test.dart for 'StartingPositionCalendarMode'/'Starting': no match). Instead this batch's test hand-rolls a single fixed corner (375×500 @ 2.0x text scale) and asserts on implementation details (a SingleChildScrollView exists; no Spacer exists) rather than the systematic multi-corner check the rest of the codebase relies on. A future edit that reintroduces overflow at a different corner (e.g. the narrow 280×653 or 1.3x scale the shared matrix covers) would ship undetected by this file, and the general-purpose guard would never learn about this widget either.",
+  "recommendation": "Add a testWidgets case for StartingPositionCalendarMode to test/overflow/overflow_guard_test.dart using expectNoOverflowAcrossDevices with the required provider overrides; keep or retire the structural (SingleChildScrollView/Spacer) assertions as a secondary, narrower regression check if desired.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "test/overflow/overflow_guard_test.dart includes a case pumping StartingPositionCalendarMode through expectNoOverflowAcrossDevices across the default device/text-scale matrix"
+  ],
+  "labels": [
+    "reuse",
+    "overflow",
+    "tracks-setup",
+    "test-infrastructure"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Only one shared dialog primitive (showAppConfirmDialog) plus synthetic proof-of-concept widgets are currently registered in overflow_guard_test.dart — no individual screen uses the harness yet, so 'the systematic check the rest of the codebase relies on' overstates current adoption. Does not change the core gap or severity."
+    ]
+  },
+  "sourceBatch": "t1-feat-tracks-p4",
+  "chunk": "grp-119",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-34",
+  "linearPriority": "Medium"
+}

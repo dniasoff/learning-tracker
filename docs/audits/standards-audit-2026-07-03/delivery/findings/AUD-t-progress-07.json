@@ -1,0 +1,44 @@
+{
+  "title": "Add a PaceCalculator regression test for bulkBaseline exceeding totalItems",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/features/progress/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/progress/domain/services/pace_calculator_test.dart",
+      "line": 1,
+      "quote": "import 'package:flutter_test/flutter_test.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/domain/services/pace_calculator.dart",
+      "line": 150,
+      "quote": "? ((totalItems - bulkBaseline) / trackDays).clamp(0.0, double.infinity)"
+    }
+  ],
+  "sites": 1,
+  "why": "pace_calculator.dart's class doc explicitly documents 'Clamped to 0 when bulkBaseline > totalItems (over-marked prior learning)' as a named edge case, but no test in the file constructs bulkBaseline > totalItems (test 6 only reaches bulkBaseline == totalItems, which is 0 without needing the clamp). A real scenario producing this — a curriculum's content set shrinks after a user already bulk-marked more items than now exist — would silently regress to a negative requiredVelocity (and a nonsensical paceStatus) if the .clamp(0.0, double.infinity) at pace_calculator.dart:150 were ever narrowed or removed, with nothing in the suite to catch it.",
+  "recommendation": "Add a test with totalItems < bulkBaseline (e.g. totalItems: 50, bulkBaseline: 80) asserting requiredVelocity == 0.0 and paceStatus is never ahead/behind.",
+  "acceptance_criteria": [
+    "New test fails red if pace_calculator.dart:150's .clamp(0.0, double.infinity) is changed to allow negative values."
+  ],
+  "effort": "S",
+  "labels": [
+    "testing",
+    "coverage-gap",
+    "pace"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p3",
+  "chunk": "grp-085",
+  "normArea": "tests/progress",
+  "id": "AUD-t-progress-07",
+  "linearPriority": "Low"
+}

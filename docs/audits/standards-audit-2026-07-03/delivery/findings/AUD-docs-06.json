@@ -1,0 +1,119 @@
+{
+  "title": "Correct sprint-status.yaml's false 'done' marking on 10 Epic-19 stories — confirmed unimplemented cleanup in story 19-10",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-4 triage protocol (presents-as-current drift check)",
+  "area": "docs/status + docs/stories/implementation",
+  "evidence": [
+    {
+      "file": "docs/status/sprint-status.yaml",
+      "line": 200,
+      "quote": "19-10-navigation-state-cleanup: done"
+    },
+    {
+      "file": "docs/stories/implementation/19-10-navigation-state-cleanup.md",
+      "line": 3,
+      "quote": "Status: ready-for-dev"
+    },
+    {
+      "file": "docs/stories/implementation/19-10-navigation-state-cleanup.md",
+      "line": 375,
+      "quote": "_To be filled during implementation_"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/providers/text_display_providers.dart",
+      "line": 59,
+      "quote": "TextDownloadService textDownloadService(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/providers/cloud_content_providers.dart",
+      "line": 20,
+      "quote": "TextDownloadStatusDao contentDownloadStatusDaoProvider(Ref ref) {"
+    },
+    {
+      "file": "docs/status/sprint-status.yaml",
+      "line": 191,
+      "quote": "19-2-two-database-split: done"
+    },
+    {
+      "file": "docs/stories/implementation/19-2-two-database-split.md",
+      "line": 3,
+      "quote": "Status: ready-for-dev"
+    },
+    {
+      "file": "docs/status/sprint-status.yaml",
+      "line": 47,
+      "quote": "1-1-initialize-flutter-project-and-directory-structure: done"
+    },
+    {
+      "file": "docs/status/sprint-status.yaml",
+      "line": 173,
+      "quote": "epic-18: in-progress"
+    },
+    {
+      "file": "docs/status/sprint-status.yaml",
+      "line": 174,
+      "quote": "18-1-extract-reusable-add-track-flow: review"
+    },
+    {
+      "file": "docs/linear-status.md",
+      "line": 85,
+      "quote": "18 — Onboarding & Track Management Overhaul | Superseded by E24–E26; all stories now Canceled"
+    },
+    {
+      "file": "docs/linear-status.md",
+      "line": 168,
+      "quote": "DNI-166 | 18.1: Extract Reusable Add Track Flow (הוספת מסלול) | Canceled"
+    },
+    {
+      "file": "docs/status/linear-mapping.yaml",
+      "line": 9,
+      "quote": "sync_timestamp: \"2026-03-12T20:23:00Z\""
+    },
+    {
+      "file": "docs/status/linear-mapping.yaml",
+      "line": 87,
+      "quote": "epic-16:"
+    },
+    {
+      "file": "docs/stories/implementation/18-3-track-management-hub.md",
+      "line": 3,
+      "quote": "Status: review"
+    }
+  ],
+  "sites": 15,
+  "why": "sprint-status.yaml marks 10 of the 11 Epic-19 story files in this batch (19-2, 19-2b, 19-3, 19-4, 19-5, 19-6, 19-7, 19-10, 19-11, 19-12) 'done', but every one of those files itself shows 0 checked tasks and a template Dev Agent Record ('_To be filled during implementation_') rather than the file-list/completion-notes pattern every Epic-18 and story 19-1/16-1 file has. For story 19-10 this is not just a stale doc: its AC-4 required deleting TextDownloadService, the text_download_status_dao.dart/table, and cloud_content_providers.dart — all three are still present and actively wired into live Riverpod providers today (cloud_content_providers.dart even carries a 'Retained for potential future use' comment). The identically-named story 1-1 shows the same pattern for Epic 1 (file says ready-for-dev/blank Dev Agent Record; tracker says done) and additionally the on-disk filename doesn't match the slug sprint-status.yaml and linear-mapping.yaml reference (`...with-architecture-foundations` vs `...and-directory-structure`), so a script matching by slug would 404 on it. Anyone treating sprint-status.yaml as ground truth (the BMAD dev-story workflow explicitly does) has no way to discover this outstanding cleanup work.",
+  "recommendation": "For each flagged story, either back-fill the Status header and Dev Agent Record with real completion evidence matching the shipped code, or correct sprint-status.yaml to the true status. Start with 19-10: verify its AC-4 against the live tree (confirmed still-present: TextDownloadService, text_download_status_dao.dart/table, cloud_content_providers.dart) and either finish the deletions or record why they're intentionally retained, then fix its sprint-status.yaml entry. Add a cheap grep-diff checker under tool/ that flags any docs/stories/implementation/*.md whose sprint-status.yaml entry is `done` while its own `Status:` header is `ready-for-dev` (uncaught today because nothing runs the reconciliation this batch performed manually).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Each of the 10 flagged Epic-19 story files has a Status header and Dev Agent Record consistent with actual repo state, or sprint-status.yaml is corrected to match.",
+    "Story 19-10's AC-4 is re-verified against learning_tracker/lib/: TextDownloadService, text_download_status_dao.dart/table, and cloud_content_providers.dart are either removed or their retention is explicitly justified, and sprint-status.yaml is updated accordingly.",
+    "A Rule-0 checker (tool/ script, runnable in CI) fails when a story file's own Status header disagrees with sprint-status.yaml's status for the same story key."
+  ],
+  "labels": [
+    "docs",
+    "process-drift",
+    "sprint-status",
+    "dead-code",
+    "epic-19"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p4",
+  "chunk": "grp-172",
+  "mergedFrom": [
+    "Reconcile docs/status/sprint-status.yaml (and linear-mapping.yaml) with Epic 18's cancellation in Linear"
+  ],
+  "coDiscoverers": [
+    "t4-docs-triage-p4"
+  ],
+  "normArea": "docs",
+  "id": "AUD-docs-06",
+  "linearPriority": "Medium"
+}

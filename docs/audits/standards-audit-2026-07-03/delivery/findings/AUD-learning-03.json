@@ -1,0 +1,52 @@
+{
+  "title": "Wrap LearningLedgerRepositoryImpl's ledger insert and outbox enqueue in one transaction",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "DB-2",
+  "area": "learning/data/repositories",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/learning_ledger_repository_impl.dart",
+      "line": 104,
+      "quote": "final id = await _database.learningLedgerDao.insertEntry("
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/learning_ledger_repository_impl.dart",
+      "line": 127,
+      "quote": "await _syncLedgerEntry(entry);"
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/learning_ledger_repository_impl.dart",
+      "line": 205,
+      "quote": "await facade.enqueueLedgerEntry(_ledgerDataToSyncMap(entry));"
+    }
+  ],
+  "sites": 2,
+  "why": "recordCompletion inserts the learning_ledger row (line 104) and then enqueues its outbox row (line 127) as two separate, unwrapped statements; recordCompletionsBatch commits all N ledger rows inside one _database.transaction() (closes at line 195) but then loops the outbox enqueue afterward, outside that transaction, one row at a time. A process death or crash between these steps leaves a ledger entry (e.g. a manual siyum mark from the Lifetime Marking screen) permanently local-only — nothing re-derives a missing outbox row from an existing ledger row, so it never reaches Firestore or a second device. The sibling CompletionWriter (completion_writer.dart) explicitly wraps its analogous completion_events + outbox insert in one Drift transaction for exactly this reason (its docs call this 'Both rows commit or both roll back' — the FR15/RC1 fix); LearningLedgerRepositoryImpl doesn't follow the same discipline for the same class of append-only sync-critical data.",
+  "recommendation": "Move the outbox enqueue for recordCompletion inside the same transaction as the ledger insert (or into one atomic Drift batch, as CompletionWriter does); for recordCompletionsBatch, move the per-item enqueueLedgerEntry calls inside the existing transaction block instead of running them afterward in a separate loop.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Both recordCompletion and recordCompletionsBatch write the ledger row(s) and their outbox row(s) inside one transaction; a regression test that fails mid-batch (e.g. a Fake outbox facade that throws after N/2 calls) asserts no ledger row survives without a matching outbox row."
+  ],
+  "labels": [
+    "db-2",
+    "sync",
+    "nygard",
+    "data-integrity"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "New evidence beyond the finding: lib/core/database/daos/outbox_dao.dart:11-12/19-20 states insertOutboxRow 'must be called inside the same transaction as the triggering write' — a directly-named invariant, stronger grounds than DB-2 alone. Also: local_data_upload_service.dart:255-259 does re-enqueue every ledger row, but only as a one-time local-to-cloud cutover bridge (story 19.7), not an ongoing safety net — the 'nothing re-derives' claim holds for steady-state usage."
+    ]
+  },
+  "sourceBatch": "t1-feat-learning-p1",
+  "chunk": "grp-060",
+  "normArea": "features/learning",
+  "id": "AUD-learning-03",
+  "linearPriority": "High"
+}

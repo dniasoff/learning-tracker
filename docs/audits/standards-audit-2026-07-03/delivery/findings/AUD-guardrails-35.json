@@ -1,0 +1,45 @@
+{
+  "title": "Remove the duplicated/truncated KNOWN-DEFERRED block in tool/vision_find_pass.js",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / hygiene",
+  "area": "tool (vision-audit orchestration prompt)",
+  "evidence": [
+    {
+      "file": "tool/vision_find_pass.js",
+      "line": 151,
+      "quote": "- city subtitle still shows raw GeoNames code \"NN\" (the build SCRIPT is fixed; the cities.sqlite ASSET regen is"
+    },
+    {
+      "file": "tool/vision_find_pass.js",
+      "line": 152,
+      "quote": "- add-track wizard step-count denominator branches (6 → 7 → 4) by path — this is INTENDED, pinned by TS-11 tests"
+    }
+  ],
+  "sites": 1,
+  "why": "The KNOWN template string (fed verbatim into every one of the 9 parallel agent prompts via briefFor at line 213) contains ~9 'KNOWN-DEFERRED' bullets stated twice back-to-back (lines 134-151 then 152-168). The FIRST copy is truncated mid-sentence at line 151 ('...the cities.sqlite ASSET regen is') and jumps straight into an unrelated bullet already stated earlier — only the second copy (line 167-168) completes the sentence ('...pending a GeoNames source download — known, do not re-flag.'). This is accidental content left over from appending an updated list without deleting the old one; it bloats every agent invocation's prompt with garbled, redundant text.",
+  "recommendation": "Delete the first (truncated) copy of the KNOWN-DEFERRED bullet list, keeping the second, complete copy (which also has one bullet — the Hebrew-Terms-toggle-hidden note — that the first copy lacks).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`grep -c \"add-track wizard step-count denominator branches\" tool/vision_find_pass.js` returns 1, not 2.",
+    "The KNOWN string contains no truncated sentences (each bullet's parenthetical closes)."
+  ],
+  "labels": [
+    "duplication",
+    "hygiene",
+    "prompt-quality"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-root-tool",
+  "chunk": "grp-163",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-35",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,37 @@
+{
+  "title": "Add a semantic label to the custom back IconButton in recent_activity_screen.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AX-3 (icon-only buttons carry semantics)",
+  "area": "features/progress/presentation/screens/recent_activity_screen.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+      "line": 106,
+      "quote": "IconButton(\n                  onPressed: () => context.maybePop(),"
+    }
+  ],
+  "sites": 1,
+  "why": "This is a hand-rolled header row, not AppBar's automatic leading back button, so Flutter supplies no implicit semantics label here. A screen-reader user (TalkBack/VoiceOver) tabbing to this control hears only 'button' with no indication it navigates back, on a screen reachable from every Progress-hub session.",
+  "recommendation": "Add tooltip: l10n.<existing back-button key> (or a new ARB key) to the IconButton so it gets both a visible tooltip and a screen-reader label.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A semantics test (or manual VoiceOver/TalkBack pass) confirms the back control announces a localized label."
+  ],
+  "labels": [
+    "accessibility"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p1",
+  "chunk": "grp-082",
+  "normArea": "features/progress",
+  "id": "AUD-progress-02",
+  "linearPriority": "Medium"
+}

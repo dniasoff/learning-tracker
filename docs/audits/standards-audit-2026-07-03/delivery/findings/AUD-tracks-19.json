@@ -1,0 +1,50 @@
+{
+  "title": "Deduplicate TrackCreationService/TrackEditService's verbatim study-day persistence loop",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication + DB-3 (batch()/insertAll over awaited per-row loops)",
+  "area": "features/tracks/setup/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/services/track_creation_service.dart",
+      "line": 359,
+      "quote": "for (final entry in studyDays.entries) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/services/track_edit_service.dart",
+      "line": 106,
+      "quote": "for (final entry in studyDays.entries) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/services/track_creation_service.dart",
+      "line": 401,
+      "quote": "for (final scope in scopes) {"
+    }
+  ],
+  "sites": 3,
+  "why": "_saveStudyDaysLocal (track_creation_service.dart:348-368) and _saveStudyDays (track_edit_service.dart:95-115) are byte-for-byte identical except a parameter name — the exact 'delete then loop-await-upsert' method copy-pasted into two sibling services. A future fix (validation, batching, a new column) applied to one copy silently leaves the other stale. Both loops (plus the unbounded _saveScopes loop) await each row individually instead of using Drift's batch()/insertAll, even though they already run inside an open transaction() so correctness is not at risk — only round-trip count.",
+  "recommendation": "Extract one shared DAO-level batched helper (e.g. StudyDayConfigDao.replaceAll using batch()) and call it from both services; do the same for _saveScopes.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "One shared helper implements the delete+insert study-day/scope replacement using batch()/insertAll",
+    "TrackCreationService and TrackEditService both call it; no duplicate method body remains"
+  ],
+  "labels": [
+    "duplication",
+    "drift",
+    "performance"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p1",
+  "chunk": "grp-113",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-19",
+  "linearPriority": "Low"
+}

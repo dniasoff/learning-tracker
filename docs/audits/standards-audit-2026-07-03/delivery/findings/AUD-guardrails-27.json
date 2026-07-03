@@ -1,0 +1,57 @@
+{
+  "title": "Fix curate_curricula/README.md status table: 13 of 14 curricula are marked TODO though main.py already implements them",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8 (docs bind to code changes)",
+  "area": "tool/curate_curricula",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/curate_curricula/README.md",
+      "line": 52,
+      "quote": "| `yerushalmi` | Seder / Masechta / Halacha / … | TODO |"
+    },
+    {
+      "file": "learning_tracker/tool/curate_curricula/README.md",
+      "line": 58,
+      "quote": "| **`mishneh_torah`** | Sefer / Hilchot / Perek / Halacha | NEW — TODO |"
+    },
+    {
+      "file": "learning_tracker/tool/curate_curricula/main.py",
+      "line": 631,
+      "quote": "\"yerushalmi\": _strategy_grouped(\n        \"yerushalmi\","
+    },
+    {
+      "file": "learning_tracker/tool/curate_curricula/main.py",
+      "line": 630,
+      "quote": "\"mishneh_torah\": _strategy_mishneh_torah,"
+    }
+  ],
+  "sites": 1,
+  "why": "README.md's Status column marks yerushalmi, mishnayos, chumash, nach, mishna_berurah, mussar, mishneh_torah, shulchan_arukh, arukh_hashulchan, kitzur_shulchan_aruch, chofetz_chaim and sefer_hamitzvot as TODO/'NEW — TODO', but main.py's STRATEGIES dict (lines 592-674) already has a complete, working strategy function for every one of them, plus shemirat_halashon which isn't in the table at all. A contributor or agent trusting this table would either re-implement already-finished strategies or believe the curation tool only covers Bavli.",
+  "recommendation": "Update the Status column to reflect main.py's STRATEGIES dict (mark implemented curricula done), add the missing shemirat_halashon row, and replace 'TODO' with the tool's actual remaining work (e.g. --diff review / spot-checking against Sefaria taxonomy).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "README.md Status column matches every key present in main.py's STRATEGIES dict",
+    "shemirat_halashon appears in the table",
+    "No curriculum with a working strategy function is labeled TODO"
+  ],
+  "labels": [
+    "docs-drift",
+    "tier2-tooling"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "AG-8 as literally defined pairs schema/migration→data-models.md, sync-behavior→sync-conflict-resolution.md, collection-shape→firestore-collection-layout.md, new-invariant→coding-standards.md only — it does not cover this README. The 'why' list also omits pirkei_avot from its 12-item enumeration even though the title's '13 of 14' count requires it."
+    ]
+  },
+  "sourceBatch": "t2-app-tool-p1",
+  "chunk": "grp-151",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-27",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,62 @@
+{
+  "title": "Consolidate the PIN entry/verify/change/setup state machine duplicated across 3 live implementations in features/profiles",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-1/Fowler duplication, AG-4 duplicate top-level names",
+  "area": "features/profiles/presentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 130,
+      "quote": "@Riverpod(keepAlive: true)\nclass PinFlowController extends _$PinFlowController {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart",
+      "line": 35,
+      "quote": "class _ParentPinSetupDialog extends ConsumerStatefulWidget {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart",
+      "line": 71,
+      "quote": "class _ParentPinVerificationDialog extends StatefulWidget {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart",
+      "line": 178,
+      "quote": "class _ParentPinChangeDialog extends StatefulWidget {"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_router.dart",
+      "line": 254,
+      "quote": "path: '/parent-mode/pin-entry',\n      page: PinFlowVerifyRoute.page,"
+    }
+  ],
+  "sites": 3,
+  "why": "The 4-digit-entry + busy-lock + lockout state machine is hand-rolled independently in PinFlowController (setup mode), _ParentPinSetupDialog (parent_pin_setup_dialog.dart), and _ParentPinVerificationDialog/_ParentPinChangeDialog (parent_pin_keypad_dialog.dart) — four near-identical but textually distinct copies of the same transitions (mismatch → reset to enterNew, lockout → freeze keypad, 4th digit → async verify/save). Worse, PinFlowController ALSO fully implements change/verify modes (and pin_flow_machine.dart even duplicates the enum names PinFlowMode/PinFlowStep as public top-level symbols, AG-4), but grepping every `.push(` call site in lib/ shows PinFlowVerifyRoute and PinFlowChangeRoute are registered in app_router.dart and never pushed anywhere — the app's real verify/change UX goes through the dialog-based _ParentPin*Dialog classes via router_provider.dart's promptForPin and settings_screen.dart. A confirmed device bug (PP-1: rapid 5th-digit tap racing the confirm-step reset) was fixed in _ParentPinSetupDialog's specific busy-before-reset ordering; because the other three copies re-derive the same logic independently, a fix like this has no guarantee of applying to the others.",
+  "recommendation": "Extract one shared PIN-entry state-machine class/notifier (digits, busy, lockedOut, lockoutMinutes, transitions) and have setup/verify/change dialogs and PinFlowScreen all delegate to it; delete PinFlowController's unreachable change/verify branches and their dead routes, or wire a real navigation call site to them.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "Only one implementation owns the digit-buffer/busy/lockout transition logic; setup, verify, and change UIs all call into it",
+    "Either PinFlowVerifyRoute/PinFlowChangeRoute get a real .push call site, or they and PinFlowController's change/verify modes are deleted",
+    "pin_flow_controller_test.dart and parent_pin_keypad_dialog_test.dart continue to pass against the consolidated implementation"
+  ],
+  "labels": [
+    "duplication",
+    "pin-flow",
+    "riverpod",
+    "dead-code"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-074",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-06",
+  "linearPriority": "Medium"
+}

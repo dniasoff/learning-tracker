@@ -1,0 +1,89 @@
+{
+  "title": "Document the tutor-mode Firestore/Functions surface in docs/api-contracts.md and fix the stale 'indexes.json is empty' claim",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs/api-contracts.md, docs/deployment-guide.md",
+  "evidence": [
+    {
+      "file": "docs/api-contracts.md",
+      "line": 9,
+      "quote": "2. **Cloud Functions** — 4 callable/trigger endpoints (deletion cascades)."
+    },
+    {
+      "file": "docs/api-contracts.md",
+      "line": 73,
+      "quote": "**Live layout — `users/{uid}/...`** — every path is owner-gated by `isOwner(uid)`:"
+    },
+    {
+      "file": "docs/api-contracts.md",
+      "line": 86,
+      "quote": "**Indexes:** `firestore.indexes.json` is empty (`{\"indexes\":[],\"fieldOverrides\":[]}`)..."
+    },
+    {
+      "file": "docs/deployment-guide.md",
+      "line": 35,
+      "quote": "Firestore indexes | firebase deploy --only firestore:indexes | firestore.indexes.json (currently empty)"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 341,
+      "quote": "export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {"
+    },
+    {
+      "file": "docs/component-inventory.md",
+      "line": 46,
+      "quote": "| `firebaseFirestoreProvider` | keepAlive | `FirebaseFirestore.instance` |"
+    },
+    {
+      "file": "docs/api-contracts.md",
+      "line": 19,
+      "quote": "...the only `lib/` file allowed to import `cloud_firestore`."
+    },
+    {
+      "file": "learning_tracker/lib/core/providers/firebase_providers.dart",
+      "line": 6,
+      "quote": "/// Note: `firebaseFirestoreProvider` has moved to"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart",
+      "line": 12,
+      "quote": "final firebaseFirestoreProvider = Provider<FirebaseFirestore>((ref) {"
+    }
+  ],
+  "sites": 9,
+  "why": "functions/src/index.ts exports 26 Cloud Functions today, not 4 — 22 of them (inviteTutor, acceptTutorInvite, revokeTutorGrant, tutorResetCompletion, tutorUpsertTrack, etc.) implement the entire tutor cross-user-access feature and are undocumented. firestore.rules has ~150 lines of top-level `tutor_grants`/`tutor_active_access` rules granting non-owner (tutor) reads on a child's records — directly at odds with api-contracts.md's characterization that 'every path is owner-gated'. firestore.indexes.json is not empty; it has 6 composite indexes, all for tutor_grants queries. This is the most privacy-sensitive feature in the codebase (cross-user access to a child's learning data, gated by SR-5) and the canonical API-contracts reference does not mention it exists.",
+  "recommendation": "Add a Tutor Mode section to api-contracts.md covering tutor_grants/tutor_active_access collections, the tutor read carve-outs in firestore.rules, the 22 tutor* Cloud Functions, and the 6 composite indexes; fix the 'indexes.json is empty' line in both api-contracts.md and deployment-guide.md.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "api-contracts.md's Cloud Functions table lists all 26 exported functions from functions/src/index.ts (or explicitly groups the tutor_* ones with a count)",
+    "api-contracts.md documents tutor_grants and tutor_active_access as top-level collections",
+    "api-contracts.md and deployment-guide.md no longer claim firestore.indexes.json is empty"
+  ],
+  "labels": [
+    "docs",
+    "drift",
+    "tutor-mode",
+    "privacy",
+    "AG-8"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p1",
+  "chunk": "grp-165",
+  "mergedFrom": [
+    "Update docs/component-inventory.md and docs/api-contracts.md for the firebaseFirestoreProvider relocation to core/sync/"
+  ],
+  "coDiscoverers": [
+    "t4-docs-canonical-p1"
+  ],
+  "normArea": "docs",
+  "id": "AUD-docs-07",
+  "linearPriority": "Medium"
+}

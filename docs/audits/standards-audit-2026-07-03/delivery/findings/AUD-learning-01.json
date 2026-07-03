@@ -1,0 +1,55 @@
+{
+  "title": "Harden or test the failure path of the unawaited CompletionDetectionService call in CompletionRepositoryImpl.markComplete",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2/EH-3 (errors converted/logged, no log-less catch) + Nygard (partial I/O failure) -- surfaced via this batch's tests",
+  "area": "test/features/learning/domain/use_cases/mark_completion_use_case_siyum_routing_test.dart, test/features/learning/data/repositories/h4_lifetime_only_detection_test.dart (exercising lib/features/learning/data/repositories/completion_repository_impl.dart:189-199)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "line": 190,
+      "quote": "if (_completionDetectionService != null && creditsAchievement) {\n        unawaited("
+    },
+    {
+      "file": "learning_tracker/test/features/learning/domain/use_cases/mark_completion_use_case_siyum_routing_test.dart",
+      "line": 210,
+      "quote": "await Future<void>.delayed(Duration.zero);\n        await Future<void>.delayed(Duration.zero);"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/data/repositories/h4_lifetime_only_detection_test.dart",
+      "line": 194,
+      "quote": "// Wait for any fire-and-forget unawaited futures to settle.\n        await Future<void>.delayed(Duration.zero);"
+    }
+  ],
+  "sites": 2,
+  "why": "completion_detection_service.dart and learning_ledger_repository_impl.dart contain zero try/catch blocks (grep-confirmed), and the call site wraps them in unawaited(...) with no .catchError, so any exception during siyum detection (closed DB mid profile-switch, disk-full write, a malformed content lookup) becomes an unhandled Future error with no retry and no user-facing signal -- the completion itself still records, but the documented B1 policy ('a learner who bulk-marks a complete masechta still earns the siyum') silently fails to hold for that unit, permanently, with no reconciliation job anywhere in lib/ to catch the gap. No test anywhere in this batch makes checkAndRecordCompletions throw and asserts the outcome; the two tests that exercise this path can only prove the happy case, and both need a Future<void>.delayed(Duration.zero) synchronization hack just to observe that -- itself a symptom that the design has no seam for verifying failure behavior deterministically.",
+  "recommendation": "Wrap the unawaited call in a .catchError (or add an internal try/catch inside checkAndRecordCompletions) that logs via AppLogger per EH-3; add a test that forces the detection service to throw (e.g. a ContentRepository stub that throws) and assert markComplete still returns successfully while the failure is logged.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A test drives CompletionDetectionService.checkAndRecordCompletions to throw and asserts (a) markComplete still returns successfully and (b) AppLogger records the failure",
+    "The unawaited call site in completion_repository_impl.dart has a catch path instead of relying on the global zone error handler"
+  ],
+  "labels": [
+    "error-handling",
+    "gamification",
+    "reliability",
+    "nygard"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The finding's \"unhandled Future error\" framing slightly overstates the silence: main.dart's runZonedGuarded + PlatformDispatcher.instance.onError DO catch this and route it through AppLogger.instance.handle() and Crashlytics (as a misleading fatal report), so it isn't fully log-less. But this doesn't rescue the finding: there's still no retry/reconciliation, no user-facing signal, and no test exercises the failure branch — the core defect (silent, permanent loss of the siyum credit with zero test coverage of the failure path) stands.</evidence_correction>\n",
+      "Severity should be downgraded from P1 to P2. The finding's \"why\" claims the failure would be \"silently\" absorbed with \"no user-facing signal\" and \"no reconciliation job anywhere in lib/ to catch the gap.\" This overstates the risk: main.dart wraps app startup in runZonedGuarded (lines 15-34), and an uncaught error from an unawaited Future is delivered to that zone handler, which calls both `_crashlytics.recordError(error, stack, fatal: true)` and `AppLogger.instance.handle(error, stack)`. So the exception is NOT silent — it is logged and reported fatal to Crashlytics, giving operators a signal (though not an automatic retry/reconciliation for the missed siyum credit). The rule citations (EH-2/EH-3) are also a loose fit: EH-3 concerns log-less *catch blocks*, and there is no catch block here at all; EH-2 concerns raw exceptions propagating into *presentation*, which doesn't happen since the zone handler intercepts before reaching UI. The underlying gap — no explicit local handling/retry for this specific invariant (B1 siyum credit) and no test exercising the failure path — is real design debt (P2: \"design debt with stated concrete cost\"), not the P1 \"silent, unsignaled defect\" the finding portrays.",
+      "The finding's framing of 'no user-facing signal' is accurate, but 'silently fails' slightly overstates the logging gap: main.dart wraps the app in runZonedGuarded, whose handler does route unhandled Future errors to AppLogger.instance.handle(...) and Crashlytics.recordError(fatal: true) — so the exception is NOT unlogged. This doesn't kill the finding: the underlying invariant break (siyum permanently not recorded, no retry, no scoped/contextual handling) is real and untested, which the finding's own recommendation and acceptance criteria already account for (explicitly asking for a catch path 'instead of relying on the global zone error handler')."
+    ]
+  },
+  "sourceBatch": "t1-feat-learning-p2",
+  "chunk": "high-051",
+  "normArea": "features/learning",
+  "id": "AUD-learning-01",
+  "linearPriority": "High"
+}

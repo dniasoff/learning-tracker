@@ -1,0 +1,56 @@
+{
+  "title": "Assert real toggle/selection state (not just tapped-label presence) in progress_p0_test.dart and scheduler_p0_test.dart chip/segment tests",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7/TQ-8 (assertion weaker than the failure mode under test)",
+  "area": "learning_tracker/test/e2e/journeys/progress_p0_test.dart, learning_tracker/test/e2e/journeys/scheduler_p0_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/progress_p0_test.dart",
+      "line": 399,
+      "quote": "// The chip label is still visible (toggle rendered without crash)."
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/progress_p0_test.dart",
+      "line": 591,
+      "quote": "// Toggle label still visible (no crash, state updated)."
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/scheduler_p0_test.dart",
+      "line": 441,
+      "quote": "// After selecting Dafim, the pace input label should reference \"Dafim\"."
+    },
+    {
+      "file": "learning_tracker/learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+      "line": 777,
+      "quote": "return FilterChip("
+    }
+  ],
+  "sites": 4,
+  "why": "Each cited test taps a chip/segment whose label was already visible before the tap (e.g. 'Last 30 Days', 'Track learning only', 'Dafim' are all rendered pre-tap as available options), then re-asserts the SAME label is present post-tap. RecentActivityScreen's chip is a real FilterChip with a `selected` bool the test never reads. A regression that wires onSelected to a no-op — tap does nothing — would leave identical text on screen and pass all 4 tests; one test's own comment even claims 'state updated' while checking only visibility, not state.",
+  "recommendation": "Assert the actual post-tap state, e.g. `tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Last 30 Days')).selected == true`, or another concrete tap-dependent effect (chart data range, provider value), instead of re-checking the tapped label's mere presence.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Each of the 4 tests asserts a concrete, tap-dependent state change (selected flag, updated derived value, or provider read) rather than only the continued presence of the tapped label."
+  ],
+  "labels": [
+    "e2e",
+    "weak-assertion",
+    "tq-7"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "'sites: 4' overcounts: recent_activity_screen.dart:777 is supporting proof, not a 4th weakened-assertion test site (only 3 exist: progress_p0_test.dart:399,591; scheduler_p0_test.dart:441) — should be sites:3. Also 'Track learning only' (lifetime_knowledge_screen.dart) and 'Dafim' (goal_setup_screen.dart) are SegmentedButton, not FilterChip as the 'why' text implies applies to 'RecentActivityScreen's chip' — only the 'Last 30 Days' site is actually a FilterChip. The tautology argument still holds for SegmentedButton (both segments always render regardless of selection), so the underlying defect is real, just the widget-type generalization is imprecise."
+    ]
+  },
+  "sourceBatch": "t1-test-cross-p3",
+  "chunk": "grp-145",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-54",
+  "linearPriority": "Low"
+}

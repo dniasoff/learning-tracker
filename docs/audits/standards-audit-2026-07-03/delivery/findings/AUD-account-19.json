@@ -1,0 +1,47 @@
+{
+  "title": "Wire AuthStateNotifier to authStateChanges() instead of leaving a shadowed, unused stream-based authStateProvider",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AU-4",
+  "area": "features/account/presentation/providers (session state architecture)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+      "line": 19,
+      "quote": "import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'\n    hide authStateProvider;"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+      "line": 274,
+      "quote": "final fbUser = ref.read(authRepositoryProvider).currentUser;"
+    }
+  ],
+  "sites": 2,
+  "why": "auth_providers.dart defines a genuinely stream-backed authStateProvider (Stream<AppUser?> authState(ref) => ref.watch(authRepositoryProvider).onAuthStateChanged()) — exactly the AU-4-compliant primitive. But the provider that actually drives session routing everywhere (AuthGuard, AppShell, this screen) is the differently-implemented, identically-named authStateProvider generated from AuthStateNotifier, which never watches or listens to that stream — forcing every screen needing both to hide/alias one of them (see the 'hide authStateProvider' import here and the 'as auth_state' alias in sign_in_controller.dart/signup_screen.dart). If Firebase invalidates a session server-side (disabled account, revoked refresh token, forced sign-out elsewhere) while the app is running, nothing re-derives AuthStateNotifier's state from that change — the app keeps believing the user is signed in until an unrelated explicit action happens to call reload/signOut. account_picker_screen.dart:274 shows the same non-reactive pattern at tile-badge granularity: hasValidSession is a one-shot ref.read(...).currentUser snapshot, not derived from the stream.",
+  "recommendation": "Either delete the dead stream-based authState/authStateProvider if genuinely unused, or have AuthStateNotifier subscribe to it in build() so live Firebase-side session changes propagate into routing state, removing the need for every consumer to route around the name collision.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "authStateProvider resolves to exactly one declaration reachable without hide/as workarounds across the codebase.",
+    "Regression test: emit a value on the mocked authStateChanges() stream after AuthStateNotifier has already resolved to signedIn, and assert the notifier's state updates without requiring an explicit signOut()/mutation call."
+  ],
+  "labels": [
+    "auth",
+    "AU-4",
+    "dead-code",
+    "riverpod"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor: AuthGuard (app/router/guards/auth_guard.dart) does not itself read authStateProvider — its own comment says session status is 'owned by AuthStateNotifier, read downstream by individual screens'; AuthGuard only gates first-launch via SharedPreferences. The 'session routing everywhere (AuthGuard, AppShell...)' phrasing overstates AuthGuard's role, but AppShell and the cited screens confirm the core claim."
+    ]
+  },
+  "sourceBatch": "sup-au-family",
+  "normArea": "features/account",
+  "id": "AUD-account-19",
+  "linearPriority": "Medium"
+}

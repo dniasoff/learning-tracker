@@ -1,0 +1,47 @@
+{
+  "title": "Override reminderSyncEffectProvider/streakAlertSyncEffectProvider in notifications_screen_test.dart and ws5_two_layers_test.dart to stop opening a real Drift database",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests, Pending) — novel violation",
+  "area": "features/notifications/presentation (tests, hermeticity)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+      "line": 29,
+      "quote": "return ProviderScope(\n      overrides: [notificationServiceProvider.overrideWithValue(mockService)],"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/ws5_two_layers_test.dart",
+      "line": 30,
+      "quote": "overrides: [\n      if (gatewayOverride != null)"
+    }
+  ],
+  "sites": 2,
+  "why": "NotificationsScreen.build() unconditionally does `ref.watch(reminderSyncEffectProvider)` / `ref.watch(streakAlertSyncEffectProvider)` (both @Riverpod(keepAlive) FutureProviders that chain into notificationSchedulerProvider -> sacredWindowRepositoryProvider -> userDatabaseProvider, i.e. a real drift_flutter-backed UserDatabase opened via driftDatabase(name: 'learning_tracker')). Neither buildSubject() (notifications_screen_test.dart) nor _buildWithProviders() (ws5_two_layers_test.dart) overrides these two effects, unlike the newer notifications_screen_l1_test.dart which does so explicitly \"to isolate the UI tests\" (its own header comment). Actually running `flutter test test/features/notifications/presentation/screens/notifications_screen_test.dart` reproduces Drift's own runtime warning verbatim: \"It looks like you've created the database class UserDatabase multiple times. When these two databases use the same QueryExecutor, race conditions will occur and might corrupt the database\" (fires because the file pumps a fresh ProviderScope 5 times against the same default DB name in one process). ws5_two_layers_test.dart pumps the same unguarded path once, so the warning doesn't fire there today, but the identical missing-override defect is present and would manifest the same way if a second pump were added.",
+  "recommendation": "Add `reminderSyncEffectProvider.overrideWith((ref) async {})` and `streakAlertSyncEffectProvider.overrideWith((ref) async {})` to both builders, matching notifications_screen_l1_test.dart's pattern, so no real UserDatabase/scheduler chain is ever constructed in these widget tests.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "buildSubject() in notifications_screen_test.dart and _buildWithProviders() in ws5_two_layers_test.dart both override reminderSyncEffectProvider and streakAlertSyncEffectProvider with no-ops.",
+    "Re-running `flutter test test/features/notifications/presentation/screens/notifications_screen_test.dart` prints no \"WARNING (drift): It looks like you've created the database class UserDatabase multiple times\" output.",
+    "(Rule-0, Pending) TQ-6 audit grep: any widget test file that pumps NotificationsScreen must also override both keepAlive sync-effect providers in the same overrides list."
+  ],
+  "labels": [
+    "testing",
+    "hermeticity",
+    "riverpod",
+    "drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p2",
+  "chunk": "grp-065",
+  "normArea": "tests/notifications",
+  "id": "AUD-t-notifications-01",
+  "linearPriority": "Medium"
+}

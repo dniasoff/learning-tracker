@@ -1,0 +1,45 @@
+{
+  "title": "Delete the duplicate readInIsrael/writeInIsrael test group in sacred_time_preferences_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ / Fowler duplication",
+  "area": "tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/sacred_time/data/services/sacred_time_preferences_test.dart",
+      "line": 171,
+      "quote": "group('SacredTimePreferences.readInIsrael', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/sacred_time/data/services/sacred_time_preferences_test.dart",
+      "line": 191,
+      "quote": "group('SacredTimePreferences.readInIsrael / writeInIsrael', () {"
+    }
+  ],
+  "sites": 1,
+  "why": "The group at line 191 tests the exact same three scenarios as the group at line 171 (default-false, true-after-write, false-after-write-false) with only the test names changed. It adds no coverage and doubles the maintenance cost of any future change to these methods' behavior.",
+  "recommendation": "Delete the second (line 191-209) group; it is fully subsumed by the first.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one group covers SacredTimePreferences.readInIsrael/writeInIsrael",
+    "No assertions are lost when the duplicate group is removed"
+  ],
+  "labels": [
+    "test-quality",
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sacred_time",
+  "chunk": "grp-090",
+  "normArea": "tests/sacred_time",
+  "id": "AUD-t-sacred_time-01",
+  "linearPriority": "Low"
+}

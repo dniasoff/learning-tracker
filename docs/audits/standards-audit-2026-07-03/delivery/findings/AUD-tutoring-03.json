@@ -1,0 +1,59 @@
+{
+  "title": "Rename the duplicate top-level incomingTutorGrantsProvider defined in both tutor_grant_providers.dart and manage_tutors_providers.dart",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AG-4 (unique top-level symbol names)",
+  "area": "features/tutoring/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/providers/tutor_grant_providers.dart",
+      "line": 68,
+      "quote": "Future<List<TutorGrant>> incomingTutorGrants(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart",
+      "line": 85,
+      "quote": "final incomingTutorGrantsProvider = FutureProvider<List<TutorGrant>>(("
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/accept_invite_screen.dart",
+      "line": 42,
+      "quote": "import '...manage_tutors_providers.dart'\n    as manage_tutors;"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/tutoring.dart",
+      "line": 33,
+      "quote": "export '...presentation/providers/tutor_grant_providers.dart';"
+    }
+  ],
+  "sites": 2,
+  "why": "Two independent top-level providers are both named `incomingTutorGrantsProvider`: the @riverpod codegen one (network-only, no offline reconciliation) and the manual FutureProvider in manage_tutors_providers.dart (offline-first, wipes stale mirrors, the one every tutoring screen actually watches). accept_invite_screen.dart's own comment documents that this ambiguity already caused a real shipped bug ('SEV-2... otherwise the accepted row never flips in-session') and had to alias-import one of them to disambiguate/compile. The feature barrel (tutoring.dart) exports the codegen one, not the offline-first one — so any new file that imports the barrel per Rule 2 and calls `incomingTutorGrantsProvider` gets the version without offline reconciliation, silently reintroducing the same bug class.",
+  "recommendation": "Rename one of the two providers (e.g. manage_tutors_providers.dart's to `offlineFirstIncomingTutorGrantsProvider` or fold the offline-first logic into the codegen provider and delete the duplicate), and update the barrel to export only the real one actually used by the screens.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one top-level symbol named incomingTutorGrantsProvider exists under lib/features/tutoring/.",
+    "accept_invite_screen.dart's `as manage_tutors` alias workaround is no longer needed for a naming collision.",
+    "grep -rn 'incomingTutorGrantsProvider' lib/features/tutoring/ shows exactly one definition."
+  ],
+  "labels": [
+    "riverpod",
+    "naming",
+    "AG-4",
+    "duplicate-symbol"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The finding's quoted phrase \"SEV-2... otherwise the accepted row never flips in-session\" splices the SEV-2 tag (accept_invite_screen.dart:172, about invalidation timing) with \"otherwise the accepted row never flips in-session\" which actually appears in the earlier import-disambiguation comment (~lines 33-39) explaining why manage_tutors_providers must be used instead of the codegen one. Both comments are real and both support the finding's claim, but they are not one contiguous quote."
+    ]
+  },
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "high-097",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-03",
+  "linearPriority": "High"
+}

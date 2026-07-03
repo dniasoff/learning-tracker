@@ -1,0 +1,82 @@
+{
+  "title": "Extract scheduler_providers.dart's private _amnestyDayCutoffUtc/anchor-clamp so reorder_amnesty_test.dart calls it instead of hand-copying it",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological/re-derived test) / Feathers seam",
+  "area": "features/scheduler/presentation/providers (hotspot: scheduler_providers.dart)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 481,
+      "quote": "DateTime _amnestyDayCutoffUtc(DateTime lastReorderAt) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 683,
+      "quote": "final progAmnestyCutoff = rawAmnestyCutoff.isAfter(anchor)"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/reorder_amnesty_test.dart",
+      "line": 221,
+      "quote": "final cutoff = DateTime.utc(local.year, local.month, local.day);"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/reorder_amnesty_test.dart",
+      "line": 280,
+      "quote": "final clampedCutoff = rawCutoff.isAfter(anchor) ? anchor : rawCutoff;"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_f5_prior_learning_filter_test.dart",
+      "line": 30,
+      "quote": "bool _isTaskCompletedBuggy(DailyTask task, List<Completion> completions) {\n  return completions.any((c) {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_f5_prior_learning_filter_test.dart",
+      "line": 117,
+      "quote": "'BUG REPRO: buggy isTaskCompleted returns true for sentinel completion '\n          '(this test documents the pre-fix behaviour and must FAIL until F5 is applied)',"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 414,
+      "quote": "bool isTaskCompleted(DailyTask task) {"
+    }
+  ],
+  "sites": 7,
+  "why": "_amnestyDayCutoffUtc is a private top-level function, so no test file can import and call it; the 3 'projection amnesty' tests in Scenario A (basic cutoff, mid-day cutoff, program back-date anchor-clamp) each hand-retype the algorithm instead (one comment even says 'Mimic the production day-level cutoff'). If a future edit to the real function or the isAfter(anchor) clamp regresses, these 3 tests stay green because they only check their own copy. Partial mitigation: scheduler_providers_branches_test.dart's RA1/RA2 do drive the real allDailyTasksProvider for the non-program path, but the program-specific back-date anchor-clamp scenario here has no confirmed real-path coverage elsewhere.",
+  "recommendation": "Mark _amnestyDayCutoffUtc @visibleForTesting (or move it plus the clamp expression to a small pure function in domain/projection/) and have reorder_amnesty_test.dart's three amnesty tests call it directly instead of retyping the algorithm.",
+  "acceptance_criteria": [
+    "reorder_amnesty_test.dart imports and calls the real cutoff/clamp function; no inline DateTime.utc(local.year, local.month, local.day) reimplementation remains in the test file.",
+    "A mutation flipping isAfter to isBefore in the anchor clamp (scheduler_providers.dart:683) fails this test file."
+  ],
+  "labels": [
+    "test-quality",
+    "TQ-8",
+    "seam",
+    "scheduler",
+    "hotspot"
+  ],
+  "effort": "M",
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Quote 'final cutoff = DateTime.utc(...)' is at line 223, not 221 (content is real, just mis-cited by 2 lines).",
+      "The reorder_amnesty_test.dart citation at line 221 is off by 2 lines — the quoted text `final cutoff = DateTime.utc(local.year, local.month, local.day);` is actually at line 223; line 221 is the tail of the 'Mimic the production day-level cutoff' comment. Immaterial to the finding's substance."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "chunk": "grp-098",
+  "mergedFrom": [
+    "Extract scheduler_providers.dart's isTaskCompleted to a top-level function so epic_27_story_f5 tests the real code"
+  ],
+  "coDiscoverers": [
+    "t1-feat-scheduler-p5",
+    "t1-story-epic-27"
+  ],
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-09",
+  "linearPriority": "Medium"
+}

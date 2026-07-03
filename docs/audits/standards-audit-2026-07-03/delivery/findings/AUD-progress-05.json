@@ -1,0 +1,55 @@
+{
+  "title": "Collapse chart_data_service.dart's *Live methods — byte-identical duplicates of their non-Live counterparts",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplicated code",
+  "area": "features/progress/domain/services/chart_data_service.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/domain/services/chart_data_service.dart",
+      "line": 213,
+      "quote": "Future<List<DailyCompletionData>> getDailyCompletionsLive({"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/domain/services/chart_data_service.dart",
+      "line": 252,
+      "quote": "Future<List<CumulativeProgressPoint>> getCumulativeProgressLive({"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/domain/services/chart_data_service.dart",
+      "line": 55,
+      "quote": "Future<List<DailyCompletionData>> getDailyCompletions({"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/domain/services/chart_data_service.dart",
+      "line": 154,
+      "quote": "Future<List<CumulativeProgressPoint>> getCumulativeProgress({"
+    }
+  ],
+  "sites": 2,
+  "why": "getDailyCompletionsLive's own docstring admits it: 'The method name retains the historic Live suffix for callsite stability; the filter is [trackAchievement]' — the same default tier getDailyCompletions already uses. Diffing the two bodies shows they run the exact same query, same bucketing, same effective-start logic; getCumulativeProgress/getCumulativeProgressLive are the same story. Roughly 140 lines exist twice with no behavioral difference today. A future change to one (a new tier parameter, a bucketing tweak, a bugfix) has no compiler-enforced reason to also land in its twin, so the two will silently diverge the next time either is touched under time pressure — the same failure mode already realized in finding #1.",
+  "recommendation": "Make getDailyCompletionsLive / getCumulativeProgressLive one-line delegates to the base methods, or delete them and repoint recent_activity_providers.dart at getDailyCompletions/getCumulativeProgress directly.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "chart_data_service.dart's *Live methods contain no independent query/bucketing logic — they either don't exist or delegate to the base method in one line."
+  ],
+  "labels": [
+    "duplication",
+    "maintainability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "getDailyCompletionsLive is dead code (no callers found), not merely a 'live duplicate' needing repointing as the recommendation implies — it can simply be deleted. This makes removal easier than described, not harder; doesn't undermine the finding."
+    ]
+  },
+  "sourceBatch": "t1-feat-progress-p1",
+  "chunk": "grp-081",
+  "normArea": "features/progress",
+  "id": "AUD-progress-05",
+  "linearPriority": "Medium"
+}

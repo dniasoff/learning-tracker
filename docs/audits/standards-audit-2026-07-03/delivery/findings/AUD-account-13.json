@@ -1,0 +1,74 @@
+{
+  "title": "Log the swallowed deleteAccountData Cloud Function failure in AccountManagementService._deleteFirestoreUserData (EH-3 log-less catch)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 (log-less catch, Pending)",
+  "area": "features/account domain service, tested from this batch's settings test tree",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
+      "line": 182,
+      "quote": "} catch (e) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
+      "line": 183,
+      "quote": "// Log but don't rethrow — auth deletion + local cleanup still proceed."
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+      "line": 54,
+      "quote": "} catch (_) {\n      // Auth not initialized (tests, or Firebase init failed at"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+      "line": 614,
+      "quote": "} catch (_) {\n        // Network unavailable or CF error — fall through to the default path."
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+      "line": 550,
+      "quote": "} catch (_) {\n        // Silent attempt failed (never shows UI) → fall through to interactive."
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+      "line": 588,
+      "quote": "} catch (_) {\n        // Sign-out best-effort; ignore."
+    }
+  ],
+  "sites": 6,
+  "why": "The comment claims 'Log but don't rethrow' but there is no AppLogger call anywhere in the catch body -- it is functionally empty. The Makefile's 'no empty catch blocks' grep (check 9/15) only matches a literal single-line `catch(...) {}`, so this multi-line, commented-but-logless catch is invisible to that checker (EH-3's 'log-less' half is explicitly Pending, not enforced). If the deleteAccountData Cloud Function fails during account deletion -- network error, quota, not-yet-deployed, permission-denied -- nothing is recorded anywhere (no Crashlytics, no Talker/AppLogger), so there is zero telemetry on failures of the primary Firestore-deletion path for a 'delete my account and my data' request. Verified account_management_service_test.dart has no test that stubs this call to throw and asserts on logging. The onUserDeleted Cloud Function trigger is a documented safety net that reduces the risk of the data actually surviving, but it does not restore visibility into how often the primary path fails.",
+  "recommendation": "Add an AppLogger.error(...) call (uid only, no other PII) inside the catch block; add a test that stubs a throwing httpsCallable and asserts the log call fired.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Catch block calls AppLogger.error with the uid and exception.",
+    "A red-first regression test in account_management_service_test.dart asserts logging occurs when the Cloud Function throws."
+  ],
+  "labels": [
+    "eh-3",
+    "observability",
+    "privacy"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "None needed; both cited lines (182, 183) match exactly."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p2",
+  "chunk": "grp-101",
+  "mergedFrom": [
+    "Log the comment-only catch blocks that structurally evade the single-line empty-catch grep"
+  ],
+  "coDiscoverers": [
+    "t1-feat-account-p1",
+    "t1-feat-settings-p2"
+  ],
+  "normArea": "features/account",
+  "id": "AUD-account-13",
+  "linearPriority": "Medium"
+}

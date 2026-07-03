@@ -1,0 +1,78 @@
+{
+  "title": "Point epic_27_integration_lockout_redaction_atomic_test.dart AC3 at CompletionRepositoryImpl instead of a hand-rolled transaction",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (regression test must exercise the source; FR20 named invariant)",
+  "area": "test/story_acceptance — learning/completions",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_integration_lockout_redaction_atomic_test.dart",
+      "line": 240,
+      "quote": "// production wire-up lives in `CompletionRepositoryImpl` (today the advance\n  // is *outside* the transaction — DNI-385 ratifies the invariant the wire-up"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_integration_lockout_redaction_atomic_test.dart",
+      "line": 275,
+      "quote": "return db.transaction(() async {\n          await db.into(db.completionEvents).insert("
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "line": 173,
+      "quote": "// 6. Advance bookmark (outside transaction — uses content repo cache)"
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "line": 218,
+      "quote": "newMilestoneUnlocks = const <RewardUnlockRecord>[];"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+      "line": 292,
+      "quote": "return const [];"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+      "line": 704,
+      "quote": "if (userMode == ProfileMode.child && newUnlocks.isNotEmpty) {"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+      "line": 197,
+      "quote": "await tester.pumpWidget(_buildHarness(unlocks: [_makeUnlock()]));"
+    }
+  ],
+  "sites": 7,
+  "why": "docs/planning/prd.md:563 states FR20 (\"completion + bookmark update + points in single transaction\"), and Story 27.9's own AC (docs/planning/epics-greenfield-rebuild.md:1548) says the bookmark advance is wired into the same transaction; epics.md:846 marks DNI-385 Done. But completion_repository_impl.dart awaits `_advanceBookmark` AFTER the transaction commits with no try/catch (lines 172-177) — if it throws, the completion is already persisted while the points-credit/analytics/milestone code later in the same `if (isNew)` block (lines 179-220) never runs, and the caller gets an uncaught exception. The acceptance test that is supposed to guard this never calls CompletionRepositoryImpl or BookmarkRepository at all; it hand-rolls its own db.transaction() wrapping a literal insert + throw, which only proves Drift's built-in rollback-on-throw, not the app's wiring — so a real regression (or, here, a real pre-existing gap) is invisible to this 'Done' story's own test. Confirmed empirically: `flutter test` on this file passes today regardless.",
+  "recommendation": "Either wrap `_advanceBookmark` inside the same `_database.transaction()` in markComplete/bulk paths (if it's DB-only work) and update AC3 to call the real CompletionRepositoryImpl with a BookmarkRepository fake that throws, asserting the real completion-row count; or, if true atomicity isn't achievable (network/content-repo dependency), correct FR20/the Story 27.9 AC text and this test's claims to match reality instead of asserting a synthetic scenario.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "AC3 test constructs the real CompletionRepositoryImpl (or calls markComplete) with an injected BookmarkRepository fake that throws, and asserts on the actual persisted completion state.",
+    "Either production code wraps bookmark advance in the transaction, or FR20/Story 27.9's AC text is corrected to state the actual (non-atomic) behavior."
+  ],
+  "labels": [
+    "testing",
+    "sync/completions",
+    "TQ-8",
+    "invariant"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-27",
+  "chunk": "high-104",
+  "mergedFrom": [
+    "Delete or rewire AchievementUnlockCelebration — its only trigger has been dead code since DEC-32"
+  ],
+  "coDiscoverers": [
+    "t1-feat-gamification-p3",
+    "t1-story-epic-27"
+  ],
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-01",
+  "linearPriority": "High"
+}

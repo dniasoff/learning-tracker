@@ -1,0 +1,49 @@
+{
+  "title": "SyncStatusIndicator hardcodes English UI strings and is never referenced by any production screen",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2",
+  "area": "features/sync presentation widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/widgets/sync_status_indicator.dart",
+      "line": 28,
+      "quote": "'Local only',"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/widgets/sync_status_indicator.dart",
+      "line": 60,
+      "quote": "? 'Sync paused — $pendingChanges queued'"
+    },
+    {
+      "file": "learning_tracker/test/features/sync/presentation/sync_status_indicator_l1_test.dart",
+      "line": 411,
+      "quote": "// All user-facing strings in SyncStatusIndicator are hardcoded English inside"
+    }
+  ],
+  "sites": 1,
+  "why": "Every label ('Local only', 'Synced', 'Syncing', '$n pending', '$n queued', 'Offline', 'Sync error', 'Sync paused'...) is a raw English literal rendered via Tooltip/Text, not routed through AppLocalizations -- a direct AX-2 violation in an EN+Hebrew app. The widget's own test file documents this exact list in a 'Hardcoded string audit' comment as 'a flag for future i18n work.' Grepping lib/, SyncStatusIndicator is referenced by nothing in production -- only by its own test -- so today the violation has zero user reach, but it is a landmine: whoever wires this widget into a real screen (a natural fit for settings/dashboard, its whole purpose) ships untranslated text with no warning beyond a comment nobody reads at the call site.",
+  "recommendation": "Either delete SyncStatusIndicator (its job is already covered by backup_sync_section.dart's localized cloud-status card) or localize it via AppLocalizations before it is ever wired up; do not leave it in this half-finished state.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "AX-2 literal-string checker (once the [P] literal-detection lint lands) reports zero hits in this file, or the file no longer exists."
+  ],
+  "labels": [
+    "AX-2",
+    "i18n",
+    "dead-code"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-106",
+  "normArea": "features/sync",
+  "id": "AUD-sync-07",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,46 @@
+{
+  "title": "Replace make audit's dead literal-phrase TODO/FIXME/XXX grep with a real AG-6 check",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6 (every TODO/FIXME carries a Linear DNI-#### id) / Rule 0",
+  "area": "Makefile / guardrail infra",
+  "evidence": [
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 350,
+      "quote": "if grep -rn \"TODO: refactor later\\|FIXME: hardcoded for now\\|XXX: temporary\" lib/ --include=\"*.dart\" | grep -q .; then \\"
+    },
+    {
+      "file": "learning_tracker/integration_test/app_test.dart",
+      "line": 25,
+      "quote": "  // TODO: Add more integration tests as features are implemented:"
+    }
+  ],
+  "sites": 2,
+  "why": "Audit check 10/15 ('No banned TODO/FIXME/XXX markers') matches only three exact, oddly-specific literal phrases. Verified: `grep -rn \"TODO: refactor later\\|FIXME: hardcoded for now\\|XXX: temporary\" learning_tracker/lib/` returns zero hits anywhere in the app, and always will — no developer writes that literal string. Meanwhile there are real, uncaught TODOs with no Linear id anywhere (`grep -c \"DNI-[0-9]\"` on all lib/ TODO/FIXME lines returns 0 of 4), and my own batch contains a live example the check silently misses: integration_test/app_test.dart:25. This grep gives the false impression that TODO/FIXME hygiene (AG-6) is enforced by `make audit`, when in fact it enforces nothing a real comment would ever trip.",
+  "recommendation": "Change the pattern to match any `// TODO`/`// FIXME`/`// XXX` NOT followed by `DNI-\\d+` (e.g. `grep -rnE '//\\s*(TODO|FIXME|XXX)' lib/ | grep -vE 'DNI-[0-9]+'`), which is what AG-6 actually requires.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`make audit` fails on any TODO/FIXME/XXX comment in lib/ (or test/) lacking a DNI-#### id.",
+    "A regression fixture (one TODO with a DNI id, one without) proves the new grep distinguishes them."
+  ],
+  "labels": [
+    "ag-6",
+    "dead-check",
+    "makefile",
+    "rule-0"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-154",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-16",
+  "linearPriority": "Medium"
+}

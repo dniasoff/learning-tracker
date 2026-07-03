@@ -1,0 +1,65 @@
+{
+  "title": "Deduplicate the 6 copies of _insertTrack() in story_acceptance tests onto the existing shared seedTrack() helper",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication (TQ-6 seam bypass)",
+  "area": "test/story_acceptance (shared test helpers)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_09_onboarding_test.dart",
+      "line": 44,
+      "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_10_parent_mode_test.dart",
+      "line": 69,
+      "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_12_notifications_test.dart",
+      "line": 50,
+      "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_14_settings_test.dart",
+      "line": 33,
+      "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+      "line": 49,
+      "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+      "line": 27,
+      "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    }
+  ],
+  "sites": 6,
+  "why": "Six of the seven files in this batch reimplement the identical 13-line _insertTrack() (insert a mishnayos curriculum_tracks row with DateTime.now() for stateChangedAt/activatedAt) instead of calling the shared seedTrack() already in test/helpers/drift_memory.dart:82-98 — which epic_13_cloud_sync_test.dart (the 7th file) uses correctly. seedTrack() itself uses the injectable DateTimeFactory.nowUtc() (a LocalDayClock-backed seam per lib/core/utils/date_utils.dart:8-18), while all 6 duplicates use a raw, unfakeable DateTime.now(), bypassing the seam the rest of the codebase standardizes on. Any future change to curriculum_tracks' required columns needs 7 edits instead of 1, and copies can silently diverge, as the clock call already has.",
+  "recommendation": "Delete the 6 private _insertTrack() functions and call seedTrack(db, profileId: 1) from test/helpers/drift_memory.dart at each site, as epic_13_cloud_sync_test.dart already does.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn 'Future<int> _insertTrack' learning_tracker/test/story_acceptance/*.dart returns zero matches.",
+    "All 6 files call the shared seedTrack() helper instead."
+  ],
+  "labels": [
+    "duplication",
+    "test-helpers",
+    "TQ-6"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-09-16",
+  "chunk": "grp-138",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-31",
+  "linearPriority": "Low"
+}

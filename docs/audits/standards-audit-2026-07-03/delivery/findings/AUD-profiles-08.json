@@ -1,0 +1,47 @@
+{
+  "title": "Populate features/profiles/profiles.dart barrel exports so Rule 2 is satisfiable for the whole feature",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 2 (barrel-only cross-feature imports) / Rule 0",
+  "area": "features/profiles (barrel)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/profiles.dart",
+      "line": 7,
+      "quote": "library profiles;"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 16,
+      "quote": "import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';"
+    }
+  ],
+  "sites": 1,
+  "why": "Every other actually-used feature barrel re-exports its public API (account.dart 21 exports, tracks.dart 26, tutoring.dart 22, progress.dart 1); profiles.dart has zero `export` statements, so its own header comment ('Import this barrel... Do NOT import deep paths directly') is impossible to follow. Grepping lib/features/**/*.dart for `features/profiles/` outside the profiles feature itself finds 65 files across 10+ other features deep-importing active_profile_provider.dart, profile_providers.dart, profile_model.dart, pin_service.dart etc. directly (plus lib/app/router/app_shell.dart, which can't even use the barrel since it exports nothing). Rule 2 is therefore 100% unenforceable for the single most cross-cut feature in the app: any future rename/move inside features/profiles/ breaks an unpredictable subset of 65+ files with no compiler-visible contract boundary.",
+  "recommendation": "Populate profiles.dart with export statements for the feature's actual public surface (profile_model.dart, profile_repository.dart, pin_service.dart, active_profile_provider.dart, profile_providers.dart, profile_switcher_sheet.dart, etc.), mirroring the structure already used in tutoring.dart, then migrate consumers off deep imports incrementally.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "features/profiles/profiles.dart exports every symbol currently deep-imported by 2+ other features",
+    "learning_tracker/Makefile check 15/15 (once its self-comparison bug is fixed, see the tutored_children_section.dart finding) shows a declining, tracked count of profiles/ deep imports outside the feature",
+    "New cross-feature consumers of profiles/ import only features/profiles/profiles.dart"
+  ],
+  "labels": [
+    "layering",
+    "rule-2",
+    "barrel",
+    "architecture"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-077",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-08",
+  "linearPriority": "Medium"
+}

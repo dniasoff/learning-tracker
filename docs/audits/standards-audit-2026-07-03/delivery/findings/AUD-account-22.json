@@ -1,0 +1,48 @@
+{
+  "title": "Make AppUser/AuthState/AuthUser @freezed instead of hand-rolled classes without value equality",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming/placement (\"domain/state models are immutable @freezed classes\")",
+  "area": "features/account/domain/models",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/domain/models/app_user.dart",
+      "line": 6,
+      "quote": "class AppUser {\n  const AppUser({"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/models/auth_state.dart",
+      "line": 49,
+      "quote": "class AuthState {\n  const AuthState({"
+    }
+  ],
+  "sites": 2,
+  "why": "AppUser, AuthState and AuthUser are plain hand-written classes (immutable, but no @freezed, no custom ==/hashCode), so two instances with identical field values compare unequal by reference identity — AuthState is literally the `state` type of a keepAlive Riverpod Notifier. Current consumers avoid the fallout by exclusively `.select()`-ing down to primitive sub-fields (e.g. `s.currentUser?.firebaseUid`, a String, in manage_tutors_providers.dart/app_shell.dart/persistent_switcher_scaffold.dart) rather than comparing whole AuthState values, so no concrete rebuild-storm is demonstrated today — but it is a landmine for the next `ref.watch(authStateProvider)` call that doesn't remember to add a `.select()`.",
+  "recommendation": "Convert to @freezed (or at minimum implement value ==/hashCode) — low-risk given the classes are small and already immutable.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "AuthState(...) == AuthState(...) is true for equal field values (documents the fix via a unit test)",
+    "build_runner regenerates cleanly with no call-site breakage"
+  ],
+  "labels": [
+    "freezed",
+    "naming",
+    "equality"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "The 'exclusively .select()-ing' claim is inaccurate: grep shows ~15+ sites (profile_providers.dart:23/79, app_shell.dart:140/152/453, sync_providers.dart, restore_providers.dart, settings widgets, etc.) do `ref.watch(authStateProvider)` on the whole object, not just the 3 cited select() sites. Practical risk stays low regardless since AuthStateNotifier only reassigns state on genuine transitions (checked auth_state_provider.dart _init), not superfluously — so P3 still holds, just not for the stated reason.",
+      "The 'why' claims consumers 'exclusively' .select() down to primitives, avoiding fallout. False: grep shows 18+ sites (sync_orchestrator_providers.dart:58, outbox_providers.dart:19/51/87, profile_switcher_sheet.dart:72, app_shell.dart:140/152/453, etc.) do `ref.watch(authStateProvider)` on the whole object with no .select(). This understates rather than overstates risk, so it doesn't undermine the finding or its P3 rating."
+    ]
+  },
+  "sourceBatch": "t1-feat-account-p1",
+  "chunk": "grp-038",
+  "normArea": "features/account",
+  "id": "AUD-account-22",
+  "linearPriority": "Low"
+}

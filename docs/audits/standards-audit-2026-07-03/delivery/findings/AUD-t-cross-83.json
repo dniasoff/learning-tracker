@@ -1,0 +1,61 @@
+{
+  "title": "Replace DateTime.now() wall-clock filler with fixed dates in track_dao_test.dart and track_scoped_dao_test.dart",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "TQ-6",
+  "area": "test/core/database/daos",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/track_dao_test.dart",
+      "line": 116,
+      "quote": "stateChangedAt: DateTime.now().toUtc(),\n              activatedAt: DateTime.now().toUtc(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/track_dao_test.dart",
+      "line": 297,
+      "quote": "final now = DateTime.now().toUtc();"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/track_scoped_dao_test.dart",
+      "line": 26,
+      "quote": "final now = DateTime.now();"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/track_scoped_dao_test.dart",
+      "line": 44,
+      "quote": "stateChangedAt: DateTime.now(),\n            activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/track_scoped_dao_test.dart",
+      "line": 424,
+      "quote": "final now = DateTime.now();"
+    }
+  ],
+  "sites": 15,
+  "why": "15 call sites across these 2 files (5 in track_dao_test.dart: lines 116,117,256,297,330; 10 in track_scoped_dao_test.dart: lines 26,44,45,55,56,77,177,203,280,424) use the system wall clock for row timestamps, breaking TQ-6 hermeticity and diverging from every sibling file in this batch, which uses fixed DateTime.utc(2026,...) literals or the drift_memory.dart helper's DateTimeFactory.nowUtc(). None of these values are currently asserted against an exact expected instant, so there is no live flakiness today, but the inconsistency means a future assertion added against 'now' in these files would be non-deterministic where every other DAO test file in the directory is not.",
+  "recommendation": "Replace DateTime.now()/DateTime.now().toUtc() with fixed DateTime.utc(2026, 1, 1)-style literals (matching the convention in track_dao_delete_test.dart, track_dao_extended_test.dart, etc.) or route through DateTimeFactory.nowUtc() as drift_memory.dart's seed helpers already do.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "track_dao_test.dart and track_scoped_dao_test.dart contain no direct DateTime.now() calls for row timestamps."
+  ],
+  "labels": [
+    "test-quality",
+    "hermetic",
+    "wall-clock"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The 'diverges from every sibling file' comparison is contradicted by direct grep: at least 9 other DAO test files in the identical directory share the same DateTime.now() pattern."
+    ]
+  },
+  "sourceBatch": "t1-core-database-daos-p3",
+  "chunk": "grp-011",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-83",
+  "linearPriority": "Low"
+}

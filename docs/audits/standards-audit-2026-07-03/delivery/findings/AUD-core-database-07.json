@@ -1,0 +1,40 @@
+{
+  "title": "Stop catching StateError (an Error subtype) in user_profile_dao.dart's AccountX.accountTier getter",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-4",
+  "area": "core/database/daos/user_profile_dao.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/daos/user_profile_dao.dart",
+      "line": 37,
+      "quote": "try {\n      return UserTierX.fromDb(tier);\n    } on StateError {\n      return UserTier.localBorn;"
+    }
+  ],
+  "sites": 1,
+  "why": "`StateError` extends `Error` in dart:core, and `UserTierX.fromDb` throws it specifically for an unrecognized `tier` string — i.e. local DB corruption or a missed enum-value migration. Catching it here and silently returning `UserTier.localBorn` masks that bug: a `cloudBorn` account whose stored tier string ever drifts (bad migration, hand-edited row, future enum rename) silently behaves as local-born everywhere accountTier is read (sync gating, balance-row eligibility per 'Adults never have balance rows (Rule 3)', etc.), with nothing logged.",
+  "recommendation": "Let the StateError propagate (or catch and rethrow after an AppLogger.error call) instead of returning a silent fallback — an unrecognized tier value is a bug that should be loud, not a normal control-flow case.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "AccountX.accountTier no longer has an `on StateError` handler that returns a default value.",
+    "A test asserts that an Account row with an unrecognized `tier` string causes accountTier to throw (or to log via AppLogger and rethrow), not silently return localBorn."
+  ],
+  "labels": [
+    "EH-4",
+    "error-handling",
+    "silent-fallback"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "grp-008",
+  "normArea": "core/database",
+  "id": "AUD-core-database-07",
+  "linearPriority": "Medium"
+}

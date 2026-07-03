@@ -1,0 +1,48 @@
+{
+  "title": "Migrate scheduler-adjacent tests off the deprecated LearningProgramRepository.instance singleton",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-7",
+  "area": "scheduler/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/learning_program_service.dart",
+      "line": 69,
+      "quote": "  @Deprecated('Use learningProgramRepositoryProvider via Riverpod instead')"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/learning_program_service.dart",
+      "line": 70,
+      "quote": "  static final instance = LearningProgramRepository._create();"
+    }
+  ],
+  "sites": 1,
+  "why": "This static singleton is exactly the 'global/static mutable singleton' SM-7 prohibits, and it has zero production (lib/) call sites — but 30+ test files across the suite (test/core/services/*, test/story_acceptance/*, test/features/tracks/*, test/features/onboarding/*, etc.) construct their fixtures via `LearningProgramRepository.instance` instead of overriding `learningProgramRepositoryProvider`. Because `test/` and `lib/` share one Dart package, Dart's default `deprecated_member_use` lint does not fire for same-package usage (only `deprecated_member_use_from_same_package` would, and it isn't enabled) — which is exactly why `flutter analyze: No issues found` coexists with 30+ live uses of a member explicitly marked for removal. The singleton can never actually be deleted while this fan-out exists, and every test using it is verifying against a construction path the app itself no longer uses.",
+  "recommendation": "Migrate test fixtures to override learningProgramRepositoryProvider via ProviderContainer overrides instead of reading the singleton directly; once the fan-out is gone, delete the singleton entirely.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "New test code does not introduce further LearningProgramRepository.instance call sites.",
+    "Existing call sites tracked for migration (e.g. a DNI ticket) with a path to eventual deletion of the singleton."
+  ],
+  "labels": [
+    "SM-7",
+    "singleton",
+    "test-quality"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Actual scope is 12 test files with 34 real .instance construction call sites, not '30+ test files' as stated — the finding conflated call-site count with file count. Substance unaffected.",
+      "Lines 69-70 quotes are exact; the singleton has zero real lib/ call sites (grep: only dartdoc [LearningProgramRepository.instance] references) and deprecated_member_use_from_same_package isn't enabled, so the SM-7 violation is real and undetected by tooling. However the 'why' claims '30+ test files' use LearningProgramRepository.instance directly — actual grep shows 11 files (33 total occurrences, one file alone has 13). Core violation, deprecation, and severity (P3) still hold; only the scale narrative is inflated ~3x."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-094",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-23",
+  "linearPriority": "Low"
+}

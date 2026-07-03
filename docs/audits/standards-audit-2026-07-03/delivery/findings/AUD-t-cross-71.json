@@ -1,0 +1,44 @@
+{
+  "title": "Fix test groups in completion_dao_extended_test.dart and completion_dao_extra_test.dart that reference the removed CompletionDao.insertCompletionsBatch method",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 / test hygiene",
+  "area": "test/core/database/daos",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_dao_extended_test.dart",
+      "line": 156,
+      "quote": "group('CompletionDao.insertCompletionsBatch', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_dao_extra_test.dart",
+      "line": 87,
+      "quote": "group('CompletionDao.insertCompletionsBatch', () {"
+    }
+  ],
+  "sites": 2,
+  "why": "completion_dao.dart's own doc comment states: 'Write methods (insertCompletion, insertCompletionsBatch) have been removed. New completions are written exclusively through CompletionWriter.' These two group() blocks (and completion_dao_extended_test.dart's file-header doc comment) still name and describe `CompletionDao.insertCompletionsBatch` as if it exists. What they actually exercise is the test-only `seedCompletionsBatch` helper (test/helpers/drift_memory.dart, itself an unbatched loop over `completionEventDao.appendEvent`) followed by CompletionDao read methods. A future maintainer reading these group names would reasonably believe CompletionDao still exposes a batch-insert API.",
+  "recommendation": "Rename the groups/comments to describe what's actually under test (e.g. 'seeding + getCompletionsByTrack/ByProfile') or drop the stale 'insertCompletionsBatch' framing entirely.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Neither file's group()/doc-comment names a CompletionDao method that doesn't exist on the class."
+  ],
+  "labels": [
+    "stale-test",
+    "naming",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "grp-008",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-71",
+  "linearPriority": "Low"
+}

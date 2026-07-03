@@ -1,0 +1,58 @@
+{
+  "title": "Test FirebaseCrashlyticsService.setUserIdentifier directly instead of a hand-duplicated fake in epic_24_stop_the_bleeding_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-4 / PV-2 (fake diverges from the class it stands in for)",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+      "line": 377,
+      "quote": "Future<void> setUserIdentifier(int? profileId) async {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+      "line": 378,
+      "quote": "lastIdentifier = profileId == null ? '' : '$profileId';"
+    },
+    {
+      "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+      "line": 67,
+      "quote": "Future<void> setUserIdentifier(int? profileId) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+      "line": 68,
+      "quote": "_crashlytics.setUserIdentifier(profileId == null ? '' : '$profileId');"
+    }
+  ],
+  "sites": 1,
+  "why": "FirebaseCrashlyticsService.setUserIdentifier and the test's _CapturingCrashlyticsService.setUserIdentifier independently hard-code the identical `profileId == null ? '' : '$profileId'` ternary. The AC3/AC4 'no PII fallback' tests (Story 24.4, a PV-2-relevant child-privacy contract) only exercise the fake's copy. If a future change to the real class's encoding diverges from the fake -- e.g. a prefix, or an email fallback on a null check gone wrong -- this acceptance test keeps passing green while the production Crashlytics identifier regresses into leaking PII, exactly the class of bug this story exists to prevent. The sibling file (epic_24_stop_bleeding_test.dart) already shows the alternative -- mocktail against the real class -- is the established pattern in this codebase.",
+  "recommendation": "Replace _CapturingCrashlyticsService for the identifier tests with a MockFirebaseCrashlytics (mocktail) wrapped in a real FirebaseCrashlyticsService, and verify(() => mock.setUserIdentifier('5')), matching the interaction-verification pattern already used in epic_24_stop_bleeding_test.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "AC3/AC4 identifier tests exercise FirebaseCrashlyticsService.setUserIdentifier (via a mocked FirebaseCrashlytics), not a hand-duplicated encoding",
+    "Changing the ternary in FirebaseCrashlyticsService.setUserIdentifier without updating the test causes a test failure"
+  ],
+  "labels": [
+    "TQ-4",
+    "PV-2",
+    "fake-drift",
+    "child-privacy"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "A third independent duplicate of the same ternary exists at test/core/logging/crashlytics_service_test.dart:93-95, strengthening (not weakening) the finding's core claim that the real class's logic is never exercised."
+    ]
+  },
+  "sourceBatch": "t1-story-epics-21-24",
+  "chunk": "grp-141",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-21",
+  "linearPriority": "Medium"
+}

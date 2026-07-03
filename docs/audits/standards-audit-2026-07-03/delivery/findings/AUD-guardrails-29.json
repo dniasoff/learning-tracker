@@ -1,0 +1,43 @@
+{
+  "title": "Fix the stale \"50%\" coverage-floor comment in ci.yml (actual floor is 60%)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene (stale comment)",
+  "area": "GitHub Actions",
+  "evidence": [
+    {
+      "file": ".github/workflows/ci.yml",
+      "line": 249,
+      "quote": "# ── 6. coverage-floor (50% line coverage, always enforced) ──"
+    },
+    {
+      "file": ".github/workflows/ci.yml",
+      "line": 264,
+      "quote": "          FLOOR=60"
+    }
+  ],
+  "sites": 1,
+  "why": "The section header comment says the floor is 50%, but the step name ('Assert coverage floor ≥ 60%') and the enforced FLOOR=60 variable both say 60% — someone raised the floor and updated the step but not the section comment. Low-impact (the enforced value is correct and stricter than the comment implies) but misleads anyone skimming section headers to understand the pipeline.",
+  "recommendation": "Update the comment to '(60% line coverage, always enforced)'.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The section-6 comment states the same percentage as the FLOOR variable."
+  ],
+  "labels": [
+    "hygiene",
+    "ci"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-156",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-29",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,64 @@
+{
+  "title": "Rename the domain StreakEvent so it stops colliding with Drift's generated StreakEvent row class",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-4",
+  "area": "learning_tracker/lib/features/gamification/streak/",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/streak/streak_event.dart",
+      "line": 10,
+      "quote": "class StreakEvent {"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/user/user_database.g.dart",
+      "line": 8896,
+      "quote": "class StreakEvent extends DataClass implements Insertable<StreakEvent> {"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/streak/streak_state_provider.dart",
+      "line": 17,
+      "quote": "import 'package:learning_tracker/core/database/user/user_database.dart'\n    hide StreakEvent;"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/streak/streak_event.dart",
+      "line": 3,
+      "quote": "/// Distinct from Drift's row class (also called `StreakEvent` and\n/// generated from `tables/streak_events.dart`): this one is what the"
+    }
+  ],
+  "sites": 4,
+  "why": "Two unrelated public top-level classes share the name StreakEvent: the hand-written domain value type that streak_event_test.dart exercises, and Drift's generated row class. It's self-aware (the domain class's own doc comment explains the collision) and worked around with `hide StreakEvent` at the one call site needing both today, but every future file that needs both the Drift row and the domain value is one missing hide/alias away from a confusing 'wrong StreakEvent' type error, and the name can't be used unqualified in review comments, Linear tickets, or docs.",
+  "recommendation": "Rename the domain class (e.g. StreakLogEvent) -- it's the smaller of the two and all its call sites are internal to the streak feature.",
+  "acceptance_criteria": [
+    "`grep -rn 'class StreakEvent' learning_tracker/lib/` returns exactly one hand-written match plus the Drift-generated one, under distinguishable names."
+  ],
+  "effort": "S",
+  "labels": [
+    "AG-4",
+    "naming",
+    "ubiquitous-language"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Core collision (both class-definition lines, doc-comment self-awareness) verified exact. But the recommendation's claim 'all call sites internal to the streak feature' is false: core/sync/merge/streak_event_merger.dart also imports+hides the domain StreakEvent, a third site outside the feature dir. This strengthens rather than undercuts the case for renaming; only the scope claim needs correction.",
+      "Finding says 'the one call site needing both today' but grep shows 4 files already import both and hide the Drift StreakEvent (streak_event_log.dart, streak_restorer.dart, streak_event_merger.dart, streak_state_provider.dart) — an undercount that if anything strengthens rather than weakens the finding."
+    ]
+  },
+  "sourceBatch": "t1-core-streak",
+  "chunk": "grp-026",
+  "mergedFrom": [
+    "StreakEvent domain class name collides with the Drift-generated StreakEvent row class"
+  ],
+  "coDiscoverers": [
+    "t1-core-streak",
+    "t1-feat-gamification-p2"
+  ],
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-20",
+  "linearPriority": "Low"
+}

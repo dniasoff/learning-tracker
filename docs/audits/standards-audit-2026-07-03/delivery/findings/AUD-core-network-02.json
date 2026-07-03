@@ -1,0 +1,67 @@
+{
+  "title": "Delete or reconnect the superseded Sefaria-REST fetcher pipeline (curriculum_content_fetcher.dart + its 989-line test suite)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Everything sweep: dead code; AG-1 (no ad-hoc variants outside make targets); Fowler speculative generality",
+  "area": "core/network/sefaria (+ tool/, test/core/network)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/network/sefaria/curriculum_content_fetcher.dart",
+      "line": 21,
+      "quote": "abstract class CurriculumContentFetcher {"
+    },
+    {
+      "file": "learning_tracker/test/core/network/dio_client_test.dart",
+      "line": 9,
+      "quote": "import '../../../tool/lib/dio_client.dart';"
+    },
+    {
+      "file": "learning_tracker/test/core/network/sefaria/fetcher_test.dart",
+      "line": 12,
+      "quote": "import '../../../../tool/lib/sefaria/bavli_fetcher.dart';"
+    },
+    {
+      "file": "learning_tracker/tool/seed_content.dart",
+      "line": 26,
+      "quote": "final dio = Dio("
+    },
+    {
+      "file": "docs/seed-build.md",
+      "line": 7,
+      "quote": "Docker. There are **no public Sefaria API calls** in the build path."
+    },
+    {
+      "file": "docs/explainers/content-database.md",
+      "line": 167,
+      "quote": "├── seed_content.dart                   # Fetch per-curriculum content"
+    }
+  ],
+  "sites": 3,
+  "why": "CurriculumContentFetcher/FetchResult/SefariaApiException (curriculum_content_fetcher.dart) have zero implementations or callers anywhere in lib/ — their only implementers are the 7 tool/lib/sefaria/*_fetcher.dart classes, and their only caller is tool/seed_content.dart, which is not invoked by `make seed` (Makefile) or any current doc workflow. docs/seed-build.md states in writing that the canonical pipeline (tool/seed/build_text_cache.dart) replaced 'the old dependency on ... the public Sefaria API' and makes 'no public Sefaria API calls'. Worse, dio_client_test.dart (158 lines) and fetcher_test.dart (831 lines) — 989 of my batch's 1188 lines — thoroughly test createDioClient/createSefariaClient/RetryInterceptor and the 7 fetchers, none of which the live pipeline calls: seed_content.dart builds its own untested, retry-less, logger-less Dio() inline (line 26) instead of reusing the fully-tested createSefariaClient(). This is a large, continuously-CI-run, thoroughly-documented dead branch that will mislead a future contributor fixing a Sefaria-shape regression into 'fixing' code nothing runs, while docs/explainers/content-database.md and docs/source-tree-analysis.md still list seed_content.dart as if it's live, contradicting docs/seed-build.md.",
+  "recommendation": "Either (a) delete curriculum_content_fetcher.dart, tool/lib/sefaria/*_fetcher.dart, tool/lib/dio_client.dart, tool/seed_content.dart and their two test files, and update docs/explainers/content-database.md + docs/source-tree-analysis.md to drop seed_content.dart from the tree/diagram; or (b) if intentionally kept as a manual fallback, wire tool/seed_content.dart to call createSefariaClient() (so the tested retry/redaction logic is actually exercised) and add a doc note stating its fallback status.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -rn 'CurriculumContentFetcher\\|createSefariaClient\\|createDioClient' across lib/ and tool/ shows either zero results (deleted) or a real caller in tool/seed_content.dart (reconnected)",
+    "docs/explainers/content-database.md and docs/source-tree-analysis.md source-tree listings match what actually exists post-fix",
+    "`make seed` (or its documented fallback) is the only content-build path referenced by both code and docs"
+  ],
+  "labels": [
+    "dead-code",
+    "core-network",
+    "docs-drift",
+    "tooling"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-network",
+  "chunk": "grp-021",
+  "normArea": "core/network",
+  "id": "AUD-core-network-02",
+  "linearPriority": "Medium"
+}

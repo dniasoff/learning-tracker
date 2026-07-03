@@ -1,0 +1,76 @@
+{
+  "title": "Add real coverage for FB-3 self-echo (hasPendingWrites) filtering and implement the missing isFromCache guard in FirestoreGatewayImpl listeners",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "FB-3",
+  "area": "core/sync — FirestoreGatewayImpl listener methods (gap surfaced via firestore_gateway_impl_test.dart group 7/16)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 729,
+      "quote": "if (change.doc.metadata.hasPendingWrites) {\n          localOnly.add(change.doc.id);"
+    },
+    {
+      "file": "learning_tracker/test/core/sync/firestore_gateway_impl_test.dart",
+      "line": 1187,
+      "quote": "group('7. listenToCollection', () {"
+    },
+    {
+      "file": "learning_tracker/docs/coding-standards.md",
+      "line": 252,
+      "quote": "Mergers skip LWW resolution for snapshots with `metadata.hasPendingWrites` or `metadata.isFromCache`"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 722,
+      "quote": "// document's change carries `hasPendingWrites == true`. Re-processing that\n    // self-write would loop the merge pipeline."
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 732,
+      "quote": "if (change.doc.metadata.hasPendingWrites) {\n          localOnly.add(change.doc.id);"
+    },
+    {
+      "file": "learning_tracker/test/core/sync/firestore_gateway_impl_test.dart",
+      "line": 1188,
+      "quote": "test('listenToCollection emits rows with firestore_id injected', () async {"
+    }
+  ],
+  "sites": 6,
+  "why": "This is the app's anti-self-echo mechanism — the source comment says re-processing a local write's own echo 'would loop the merge pipeline.' It's implemented at 4 call sites in firestore_gateway_impl.dart but firestore_gateway_impl_test.dart's group 7/16 (listenToCollection/listenToChildCollection/listenToTutorGrants) contain zero tests of it, and repo-wide grep confirms no other test file covers it either. Worse, it's structurally impossible to test with this suite's own fixture: fake_cloud_firestore's MockSnapshotMetadata hardcodes `hasPendingWrites => false` unconditionally, so no test built on createFakeFirestore() can ever observe the filter working. Separately, isFromCache — the other half of FB-3 — does not appear anywhere in lib/ (grep returns zero hits): it is simply not implemented, so a snapshot served from local cache on listener reattach is never distinguished from a fresh server-confirmed one.",
+  "recommendation": "Build a small hand-written fake implementing the cloud_firestore DocumentChange/DocumentSnapshot/SnapshotMetadata interfaces directly (per TQ-4, bypassing fake_cloud_firestore) so hasPendingWrites/isFromCache can be set true in a unit test; add the equivalent isFromCache skip-check at the four hasPendingWrites call sites in firestore_gateway_impl.dart, with a test proving a cached, non-pending snapshot doesn't get treated as authoritative.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "New test in firestore_gateway_impl_test.dart drives a hand-rolled fake DocumentChange with hasPendingWrites=true through listenToCollection and asserts the row is excluded from ListenerSnapshot.rows",
+    "firestore_gateway_impl.dart adds an isFromCache check at the four hasPendingWrites call sites (or a documented reason it's unnecessary) with a matching test",
+    "grep for isFromCache in lib/core/sync/ returns a non-zero count after the fix"
+  ],
+  "labels": [
+    "testing",
+    "sync",
+    "FB-3",
+    "coverage-gap"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "None needed — all file:line citations and quotes check out exactly as claimed."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-root-p2",
+  "chunk": "high-032",
+  "mergedFrom": [
+    "No test anywhere exercises FirestoreGatewayImpl's local-write-echo suppression (hasPendingWrites) — the 'listener echo of own writes' scenario this batch is charged with covering"
+  ],
+  "coDiscoverers": [
+    "t1-core-sync-root-p2",
+    "t1-feat-sync-p2"
+  ],
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-01",
+  "linearPriority": "High"
+}

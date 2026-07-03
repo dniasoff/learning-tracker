@@ -1,0 +1,58 @@
+{
+  "title": "Guard ref.watch/ref.read after in-flight awaits in dashboard_providers.dart (SM-4)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-4",
+  "area": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+      "line": 142,
+      "quote": "final track = await db.trackDao.getTrackById(trackId);"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+      "line": 155,
+      "quote": "final totalItems = await ref.watch(\n    scopedItemCountProvider(curriculum).future,"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+      "line": 323,
+      "quote": "await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+      "line": 439,
+      "quote": "final totalItems = await ref.watch(\n    scopedItemCountProvider(curriculum).future,"
+    }
+  ],
+  "sites": 4,
+  "why": "dashboardTrackCompletionPercentage, dashboardCompletionPercentage, stripStockMilestonesEffect, and dashboardPaceStatus each call ref.watch/ref.read after an earlier await (a Drift DB read) with no ref.mounted check in between. If any of these autoDispose family providers loses its last listener while that DB read is still in flight — e.g. the user swipes the active-tracks carousel past a card or leaves the dashboard mid-load — the later ref call throws UnmountedRefException, an uncaught exception inside the async provider body. The same file's dashboardChildNextReward provider (line 343) already guards this exact hazard with `if (!ref.mounted) return null;`, proving the team knows the failure mode; it just isn't applied consistently.",
+  "recommendation": "Add `if (!ref.mounted) return <default>;` immediately after the await that precedes the later ref access in each of the four functions, mirroring the existing guard in dashboardChildNextReward.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A targeted test that disposes the ProviderContainer (or drops the last listener) mid-await for each of the four providers confirms no UnmountedRefException escapes.",
+    "A grep/lint check for 'ref.watch|ref.read after await without a preceding ref.mounted guard' is added to make audit or riverpod_lint config."
+  ],
+  "labels": [
+    "riverpod",
+    "SM-4",
+    "dashboard",
+    "crash-risk"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Evidence array cites lines 142,155,323,439 (covering 3 of the 4 named functions) — dashboardCompletionPercentage's identical unguarded ref.watch after await at lines 189-190 is the 4th named site but has no matching evidence entry; I confirmed it independently and it is real."
+    ]
+  },
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "grp-046",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-06",
+  "linearPriority": "Medium"
+}

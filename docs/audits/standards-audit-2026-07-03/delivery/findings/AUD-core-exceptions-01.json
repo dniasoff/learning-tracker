@@ -1,0 +1,55 @@
+{
+  "title": "Remove dead DuplicateCompletionException / InvalidTrackOperationException or wire them up — neither is thrown in production",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6 dead-code (Fowler speculative generality) + secondary EH-5 (hardcoded English userMessage)",
+  "area": "learning_tracker/lib/core/exceptions",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/exceptions/duplicate_completion_exception.dart",
+      "line": 34,
+      "quote": "String get userMessage {"
+    },
+    {
+      "file": "learning_tracker/lib/core/exceptions/duplicate_completion_exception.dart",
+      "line": 35,
+      "quote": "return 'Already completed under $existingTrackName track';"
+    },
+    {
+      "file": "learning_tracker/lib/core/exceptions/invalid_track_operation_exception.dart",
+      "line": 7,
+      "quote": "class InvalidTrackOperationException extends ValidationException {"
+    },
+    {
+      "file": "learning_tracker/test/core/exceptions/duplicate_completion_exception_test.dart",
+      "line": 1,
+      "quote": "// Tests for DuplicateCompletionException — covers toString and userMessage."
+    }
+  ],
+  "sites": 2,
+  "why": "Repo-wide grep (lib/ and test/) shows DuplicateCompletionException is referenced nowhere outside its own definition file and its own single-purpose test file; InvalidTrackOperationException is thrown nowhere in lib/ — track_repository.dart only re-exports the type 'so existing importers of this file don't need updating,' and completion_writer.dart's current duplicate-completion handling is idempotent (silently returns the existing row, no exception thrown), confirming both exceptions' original call sites were refactored away. Both classes also bake a raw, hardcoded English message rather than a stable code (DuplicateCompletionException.userMessage is explicitly documented as 'for display in snackbars/dialogs') — if either is revived by a future feature without noticing this, it reintroduces an EH-5 violation (unlocalized English shown to Hebrew-locale users) on day one. Today the risk is purely maintenance/documentation drift: a developer debugging track-deactivation or completion-marking who searches for these classes' names will be misled into thinking they're live guards.",
+  "recommendation": "Delete both classes and duplicate_completion_exception_test.dart, or wire them into a live call site. If a real duplicate-completion/invalid-track-operation UI error is still needed, add a stable enum/code to a new exception rather than reviving these hardcoded-English ones.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep for DuplicateCompletionException/InvalidTrackOperationException across lib/ shows either a live throw+catch pair or zero results",
+    "No orphaned test file whose only coverage is a dead exception's string formatting"
+  ],
+  "labels": [
+    "dead-code",
+    "eh-5",
+    "exceptions"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-small-a",
+  "chunk": "grp-025",
+  "normArea": "core/exceptions",
+  "id": "AUD-core-exceptions-01",
+  "linearPriority": "Low"
+}

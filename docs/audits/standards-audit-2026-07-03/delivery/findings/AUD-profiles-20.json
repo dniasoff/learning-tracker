@@ -1,0 +1,46 @@
+{
+  "title": "Replace unchecked e.message as String? casts in PIN dialogs with a null-safe read",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene / defensive coding",
+  "area": "features/profiles/presentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+      "line": 286,
+      "quote": "errorMessage: e.message as String?,"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart",
+      "line": 122,
+      "quote": "_errorMessage = e.message as String?;"
+    }
+  ],
+  "sites": 2,
+  "why": "ArgumentError.message is typed Object? in dart:core, not String?. Both sites hard-cast it with `as String?`, which would throw a TypeError if PinService ever threw an ArgumentError constructed with a non-String message (e.g. ArgumentError.value(...)). Today PinService only ever throws `ArgumentError('PIN must be exactly 4 numeric digits')` so this never fires, but the cast is a landmine for the next caller of setProfilePin/setTutorPin-style methods that doesn't preserve that convention.",
+  "recommendation": "Use `e.message?.toString() ?? <fallback>` instead of the unchecked cast in both places.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both sites read e.message without an unchecked String cast",
+    "A test constructing ArgumentError.value(42, 'pin') and feeding it through does not crash"
+  ],
+  "labels": [
+    "hygiene",
+    "defensive-coding"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "dart:core declares ArgumentError.message as 'dynamic', not 'Object?' (cosmetic, same behavior). Separately, the proposed acceptance test ArgumentError.value(42, 'pin') sets message=null (3-arg form needed: e.g. ArgumentError.value(42,'pin',99)) so as literally written it would not reproduce the crash — the underlying defect claim is still valid, only the suggested regression test is imprecise."
+    ]
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-077",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-20",
+  "linearPriority": "Low"
+}

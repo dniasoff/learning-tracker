@@ -1,0 +1,48 @@
+{
+  "title": "Archive the stale 993-line root coding-standards.md superseded by docs/coding-standards.md",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8 / AG-2",
+  "area": "docs",
+  "evidence": [
+    {
+      "file": "coding-standards.md",
+      "line": 3,
+      "quote": "**Status:** CAST-IRON RULES - Violations block PRs"
+    },
+    {
+      "file": "coding-standards.md",
+      "line": 26,
+      "quote": "// REQUIRED - Always UTC\nfinal now = DateTime.now().toUtc();"
+    }
+  ],
+  "sites": 1,
+  "why": "Two documents claim to be the coding-standards authority. The root one (993 lines, older) actively contradicts the canonical docs/coding-standards.md — e.g. it REQUIRES `DateTime.now().toUtc()` while audit check 6 bans `DateTime.now()` outside core/time entirely. An agent that greps for coding-standards can land on the wrong file and follow dead rules; a doc that lies is worse than no doc.",
+  "recommendation": "Move root coding-standards.md to docs/_archive/ (or delete it) and leave nothing at the root but a pointer; sweep other root-level docs for the same staleness.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "root coding-standards.md gone or replaced by a one-line pointer to docs/coding-standards.md",
+    "doc-lint/audit grep asserting only one file named coding-standards.md exists outside _archive"
+  ],
+  "labels": [
+    "docs",
+    "hygiene",
+    "drift"
+  ],
+  "origin": "orchestrator-baseline",
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Evidence undersells it: README.md:117, docs/index.md:100 ('enforced coding rules'), and docs/developer-handbook.md:354 all live-link to the STALE root file as canonical — this isn't a dead orphan, it's the file agents following documented links actually land on."
+    ]
+  },
+  "sourceBatch": "orchestrator",
+  "chunk": "grp-134",
+  "normArea": "docs",
+  "id": "AUD-docs-04",
+  "linearPriority": "Medium"
+}

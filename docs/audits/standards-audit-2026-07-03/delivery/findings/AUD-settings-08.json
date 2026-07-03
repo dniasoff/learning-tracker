@@ -1,0 +1,52 @@
+{
+  "title": "Route ScopeSelectionScreen's per-value checkbox list through a lazy builder before wiring the screen into navigation",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "PF-2",
+  "area": "settings/presentation — ScopeSelectionScreen (currently unreachable/dead code)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+      "line": 201,
+      "quote": "return ListView("
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+      "line": 309,
+      "quote": "final values = _getDistinctValuesAtLevel(allItems, _selectedLevel!);\n    return values.map((value) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+      "line": 241,
+      "quote": "for (var level = 1; level < _maxLevels; level++)"
+    }
+  ],
+  "sites": 1,
+  "why": "`_buildLevelValueTiles` builds one CheckboxListTile per distinct raw value at the user-chosen hierarchy level via `.map(...).toList()` inside a bare `ListView(children:...)` — every value realized synchronously, no windowing. I verified against the bundled content assets: for CurriculumId.mishnaBerurah, the deepest level the screen offers (level 2/'Siman' — level 3/'Seif' is excluded as the leaf) has 697 distinct values; Bavli's 'Daf' level (level 3, also offered) has 176; several other curricula land in the 30-90 range. Picking one of these levels would build 176-697 CheckboxListTiles in a single frame. HOWEVER: ScopeSelectionScreen carries no `@RoutePage()` annotation, is not registered in app_router.dart, and a repo-wide grep of lib/ finds zero `ScopeSelectionScreen(`/`ScopeSelectionRoute` call sites outside its own file — it is currently dead code in production, reachable only from its own dedicated widget-test suite (test/features/settings/presentation/screens/scope_lifetime_l1_test.dart, ~900 lines). Its doc comment ('Push this screen from Settings or Onboarding') and the extensive, actively-maintained tests indicate finished-but-unwired feature code rather than abandoned code, so the defect is real and will hit real users the moment the missing navigation entry point is added — this is why it is filed now rather than ignored as dead code.",
+  "recommendation": "Delegate value selection to the already-lazy `HierarchyBrowser` (core/content/hierarchy_browser.dart, backed by ListView.builder) that `LifetimeCurriculumMarkingScreen` in this same file already reuses for the equivalent curriculum-hierarchy-picking problem, instead of hand-rolling `_buildLevelValueTiles`. If a bespoke checkbox list must be kept, swap the `.map().toList()` + `ListView(children:...)` for `ListView.builder(itemCount: values.length, itemBuilder: (_, i) => ...)`.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Rule-0/AG-6 companion: before this screen is wired into app_router.dart, a check confirms every non-generated screen file has at least one route/Navigator.push call site (flagging orphaned screens), and the PF-2 checker (once it exists) additionally flags the eager ListView( here.",
+    "Regression test: widget-test ScopeSelectionScreen(curriculumId: CurriculumId.mishnaBerurah), toggle off 'Track entire curriculum', select the 'Siman' level, and assert (a) tester.pumpAndSettle completes without timing out and (b) find.byType(CheckboxListTile) count at rest is bounded to roughly a screenful, not all 697 values."
+  ],
+  "labels": [
+    "performance",
+    "PF-2",
+    "dead-code",
+    "settings"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Recommendation says LifetimeCurriculumMarkingScreen is 'in this same file' and 'already reuses' HierarchyBrowser — it's actually in lifetime_marking_screen.dart (a different file) and reuses HierarchyBrowser only indirectly via HierarchySelectionPanel. Also states scope_lifetime_l1_test.dart is '~900 lines'; actual is 1499. Neither affects the core defect or reachability claim."
+    ]
+  },
+  "sourceBatch": "sup-pf2",
+  "normArea": "features/settings",
+  "id": "AUD-settings-08",
+  "linearPriority": "Medium"
+}

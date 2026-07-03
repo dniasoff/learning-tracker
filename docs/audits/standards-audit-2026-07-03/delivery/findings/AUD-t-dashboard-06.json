@@ -1,0 +1,62 @@
+{
+  "title": "dart_test.yaml: register the dashboard and i18n @Tags used by dashboard_todays_missions_heading_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 0 (checker/config completeness) / AG-1 tooling hygiene",
+  "area": "test config",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+      "line": 10,
+      "quote": "@Tags(['dashboard', 'i18n', 'overflow'])"
+    },
+    {
+      "file": "learning_tracker/dart_test.yaml",
+      "line": 168,
+      "quote": "overflow:\n  settings:"
+    },
+    {
+      "file": "learning_tracker/dart_test.yaml",
+      "line": 2,
+      "quote": "# Prevents \"unknown tag\" warnings when running `flutter test --tags`."
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart",
+      "line": 13,
+      "quote": "@Tags(['epic_28', 'story_i4'])"
+    }
+  ],
+  "sites": 4,
+  "why": "dart_test.yaml's tags: registry states its own purpose is to 'prevent \"unknown tag\" warnings when running flutter test --tags', and registers overflow: and settings:, but never dashboard: or i18n: anywhere in the file. Confirmed by execution: every run of this file prints 'Warning: Tags were used that weren't specified in dart_test.yaml. dashboard was used in the suite itself / i18n was used in the suite itself.' 10 other files also use the dashboard tag and 2 more use i18n, so every one of those runs repeats the same warning noise in local/CI output, burying real signal.",
+  "recommendation": "Add `dashboard:` and `i18n:` entries to dart_test.yaml's tags: block alongside the existing overflow:/settings: entries.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "dart_test.yaml declares dashboard: and i18n: tags.",
+    "`flutter test test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart` prints no 'Tags were used that weren't specified' warning."
+  ],
+  "labels": [
+    "testing",
+    "config",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p3",
+  "chunk": "grp-050",
+  "mergedFrom": [
+    "Register epic_28/story_i4 tags in dart_test.yaml so the tag registry stays a working typo guard"
+  ],
+  "coDiscoverers": [
+    "t1-feat-dashboard-p3",
+    "t1-story-epics-28plus"
+  ],
+  "normArea": "tests/dashboard",
+  "id": "AUD-t-dashboard-06",
+  "linearPriority": "Low"
+}

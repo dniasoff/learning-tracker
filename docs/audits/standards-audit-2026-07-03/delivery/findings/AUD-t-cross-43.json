@@ -1,0 +1,54 @@
+{
+  "title": "Share local-track-id resolution across mergers instead of re-deriving it per merger",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Evans (invariant re-derived, not enforced in one place) — needs full merger source read to confirm behavioral divergence",
+  "area": "core/sync/merge (surfaced by test/sync)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/tutored_mirror_projection_inputs_test.dart",
+      "line": 99,
+      "quote": "'stage_definitions with a remote track_id bind to the local mirror track',"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+      "line": 417,
+      "quote": "Future<int> _resolveLocalTrackId({"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/goal_merger.dart",
+      "line": 57,
+      "quote": "final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum("
+    }
+  ],
+  "sites": 3,
+  "why": "tutored_mirror_projection_inputs_test.dart (4 test cases) and study_day_config_sync_test.dart (2 more 'Bug 3' cases) together needed 6 separate test cases to pin the same 'remote track_id → local mirror track_id' remap across StageDefinitionMerger, GoalMerger, StudyDayConfigMerger and GamificationSettingsMerger. grep confirms goal_merger.dart:57, gamification_settings_merger.dart:124 and study_day_config_merger.dart:56 each call `trackDao.getTrackByProfileAndCurriculum` directly instead of routing through the one shared `DriftMergeStore._resolveLocalTrackId` helper that already exists for this exact purpose. study_day_config_sync_test.dart shows StudyDayConfigMerger SKIPPING a row when no local track exists, which looks like different fallback semantics than _resolveLocalTrackId's `local?.id ?? fallbackTrackId` (falls back to the stale remote id rather than skipping) — if that divergence is real, a future fix to one merger's skip/fallback rule will not propagate to the others. Confirming this needs reading goal_merger.dart, gamification_settings_merger.dart, study_day_config_merger.dart and stage_definition_merger.dart in full, which are outside this batch's file list.",
+  "recommendation": "Route every child-row merger's local-track resolution through DriftMergeStore._resolveLocalTrackId (or one shared helper), and add one test proving the fallback/skip behavior is identical across all mergers when no local track exists.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "goal_merger.dart, gamification_settings_merger.dart and study_day_config_merger.dart resolve the local track id through the same shared helper as drift_merge_store.dart's other call sites",
+    "a single test (or shared test helper) proves identical skip/fallback behavior across all child-row mergers when the local track is missing"
+  ],
+  "labels": [
+    "sync",
+    "merge",
+    "duplication",
+    "cross-file",
+    "needs-followup"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Raising confidence SUSPECTED→CONFIRMED and severity P3→P2 on new cited evidence: goals.dart:16 and stage_definitions.dart:24 both carry the same unguarded FK into curriculum_tracks; user_database.dart:176 confirms PRAGMA foreign_keys=ON; merge_router.dart:55 calls merger.merge with no try/catch; goal_dao.dart's upsertGoalByTrack does an unguarded insert. gamification_settings_merger.dart:118-121's own comment ('tutored_pull_error / tutored_listener_merge_error') proves this exact FK-crash class was already hit and fixed for ONE merger but not for Goal/StageDefinition, which still route through the unguarded fallback. This is a real, documented-elsewhere bug class with unaddressed exposure, not just DRY debt — concrete cost, P2 is warranted (not P1: reachability depends on pull/merge cross-channel ordering guarantees I could not fully verify, so not claiming a live production defect)."
+    ]
+  },
+  "sourceBatch": "t1-feat-sync-p3",
+  "chunk": "grp-109",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-43",
+  "linearPriority": "Medium"
+}

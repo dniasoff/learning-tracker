@@ -1,0 +1,46 @@
+{
+  "title": "lifecycle_observer_test.dart's 'hidden and detached' test never exercises AppLifecycleState.detached",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 / naming drift",
+  "area": "test/sync/lifecycle_observer_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/lifecycle_observer_test.dart",
+      "line": 136,
+      "quote": "test('hidden and detached states also flag as backgrounded', () async {"
+    },
+    {
+      "file": "learning_tracker/test/sync/lifecycle_observer_test.dart",
+      "line": 149,
+      "quote": "await observer.didChangeAppLifecycleState(AppLifecycleState.hidden);\n      await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);"
+    }
+  ],
+  "sites": 1,
+  "why": "The test name promises 'detached' is covered alongside 'hidden'; the body only drives hidden → resumed. No test in this file drives detached → resumed, so a regression that special-cased hidden but mishandled detached in LifecycleObserver's background-state classification would pass this suite while the title implies otherwise — a false sense of coverage for whoever next reads this file to decide if a test is needed.",
+  "recommendation": "Either add a second assertion block for AppLifecycleState.detached → resumed (same 5-line pattern as the hidden case), or rename the test to 'hidden state also flags as backgrounded' to stop overclaiming.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "the test body exercises AppLifecycleState.detached, or the test name no longer mentions detached"
+  ],
+  "labels": [
+    "hygiene",
+    "naming-drift",
+    "test-coverage"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Rule citation 'TQ-8' is a stretch — TQ-8 governs bug-fix regression tests, not test-name accuracy; no coding-standards.md rule directly covers misleading test titles. Finding's own 'naming drift' tag already hedges this. Fact pattern itself is fully verified."
+    ]
+  },
+  "sourceBatch": "t1-feat-sync-p2",
+  "chunk": "grp-109",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-100",
+  "linearPriority": "Low"
+}

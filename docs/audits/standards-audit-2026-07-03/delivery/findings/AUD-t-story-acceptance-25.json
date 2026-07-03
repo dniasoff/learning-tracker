@@ -1,0 +1,54 @@
+{
+  "title": "Align Story 21.12 AC3 and Story 21.10 assertions in epic_21_multi_account_test.dart with the UI-level claims their names/comments make",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (weak assertion narrower than the AC title)",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+      "line": 590,
+      "quote": "test('AC3: cloud-born account does not show upgrade option', () {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+      "line": 600,
+      "quote": "expect(cloudState.isLocalBorn, isFalse);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+      "line": 508,
+      "quote": "expect(accounts.isNotEmpty, isTrue); // → picker"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+      "line": 513,
+      "quote": "expect(accounts.isEmpty, isTrue); // → welcome"
+    }
+  ],
+  "sites": 2,
+  "why": "Story 21.12's AC3 test name promises 'does not show upgrade option' (a UI/screen claim) but only asserts `cloudState.isLocalBorn == false`, which is a one-line freezed getter (`tier == Tier.localBorn` in auth_state.dart:77) -- it never touches whatever widget actually gates the upgrade button, so a regression in that gating logic would not be caught here despite the AC's name. Story 21.10 similarly comments '// → picker' / '// → welcome' next to plain registry-count assertions without ever exercising the routing decision. Unlike the DEC-34 group a few hundred lines below in the same file, which explicitly documents 'the UI enforcement is covered by code review of account_picker_screen.dart:_activateLocalAccountFromLocalData', neither of these tests says where -- or whether -- the claimed UI behavior is actually verified elsewhere.",
+  "recommendation": "Either rename the tests to describe what they actually check (data-layer state, not UI), add the missing UI/routing assertion, or add a DEC-34-style comment pointing to where the UI-level behavior is verified.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Story 21.12 AC3's test name matches its assertion scope, or it exercises the actual upgrade-option gating logic",
+    "Story 21.10's picker/welcome comments are backed by an assertion or a pointer comment naming where routing is verified"
+  ],
+  "labels": [
+    "TQ-8",
+    "weak-assertion"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-21-24",
+  "chunk": "grp-141",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-25",
+  "linearPriority": "Low"
+}

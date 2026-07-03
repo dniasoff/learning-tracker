@@ -1,0 +1,52 @@
+{
+  "title": "Check TutorGrantResult before treating revoke/resign/rescind as successful in manage_tutors_screen.dart and manage_grants_screen.dart",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2 / EH-6 (exhaustive Result handling)",
+  "area": "features/tutoring/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+      "line": 228,
+      "quote": "await ref.read(resignTutorGrantUseCaseProvider).call(grant: widget.grant);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+      "line": 368,
+      "quote": "await ref.read(revokeTutorGrantUseCaseProvider).call(grant: widget.grant);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+      "line": 427,
+      "quote": ".read(rescindTutorInviteUseCaseProvider)\n          .call(grant: widget.grant);"
+    }
+  ],
+  "sites": 3,
+  "why": "All three handlers await the use case's Future<TutorGrantResult> and discard the return value, then unconditionally run the success branch (wipe local mirror, invalidate the grant list, send a lifecycle email) inside `if (mounted) { ... }`, with only a generic `catch` around thrown exceptions. FirestoreTutorGrantRepository.revokeGrant/resignGrant/rescindInvite never rethrow FirebaseFunctionsException — they always return TutorGrantFailure. So when the Cloud Function genuinely rejects the call (permission-denied, already-revoked race, offline), the UI still shows success, wipes the tutor's local mirror, and — worst case for _revoke — emails the tutor 'your access was revoked' while the grant is still active server-side, giving the parent false assurance that access was cut off. The sibling screens (invite/accept/decline) all correctly `switch` on the same result type, proving the pattern is known but was missed here.",
+  "recommendation": "Assign the awaited call to a `result` variable and exhaustively switch on TutorGrantSuccess/TutorGrantFailure/TutorGrantPreconditionError exactly as invite_tutor_screen.dart/accept_invite_screen.dart/decline_invite_screen.dart already do; only run the mirror-wipe/invalidate/notify side effects on Success, and surface a localized error (not e.toString()) otherwise.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Add a widget test in manage_tutors_screen_l1_test.dart that stubs revokeTutorGrantUseCaseProvider/rescindTutorInviteUseCaseProvider to return TutorGrantFailure and asserts wipeMirrorForGrant/notifyTutorOfRevocation/ref.invalidate are NOT invoked and an error is shown.",
+    "Add the equivalent test in manage_grants_screen_l1_test.dart for resignTutorGrantUseCaseProvider returning TutorGrantFailure.",
+    "flutter analyze clean; existing Success-path tests continue to pass."
+  ],
+  "labels": [
+    "error-handling",
+    "correctness",
+    "tutoring",
+    "security-adjacent"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "high-096",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-01",
+  "linearPriority": "High"
+}

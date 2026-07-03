@@ -1,0 +1,45 @@
+{
+  "title": "Localize TransactionalEmail subject/body strings before wiring a real email provider",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2 — no hardcoded user-facing strings; EN/HE ARB parity",
+  "area": "core/email (i18n)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/email/transactional_email_service.dart",
+      "line": 44,
+      "quote": "/// Subject line (in English; localisation deferred to the email template)."
+    },
+    {
+      "file": "learning_tracker/lib/core/email/transactional_email_service.dart",
+      "line": 68,
+      "quote": "'$parentName invited you to tutor $childName on Learning Tracker';"
+    }
+  ],
+  "sites": 1,
+  "why": "All five email subject/body getters are hardcoded English with no AppLocalizations/ARB involvement, in a bilingual EN/HE app whose 1421-key ARB parity check would not catch this since these are plain Dart string literals, not l10n keys. Impact is currently nil — the only bound implementation is LoggingTransactionalEmailService, so no real recipient has ever seen this text — but the moment a real provider (SendGrid/Firebase Extension) is wired per the file's own WAKE-UP banner, Hebrew-speaking tutors/parents will receive tutor-invite/accept/decline/revoke/resign notifications only in English.",
+  "recommendation": "Route subject/body through locale-aware templates (e.g. Flutter's generated lookupAppLocalizations(locale) keyed off the recipient's stored locale, not the sender's device) before cutting over to a real provider; gate the provider cutover on this in the same Linear item that tracks provisioning.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A Linear DNI-#### ticket exists gating real-email-provider cutover on localized templates",
+    "Once implemented, HE-locale recipients receive Hebrew subject/body; EN/HE parity is checkable the same way ARB keys are"
+  ],
+  "labels": [
+    "i18n",
+    "AX-2",
+    "deferred-scope"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-services",
+  "chunk": "grp-024",
+  "normArea": "core/email",
+  "id": "AUD-core-email-02",
+  "linearPriority": "Low"
+}

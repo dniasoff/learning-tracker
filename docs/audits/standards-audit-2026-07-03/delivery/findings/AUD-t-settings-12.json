@@ -1,0 +1,59 @@
+{
+  "title": "Use DateTimeFactory.nowUtc() instead of raw DateTime.now() in scope_lifetime_l1_test.dart and backup_sync_error_l10n_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (Pending for test/)",
+  "area": "features/settings (test fixtures)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+      "line": 419,
+      "quote": "createdAt: DateTime.now().toUtc(),"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+      "line": 430,
+      "quote": "createdAt: DateTime.now().toUtc(),"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+      "line": 446,
+      "quote": "stateChangedAt: DateTime.now().toUtc(),"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart",
+      "line": 121,
+      "quote": "failedAt: DateTime.now().toUtc(),"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart",
+      "line": 157,
+      "quote": "failedAt: DateTime.now().toUtc(),"
+    }
+  ],
+  "sites": 8,
+  "why": "scope_lifetime_l1_test.dart (6 occurrences: lines 419,420,430,431,446,447) and backup_sync_error_l10n_test.dart (2: lines 121,157) seed DB rows / SyncStatus values with raw `DateTime.now().toUtc()`, even though the sibling file settings_screen_r5_regression_test.dart's `_dbWithProfile` in the same feature directory already uses the project's `DateTimeFactory.nowUtc()` for the identical FK-seeding purpose. TQ-6 is Enforced for lib/ specifically because wall-clock reads are a live nondeterminism source under parallel/randomized test ordering; extending that discipline to test/ is explicitly named as the pending next step, and this batch shows the established in-feature alternative being ignored, not just an isolated slip.",
+  "recommendation": "Replace the 8 call sites with DateTimeFactory.nowUtc(), matching settings_screen_r5_regression_test.dart's convention.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No DateTime.now() call remains in scope_lifetime_l1_test.dart or backup_sync_error_l10n_test.dart; both use DateTimeFactory.nowUtc() or a fixed DateTime.utc(...) literal."
+  ],
+  "labels": [
+    "TQ-6",
+    "hermeticity",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-103",
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-12",
+  "linearPriority": "Low"
+}

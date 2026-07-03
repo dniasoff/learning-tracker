@@ -1,0 +1,44 @@
+{
+  "title": "Mark hebrew-terms.md §11 item 5 as fixed — the make audit grep already targets the right symbol",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "doc-accuracy",
+  "area": "docs/hebrew-terms.md",
+  "evidence": [
+    {
+      "file": "docs/hebrew-terms.md",
+      "line": 151,
+      "quote": "The `make audit` layering grep targets a symbol name (`hebrewTermsScriptProvider`) that does not exist..."
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 322,
+      "quote": "echo \"7/15 — No useHebrewTermsProvider read outside core/labels...\"; \\"
+    }
+  ],
+  "sites": 1,
+  "why": "learning_tracker/Makefile check 7 already greps for `useHebrewTermsProvider` (the real provider name), not `hebrewTermsScriptProvider` — which has zero occurrences anywhere in the repo. Every sibling item in this same numbered list (3, 4, 6, 7, 8) that got fixed carries a '— FIXED (A4)' annotation; item 5 is missing one, so the doc still presents a working control as broken. A reader could waste time re-\"fixing\" a grep that already works, or distrust a control that is functioning.",
+  "recommendation": "Add '— FIXED' to hebrew-terms.md §11 item 5, or remove it if the underlying grep-correction was folded into an earlier commit.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "hebrew-terms.md §11 item 5 either is removed or carries a FIXED annotation consistent with its siblings"
+  ],
+  "labels": [
+    "docs",
+    "drift",
+    "hebrew-terms"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p1",
+  "chunk": "grp-166",
+  "normArea": "docs",
+  "id": "AUD-docs-32",
+  "linearPriority": "Low"
+}

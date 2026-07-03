@@ -1,0 +1,38 @@
+{
+  "title": "Give SignInActions' TapGestureRecognizer a disposal owner instead of rebuilding it every build()",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Flutter widget lifecycle hygiene",
+  "area": "features/account/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/presentation/widgets/sign_in_actions.dart",
+      "line": 105,
+      "quote": "recognizer: TapGestureRecognizer()\n                    ..onTap = () {"
+    }
+  ],
+  "sites": 1,
+  "why": "SignInActions is a StatelessWidget, so every build() (e.g. each time isLoading flips) allocates a brand-new TapGestureRecognizer that nothing ever calls .dispose() on. The framework does not manage recognizer lifecycle automatically; Flutter's own guidance is to create such recognizers once in a State and dispose them in State.dispose(). The same pattern also exists in signup_screen.dart:825, so it's a small but repeated hygiene gap, not a one-off typo.",
+  "recommendation": "Hoist the 'Register' tap handling into a small stateful owner (or the already-stateful parent SignInScreen) that creates the TapGestureRecognizer once and disposes it in dispose().",
+  "effort": "S",
+  "acceptance_criteria": [
+    "the TapGestureRecognizer used for the Register span is created once and disposed via a State.dispose() rather than reallocated on every SignInActions.build()"
+  ],
+  "labels": [
+    "hygiene",
+    "flutter-lifecycle"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p2",
+  "chunk": "grp-039",
+  "normArea": "features/account",
+  "id": "AUD-account-21",
+  "linearPriority": "Low"
+}

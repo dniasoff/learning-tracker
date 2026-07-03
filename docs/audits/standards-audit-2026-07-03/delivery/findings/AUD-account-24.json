@@ -1,0 +1,40 @@
+{
+  "title": "Stop interpolating raw exception text into the sign-up failure l10n message",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "custom_lint no_e_to_string_in_ui (currently non-enforcing)",
+  "area": "features/account/onboarding/presentation/screens/signup_screen.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+      "line": 291,
+      "quote": "_showError(AppLocalizations.of(context)!.signUpFailed(e.toString()));"
+    }
+  ],
+  "sites": 1,
+  "why": "This is the exact pattern the repo's (currently broken/non-enforcing per baseline) custom_lint rule `no_e_to_string_in_ui` targets: a raw exception's .toString() is spliced into a user-facing localized string on the local/offline sign-up failure path, so the user can see a technical exception dump instead of translated, actionable copy. It is the only such site in this batch — the other three e.toString() uses in the batch are internal to _extractFirebaseCode's regex parsing and never reach the UI directly.",
+  "recommendation": "Map the failure to a stable error code (mirroring the existing _mapAuthError switch) and a dedicated generic ARB message instead of interpolating e.toString().",
+  "effort": "S",
+  "acceptance_criteria": [
+    "signUpFailed(...) or its replacement no longer receives e.toString()",
+    "Once custom_lint is repaired (tracked separately), no_e_to_string_in_ui passes clean on this file"
+  ],
+  "labels": [
+    "custom-lint",
+    "no_e_to_string_in_ui",
+    "i18n"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p1",
+  "chunk": "grp-037",
+  "normArea": "features/account",
+  "id": "AUD-account-24",
+  "linearPriority": "Low"
+}

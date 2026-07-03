@@ -1,0 +1,45 @@
+{
+  "title": "Guard SkippedTasks.build()'s fire-and-forget prefs load with ref.mounted",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-2 / SM-4",
+  "area": "scheduler/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 184,
+      "quote": "  Set<String> build() {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 185,
+      "quote": "    unawaited(_loadFromPrefs());"
+    }
+  ],
+  "sites": 1,
+  "why": "build() kicks off an un-awaited async side effect (SM-2 forbids side effects in build). _loadFromPrefs() then does `await SharedPreferences.getInstance()` and further awaits before writing `state = ...` twice, with no `ref.mounted` check (SM-4) anywhere in the method. If the provider is disposed (e.g. the user navigates off the Scheduler screen quickly) before the load resolves, the post-await `state = ...` throws Riverpod 3's UnmountedRefException — which the surrounding try/catch swallows and logs via `AppLogger.instance.error(event: 'Failed to load skipped tasks', ...)`, i.e. a routine dispose race gets misreported as a genuine load failure in production logs/Crashlytics breadcrumbs, obscuring real failures of the same code path.",
+  "recommendation": "Check `ref.mounted` immediately before each `state = ...` assignment in _loadFromPrefs, and return early (without logging) when unmounted, matching Riverpod 3's documented SM-4 pattern used elsewhere in the codebase.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_loadFromPrefs checks ref.mounted before both `state = refs.toSet()` and `state = {}`.",
+    "A widget test that disposes the ProviderContainer/screen mid-load does not produce an AppLogger error log."
+  ],
+  "labels": [
+    "SM-2",
+    "SM-4",
+    "riverpod"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-093",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-10",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,54 @@
+{
+  "title": "De-duplicate the InvalidTrackOperationException.toString and W3.22 deactivate smoke tests across 3 track_dao test files",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1 (Fowler duplication)",
+  "area": "test/core/database/daos",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/track_dao_deactivate_test.dart",
+      "line": 45,
+      "quote": "test('toString includes the message', () {\n      const ex = InvalidTrackOperationException('test error message');"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/track_dao_delete_test.dart",
+      "line": 320,
+      "quote": "test('InvalidTrackOperationException.toString contains message', () {\n      const e = InvalidTrackOperationException('test message');"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/track_dao_test.dart",
+      "line": 48,
+      "quote": "test('deactivateTrack retires (no longer throws) — W3.22', () async {\n      // W3.22: deactivateTrack now delegates to retireTrack; it no longer"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/track_dao_delete_test.dart",
+      "line": 309,
+      "quote": "test('retires (no longer throws) — W3.22', () async {\n      // W3.22: deactivateTrack now delegates to retireTrack instead of"
+    }
+  ],
+  "sites": 4,
+  "why": "Two independent tests are copy-pasted verbatim (same logic, same comments, trivially different literals) into separate files: InvalidTrackOperationException.toString is tested identically in track_dao_deactivate_test.dart and track_dao_delete_test.dart, and the activate-then-deactivate W3.22 smoke test is tested identically in track_dao_delete_test.dart and track_dao_test.dart. Each pair evidently came from independent 'add missing coverage' passes that didn't check what already existed. No functional risk today, but the exception-message format or the W3.22 behavior now needs updating in two places to stay in sync, and it inflates the very AG-3 line counts flagged separately.",
+  "recommendation": "Keep one canonical copy of each test (e.g. in track_dao_test.dart for the W3.22 case, track_dao_deactivate_test.dart for the exception case) and delete the other copy.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "InvalidTrackOperationException.toString is tested in exactly one file in this directory.",
+    "The activate-then-deactivateTrack W3.22 smoke test is tested in exactly one file in this directory."
+  ],
+  "labels": [
+    "test-quality",
+    "duplication"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-daos-p3",
+  "chunk": "grp-010",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-59",
+  "linearPriority": "Low"
+}

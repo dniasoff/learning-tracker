@@ -1,0 +1,44 @@
+{
+  "title": "Remove the unused mocktail import and registerFallbackValue call from epic_18_track_overhaul_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 24,
+      "quote": "import 'package:mocktail/mocktail.dart';"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 46,
+      "quote": "registerFallbackValue(CurriculumId.mishnayos);"
+    }
+  ],
+  "sites": 1,
+  "why": "No Mock/when/verify call appears anywhere else in the 689-line file — every collaborator is a real Drift DB or real service. The fallback-value registration is vestigial (likely copy-pasted from a mocked-test template) and misleads a reader into thinking mocking happens in this file.",
+  "recommendation": "Delete the mocktail import and the setUpAll/registerFallbackValue block.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "mocktail is no longer imported in epic_18_track_overhaul_test.dart",
+    "dart analyze reports no regression"
+  ],
+  "labels": [
+    "hygiene",
+    "dead-code"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-17-20",
+  "chunk": "grp-139",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-44",
+  "linearPriority": "Low"
+}

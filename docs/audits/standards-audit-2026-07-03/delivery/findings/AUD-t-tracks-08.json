@@ -1,0 +1,44 @@
+{
+  "title": "Override localDayClockProvider in track_detail_screen_test.dart to remove its wall-clock dependency",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "features/tracks/setup/presentation/screens (track_detail_screen_test.dart)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart",
+      "line": 94,
+      "quote": "userDatabaseProvider.overrideWith((ref) => db),\n    // Goal writes go through goalRepositoryProvider,"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+      "line": 301,
+      "quote": "localDayClockProvider.overrideWithValue(\n        FakeLocalDayClock(DateTime.utc(2026, 5, 30)),"
+    }
+  ],
+  "sites": 1,
+  "why": "TrackDetailScreen reads localDayClockProvider via _trackPaceCalcProvider (default = SystemLocalDayClock, real DateTime.now()). track_detail_screen_test.dart's _overridesFor list never overrides it, while every sibling file that mounts the same screen in this batch (track_detail_goal_stale_test.dart, edit_track_and_detail_l1_test.dart) does, with FakeLocalDayClock pinned to 2026-05-30. No current assertion in track_detail_screen_test.dart depends on paceCalc's output, so this isn't flaky today, but it's one inconsistent override away from date-dependent flakiness the moment someone adds an assertion that touches TrackInfoCard's pace-derived text (days-remaining, projected finish), and it's inconsistent with the established pattern in the same directory.",
+  "recommendation": "Add localDayClockProvider.overrideWithValue(FakeLocalDayClock(DateTime.utc(2026, 5, 30))) (or another fixed date) to _overridesFor, matching the sibling files.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "track_detail_screen_test.dart's _overridesFor includes a localDayClockProvider override with a fixed date"
+  ],
+  "labels": [
+    "hermeticity",
+    "wall-clock",
+    "tracks-setup"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p4",
+  "chunk": "grp-120",
+  "normArea": "tests/tracks",
+  "id": "AUD-t-tracks-08",
+  "linearPriority": "Low"
+}

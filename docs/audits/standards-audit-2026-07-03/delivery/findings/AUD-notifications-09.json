@@ -1,0 +1,45 @@
+{
+  "title": "Wrap SacredWindowEntries clear+insert in one transaction (DB-2)",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "DB-2",
+  "area": "features/notifications/data/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/data/services/sacred_window_repository.dart",
+      "line": 50,
+      "quote": "_dao?.clearAll();"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/data/services/sacred_window_repository.dart",
+      "line": 167,
+      "quote": "dao.clearAll().then((_) => dao.insertAll(companions)).ignore();"
+    }
+  ],
+  "sites": 2,
+  "why": "The table is briefly empty between clearAll() completing and insertAll() starting; neither call is awaited by any caller and neither is wrapped in a transaction. invalidate()'s own separate unawaited clearAll() (line 50) can also interleave with _persistToDb()'s clear-then-insert pair (line 167) in either order. The class's own doc says this cache exists so 'background notification-fire-time checks can read them on cold-start without the Flutter engine' -- a background read landing in the empty gap, or after invalidate() wins a race against a slower insertAll(), sees no Sacred Time windows and could fail to suppress a notification during Shabbos/Yom Tov, the entire point of DNI-367. Confirming the full consequence requires reading the background notification-fire-time isolate handler, which is outside this batch.",
+  "recommendation": "Wrap clear+insert in one db.transaction(...) and await it from both invalidate() and _persistToDb(), or add an explicit generation-counter guard so a stale clear can't stomp a newer insert.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A DAO-level test that races invalidate() against a concurrent _persistToDb() cycle never observes SacredWindowEntries transition through an empty state once a non-empty write has committed."
+  ],
+  "labels": [
+    "drift",
+    "db-2",
+    "notifications",
+    "race-condition"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-063",
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-09",
+  "linearPriority": "Medium"
+}

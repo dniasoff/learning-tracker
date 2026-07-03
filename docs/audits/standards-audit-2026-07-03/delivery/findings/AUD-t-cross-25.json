@@ -1,0 +1,50 @@
+{
+  "title": "Fix migration_test.dart and hebrew_migration_test.dart to exercise UserDatabase's real onUpgrade",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-4",
+  "area": "learning_tracker/test/core/database",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/migration_test.dart",
+      "line": 8,
+      "quote": "group('Schema migration v15 to v16', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/hebrew_migration_test.dart",
+      "line": 8,
+      "quote": "group('Schema migration v23→v24: Hebrew stage names', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/hebrew_migration_test.dart",
+      "line": 284,
+      "quote": "Future<void> _runHebrewMigration(UserDatabase db) async {"
+    }
+  ],
+  "sites": 2,
+  "why": "Neither test actually drives UserDatabase.migration. migration_test.dart's group is titled 'v15 to v16' but user_database.dart's onUpgrade has no `if (from < 16)` block (only from<25 onward exists) — the test just creates a fresh onCreate'd v32 database via createTestDatabase() and asserts current column defaults, never running an upgrade. hebrew_migration_test.dart is worse: it hand-copies the English-to-Hebrew stage-name UPDATE statements into a local _runHebrewMigration helper and calls that — there is no `if (from < 24)` block in onUpgrade for it to call instead, so the helper is entirely disconnected from production migration code. Both give the false impression that UserDatabase's historical migrations are regression-tested; neither would catch a real regression, and neither caught the gap in finding 1.",
+  "recommendation": "Either rebuild these as genuine migration tests using Drift's SchemaVerifier (open an old-schema fixture DB, call verifier.migrateAndValidate(db, 32), assert data survives) once drift_schemas/ exists per DB-4, or rename/rescope them honestly as current-schema behavior tests and delete the misleading version-number titles and the hand-copied SQL helper.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Either the test constructs a real old-schema Drift database and runs it through UserDatabase's actual MigrationStrategy, or the file/group name no longer claims to test a migration version that doesn't exist in onUpgrade.",
+    "A red-first check: breaking the Hebrew-name mapping in production code (if/when it's reintroduced) fails this test; today nothing in production feeds it."
+  ],
+  "labels": [
+    "DB-4",
+    "TQ-8",
+    "test-integrity"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-root-p1",
+  "chunk": "grp-011",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-25",
+  "linearPriority": "Medium"
+}

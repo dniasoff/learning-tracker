@@ -1,0 +1,44 @@
+{
+  "title": "Correct cf_tutor_completions.test.mjs's header comment to stop claiming tutorBulkPriorCompletions coverage",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "test hygiene",
+  "area": "functions/test",
+  "evidence": [
+    {
+      "file": "learning_tracker/functions/test/cf_tutor_completions.test.mjs",
+      "line": 1,
+      "quote": "// CF tests — tutor completion mutations: tutorResetCompletion,\n// tutorBulkPriorCompletions. See _cf_helpers.mjs for the harness."
+    },
+    {
+      "file": "learning_tracker/functions/test/cf_tutor_settings_profile.test.mjs",
+      "line": 321,
+      "quote": "describe('tutorBulkPriorCompletions', () => {"
+    }
+  ],
+  "sites": 1,
+  "why": "A maintainer reading cf_tutor_completions.test.mjs to check or extend tutorBulkPriorCompletions coverage would find nothing there and might conclude it's untested (or add a duplicate suite) -- the real coverage lives in cf_tutor_settings_profile.test.mjs, a file whose name doesn't mention completions at all.",
+  "recommendation": "Move the tutorBulkPriorCompletions describe block into cf_tutor_completions.test.mjs, or fix the header comments in both files to point to the actual location.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Header comments in both files accurately state where tutorBulkPriorCompletions is tested."
+  ],
+  "labels": [
+    "test-quality",
+    "hygiene",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "chunk": "grp-158",
+  "normArea": "firebase",
+  "id": "AUD-firebase-12",
+  "linearPriority": "Low"
+}

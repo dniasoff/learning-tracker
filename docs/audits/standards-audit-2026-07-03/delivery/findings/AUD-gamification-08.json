@@ -1,0 +1,46 @@
+{
+  "title": "Route child_redemption_screen.dart and parent_pending_redemptions_screen.dart error states through AppLocalizations instead of raw e.toString()",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5 / AX-2 (no raw exception reaches presentation; everything user-facing via AppLocalizations/ARB) -- matches the currently-non-functional custom_lint rule no_e_to_string_in_ui",
+  "area": "features/gamification/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+      "line": 107,
+      "quote": "error: (e, _) => Center(child: Text(e.toString())),"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart",
+      "line": 84,
+      "quote": "error: (e, _) => Center(child: Text(e.toString())),"
+    }
+  ],
+  "sites": 2,
+  "why": "Both screens render the raw exception's toString() as the entire error-state UI, completely bypassing localization -- in an EN/Hebrew app, a Hebrew-locale user sees untranslated (and potentially technical/internal) English text if the balance or pending-redemptions stream errors. This is not a missing capability: the very same feature already has a sanctioned pattern for this (point_config_screen.dart:222,267 use `AppLocalizations.of(context)!.errorGeneric(e.toString())`, and gamification_screen.dart uses `l10n.errorLoadingCalendar` for its own error states) -- these two sites simply don't use it, an inconsistency within one feature slice.",
+  "recommendation": "Replace `Text(e.toString())` with `Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))` (or a more specific localized string) in both files, matching the pattern already used elsewhere in the same feature.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Neither file renders a bare e.toString() as UI text; both route through an AppLocalizations-resolved string",
+    "A widget test pumps each screen in an error AsyncValue state under Locale('he') and asserts the rendered text is not raw English exception text"
+  ],
+  "labels": [
+    "EH-5",
+    "AX-2",
+    "i18n",
+    "hebrew"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-051",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-08",
+  "linearPriority": "Medium"
+}

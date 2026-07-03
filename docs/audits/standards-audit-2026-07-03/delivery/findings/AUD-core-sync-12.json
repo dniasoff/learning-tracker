@@ -1,0 +1,58 @@
+{
+  "title": "Wire onError (and a recovery-pull path) into TutoredListenerSupervisor's inner ListenerSupervisor",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 / observability parity",
+  "area": "core/sync (tutored)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/tutored_listener_supervisor.dart",
+      "line": 97,
+      "quote": "_supervisor = ListenerSupervisor(\n      source: source,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/tutored_listener_supervisor.dart",
+      "line": 99,
+      "quote": "onEvent: (channel, payload) => _onEvent(localProfileId, channel, payload),\n    );"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 478,
+      "quote": "onEvent: _onListenerEvent,\n      onError: _onListenerError,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/listener_supervisor.dart",
+      "line": 202,
+      "quote": "onError: (Object error, StackTrace stackTrace) {\n          _onError?.call(channel, error, stackTrace);"
+    }
+  ],
+  "sites": 1,
+  "why": "TutoredListenerSupervisor.attach() builds its ListenerSupervisor with only `source` and `onEvent` -- no `onError`, no `recoveryPullTriggers`. Inside ListenerSupervisor.start(), a stream error calls `_onError?.call(...)`, which is a silent no-op when `_onError` is null. Firestore terminates a `.snapshots()` stream on error (e.g. permission-denied when a parent revokes the grant while the tutor's 15 tutored channels are live, or any transient stream fault) -- so that one channel goes permanently dark for the rest of the session, with zero AppLogger entry, zero Crashlytics record, and no resubscription, while sibling channels keep working. The parallel own-profile path in sync_orchestrator.dart wires `onError: _onListenerError` (logs, forwards to Crashlytics, fires analytics) and `recoveryPullTriggers` (recovers from at-limit snapshots) -- the tutored path has neither, so it is both less observable and less self-healing than the path it was copied from.",
+  "recommendation": "Pass `onError` (log via AppLogger at minimum, consider triggering TutoredPullService.pull() on permission-denied) and `recoveryPullTriggers` into the ListenerSupervisor built in TutoredListenerSupervisor.attach(), mirroring SyncOrchestratorImpl.start().",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Unit test: a ListenerSource stub that emits a stream error during an attached tutored session asserts the error reaches a logger/callback, not silently dropped.",
+    "TutoredListenerSupervisor.attach() passes a non-null onError to ListenerSupervisor(...)."
+  ],
+  "labels": [
+    "EH-3",
+    "sync",
+    "tutored",
+    "observability"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Finding cites tutored_listener_supervisor.dart:97 for the 'source: source' line; actual file has '_supervisor = ListenerSupervisor(' at line 97 and 'source: source,' at line 98 -- one-line offset, immaterial to the claim."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-root-p1",
+  "chunk": "high-030",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-12",
+  "linearPriority": "High"
+}

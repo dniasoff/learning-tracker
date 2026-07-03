@@ -1,0 +1,83 @@
+{
+  "title": "Scope firestore.rules text-matching assertions to their collection block and check deny-all ordering in epic_24_stop_the_bleeding_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (weak assertion vs SR-1..3 rule content)",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+      "line": 52,
+      "quote": "expect(rules, contains('points >= 0'));"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+      "line": 57,
+      "quote": "expect(rules, contains('completed_at <= request.time'));"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+      "line": 172,
+      "quote": "// The deny-all rule must come before any collection-specific rules."
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+      "line": 173,
+      "quote": "final denyPos = rules.indexOf('allow read, write: if false');"
+    },
+    {
+      "file": "learning_tracker/test/core/logging/logger_test.dart",
+      "line": 53,
+      "quote": "test('sets FlutterError.onError handler', () {\n      AppLogger.setupFlutterErrorHandlers();"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+      "line": 256,
+      "quote": "'AC2: recordFlutterFatalError is called for Flutter errors',\n        () async {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+      "line": 262,
+      "quote": "await service.recordFlutterFatalError(details);\n          expect(service.flutterErrors, hasLength(1));"
+    },
+    {
+      "file": "learning_tracker/lib/app/bootstrap/crashlytics_bootstrap.dart",
+      "line": 11,
+      "quote": "CrashlyticsService bootstrapCrashlyticsHandlers({\n  required CrashlyticsService crashlytics,"
+    }
+  ],
+  "sites": 8,
+  "why": "'allows create' and 'enforces completed_at' assert against the whole `rules` string instead of the `_extractBlock(rules, 'completions/{completionId}')` result that the very next test in the same group ('denies update on completions') correctly uses. Nothing stops the points-bound or timestamp-clamp text from being removed from the completions block and coincidentally still matching elsewhere in the file (e.g. another append-only ledger) while this test stays green -- points_ledger and streak_events currently have no such bound at all, so a future accidental swap would go undetected. Separately, the deny-all test's own comment states the rule 'must come before any collection-specific rules' but the assertion only checks `denyPos > -1` (string exists somewhere) -- it never compares denyPos to any collection match's position, so reordering the deny-all rule after a permissive collection rule would not fail this test despite the comment's explicit claim.",
+  "recommendation": "Change the two unscoped assertions to use `_extractBlock(rules, 'completions/{completionId}')` like the sibling test three lines below; change the deny-all test to assert `denyPos < rules.indexOf('match /completions')` (or the first collection match position) instead of just `> -1`.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The two completions assertions call _extractBlock(rules, 'completions/{completionId}') the same way the 'denies update' test does",
+    "The deny-all test fails if the deny-all rule is moved after a collection-specific match block"
+  ],
+  "labels": [
+    "TQ-8",
+    "weak-assertion",
+    "firestore-rules",
+    "security"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-21-24",
+  "chunk": "grp-140",
+  "mergedFrom": [
+    "Replace logger_test.dart's setupFlutterErrorHandlers tests and epic_24 AC2 tests with a real test of bootstrapCrashlyticsHandlers"
+  ],
+  "coDiscoverers": [
+    "sup-eh1-bootstrap",
+    "t1-story-epics-21-24"
+  ],
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-20",
+  "linearPriority": "Medium"
+}

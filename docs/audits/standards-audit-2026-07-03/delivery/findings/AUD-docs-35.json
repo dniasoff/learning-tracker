@@ -1,0 +1,39 @@
+{
+  "title": "Remove test-options.md's reference to tool/device_e2e/night_runner.py — the file does not exist in the repo",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs (test-options.md) vs tool/device_e2e",
+  "evidence": [
+    {
+      "file": "docs/test-options.md",
+      "line": 129,
+      "quote": "- `night_runner.py` — continuous soak loop; self-cleans each iteration\n    (deletes its test account/data/token)."
+    }
+  ],
+  "sites": 1,
+  "why": "test-options.md lists night_runner.py as an existing 'piece' of the on-device E2E harness alongside driver.py, journey_01_signup_profile.py and README.md — all three of which do exist. `find . -iname 'night_runner*'` across the whole repo returns nothing. The rest of this doc (layer table, CI job list, ~10,000-test count, test/e2e|sync|overflow paths) was verified accurate, so this single fabricated-sounding entry stands out and would send someone looking for a soak-test script that was never committed (or was planned and never built).",
+  "recommendation": "Either remove the night_runner.py bullet or, if it's planned work, reword it as 'planned: a continuous soak loop is not yet built' to match the doc's own honest framing elsewhere ('one journey proven; full per-screen coverage builds out journey-by-journey').",
+  "effort": "S",
+  "acceptance_criteria": [
+    "test-options.md only lists tool/device_e2e/ files that exist, or explicitly marks planned-but-unbuilt ones as such"
+  ],
+  "labels": [
+    "docs",
+    "testing",
+    "stale-docs"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p2",
+  "chunk": "grp-168",
+  "normArea": "docs",
+  "id": "AUD-docs-35",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,48 @@
+{
+  "title": "Replace outbox_processor.dart's raw 'sync_outbox_push_failed' literal with a LogEvents catalog constant",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Evans (ubiquitous language) / logging convention",
+  "area": "core/sync/outbox",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 329,
+      "quote": "event: 'sync_outbox_push_failed',"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 395,
+      "quote": "event: 'sync_outbox_push_failed',"
+    },
+    {
+      "file": "learning_tracker/lib/core/logging/log_events.dart",
+      "line": 66,
+      "quote": "String get pushFailed => 'sync_push_failed';"
+    }
+  ],
+  "sites": 2,
+  "why": "log_events.dart's own header says every AppLogger call site MUST use a constant from that file rather than an ad-hoc string literal, but both AppLogger.instance.warning(...) calls here hand-type 'sync_outbox_push_failed' — a name distinct from the catalog's existing sync_push_failed. Two divergent event names now exist for 'a sync push failed'; anyone querying structured logs by the catalog constant misses these two sites, and renaming pushFailed's value later won't touch them.",
+  "recommendation": "Either reuse LogEvents.sync.pushFailed (if semantically equivalent) or add `String get outboxPushFailed => 'sync_outbox_push_failed';` to _SyncEvents and reference it from both call sites.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`grep -n \"event: '\" lib/core/sync/outbox/outbox_processor.dart` returns no bare string-literal event names."
+  ],
+  "labels": [
+    "hygiene",
+    "logging"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-outbox",
+  "chunk": "grp-031",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-40",
+  "linearPriority": "Low"
+}

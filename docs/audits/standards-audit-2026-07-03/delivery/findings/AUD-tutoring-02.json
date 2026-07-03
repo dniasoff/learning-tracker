@@ -1,0 +1,98 @@
+{
+  "title": "Localize TutorGrantPreconditionError.message instead of rendering raw English in accept/decline-invite screens",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5 / AX-2",
+  "area": "features/tutoring/domain+presentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+      "line": 153,
+      "quote": "message:\n            'Grant ${grant.grantId} is not in a state that can be accepted '"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/accept_invite_screen.dart",
+      "line": 206,
+      "quote": "_errorMessage = message;"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/accept_invite_screen_l1_test.dart",
+      "line": 631,
+      "quote": "expect(find.text('Invite has already expired.'), findsOneWidget);"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/decline_invite_screen_l1_test.dart",
+      "line": 508,
+      "quote": "find.textContaining('is not in a state that can be declined'),"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+      "line": 120,
+      "quote": "message: 'A valid tutor email address is required.',"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+      "line": 154,
+      "quote": "'Grant ${grant.grantId} is not in a state that can be accepted '"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart",
+      "line": 29,
+      "quote": "'Grant ${grant.grantId} cannot be revoked '"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_pin_service.dart",
+      "line": 93,
+      "quote": "message: 'Tutor PIN must be exactly 4 numeric digits.',"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/invite_tutor_screen.dart",
+      "line": 161,
+      "quote": "setState(() => _errorMessage = message);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/decline_invite_screen.dart",
+      "line": 145,
+      "quote": "_errorMessage = message;"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_dialog.dart",
+      "line": 88,
+      "quote": "_errorMessage = message;"
+    }
+  ],
+  "sites": 11,
+  "why": "tutor_invite_use_cases.dart builds TutorGrantPreconditionError.message as hardcoded English embedding an internal enum's toJson() (e.g. 'Grant abc123 is not in a state that can be accepted (current state: ...)'). accept_invite_screen.dart and decline_invite_screen.dart destructure and display it verbatim via _errorMessage = message — unlike the sibling TutorGrantFailure case, which the same files explicitly map to a localized generic string with a comment citing a prior fix ('Never surface raw Firebase/gRPC codes... always map to a friendly, localized message'). A Hebrew-locale user whose invite already expired or was handled on another device — a routine, everyday race, not an edge case — sees an untranslated, internal-looking English string. The regression tests in this batch (accept_invite_screen_l1_test.dart, decline_invite_screen_l1_test.dart) assert this raw text as the expected, correct outcome, so the bug is actively pinned rather than caught.",
+  "recommendation": "Give TutorGrantPreconditionError a stable code/enum instead of a message (matching the EH-5 treatment already applied to TutorGrantFailure). Resolve it to an AppLocalizations string in accept_invite_screen.dart, decline_invite_screen.dart, and invite_tutor_screen.dart (all three consumers). Update the two pinned test assertions to check the localized string.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "TutorGrantPreconditionError carries a code/enum, not a pre-formatted message; tutor_invite_use_cases.dart no longer interpolates grant id/state into user-facing text",
+    "accept_invite_screen.dart and decline_invite_screen.dart resolve the code via AppLocalizations/ARB with EN+HE parity",
+    "accept_invite_screen_l1_test.dart and decline_invite_screen_l1_test.dart assert the localized string, not literal English; a Locale('he') variant confirms the Hebrew string renders"
+  ],
+  "labels": [
+    "EH-5",
+    "i18n",
+    "P1"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "high-099",
+  "mergedFrom": [
+    "Route TutorGrantPreconditionError/TutorPinValidationError messages through AppLocalizations instead of hardcoded English"
+  ],
+  "coDiscoverers": [
+    "t1-feat-tutoring-p1",
+    "t1-feat-tutoring-p2"
+  ],
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-02",
+  "linearPriority": "High"
+}

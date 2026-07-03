@@ -1,0 +1,55 @@
+{
+  "title": "Remove dead cloud-content-download and text-download-status code paths",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code (Everything sweep) / Fowler speculative generality",
+  "area": "features/content_browsing/data,presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/providers/cloud_content_providers.dart",
+      "line": 12,
+      "quote": "@Riverpod(keepAlive: true)\nCloudContentService cloudContentService(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/providers/cloud_content_providers.dart",
+      "line": 19,
+      "quote": "@Riverpod(keepAlive: true)\nTextDownloadStatusDao contentDownloadStatusDaoProvider(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/providers/text_display_providers.dart",
+      "line": 67,
+      "quote": "Future<bool> isTextDownloaded(Ref ref, CurriculumId curriculumId) async {"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/data/services/text_download_service.dart",
+      "line": 53,
+      "quote": "/// @deprecated — Text content is now bundled in the seed database."
+    }
+  ],
+  "sites": 4,
+  "why": "grep -rn across lib/ confirms cloudContentServiceProvider, contentDownloadStatusDaoProvider, and isTextDownloadedProvider have no watchers/readers anywhere outside their own definition files — cloudContentService's own doc comment admits it is 'Retained for potential future use'. This keeps ~450 lines alive (the full 359-line cloud_content_service.dart plus the 66-line text_download_service.dart) including a duplicate download-state/progress modeling pattern (ContentDownloadState/Progress vs TextDownloadState/Progress are near-identical), and wires a real FirebaseStorage dependency via firebaseStorageProvider for a path nothing exercises. The '@deprecated' marker on downloadCurriculum is a doc comment, not a real @Deprecated() annotation, so the analyzer cannot warn a future caller either.",
+  "recommendation": "Delete cloud_content_service.dart, cloud_content_providers.dart, text_download_service.dart, and the textDownloadService/isTextDownloaded providers, or if a near-term roadmap need is real, replace the speculative comment with a Linear ticket id per AG-6 and wire one actual caller.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -rn for cloudContentServiceProvider/contentDownloadStatusDaoProvider/isTextDownloadedProvider in lib/ returns no hits (or a real non-self caller)",
+    "flutter analyze stays clean; the corresponding now-orphaned test files (cloud_content_service_test.dart, text_download_service_test.dart) are removed or updated in the same change"
+  ],
+  "labels": [
+    "dead-code",
+    "yagni",
+    "tech-debt"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "chunk": "grp-043",
+  "normArea": "features/content_browsing",
+  "id": "AUD-content_browsing-06",
+  "linearPriority": "Medium"
+}

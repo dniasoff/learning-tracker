@@ -1,0 +1,40 @@
+{
+  "title": "Create or remove the dangling docs/appcheck-enforcement.md reference in docs/coding-standards.md",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "PV-6",
+  "area": "docs/coding-standards.md",
+  "evidence": [
+    {
+      "file": "docs/coding-standards.md",
+      "line": 349,
+      "quote": "...enforcement flips only after CI/device tokens are registered and metrics reviewed, recorded in `docs/appcheck-enforcement.md`."
+    }
+  ],
+  "sites": 1,
+  "why": "docs/appcheck-enforcement.md does not exist anywhere in the repo — PV-6's enforcement-status process points at a record that was never created. Given the project's known App Check debug-token fragility (wipes regenerate the token and cause 403/permission-denied outages), the absence of any recorded enforcement-status process for a fragile, security-relevant subsystem is more than pure hygiene.",
+  "recommendation": "Either create docs/appcheck-enforcement.md recording current App Check enforcement status, or remove the dangling pointer from PV-6 until the doc exists.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "docs/appcheck-enforcement.md exists, or coding-standards.md:349 no longer references it"
+  ],
+  "labels": [
+    "docs",
+    "drift",
+    "appcheck",
+    "broken-link"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p1",
+  "chunk": "grp-167",
+  "normArea": "docs",
+  "id": "AUD-docs-27",
+  "linearPriority": "Low"
+}

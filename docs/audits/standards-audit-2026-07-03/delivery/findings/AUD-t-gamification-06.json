@@ -1,0 +1,55 @@
+{
+  "title": "Introduce test/helpers/pump_app.dart — 6 gamification test files hand-roll near-identical MaterialApp/ProviderScope boilerplate",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "features/gamification presentation tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_screen_l1_test.dart",
+      "line": 98,
+      "quote": "Future<void> _pumpScreen(\n  WidgetTester tester, {"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/gamification_screen_l1_test.dart",
+      "line": 124,
+      "quote": "Widget _buildApp({\n  AsyncValue<AchievementsOverview>? achievementsState,"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+      "line": 272,
+      "quote": "final db = createTestUserDatabase();\n        await tester.pumpWidget("
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+      "line": 297,
+      "quote": "final db2 = createTestUserDatabase();\n        await tester.pumpWidget("
+    }
+  ],
+  "sites": 6,
+  "why": "docs/coding-standards.md:462-465 (TQ-3) names `test/helpers/pump_app.dart` as 'the reviewed convention' for this exact ProviderScope+localization-delegate boilerplate, but the file doesn't exist anywhere in the repo (confirmed via ls test/helpers/). In this batch alone, child_redemption_screen_l1_test.dart (_pumpScreen + _pumpScreenWithRouter), gamification_screen_l1_test.dart (_buildApp), parent_pending_redemptions_screen_l1_test.dart (_buildScreen + buildWithRouter), reward_configuration_screen_l1_test.dart (_buildFake), streak_widget_test.dart (buildWidget) and achievement_unlock_celebration_test.dart (_buildHarness) each reimplement the same ~20-30 line scaffold independently; achievement_unlock_celebration_test.dart even duplicates its own _buildHarness body inline twice (lines 272-294 and 297-319) instead of calling it, showing the drift risk in practice — any future fix to the shared scaffold (e.g. a new required delegate) must be hand-applied at every site.",
+  "recommendation": "Create test/helpers/pump_app.dart per the standards doc and migrate these builders to call it, parameterizing only the feature-specific overrides.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists.",
+    "The 6 cited builder functions delegate to it instead of duplicating MaterialApp/localizationsDelegates/ProviderScope setup."
+  ],
+  "labels": [
+    "duplication",
+    "fowler",
+    "test-infra"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p3",
+  "chunk": "grp-057",
+  "normArea": "tests/gamification",
+  "id": "AUD-t-gamification-06",
+  "linearPriority": "Low"
+}

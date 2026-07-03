@@ -1,0 +1,63 @@
+{
+  "title": "Make hierarchy_selection_panel.dart's breadcrumb separator direction-aware",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AX-3",
+  "area": "features/content_browsing/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart",
+      "line": 229,
+      "quote": "Icons.chevron_right,"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart",
+      "line": 13,
+      "quote": "direction == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right;"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart",
+      "line": 228,
+      "quote": "const Icon(\n                        Icons.chevron_right,"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart",
+      "line": 12,
+      "quote": "IconData breadcrumbSeparatorIcon(TextDirection direction) =>\n    direction == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right;"
+    }
+  ],
+  "sites": 4,
+  "why": "In RTL/Hebrew-Terms mode this breadcrumb trail reads right-to-left but always renders a right-pointing chevron, so the separators point the wrong reading direction — exactly the bug already found and fixed in the sibling widget (see breadcrumb_navigation.dart's breadcrumbSeparatorIcon helper and its 'R2 finding 4' comment in content_hierarchy_screen.dart). This widget is consumed by bulk_mark_screen.dart (a churn HOTSPOT), step_bulk_mark.dart (track setup wizard), and lifetime_marking_screen.dart, all real onboarding/settings flows.",
+  "recommendation": "Import breadcrumbSeparatorIcon from breadcrumb_navigation.dart and replace the hardcoded Icon(Icons.chevron_right, ...) at hierarchy_selection_panel.dart:228-232 with Icon(breadcrumbSeparatorIcon(Directionality.of(context)), ...).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "a Locale('he')/TextDirection.rtl widget test for HierarchySelectionPanel (or bulk_mark_screen.dart) asserts Icons.chevron_left is used, not Icons.chevron_right",
+    "grep for a bare 'Icons.chevron_right' inside this file (outside a direction-aware helper call) returns no hits"
+  ],
+  "labels": [
+    "rtl",
+    "ax-3",
+    "i18n",
+    "duplication"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "chunk": "high-042",
+  "mergedFrom": [
+    "Make HierarchySelectionPanel's inline breadcrumb separator direction-aware (reuse breadcrumbSeparatorIcon)"
+  ],
+  "coDiscoverers": [
+    "t1-feat-content_browsing-p1",
+    "t1-feat-content_browsing-p3"
+  ],
+  "normArea": "features/content_browsing",
+  "id": "AUD-content_browsing-02",
+  "linearPriority": "High"
+}

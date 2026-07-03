@@ -1,0 +1,101 @@
+{
+  "title": "Extract a shared test helper for locating lib/ source files instead of 13 ad hoc reimplementations",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplicated code",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+      "line": 44,
+      "quote": "File('lib/core/widgets/stat_card.dart'),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+      "line": 225,
+      "quote": "'lib/features/dashboard/presentation/widgets/task_category_stat_box.dart',"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "line": 33,
+      "quote": "File('lib/core/widgets/preference_list_tile.dart'),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "line": 64,
+      "quote": "File('lib/core/widgets/preference_segmented_tile.dart'),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "line": 99,
+      "quote": "'lib/features/settings/presentation/screens/settings_screen.dart',"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "line": 139,
+      "quote": "'lib/features/settings/presentation/screens/settings_screen.dart', (2nd independent read of the same file, AC4)"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+      "line": 225,
+      "quote": "'lib/features/onboarding/presentation/screens/onboarding_screen.dart',"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_31_rtl_audit_test.dart",
+      "line": 17,
+      "quote": "Directory _projectRoot() {\n  for (final c in [Directory.current, Directory.current.parent]) {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_31_rtl_audit_test.dart",
+      "line": 185,
+      "quote": "String readFeatureFile(String relPath) {\n        final root = _projectRoot();"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+      "line": 37,
+      "quote": "'lib/features/scheduler/presentation/providers/scheduler_providers.dart',"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+      "line": 29,
+      "quote": "String _src(String path) {\n  final candidates = ['lib/$path', 'learning_tracker/lib/$path'];"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+      "line": 169,
+      "quote": "'lib/features/tracks/setup/presentation/screens/add_track_flow_screen... /add_track_flow.dart',"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+      "line": 207,
+      "quote": "'lib/features/tracks/setup/presentation/screens/add_track_flow.dart', (byte-identical block to line 169, 38 lines later, same file)"
+    }
+  ],
+  "sites": 13,
+  "why": "Five files in this batch each hand-roll their own version of 'locate a lib/ source file whether cwd is the app root or the repo root': a plain candidates.firstWhere(orElse: ...) (story_16 x2, story_20 x5, story_6 x1), a _projectRoot()+readFeatureFile() pair (story_31), and a _src() helper that is itself bypassed twice for a byte-identical inline duplicate 38 lines apart in the same file (story_7, lines 169 and 207). test/helpers/ has no such helper (only drift_memory.dart, firestore_fake.dart, golden_runner.dart, migration_test_helper.dart, overflow_harness.dart, test_database.dart exist). story_20 independently re-reads settings_screen.dart from scratch in two separate setUpAll blocks (AC3 and AC4) instead of sharing one read. Any future change to how these tests resolve project-relative paths means fixing the same ~10-line block by hand in 13 places, and failure behavior already differs silently between copies (some throw StateError immediately, some fall back to an empty string and let a later contains() assertion fail with a confusing message).",
+  "recommendation": "Add a single `String readLibSource(String relativePath)` / `bool libFileExists(String relativePath)` to test/helpers/ with one consistent failure behavior and migrate all 13 call sites onto it.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "test/helpers/ exposes one shared source-file-lookup helper used by the story_16/20/31/6/7 files",
+    "grep -c 'final candidates = \\[' across those 5 files trends to 0 outside the shared helper",
+    "the two byte-identical blocks at epic_26_story_26_7_dashboard_model_provider_test.dart:169 and :207 collapse to one call"
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "maintainability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-130",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-08",
+  "linearPriority": "Medium"
+}

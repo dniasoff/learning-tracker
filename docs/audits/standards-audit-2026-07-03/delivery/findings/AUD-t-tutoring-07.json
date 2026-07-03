@@ -1,0 +1,51 @@
+{
+  "title": "Add a Hebrew/RTL locale variant to invite_tutor_screen_l1_test.dart and manage_grants_screen_l1_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/features/tutoring",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/invite_tutor_screen_l1_test.dart",
+      "line": 100,
+      "quote": "locale: const Locale('en'), // _buildApp has no locale parameter"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/manage_grants_screen_l1_test.dart",
+      "line": 172,
+      "quote": "locale: Locale('en'), // buildSubject has no locale parameter"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/tutor_audit_log_screen_l1_test.dart",
+      "line": 611,
+      "quote": "'leading FilterChip is fully on-screen in RTL (Hebrew) — not clipped at edge'"
+    }
+  ],
+  "sites": 2,
+  "why": "Two sibling l1 tests in this exact batch (manage_tutors_screen_l1_test.dart, tutor_audit_log_screen_l1_test.dart) each carry a Locale('he') case — and the audit-log one exists specifically because an earlier RTL clipping bug was found (comment: 'not clipped at edge'), proving this class of bug is real for this feature. invite_tutor_screen_l1_test.dart and manage_grants_screen_l1_test.dart hardcode Locale('en') with no way to parameterize it, so a directional-layout regression on either screen would ship with green tests.",
+  "recommendation": "Parameterize _buildApp/buildSubject with a Locale argument and add one Locale('he') testWidgets case per screen asserting key rows/buttons render without overflow, matching tutor_audit_log_screen_l1_test.dart's pattern.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "invite_tutor_screen_l1_test.dart has a Locale('he') case asserting the form/Send button render without RenderFlex overflow",
+    "manage_grants_screen_l1_test.dart has the same for the active/pending grant rows"
+  ],
+  "labels": [
+    "testing",
+    "tutoring",
+    "rtl",
+    "i18n"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "chunk": "grp-127",
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-07",
+  "linearPriority": "Low"
+}

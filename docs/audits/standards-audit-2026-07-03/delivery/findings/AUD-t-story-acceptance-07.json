@@ -1,0 +1,50 @@
+{
+  "title": "Extract a shared FakeFirestoreGateway test helper instead of re-implementing FirestoreGateway in 23 test files",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler — duplication / shotgun surgery",
+  "area": "test/story_acceptance — sync",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+      "line": 584,
+      "quote": "class _ToggleableFakeGateway implements FirestoreGateway {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+      "line": 811,
+      "quote": "// ── Step 1 additions (DNI-333 cutover) ─────────────────────────────────────"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+      "line": 927,
+      "quote": "// W6.13: fetchAuditLogEntries added to FirestoreGateway interface."
+    }
+  ],
+  "sites": 1,
+  "why": "`grep -rl \"implements FirestoreGateway\" test/` finds 23 files, of which this ~370-line _ToggleableFakeGateway is one; the other 22 are independent hand-rolled implementations of the same 25+-method interface. This file's own accretion comments ('Step 1 additions', 'W6.13', 'T1.gateway — stub') show the interface has grown at least 3 times since this fake was written — each growth requires editing every one of the 23 fakes or the analyzer fails each independently (classic shotgun surgery). This is also the single largest contributor to the file's AG-3 overage (see the paired finding).",
+  "recommendation": "Extract one canonical InMemoryFirestoreGateway/FakeFirestoreGateway to test/helpers/, parameterized for online/offline + failure-injection behaviour used here, and have call sites configure it instead of re-implementing the interface.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "A shared fake gateway exists under test/helpers/ implementing FirestoreGateway once.",
+    "This file's _ToggleableFakeGateway is replaced by (or extends) the shared fake; repo-wide count of independent `implements FirestoreGateway` fakes decreases."
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "sync"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-27",
+  "chunk": "grp-135",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-07",
+  "linearPriority": "Medium"
+}

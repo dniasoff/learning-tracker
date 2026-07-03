@@ -1,0 +1,100 @@
+{
+  "title": "Convert scheduler domain value types to @freezed instead of hand-rolled or missing equality",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming/placement — \"Domain/state models are immutable @freezed classes; never hand-write ==/hashCode for data classes\"",
+  "area": "features/scheduler/domain models, projection, repositories",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/models/delta_value.dart",
+      "line": 14,
+      "quote": "final class DateDelta {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/models/delta_value.dart",
+      "line": 38,
+      "quote": "final class PaceDelta {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/models/delta_value.dart",
+      "line": 65,
+      "quote": "final class DateScheduleDelta extends ScheduleDelta {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/models/delta_value.dart",
+      "line": 82,
+      "quote": "final class PaceScheduleDelta extends ScheduleDelta {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/models/goal_entity.dart",
+      "line": 41,
+      "quote": "final class DeadlineTarget extends PaceTarget {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/models/goal_entity.dart",
+      "line": 58,
+      "quote": "final class PacePeriodTarget extends PaceTarget {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+      "line": 17,
+      "quote": "class ScheduledUnit {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+      "line": 48,
+      "quote": "class StudyDayPattern {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+      "line": 87,
+      "quote": "class ProjectionResult {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_completion_repository.dart",
+      "line": 4,
+      "quote": "class SchedulerCompletion {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_content_repository.dart",
+      "line": 10,
+      "quote": "class SchedulerContentItem {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_stage_repository.dart",
+      "line": 5,
+      "quote": "class SchedulerStage {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart",
+      "line": 4,
+      "quote": "class SchedulerOrderItem {"
+    }
+  ],
+  "sites": 13,
+  "why": "9 of the 13 classes hand-write ==/hashCode/toString (delta_value.dart's 4 types, goal_entity.dart's PaceTarget subtypes, overdue_types.dart's 3 types) — correct today, but every future field addition must remember to update the hand-written equality by hand (Fowler shotgun-surgery risk that @freezed removes entirely). The other 4 (SchedulerCompletion, SchedulerContentItem, SchedulerStage, SchedulerOrderItem — the scheduler-local adapter DTOs returned across every repository interface in this batch) have NO equality override at all, so they compare by identity; any future Set/contains/expect(x,y)-by-value usage of these types will silently pass or fail for the wrong reason.",
+  "recommendation": "Convert to @freezed, or record the zero-codegen-dependency rationale (stated in overdue_types.dart's docstring) as an explicit documented judgment call in coding-standards.md so it stops being flagged.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "Each listed class is either converted to @freezed, or the deliberate non-freezed choice is recorded in coding-standards.md's judgment-call list.",
+    "A Rule-0 grep/lint flags hand-written operator== under lib/features/*/domain/ (excluding generated files) so the decision stays enforced either way."
+  ],
+  "labels": [
+    "naming-placement",
+    "freezed",
+    "value-equality"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "chunk": "grp-091",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-19",
+  "linearPriority": "Low"
+}

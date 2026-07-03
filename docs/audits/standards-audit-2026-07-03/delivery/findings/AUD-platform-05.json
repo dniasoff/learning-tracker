@@ -1,0 +1,40 @@
+{
+  "title": "Pin distributionSha256Sum in android/gradle/wrapper/gradle-wrapper.properties",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-2 area note (security/supply-chain)",
+  "area": "learning_tracker/android/gradle/wrapper/gradle-wrapper.properties",
+  "evidence": [
+    {
+      "file": "learning_tracker/android/gradle/wrapper/gradle-wrapper.properties",
+      "line": 5,
+      "quote": "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14-all.zip"
+    }
+  ],
+  "sites": 1,
+  "why": "The wrapper properties file has no distributionSha256Sum key. Without it, gradlew's bootstrap download of the Gradle distribution has no integrity check beyond TLS — a compromised mirror/CDN or a MITM on a misconfigured proxy could substitute a malicious Gradle distribution that every subsequent local build and CI run would silently execute.",
+  "recommendation": "Run `./gradlew wrapper --gradle-version 8.14 --distribution-type all` (or add distributionSha256Sum manually from Gradle's published checksums page) so the wrapper verifies the download and fails closed on mismatch.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "gradle-wrapper.properties contains a distributionSha256Sum line matching the official checksum for gradle-8.14-all.zip.",
+    "A deliberately-wrong checksum causes ./gradlew to fail the download instead of proceeding."
+  ],
+  "labels": [
+    "android",
+    "gradle",
+    "supply-chain"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-platform-config-p1",
+  "chunk": "grp-162",
+  "normArea": "platform",
+  "id": "AUD-platform-05",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,43 @@
+{
+  "title": "Add Linear DNI ids to the two TODO comments in epic_14_settings_test.dart's skipped app-info group",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6",
+  "area": "test/story_acceptance/epic_14 (Story 14.4, skip-wrapped)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_14_settings_test.dart",
+      "line": 724,
+      "quote": "// TODO: verify version string display"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_14_settings_test.dart",
+      "line": 728,
+      "quote": "// TODO: verify link navigation"
+    }
+  ],
+  "sites": 2,
+  "why": "AG-6 requires every TODO/FIXME to carry a Linear id (DNI-####). These two are bare, inside a group already skip:-wrapped as 'Backlog: app info screen not yet implemented' — when Story 14.4 is picked up there is no ticket link from the test back to tracked work.",
+  "recommendation": "Add the Story 14.4 Linear id to both, e.g. `// TODO(DNI-####): verify version string display`, or drop the TODOs since the surrounding group/skip reason already documents the backlog status.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both TODOs either carry a DNI-#### id or are removed."
+  ],
+  "labels": [
+    "AG-6",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-09-16",
+  "chunk": "grp-138",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-22",
+  "linearPriority": "Low"
+}

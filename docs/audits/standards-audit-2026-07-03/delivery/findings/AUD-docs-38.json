@@ -1,0 +1,46 @@
+{
+  "title": "Verify testing-guide.md's 'progress_providers.g.dart is manually authored' gotcha — the file now carries a clean, unmodified codegen header",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-7",
+  "area": "docs (testing-guide.md) vs features/progress",
+  "evidence": [
+    {
+      "file": "docs/testing-guide.md",
+      "line": 598,
+      "quote": "The generated file `progress_providers.g.dart` is manually maintained because the Riverpod code generator does not handle `Map<K, V>` return types correctly. Do not delete or regenerate this file with `build_runner`."
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/progress_providers.g.dart",
+      "line": 1,
+      "quote": "// GENERATED CODE - DO NOT MODIFY BY HAND"
+    }
+  ],
+  "sites": 1,
+  "why": "This 'Known Gotcha' instructs contributors to never regenerate this file. The file's actual header today is the standard, unmodified RiverpodGenerator boilerplate with no hand-maintenance marker, and its source (progress_providers.dart:45) does contain a `Map<String, int>` return type as the doc describes — so either riverpod_generator (pinned at ^4.0.3, a newer major than whatever version motivated this note) now handles that shape fine and the note is stale, or the file is still hand-edited but deceptively wears a generated-code header (itself an AG-7 problem, worse than the doc issue). Not run to ground: I did not execute `dart run build_runner build --delete-conflicting-outputs` and diff the output, which would settle it definitively.",
+  "recommendation": "Run `dart run build_runner build --delete-conflicting-outputs` and `git diff` on this file. If the diff is empty, delete the gotcha entry (it's safe to regenerate). If the diff is non-empty, the finding shifts to an AG-7 violation on the file itself and the doc's warning should stay, updated with the current reason.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "build_runner + git diff on progress_providers.g.dart is checked; testing-guide.md's gotcha entry either removed or reworded based on the result"
+  ],
+  "labels": [
+    "docs",
+    "testing",
+    "codegen"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Raising confidence from filed SUSPECTED to CONFIRMED: I executed the finding's own recommended verification (build_runner + git diff) and it settled definitively — empty diff, so the file is genuinely generated, not hand-maintained."
+    ]
+  },
+  "sourceBatch": "t4-docs-canonical-p2",
+  "chunk": "grp-169",
+  "normArea": "docs",
+  "id": "AUD-docs-38",
+  "linearPriority": "Low"
+}

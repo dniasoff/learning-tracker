@@ -1,0 +1,49 @@
+{
+  "title": "Replace DateTime.now() with a fixed clock value in scheduler test fixture seeding",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests, no wall-clock)",
+  "area": "features/scheduler data/domain tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+      "line": 77,
+      "quote": "stateChangedAt: DateTime.now(),\n            activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_test.dart",
+      "line": 48,
+      "quote": "stateChangedAt: DateTime.now(),\n            activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_integration_test.dart",
+      "line": 51,
+      "quote": "stateChangedAt: DateTime.now(),\n              activatedAt: DateTime.now(),"
+    }
+  ],
+  "sites": 3,
+  "why": "TQ-6 requires hermetic tests with no wall-clock. All three files otherwise correctly drive their actual scheduling assertions off a fixed `DateTime.utc(...)` 'now'/'today' constant — but the CurriculumTracksCompanion.insert(...) calls that seed the track row use the real system clock for stateChangedAt/activatedAt instead of that same fixed constant. No current assertion reads these two columns, so it doesn't flip any test's pass/fail today, but it's an easy trap: the moment a future test (or the production code these tests exercise) starts reading track state-change recency, these three tests will intermittently disagree with their own fixed 'now' by however many days/years separate the two clocks.",
+  "recommendation": "Pass the file's existing fixed now/today constant for stateChangedAt/activatedAt instead of DateTime.now(), matching the pattern already used for every other timestamp in the same setUp blocks.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`grep -n 'DateTime.now()'` across the three files returns nothing."
+  ],
+  "labels": [
+    "tq-6",
+    "wall-clock",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "chunk": "grp-096",
+  "normArea": "tests/scheduler",
+  "id": "AUD-t-scheduler-08",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,38 @@
+{
+  "title": "Attach a Linear id to the CompletionButton TODO in epic_27_story_4_widget_golden_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6",
+  "area": "test/story_acceptance — hygiene",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_4_widget_golden_test.dart",
+      "line": 240,
+      "quote": "// TODO: CompletionButton was removed in the Wave-3/4 refactor.\n      // Skip until a replacement widget is identified or this test is deleted."
+    }
+  ],
+  "sites": 1,
+  "why": "AG-6 requires every TODO/FIXME to carry a DNI-#### id so it's tracked; this one has none, so the permanently-skipped test with a dead `expect(true, isTrue)` body has no queue entry telling anyone to replace or delete it.",
+  "recommendation": "Attach a DNI-#### id, or just delete the dead skipped test now that CompletionButton is confirmed gone (its skip reason already states this).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The TODO carries a DNI id, or the skipped test is removed."
+  ],
+  "labels": [
+    "hygiene",
+    "AG-6"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-27",
+  "chunk": "grp-135",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-27",
+  "linearPriority": "Low"
+}

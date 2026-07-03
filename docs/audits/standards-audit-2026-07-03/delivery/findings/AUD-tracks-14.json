@@ -1,0 +1,46 @@
+{
+  "title": "Route TrackManagementBody's hard-delete ('wipe') path through a repository instead of calling trackDao directly (DB-1)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-1",
+  "area": "presentation/tracks-setup",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+      "line": 273,
+      "quote": "final dao = ref.read(userDatabaseProvider).trackDao;"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+      "line": 275,
+      "quote": "await dao.purgeHistory(track.id);"
+    }
+  ],
+  "sites": 1,
+  "why": "_showDeleteDialog's 'wipe' branch pulls trackDao straight out of userDatabaseProvider and calls purgeHistory/deleteTrackAndData from a widget State, bypassing the repository layer DB-1 requires. It's an inconsistency within the same method: the sibling 'archive' branch a few lines above correctly goes through curriculumActivationServiceProvider and has typed try/catch + a localized error SnackBar; the 'wipe' branch has neither a repository nor any error handling at all — if either DAO call throws, the widget has no recovery path. (The DAO methods themselves are well-built — transactional, outbox-aware — so this is a layering/testability and inconsistent-error-handling defect, not a sync-correctness one.)",
+  "recommendation": "Add a track repository (or extend an existing one) with wipe/delete methods that widgets call, mirroring the 'archive' branch's service-layer pattern, including a try/catch with a localized error SnackBar for parity with the archive path.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "track_management_body.dart no longer reads userDatabaseProvider or trackDao directly.",
+    "The 'wipe' branch has the same try/catch + user-facing error handling as the 'archive' branch.",
+    "DB-1's checker (once implemented) reports zero direct DAO access from lib/features/*/presentation/."
+  ],
+  "labels": [
+    "database",
+    "layering",
+    "error-handling"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "grp-116",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-14",
+  "linearPriority": "Medium"
+}

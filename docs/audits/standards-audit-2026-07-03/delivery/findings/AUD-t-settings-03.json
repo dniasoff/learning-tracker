@@ -1,0 +1,44 @@
+{
+  "title": "Replace scope_lifetime_l1_test.dart's tautological lifetimeOnly-source test with one that drives the real _markSelections call",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological test asserts what the mock returns)",
+  "area": "features/settings/presentation/screens (lifetime marking)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+      "line": 1425,
+      "quote": "await stub.recordCompletionsBatch(const []);"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/lifetime_marking_screen.dart",
+      "line": 592,
+      "quote": "await repo.recordCompletionsBatch(batchItems);"
+    }
+  ],
+  "sites": 1,
+  "why": "The test titled 'Completion-credit policy: recordCompletionsBatch default source is lifetimeOnly (not live)' never touches LifetimeCurriculumMarkingScreen. It builds its own _MockLearningLedgerRepository, calls `stub.recordCompletionsBatch(const [])` directly, and asserts the captured source resolves via a `?? CompletionSource.lifetimeOnly` fallback written inside the test's own thenAnswer closure — a fact about the test's mock, not about production code. The real call site (lifetime_marking_screen.dart:592) omits `source:` and relies on the repository interface's default; if a future edit added an explicit `source: CompletionSource.live` there (silently breaking the 'lifetime marks never inflate streak/points' product rule), this suite would keep passing.",
+  "recommendation": "Rewrite the test to drive LifetimeCurriculumMarkingScreen's real Save flow with a captured mock and assert on the actual invocation's arguments (or, if HierarchySelectionPanel truly can't be driven at L1 as the file's comments claim, assert against the widget's captured call rather than a standalone stub) so the test fails if _markSelections is changed to pass an explicit source override.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "The regression test fails (red) when lifetime_marking_screen.dart:592 is changed to `repo.recordCompletionsBatch(batchItems, source: CompletionSource.live)`, and passes on the current code."
+  ],
+  "labels": [
+    "TQ-8",
+    "tautological-test",
+    "product-rule"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-102",
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-03",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,45 @@
+{
+  "title": "Add Locale('he') RTL variant to tutor_pin_reset_screen_l1_test.dart and tutor_pin_setup_screen_l1_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/features/tutoring",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/tutor_pin_reset_screen_l1_test.dart",
+      "line": 72,
+      "quote": "locale: const Locale('en'),"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/tutor_pin_setup_screen_l1_test.dart",
+      "line": 82,
+      "quote": "locale: const Locale('en'),"
+    }
+  ],
+  "sites": 2,
+  "why": "Neither file contains a single Locale('he') pump, so RTL/overflow regressions in the PIN-reset and PIN-setup screens (part of the same security-sensitive tutor-PIN flow) are invisible to this suite. The sibling test in the same directory, tutor_pin_entry_gate_l1_test.dart, DOES carry a Hebrew group ('he locale: renders PIN entry screen without overflow or crash') proving the flow is expected to be RTL-tested — these two screens are the odd ones out. coding-standards.md's own TQ-3 rationale states this app ships RTL/overflow fixes 'every audit wave', so an LTR-only gap here is a live, stated-cost risk, not a hypothetical one.",
+  "recommendation": "Add a `he` locale smoke test to each file mirroring tutor_pin_entry_gate_l1_test.dart's Hebrew group (pump with Locale('he'), assert no exception and the Scaffold/key text renders).",
+  "acceptance_criteria": [
+    "tutor_pin_reset_screen_l1_test.dart and tutor_pin_setup_screen_l1_test.dart each gain a testWidgets case pumping Locale('he') that asserts the screen renders without throwing."
+  ],
+  "effort": "S",
+  "labels": [
+    "i18n",
+    "RTL",
+    "TQ-3",
+    "tutoring"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p4",
+  "chunk": "grp-128",
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-01",
+  "linearPriority": "Medium"
+}

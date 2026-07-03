@@ -1,0 +1,52 @@
+{
+  "title": "Rewrite TrackLearningOrderScreen 'race-safety' test to actually verify the _sedarimSaveSeq guard",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (regression test weaker than what the source can do wrong) / Feathers seam lens",
+  "area": "test/features/tracks/track_management_body_and_order_l1_test.dart — TrackLearningOrderScreen",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart",
+      "line": 1059,
+      "quote": "repo.saveSedarimOrder(_kTrackId, any<List<LearningOrderItem>>()),\n        ).called(2);"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart",
+      "line": 1064,
+      "quote": "expect(find.byType(DraggableOrderItem), findsAtLeastNWidgets(1));"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+      "line": 223,
+      "quote": "if (!mounted || mySeq != _sedarimSaveSeq) return;"
+    }
+  ],
+  "sites": 1,
+  "why": "Test '20. rapid successive reorders only persist the final order (seq guard)' claims to pin the _sedarimSaveSeq race guard, but its only assertions are that saveSedarimOrder was called twice and that some DraggableOrderItem still renders. Both saves are dispatched regardless of the guard (the guard only gates the *post-await* provider-invalidate/setState in _persistSedarim), so deleting the 'mySeq != _sedarimSaveSeq' checks entirely would not change either assertion's outcome — the test cannot fail if the guard regresses. Contrast with track_learning_order_reset_test.dart in the same batch, which correctly uses controlled Completers to prove which read 'wins'; that pattern is available and not applied here, so a future refactor could silently reintroduce the stale-continuation race (flicker/revert of the reordered list) with CI green.",
+  "recommendation": "Give the mocked repo.saveSedarimOrder two distinguishable outcomes (e.g. via Completers, as done in track_learning_order_reset_test.dart) so the first (slow) save's post-await continuation would visibly corrupt state if it ran; assert that only the second reorder's masechtos invalidation/refetch is reflected in the rendered order, and that the test fails when the mySeq guard is removed.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Test fails (red) when the 'if (!mounted || mySeq != _sedarimSaveSeq) return;' guard is deleted from _persistSedarim in track_learning_order_screen.dart",
+    "Test distinguishes stale vs fresh masechtos-fetch results (e.g. per-call Completers) rather than only counting saveSedarimOrder invocations",
+    "Final rendered/persisted order is asserted to match the second (last) reorder, not merely 'a list renders without crashing'"
+  ],
+  "labels": [
+    "testing",
+    "TQ-8",
+    "race-condition",
+    "tracks"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p5",
+  "chunk": "grp-120",
+  "normArea": "tests/tracks",
+  "id": "AUD-t-tracks-06",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,80 @@
+{
+  "title": "Delete the dead pre-per-profile notification scheduling API in NotificationGateway/NotificationScheduler",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler dead code",
+  "area": "features/notifications/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+      "line": 168,
+      "quote": "Future<void> scheduleDailyReminder({"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+      "line": 197,
+      "quote": "Future<void> cancelDailyReminder() async {"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+      "line": 212,
+      "quote": "Future<void> scheduleBatchReminders({"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+      "line": 244,
+      "quote": "Future<void> cancelBatchReminders() async {"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+      "line": 335,
+      "quote": "Future<void> scheduleStreakAlert({"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+      "line": 365,
+      "quote": "Future<void> cancelStreakAlert() async {"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_scheduler.dart",
+      "line": 127,
+      "quote": "Future<void> schedule({"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_scheduler.dart",
+      "line": 150,
+      "quote": "Future<void> cancelForSacredTime() async {"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_scheduler.dart",
+      "line": 161,
+      "quote": "Future<void> cancel() async {"
+    }
+  ],
+  "sites": 9,
+  "why": "WS5.per-profile replaced these with *ForProfile equivalents (per the 'H1 fix' comments elsewhere in the file); a repo-wide grep for non-declaration, non-test callers of all 9 methods returns nothing, confirming zero production callers. Yet they still compile and are still exercised by roughly 780 of notification_gateway_test.dart's 1415 lines plus the entirety of notification_scheduler_test.dart and notification_service_test.dart. A future edit that calls scheduler.schedule()/.cancel() instead of the *ForProfile variant -- same class, plausible-looking name -- would silently reintroduce H1 (two competing ID schemes per profile) with no compiler or test signal, since the dead path still 'works' and stays green in CI.",
+  "recommendation": "Delete the 9 legacy methods and the singleton ID constants, delete/collapse the corresponding dead tests, and keep only the *ForProfile surface.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -rn for the 9 legacy method names in lib/ returns zero results once removed.",
+    "notification_gateway_test.dart / notification_scheduler_test.dart / notification_service_test.dart shrink accordingly with no loss of coverage on the *ForProfile paths."
+  ],
+  "labels": [
+    "dead-code",
+    "notifications",
+    "hotspot"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-063",
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-04",
+  "linearPriority": "Medium"
+}

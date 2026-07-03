@@ -1,0 +1,89 @@
+{
+  "title": "Make E2E-516/E2E-922/E2E-416 actually pump Locale('he') instead of asserting a false harness limitation",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/e2e/journeys (Scheduler, Settings, Tracks)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart",
+      "line": 940,
+      "quote": "// Note: the harness boots with locale=en by default. For this smoke\n// test we assert the screen renders without crash — proper RTL layout"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/settings_p1_test.dart",
+      "line": 895,
+      "quote": "// The harness hardcodes locale: const Locale('en') in _buildMaterialApp.\n// There is no headless way to override the device locale for the full"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/settings_p1_test.dart",
+      "line": 913,
+      "quote": "skip: true, // device/harness: locale hardcoded to \"en\" in harness\n(tester) async {},"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/tracks_p1_test.dart",
+      "line": 632,
+      "quote": "// as an absence-of-crash check — the date still renders (in English), which\n// is the documented bug; the correct-behavior assertion is kept below."
+    },
+    {
+      "file": "learning_tracker/test/e2e/harness/e2e_harness.dart",
+      "line": 652,
+      "quote": "// Locale is injectable (defaults to en) so Hebrew-RTL journeys can pump\n// the app under Locale('he') and assert RTL + Hebrew l10n strings."
+    },
+    {
+      "file": "docs/planning/e2e-test-suite-plan.md",
+      "line": 271,
+      "quote": "| E2E-922 | Hebrew locale — Settings renders in Hebrew RTL, Hebrew Terms tile hidden | P1 | ad | he | SettingsScreen in he locale; tiles render right-to-left; Hebrew Terms tile hidden (already in Hebrew) | he locale |"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+      "line": 11,
+      "quote": "///            (harness hardcodes Locale('en'); he locale requires device)"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+      "line": 582,
+      "quote": "// device/harness: Harness hardcodes Locale(\"en\"); Hebrew-RTL locale"
+    },
+    {
+      "file": "learning_tracker/test/e2e/harness/e2e_harness.dart",
+      "line": 307,
+      "quote": "Locale locale = const Locale('en'),"
+    }
+  ],
+  "sites": 9,
+  "why": "The E2E catalog tags E2E-516, E2E-922 and E2E-416 dims=he — required to run under the Hebrew locale. All three instead pump under the default en locale (only toggling the unrelated useHebrewTermsProvider vocabulary preference), and two carry comments claiming the harness 'hardcodes' or cannot override locale. That claim has been false since commit 9c9655ed (2026-06-22, 'harness — injectable locale in pumpApp (enables Hebrew-RTL journeys)'); sibling file hebrew_rtl_p1_test.dart proves it works today for 11 adjacent journeys, including Settings (E2E-1506) and Scheduler (E2E-1504). Concretely, E2E-922's own catalogued behavior — the Hebrew Terms/Pronunciation tile auto-hiding when the app locale is already 'he' — has zero implementation anywhere in the suite (E2E-1506 only checks generic tile RTL layout, not this branch), so a regression in that gating condition inside settings_screen.dart (a churn hotspot) would ship undetected. E2E-416 likewise claims 'the correct-behavior assertion is kept below' for risk R-TR5 (Hebrew-calendar date formatting) but no such assertion exists anywhere in the test body.",
+  "recommendation": "Pass locale: const Locale('he') in h.pumpApp(...) for E2E-516 and E2E-416 (mirroring hebrew_rtl_p1_test.dart) and assert Directionality.of(tester.element(find.byType(<Screen>))) == TextDirection.rtl plus the catalog's stated key assertions. Un-skip E2E-922 and implement the Hebrew-Terms-tile-hidden assertion under Locale('he') — the one piece of behavior no other test covers. Delete the false 'harness hardcodes locale' comments, and consider consolidating with hebrew_rtl_p1_test.dart to avoid two near-duplicate RTL smoke tests per screen.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "E2E-516 (scheduler_p1_test.dart) and E2E-416 (tracks_p1_test.dart) call pumpApp with locale: const Locale('he') and assert RTL Directionality.",
+    "E2E-922 (settings_p1_test.dart) is no longer skip:true and asserts the Hebrew Terms/Pronunciation tile is absent under Locale('he').",
+    "A grep-based checker cross-referencing docs/planning/e2e-test-suite-plan.md rows tagged dims=he against Locale('he') usage in the matching *_test.dart file returns zero mismatches (Rule-0 checker candidate)."
+  ],
+  "labels": [
+    "testing",
+    "i18n-rtl",
+    "coverage-gap",
+    "hebrew-locale"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p4",
+  "chunk": "grp-146",
+  "mergedFrom": [
+    "progress_p1_test.dart E2E-812 permanently skipped on a false claim that the harness 'hardcodes Locale(en)' and cannot inject Hebrew"
+  ],
+  "coDiscoverers": [
+    "t1-test-cross-p3",
+    "t1-test-cross-p4"
+  ],
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-31",
+  "linearPriority": "Medium"
+}

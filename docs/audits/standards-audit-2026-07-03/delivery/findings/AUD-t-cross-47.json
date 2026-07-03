@@ -1,0 +1,67 @@
+{
+  "title": "infrastructure_test.dart's 'database is isolated between tests' only proves two objects aren't identical(), not that data is isolated",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (assertions weaker than what the source under test can actually do wrong)",
+  "area": "learning_tracker/test/infrastructure_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/infrastructure_test.dart",
+      "line": 132,
+      "quote": "test('database is isolated between tests', () async {"
+    },
+    {
+      "file": "learning_tracker/test/infrastructure_test.dart",
+      "line": 137,
+      "quote": "expect(identical(db1, db2), false);"
+    },
+    {
+      "file": "learning_tracker/test/infrastructure_test.dart",
+      "line": 22,
+      "quote": "final mockAuthRepo = MockAuthRepository();\n        expect(mockAuthRepo, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/infrastructure_test.dart",
+      "line": 44,
+      "quote": "expect(mishna.curriculumId, CurriculumId.mishnayos.storageKey);"
+    },
+    {
+      "file": "learning_tracker/test/fixtures/content_fixtures.dart",
+      "line": 24,
+      "quote": "curriculumId ?? CurriculumId.mishnayos.storageKey,"
+    }
+  ],
+  "sites": 5,
+  "why": "createTestDatabase() is a plain constructor call with no caching, so identical(db1, db2) is guaranteed false for any two invocations regardless of whether UserDatabase has any shared/static state that leaks data between instances — the assertion cannot fail even if isolation were genuinely broken. Running this test (`flutter test test/infrastructure_test.dart`) confirms it passes today, and also prints a real Drift runtime warning at exactly this test's stack frame: 'It looks like you've created the database class UserDatabase multiple times... race conditions will occur and might corrupt the database' (createTestDatabase at test_database.dart:13, called from infrastructure_test.dart:134). Twenty-plus other test files in this repo (app_shell_test.dart, e2e_harness.dart, the sync/merge/* roundtrip suite) already know about this and explicitly set `driftRuntimeOptions.dontWarnAboutMultipleDatabases = true` when intentionally creating multiple in-memory DBs — this test does not follow that established convention, so it emits unnecessary warning noise on every run on top of not checking the property its name promises. A real cross-instance state leak (e.g. an accidental static/singleton in UserDatabase) would sail through this test undetected.",
+  "recommendation": "Replace the identical() check with a real isolation assertion: insert a row into db1 (e.g. via seedProfile) and assert it is absent when querying db2, or that db2's relevant table starts empty. Also set driftRuntimeOptions.dontWarnAboutMultipleDatabases = true here to match the repo's established pattern for intentional multi-instance in-memory DBs.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The test inserts data into db1 and asserts it is not visible from db2 (or vice versa), not just that the two references are non-identical.",
+    "Running the test no longer prints the Drift multiple-database-instantiation warning."
+  ],
+  "labels": [
+    "test-quality",
+    "tq-8",
+    "tautological-test",
+    "empirically-verified"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-helpers",
+  "chunk": "grp-150",
+  "mergedFrom": [
+    "Delete the remaining tautological instantiation/fixture-echo tests in infrastructure_test.dart"
+  ],
+  "coDiscoverers": [
+    "t1-test-helpers"
+  ],
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-47",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,57 @@
+{
+  "title": "Resolve profileId live, not by snapshot, when wiring OutboxSyncWriteFacade/LocalDataUploadService/PointsBalanceDao.syncSink in syncOrchestratorProvider",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "sync push/pull invariant (docs/sync-conflict-resolution.md) / Nygard-lens: stale capture",
+  "area": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+      "line": 79,
+      "quote": "final profileId = ref.read(activeProfileIdProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+      "line": 91,
+      "quote": "database.pointsBalanceDao.syncSink = uploadFacade;"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+      "line": 95,
+      "quote": "unawaited(database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(profileId));"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+      "line": 68,
+      "quote": "final resolveProfileId = ref.read(resolveProfileIdProvider);"
+    }
+  ],
+  "sites": 1,
+  "why": "syncOrchestratorProvider is a keepAlive singleton that (by explicit design, per its own comments and resolveProfileIdProvider's doc) survives a profile switch without rebuilding, reacting only via `ref.listen(activeProfileIdProvider, ...)` to restart listeners. But `profileId` at line 79 is a one-time ref.read snapshot baked into OutboxSyncWriteFacade/LocalDataUploadService and into pointsBalanceDao.syncSink — not the lazy `resolveProfileId` the same function already builds at line 68 for the orchestrator's own calls. OutboxSyncWriteFacade._enqueue (features/sync/data/outbox_sync_write_facade.dart) stamps every outbox row's `profileId` column from this captured field for every entity kind it handles except learner-profile-delete (bookmarks, settings, goals, learning order, curriculum tracks, notification/gamification/UI-preference snapshots, streak events, study-day configs, and — via PointsBalanceDao._pushRedemption calling sink.enqueueRewardRedemption — reward redemptions). OutboxProcessor._doDrain only sweeps the currently-active profileId plus account-level 0 (confirmed in outbox_processor.dart and explicitly documented for the analogous deleteLearnerProfile case: 'the drain only sweeps the ACTIVE profile + 0... orphans the row'). So after a household profile switch (Bug #1/R1 already proves this happens mid-session without an orchestrator rebuild), every write of the affected kinds for the newly-active profile gets tagged with the stale boot-time profileId and is never drained until — if ever — that exact stale profile becomes active again. Concretely: parent app open with childA active, orchestrator built (profileId=A); parent switches to childB; childB redeems a reward or a bookmark/goal/track change is made; the outbox row is stamped profileId=A; the orchestrator's periodic/lifecycle/connectivity drains all resolve the live profileId (=B) and never pick up the A-stamped row. That data silently never reaches Firestore / other devices.",
+  "recommendation": "Change OutboxSyncWriteFacade and LocalDataUploadService to take an `int Function() resolveProfileId` (reuse resolveProfileIdProvider) instead of a captured `int profileId`, reading it at each call instead of at construction. Re-wire pointsBalanceDao.syncSink and re-run reEnqueueUnsyncedLedgerRows whenever the active profile changes, not just once at orchestrator build.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "OutboxSyncWriteFacade/LocalDataUploadService read the active profile id live at write time rather than at construction time.",
+    "Regression test: build a ProviderContainer, go cloud-born with profile A active, switch activeProfileIdProvider to B, perform a write that reaches OutboxSyncWriteFacade, and assert the resulting outbox row's profileId column equals B, not A.",
+    "Existing sync_orchestrator_providers.dart comments documenting the resolver-vs-snapshot distinction (Bug #1/R1) are updated to cover this fix."
+  ],
+  "labels": [
+    "sync",
+    "offline-first",
+    "riverpod",
+    "data-loss-risk"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-providers",
+  "chunk": "high-026",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-10",
+  "linearPriority": "High"
+}

@@ -1,0 +1,45 @@
+{
+  "title": "Consolidate the duplicate 0-indexed/1-indexed level-value accessors in content_grouping.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler — duplicated code / confusing near-twins",
+  "area": "core/content/content_grouping.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/content/content_grouping.dart",
+      "line": 74,
+      "quote": "String? _levelValueAt(ContentItem item, int depth) => switch (depth) {\n  0 => item.level1,"
+    },
+    {
+      "file": "learning_tracker/lib/core/content/content_grouping.dart",
+      "line": 83,
+      "quote": "String? levelValueAt(ContentItem item, int level) => switch (level) {\n  1 => item.level1,"
+    }
+  ],
+  "sites": 1,
+  "why": "Two functions differing only by a leading underscore implement the identical level1..level4 switch, one 0-indexed (internal, used by groupItemsByNextLevel) and one 1-indexed (public, used by hierarchy_browser.dart and hierarchy_selection_panel.dart). The near-identical names with different index conventions is exactly the kind of thing a future edit touches in one copy and forgets in the other, or a caller picks the wrong one and is off by one level.",
+  "recommendation": "Keep only the public 1-indexed levelValueAt and have groupItemsByNextLevel call it with `depth + 1`, deleting the private 0-indexed twin.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "content_grouping.dart has one level-value accessor function, not two.",
+    "coarse_unit_leaf_refs_test.dart and existing grouping behavior are unchanged."
+  ],
+  "labels": [
+    "core/content",
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-content",
+  "chunk": "grp-006",
+  "normArea": "core/content",
+  "id": "AUD-core-content-05",
+  "linearPriority": "Low"
+}

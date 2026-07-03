@@ -1,0 +1,38 @@
+{
+  "title": "Replace the wildcard `case _:` on the sealed AsyncValue switch in gamification_screen_l1_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-6",
+  "area": "features/gamification presentation test helper",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/screens/gamification_screen_l1_test.dart",
+      "line": 143,
+      "quote": "case _:\n            return Completer<AchievementsOverview>().future;"
+    }
+  ],
+  "sites": 1,
+  "why": "AsyncValue is `sealed class AsyncValue<T>` with exactly 3 subtypes (AsyncData/AsyncLoading/AsyncError, verified in the riverpod package source). This switch handles AsyncData and AsyncError explicitly but falls back to a `case _:` wildcard for AsyncLoading instead of naming it. Per docs/coding-standards.md:197-199 (EH-6), a wildcard arm 'silently absorbs future variants and destroys' the compiler's exhaustiveness guarantee — here it also hides that the loading case is deliberately made to hang (Completer().future never completes) rather than being an oversight.",
+  "recommendation": "Change `case _:` to `case AsyncLoading():` so the switch is explicitly exhaustive.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The switch in _buildApp's achievementsOverviewProvider override names AsyncLoading() explicitly instead of using a wildcard arm."
+  ],
+  "labels": [
+    "hygiene",
+    "EH-6"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p3",
+  "chunk": "grp-058",
+  "normArea": "tests/gamification",
+  "id": "AUD-t-gamification-08",
+  "linearPriority": "Low"
+}

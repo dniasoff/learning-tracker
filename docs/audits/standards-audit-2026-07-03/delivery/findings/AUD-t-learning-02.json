@@ -1,0 +1,77 @@
+{
+  "title": "Delete or merge stale learning_screen_test.dart into learning_screen_l1_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1",
+  "area": "test/features/learning/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_test.dart",
+      "line": 19,
+      "quote": "dashboardActiveCurriculaProvider.overrideWith(\n            (ref) => Future.value([]),"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_test.dart",
+      "line": 25,
+      "quote": "dashboardUserModeProvider.overrideWith(\n            (ref) => Future.value(ProfileMode.adult),"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_test.dart",
+      "line": 60,
+      "quote": "// With no active curricula, the empty state is shown\n      expect(find.text('No active tracks'), findsOneWidget);"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "line": 310,
+      "quote": "expect(find.text('No active tracks'), findsOneWidget);"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "line": 411,
+      "quote": "test(\n    'PRODUCT INVARIANT: TutorPermissions VO always enforces canMarkLiveCompletion=false',"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "line": 452,
+      "quote": "test(\n    'PRODUCT INVARIANT: TutoredProfileSelection.permissions always has canMarkLiveCompletion=false',"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/ws3_3d_tutor_permissions_surface_test.dart",
+      "line": 202,
+      "quote": "expect(perms.canMarkLiveCompletion, isFalse);"
+    }
+  ],
+  "sites": 7,
+  "why": "learning_screen_test.dart overrides dashboardActiveCurriculaProvider and dashboardUserModeProvider (lines 19-27) — I grepped learning_screen.dart's ref.watch calls and confirmed it reads neither provider; both overrides are dead, left over from before the screen was refactored onto dashboardActiveCurriculaStreamProvider/coarse-track providers. Its 'renders without error' and 'shows key UI elements' tests are a strict, weaker subset of learning_screen_l1_test.dart's empty-state tests (same setup, same assertion, less specific). Only the AppErrorView regression test (lines 70-93) is unique, and it doesn't exercise LearningScreen at all. Net effect: a second file that must be kept in sync with LearningScreen's provider surface for zero incremental protection, and it's currently out of sync (see the DB-leak finding above, which independently proves this).",
+  "recommendation": "Move the unique AppErrorView regression test to a location that actually reflects what it tests (e.g. a core/widgets AppErrorView test, or leave in learning_screen_test.dart renamed), delete the two redundant/stale tests and dead overrides, and remove learning_screen_test.dart per TQ-7 with the reason stated in the commit message.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "learning_screen_test.dart is deleted or contains only the non-duplicate AppErrorView test",
+    "No override in the remaining file references a provider LearningScreen does not read (grep ref.watch in learning_screen.dart against the override list)"
+  ],
+  "labels": [
+    "TQ-1",
+    "duplicate-tests",
+    "stale-test",
+    "hotspot"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-learning-p3",
+  "chunk": "grp-061",
+  "mergedFrom": [
+    "Remove duplicate TutorPermissions invariant tests from learning_screen_l1_test.dart — already covered in ws3_3d_tutor_permissions_surface_test.dart"
+  ],
+  "coDiscoverers": [
+    "t1-feat-learning-p3"
+  ],
+  "normArea": "tests/learning",
+  "id": "AUD-t-learning-02",
+  "linearPriority": "Medium"
+}

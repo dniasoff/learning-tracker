@@ -1,0 +1,56 @@
+{
+  "title": "Extract the hardcoded 'לימוד' stage-name sentinel to a shared constant",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Evans ubiquitous language, Fowler duplication",
+  "area": "onboarding/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/services/learning_process_wizard_service.dart",
+      "line": 170,
+      "quote": "stageName: 'לימוד',"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/services/learning_process_wizard_service.dart",
+      "line": 216,
+      "quote": "stageName: 'לימוד',"
+    },
+    {
+      "file": "learning_tracker/lib/core/constants/curriculum_defaults.dart",
+      "line": 14,
+      "quote": "stageName: 'לימוד',"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart",
+      "line": 23,
+      "quote": "(stageOrder: 1, stageName: 'לימוד', delayDays: 0),"
+    }
+  ],
+  "sites": 2,
+  "why": "DomainTermLabels.resolveStoredStageName documents this literal as the canonical sentinel matched via HebrewTerms.stageNameMap to resolve the correct localized stage name at render time — it is load-bearing, not decorative. It's independently hand-typed in 3 separate files (2 sites in this batch's paired lib file) with no shared constant tying them together; a typo in one copy would silently break resolveStoredStageName's lookup for stages created by that one code path only, and nothing would catch it since the value is a plain string, not a shared symbol.",
+  "recommendation": "Add a single `const kLimudStageName = 'לימוד';` (near HebrewTerms.stageNameMap or in core/constants) and reference it from all 3 write sites instead of retyping the literal.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn \"stageName: 'לימוד'\" lib/ returns only the shared constant's own definition, not literal duplicates at the 3 call sites"
+  ],
+  "labels": [
+    "duplication",
+    "onboarding",
+    "i18n"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "learning_process_wizard_service_test.dart and curriculum_defaults_test.dart both hardcode expect(stages.first.stageName, 'לימוד') independently of the source constant, so an isolated source-side typo in those two files would be caught by CI; stage_definition_repository_impl_test.dart / _26_26_test.dart never assert the Hebrew literal (they use 'Learn' fixtures instead), so that third copy is genuinely uncovered."
+    ]
+  },
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-070",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-14",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,46 @@
+{
+  "title": "Inject a fake clock instead of comparing against real DateTime.now() in completion/restore timing assertions",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_03_learning_cycle_test.dart",
+      "line": 118,
+      "quote": "DateTime.now().difference(completion.completedAt).abs().inSeconds,\n          lessThan(5),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/regression_invariants_test.dart",
+      "line": 251,
+      "quote": "restored.activatedAt.isAfter(\n              beforeRestore.subtract(const Duration(seconds: 5)),"
+    }
+  ],
+  "sites": 2,
+  "why": "Both assertions pin correctness to a 5-second window measured against the real wall clock at assertion time, rather than the FakeLocalDayClock/DateTimeFactory override the codebase already provides and uses correctly elsewhere (e.g. epic_08_gamification_test.dart Story 8.2). On a slow or contended CI runner, a stall of more than 5 seconds between the write and the assertion — plausible for a cold Drift/sqlite3 open — flakes the test for a reason unrelated to the code under test.",
+  "recommendation": "Install a FakeLocalDayClock (or equivalent) before the write and assert equality/near-equality against the fake's fixed instant, matching the pattern already used in epic_08_gamification_test.dart Story 8.2.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both assertions compare against a fixed/fake clock value, not a DateTime.now()/DateTimeFactory.nowUtc() call made at assertion time"
+  ],
+  "labels": [
+    "test-quality",
+    "hermetic",
+    "flake-risk"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "epic_03_learning_cycle_test.dart evidence line should be 119, not 118 — the quoted text begins one line after the cited line number."
+    ]
+  },
+  "sourceBatch": "t1-story-epics-01-08",
+  "chunk": "grp-133",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-39",
+  "linearPriority": "Low"
+}

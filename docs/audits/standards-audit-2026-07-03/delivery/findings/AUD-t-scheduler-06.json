@@ -1,0 +1,44 @@
+{
+  "title": "Drop the hard-coded 500ms wall-clock assertion from scheduler_engine_performance_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests) / Nygard erratic test",
+  "area": "features/scheduler/domain/services tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_performance_test.dart",
+      "line": 102,
+      "quote": "final stopwatch = Stopwatch()..start();\n      final tasks = await engine.generateDailyTasks(config);"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_performance_test.dart",
+      "line": 107,
+      "quote": "stopwatch.elapsedMilliseconds,\n        lessThan(500),"
+    }
+  ],
+  "sites": 1,
+  "why": "This test asserts a hard wall-clock budget (elapsedMilliseconds < 500) for a 5,000-item/10,000-completion synchronous computation, running inside the same hermetic unit suite as every other file in this batch (no @Tags/exclusion). It passed on this run, but pass/fail now depends on host CPU speed and contention from parallel test-runner isolates/CI-runner noise, not on SchedulerEngine's correctness — a classic Nygard/Fowler 'erratic test.' A spurious failure on a busy CI runner produces a false-negative unrelated to the diff under review, and the natural response ('just rerun it') erodes trust in the suite over time.",
+  "recommendation": "Tag it out of the default hermetic run (e.g. `@Tags(['perf'])`, matching how the repo already tags story-acceptance suites) so it runs in a dedicated, less contention-sensitive job, or replace the absolute threshold with a much wider safety margin / relative-regression check.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test is excluded from the default `flutter test` sweep, or its threshold is widened enough (e.g. 5-10x measured baseline) to tolerate CI contention while still catching a genuine algorithmic regression (e.g. an accidental O(n^2) reintroduction)."
+  ],
+  "labels": [
+    "tq-6",
+    "flaky-test",
+    "performance"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "chunk": "grp-095",
+  "normArea": "tests/scheduler",
+  "id": "AUD-t-scheduler-06",
+  "linearPriority": "Low"
+}

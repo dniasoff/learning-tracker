@@ -1,0 +1,50 @@
+{
+  "title": "Log-less catch blocks in notifications swallow exceptions with no AppLogger trail (EH-3)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3",
+  "area": "features/notifications",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+      "line": 279,
+      "quote": "} catch (_) {\n      // Some tests build notification providers without full sync dependencies."
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/presentation/widgets/timezone_lifecycle_observer.dart",
+      "line": 62,
+      "quote": "} catch (_) {\n      // Timezone re-detection failed — keep existing tz.local."
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_initializer.dart",
+      "line": 47,
+      "quote": "} catch (_) {\n      // Platform query failed — leave tz.local as UTC rather than crash."
+    }
+  ],
+  "sites": 3,
+  "why": "None of the three call AppLogger, so a real production failure is indistinguishable from the expected/benign case. The outbox-facade catch is the most consequential: it catches ANY exception from the whole outboxSyncWriteFacadeProvider dependency chain -- not just the 'test doesn't override this provider' case its comment describes -- and silently disables cloud sync of notification settings for that session with zero diagnostic trail.",
+  "recommendation": "Log via AppLogger in all three; for the outbox-facade catch, narrow the caught condition so only the intended test-scaffolding case is swallowed and real errors are logged/propagated distinctly.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Each catch gains a corresponding AppLogger call.",
+    "A grep for catch (_) { or catch (e) { in lib/features/notifications without a following AppLogger call in the same block fails CI."
+  ],
+  "labels": [
+    "eh-3",
+    "error-handling",
+    "notifications"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-064",
+  "normArea": "features/notifications",
+  "id": "AUD-notifications-05",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,46 @@
+{
+  "title": "Back epic_27_story_27_8's tutor/rules security-boundary tests with real rule evaluation, not substring matching",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 / SR-5",
+  "area": "test/story_acceptance — firestore.rules",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+      "line": 194,
+      "quote": "// as Group A — the `fake_firebase_security_rules` package cannot evaluate\n  // `request.auth.uid` comparisons dynamically, but string-scanning the rules"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+      "line": 246,
+      "quote": "expect(\n          block,\n          isNot(contains('isTutorOf')),"
+    }
+  ],
+  "sites": 1,
+  "why": "The file's own comment admits the dynamic rules-emulation package can't evaluate request.auth.uid, so the 'LOAD-BEARING security invariant' tests (line 199) fall back to scanning firestore.rules TEXT for substrings. A rule edit that inserts a bypass while preserving the substrings — e.g. `allow create: if isOwner(uid) || request.auth != null;` — still contains 'isOwner(uid)', still omits 'isTutorOf', and would pass every assertion here while granting any authenticated user write access to completions. Per the audit baseline, the real emulator-based rules suite (firestore_rules.test.mjs) is currently soft-skipped in `make ci` (TQ-9, already known) — so this Dart text-matching suite may be the only thing CI runs today for the tutor-write-block boundary this file calls load-bearing.",
+  "recommendation": "Assert the tutor-write-block and owner-write invariants against the actual Firestore Rules emulator (@firebase/rules-unit-testing) with real auth contexts (assertFails/assertSucceeds), not string containment on the rules source; keep the text-scan tests only as a fast pre-check, not the sole gate.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "An emulator-backed test asserts a tutor-authenticated write to completions/{completionId} is denied and an owner-authenticated write succeeds.",
+    "CI runs this test unconditionally (ties into the existing TQ-9 soft-skip fix)."
+  ],
+  "labels": [
+    "testing",
+    "security",
+    "firestore-rules",
+    "TQ-8"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-27",
+  "chunk": "grp-135",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-03",
+  "linearPriority": "Medium"
+}

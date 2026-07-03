@@ -1,0 +1,42 @@
+{
+  "title": "Fix the self-comparison assertion in firestore_listener_source_test.dart:153 — expect(x, equals(x)) always passes",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "core/sync — firestore_listener_source_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/sync/firestore_listener_source_test.dart",
+      "line": 153,
+      "quote": "expect(entry.orderField, equals(entry.orderField));"
+    }
+  ],
+  "sites": 1,
+  "why": "Comparing a value to itself is always true regardless of what orderField holds. The test's own comment states the intent — verify 'every wired collection... must carry an explicit, recognised field' via the actual order field passed to listenToCollection — and the preceding expect (checking FirestoreListenerSource.orderFields[entry.collection] is not null) does real work, but this second line adds nothing. If a future change wires the wrong orderField to a collection (e.g. swaps two entries in the orderFields map), this test cannot catch it, undermining the FB-2-adjacent guarantee that every listener sorts by its intended recency field.",
+  "recommendation": "Change to expect(entry.orderField, equals(FirestoreListenerSource.orderFields[entry.collection])) so the assertion checks the actual call-site value against the expected map entry.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Line 153 compares entry.orderField against FirestoreListenerSource.orderFields[entry.collection]",
+    "Deliberately wiring the wrong orderField constant to one collection in the source makes the test fail red"
+  ],
+  "labels": [
+    "testing",
+    "sync",
+    "tautological-test"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Downgraded severity P2 -> P3; core claim and quote fully verified accurate."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-root-p2",
+  "chunk": "grp-035",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-72",
+  "linearPriority": "Low"
+}

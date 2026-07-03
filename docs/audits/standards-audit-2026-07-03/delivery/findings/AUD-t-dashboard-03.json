@@ -1,0 +1,48 @@
+{
+  "title": "dashboard_todays_missions_heading_test.dart: remove the blind exception-drain loop in pumpAt (proven dead, masks any real regression in the pumped tree)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7 (never weaken/bypass assertions without a stated, scoped justification) / Fowler stale-comment smell",
+  "area": "test/features/dashboard/presentation/widgets (dashboard feature test)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+      "line": 198,
+      "quote": "// an unrelated sibling card (MainFocusMissionCard's \"Start learning\"\n    // button Row) overflows — a pre-existing issue outside this finding's"
+    },
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+      "line": 204,
+      "quote": "dynamic pending = tester.takeException();\n    while (pending != null) {"
+    }
+  ],
+  "sites": 1,
+  "why": "The loop unconditionally drains and discards ANY exception raised anywhere in the pumped DashboardBody tree, not just the specific MainFocusMissionCard overflow the adjoining comment names -- there is no type/message check. Verified by direct execution: (1) with the code as shipped, a print-probe substituted for the loop shows the pending exception is null for all 3 testWidgets in this file at its own matrix (412x915, en/he, scale 1.0/1.3) -- there is nothing to drain today; (2) after temporarily reverting main_focus_mission_card.dart's FittedBox fix back to the exact pre-fix plain Row (commit 2c62ff2c, reverted then git-restored), rerunning this file UNMODIFIED still reports 'All tests passed' with zero exceptions surfacing -- so the comment's stated justification does not reproduce under this test's own conditions either. The loop is therefore proven, executable dead code whose only live effect is to silently swallow any *actual future* exception (a provider throwing, a genuine new overflow) raised by any widget in this subtree during these three pumps, without ever failing the test.",
+  "recommendation": "Delete the unconditional while-loop. If some exception genuinely needs tolerating, capture it once via a single tester.takeException() and assert its type/message matches a specifically named, filed issue (with a // weaken-ok:-style comment and Linear id) instead of draining blind.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The while (pending != null) { pending = tester.takeException(); } loop is removed, or replaced with a single takeException() call whose result is asserted against a named/filed exception, not silently discarded.",
+    "Re-running the file with main_focus_mission_card.dart's FittedBox reverted now fails the test (proving the guard is live, not inert)."
+  ],
+  "labels": [
+    "testing",
+    "dead-code",
+    "regression-safety",
+    "dashboard"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Finding's claim 'rerunning ... reports All tests passed with zero exceptions surfacing -- so the comment's justification does not reproduce' is misleading. Verified via probe: reverting main_focus_mission_card.dart's FittedBox DOES throw a RenderFlex-overflow exception (caught by tester.takeException(), pending='A RenderFlex overflowed by 44 pixels...') on the en@1.3 pump. It never prints/fails only because the same unconditional drain loop consumes it -- the underlying bug does reproduce, it's just silently hidden, which if anything strengthens (not undermines) the finding's core 'blind swallow masks real regressions' thesis."
+    ]
+  },
+  "sourceBatch": "t1-feat-dashboard-p3",
+  "chunk": "grp-050",
+  "normArea": "tests/dashboard",
+  "id": "AUD-t-dashboard-03",
+  "linearPriority": "Medium"
+}

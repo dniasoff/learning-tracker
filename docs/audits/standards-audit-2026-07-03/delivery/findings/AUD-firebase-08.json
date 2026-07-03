@@ -1,0 +1,49 @@
+{
+  "title": "Make tutor audit-log writes idempotent and failure-visible instead of best-effort auto-ID writes",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "functions error-handling (Nygard: I/O failure/retry)",
+  "area": "functions/audit-log",
+  "evidence": [
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 1218,
+      "quote": "/** Write an audit log entry for a tutor mutation (best-effort — errors are logged but not thrown). */"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 1243,
+      "quote": "} catch (e) {\n    logger.warn(`writeAuditLog: failed for grant=${grantId} action=${action}`, e);"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 1233,
+      "quote": ".collection(\"audit_log\")\n      .add({"
+    }
+  ],
+  "sites": 13,
+  "why": "The audit log is the parent's only visibility into what an invited tutor did to their child's data (12-month retention, W3.42), but every write to it is swallowed on failure (the primary mutation still returns success:true even if its audit entry silently failed) and keyed by Firestore auto-ID rather than a deterministic key, so a client-side retry of a timed-out-but-actually-succeeded Cloud Function call produces a duplicate entry for the same real action. A parent reviewing the trail can see gaps or phantom duplicates with no way to tell which from inside the app.",
+  "recommendation": "Derive a deterministic audit_log doc ID from (grantId, action, target, an idempotency key) so retries coalesce, and consider writing the audit entry in the same batch/transaction as the primary mutation so both succeed or fail together.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Calling the same tutor mutation twice with the same idempotency key produces exactly one audit_log entry, proven by a new test."
+  ],
+  "labels": [
+    "cloud-functions",
+    "correctness",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "chunk": "grp-157",
+  "normArea": "firebase",
+  "id": "AUD-firebase-08",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,46 @@
+{
+  "title": "Add the required inline keepAlive justification to CompletionCommitted and OptimisticCompletionState",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "SM-6",
+  "area": "learning/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/presentation/providers/completion_writer_providers.dart",
+      "line": 28,
+      "quote": "@Riverpod(keepAlive: true)\nclass CompletionCommitted extends _$CompletionCommitted {"
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/presentation/providers/optimistic_completion_provider.dart",
+      "line": 17,
+      "quote": "@Riverpod(keepAlive: true)\nclass OptimisticCompletionState extends _$OptimisticCompletionState {"
+    }
+  ],
+  "sites": 2,
+  "why": "Both classes have doc comments explaining what they do, but neither explains why keepAlive: true (vs default autoDispose) is required. The codebase already has an established convention for this — content_providers.dart:12, sync_orchestrator_providers.dart:51 and pin_flow_controller.dart:127 all lead with 'keepAlive: ...' explicitly justifying the lifecycle choice — so this is a real, checkable deviation from a convention this same codebase demonstrably follows elsewhere, not a style nit invented for this review.",
+  "recommendation": "Prefix each doc comment (or add an adjacent `// keepAlive: ...` line) explicitly stating why autoDispose would break the provider — e.g. 'keepAlive: true — must survive across screens so completion-dependent providers can detect a commit that happened while they were unmounted.'",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both keepAlive: true annotations carry an adjacent comment starting with 'keepAlive:' explaining the lifecycle choice, matching the convention in content_providers.dart / sync_orchestrator_providers.dart."
+  ],
+  "labels": [
+    "sm-6",
+    "riverpod",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The 'established convention... demonstrably follows elsewhere' framing overstates prevalence — most of the ~65 keepAlive:true sites in lib/ lack an adjacent justification comment; only a handful (content_providers.dart, sync_orchestrator_providers.dart, pin_flow_controller.dart, active_profile_provider.dart) do. Doesn't invalidate the violation since SM-6's rule text applies regardless."
+    ]
+  },
+  "sourceBatch": "t1-feat-learning-p1",
+  "chunk": "grp-059",
+  "normArea": "features/learning",
+  "id": "AUD-learning-09",
+  "linearPriority": "Low"
+}

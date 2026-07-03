@@ -1,0 +1,62 @@
+{
+  "title": "Stop interpolating e.toString() directly into tutoring error/snackbar text",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "custom_lint no_e_to_string_in_ui / EH-5",
+  "area": "features/tutoring/presentation + data",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+      "line": 272,
+      "quote": "SnackBar(content: Text(l10n.manageGrantsResignError(e.toString()))),"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+      "line": 230,
+      "quote": "l10n.manageTutorsLoadError(e.toString()),"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+      "line": 404,
+      "quote": "SnackBar(content: Text(l10n.manageTutorsRevokeError(e.toString()))),"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart",
+      "line": 54,
+      "quote": "return TutorGrantFailure(message: e.toString());"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/data/services/tutor_write_service.dart",
+      "line": 76,
+      "quote": "return TutorWriteFailure(message: e.toString());"
+    }
+  ],
+  "sites": 11,
+  "why": "manage_grants_screen.dart and manage_tutors_screen.dart interpolate a raw Dart exception's toString() into an otherwise-localized ARB string 4 times, so a Hebrew UI sentence ends with an untranslated English/technical fragment (e.g. a gRPC status string). The 6 matching data-layer sites (firestore_tutor_grant_repository.dart x6, tutor_write_service.dart x1) manufacture that raw string in the first place by stuffing `e.toString()` into the Failure.message field instead of a stable code, which is exactly the custom_lint `no_e_to_string_in_ui` rule this repo already has defined (currently non-enforcing because custom_lint is broken repo-wide).",
+  "recommendation": "In the 4 UI catch blocks, map to a generic localized fallback (as invite_tutor_screen.dart already does for TutorGrantFailure) instead of interpolating e.toString(); in the data layer, log e.toString() via AppLogger and return a stable failure code instead of stashing the raw text in the value the UI eventually reads.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn 'e.toString()' lib/features/tutoring/presentation/ returns no UI-text interpolation sites.",
+    "Widget test confirms a thrown exception during revoke/rescind/load shows a fixed localized string regardless of the exception's message."
+  ],
+  "labels": [
+    "l10n",
+    "custom-lint",
+    "error-handling"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "The lint source (packages/custom_lints/lib/src/rules/no_e_to_string_in_ui.dart) scopes strictly to files under '/presentation/'. It would NOT catch the 7 data-layer sites (data/repositories, data/services) even if custom_lint worked — only the 4 UI sites are covered by that specific lint. The 'why' text's claim that data-layer sites are 'exactly' this lint is inaccurate; those sites are EH-5 violations only. Doesn't change validity/severity of the underlying finding."
+    ]
+  },
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "grp-121",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-11",
+  "linearPriority": "Medium"
+}

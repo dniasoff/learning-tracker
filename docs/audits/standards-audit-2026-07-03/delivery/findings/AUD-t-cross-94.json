@@ -1,0 +1,44 @@
+{
+  "title": "Strengthen PinEntryWidget's error-styling test to assert the border color, not just decoration non-null",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/core/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/widgets/pin_entry_widget_test.dart",
+      "line": 224,
+      "quote": "expect(firstField.decoration, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/lib/core/widgets/pin_entry_widget.dart",
+      "line": 266,
+      "quote": "final borderColor = widget.hasError"
+    }
+  ],
+  "sites": 1,
+  "why": "The test 'should have error styling when error message is present' (pin_entry_widget_test.dart:206-225) only asserts `firstField.decoration != null`, which is unconditionally true — the widget always sets a decoration whether or not hasError is true (its own comment admits 'which we can't easily test'). But it can: pin_entry_widget.dart:266-268 picks the border colour from `theme.colorScheme.error` vs `.outline` based on hasError, and that colour is directly readable off `decoration.enabledBorder` without pixel-level rendering. If that branch were deleted or inverted, this test would keep passing — a real regression in the parent-PIN wrong-attempt affordance would ship with green CI.",
+  "recommendation": "Rewrite the assertion to read `(firstField.decoration!.enabledBorder as OutlineInputBorder).borderSide.color` and compare it against `theme.colorScheme.error` in the error case and `.outline` in a matching non-error case.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test fails red when pin_entry_widget.dart's hasError ternary at line 266-268 is temporarily reverted to always return theme.colorScheme.outline, proving it actually exercises the branch."
+  ],
+  "labels": [
+    "test-quality",
+    "TQ-8",
+    "core-widgets"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-theme-widgets",
+  "chunk": "grp-036",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-94",
+  "linearPriority": "Low"
+}

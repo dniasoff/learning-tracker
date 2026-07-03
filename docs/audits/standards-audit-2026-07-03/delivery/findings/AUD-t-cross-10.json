@@ -1,0 +1,65 @@
+{
+  "title": "Deduplicate hand-rolled e2e fakes (_FakeContentRepository, _NullTutoredSelection) before more copies drift like learning_p1_test.dart's broken filterByLevel",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-4 (hand-written fakes) + Fowler duplication lens",
+  "area": "test/e2e/journeys (learning_p0/p1, hebrew_rtl_p1, learning_sched_gam_p2, + 7 more files outside this batch)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/learning_p0_test.dart",
+      "line": 143,
+      "quote": "if (level1 != null) items = items.where((i) => i.level1 == level1).toList();"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/learning_p1_test.dart",
+      "line": 130,
+      "quote": "}) async => await getContentForCurriculum(curriculumId);"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+      "line": 129,
+      "quote": "class _NullTutoredSelection extends ActiveTutoredProfileSelection {"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/learning_p0_test.dart",
+      "line": 968,
+      "quote": "class _NullTutoredSelection extends ActiveTutoredProfileSelection {"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/learning_p1_test.dart",
+      "line": 252,
+      "quote": "class _NullTutoredSelection extends ActiveTutoredProfileSelection {"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/learning_sched_gam_p2_test.dart",
+      "line": 156,
+      "quote": "class _NullTutoredSelection extends ActiveTutoredProfileSelection {"
+    }
+  ],
+  "sites": 6,
+  "why": "Every journey file that needs a no-op tutored-selection notifier or a fake ContentRepository/CompletionRepository hand-rolls its own private copy instead of sharing one via E2EHarness (which already centralizes similar cross-cutting fixtures, e.g. dashboardSilenceOverrides) — at least 11 files repo-wide redefine _NullTutoredSelection verbatim, 4 of them in this batch. The copies have already diverged: learning_p0_test.dart's _FakeContentRepository.filterByLevel correctly filters by level1..4, while learning_p1_test.dart's same-named, same-interface fake silently ignores every level argument and returns the full unfiltered list. No test in learning_p1_test.dart currently drives level-filtered hierarchy browsing through this fake, so the bug is latent — but the next engineer who copies this file's pattern to add hierarchy coverage inherits a fake that compiles, matches the interface, and silently returns wrong results.",
+  "recommendation": "Extract _NullTutoredSelection, _FakeContentRepository, and _FakeCompletionRepository into a shared test/e2e/fakes/ module (or onto E2EHarness) and delete the per-file copies; fix the shared filterByLevel to actually filter, matching learning_p0_test.dart's current correct behavior.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A single _FakeContentRepository/_NullTutoredSelection implementation is imported by every e2e journey file that needs one (grep for 'class _NullTutoredSelection' returns one definition site).",
+    "The shared filterByLevel filters by level1..4 and is exercised by at least one test."
+  ],
+  "labels": [
+    "duplication",
+    "test-doubles",
+    "TQ-4"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p2",
+  "chunk": "grp-144",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-10",
+  "linearPriority": "Medium"
+}

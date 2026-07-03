@@ -1,0 +1,46 @@
+{
+  "title": "Localize the hardcoded 'Curriculum settings' tooltip in curriculum_progress_screen.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2 (no hardcoded user-facing strings)",
+  "area": "features/progress/presentation/screens/curriculum_progress_screen.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/screens/curriculum_progress_screen.dart",
+      "line": 76,
+      "quote": "tooltip: 'Curriculum settings',"
+    }
+  ],
+  "sites": 1,
+  "why": "Every other string on this screen goes through AppLocalizations (l10n.curriculumProgressBreakdownByLevel, l10n.errorUnknownCurriculum, etc.); this one literal renders in English regardless of device locale, so a Hebrew-locale, RTL user long-pressing the settings gear sees an English tooltip in an otherwise fully-Hebrew screen.",
+  "recommendation": "Add an ARB key (EN+HE) and use l10n.<key> instead of the literal.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "make arb-parity stays green with the new key present in both app_en.arb and app_he.arb.",
+    "The tooltip: parameter on this IconButton references an l10n getter, not a string literal."
+  ],
+  "labels": [
+    "i18n",
+    "AX-2"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p1",
+  "chunk": "grp-082",
+  "mergedFrom": [
+    "Route the hardcoded 'Curriculum settings' tooltip through AppLocalizations in curriculum_progress_screen.dart"
+  ],
+  "coDiscoverers": [
+    "t1-feat-progress-p1",
+    "t1-feat-progress-p4"
+  ],
+  "normArea": "features/progress",
+  "id": "AUD-progress-12",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,61 @@
+{
+  "title": "Override userDatabaseProvider/coarsePacedTrackIdsProvider/contentIndexProvider in LearningScreen widget tests — real Drift DB is being constructed on every pump",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/features/learning/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "line": 178,
+      "quote": "final overrides = <Override>["
+    },
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+      "line": 214,
+      "quote": "    ),\n  ];"
+    },
+    {
+      "file": "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart",
+      "line": 43,
+      "quote": "ref.watch(coarsePacedTrackIdsProvider).asData?.value ?? const <int>{};"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_test.dart",
+      "line": 17,
+      "quote": "return ProviderScope(\n        overrides: ["
+    }
+  ],
+  "sites": 2,
+  "why": "Neither _buildScreen() (l1 file) nor buildTestWidget() (plain file) overrides coarsePacedTrackIdsProvider or contentIndexProvider, both of which LearningScreen.build() watches unconditionally. coarsePacedTrackIdsProvider falls through to its real implementation, which calls ref.watch(userDatabaseProvider).goalDao.getGoalsByProfile(...) — constructing a real driftDatabase(name: 'learning_tracker'). I ran `flutter test` on both files directly and reproduced Drift's own warning verbatim: 'It looks like you've created the database class UserDatabase multiple times... race conditions will occur and might corrupt the database' — 22 times across the 23 widget-pumping tests in learning_screen_l1_test.dart and once in learning_screen_test.dart (first pump per process is silent; every subsequent one warns). Every ProviderScope in these tests opens a NEW real UserDatabase instance sharing the same QueryExecutor/file name, i.e. real shared mutable state across nominally-isolated tests — the exact thing TQ-6 forbids. At least 10 other test files in this repo (e.g. test/features/scheduler/presentation/screens/study_day_config_screen_l1_test.dart) correctly override userDatabaseProvider with an in-memory double; these two files, both touching the same HOTSPOT screen, fell out of sync with LearningScreen's provider surface after coarse-track grouping was added.",
+  "recommendation": "Add userDatabaseProvider (in-memory test double per test/helpers/test_database.dart), coarsePacedTrackIdsProvider, and contentIndexProvider overrides to both _buildScreen and buildTestWidget. Add a CI/audit grep that fails if `flutter test` output for these files contains the literal string 'WARNING (drift)'.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "`flutter test test/features/learning/presentation/screens/` produces zero occurrences of 'WARNING (drift)' in stdout/stderr",
+    "Both override lists explicitly override userDatabaseProvider, coarsePacedTrackIdsProvider, and contentIndexProvider",
+    "New grep-based Rule-0 check (Makefile or CI step) greps flutter test output for 'WARNING (drift)' and fails the build if found"
+  ],
+  "labels": [
+    "TQ-6",
+    "hermetic-tests",
+    "drift",
+    "hotspot",
+    "flaky-risk"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "Minor: empirical run showed 23 'WARNING (drift)' occurrences in learning_screen_l1_test.dart vs the finding's claimed 22 — negligible discrepancy that does not affect the defect's validity.",
+      "Drift warning count is 23 in my reproduction (26 tests total, first pump silent), not the claimed 22 — immaterial off-by-one, does not affect the finding's validity. Severity should be P2, not P1, to match two structurally identical sibling findings (grp-065, grp-050) in the same audit rated P2 for the same TQ-6 pattern."
+    ]
+  },
+  "sourceBatch": "t1-feat-learning-p3",
+  "chunk": "high-052",
+  "normArea": "tests/learning",
+  "id": "AUD-t-learning-01",
+  "linearPriority": "High"
+}

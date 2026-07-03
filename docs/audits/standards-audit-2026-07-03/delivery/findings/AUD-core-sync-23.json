@@ -1,0 +1,53 @@
+{
+  "title": "Resolve outboxProcessor lazily in syncOrchestratorProvider instead of capturing it by value",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "SM-6 lazy-resolver consistency / Nygard-lens: stale capture across DB swap",
+  "area": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+      "line": 129,
+      "quote": "final outboxProcessor = ref.read(outboxProcessorProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+      "line": 160,
+      "quote": "outboxProcessor: outboxProcessor,"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+      "line": 164,
+      "quote": "resolveOutboxDao: () => ref.read(userDatabaseProvider).outboxDao,"
+    }
+  ],
+  "sites": 1,
+  "why": "Every other volatile build-time dependency in this same constructor call (gateway, merge router, outbox DAO, identity status) is deliberately passed as a lazy `() => ref.read(...)` resolver specifically — per the inline comments at lines 136-137, 161-163 — 'so a DB swap (multi-account flow) is picked up without rebuilding the orchestrator singleton.' outboxProcessor is the one exception: it's read once (line 129) and stored as a plain value field. outboxProcessorProvider (outbox_providers.dart) watches userDatabaseProvider and rebuilds on a DB swap; database_provider.dart confirms userDatabaseProvider swaps via the independently-mutable accountDbFileNameProvider, decoupled from authStateProvider (the only thing syncOrchestratorProvider itself watches). If a DB swap can occur without authStateProvider's watched value also changing in the same tick, the orchestrator keeps draining through an OutboxProcessor bound to the pre-swap, superseded UserDatabase/outboxDao while its other lazily-resolved collaborators (gateway, merge router) may already be pointing at the new account — a split-identity state. Confirming this needs tracing whether the app's account-switch flow (account_actions.dart) can complete a DB swap before authStateProvider's emitted value settles to the new account.",
+  "recommendation": "Change the outboxProcessor parameter to a lazy `resolveOutboxProcessor: () => ref.read(outboxProcessorProvider)` resolver, matching resolveGateway/resolveMergeRouter/resolveOutboxDao, so it can't go stale relative to its siblings.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "syncOrchestratorProvider resolves outboxProcessor via a lazy resolver rather than a captured value.",
+    "Regression/integration test: trigger a userDatabaseProvider swap while syncOrchestratorProvider stays alive (authState unchanged) and assert the next drain operates against the new outboxDao's pending rows, not the pre-swap instance."
+  ],
+  "labels": [
+    "sync",
+    "riverpod",
+    "multi-account",
+    "nygard"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "'gateway... may already be pointing at the new account' is wrong: firestoreGatewayProvider depends on authStateProvider, not userDatabaseProvider, so it stays old in lockstep with outboxProcessor during the window. The actually-divergent siblings are resolveMergeRouter (comment confirms it watches userDatabaseProvider) and resolveOutboxDao (directly reads userDatabaseProvider) — same race, wrong example cited in the 'why'."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-providers",
+  "chunk": "grp-032",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-23",
+  "linearPriority": "Medium"
+}

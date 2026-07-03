@@ -1,0 +1,45 @@
+{
+  "title": "Delete sync_rework_engine_test.dart — all 5 groups are skip-only placeholders with zero assertions",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead code (Everything sweep); TQ-7 spirit",
+  "area": "test/sync",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/sync/sync_rework_engine_test.dart",
+      "line": 19,
+      "quote": "skip: 'Retired W2.35 — covered by OutboxProcessor tests',"
+    },
+    {
+      "file": "learning_tracker/test/sync/sync_rework_engine_test.dart",
+      "line": 21,
+      "quote": "test('placeholder', () {});"
+    }
+  ],
+  "sites": 1,
+  "why": "SyncEngine was deleted in W2.35 (per the file's own docstring) and every one of the file's 5 groups is skip:-disabled with an empty test('placeholder', () {}) body — the file runs zero real assertions and no longer mirrors any lib/ source file. It shows up as '5 skipped' in every CI run for no regression-protection value; the redirect notes belong as a comment on the replacement suites, not a standing test file.",
+  "recommendation": "Delete the file; fold its 'moved to X' pointers into the header comments of the replacement suites (OutboxProcessor tests, CompletionMerger tests, SyncOrchestratorImpl tests) if not already present, and state the deletion reason in the commit message per TQ-7.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "sync_rework_engine_test.dart is removed from the repo, or its groups are un-skipped with real assertions",
+    "no reduction in real (non-skip) test count results from the deletion"
+  ],
+  "labels": [
+    "hygiene",
+    "dead-code",
+    "sync"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p3",
+  "chunk": "grp-110",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-64",
+  "linearPriority": "Low"
+}

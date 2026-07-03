@@ -1,0 +1,74 @@
+{
+  "title": "Verify TutoredMirrorWipeService fires on tutor resign/revoke in manage_grants_screen_l1_test.dart and manage_tutors_screen_l1_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/features/tutoring",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/manage_grants_screen_l1_test.dart",
+      "line": 369,
+      "quote": "testWidgets('confirming resignation calls ResignTutorGrantUseCase', ( ... verify(() => mockResignUseCase.call(...)).called(1);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+      "line": 234,
+      "quote": "buildTutoredMirrorWipeServiceFromWidget(ref: ref, onWipe: (_) => ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+      "line": 667,
+      "quote": "testWidgets('confirming Revoke calls revokeTutorGrantUseCase with the grant', ( ... only verifies mockRevoke.call, no mirror/session assertion"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/ws3_3f_manage_remove_tutors_test.dart",
+      "line": 71,
+      "quote": "manageTutorsSrc,\n        contains('_revoke'),"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/firestore_tutor_grant_repository_test.dart",
+      "line": 39,
+      "quote": "const result = TutorGrantFailure(message: message, code: code);"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+      "line": 675,
+      "quote": ").thenAnswer((_) async => const TutorGrantSuccess());"
+    }
+  ],
+  "sites": 6,
+  "why": "Both the tutor-side resign flow and the parent-side revoke flow fire-and-forget (unawaited) a local Drift mirror wipe plus an active-session exit() callback as an explicit fix (comment tag R4-M3) after the grant use case succeeds. This is the same class of stale-local-data bug this codebase already shipped once and wrote a dedicated regression test for elsewhere (iter10_outgoing_grants_stale_cache_test.dart, DG-TUT-STALE-01) — yet repo-wide grep for wipeMirrorForGrant/buildTutoredMirrorWipeServiceFromWidget in test/features/tutoring returns zero matches. Neither test file verifies the Drift mirror row is actually removed, or that activeTutoredProfileSelectionProvider clears when the resigned/revoked grant is the active tutored session. A regression that silently drops the unawaited(...) call, or breaks the onWipe wiring, ships undetected.",
+  "recommendation": "Seed an in-memory Drift mirror row for the grant (reusing the inMemoryDb()/_seedActiveMirror pattern from r3_shell_revocation_exit_test.dart), confirm resign/revoke, then assert the mirror row is gone; add a case where the wiped grant is the active tutored selection and assert the provider clears.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "manage_grants_screen_l1_test.dart asserts the Drift tutored-mirror row for a resigned grant is deleted after confirming resignation",
+    "manage_tutors_screen_l1_test.dart asserts the same for a revoked grant",
+    "Both cover the case where the wiped grant is the active tutored session and assert activeTutoredProfileSelectionProvider becomes null"
+  ],
+  "labels": [
+    "testing",
+    "tutoring",
+    "sync",
+    "coverage-gap"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "chunk": "grp-126",
+  "mergedFrom": [
+    "Replace source-text-matching and self-asserting tests with real behavioral tests (ws3_3f_manage_remove_tutors_test.dart, firestore_tutor_grant_repository_test.dart)"
+  ],
+  "coDiscoverers": [
+    "t1-feat-tutoring-p1",
+    "t1-feat-tutoring-p3"
+  ],
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-06",
+  "linearPriority": "Medium"
+}

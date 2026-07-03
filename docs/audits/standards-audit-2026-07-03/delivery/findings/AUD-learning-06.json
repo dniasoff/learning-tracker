@@ -1,0 +1,42 @@
+{
+  "title": "Narrow and log the catch-all in CompletionRepositoryImpl._appendStreakEvent",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3",
+  "area": "learning/data/repositories",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "line": 767,
+      "quote": "} catch (_) {\n      // Defensive: never let a telemetry tee block the primary write."
+    }
+  ],
+  "sites": 1,
+  "why": "catch (_) swallows every exception from BOTH the streak_events Drift insert and the outbox enqueue (facade.enqueueStreakPayload) with no AppLogger call anywhere in this file — a codec bug, closed-DB race, or genuine corruption is indistinguishable from the expected benign duplicate-key case this comment is defending against. This is also EH-4-adjacent (catches Error subtypes, not just typed Exceptions) and evades the Rule-0 'no empty catch blocks' Makefile grep (`catch\\s*(_\\?\\w*)\\s*{}`), which only matches a literal same-line `{}` — this multi-line comment-only body is functionally empty but textually invisible to that checker. Per the file's own header comment, the outbox enqueue here is what 'closes the gap' where a second device sees a frozen streak; if enqueueStreakPayload throws, that gap silently reopens with zero diagnostic trail and no retry.",
+  "recommendation": "Catch a specific expected type (e.g. the Drift unique-constraint exception) for the benign-duplicate case and let everything else propagate or be logged via AppLogger.instance.warning/error before swallowing, so a genuine failure is at least visible in Crashlytics/Talker.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The catch narrows to the specific expected exception type; every other path logs via AppLogger before returning; a regression test that makes enqueueStreakPayload throw asserts the failure is logged, not silently dropped."
+  ],
+  "labels": [
+    "eh-3",
+    "eh-4",
+    "error-handling",
+    "sync"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "The cited 'closes the gap' comment is the doc-comment immediately above _appendStreakEvent (~line 727), not the file's top header — minor mislabel, doesn't affect the claim's substance since it's in the same file and directly tied to the cited catch block."
+    ]
+  },
+  "sourceBatch": "t1-feat-learning-p1",
+  "chunk": "grp-059",
+  "normArea": "features/learning",
+  "id": "AUD-learning-06",
+  "linearPriority": "Medium"
+}

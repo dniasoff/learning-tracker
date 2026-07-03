@@ -1,0 +1,59 @@
+{
+  "title": "Fix missing synthetic-container guard in items_learned_providers.dart:computeLifetimeViewSummary (composite-curriculum over-credit regression)",
+  "severity": "P0",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplicated-code / previously-fixed P0 composite-over-credit guard",
+  "area": "features/progress presentation/providers (lifetime knowledge / items learned)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+      "line": 189,
+      "quote": "return !CompositeCurriculumStrategy.isSyntheticContainerLevel1("
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/items_learned_providers.dart",
+      "line": 126,
+      "quote": "final ledger = await db.learningLedgerDao.getEntriesByCurriculum("
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/items_learned_providers.dart",
+      "line": 336,
+      "quote": "learnedRefs.add(leaf.sefariaRef);"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/screens/lifetime_knowledge_screen.dart",
+      "line": 49,
+      "quote": "_LifetimeSourceFilter _filter = _LifetimeSourceFilter.allSources;"
+    }
+  ],
+  "sites": 1,
+  "why": "A stray level1 ledger row targeting a composite curriculum's synthetic container (e.g. tanach/level1/'Torah' — created by a since-fixed bug and, per the code's own comment, never cleaned up on already-upgraded devices because the v32 migration only runs once) makes every leaf under that curriculum register as learned. lifetime_knowledge_providers.dart's lifetimeDataProvider defends against this by dropping synthetic-container level1 rows before building the tree (comment there explicitly calls it a 'P0 (composite over-credit) READ-TIME guard'). items_learned_providers.dart's computeLifetimeViewSummary reimplements the identical ledger-to-learned-refs algorithm from scratch in a private _learnedLeafRefs function, but never applies the guard. Since the Lifetime Knowledge screen's default tab is 'All sources' (_filter = allSources), which routes to computeLifetimeViewSummary via lifetimeViewSummariesProvider, a user with exactly one Chumash book bulk/lifetime-marked can open the app and see 'Tanach 100% learned' by default — a silent, high-visibility corruption of the app's core progress-tracking claim. The one regression test written for this exact invariant (lifetime_tree_builder_composite_test.dart) only calls LifetimeTreeBuilder directly, so it gives zero protection against this duplicate path.",
+  "recommendation": "Delete the duplicate _learnedLeafRefs/_buildCompletionTree/_levelKey/_hebrewForLeafGroup functions in items_learned_providers.dart and have computeItemsLearnedSummary/computeLifetimeViewSummary call LifetimeTreeBuilder (computeLearnedLeafRefs/buildTree) directly, exactly as lifetime_knowledge_providers.dart already does, so the guard and any future fix apply to both surfaces from one implementation.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A test mirroring lifetime_tree_builder_composite_test.dart's single-book scenario, but driven through computeLifetimeViewSummary/lifetimeViewSummariesProvider, asserts the composite curriculum's learned count equals the single book's leaf count, not the whole curriculum's.",
+    "items_learned_providers.dart contains no second implementation of the ledger-scope-to-learned-refs algorithm; grep for '_learnedLeafRefs' in that file returns nothing after the fix."
+  ],
+  "labels": [
+    "data-correctness",
+    "duplication",
+    "progress"
+  ],
+  "originalSeverity": "P0",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The recommendation's phrasing ('call LifetimeTreeBuilder directly... exactly as lifetime_knowledge_providers.dart already does') slightly understates that the synthetic-container guard is actually a ledger pre-filter step in the caller (lifetime_knowledge_providers.dart lines 180-193), not inside LifetimeTreeBuilder itself; the fix must port that pre-filter, not just switch to calling the builder. This doesn't change the finding's validity, only a nuance in the fix description.",
+      "The 4th evidence citation (items_learned_providers.dart:336, quote \"learnedRefs.add(leaf.sefariaRef);\") is mislocated — line 336 actually reads \"learnedRefs.add(unitId);\"; the cited quote appears at line 369 instead, within the same _learnedLeafRefs function. Does not affect the finding's substance.",
+      "The evidence entry citing items_learned_providers.dart:336 for quote 'learnedRefs.add(leaf.sefariaRef);' is off by location: that exact line only contains 'learnedRefs.add(unitId);' (part of the same unguarded ledger-to-learned-refs logic, one branch earlier). The quoted text 'learnedRefs.add(leaf.sefariaRef);' is real and present in the file but at line 369, not 336. This is a citation slip, not a fabrication -- the substantive defect (missing synthetic-container guard in the duplicated algorithm) is fully confirmed by the surrounding code at lines 280-376."
+    ]
+  },
+  "sourceBatch": "t1-feat-progress-p1",
+  "chunk": "high-070",
+  "normArea": "features/progress",
+  "id": "AUD-progress-01",
+  "linearPriority": "Urgent"
+}

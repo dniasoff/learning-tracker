@@ -1,0 +1,75 @@
+{
+  "title": "Import the shared MockAuthRepository from test/mocks/mock_repositories.dart instead of 7 duplicated private copies in the account test suite",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / DRY test fixtures",
+  "area": "features/account presentation test suite",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/mocks/mock_repositories.dart",
+      "line": 10,
+      "quote": "class MockAuthRepository extends Mock implements AuthRepository {}"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/notifiers/sign_in_controller_test.dart",
+      "line": 21,
+      "quote": "class _MockAuthRepository extends Mock implements AuthRepository {}"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/notifiers/sign_in_google_signout_throws_test.dart",
+      "line": 42,
+      "quote": "class _MockAuthRepository extends Mock implements AuthRepository {}"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/notifiers/sign_in_local_signout_throws_test.dart",
+      "line": 51,
+      "quote": "class _MockAuthRepository extends Mock implements AuthRepository {}"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/notifiers/sign_in_verify_signout_throws_test.dart",
+      "line": 35,
+      "quote": "class _MockAuthRepository extends Mock implements AuthRepository {}"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/notifiers/sign_in_wrong_password_no_callback_test.dart",
+      "line": 62,
+      "quote": "class _MockAuthRepository extends Mock implements AuthRepository {}"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/screens/account_picker_local_data_missing_test.dart",
+      "line": 53,
+      "quote": "class _MockAuthRepository extends Mock implements AuthRepository {}"
+    },
+    {
+      "file": "learning_tracker/test/features/account/presentation/screens/account_picker_screen_l1_test.dart",
+      "line": 59,
+      "quote": "class _MockAuthRepository extends Mock implements AuthRepository {}"
+    }
+  ],
+  "sites": 7,
+  "why": "A shared, public MockAuthRepository already exists in test/mocks/mock_repositories.dart, but every one of these 7 files (all in this one batch; ~30 across the repo) reinvents an identical private copy. Low runtime risk today (mocktail's Mock base class no-ops unimplemented members via noSuchMethod), but it's needless duplication that a future AuthRepository interface change has to be reconciled against N private near-identical definitions instead of one, and two of the account_picker files additionally duplicate ~100 lines of ProviderScope/fixture wiring between them (account_picker_screen_l1_test.dart's _Fixture/_buildFixture vs account_picker_local_data_missing_test.dart's _buildApp) with no shared harness module.",
+  "recommendation": "Import MockAuthRepository from test/mocks/mock_repositories.dart in these 7 files instead of redeclaring it; extract the account-picker widget fixture (registry/userDb/auth/router setup + buildSubject) shared by account_picker_screen_l1_test.dart and account_picker_local_data_missing_test.dart into one harness file.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn 'class _MockAuthRepository extends Mock implements AuthRepository' learning_tracker/test/features/account returns 0 hits.",
+    "The 7 files import test/mocks/mock_repositories.dart's MockAuthRepository and all existing assertions still pass."
+  ],
+  "labels": [
+    "duplication",
+    "test-fixtures",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p3",
+  "chunk": "grp-041",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-73",
+  "linearPriority": "Low"
+}

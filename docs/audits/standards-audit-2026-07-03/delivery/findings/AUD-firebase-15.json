@@ -1,0 +1,56 @@
+{
+  "title": "Split functions/src/index.ts's five unrelated concerns into focused modules",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler lens (misplaced responsibility / god-file); AG-3 intent",
+  "area": "functions/src",
+  "evidence": [
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 28,
+      "quote": "/**\n * Triggered when a Firebase Auth user is deleted."
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 206,
+      "quote": "// W3.42 — Tutor audit-log purge (scheduled, 12-month retention)"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 533,
+      "quote": "// V2-R3 C3 — Tutor grant lifecycle Cloud Functions"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 1123,
+      "quote": "// Tutor write-path Cloud Functions — S4 (Talmid-View Squad)"
+    }
+  ],
+  "sites": 1,
+  "why": "One 2029-line file houses account-deletion cascades, a scheduled audit-log purge, the bulk-completion proxy, the full invite/accept/decline/revoke/resign grant lifecycle, and 12 near-identical tutor CRUD write-paths. Every change -- including several fixes this audit recommends -- touches the same file, so unrelated concerns share one blast radius for code review, git blame, and merge conflicts.",
+  "recommendation": "Split by concern (e.g. deletes.ts, tutor_invites.ts, tutor_writes.ts, triggers.ts) with index.ts re-exporting every `export const` so deployed function names and functions/test imports are unaffected.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "index.ts (or its replacement barrel) is under a stated line budget (e.g. <300 lines); `npm run build` still compiles; every existing export name is preserved."
+  ],
+  "labels": [
+    "cloud-functions",
+    "maintainability",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Finding says '12 near-identical tutor CRUD write-paths' under the S4 header; direct count of exported consts from tutorResetCompletion through tutorEditProfile is 13. Off-by-one, immaterial to the verdict. Also note AG-3's line cap is textually scoped to 'hand-written Dart files' — citing it against a .ts file is an analogy, not a direct violation; the finding itself hedges this correctly with 'AG-3 intent.'"
+    ]
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "chunk": "grp-158",
+  "normArea": "firebase",
+  "id": "AUD-firebase-15",
+  "linearPriority": "Low"
+}

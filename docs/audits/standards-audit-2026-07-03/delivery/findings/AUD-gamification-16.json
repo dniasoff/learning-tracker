@@ -1,0 +1,38 @@
+{
+  "title": "Delete PointsPopupWidget or give it a real call site",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Dead code / speculative generality (Fowler lens)",
+  "area": "features/gamification/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/points_display_widget.dart",
+      "line": 70,
+      "quote": "class PointsPopupWidget extends StatelessWidget {"
+    }
+  ],
+  "sites": 1,
+  "why": "grep across lib/ and test/ shows PointsPopupWidget is only ever referenced from its own test file (points_display_widget_test.dart) -- it is never instantiated by any screen (not learning_screen.dart, not bulk_mark_screen.dart, nowhere completion-triggered popups would plausibly live). It's fully-formed, styled, and tested code that the app never actually shows to a user.",
+  "recommendation": "Either remove PointsPopupWidget and its test, or wire it into the completion-celebration flow it was clearly built for (alongside AchievementUnlockCelebration) and add a widget test proving it renders from a real screen.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "PointsPopupWidget is either deleted (with its test) or has at least one production call site exercised by a widget test"
+  ],
+  "labels": [
+    "dead-code",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-052",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-16",
+  "linearPriority": "Low"
+}

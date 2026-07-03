@@ -1,0 +1,70 @@
+{
+  "title": "Add SR-2/SR-3/SR-4/SR-5 + TQ-9 ruleCoverage pending hardening tests to firestore_rules.test.mjs",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SR-2/SR-3/SR-4/SR-5/TQ-9",
+  "area": "firestore-rules-tests (functions/test)",
+  "evidence": [
+    {
+      "file": "docs/coding-standards.md",
+      "line": 298,
+      "quote": "SR-2 — Validate value types and cap string sizes in rules (`is timestamp`, `is number`, `s.size() <= N`), not just key sets via `hasOnly()`."
+    },
+    {
+      "file": "docs/coding-standards.md",
+      "line": 303,
+      "quote": "SR-3 — Every event create requires a server-bounded timestamp: present, `is timestamp`, and `<= request.time`."
+    },
+    {
+      "file": "docs/coding-standards.md",
+      "line": 308,
+      "quote": "SR-4 — Cap `list` queries on per-profile event collections: `allow list: if <cond> && request.query.limit <= 500`."
+    },
+    {
+      "file": "docs/coding-standards.md",
+      "line": 313,
+      "quote": "SR-5 — Tutor cross-user access checks state and expiry in the rule itself (`state == 'active' && expires_at > request.time`...)."
+    },
+    {
+      "file": "learning_tracker/functions/test/firestore_rules.test.mjs",
+      "line": 36,
+      "quote": "  setDoc,"
+    }
+  ],
+  "sites": 5,
+  "why": "coding-standards.md (2026-07-02) lists SR-2..SR-5 and TQ-9's ruleCoverage clause as [Pending], each with an 'Enforce' line naming the exact test pattern this file should carry. None exist. (1) SR-2: the only type/size check anywhere is `points: '50'` on completions (line 318) — no oversized-string test, no wrong-type test on any other field in any of the 12 hasOnly/open-bag collections. (2) SR-3: streak_events/learning_ledger/points_ledger accept a timestamp field of any value including far-future dates with zero test coverage — the deprecated test/firestore-rules/ suite used to test exactly this for 2 of these 3 collections before the schema migration; that coverage was lost, not carried forward. (3) SR-4: the file's own Firestore import list (line 33-40) never imports `getDocs`/`query` — it is structurally impossible for any test here to issue a list/collection query, so an owner or active tutor enumerating a child's entire event history in one unbounded query is completely untested. (4) SR-5: beforeEach (line 106-122) always seeds an 'active' tutor_grants/tutor_active_access pair; no test seeds a revoked or expired grant to prove tutor access is actually cut off, so a bug in the Cloud Function that deletes tutor_active_access on revoke would go undetected. (5) TQ-9: the emulator's own `ruleCoverage` report (flags rule expressions never evaluated by any test) is never fetched or asserted anywhere in the repo (zero grep hits for 'ruleCoverage'), so dead/unreachable branches in the 447-line rules file can accumulate silently.",
+  "recommendation": "Track as a backlog against SR-2..SR-5 + TQ-9: each lands its named assertFails/assertSucceeds pattern in firestore_rules.test.mjs; SR-4/SR-5 additionally need firestore.rules changes (an allow-list split with a limit cap, and a state/expires_at field) since nothing in the current rule is testable yet; TQ-9's ruleCoverage check is a Makefile/ci.yml addition that curls the emulator's coverage endpoint after the suite runs.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "SR-2: a test asserts a large string and a wrong-typed field are denied on at least one hasOnly-guarded and one open-bag collection",
+    "SR-3: streak_events, learning_ledger and points_ledger each gain a future-timestamp assertFails test mirroring completions'",
+    "SR-4: a test issues `limit(500)` (succeeds) and `limit(1000)`/unbounded (fails) against one event collection after firestore.rules adds an allow-list cap",
+    "SR-5: a test seeds a revoked/expired tutor_active_access scenario and asserts tutor read is denied",
+    "TQ-9: CI fetches the emulator's ruleCoverage report and fails the job on any never-evaluated rule expression"
+  ],
+  "labels": [
+    "security",
+    "test-coverage",
+    "SR-2",
+    "SR-3",
+    "SR-4",
+    "SR-5",
+    "TQ-9",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Bundles 5 distinct rule IDs (SR-2..SR-5, TQ-9) into one finding tagged 'sites: 5' — digest's consolidation rule (#4) is meant for the same defect repeated at N sites, not N different rules glued together. Structural nitpick only; every sub-claim checked out under direct evidence (including cross-referencing deleted git history), so the finding stands."
+    ]
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p2",
+  "chunk": "grp-158",
+  "normArea": "docs",
+  "id": "AUD-docs-02",
+  "linearPriority": "Medium"
+}

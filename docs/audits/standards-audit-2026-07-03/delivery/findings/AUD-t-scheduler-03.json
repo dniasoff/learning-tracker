@@ -1,0 +1,161 @@
+{
+  "title": "Replace fixed Future.delayed sleeps with a deterministic await in scheduler provider tests",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests, no timing-based synchronization) / Fowler flaky-test smell",
+  "area": "learning_tracker/test/features/scheduler/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 309,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 356,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 441,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 523,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 583,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 150));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 622,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 150));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 688,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 714,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 794,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 889,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+      "line": 930,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_contiguous_overdue_no_gap_test.dart",
+      "line": 208,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_branches_test.dart",
+      "line": 342,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_branches_test.dart",
+      "line": 398,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_branches_test.dart",
+      "line": 461,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_branches_test.dart",
+      "line": 508,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_branches_test.dart",
+      "line": 561,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_branches_test.dart",
+      "line": 617,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_branches_test.dart",
+      "line": 668,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_test.dart",
+      "line": 300,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_test.dart",
+      "line": 317,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_test.dart",
+      "line": 336,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_test.dart",
+      "line": 356,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_test.dart",
+      "line": 375,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 200));"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_test.dart",
+      "line": 395,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 200));"
+    }
+  ],
+  "sites": 25,
+  "why": "Every one of these sites follows the same pattern: `c.listen(skippedTasksProvider, (_, __) {})` then a hardcoded 100-200ms sleep, hoping SkippedTasks._loadFromPrefs() (fired via `unawaited()` inside build()) finished first — instead of awaiting the load itself, because the notifier exposes no future to await. Under a loaded CI runner or slower SharedPreferences-mock resolution the guess can be wrong: assertions then run against the stale initial `{}` state, or (in the several tests that call `.skip()`/`.undoSkip()` immediately after the sleep) a late-resolving `_loadFromPrefs()` can overwrite `state` with old prefs data right after the test's own mutation, silently clobbering it. The result is an intermittent, hard-to-reproduce CI failure with no diagnostic pointing at the real cause, plus 3+ seconds of pure sleep time paid on every run across these 4 files.",
+  "recommendation": "Give SkippedTasks a way to be awaited deterministically (e.g. an internal `Future<void>` the notifier tracks that a test helper can await via `container.read(...notifier).debugReadyForTest`), or restructure as an AsyncNotifier so tests can `await container.read(skippedTasksProvider.future)`. Replace all fixed-delay call sites with that await.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "No `Future<void>.delayed` remains in test/features/scheduler/presentation/providers/*.dart used purely to wait for provider initialization.",
+    "A test that artificially slows the fake SharedPreferences resolution (e.g. via a delayed Future in the mock) still passes, proving synchronization is no longer time-based."
+  ],
+  "labels": [
+    "testing",
+    "flaky-test",
+    "scheduler",
+    "riverpod"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p4",
+  "chunk": "grp-096",
+  "normArea": "tests/scheduler",
+  "id": "AUD-t-scheduler-03",
+  "linearPriority": "Medium"
+}

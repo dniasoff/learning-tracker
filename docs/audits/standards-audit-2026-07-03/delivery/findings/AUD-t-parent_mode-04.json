@@ -1,0 +1,43 @@
+{
+  "title": "Use addTearDown(container.dispose) in pin_flow_controller_test.dart's async/setup-transition tests",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-2",
+  "area": "test/features/parent_mode/presentation/providers/pin_flow_controller_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/parent_mode/presentation/providers/pin_flow_controller_test.dart",
+      "line": 434,
+      "quote": "expect(container.read(pinFlowControllerProvider).completed, isTrue);"
+    },
+    {
+      "file": "learning_tracker/test/features/parent_mode/presentation/providers/pin_flow_controller_test.dart",
+      "line": 599,
+      "quote": "container.dispose();"
+    }
+  ],
+  "sites": 5,
+  "why": "Every other group in this file creates its container with addTearDown(container.dispose) immediately after construction, per TQ-2, guaranteeing cleanup even when an expect() throws. The 5 tests in the 'verify mode (async)' and 'setup mode step transitions' groups (lines ~424-435, 442-454, 463-474, 579-599, 604-625) instead call container.dispose() as the last statement in the test body — if any expect() before it fails, the container and its pending bcrypt/timer callbacks leak into the rest of the suite.",
+  "recommendation": "Add addTearDown(container.dispose) immediately after each of the 5 `final container = _makeContainer(...)` calls in these two groups; drop the trailing manual container.dispose() calls.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No test in the file calls container.dispose() as its last statement; every container has a paired addTearDown at construction."
+  ],
+  "labels": [
+    "TQ-2",
+    "test-hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-parent_mode",
+  "chunk": "grp-073",
+  "normArea": "tests/parent_mode",
+  "id": "AUD-t-parent_mode-04",
+  "linearPriority": "Low"
+}

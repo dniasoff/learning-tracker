@@ -1,0 +1,45 @@
+{
+  "title": "Show user-facing error feedback on the StateError path in TutoredChildrenSection._fireEntryPullAndNavigate",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2 / UX completeness",
+  "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 662,
+      "quote": "} on StateError catch (e) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "line": 669,
+      "quote": "dismissLoading();"
+    }
+  ],
+  "sites": 1,
+  "why": "The permissionDenied and error branches of the preceding switch both show a ScaffoldMessenger snackbar so the user learns why they didn't land in the talmid view. The `on StateError catch` block three lines later only logs via AppLogger and calls exit()+dismissLoading() — no snackbar, no dialog. If buildTutoredPullServiceFromWidget throws (documented as the 'non-cloud accounts' case), the user taps a tutored-child row, watches the loading spinner, and it disappears with zero explanation — indistinguishable from a silent hang.",
+  "recommendation": "Add the same ScaffoldMessenger snackbar pattern (with an AppLocalizations-backed message) to the StateError catch block.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A widget test stubs the pull service to throw StateError and asserts a SnackBar/error message appears",
+    "The StateError catch block gives feedback consistent with the permissionDenied/error branches"
+  ],
+  "labels": [
+    "error-handling",
+    "ux",
+    "tutoring"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-078",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-10",
+  "linearPriority": "Medium"
+}

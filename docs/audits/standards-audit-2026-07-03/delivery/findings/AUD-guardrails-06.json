@@ -1,0 +1,46 @@
+{
+  "title": "Add test coverage for no_e_to_string_in_ui and no_raw_logevent lint rules",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 0 / TQ-8",
+  "area": "custom_lints",
+  "evidence": [
+    {
+      "file": "packages/custom_lints/lib/src/rules/no_e_to_string_in_ui.dart",
+      "line": 30,
+      "quote": "class NoEToStringInUi extends DartLintRule {"
+    },
+    {
+      "file": "packages/custom_lints/lib/src/rules/no_raw_logevent.dart",
+      "line": 31,
+      "quote": "class NoRawLogEvent extends DartLintRule {"
+    }
+  ],
+  "sites": 2,
+  "why": "Every other lint rule (7 of 9) ships a dedicated *_test.dart; `packages/custom_lints/test/` has no no_e_to_string_in_ui_test.dart or no_raw_logevent_test.dart anywhere in the repo (confirmed by directory listing and a repo-wide filename search), and neither Makefile has a backstop grep for these two invariants (raw exception-to-string in UI, raw logEvent calls) the way it does for e.g. talker imports or Firebase imports. Both rules were added together in commit bc327fef with no tests from day one. Combined with F8 (suite not CI-wired even where tests exist), these two rules have zero automated verification of any kind.",
+  "recommendation": "Add no_e_to_string_in_ui_test.dart and no_raw_logevent_test.dart mirroring the violation/allowed/whitelist groups already used by the other 7 rule test files.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "packages/custom_lints/test/no_e_to_string_in_ui_test.dart exists and covers at least one violation and one allowed case per identifier/context branch.",
+    "packages/custom_lints/test/no_raw_logevent_test.dart exists and covers the analytics_service.dart whitelist plus a violation case.",
+    "dart test in packages/custom_lints passes with both new files."
+  ],
+  "labels": [
+    "testing",
+    "coverage",
+    "custom-lint"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-lints-hooks",
+  "chunk": "grp-160",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-06",
+  "linearPriority": "Medium"
+}

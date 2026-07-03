@@ -1,0 +1,50 @@
+{
+  "title": "Extract the Sefaria TOC category-walk loop shared by curate_curricula/main.py (2x) and audit_seed.py (1x) instead of copy-pasting it",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-DuplicatedCode",
+  "area": "tool/curate_curricula, tool/",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/curate_curricula/main.py",
+      "line": 133,
+      "quote": "def _toc_subtree(path: str):\n    \"\"\"Walk Sefaria TOC categories by '/' delimited path, return the node.\"\"\""
+    },
+    {
+      "file": "learning_tracker/tool/curate_curricula/main.py",
+      "line": 504,
+      "quote": "def _toc_books(category_path: str, main_subcats: list[str] | None = None):"
+    },
+    {
+      "file": "learning_tracker/tool/audit_seed.py",
+      "line": 195,
+      "quote": "def _books_in_category(path: str, main_subcats=None) -> list[str]:"
+    }
+  ],
+  "sites": 3,
+  "why": "The same ~10-line 'split path on / and descend library.get_toc() matching category nodes' loop (identical toc/parts/node/contents/match variable names) is copy-pasted three times — twice inside main.py itself (_toc_subtree and _toc_books duplicate each other) and once more in audit_seed.py. A change to how Sefaria's TOC node shape is walked (e.g. a new category key) has to be found and patched in three places, and nothing keeps them in sync if only one gets fixed.",
+  "recommendation": "Extract a shared `_walk_toc_path(path) -> node | None` helper (e.g. a small tool/sefaria_toc_utils.py importable by both scripts) and have _toc_subtree, _toc_books, and _books_in_category call it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one implementation of the TOC-path-walk loop exists across tool/curate_curricula/main.py and tool/audit_seed.py",
+    "Sample category path (e.g. Talmud/Bavli/Seder Zeraim) resolves identically before/after the refactor"
+  ],
+  "labels": [
+    "duplication",
+    "fowler",
+    "tier2-tooling"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-app-tool-p1",
+  "chunk": "grp-151",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-26",
+  "linearPriority": "Low"
+}

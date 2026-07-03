@@ -1,0 +1,45 @@
+{
+  "title": "Fix ZmanimWindowService polar-fallback candle-lighting/tzais to use the target location's time, not the device's",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard failure-mode / domain-logic correctness",
+  "area": "domain",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sacred_time/domain/services/zmanim_window_service.dart",
+      "line": 163,
+      "quote": "return DateTime(forDate.year, forDate.month, forDate.day, 17).toUtc();"
+    },
+    {
+      "file": "learning_tracker/lib/features/sacred_time/domain/services/zmanim_window_service.dart",
+      "line": 182,
+      "quote": "return DateTime(forDate.year, forDate.month, forDate.day, 21).toUtc();"
+    }
+  ],
+  "sites": 2,
+  "why": "DateTime(y, m, d, 17) (no .utc) constructs a device-local wall-clock time; .toUtc() then converts using the DEVICE's current timezone offset, not the offset of latitude/longitude — an arbitrary location the user picked, which the feature explicitly lets differ from the device's own timezone (manual city/coords). The doc comment above promises 'a wide local-time window' at the target, but the fallback is local to whichever timezone the device (or test runner) happens to be in. It only fires at extreme (polar) latitudes when getCandleLighting()/getTzais() return null, and zmanim_window_service_test.dart has no test forcing that branch, so it has never been exercised.",
+  "recommendation": "Compute the fallback from a fixed offset derived from longitude (or explicitly switch to UTC and correct the 'local-time' claim in the comment) instead of relying on DateTime's device-local constructor.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Fallback candle-lighting/tzais no longer depends on the executing device's timezone",
+    "A unit test at an extreme-latitude fixture forces getCandleLighting()/getTzais() to return null and asserts the returned UTC instant is stable regardless of the test machine's TZ"
+  ],
+  "labels": [
+    "domain-logic",
+    "timezone",
+    "edge-case"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sacred_time",
+  "chunk": "grp-089",
+  "normArea": "features/sacred_time",
+  "id": "AUD-sacred_time-04",
+  "linearPriority": "Medium"
+}

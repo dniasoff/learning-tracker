@@ -1,0 +1,56 @@
+{
+  "title": "Fix wrong bundled seed-asset filename (seed.db.gz) in docs/qa/legacy/14-sync-and-offline.md",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-4 triage AREA NOTE — factual-drift check against reality for a presents-as-current doc",
+  "area": "docs/qa/legacy",
+  "evidence": [
+    {
+      "file": "docs/qa/legacy/14-sync-and-offline.md",
+      "line": 19,
+      "quote": "6. Content DB seed file (`seed.db.gz`) is available in the APK assets"
+    },
+    {
+      "file": "docs/qa/legacy/14-sync-and-offline.md",
+      "line": 690,
+      "quote": "**Preconditions:** Fresh install of the app. The APK contains `seed.db.gz` in assets."
+    },
+    {
+      "file": "learning_tracker/lib/core/database/seed_manager.dart",
+      "line": 73,
+      "quote": "static const String _seedAssetPath = 'assets/db/content.db.gz';"
+    },
+    {
+      "file": "docs/qa/legacy/seed-content-db-build-guide.md",
+      "line": 218,
+      "quote": "unzip -l build/app/outputs/flutter-apk/app-release.apk | grep content.db"
+    }
+  ],
+  "sites": 2,
+  "why": "A tester following SYNC-29 to verify the seed DB ships in the APK would run `unzip -l app-release.apk | grep seed.db.gz`, find nothing (the real bundled asset is content.db.gz — seed.db.gz is only a local build-only intermediate per tool/seed_content_db.dart), and could file a false 'seed file missing from APK' bug, burning triage time on a doc typo instead of a real defect.",
+  "recommendation": "Replace both `seed.db.gz` mentions with `content.db.gz`, or add a one-line caveat that seed.db.gz is the pre-bundle build intermediate, never the shipped asset name — matching the correct usage already in the sibling seed-content-db-build-guide.md.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both occurrences of `seed.db.gz` in docs/qa/legacy/14-sync-and-offline.md (Prerequisites list and SYNC-29) read `content.db.gz` or are annotated as the build-only intermediate name.",
+    "grep -c 'seed.db.gz' docs/qa/legacy/14-sync-and-offline.md returns 0, or only appears inside an explicit build-intermediate caveat."
+  ],
+  "labels": [
+    "docs",
+    "tier4-triage",
+    "factual-drift",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p3",
+  "chunk": "grp-171",
+  "normArea": "docs",
+  "id": "AUD-docs-31",
+  "linearPriority": "Low"
+}

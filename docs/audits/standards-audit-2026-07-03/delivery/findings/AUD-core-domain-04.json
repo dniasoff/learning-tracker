@@ -1,0 +1,71 @@
+{
+  "title": "Replace hardcoded 'cloudBorn' literal and profile_model.dart's reimplemented switch with AccountTier/ProfileMode's own storageKey/fromStorageKey",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication (self-flagged by each VO's own 'Migration note')",
+  "area": "core/domain/value_objects (account/profile)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/account_tier.dart",
+      "line": 14,
+      "quote": "Direct string comparisons (`account.tier == 'cloudBorn'`) should be"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+      "line": 183,
+      "quote": "'cloudBorn',"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+      "line": 221,
+      "quote": "'cloudBorn',"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+      "line": 324,
+      "quote": "'cloudBorn',"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+      "line": 361,
+      "quote": "'cloudBorn',"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/profile_mode.dart",
+      "line": 10,
+      "quote": "Direct string comparisons (`profile.mode == 'child'`) should be replaced"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/models/profile_model.dart",
+      "line": 28,
+      "quote": "ProfileMode get profileMode => switch (mode) {"
+    }
+  ],
+  "sites": 5,
+  "why": "account_tier.dart's own docstring names exactly this anti-pattern as the W5.11 sweep target, yet the primary caller of DeviceRegistryDatabase.updateAccountTier (the local→cloud upgrade flow) hardcodes the raw literal 'cloudBorn' at all 4 of its call sites instead of using AccountTier.cloud.storageKey — the read path (DeviceAccountX.accountTier) already goes through the typed enum, so write and read now use two unlinked representations of the same key. Separately, profile_model.dart re-implements ProfileMode's string↔enum mapping with its own switch (silently defaulting to adult) instead of calling ProfileMode.fromStorageKey (which throws on unrecognized values). Neither currently misbehaves — the literals happen to match — but a typo or a future storage-key rename in the VO would not be caught by the compiler at any of these 5 sites, and the two ProfileMode mappings already have different error-handling semantics (throw vs. silent default) for what is meant to be the same conversion.",
+  "recommendation": "Replace the 4 'cloudBorn' literals with AccountTier.cloud.storageKey; have profile_model.dart's profileMode getter delegate to ProfileMode.fromStorageKey (wrapped in the same kind of fail-safe try/catch pattern already used in child_mode_guard.dart) instead of re-switching.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "upgrade_to_cloud_service.dart contains zero raw 'cloudBorn'/'localBorn' string literals; all go through AccountTier.*.storageKey.",
+    "profile_model.dart's profileMode getter calls ProfileMode.fromStorageKey (or documents why it deliberately diverges)."
+  ],
+  "labels": [
+    "duplication",
+    "primitive-obsession"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "profile_mode.dart quote is at line 11, not 10. upgrade_to_cloud_service.dart 'cloudBorn' lines are 183/222/325/362, not 183/221/324/361 (3 of 4 off by one)."
+    ]
+  },
+  "sourceBatch": "t1-core-domain-learning",
+  "chunk": "grp-017",
+  "normArea": "core/domain",
+  "id": "AUD-core-domain-04",
+  "linearPriority": "Medium"
+}

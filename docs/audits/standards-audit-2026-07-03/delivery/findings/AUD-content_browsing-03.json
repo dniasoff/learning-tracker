@@ -1,0 +1,45 @@
+{
+  "title": "Inject analyticsServiceProvider into MarkLiveCompletionUseCase so tutor_live_mark_blocked actually fires",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2/PV-5 adjacent (use-case telemetry)",
+  "area": "features/content_browsing/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+      "line": 669,
+      "quote": "final markLiveUseCase = MarkLiveCompletionUseCase<MarkCompletionResult>("
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart",
+      "line": 62,
+      "quote": "await _analytics?.logEvent(LogEvents.tutor.liveMarkBlocked);"
+    }
+  ],
+  "sites": 1,
+  "why": "grep -rn 'MarkLiveCompletionUseCase<' across lib/ shows text_display_screen.dart:669 is the ONLY production construction site in the app, and it omits the optional `analytics:` argument, so `_analytics` stays null and the null-aware `_analytics?.logEvent(...)` silently no-ops. The use case's own comment says this telemetry exists so 'tutor boundary violations are visible in dashboards' (W7.11) — the permission guard itself still works (exception thrown, dialog shown), but that dashboard signal never fires anywhere in production, so ops has zero visibility into how often the tutor write-boundary is hit.",
+  "recommendation": "Pass analytics: ref.read(analyticsServiceProvider) at the construction site — the provider already exists and is used the same way by sibling tutoring providers (tutor_grant_providers.dart).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "a widget/unit test overrides analyticsServiceProvider with a fake, drives a tutor-session mark-complete attempt, and asserts logEvent(LogEvents.tutor.liveMarkBlocked) was called exactly once"
+  ],
+  "labels": [
+    "observability",
+    "analytics",
+    "tutoring",
+    "bug"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "chunk": "grp-044",
+  "normArea": "features/content_browsing",
+  "id": "AUD-content_browsing-03",
+  "linearPriority": "Medium"
+}

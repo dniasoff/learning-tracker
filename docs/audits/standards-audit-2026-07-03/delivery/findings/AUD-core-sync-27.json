@@ -1,0 +1,56 @@
+{
+  "title": "Wire or delete dead MergeException and OutboxDeadLetterException — neither is ever thrown in lib/",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Dead-code/lens-pass sweep (digest 'Everything' applicability) + Evans ubiquitous-language (doc must match reality); AG-6-adjacent speculative generality",
+  "area": "core/sync/exceptions",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/exceptions/merge_exception.dart",
+      "line": 7,
+      "quote": "Callers that catch [MergeException] should record the event via crisis"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/exceptions/merge_exception.dart",
+      "line": 12,
+      "quote": "class MergeException extends InternalException {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/exceptions/outbox_dead_letter_exception.dart",
+      "line": 7,
+      "quote": "thrown the item should be moved to a dead-letter queue and crisis telemetry"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 272,
+      "quote": "return false; // dead-lettered"
+    }
+  ],
+  "sites": 2,
+  "why": "Both classes' own doc comments assert they are 'Thrown when...' a specific failure occurs and that catching them triggers crisis telemetry / user-facing recovery. Exhaustive grep of lib/ for 'MergeException(' and 'OutboxDeadLetterException(' matches only their own constructor declarations — zero throw sites exist anywhere in production code (MergeException's only other reference in the whole repo is a widget test that hand-constructs it to exercise AppErrorView's generic category). The behaviors the docs promise ARE implemented — drift_merge_store.dart/profile_program_merger.dart fire merge_row_skipped and outbox_processor.dart fires outbox_dead_lettered (confirmed at outbox_processor.dart:262-272) — but entirely through inline AppLogger/analytics calls that never construct these types. A developer investigating 'why doesn't a merge failure surface a recoverable error to the user' will find MergeException, read its contract, and either burn time hunting for a throw site that doesn't exist or wrongly conclude the safety net is live when it isn't.",
+  "recommendation": "Either thread these into their designed throw sites (a genuinely-unrecoverable branch in drift_merge_store.dart/profile_program_merger.dart for MergeException; the max-attempts branch in outbox_processor.dart for OutboxDeadLetterException) so `is MergeException` / `is OutboxDeadLetterException` becomes meaningful to callers, or delete both classes, drop the stale W7.2 backlog line in docs/planning/tech-debt-remediation-plan.md:531, and fix the docstrings so they stop describing a control-flow path that doesn't exist.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -rn \"throw MergeException\" learning_tracker/lib returns >=1 hit, or merge_exception.dart is removed and learning_screen_test.dart:80 is updated to use a type that is actually thrown in production",
+    "grep -rn \"throw OutboxDeadLetterException\" learning_tracker/lib returns >=1 hit, or the class is removed",
+    "if wired: a new test at test/core/sync/exceptions/ (mirrors lib/core/sync/exceptions/ per AG-5) exercises the real throw site"
+  ],
+  "labels": [
+    "dead-code",
+    "sync",
+    "documentation-drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-exceptions",
+  "chunk": "grp-028",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-27",
+  "linearPriority": "Medium"
+}

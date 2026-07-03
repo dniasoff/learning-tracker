@@ -1,0 +1,71 @@
+{
+  "title": "Fix 7 stale 'HARDCODED STRING' comments in upgrade_to_cloud_screen_l1_test.dart — the strings are l10n-sourced now",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8-adjacent (comments must not misrepresent current source state) / AX-2",
+  "area": "features/settings/presentation/screens (upgrade-to-cloud)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+      "line": 230,
+      "quote": "// HARDCODED STRING: \"Confirm your password\" is not sourced from l10n."
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+      "line": 265,
+      "quote": "// HARDCODED STRING: \"You're signed in as …\" body text is hardcoded."
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+      "line": 309,
+      "quote": "// HARDCODED STRING: \"Password required\" is hardcoded in the validator."
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+      "line": 357,
+      "quote": "// HARDCODED STRING: this message is hardcoded in _submit()."
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+      "line": 394,
+      "quote": "// HARDCODED STRING: \"Incorrect password.\" is hardcoded in the catch block."
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+      "line": 577,
+      "quote": "// HARDCODED STRING: internet error message is hardcoded."
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+      "line": 709,
+      "quote": "// HARDCODED STRING: \"You're backed up!\" in _SuccessBlock is not l10n-sourced."
+    }
+  ],
+  "sites": 7,
+  "why": "None of the 7 strings these comments call out as hardcoded actually appear as literals in upgrade_to_cloud_screen.dart — grepping the source finds zero hits, and every one is confirmed sourced from a matching AppLocalizations getter with an identical English ARB value (e.g. app_en.arb:1514 upgradeToCloudPasswordLabel = 'Confirm your password', :1526 upgradeToCloudSuccessTitle = \"You're backed up!\"). The code was fixed in an earlier wave but these test comments were never updated, so they now misrepresent the file's current AX-2 compliance to the next reader/agent — who might waste time 'fixing' a non-issue or, worse, assume any future l10n regression here is 'already known'.",
+  "recommendation": "Delete or correct the 7 comments to note the strings are AppLocalizations-sourced (cite the ARB keys), so the file accurately documents current state.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "None of the 7 comments in upgrade_to_cloud_screen_l1_test.dart claim a string is hardcoded/not-l10n-sourced when grepping upgrade_to_cloud_screen.dart shows it is."
+  ],
+  "labels": [
+    "docs-drift",
+    "AX-2",
+    "stale-comment"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The 7th evidence entry's line should be 710, not 709 — the quoted comment text is verbatim correct, just one line off."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-103",
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-09",
+  "linearPriority": "Low"
+}

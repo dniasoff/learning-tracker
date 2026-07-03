@@ -1,0 +1,44 @@
+{
+  "title": "profile_scoped_preference_keys_test.dart tests each read* method twice under two differently-named, near-identical groups",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "test-quality",
+  "area": "features/sync test",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/sync/domain/profile_scoped_preference_keys_test.dart",
+      "line": 132,
+      "quote": "group('ProfileScopedPreferenceKeys.readAppLocale', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/sync/domain/profile_scoped_preference_keys_test.dart",
+      "line": 159,
+      "quote": "group('readAppLocale', () {"
+    }
+  ],
+  "sites": 7,
+  "why": "For each of 7 read* methods (readAppLocale, readUseHebrewCalendar, readFontSizeIndex, readShowNikud, readLearningOrderParentControls, readHebrewTermsScript, readTransliterationVariant) the file has a 'ProfileScopedPreferenceKeys.readX' group immediately followed by a bare 'readX' group asserting the same scenarios (scoped value present, legacy-key fallback for profile 0, default when unset) via slightly different setup mechanics (setMockInitialValues vs. prefs.setString). None of the second groups add coverage the first doesn't already have -- this roughly doubles the file's length for no additional protection and doubles the edits needed whenever a read* method's fallback logic changes.",
+  "recommendation": "Delete one of each duplicate group pair (keep whichever naming convention the rest of the suite uses); should shrink the file well under the AG-3 400-line threshold from the companion finding.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "File line count drops materially (each read* method has exactly one group) and dart test still exercises scoped/legacy/default paths for all 7 methods."
+  ],
+  "labels": [
+    "test-quality",
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-107",
+  "normArea": "tests/sync",
+  "id": "AUD-t-sync-03",
+  "linearPriority": "Low"
+}

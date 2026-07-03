@@ -1,0 +1,45 @@
+{
+  "title": "Type the bare catch clauses in the merge layer so they stop swallowing Error subtypes",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-4 (typed `on X catch`; never catch Error subtypes)",
+  "area": "core/sync/merge",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/merge/learner_profile_merger.dart",
+      "line": 74,
+      "quote": "} catch (e, stackTrace) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+      "line": 701,
+      "quote": "} catch (_) {"
+    }
+  ],
+  "sites": 2,
+  "why": "Neither catch has an `on <Type>` clause, so both trap Error subtypes (TypeError, RangeError, AssertionError) alongside genuine Exceptions. Per EH-4's stated rationale, that masks real programming bugs introduced by a future edit to these exact files: instead of crashing loudly with a stack trace in dev/QA, a regression degrades silently to a 'sync_learner_profile_merge_row_failed' warning log (site 1) or a silently-emptied schedule days-of-week list inside _encodeSchedule (site 2).",
+  "recommendation": "Narrow both to `on Exception catch` (or the specific expected types, e.g. FormatException/SqliteException) and let genuine Error subtypes propagate and crash loudly.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "avoid_catches_without_on_clauses + avoid_catching_errors lints (EH-4's stated Pending checkers in coding-standards.md) pass for these two files.",
+    "Existing mergers_test.dart / learning_ledger_merger_test.dart suites still pass after narrowing."
+  ],
+  "labels": [
+    "sync",
+    "error-handling",
+    "EH-4"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-merge",
+  "chunk": "grp-029",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-25",
+  "linearPriority": "Medium"
+}

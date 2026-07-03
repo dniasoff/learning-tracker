@@ -1,0 +1,45 @@
+{
+  "title": "Add semantic labels to the icon-only ArrowButton carousel controls (AX-3)",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AX-3",
+  "area": "learning_tracker/lib/features/dashboard/presentation/widgets/arrow_button.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/arrow_button.dart",
+      "line": 18,
+      "quote": "return InkWell(\n      onTap: onTap,"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/active_tracks_carousel_section.dart",
+      "line": 79,
+      "quote": "ArrowButton(\n              icon: Directionality.of(context) == TextDirection.rtl"
+    }
+  ],
+  "sites": 1,
+  "why": "The prev/next chevrons that page the active-tracks carousel are pure Icon-in-InkWell controls with no Semantics/tooltip/semanticLabel anywhere in the widget or its two call sites (prev at line 79, next at line 94 of active_tracks_carousel_section.dart). A TalkBack/VoiceOver user hears at best an unlabeled 'button' for each — no indication of direction or purpose — for the only pointer-driven way to move between active tracks. dashboard_body.dart:304-311 shows the team applying this exact fix elsewhere ('F-11: wrap the streak chip in a Semantics node so TalkBack/VoiceOver announces a descriptive label'), so the omission here is an inconsistency, not a policy gap.",
+  "recommendation": "Wrap each ArrowButton instance (or give the widget a required semanticLabel) in Semantics(label: l10n.previousTrack / l10n.nextTrack, button: true, excludeSemantics: true, ...), mirroring the streak-chip pattern in dashboard_body.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A widget test using tester.getSemantics on ActiveTracksCarouselSection confirms both arrow controls expose a non-empty, direction-specific label.",
+    "Manual TalkBack/VoiceOver pass announces 'Previous track'/'Next track' (EN) and their Hebrew ARB equivalents."
+  ],
+  "labels": [
+    "AX-3",
+    "accessibility",
+    "dashboard"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "high-044",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-01",
+  "linearPriority": "High"
+}

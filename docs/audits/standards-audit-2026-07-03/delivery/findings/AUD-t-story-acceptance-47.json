@@ -1,0 +1,44 @@
+{
+  "title": "Replace the tautological AuthRepository mock-shape test in epic_25_schema_core_test.dart with real coverage or delete it",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological/over-mocked test)",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+      "line": 615,
+      "quote": "when(() => repo.currentUser).thenReturn(null);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+      "line": 625,
+      "quote": "expect(repo.currentUser, isNull);"
+    }
+  ],
+  "sites": 1,
+  "why": "The test stubs every AuthRepository member on a mocktail Mock and then asserts the mock returns exactly what it was just told to return — it can never fail regardless of what AuthRepositoryImpl actually does, so it gives false confidence that Story 25.11's 'sole firebase_auth consumer' AC is under test. Real behavioural coverage already exists separately in test/features/auth/data/repositories/auth_repository_impl_test.dart, so today this test adds zero net verification while reading like acceptance coverage for the story.",
+  "recommendation": "Delete the runtime expect() calls and keep this as a documented compile-only shape check (a referenced-but-uncalled function is enough to prove the interface compiles), or point the docstring at auth_repository_impl_test.dart so reviewers don't mistake mock-echo assertions for behavioural coverage.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "test either exercises AuthRepositoryImpl directly or is reduced to a compile-time shape check with no expect() calls that only echo their own stubs"
+  ],
+  "labels": [
+    "tautological-test",
+    "over-mocked",
+    "TQ-8"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-25",
+  "chunk": "grp-129",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-47",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Fix migration_test_helper.dart's doc comment — claims post-migration schemaVersion 19, actual is 32",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Docs/comment drift (hygiene; no direct rule ID)",
+  "area": "learning_tracker/test/helpers/migration_test_helper.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/helpers/migration_test_helper.dart",
+      "line": 12,
+      "quote": "// DB is now at v19 (all migrations ran)."
+    },
+    {
+      "file": "learning_tracker/lib/core/database/user/user_database.dart",
+      "line": 159,
+      "quote": "int get schemaVersion => 32;"
+    }
+  ],
+  "sites": 1,
+  "why": "The usage example at the top of the file illustrates openDbAtVersion(15, ...) landing the DB 'at v19 (all migrations ran)' — accurate when written, but schemaVersion is now 32. The helper itself is functionally unaffected (Drift's migration runner walks every step up to the real schemaVersion regardless of what the docstring says), so this is pure documentation drift, but a future reader relying on the comment to understand 'how far migrations run' gets a wrong mental model.",
+  "recommendation": "Update the docstring to say 'all migrations ran' without a hardcoded version number, or reference `UserDatabase.schemaVersion` instead of a literal so it can't go stale again.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The usage example no longer states a specific stale schemaVersion number."
+  ],
+  "labels": [
+    "hygiene",
+    "docs-drift",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-helpers",
+  "chunk": "grp-150",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-69",
+  "linearPriority": "Low"
+}

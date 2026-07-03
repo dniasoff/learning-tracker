@@ -1,0 +1,46 @@
+{
+  "title": "Automate hooks/pre-commit installation instead of relying on manual copy/chmod instructions",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 0 / AG-11",
+  "area": "hooks",
+  "evidence": [
+    {
+      "file": "hooks/README.md",
+      "line": 11,
+      "quote": "cp hooks/pre-commit .git/hooks/\nchmod +x .git/hooks/pre-commit"
+    },
+    {
+      "file": "hooks/pre-commit",
+      "line": 3,
+      "quote": "# Install: cp hooks/pre-commit .git/hooks/ && chmod +x .git/hooks/pre-commit"
+    }
+  ],
+  "sites": 2,
+  "why": "The pre-commit hook only runs if a contributor manually copies it into .git/hooks/ — there is no `make install-hooks`/`setup` target anywhere in either Makefile that does this for them, confirmed by grepping both Makefiles for 'hook' and finding no match. This repo's own `.git/hooks/pre-commit` is absent right now, empirically confirming the gate is not installed even in the reference checkout. CI backstops the same two checks (format/analyze), so this is not a silent-corruption risk, but it means every new contributor's first several commits get zero local pre-commit feedback and the guardrail is bypassable by simply never running the two setup lines — exactly the 'check that can never fire by default' pattern this audit area was asked to hunt.",
+  "recommendation": "Add a `make install-hooks` target (or a postinstall step referenced from the top-level setup docs) that performs the cp+chmod, and reference it from hooks/README.md/CONTRIBUTING.md instead of raw shell steps.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A committed make/tool target installs hooks/pre-commit into .git/hooks/ without manual copy-paste.",
+    "hooks/README.md, CONTRIBUTING.md, learning_tracker/README.md, and docs/development-guide.md point to that target."
+  ],
+  "labels": [
+    "guardrail",
+    "hooks",
+    "onboarding",
+    "soft-skip"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-lints-hooks",
+  "chunk": "grp-161",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-19",
+  "linearPriority": "Low"
+}

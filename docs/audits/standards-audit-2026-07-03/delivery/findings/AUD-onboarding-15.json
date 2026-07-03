@@ -1,0 +1,44 @@
+{
+  "title": "Remove unreachable English-only default parameter values in AppIntroScreen's _IntroPage",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene / dead code",
+  "area": "features/onboarding/presentation/screens",
+  "sites": 2,
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/screens/app_intro_screen.dart",
+      "line": 432,
+      "quote": "String talmidChochomLabel = 'Talmid Chochom',"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/screens/app_intro_screen.dart",
+      "line": 457,
+      "quote": "String talmidChochomLabel = 'Talmid Chochom',"
+    }
+  ],
+  "why": "Both call sites (_buildSubtitleBlock at line 292 and its internal call to _subtitleRich) always pass an explicit talmidChochomLabel: terms.talmidChochom argument, so these English-literal defaults can never actually render -- dead code that also looks like (but isn't reachable as) an AX-2 violation, wasting a reviewer's attention when auditing for hardcoded strings.",
+  "recommendation": "Make the parameter `required String talmidChochomLabel` (drop the default) so the compiler enforces callers always supply the localized value.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "flutter analyze clean after making the parameter required (proves no call site relied on the default)"
+  ],
+  "labels": [
+    "dead-code",
+    "hygiene",
+    "onboarding"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "chunk": "grp-068",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-15",
+  "linearPriority": "Low"
+}

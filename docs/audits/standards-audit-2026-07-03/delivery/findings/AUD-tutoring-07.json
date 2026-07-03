@@ -1,0 +1,45 @@
+{
+  "title": "Handle mid-loop failure in TutoredWriteRouter.pushStageDefinitions (tutored_write_router.dart)",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "Nygard (partial I/O failure) / DB-6 offline-first parity",
+  "area": "features/tutoring/data/routers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+      "line": 141,
+      "quote": "for (final stage in stages) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+      "line": 157,
+      "quote": "_handleResult(result, 'tutorUpsertStageDefinition[$stageId]');"
+    }
+  ],
+  "sites": 1,
+  "why": "pushStageDefinitions awaits one Cloud Function call per stage sequentially and _handleResult throws immediately on the first TutorWriteFailure. If a tutor edits several stages at once and the network drops partway through, the earlier stages are already committed server-side while the remaining ones are simply lost — the thrown TutorWriteException names only the failing stage, not which stages already succeeded. Unlike the normal (non-tutored) write path, tutored writes deliberately bypass the local outbox (per this file's own header comment), so there is no retry queue to pick the dropped stages back up on reconnect — the class's offline-first guarantee (DB-6, exercised everywhere else in this app) does not hold here. This is architectural/edge-case reasoning, not a reproduced runtime failure.",
+  "recommendation": "Either batch the per-stage calls into a single CF invocation (atomic on the server) or collect per-stage results and surface a structured partial-failure summary (which stages succeeded/failed) so the caller can retry just the failed subset instead of losing silent state.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "A test that fails the 2nd of 3 stage upserts asserts the caller learns which stages succeeded (not just a single opaque exception).",
+    "Documented decision (in tutored_write_router.dart's header) on whether partial multi-stage failure is an accepted risk or gets a retry path."
+  ],
+  "labels": [
+    "offline-first",
+    "nygard",
+    "partial-failure"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "grp-122",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-07",
+  "linearPriority": "Medium"
+}

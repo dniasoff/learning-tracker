@@ -1,0 +1,51 @@
+{
+  "title": "Delete or rewrite generated_providers_coverage_test.dart (757 lines) — every test only exercises riverpod_generator boilerplate",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological tests) + AG-3 (400-line hand-written file cap)",
+  "area": "test/core/providers (test quality)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/providers/generated_providers_coverage_test.dart",
+      "line": 9,
+      "quote": "/// No ProviderContainer needed — we only call methods on provider objects."
+    },
+    {
+      "file": "learning_tracker/test/core/providers/generated_providers_coverage_test.dart",
+      "line": 65,
+      "quote": "expect(p1, equals(p2));\n      expect(p1 == p3, isFalse);"
+    },
+    {
+      "file": "learning_tracker/test/core/providers/generated_providers_coverage_test.dart",
+      "line": 69,
+      "quote": "expect(p1.debugGetCreateSourceHash(), isNotEmpty);"
+    }
+  ],
+  "sites": 1,
+  "why": "Every one of this file's ~60 tests calls only toString()/==/hashCode/overrideWithValue()/debugGetCreateSourceHash() on provider objects across ~25 imported provider files — methods riverpod_generator emits mechanically and guarantees correct by construction (the file's own header brags 'No ProviderContainer needed'). None of the 757 lines read an actual computed provider value or exercise application logic, so the suite cannot catch a real regression; it exists purely to move a coverage percentage, and must be hand-edited every time any of those ~25 files' provider signatures change (pure maintenance tax for zero protection). At 757 lines it also breaches AG-3's 400-line cap for hand-written files.",
+  "recommendation": "Delete the file — riverpod_generator's own test suite already guarantees .g.dart correctness for toString/==/hashCode/overrideWithValue. If a coverage-percentage floor is the actual goal, exclude generated files from the coverage calculation instead of hand-writing padding tests, and reinvest the budget in ProviderContainer-based behavioral tests for the providers that currently have none (see the companion core/preferences test-coverage finding).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "File is removed, or every remaining test reads a real computed value via ProviderContainer and would fail on an actual logic regression.",
+    "AG-3's checker (find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400') no longer lists this file."
+  ],
+  "labels": [
+    "testing",
+    "AG-3",
+    "coverage-padding",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-providers-prefs",
+  "chunk": "grp-022",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-15",
+  "linearPriority": "Medium"
+}

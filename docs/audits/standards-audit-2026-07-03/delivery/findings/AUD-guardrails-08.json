@@ -1,0 +1,56 @@
+{
+  "title": "Deduplicate tool/device_e2e/run{2,3,4,5,6,7}_full_suite.mjs into one parameterized orchestration module",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-1 (route through committed scripts, no ad-hoc variants) + Fowler duplication",
+  "area": "tool/device_e2e (on-device audit orchestration)",
+  "evidence": [
+    {
+      "file": "tool/device_e2e/run2_full_suite.mjs",
+      "line": 2,
+      "quote": "name: 'device-e2e-full-suite-run2',"
+    },
+    {
+      "file": "tool/device_e2e/run7_full_suite.mjs",
+      "line": 2,
+      "quote": "name: 'device-e2e-full-suite-run7',"
+    },
+    {
+      "file": "tool/device_e2e/run2_full_suite.mjs",
+      "line": 43,
+      "quote": "`## Judgment calibration (avoid the false positives from run 1)`,"
+    },
+    {
+      "file": "tool/device_e2e/run5_fix.mjs",
+      "line": 97,
+      "quote": "excluded: ['#16 RTL segmented stranded — re-rejected (deferred workflow + run-2 confirmed SegmentedButton mirrors correctly...)'],"
+    }
+  ],
+  "sites": 6,
+  "why": "diff run2_full_suite.mjs against run3/4/5/6/7 shows each 256-line file differs from run2 by EXACTLY 3 lines (name, output dir, one description string) — 1536 lines of near-total copy-paste across 6 files. The concrete cost is visible: the calibration text 'avoid the false positives from run 1' (line 43) is frozen verbatim since run2, yet the SAME false positive (RTL segmented controls auto-mirroring) had to be independently rediscovered and excluded in run3 (run3_fix.mjs:104, '#10... contradicted between runs') and AGAIN in run5 (run5_fix.mjs:97, '#16... re-rejected'). Because the shared logic isn't factored into one module, a lesson learned in one run never propagates to the others — the next run(run8+) will hit the same wall.",
+  "recommendation": "Extract the shared constants/builders (DEV map, driveGuide/seedPrompt/auditPrompt/verifyPrompt, the phase pipeline) into one importable module parameterized by {runId, priorFixSummary, areaPartitions}; each runN_full_suite.mjs shrinks to its run-specific area/seed data plus a call into the shared runner. Fold the RTL-segmented-controls lesson (and similar recurring false-positives) into the shared calibration text once, permanently.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A shared tool/device_e2e/_full_suite_lib.mjs (or similar) exports the orchestration/prompt-builder logic; runN_full_suite.mjs files import it instead of redefining it.",
+    "Each new runN_full_suite.mjs is materially smaller than 256 lines (only run-specific data), checkable by a simple line-count grep in CI/Makefile.",
+    "The RTL-segmented-controls calibration note is asserted exactly once in the shared module (grep -c across tool/device_e2e/*.mjs returns 1, not 6)."
+  ],
+  "labels": [
+    "tooling",
+    "duplication",
+    "device-e2e"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-root-tool",
+  "chunk": "grp-163",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-08",
+  "linearPriority": "Medium"
+}

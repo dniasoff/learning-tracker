@@ -1,0 +1,51 @@
+{
+  "title": "Regenerate and commit stale codegen for curriculum_label_providers and 2 other .g.dart files; add the AG-7 freshness gate",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-7",
+  "area": "core/labels",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/labels/curriculum_label_providers.g.dart",
+      "line": 204,
+      "quote": "regen adds 22 lines of doc-comment (Hebrew ancestor-name lookup docs) — committed file predates its source's doc change"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.g.dart",
+      "line": 1,
+      "quote": "2-line drift on regeneration"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.g.dart",
+      "line": 1,
+      "quote": "2-line drift on regeneration"
+    }
+  ],
+  "sites": 3,
+  "why": "Committed generated code no longer matches its sources: `dart run build_runner build` on a clean tree at 4018a91c dirties 3 files. Every future agent build produces unexplained diffs, and the doc-claimed 'CI regenerates before analyze' means CI analyzes code that differs from what is committed. The pending `git diff --exit-code` freshness gate (AG-7) would have caught this at commit time.",
+  "recommendation": "Run build_runner + gen-l10n, commit the 3 regenerated files, and add the AG-7 freshness gate to CI (`git diff --exit-code` after regeneration).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "build_runner + gen-l10n on a clean tree leaves `git status` clean",
+    "CI fails on non-empty git diff after codegen (freshness gate landed)"
+  ],
+  "labels": [
+    "codegen",
+    "ci",
+    "hygiene"
+  ],
+  "origin": "orchestrator-baseline",
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "orchestrator",
+  "chunk": "grp-133",
+  "normArea": "core/labels",
+  "id": "AUD-core-labels-03",
+  "linearPriority": "Medium"
+}

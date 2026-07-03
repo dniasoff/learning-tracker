@@ -1,0 +1,44 @@
+{
+  "title": "Narrow LocationService's `on Object catch` clauses so programming errors aren't swallowed",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-4",
+  "area": "error-handling",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sacred_time/data/services/location_service.dart",
+      "line": 73,
+      "quote": "} on Object catch (e) {\n      return LocationFetchError(e.toString());"
+    },
+    {
+      "file": "learning_tracker/lib/features/sacred_time/data/services/location_service.dart",
+      "line": 86,
+      "quote": "} on Object {\n      return null;"
+    }
+  ],
+  "sites": 2,
+  "why": "`on Object` catches everything Dart can throw, including Error subtypes (TypeError, NoSuchMethodError, StateError, ...) that only_throw_errors-compliant code elsewhere in the app throws for genuine programming bugs. A plugin-level type mismatch or null-safety violation inside geolocator/geocoding would silently become 'location fetch failed' (or a silently-null country code) forever, with no crash report and no log line — exactly the bug-masking EH-4 exists to prevent.",
+  "recommendation": "Change both clauses to `on Exception catch (e)` (or the specific exception types geolocator/geocoding document), letting Error subtypes propagate and reach Crashlytics/crash loudly.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both catch clauses in location_service.dart are typed to Exception (or narrower), not Object",
+    "A test asserts a thrown Error from the fake platform is NOT converted to LocationFetchError/null but propagates"
+  ],
+  "labels": [
+    "error-handling",
+    "hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sacred_time",
+  "chunk": "grp-089",
+  "normArea": "features/sacred_time",
+  "id": "AUD-sacred_time-06",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,56 @@
+{
+  "title": "Replace wall-clock DateTime.now() reads with the injectable clock seam in bulk_prior_completion_b6_b8_test.dart and store_screenshots_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/integration,test/golden",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+      "line": 493,
+      "quote": "final before = DateTime.now().toUtc();"
+    },
+    {
+      "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+      "line": 499,
+      "quote": "final after = DateTime.now().toUtc();"
+    },
+    {
+      "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+      "line": 1224,
+      "quote": "updatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+      "line": 108,
+      "quote": "final now = DateTime.now();"
+    }
+  ],
+  "sites": 4,
+  "why": "expungePriorCompletions writes purgedAt via DateTimeFactory.nowUtc() (lib/.../bulk_prior_completion_service.dart:337), which resolves through the same injectable core/time/local_day_clock.dart seam FakeLocalDayClock/useLocalDayClock already provide elsewhere in this suite. Instead of pinning that clock, the test reads real wall time before/after and asserts purgedAt falls in a 1-second-padded window (lines 514-521) — a real (if narrow) flake surface under slow/loaded CI, and strictly weaker than an exact-timestamp assertion the existing seam would allow. TQ-5's own Enforce line calls for exactly 'audit grep for DateTime.now(/Random( in files calling matchesGoldenFile' — store_screenshots_test.dart:108 is precisely that pattern (harmless today only because the CurriculumSummary.lastCompletionAt field it feeds is never rendered by CurriculumSummaryCard).",
+  "recommendation": "Inject a fixed DateTime via useLocalDayClock(FakeLocalDayClock(...)) (with resetLocalDayClock() in tearDown) and assert purgedAt equals that fixed instant exactly; replace the two decorative DateTime.now() call sites with fixed constants.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn 'DateTime.now(' test/ finds no call sites in files under core/time's clock-seam contract that could instead use DateTimeFactory/useLocalDayClock",
+    "the B8 AC1 purgedAt assertion checks an exact fixed timestamp rather than a before/after window"
+  ],
+  "labels": [
+    "TQ-6",
+    "wall-clock",
+    "flaky",
+    "golden"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p5",
+  "chunk": "grp-146",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-39",
+  "linearPriority": "Medium"
+}

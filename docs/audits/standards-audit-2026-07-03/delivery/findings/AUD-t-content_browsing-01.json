@@ -1,0 +1,55 @@
+{
+  "title": "Make pp18_content_search_clear_button_test.dart render the real ContentSearchScreen instead of a hand-rolled TextField clone",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological test — doesn't exercise the code it claims to protect)",
+  "area": "test-quality — content_browsing/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/content_browsing/presentation/screens/pp18_content_search_clear_button_test.dart",
+      "line": 22,
+      "quote": "/// Helper: builds a minimal TextField that mirrors the ContentSearchScreen"
+    },
+    {
+      "file": "learning_tracker/test/features/content_browsing/presentation/screens/pp18_content_search_clear_button_test.dart",
+      "line": 17,
+      "quote": "import 'package:flutter/material.dart';"
+    },
+    {
+      "file": "learning_tracker/test/features/content_browsing/presentation/screens/content_search_screen_test.dart",
+      "line": 23,
+      "quote": "group('ContentSearchScreen', () {"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/screens/content_search_screen.dart",
+      "line": 128,
+      "quote": "suffixIcon: _searchController.text.isNotEmpty"
+    }
+  ],
+  "sites": 1,
+  "why": "This file's docstring says it is the regression test for PP-18 ('No clear (X) affordance in the content-search field') and claims to verify ContentSearchScreen's `InputDecoration.suffixIcon` is wired. It never imports content_search_screen.dart — its own comment admits `buildSearchField()` only 'mirrors' (re-implements by hand) the real screen's decoration logic. The real screen still has the suffixIcon wiring today (content_search_screen.dart:128-133), but I grepped every test in the repo that renders `ContentSearchScreen(` for real — content_search_screen_test.dart (this batch) and content_tile_search_providers_test.dart (outside it) — and neither checks `Icons.clear` or `suffixIcon`. So if a future edit to the real screen breaks or removes the clear button, every test in the repo, including the one named specifically for that bug, stays green.",
+  "recommendation": "Rewrite the test to pumpWidget the real ContentSearchScreen (reusing the provider overrides from content_search_screen_test.dart), enterText into the real search field, and assert the real Icons.clear IconButton appears/clears/disappears. Delete the hand-rolled buildSearchField helper.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test imports and pumps ContentSearchScreen; temporarily deleting the suffixIcon block in content_search_screen.dart makes this test fail."
+  ],
+  "labels": [
+    "test-quality",
+    "content_browsing",
+    "tautological-test",
+    "regression-test"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p2",
+  "chunk": "grp-045",
+  "normArea": "tests/content_browsing",
+  "id": "AUD-t-content_browsing-01",
+  "linearPriority": "Medium"
+}

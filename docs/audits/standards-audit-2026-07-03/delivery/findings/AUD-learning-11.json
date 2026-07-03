@@ -1,0 +1,44 @@
+{
+  "title": "Remove the completion_source.dart re-export from mark_completion_use_case.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Rule-2",
+  "area": "learning/domain/use_cases",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/learning/domain/use_cases/mark_completion_use_case.dart",
+      "line": 8,
+      "quote": "export 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';"
+    },
+    {
+      "file": "learning_tracker/test/features/learning/domain/use_cases/mark_completion_use_case_siyum_routing_test.dart",
+      "line": 41,
+      "quote": "import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';"
+    }
+  ],
+  "sites": 1,
+  "why": "coding-standards.md Rule 2 states providers.dart is 'the only sanctioned re-export file... do not add other barrel/re-export files — deep re-export chains defeat \"where is X defined?\" search'. mark_completion_use_case.dart re-exports a domain entity from an unrelated file. This isn't theoretical: mark_completion_use_case_siyum_routing_test.dart imports only the use-case file and uses CompletionSource entirely via the transitive re-export, demonstrating exactly the defined-where? confusion the rule warns about.",
+  "recommendation": "Delete the export statement; update the one demonstrated consumer (and any others `dart analyze` surfaces) to import completion_source.dart directly.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "mark_completion_use_case.dart has no export statement; all consumers of CompletionSource import completion_source.dart directly; `dart analyze` stays clean."
+  ],
+  "labels": [
+    "rule-2",
+    "barrel",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-learning-p1",
+  "chunk": "grp-059",
+  "normArea": "features/learning",
+  "id": "AUD-learning-11",
+  "linearPriority": "Low"
+}

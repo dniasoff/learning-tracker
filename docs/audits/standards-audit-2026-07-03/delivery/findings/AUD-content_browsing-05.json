@@ -1,0 +1,46 @@
+{
+  "title": "Populate content_browsing.dart barrel with real exports so Rule 2 has a legal import path",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 2",
+  "area": "features/content_browsing",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/content_browsing/content_browsing.dart",
+      "line": 7,
+      "quote": "library content_browsing;"
+    },
+    {
+      "file": "learning_tracker/lib/core/labels/curriculum_label_providers.dart",
+      "line": 6,
+      "quote": "import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';"
+    }
+  ],
+  "sites": 1,
+  "why": "The barrel file has zero export statements, so there is no compliant way for other code to reach ContentRepository, contentRepositoryProvider, curriculumContentProvider or ContentItemTile — every consumer (core/labels/, core/content/, and every deep import inside this batch's own screens into dashboard/learning/scheduler/tutoring/gamification/tracks) is forced into a deep import because the barrel offers nothing. lib/features/progress/progress.dart shows the intended pattern (documented policy + real `export` lines); content_browsing's barrel (like several other features sampled: gamification, dashboard, onboarding, notifications, profiles, learning) is only a decorative stub.",
+  "recommendation": "Follow progress.dart's pattern: export ContentRepository, contentRepositoryProvider, curriculumContentProvider, and ContentItemTile with a comment naming each external consumer, then migrate at least the deep imports inside this batch to the barrel.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "content_browsing.dart contains one or more `export` statements for types already consumed outside the feature",
+    "flutter analyze stays clean after switching at least one external consumer (e.g. core/labels/curriculum_label_providers.dart) to the barrel import"
+  ],
+  "labels": [
+    "architecture",
+    "rule-2",
+    "barrel",
+    "tech-debt"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "chunk": "grp-043",
+  "normArea": "features/content_browsing",
+  "id": "AUD-content_browsing-05",
+  "linearPriority": "Medium"
+}

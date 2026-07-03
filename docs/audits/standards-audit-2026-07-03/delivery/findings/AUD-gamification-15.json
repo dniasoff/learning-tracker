@@ -1,0 +1,46 @@
+{
+  "title": "Correct streak_event_log.dart's doc comment — the real unique index is (profileId, dayUtc, eventType), not eventTimestamp",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Evans (ubiquitous language consistency) / AG-8-adjacent (docs must match reality)",
+  "area": "features/gamification/streak",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/streak/streak_event_log.dart",
+      "line": 3,
+      "quote": "/// The single mutation method is [append]. Idempotency is enforced by\n/// the UNIQUE `(profileId, eventTimestamp, eventType)` index on"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/tables/streak_events.dart",
+      "line": 12,
+      "quote": "@TableIndex(\n  name: 'streak_events_natural_key',\n  columns: {#profileId, #dayUtc, #eventType},"
+    }
+  ],
+  "sites": 1,
+  "why": "The actual Drift table declares the UNIQUE composite as (profileId, dayUtc, eventType) — eventTimestamp is not part of it, and the table's own doc comment says so explicitly ('two devices writing the same logical day-event collapse to one row'). streak_event_log.dart's code is actually correct (it computes dayUtc from eventTimestamp before inserting), but its doc comment describes a different, wrong key. This class is the write path used by core/sync/merge/streak_event_merger.dart for cross-device streak-event merge — a maintainer who trusts this comment and 'optimizes' the dedup logic around eventTimestamp instead of dayUtc would break cross-device dedup and silently duplicate streak_events rows on sync, corrupting streak counts.",
+  "recommendation": "Fix the doc comment to say (profileId, dayUtc, eventType), matching core/database/tables/streak_events.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "streak_event_log.dart's doc comment states the same 3 columns as the @TableIndex on StreakEvents."
+  ],
+  "labels": [
+    "docs-drift",
+    "sync",
+    "streak"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Quote for streak_events.dart cited at line 12; the @TableIndex block actually starts at line 13 (line 12 is the doc comment's last line). Quote text is verbatim correct, just off by one line."
+    ]
+  },
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-056",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-15",
+  "linearPriority": "Low"
+}

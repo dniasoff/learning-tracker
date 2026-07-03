@@ -1,0 +1,44 @@
+{
+  "title": "Remove or wire up HierarchyBrowserState's unused currentPath/canGoBack public getters",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler — dead/unused public interface (YAGNI)",
+  "area": "core/content/hierarchy_browser.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/content/hierarchy_browser.dart",
+      "line": 100,
+      "quote": "List<String> get currentPath => List.unmodifiable(_path);"
+    },
+    {
+      "file": "learning_tracker/lib/core/content/hierarchy_browser.dart",
+      "line": 103,
+      "quote": "bool get canGoBack => _path.isNotEmpty;"
+    }
+  ],
+  "sites": 1,
+  "why": "Both are documented as 'Public API for external callers' reachable via the widget's GlobalKey, but the sole caller (HierarchySelectionPanel) never accesses `_browserKey.currentState?.currentPath` or `.canGoBack` — only `.navigateBack()` and `.clearNavigation()` are ever invoked through the key. The caller instead maintains its own parallel `_navigationStack`/`canGoBack` state fed via the onNavigationChanged callback, duplicating the same information HierarchyBrowserState already tracks internally.",
+  "recommendation": "Delete the two unused getters (and their doc-comment mention) unless a near-term caller is planned; if HierarchySelectionPanel's parallel navigation-stack tracking is meant to be temporary, replace it with these getters instead of keeping both.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No lib/ reference to HierarchyBrowserState.currentPath or .canGoBack exists, or a real caller uses them in place of a duplicate local navigation stack."
+  ],
+  "labels": [
+    "core/content",
+    "dead-code",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-content",
+  "chunk": "grp-007",
+  "normArea": "core/content",
+  "id": "AUD-core-content-07",
+  "linearPriority": "Low"
+}

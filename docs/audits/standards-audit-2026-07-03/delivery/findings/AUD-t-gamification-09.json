@@ -1,0 +1,43 @@
+{
+  "title": "Wire or remove the no-op profileMode parameter on reward_config_controller_test.dart's _makeContainer",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7-adjacent (test helper must do what its doc comment claims)",
+  "area": "features/gamification/presentation/providers (test helper)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+      "line": 53,
+      "quote": "/// Pass [profileMode] as 'child' or 'adult' to test profile-type branching."
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+      "line": 876,
+      "quote": "final c = _makeContainer(profileId: 1, profileMode: 'adult');"
+    }
+  ],
+  "sites": 1,
+  "why": "_makeContainer's doc comment promises profileMode drives 'profile-type branching' overrides, but the function body only ever reads profileId — profileMode is accepted and silently discarded. The one call site that passes profileMode: 'adult' (in the 'product rule: adults have no points' test) gets zero behavioral effect from it; a future test adding profileMode: 'child' expecting a different container wiring would get a false pass.",
+  "recommendation": "Either delete the unused parameter, or wire it to an actual profile-mode override (e.g. a stubbed profileModeProvider) so it matches its doc comment.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "_makeContainer's profileMode parameter is either removed or demonstrably changes container behavior, with a test asserting the difference between 'adult' and 'child'."
+  ],
+  "labels": [
+    "hygiene",
+    "test-quality"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p3",
+  "chunk": "grp-057",
+  "normArea": "tests/gamification",
+  "id": "AUD-t-gamification-09",
+  "linearPriority": "Low"
+}

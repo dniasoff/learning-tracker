@@ -1,0 +1,50 @@
+{
+  "title": "Replace duplicated inline curriculumTracks lookups with the existing TrackDao.getTrackByProfileAndCurriculum",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / DAO-layer reuse",
+  "area": "features/settings/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/curriculum_settings_screen.dart",
+      "line": 156,
+      "quote": "await (db.select(db.curriculumTracks)"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+      "line": 388,
+      "quote": "await (db.select(db.curriculumTracks)"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+      "line": 185,
+      "quote": "Future<CurriculumTrack?> getTrackByProfileAndCurriculum("
+    }
+  ],
+  "sites": 2,
+  "why": "Both screens re-implement, inline, the exact (profileId, curriculumId) -> CurriculumTrack? query that TrackDao.getTrackByProfileAndCurriculum already provides -- same where-clause shape, same ..limit(1)).getSingleOrNull(). The DAO method's doc comment records a non-obvious business rule (tutored-mirror local/remote id resolution) that a maintainer fixing that DAO method has no way of knowing also needs re-applying at these 2 inline copies; they will silently drift the next time this query's semantics change.",
+  "recommendation": "Call ref.read(userDatabaseProvider).trackDao.getTrackByProfileAndCurriculum(profileId, curriculumId.storageKey) at both sites instead of the inline Drift query.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both call sites use TrackDao.getTrackByProfileAndCurriculum; a grep-based check for `db.select(db.curriculumTracks)` outside core/database/ can catch new inline copies."
+  ],
+  "labels": [
+    "duplication",
+    "settings"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "curriculum_settings_screen.dart quote 'await (db.select(db.curriculumTracks)' is at line 157, not 156 as cited."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p1",
+  "chunk": "grp-099",
+  "normArea": "features/settings",
+  "id": "AUD-settings-06",
+  "linearPriority": "Medium"
+}

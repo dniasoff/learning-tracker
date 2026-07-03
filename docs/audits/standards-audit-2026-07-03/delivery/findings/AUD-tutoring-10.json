@@ -1,0 +1,52 @@
+{
+  "title": "Move TutorAuditLogReadRepository/TutorGrantRepository interfaces into domain/repositories/ to remove the data→presentation import",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Placement guide (\"New repository interface → domain/repositories/\") / layering",
+  "area": "features/tutoring/data + domain + presentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/data/repositories/firestore_audit_log_read_repository.dart",
+      "line": 17,
+      "quote": "import '...presentation/providers/audit_log_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart",
+      "line": 20,
+      "quote": "abstract interface class TutorAuditLogReadRepository {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+      "line": 29,
+      "quote": "abstract interface class TutorGrantRepository {"
+    }
+  ],
+  "sites": 2,
+  "why": "coding-standards.md's placement guide says a new repository interface belongs at `domain/repositories/<name>_repository.dart`. None of tutoring's three repository interfaces live there: TutorAuditLogReadRepository is defined inside presentation/providers/audit_log_providers.dart, so the DATA-layer implementation (firestore_audit_log_read_repository.dart) has to import a PRESENTATION file to satisfy `implements` — the exact inverse of the documented data-flow direction — pulling Riverpod Provider definitions and an unrelated stub class into what should be a lean, presentation-agnostic data module and complicating isolated unit-testing of the repository (Feathers seam). TutorGrantRepository is at least kept in domain/ but lives in a use_cases file instead of domain/repositories/, the same underlying placement drift.",
+  "recommendation": "Create lib/features/tutoring/domain/repositories/tutor_audit_log_repository.dart (read) and tutor_grant_repository.dart, move the three interfaces there, and update data-layer implementations plus presentation/providers imports accordingly.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn 'presentation/' lib/features/tutoring/data/ returns nothing.",
+    "TutorAuditLogReadRepository, TutorAuditLogRepository, TutorGrantRepository all resolve from lib/features/tutoring/domain/repositories/."
+  ],
+  "labels": [
+    "layering",
+    "architecture",
+    "placement"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Strengthens, not weakens: real circular import exists between the two cited files; 3 interfaces are misplaced, not 2."
+    ]
+  },
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "grp-122",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-10",
+  "linearPriority": "Medium"
+}

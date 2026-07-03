@@ -1,0 +1,76 @@
+{
+  "title": "Deduplicate seedProfile/seedProfileZero between test/helpers/drift_memory.dart and test/helpers/test_database.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication (test helper hygiene; no single named coding-standards rule ID)",
+  "area": "learning_tracker/test/helpers (DB seeding)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/helpers/drift_memory.dart",
+      "line": 50,
+      "quote": "Future<void> seedProfile(UserDatabase db) async {"
+    },
+    {
+      "file": "learning_tracker/test/helpers/test_database.dart",
+      "line": 35,
+      "quote": "Future<void> seedProfile(UserDatabase db) async {"
+    },
+    {
+      "file": "learning_tracker/test/helpers/drift_memory.dart",
+      "line": 105,
+      "quote": "Future<void> seedProfileZero(UserDatabase db) async {"
+    },
+    {
+      "file": "learning_tracker/test/helpers/test_database.dart",
+      "line": 137,
+      "quote": "Future<void> seedProfileZero(UserDatabase db) async {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart",
+      "line": 61,
+      "quote": "Future<int> _insertTrack("
+    },
+    {
+      "file": "learning_tracker/test/helpers/drift_memory.dart",
+      "line": 82,
+      "quote": "Future<int> seedTrack("
+    }
+  ],
+  "sites": 6,
+  "why": "seedProfile and seedProfileZero are byte-for-byte identical function bodies defined independently in both files (same AccountsCompanion/LearnerProfilesCompanion literals, same email/tier/displayName defaults). drift_memory.dart's own doc comment already says 'Prefer this helper over the older createTestDatabase() in test_database.dart... it is the canonical entry point' — but nobody finished the migration, so both copies live on. Because both files export the same two function names at the same signature, 26 test files that need functionality from both (grep-verified: schema_v1_smoke_test.dart, points_service_test.dart, epic_01..27 story-acceptance files, etc.) must use `show`/`hide` import combinators to dodge a compile-time ambiguous-name collision — e.g. `import '../helpers/drift_memory.dart' show seedCompletion, seedProfile; import '../helpers/test_database.dart' hide seedProfile;`. If the Accounts/LearnerProfiles schema changes, a fix applied to one copy and missed in the other would silently desync, and nothing forces the 26 dependent files' show/hide lists to stay correct as new functions are added to either file.",
+  "recommendation": "Keep drift_memory.dart as canonical per its own doc comment; delete the duplicate seedProfile/seedProfileZero bodies from test_database.dart and have it import+re-export (or simply import) the versions from drift_memory.dart; then strip the now-unnecessary show/hide combinators from the 26 dependent files.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "seedProfile and seedProfileZero are defined in exactly one file under test/helpers/; the other file imports rather than redefines them.",
+    "None of the 26 currently-affected test files need a show/hide combinator to disambiguate seedProfile/seedProfileZero.",
+    "A grep check (candidate for make audit) fails if two files under test/helpers/ define a top-level function with the same name."
+  ],
+  "labels": [
+    "test-infra",
+    "duplication",
+    "db-seeding",
+    "maintenance-cost"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "27 files import both helpers, not 26; of those, 23 (not all) actually use show/hide combinators — the other 4 import plainly because they never reference seedProfile/seedProfileZero unqualified. Core duplication risk and recommendation still stand."
+    ]
+  },
+  "sourceBatch": "t1-test-helpers",
+  "chunk": "grp-149",
+  "mergedFrom": [
+    "Reuse drift_memory.dart's seedTrack/seedProfile instead of re-deriving _insertProfile/_insertTrack in epic_28_curriculum_overlap_test.dart"
+  ],
+  "coDiscoverers": [
+    "t1-story-epics-28plus",
+    "t1-test-helpers"
+  ],
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-12",
+  "linearPriority": "Medium"
+}

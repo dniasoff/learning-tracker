@@ -1,0 +1,52 @@
+{
+  "title": "Delete or wire up the dead TutorAuditLogWriter path (tutor_audit_log_writer.dart / audit_log_providers.dart)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler dead code / AG-6 (untracked TODO)",
+  "area": "features/tutoring/domain/services + presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart",
+      "line": 56,
+      "quote": "(_) => _StubAuditLogWriteRepository(),"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart",
+      "line": 63,
+      "quote": "// TODO(data-layer): Replace with Firestore write."
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_audit_log_writer.dart",
+      "line": 198,
+      "quote": "'${now.millisecondsSinceEpoch.toRadixString(16).padLeft(16, '0')}'"
+    }
+  ],
+  "sites": 2,
+  "why": "A repo-wide grep confirms `TutorAuditLogWriter` is constructed nowhere in lib/ — its 228 lines and the `TutorAuditLogRepository` interface it depends on are unreachable. Its own provider (`tutorAuditLogWriteRepositoryProvider`) resolves to `_StubAuditLogWriteRepository`, a permanent no-op with an ID-less TODO. The class's doc-comment claims 'every tutor write path... calls through this writer' and that entryId format is 'timestamp + 10 random hex chars (26 chars total)', but the actual `_log()` implementation has no random suffix at all — two same-millisecond calls for the same action type would collide on entryId, and per the interface's own idempotency contract ('duplicate writes with the same ULID are silently ignored') the second entry would be silently dropped if this code were ever revived as-is. Cross-checked functions/src/index.ts: the real audit trail is written server-side by each tutor*CF via `writeAuditLog(...)`, so there is no current production gap — this is confusing, misdocumented dead weight, not a live data-loss bug.",
+  "recommendation": "Delete TutorAuditLogWriter, TutorAuditLogRepository, and the stub/provider if the server-side CF audit writes are now the sole source of truth; if a client-side path is still intended, wire a real Firestore-backed implementation and fix the entryId generator to match its documented ULID claim, with a DNI-#### ticket on the TODO either way.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn 'TutorAuditLogWriter' lib/ returns nothing, or returns a live call site plus a non-stub repository.",
+    "No bare `TODO(...)` without a DNI-#### id remains in audit_log_providers.dart (AG-6 grep clean)."
+  ],
+  "labels": [
+    "dead-code",
+    "AG-6",
+    "audit-log"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "tutor_audit_log_writer.dart: the quote \"'${now.millisecondsSinceEpoch.toRadixString(16).padLeft(16, '0')}'\" is at line 201, not line 198. Line 198 reads \"//   yyyyMMddHHmmssSSS + 10 random hex chars (26 chars total)\" (the docstring describing the intended, unimplemented format). The other two evidence citations (audit_log_providers.dart:56 and :63) are exact matches."
+    ]
+  },
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "grp-121",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-06",
+  "linearPriority": "Medium"
+}

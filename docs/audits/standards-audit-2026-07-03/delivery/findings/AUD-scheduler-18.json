@@ -1,0 +1,51 @@
+{
+  "title": "Convert ScheduledUnit/StudyDayPattern/ProjectionResult in overdue_types.dart to @freezed instead of hand-rolled ==/hashCode",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "File Naming Conventions (never hand-write ==/hashCode for data classes)",
+  "area": "features/scheduler/domain/projection",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+      "line": 27,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+      "line": 66,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+      "line": 107,
+      "quote": "bool operator ==(Object other) =>"
+    }
+  ],
+  "sites": 3,
+  "why": "Every field pairing is currently correct (verified by reading all three operators/hashCodes), so there is no live bug today. But every sibling domain model in the same feature (daily_task.dart, goal_entity.dart, pace_status.dart, schedule_config.dart) uses @freezed, and this file's own doc comment's 'no codegen' rationale doesn't actually require hand-rolled equality — freezed has no Flutter/Riverpod/Drift dependency either. overdue_projection_test.dart's O1/O3/O5 determinism assertions (expect(r1, equals(r2))) depend entirely on this hand-rolled equality staying correctly paired with every future field addition.",
+  "recommendation": "Convert the three classes to @freezed and regenerate; overdue_projection_test.dart/overdue_durability_test.dart should pass unchanged since the generated == is equivalent.",
+  "acceptance_criteria": [
+    "ScheduledUnit, StudyDayPattern, and ProjectionResult are @freezed classes with no hand-written operator== or hashCode.",
+    "overdue_projection_test.dart and overdue_durability_test.dart pass unchanged after the conversion."
+  ],
+  "labels": [
+    "freezed",
+    "domain-model",
+    "scheduler",
+    "hygiene"
+  ],
+  "effort": "S",
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "chunk": "grp-099",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-18",
+  "linearPriority": "Low"
+}

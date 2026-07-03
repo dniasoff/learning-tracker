@@ -1,0 +1,45 @@
+{
+  "title": "Route Sacred Time's hardcoded Color() literals through core/theme tokens",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "no_color_literal_outside_theme (custom_lint, currently non-functional)",
+  "area": "presentation/theming",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart",
+      "line": 114,
+      "quote": "background: Color(0xFF11215C),"
+    },
+    {
+      "file": "learning_tracker/lib/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart",
+      "line": 87,
+      "quote": "color: Color(0xFF11389F),"
+    }
+  ],
+  "sites": 13,
+  "why": "13 raw Color()/Colors.white literals across these 2 widget files bypass core/theme/ tokens. The custom_lint rule meant to catch this (no_color_literal_outside_theme) is currently crashing repo-wide (already tracked elsewhere), so nothing flags it today. This mirrors a very widespread pre-existing pattern (406 raw Color() literals across lib/features/), so it is not unique to this feature, but each instance adds to the same cost: a future dark-mode or rebrand pass has to hunt literals feature-by-feature instead of editing one token file.",
+  "recommendation": "Extract these into named core/theme constants, or explicitly document in coding-standards.md that the lock-screen's per-window-kind palette is an intentional exception to the theme system, once custom_lint is unblocked.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Color literals in these 2 files replaced with core/theme tokens, or the exception is documented in coding-standards.md",
+    "no_color_literal_outside_theme passes for this feature once custom_lint is repaired"
+  ],
+  "labels": [
+    "theming",
+    "hygiene",
+    "hardcoded-value"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sacred_time",
+  "chunk": "grp-090",
+  "normArea": "features/sacred_time",
+  "id": "AUD-sacred_time-09",
+  "linearPriority": "Low"
+}

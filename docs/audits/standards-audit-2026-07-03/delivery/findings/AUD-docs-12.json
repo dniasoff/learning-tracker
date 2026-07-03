@@ -1,0 +1,56 @@
+{
+  "title": "Propagate the Epic-20-canceled banner to dashboard-redesign-set pages 01-07 (currently read as ready-to-build)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-4 triage AREA NOTE — presents-as-current classification; egregious contradiction with reality",
+  "area": "docs/scenarios/dashboard-redesign-set",
+  "evidence": [
+    {
+      "file": "docs/scenarios/dashboard-redesign-set/dashboard-redesign/00-scenario-overview.md",
+      "line": 3,
+      "quote": "Epic 20 (DNI-210) was canceled 2026-04-15 (all 12 child stories) ... the dashboard UI redesign specified in this set is **not shipped**."
+    },
+    {
+      "file": "docs/scenarios/dashboard-redesign-set/dashboard-redesign/01-dashboard.md",
+      "line": 1,
+      "quote": "# 01 — Dashboard"
+    },
+    {
+      "file": "docs/scenarios/dashboard-redesign-set/dashboard-redesign/06-progress-screen.md",
+      "line": 1,
+      "quote": "# 06 — Progress Screen"
+    },
+    {
+      "file": "docs/planning/epics.md",
+      "line": 653,
+      "quote": "**DNI-211** — 20.1: Schema Definition — trackId on 7 Config Tables + paceResetDate *(Canceled)*"
+    }
+  ],
+  "sites": 7,
+  "why": "Files 01 through 07 read as fully-approved, implementation-ready specs (dp-level layout tables, real Riverpod provider names, Dart variant-selection snippets, acceptance checklists all ticked [x]) with zero mention that Epic 20/DNI-210's 12 stories are Canceled — that fact lives only in the sibling 00-scenario-overview.md. An engineer or agent opening 01-dashboard.md, 06-progress-screen.md, or 07-track-detail.md directly (search, or a 'build the dashboard redesign' request) has no signal to check 00 first and could sink real implementation effort into a design the project has already dropped in favor of the Greenfield Rebuild (Epics 24-27, all still Backlog).",
+  "recommendation": "Copy the same one-line cancellation banner from 00-scenario-overview.md:3 to the top of 01-dashboard.md, 02-card-program.md, 03-card-deadline.md, 04-card-velocity.md, 05-card-momentum.md, 06-progress-screen.md, and 07-track-detail.md — matching the pattern already applied consistently across all 19 files in docs/scenarios/evolution/.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Each of the 7 page-spec files under docs/scenarios/dashboard-redesign-set/dashboard-redesign/ (01 through 07) opens with a banner stating Epic 20/DNI-210 was canceled and the design is unshipped, matching 00-scenario-overview.md:3.",
+    "grep -L 'canceled' docs/scenarios/dashboard-redesign-set/dashboard-redesign/*.md returns none of 01-07 once fixed."
+  ],
+  "labels": [
+    "docs",
+    "tier4-triage",
+    "canceled-epic",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p3",
+  "chunk": "grp-172",
+  "normArea": "docs",
+  "id": "AUD-docs-12",
+  "linearPriority": "Medium"
+}

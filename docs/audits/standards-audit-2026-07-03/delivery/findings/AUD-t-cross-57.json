@@ -1,0 +1,41 @@
+{
+  "title": "Broaden no_hardcoded_percent_in_chart_subtitle_test.dart regex to catch unsigned fabricated percentages",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (assertion weaker than the class of defect the source can actually reproduce)",
+  "area": "learning_tracker/test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart",
+      "line": 15,
+      "quote": "final _hardcodedPercentPattern = RegExp(r'[+-]\\d+%');"
+    }
+  ],
+  "sites": 1,
+  "why": "The original defect (per the file's own docstring) was 'a static placeholder ... never computed at runtime' — the fix removed the number entirely. But the regression test only rejects the signed digit-percent shape ('+12%'/'-5%'). A future contributor could reintroduce the same never-computed-at-runtime fabrication as 'chartCumulativeProgressSubtitle: 12% higher than last week' (no sign) or as a non-percent fake stat ('12 more completions than last week'), and this test would pass, giving false confidence that the fix is intact.",
+  "recommendation": "Widen the guard — at minimum drop the sign requirement (match \\d+%), or better, assert the subtitle contains no digits at all, matching the intent that it is now static prose rather than a statistic.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Injecting an unsigned literal like '12%' into chartCumulativeProgressSubtitle in either ARB fails this test"
+  ],
+  "labels": [
+    "tests",
+    "l10n",
+    "regression-test-quality"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "None — quote and line verified exact; ARB files checked directly and contain no digits."
+    ]
+  },
+  "sourceBatch": "t1-app-l10n-p3",
+  "chunk": "grp-003",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-57",
+  "linearPriority": "Low"
+}

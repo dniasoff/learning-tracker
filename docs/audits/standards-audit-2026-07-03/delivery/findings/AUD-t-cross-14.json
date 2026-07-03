@@ -1,0 +1,52 @@
+{
+  "title": "Delete or re-target calendar_program_service_ref_extraction_test.dart — tests hand-duplicated logic absent from production",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological/illusory coverage) + dead-code sweep",
+  "area": "test/core/services (dead test)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/services/calendar_program_service_ref_extraction_test.dart",
+      "line": 5,
+      "quote": "/// The actual method is private, so we test the same extraction algorithm"
+    },
+    {
+      "file": "learning_tracker/test/core/services/calendar_program_service_ref_extraction_test.dart",
+      "line": 7,
+      "quote": "String extractSefariaRefFromLink(String? link, String fallback) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/calendar_program_service.dart",
+      "line": 69,
+      "quote": "/// Historically orchestrated Sefaria + Hebcal API calls with a 24-hour"
+    }
+  ],
+  "sites": 1,
+  "why": "This 66-line file has no import of any production symbol — its only import is flutter_test itself — because it defines and tests its own hand-copied reimplementation of a once-private URL-parsing method. That method no longer exists anywhere: `grep -rn sefaria.org lib/` returns zero hits, and CalendarProgramService's own docstring confirms why — after Story 19.4 it is 'a thin delegate over LocalCalendarEngine: every call is a local-DB read, no network traffic, no JSON parsing, no cache.' The test can never fail regardless of what CalendarProgramService actually does, so it gives false confidence that Sefaria-ref extraction is covered when there is zero real coverage.",
+  "recommendation": "Delete the file — the logic and its risk surface are gone from production. If Sefaria-URL ref extraction still matters somewhere (e.g. a build-time seed-generation script under tool/), point a new test at that real symbol instead.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "File removed from test/ (or rewritten to import and exercise a real, currently-live production symbol)",
+    "flutter test / make test-all-stories stays green with no coverage claimed for the removed dead code"
+  ],
+  "labels": [
+    "dead-code",
+    "test-quality",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "None needed; all cited evidence reproduced exactly."
+    ]
+  },
+  "sourceBatch": "t1-core-services",
+  "chunk": "grp-023",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-14",
+  "linearPriority": "Medium"
+}

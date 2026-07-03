@@ -1,0 +1,53 @@
+{
+  "title": "Mark tool/text_extract/ as retired in-repo and fix extract_books.py's footnote-stripping regression before any reuse",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code + text-cleaning correctness (BUG-5 invariant)",
+  "area": "tool/text_extract (superseded Sefaria-Project extraction path)",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/text_extract/README.md",
+      "line": 3,
+      "quote": "Builds `tool/data/daily_content_cache.json` — a pre-resolved bilingual"
+    },
+    {
+      "file": "learning_tracker/tool/text_extract/extract_books.py",
+      "line": 119,
+      "quote": "s = _HTML.sub(\"\", s)"
+    },
+    {
+      "file": "learning_tracker/tool/text_extract/main.py",
+      "line": 46,
+      "quote": "_FOOTNOTE = re.compile(r\" ?\\(…\\)|<i class=\\\"footnote\\\".*?</i>\", re.S)"
+    }
+  ],
+  "sites": 3,
+  "why": "docs/seed-build.md:6,123 explicitly states the daily-content resolvers were 'ported from the retired tool/text_extract/main.py', and the live pipeline (make seed → tool/seed/build_text_cache.dart, tool/seed/build_daily_content.dart) never invokes anything under tool/text_extract/. Yet the directory's own README still reads as a live runbook (present-tense 'Builds…', full venv setup, a 'Failure modes' section) with no pointer to the replacement or the fact it's retired. Worse, extract_books.py's _clean() (which shares the exact same directory/README/venv and produces tool/data/curriculum_books.json — the very file build_text_cache.dart now treats as a static committed input) only strips HTML *tags* via a bare `<[^>]+>` regex; it does not remove footnote *bodies* the way its own sibling main.py's `_FOOTNOTE` regex does, or the way the runtime's HebrewUtils.cleanSefariaText does (documented as the 'BUG-5' fix in sefaria_mongo.dart:19 and seed_content_db.dart:583-591). A contributor trusting the README who re-runs extract_books.py to add a book would regenerate curriculum_books.json/book_text_cache.json with Sefaria footnote text merged back into the main body — reintroducing exactly the corruption the rest of the codebase guards against three times over.",
+  "recommendation": "Add a retirement banner to tool/text_extract/README.md pointing at tool/seed/build_text_cache.dart and build_daily_content.dart as the current replacement. If the directory is kept for reference/history rather than deleted, fix extract_books.py's _clean() to strip footnote bodies the same way main.py's _FOOTNOTE regex does, so it can't silently corrupt data if someone runs it anyway.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "tool/text_extract/README.md states the retirement and names the current replacement tools, or the directory is removed entirely",
+    "A test asserts extract_books.py's _clean() removes an `<i class=\"footnote\">…</i>` span wholesale (matching main.py's _FOOTNOTE behavior) — red before the fix, green after, or the file is deleted"
+  ],
+  "labels": [
+    "dead-code",
+    "data-quality",
+    "tool",
+    "regression-risk"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "extract_books.py:262-283 shows BOOKS_OUT/curriculum_books.json is built from raw r.normal() ref strings, never routed through _clean(); only TEXT_OUT (gitignored book_text_cache.json) uses _clean(), and build_text_cache.dart regenerates that file fresh from Mongo via the correct HebrewUtils cleaner on every `make seed` run before seed_content_db.dart reads it. The 'corrupts the committed input' claim is factually wrong; real exposure is narrower (manual out-of-band reuse skipping `make seed` only)."
+    ]
+  },
+  "sourceBatch": "t2-app-tool-p2",
+  "chunk": "grp-152",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-33",
+  "linearPriority": "Low"
+}

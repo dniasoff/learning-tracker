@@ -1,0 +1,80 @@
+{
+  "title": "Centralize the 29 raw Color(0x...) hex literals in progress widgets into core/theme tokens",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "no_color_literal_outside_theme (custom_lint rule, currently non-functional because the tool crashes)",
+  "area": "presentation / theming",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/streak_calendar.dart",
+      "line": 219,
+      "quote": "const activeColor = Color(0xFF103BAC);"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+      "line": 347,
+      "quote": "const activeColor = Color(0xFF103BAC);"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart",
+      "line": 379,
+      "quote": "LifetimeNodeState.partial => const Color(0xFFFFD26A),"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart",
+      "line": 517,
+      "quote": "MarkingRowVisual.partial => const Color(0xFFFFD26A),"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/cumulative_line_chart.dart",
+      "line": 58,
+      "quote": "colors: [Color(0x33123DAE), Color(0x00123DAE)],"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/points_over_time_chart.dart",
+      "line": 47,
+      "quote": "color: const Color(0xFFF2D9B3),"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/progress_tier_counter_row.dart",
+      "line": 104,
+      "quote": "accent: const Color(0xFFFF6F77),"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/siyumim_grouped_view.dart",
+      "line": 163,
+      "quote": "const gold = Color(0xFFFFB300);"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/limudim_chazaros_bar_chart.dart",
+      "line": 14,
+      "quote": "const Color _kChazaraColor = Color(0xFFF2A93B);"
+    }
+  ],
+  "sites": 29,
+  "why": "The custom_lint rule that bans this exists and is correctly written but the tool crashes on every invocation, so nothing currently enforces it (29 call sites across 8 of the batch's 15 widget files, 15 of them in lifetime_folder_styled_widgets.dart alone). The cost isn't hypothetical: the identical 'active-day' blue (0xFF103BAC) is independently retyped in both streak_calendar.dart:219 and monthly_activity_sliver_calendar.dart:347, and the identical amber (0xFFFFD26A) is independently retyped in lifetime_folder_styled_widgets.dart:379 and :517 — proof that without a shared token, a future brand-color tweak requires hunting every file by eye and will eventually miss one, producing a visibly inconsistent color for the same semantic state.",
+  "recommendation": "Add named constants to core/theme/app_colors.dart (or app_theme.dart) for each distinct value and replace the 29 call sites; once custom_lint is unbroken (tracked separately), no_color_literal_outside_theme prevents regression.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -o 'Color(0x[0-9A-Fa-f]\\{6,8\\})' lib/features/progress/presentation/widgets/*.dart returns zero hits.",
+    "no_color_literal_outside_theme passes clean on this directory once custom_lint is functional again."
+  ],
+  "labels": [
+    "theming",
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p2",
+  "chunk": "grp-083",
+  "normArea": "features/progress",
+  "id": "AUD-progress-04",
+  "linearPriority": "Medium"
+}

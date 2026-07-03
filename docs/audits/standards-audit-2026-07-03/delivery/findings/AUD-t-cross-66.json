@@ -1,0 +1,43 @@
+{
+  "title": "Delete the now-vestigial integration_test/.gitkeep placeholder",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene",
+  "area": "repo hygiene",
+  "evidence": [
+    {
+      "file": "learning_tracker/integration_test/.gitkeep",
+      "line": 1,
+      "quote": "(empty file)"
+    },
+    {
+      "file": "learning_tracker/integration_test/app_test.dart",
+      "line": 1,
+      "quote": "import 'package:flutter_test/flutter_test.dart';"
+    }
+  ],
+  "sites": 2,
+  "why": ".gitkeep files exist solely to keep an otherwise-empty directory tracked by git. learning_tracker/integration_test/ has contained a real, tracked file (app_test.dart) since that test was added, so the .gitkeep no longer serves any purpose — pure clutter.",
+  "recommendation": "Delete learning_tracker/integration_test/.gitkeep.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "learning_tracker/integration_test/.gitkeep no longer exists."
+  ],
+  "labels": [
+    "hygiene",
+    "cleanup"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-156",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-66",
+  "linearPriority": "Low"
+}

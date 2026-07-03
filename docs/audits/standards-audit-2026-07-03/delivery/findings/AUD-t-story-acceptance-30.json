@@ -1,0 +1,60 @@
+{
+  "title": "Deduplicate seedProfile/seedProfileZero between test/helpers/drift_memory.dart and test/helpers/test_database.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-4-adjacent (Fowler-duplication)",
+  "area": "test/helpers (imported by story_acceptance)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_story_18x_track_restore_test.dart",
+      "line": 13,
+      "quote": "import '../helpers/drift_memory.dart' show seedProfile;"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_20_hard_tier_auth_test.dart",
+      "line": 14,
+      "quote": "import '../helpers/drift_memory.dart' show seedProfile;"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 27,
+      "quote": "import '../helpers/test_database.dart' show seedProfile;"
+    },
+    {
+      "file": "learning_tracker/test/helpers/drift_memory.dart",
+      "line": 50,
+      "quote": "Future<void> seedProfile(UserDatabase db) async {"
+    },
+    {
+      "file": "learning_tracker/test/helpers/test_database.dart",
+      "line": 35,
+      "quote": "Future<void> seedProfile(UserDatabase db) async {"
+    }
+  ],
+  "sites": 3,
+  "why": "Two files under test/helpers/ define an identically-named seedProfile(UserDatabase) — and seedProfileZero — with near-identical bodies (same fixture email, tier, displayName). Three of my four batch files import it interchangeably from either helper. If either copy is fixed or extended (e.g. a new required column) without the other, tests silently diverge on what 'a seeded profile' means depending on which import a test author happened to copy — the same 'divergent parallel copies' failure AG-4 targets for lib/, reproduced in test/helpers/.",
+  "recommendation": "Keep one implementation (drift_memory.dart looks like the more focused, Drift-specific home) and have test_database.dart re-export or delegate to it; repoint all story_acceptance imports at the single source.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one definition of seedProfile and one of seedProfileZero exist under learning_tracker/test/helpers/",
+    "grep -rn 'Future<void> seedProfile(' learning_tracker/test/helpers/ returns exactly one match per function name"
+  ],
+  "labels": [
+    "hygiene",
+    "duplication",
+    "test-helpers"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-17-20",
+  "chunk": "grp-139",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-30",
+  "linearPriority": "Low"
+}

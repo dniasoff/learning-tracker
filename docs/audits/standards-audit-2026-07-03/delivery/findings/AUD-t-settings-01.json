@@ -1,0 +1,69 @@
+{
+  "title": "Add the showDeleteLocalAccountFlow tests settings_utils_test.dart's docstring claims already exist",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "features/settings (test suite) — presentation/utils",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/settings_utils_test.dart",
+      "line": 19,
+      "quote": "//   A1. showDeleteLocalAccountFlow: non-localBorn auth state → exits immediately / //   A2. showDeleteLocalAccountFlow: localBorn → delete dialog shown"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart",
+      "line": 506,
+      "quote": "final authState = ref.read(authStateProvider); / if (!authState.isLocalBorn) return;"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/sign_out_dialog_l10n_test.dart",
+      "line": 47,
+      "quote": "// Build the inner dialog widget directly (same builder used / inside showSignOutConfirmation) rather than calling the full"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/sign_out_dialog_l10n_test.dart",
+      "line": 62,
+      "quote": "l10n.signOut,"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart",
+      "line": 103,
+      "quote": "AppLocalizations.of(context)!.signOutConfirmTitle,"
+    }
+  ],
+  "sites": 5,
+  "why": "Running the file (`flutter test settings_utils_test.dart`) shows exactly 11 tests (S1-S11); A1/A2 don't exist. `grep -rn showDeleteLocalAccountFlow test/` across the whole repo returns zero hits outside this docstring, and account_actions_test.dart (which the comment says 'does not cover' this) also has none. showDeleteLocalAccountFlow is the irreversible local-account-deletion path (closes the Drift handle, deletes the account DB file, clears the device-registry row and session) called from 3 lib sites including the HOTSPOT account_actions.dart; it ships with zero regression coverage while a comment implies it's covered.",
+  "recommendation": "Write A1 (non-localBorn auth state returns without showing any dialog) and A2 (localBorn auth state shows the delete-confirmation dialog and, once confirmed, drives the delete-local-account path) using the same DB/registry fakes account_management_service_test.dart already has, or delete the stale docstring lines if coverage is intentionally deferred and track it as a real ticket instead.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "test/features/settings/settings_utils_test.dart (or a relocated file, see AG-5 finding) contains passing A1 and A2 tests exercising showDeleteLocalAccountFlow directly.",
+    "grep -rn 'showDeleteLocalAccountFlow' test/ matches at least one real test body, not just a comment."
+  ],
+  "labels": [
+    "testing",
+    "settings",
+    "coverage-gap",
+    "account-deletion"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "'Called from 3 lib sites including the HOTSPOT account_actions.dart' is wrong - account_actions.dart:502 is the definition, not a call site. Actual call sites are 2 (parent_settings_screen.dart:356, account_actions_sheet.dart:267); a 4th hit (account_picker_screen.dart:810) is just a comment. Doesn't undermine the core finding, which stands on the missing-test evidence alone."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p4",
+  "chunk": "grp-104",
+  "mergedFrom": [
+    "Rewrite sign_out_dialog_l10n_test.dart to exercise the real showSignOutConfirmation, not a hand-copied dialog"
+  ],
+  "coDiscoverers": [
+    "t1-feat-settings-p4"
+  ],
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-01",
+  "linearPriority": "Medium"
+}

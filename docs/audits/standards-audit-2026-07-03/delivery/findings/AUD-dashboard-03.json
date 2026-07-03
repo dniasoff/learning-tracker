@@ -1,0 +1,51 @@
+{
+  "title": "Delete or relocalize the orphaned CurriculumSummaryCard (zero production callers, raw English strings)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2 / Fowler dead-code",
+  "area": "learning_tracker/lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart",
+      "line": 90,
+      "quote": "'No projection',"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart",
+      "line": 77,
+      "quote": "'$percentage complete',"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart",
+      "line": 129,
+      "quote": "PaceStatusType.onPace => 'On pace',"
+    }
+  ],
+  "sites": 1,
+  "why": "CurriculumSummaryCard is instantiated nowhere in lib/ — its only two call sites repo-wide are test/golden/store_screenshots_test.dart and test/story_acceptance/epic_07_dashboard_test.dart. Every user-facing label ('No projection', '$percentage complete', 'Next: …', 'On pace', 'Xd ahead', 'Xd behind') is a raw English literal with no AppLocalizations/ARB entry — a straight AX-2 violation that would leak untranslated English to Hebrew users if this widget were ever reachable again. The two tests exercising it currently pin the behavior of UI the app never shows, which is worse than no test: they keep passing (and the golden image keeps needing maintenance) even as the widget drifts from the live dashboard design.",
+  "recommendation": "Delete curriculum_summary_card.dart and its two orphaned tests; or, if the per-curriculum summary view is coming back, route its strings through AppLocalizations and switch it to the CurriculumSummary type the rest of the dashboard actually uses (see the paired AG-4 finding).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rln CurriculumSummaryCard lib/ returns zero results after deletion, or a real screen renders it.",
+    "If kept: make arb-parity still passes and every literal above has an ARB key."
+  ],
+  "labels": [
+    "dead-code",
+    "AX-2",
+    "i18n",
+    "dashboard"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "grp-047",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-03",
+  "linearPriority": "Medium"
+}

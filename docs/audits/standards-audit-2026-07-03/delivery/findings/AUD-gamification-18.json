@@ -1,0 +1,46 @@
+{
+  "title": "Populate or delete the dead gamification.dart barrel file",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 2 (barrel is the only sanctioned re-export file) / dead code",
+  "area": "features/gamification",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/gamification.dart",
+      "line": 3,
+      "quote": "// Import this barrel (features/gamification/gamification.dart) from outside"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/gamification.dart",
+      "line": 7,
+      "quote": "library gamification;"
+    }
+  ],
+  "sites": 1,
+  "why": "This 7-line file's own doc comment instructs other features to import it as the feature's public surface, but it contains zero `export` statements, and a repo-wide grep confirms zero files import it (the only match for the literal path string is the comment inside the file itself). Meanwhile 5 other features (dashboard, learning, notifications, sync, content_browsing) reach into features/gamification/** via 10+ direct deep imports of domain/models, domain/services, streak/*, and presentation/widgets paths instead. The file is not doing the job it documents itself as doing -- either because the codebase's barrel convention moved to providers.dart (per current coding-standards.md Rule 2) and this file is a stale leftover, or because populating it was simply never finished.",
+  "recommendation": "Either delete gamification.dart as stale scaffolding, or make it a real public surface (export the symbols the 10 external deep-import sites currently reach for) and redirect those imports through it -- consistent with whichever barrel filename convention (gamification.dart vs providers.dart) the team settles on.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "gamification.dart either exports real symbols with at least one external importer, or is removed from the tree"
+  ],
+  "labels": [
+    "Rule-2",
+    "dead-code",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Recommendation's 'populate gamification.dart' branch conflicts with coding-standards.md Rule 2 ('providers.dart barrel is the only sanctioned re-export file... do not add other barrel/re-export files'); only the delete option is actually standards-compliant, not a coin-flip between two conventions."
+    ]
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-053",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-18",
+  "linearPriority": "Low"
+}

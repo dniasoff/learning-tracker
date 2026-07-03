@@ -1,0 +1,52 @@
+{
+  "title": "Move _decodePayload() calls inside outbox_processor.dart's per-row try blocks so one bad payload can't abort the whole drain",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2 / EH-3",
+  "area": "core/sync/outbox",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 292,
+      "quote": "representativePayload[row.entityKey] = _decodePayload(row.payload);"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 383,
+      "quote": "final payload = _decodePayload(row.payload);\n        try {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 404,
+      "quote": "// Continue draining other rows — don't abort the whole batch on\n          // a single failure."
+    }
+  ],
+  "sites": 2,
+  "why": "_decodePayload throws FormatException when a row's payload isn't a JSON object (DB corruption, a future write bug, or jsonEncode(null)). Both call sites sit OUTSIDE any try/catch: line 292 is inside the eligibleCompletions loop before the try at line 306, and line 383 is immediately before the per-row try at line 384. A single malformed row therefore throws all the way out of _drainForProfile → _doDrain → drain()'s try/finally (the finally still clears the single-flight guard, but nothing catches or converts the error), skipping every other pending completion, every remaining non-completion kind, AND the profile-0 account sweep in _doDrain — on every one of the 5 wired drain triggers, forever, until the row is fixed out of band. This directly contradicts the code's own stated invariant quoted above.",
+  "recommendation": "Wrap each _decodePayload call in its own try/catch (or catch FormatException specifically) so a bad payload is treated like any other per-row failure: logged, markAttempted (or immediately dead-lettered, since it can never succeed), and does not block sibling rows or other kinds.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Regression test: insert one outbox row with a non-JSON-object payload (e.g. payload: 'null') alongside a valid row of a different kind; drain() must not throw, the valid row must still be pushed, and the bad row must be marked attempted without blocking siblings.",
+    "Same test repeated for a malformed completion-kind row."
+  ],
+  "labels": [
+    "sync",
+    "error-handling",
+    "reliability"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The EH-2/EH-3 rule citation is only loosely accurate — the raw exception IS caught and logged one layer up in sync_orchestrator.dart (satisfying EH-3's catch/log requirement and EH-2's presentation-boundary requirement), so this is better framed as a reliability/per-row-isolation defect (violates the file's own stated invariant) than a strict EH-2/EH-3 hit. Recommend keeping P1 but noting the rule tag is approximate."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-outbox",
+  "chunk": "high-025",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-09",
+  "linearPriority": "High"
+}

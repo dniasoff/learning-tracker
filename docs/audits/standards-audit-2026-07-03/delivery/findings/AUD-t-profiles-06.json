@@ -1,0 +1,45 @@
+{
+  "title": "Scope or ticket the FlutterError.onError overflow suppression in profile_picker_screen_l1_test.dart and rpr2_picker_offline_delete_test.dart he-locale tests",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7",
+  "area": "test/features/profiles/presentation/screens/{profile_picker_screen_l1_test,rpr2_picker_offline_delete_test}.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/profile_picker_screen_l1_test.dart",
+      "line": 666,
+      "quote": "FlutterError.onError = (details) {\nif (details.exceptionAsString().contains('overflowed')) return;"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/rpr2_picker_offline_delete_test.dart",
+      "line": 193,
+      "quote": "FlutterError.onError = (details) {\nif (details.exceptionAsString().contains('overflowed')) return;"
+    }
+  ],
+  "sites": 2,
+  "why": "Both overrides swallow every RenderFlex-overflow FlutterError raised anywhere in the pumped tree for the remainder of the test, not just the one 'residual small profile-grid' overflow the comment names, and neither comment cites a Linear DNI-#### id (only 'tracked for the Phase 8 RTL/visual sweep'). Any new, unrelated overflow introduced later in the Hebrew-locale render of ProfilePickerScreen (or, in rpr2, the manage-sheet/confirm-dialog chain) will pass silently instead of failing CI, on an RTL app where directional-layout overflow is a named risk (AX-1).",
+  "recommendation": "Narrow the filter to the specific known widget (match its key/type in the error details), or replace the blanket catch with a `// TODO(DNI-####): remove once <widget> RTL overflow is fixed` plus a scoped skip, so unrelated future overflows still fail the test.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Introducing a synthetic RenderFlex overflow in an unrelated widget within the same pumped tree causes these two tests to fail again."
+  ],
+  "labels": [
+    "test-quality",
+    "AX-1",
+    "RTL",
+    "profiles"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p3",
+  "chunk": "grp-080",
+  "normArea": "tests/profiles",
+  "id": "AUD-t-profiles-06",
+  "linearPriority": "Low"
+}

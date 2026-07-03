@@ -1,0 +1,39 @@
+{
+  "title": "Guard the force-unwrapped credential.user in FirebaseAuthGatewayImpl.createUserWithEmailAndPassword",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2",
+  "area": "core/auth",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+      "line": 86,
+      "quote": "return credential.user!.uid;"
+    }
+  ],
+  "sites": 1,
+  "why": "Every other credential.user access in this same file tolerates a null user (signInAndGetUser:74 and signInWithEmailLink:141 both route through _toAppUserOrNull). Here the `!` will throw a raw TypeError ('Null check operator used on a null value') instead of a typed, catchable error if Firebase ever returns a credential without a user — a TypeError carries no stable code (EH-5) and isn't a deliberately-thrown, meaningful exception, so it degrades straight to an opaque crash instead of a handleable condition, inconsistent with how the rest of the file treats the identical precondition.",
+  "recommendation": "Mirror the null-check-and-throw pattern used elsewhere in the file (or the typed exception recommended in the EH-5 finding) instead of force-unwrapping credential.user.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No bare `!` on credential.user in this file.",
+    "A regression test exercises the null-user branch of createUserWithEmailAndPassword."
+  ],
+  "labels": [
+    "auth",
+    "defensive-coding"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-auth",
+  "chunk": "grp-005",
+  "normArea": "core/auth",
+  "id": "AUD-core-auth-06",
+  "linearPriority": "Low"
+}

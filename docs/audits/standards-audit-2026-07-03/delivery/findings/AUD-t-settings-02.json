@@ -1,0 +1,84 @@
+{
+  "title": "Extract a shared pumpApp test helper instead of duplicating ProviderScope/MaterialApp scaffolding across 9 settings test files",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3 (shared pumpApp helper convention)",
+  "area": "features/settings (test infrastructure)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+      "line": 243,
+      "quote": "Widget _buildScopeApp({"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+      "line": 288,
+      "quote": "Widget _buildLifetimeApp({"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/settings_screen_r5_regression_test.dart",
+      "line": 180,
+      "quote": "Widget _buildSettings({"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/settings_screen_test.dart",
+      "line": 74,
+      "quote": "Widget createTestWidget({"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/st3_settings_switch_a11y_test.dart",
+      "line": 54,
+      "quote": "Widget _buildSettings({"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+      "line": 103,
+      "quote": "Widget _buildApp({"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/utils/account_actions_test.dart",
+      "line": 169,
+      "quote": "Widget _buildApp({"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+      "line": 123,
+      "quote": "Widget _buildApp({"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/an7_destructive_icon_contrast_test.dart",
+      "line": 101,
+      "quote": "Widget _buildApp({"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart",
+      "line": 64,
+      "quote": "Widget _buildHarness({required SyncStatus syncStatus}) {"
+    }
+  ],
+  "sites": 9,
+  "why": "9 of the 11 files in this batch hand-roll their own ProviderScope+MaterialApp+localizationsDelegates+supportedLocales widget factory (scope_lifetime_l1_test.dart alone defines 3). No test/helpers/pump_app.dart exists anywhere in the repo despite TQ-3 naming it as the reviewed convention — the only genuinely shared harness in this batch is the unrelated overflow_harness.dart. Each copy can drift independently: a future required override has to be hand-added to every one of these ~10 near-identical blocks instead of once, and a missing delegate/override in one copy silently produces different behavior (e.g. RTL/l10n) than its siblings.",
+  "recommendation": "Introduce test/helpers/pump_app.dart exporting a pumpApp/buildTestApp helper that wraps ProviderScope(overrides) + MaterialApp(locale, delegates, supportedLocales, home), and migrate these 9 local builders to call it, keeping only the per-screen `home` widget and override list as parameters.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and is imported by the 9 files listed in evidence in place of their local _buildApp/_buildSettings/_buildHarness/createTestWidget/_buildScopeApp functions."
+  ],
+  "labels": [
+    "TQ-3",
+    "duplication",
+    "test-infrastructure"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-102",
+  "normArea": "tests/settings",
+  "id": "AUD-t-settings-02",
+  "linearPriority": "Medium"
+}

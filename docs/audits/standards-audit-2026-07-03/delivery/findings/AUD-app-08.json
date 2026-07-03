@@ -1,0 +1,50 @@
+{
+  "title": "Close the DeviceRegistryDatabase connection on account_bootstrap.dart's exception path",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard (I/O failure handling) / resource cleanup",
+  "area": "app/bootstrap",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/app/bootstrap/account_bootstrap.dart",
+      "line": 23,
+      "quote": "final registry = DeviceRegistryDatabase(\n  driftDatabase(name: 'device_registry'),\n);"
+    },
+    {
+      "file": "learning_tracker/lib/app/bootstrap/account_bootstrap.dart",
+      "line": 49,
+      "quote": "await registry.close();"
+    },
+    {
+      "file": "learning_tracker/lib/app/bootstrap/account_bootstrap.dart",
+      "line": 51,
+      "quote": "} catch (e, stack) {"
+    }
+  ],
+  "sites": 1,
+  "why": "`registry.close()` sits at the end of the try block, not in a finally. If sessionService.resolveActiveAccountId() (line 30) or registry.findById() (line 33) throws, execution jumps straight to the outer catch (line 51), which logs and returns a fallback filename WITHOUT ever closing the Drift-backed device_registry connection — the exact 'I/O fails halfway' scenario the Nygard lens asks about. Impact is low in practice (this runs once per app process at startup), but a leaked native database handle held for the app's whole lifetime is still an avoidable defect, and it would compound if this code path were ever retried (e.g. a future hot-reattempt) or re-used in a longer-lived context.",
+  "recommendation": "Move `final registry = ...` construction above a try/finally (or wrap the resolveActiveAccountId/findById calls in try{...}finally{ await registry.close(); }) so every exit path closes the connection.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "registry.close() executes on both the success path and any exception path out of bootstrapAccount.",
+    "A unit test makes sessionService.resolveActiveAccountId() throw and asserts the registry/executor was still closed."
+  ],
+  "labels": [
+    "resource-leak",
+    "hygiene",
+    "bootstrap"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-app-l10n-p1",
+  "chunk": "grp-001",
+  "normArea": "app",
+  "id": "AUD-app-08",
+  "linearPriority": "Low"
+}

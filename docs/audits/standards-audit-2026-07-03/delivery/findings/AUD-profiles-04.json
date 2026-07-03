@@ -1,0 +1,61 @@
+{
+  "title": "Replace profile_picker_screen.dart's private rename/delete dialogs with the canonical editProfileFlow/deleteProfileFlow",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2 (no hardcoded user-facing strings) / Fowler duplication",
+  "area": "features/profiles/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/screens/profile_picker_screen.dart",
+      "line": 361,
+      "quote": "isLast ? 'Delete your only profile?' : l10n.deleteProfileTitle,"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/screens/profile_picker_screen.dart",
+      "line": 365,
+      "quote": "? 'This is your only profile. Deleting '\n                      '\"${profile.displayName}\" will erase every track, '"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/screens/profile_picker_screen.dart",
+      "line": 382,
+      "quote": "child: Text(isLast ? 'Delete anyway' : l10n.delete),"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/screens/profile_picker_screen.dart",
+      "line": 394,
+      "quote": "await repo.deleteProfile(profile.id, allowLast: isLast);\n    final sel = ref.read(selectedProfileIdProvider) ?? -1;"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
+      "line": 92,
+      "quote": "isLast ? l10n.deleteProfileLastTitle : l10n.deleteProfileTitle,"
+    }
+  ],
+  "sites": 2,
+  "why": "profile_picker_screen.dart implements its own `_showRenameDialog`/`_showDeleteDialog` instead of reusing the canonical `editProfileFlow`/`deleteProfileFlow` from profile_edit_delete_actions.dart (which manage_learners_screen.dart correctly delegates to, per its own 'WS1.consolidate' comment). The duplicate is inferior on two fronts: (1) the last-profile branch of its delete dialog hardcodes English sentences ('Delete your only profile?', the erase-everything body, 'Delete anyway') instead of using ARB keys the sibling flow already has (deleteProfileLastTitle/Body/Confirm) — any Hebrew-locale user with exactly one profile who tries to delete it sees raw untranslated English, breaking the app's EN/HE parity invariant; (2) after `await repo.deleteProfile(...)` it touches `ref` with no `mounted` guard (the sibling `_showRenameDialog` in the same file does guard with `if (mounted) ref.invalidate(...)`), risking a post-dispose WidgetRef use if the user navigates away during the multi-table cascade delete.",
+  "recommendation": "Delete `_showRenameDialog`/`_showManageSheet`'s rename+delete branches from profile_picker_screen.dart and call `editProfileFlow`/`deleteProfileFlow` from profile_edit_delete_actions.dart instead, matching manage_learners_screen.dart.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "profile_picker_screen.dart's long-press menu invokes editProfileFlow/deleteProfileFlow (or an equivalent single canonical implementation) rather than private duplicates",
+    "A Locale('he') widget test opens the delete dialog on an account with exactly one profile and asserts no raw-English literal renders",
+    "make arb-parity stays green"
+  ],
+  "labels": [
+    "i18n",
+    "duplication",
+    "profiles"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "high-065",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-04",
+  "linearPriority": "High"
+}

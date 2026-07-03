@@ -1,0 +1,54 @@
+{
+  "title": "Replace Future.delayed wall-clock waits with deterministic signals in notification cold-start tests (TQ-6)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/features/notifications/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/providers/reminder_enabled_cold_start_test.dart",
+      "line": 106,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/providers/reminder_time_cold_start_test.dart",
+      "line": 94,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/providers/notification_providers_deep_test.dart",
+      "line": 184,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 200));"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/providers/notification_providers_test.dart",
+      "line": 48,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 200));"
+    }
+  ],
+  "sites": 19,
+  "why": "These bare-ProviderContainer tests (no WidgetTester/FakeAsync virtualization) use a real-wall-clock Future.delayed(100ms/200ms) to 'give async load time to complete' instead of awaiting a concrete signal. This encodes an unstated assumption about how fast SharedPreferences-mock plus microtasks resolve rather than an explicit dependency, and is non-hermetic under CI scheduler contention.",
+  "recommendation": "Replace with pumpEventQueue() (package:test) or listen-and-await-first-matching-value instead of fixed sleeps.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "None of the 4 listed files contain Future.delayed combined with a millisecond Duration literal."
+  ],
+  "labels": [
+    "tq-6",
+    "test-quality",
+    "notifications"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-065",
+  "normArea": "tests/notifications",
+  "id": "AUD-t-notifications-06",
+  "linearPriority": "Low"
+}

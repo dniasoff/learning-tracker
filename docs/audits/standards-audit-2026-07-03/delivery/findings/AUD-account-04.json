@@ -1,0 +1,48 @@
+{
+  "title": "Extract the duplicated _extractFirebaseCode regex parser out of MagicLinkService and UpgradeToCloudService",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler: duplicated code; layering tension with Rule 3",
+  "area": "features/account/domain + data",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/data/services/magic_link_service.dart",
+      "line": 238,
+      "quote": "final match = RegExp(r'\\[([a-z-]+)\\]').firstMatch(str);"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+      "line": 374,
+      "quote": "final match = RegExp(r'\\[([a-z-]+)\\]').firstMatch(str);"
+    }
+  ],
+  "sites": 2,
+  "why": "Both files independently reimplement 'parse a Firebase error code out of an exception's toString()' via the identical regex, because Rule 3 blocks these features/account/{domain,data} files from importing FirebaseAuthException directly and matching its typed .code field. The fallback is fragile: if a Firebase Auth SDK bump changes the exception's string format so it no longer wraps the code in literal brackets, _extractFirebaseCode silently returns null everywhere at once — in upgrade_to_cloud_service.dart this means the 'email-already-in-use' retry-merge branch falls through to rethrow, and the guided merge flow silently stops firing, surfacing a raw exception to the user instead. The same helper is also duplicated at 3 more sites repo-wide (signup_screen.dart, sign_in_controller.dart, upgrade_to_cloud_screen.dart), confirming this is a systemic gap rather than a one-off.",
+  "recommendation": "Factor the regex parser into one shared, unit-tested helper (e.g. core/utils/firebase_error_code.dart, which only touches strings so it doesn't trip Rule 3) that all current call sites import.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "one shared, unit-tested extractFirebaseCode(Object e) utility exists",
+    "magic_link_service.dart and upgrade_to_cloud_service.dart delegate to it instead of each defining their own regex copy"
+  ],
+  "labels": [
+    "duplication",
+    "fowler",
+    "layering"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Traced firebase_auth_gateway_impl.dart:78-87 (raw FirebaseAuthException propagates unwrapped) and upgrade_to_cloud_screen.dart:193-274 (its own duplicate of the same buggy regex also gates the EmailCollisionException catch AND the network/weak-password/invalid-email branches). All of these are dead today, not just a hypothetical future-SDK risk as the finding's 'why' frames it — this is a live, confirmed defect, so P1 not P2.",
+      "The finding frames the bug as contingent on 'if a Firebase Auth SDK bump changes the exception's string format.' I traced the actual currently-pinned dependency chain (firebase_auth 6.5.1 -> firebase_auth_platform_interface 9.0.1 -> FirebaseException.toString() in firebase_core_platform_interface 7.0.1 = '[$plugin/$code] $message') and confirmed with a live regex test that RegExp(r'\\[([a-z-]+)\\]') never matches '[firebase_auth/email-already-in-use] ...' because of the underscore and slash. I also traced the call chain (upgrade()->_auth.createUserAccount->AuthRepositoryImpl->FirebaseAuthGateway->raw firebase_auth SDK) and found no exception conversion anywhere, so the raw FirebaseAuthException really does reach _extractFirebaseCode. This means the described failure is not a future risk but an already-live, reachable defect today, given the SDK version actually pinned in pubspec.lock. This strengthens rather than weakens the finding."
+    ]
+  },
+  "sourceBatch": "t1-feat-account-p2",
+  "chunk": "grp-039",
+  "normArea": "features/account",
+  "id": "AUD-account-04",
+  "linearPriority": "High"
+}

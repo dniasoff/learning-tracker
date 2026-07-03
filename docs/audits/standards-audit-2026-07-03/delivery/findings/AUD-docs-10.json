@@ -1,0 +1,89 @@
+{
+  "title": "Fix the GoalSetupScreen \"provably-dead — delete\" verdict in docs/planning/on-device-preflight-cheatsheet.md before anyone acts on it",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs/planning",
+  "evidence": [
+    {
+      "file": "docs/planning/on-device-preflight-cheatsheet.md",
+      "line": 45,
+      "quote": "Delete the whole file lib/features/scheduler/presentation/screens/goal_setup_screen.dart (both GoalSetupForm and GoalSetupScreen are dead)... Do NOT spend on-device test effort mounting GoalSetupScreen/GoalSetupForm: there is no in-app path to it."
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+      "line": 788,
+      "quote": "builder: (_) => GoalSetupScreen("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+      "line": 692,
+      "quote": "? () => _openGoalEdit(track, curriculum)"
+    },
+    {
+      "file": "docs/planning/e2e-test-suite-plan.md",
+      "line": 15,
+      "quote": "Non-routed screens (Navigator push only) | **6** | `ScopeSelectionScreen`, `GoalSetupScreen`, `EditTrackScreen`..."
+    },
+    {
+      "file": "docs/planning/daf-unit-display-scope.md",
+      "line": 3,
+      "quote": "**Status:** Scoped, product decisions made (2026-06-14). Phase 1 in progress."
+    },
+    {
+      "file": "docs/planning/daf-unit-display-scope.md",
+      "line": 146,
+      "quote": "### FINAL STATUS (2026-06-14) — daf-unit work COMPLETE"
+    },
+    {
+      "file": "docs/planning/overdue-refactor-architecture.md",
+      "line": 5,
+      "quote": "| **Status** | Draft — for review |"
+    },
+    {
+      "file": "docs/planning/e2e-test-suite-plan.md",
+      "line": 5,
+      "quote": "**Date:** 2026-06-18 · **Status:** Planning — implementation-ready; Wave 1 builds on proven harness..."
+    },
+    {
+      "file": "docs/planning/epics.md",
+      "line": 12,
+      "quote": "# learning-tracker - Epic 19 Breakdown"
+    }
+  ],
+  "sites": 9,
+  "why": "track_detail_screen.dart (a churn-hotspot file) wires `_openGoalEdit`, called from an onTap at line 692, which pushes `GoalSetupScreen` via `Navigator.push(MaterialPageRoute(...))` at line 788 — this is the live \"Edit Goal\" flow, reachable and reachable-only via Navigator (never @RoutePage-routed, which is exactly why the cheatsheet's router/`.gr.dart` grep missed it). A later doc in the same repo, e2e-test-suite-plan.md (2026-06-18), independently and correctly classifies GoalSetupScreen as reachable (\"Navigator push only\"), directly contradicting this cheatsheet's \"provably-dead\" verdict. The cheatsheet is explicitly framed as an action list (\"pre-flight cheat-sheet\") with an unambiguous, confident delete instruction; anyone or any agent treating it as current guidance today would delete a live, user-reachable screen — a real functional regression (the Edit-Goal button on Track Detail would 404/crash).",
+  "recommendation": "Strike or correct the GoalSetupScreen entry (cross-reference e2e-test-suite-plan.md's classification) and add a one-line banner to the top of the cheatsheet stating its verdicts are a snapshot as of the 2026-05-31 commit and must be re-grepped before acting, since — as this very file shows — the underlying code moves.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The GoalSetupScreen section no longer recommends deletion, or is removed/marked resolved-incorrect.",
+    "A dated \"snapshot, re-verify before acting\" disclaimer is added near the top of the file.",
+    "Spot check: `grep -rn 'GoalSetupScreen(' learning_tracker/lib` continues to show the track_detail_screen.dart call site as the acceptance check that the doc no longer disagrees with."
+  ],
+  "labels": [
+    "docs",
+    "dead-code-risk",
+    "planning-docs"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "docs/planning/e2e-test-suite-plan.md 'Non-routed screens' row is at line 18, not 15 as cited; quote text itself is verbatim-correct and easily located."
+    ]
+  },
+  "sourceBatch": "t4-docs-triage-p1",
+  "chunk": "grp-170",
+  "mergedFrom": [
+    "Update stale status/title headers in living docs/planning/ files whose own body or code shows the work is already done"
+  ],
+  "coDiscoverers": [
+    "t4-docs-triage-p1"
+  ],
+  "normArea": "docs",
+  "id": "AUD-docs-10",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,47 @@
+{
+  "title": "Cover DataExportImportService._resolveScheduleJson's weekly/rolling/new-schema branches (3 of 4 paths untested)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (assertions weaker than what the source can do wrong)",
+  "area": "features/settings domain service, tested across 7 files in this batch",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 921,
+      "quote": "case 'weekly':"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+      "line": 928,
+      "quote": "case 'rolling':"
+    }
+  ],
+  "sites": 1,
+  "why": "_resolveScheduleJson exists specifically to keep old backup files importable across the W3.27 schema migration -- exactly the scenario a real user hits restoring a pre-migration backup. A repo-wide grep across all 7 domain/services test files in this batch for 'scheduleType', a literal 'schedule' key, 'rollingWindowSize', and 'daysOfWeek' returns zero hits: every stage-definition test fixture omits both the old quartet and the new field, so every test silently exercises only the `default: delay` fallback branch. A bug in the weekly/rolling legacy-parsing logic (e.g. the `jsonDecode(days) as List` cast, or a rolling-window field-name mismatch) would silently produce a wrong-but-plausible study schedule on restore, and nothing in this test suite would catch it.",
+  "recommendation": "Add tests importing legacy-quartet payloads with scheduleType: 'weekly' (including a JSON-string-encoded daysOfWeek and a native-List one) and 'rolling', plus one with the new 'schedule' field pre-populated, asserting the resulting stage_definitions.schedule column.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "3 new tests exist covering the weekly, rolling, and new-schedule-field branches.",
+    "Each new test fails when _resolveScheduleJson's corresponding branch is deliberately broken (red-first check)."
+  ],
+  "labels": [
+    "test-gap",
+    "back-compat",
+    "tq-8"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor: 'case 'weekly':' is actually at line 922, not 921 as cited (rolling at 928 is exact). Quote text itself is correct and uniquely locatable."
+    ]
+  },
+  "sourceBatch": "t1-feat-settings-p2",
+  "chunk": "grp-101",
+  "normArea": "features/settings",
+  "id": "AUD-settings-05",
+  "linearPriority": "Medium"
+}

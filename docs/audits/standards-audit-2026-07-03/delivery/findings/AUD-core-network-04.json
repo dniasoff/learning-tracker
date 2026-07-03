@@ -1,0 +1,48 @@
+{
+  "title": "Fix ContentItem's doc comment claiming it maps to a content_items DB table that no longer exists",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Everything sweep / Evans ubiquitous-language accuracy",
+  "area": "core/network/sefaria/models",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/network/sefaria/models/content_item.dart",
+      "line": 4,
+      "quote": "/// (individual mishna, daf, pasuk, etc.). Maps directly to the\n/// `content_items` table schema."
+    },
+    {
+      "file": "learning_tracker/lib/core/database/tables/bookmarks.dart",
+      "line": 8,
+      "quote": "/// replacing the old contentItemId FK to the content_items table."
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/data/repositories/content_repository_impl.dart",
+      "line": 15,
+      "quote": "/// Loads hierarchy content from bundled JSON assets on first access"
+    }
+  ],
+  "sites": 1,
+  "why": "There is no `content_items` table anywhere in lib/core/database/tables/ today; the only other repo references to it (bookmarks.dart, learning_order.dart) describe it in the past tense as an FK that was removed. The actual runtime source, per ContentRepositoryImpl's own doc comment, is bundled JSON assets (assets/content/hierarchy/*.json), not a database table. A maintainer trusting this comment could waste time hunting for a Drift migration that doesn't exist.",
+  "recommendation": "Update the doc comment to describe the current asset-backed source and drop the content_items-table claim (or mark it explicitly historical).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Comment text matches ContentRepositoryImpl's actual loading mechanism; no remaining present-tense 'content_items table' claim outside historical-context comments"
+  ],
+  "labels": [
+    "docs-drift",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-network",
+  "chunk": "grp-021",
+  "normArea": "core/network",
+  "id": "AUD-core-network-04",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,79 @@
+{
+  "title": "Use AppLocalizations.localizationsDelegates and add a Locale('he') variant across dashboard widget tests",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/features/dashboard/presentation/{screens,widgets}",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/screens/dashboard_screen_test.dart",
+      "line": 59,
+      "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_tier_row_test.dart",
+      "line": 200,
+      "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_body_streak_nav_test.dart",
+      "line": 146,
+      "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_body_stats_resolve_test.dart",
+      "line": 173,
+      "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_level_points_card_gating_test.dart",
+      "line": 25,
+      "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_level_points_card_skeleton_pp15_test.dart",
+      "line": 52,
+      "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/active_tracks_carousel_rtl_test.dart",
+      "line": 68,
+      "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/widgets/active_track_card_layout_test.dart",
+      "line": 85,
+      "quote": "localizationsDelegates: AppLocalizations.localizationsDelegates,"
+    }
+  ],
+  "sites": 7,
+  "why": "No shared pumpApp helper exists anywhere in test/helpers/ (TQ-3 is [P]ending, not yet built). Seven files in this batch hand-spell the same 4-item l10n delegate list (11 total call sites) instead of the 1-line AppLocalizations.localizationsDelegates shortcut that this same batch's active_track_card_layout_test.dart already uses correctly — adding a 5th delegate later means editing 7 files instead of 1. More concretely: DashboardScreen is the app's home/hotspot screen in a bilingual RTL-first app (AX-1, the dedicated Hebrew-terms system, and this batch's own active_tracks_carousel_rtl_test.dart all attest to how seriously RTL is taken here), yet none of dashboard_screen_test.dart's three pumpWidget sites ever set locale: Locale('he') — a Hebrew-layout regression on the dashboard's own scaffold would ship undetected by its own test file.",
+  "recommendation": "Switch the 7 files to AppLocalizations.localizationsDelegates; add a Locale('he') pump variant to dashboard_screen_test.dart's core render test, reusing the pattern already proven in active_tracks_carousel_rtl_test.dart.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -c 'GlobalCupertinoLocalizations.delegate' across the 7 files drops to 0",
+    "dashboard_screen_test.dart gains a testWidgets case that pumps with locale: Locale('he') and asserts no exception/overflow"
+  ],
+  "labels": [
+    "test-quality",
+    "i18n",
+    "rtl",
+    "duplication",
+    "dashboard"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Total GlobalCupertinoLocalizations.delegate occurrences across the 7 files is 12, not 11 (dashboard_tier_row_test.dart and dashboard_screen_test.dart each have 3, skeleton_pp15 has 2)."
+    ]
+  },
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "chunk": "grp-049",
+  "normArea": "tests/dashboard",
+  "id": "AUD-t-dashboard-01",
+  "linearPriority": "Medium"
+}

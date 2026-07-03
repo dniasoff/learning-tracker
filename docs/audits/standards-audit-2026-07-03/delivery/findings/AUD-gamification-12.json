@@ -1,0 +1,52 @@
+{
+  "title": "streak_restorer.dart redefines kBulkPriorSentinelMs as a local magic number instead of importing the existing core constant",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Evans (invariant enforced in one place) / Fowler (duplicated code, magic number)",
+  "area": "features/gamification/streak",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/streak/streak_restorer.dart",
+      "line": 41,
+      "quote": "// kBulkPriorSentinelMs (DateTime.utc(2000, 1, 1)); we define it locally to\n    // avoid a core→features layering violation."
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/streak/streak_restorer.dart",
+      "line": 44,
+      "quote": "const bulkPriorSentinelMs = 946684800000; // DateTime.utc(2000,1,1) ms"
+    },
+    {
+      "file": "learning_tracker/lib/core/learning/completion_constants.dart",
+      "line": 18,
+      "quote": "const int kBulkPriorSentinelMs =\n    946684800000; // DateTime.utc(2000, 1, 1).millisecondsSinceEpoch"
+    }
+  ],
+  "sites": 1,
+  "why": "The comment's stated reason is wrong: SchedulerEngine.kBulkPriorSentinelMs (the thing it says it's avoiding importing) lives in features/scheduler, not core, so importing it would be a cross-feature import (Rule 2), not a core→features violation (Rule 1) — and the correct fix was available anyway: lib/core/learning/completion_constants.dart already exports this exact constant from core, which features/ may freely import, and its own doc comment explicitly says it 'MUST be excluded from... streak calculations.' The sentinel (2000-01-01 UTC ms) now has three independent definitions (core/learning/completion_constants.dart, features/scheduler/domain/services/scheduler_engine.dart, and this file) that can silently diverge if any one is edited, corrupting bulk-prior filtering in exactly one of streak restore, points history, or scheduler completion detection without any test catching the mismatch.",
+  "recommendation": "Delete the local bulkPriorSentinelMs const and import kBulkPriorSentinelMs from core/learning/completion_constants.dart (a legal features→core import); fix the misleading comment.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "streak_restorer.dart imports and uses core's kBulkPriorSentinelMs; the local const is removed.",
+    "grep -rn '946684800000' lib/ returns exactly one hit (completion_constants.dart)."
+  ],
+  "labels": [
+    "duplication",
+    "layering",
+    "streak"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "A 4th independent definition of this sentinel exists at features/onboarding/domain/services/bulk_prior_completion_service.dart:31-34 (with the identical flawed 'avoid core→features violation' comment) — not mentioned by the finding. The acceptance criterion 'grep returns exactly one hit' is unattainable via the stated fix alone; 2 hits (completion_constants.dart + bulk_prior_completion_service.dart) would remain."
+    ]
+  },
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-053",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-12",
+  "linearPriority": "Medium"
+}

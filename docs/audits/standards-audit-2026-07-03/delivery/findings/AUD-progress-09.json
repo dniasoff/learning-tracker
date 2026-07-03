@@ -1,0 +1,38 @@
+{
+  "title": "Add a semantic label to the icon-only drill-in IconButton in LifetimeMarkingScopeRow",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-3 (icon-only buttons carry semantics)",
+  "area": "accessibility",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart",
+      "line": 630,
+      "quote": "IconButton(\n                icon: Icon(\n                  Icons.navigate_next_rounded,"
+    }
+  ],
+  "sites": 1,
+  "why": "This IconButton has no tooltip and isn't wrapped in Semantics, unlike the rest of the batch — progress_tier_counter_row.dart, for example, explicitly wraps its icon+number tiles in Semantics(label: ...). A screen-reader user landing on this control hears an unlabeled button with no indication it drills into the row's children.",
+  "recommendation": "Add a tooltip (e.g. an l10n 'View details' / drill-in key) to the IconButton.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The IconButton exposes a non-empty accessible label (tooltip or Semantics wrapper), verifiable via a widget test asserting on Semantics data."
+  ],
+  "labels": [
+    "accessibility",
+    "ax-3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p2",
+  "chunk": "grp-084",
+  "normArea": "features/progress",
+  "id": "AUD-progress-09",
+  "linearPriority": "Low"
+}

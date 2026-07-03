@@ -1,0 +1,45 @@
+{
+  "title": "Deduplicate the MockNotificationGateway class shared verbatim by notifications_screen_test.dart and ws5_two_layers_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-4 candidate + Fowler duplication",
+  "area": "features/notifications (tests, duplication)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+      "line": 15,
+      "quote": "class MockNotificationGateway extends Mock implements NotificationGateway {}"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/ws5_two_layers_test.dart",
+      "line": 24,
+      "quote": "class MockNotificationGateway extends Mock implements NotificationGateway {}"
+    }
+  ],
+  "sites": 2,
+  "why": "Two files under the same feature independently declare an identical top-level `MockNotificationGateway` class. Harmless today, but the digest's dedup pass will flag it as a duplicate top-level symbol, and if the two copies ever drift (e.g. one gets extra default stubs), the same name means different behavior depending on which file's test you're reading.",
+  "recommendation": "Move the class into a small shared test-support file under test/features/notifications/ (e.g. support/mock_notification_gateway.dart) and import it from both.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only one MockNotificationGateway declaration exists; both test files import it.",
+    "(Rule-0, Pending) AG-4 duplicate-symbol audit no longer lists MockNotificationGateway as duplicated."
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "AG-4"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p2",
+  "chunk": "grp-066",
+  "normArea": "tests/notifications",
+  "id": "AUD-t-notifications-03",
+  "linearPriority": "Low"
+}

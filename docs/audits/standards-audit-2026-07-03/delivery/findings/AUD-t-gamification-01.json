@@ -1,0 +1,50 @@
+{
+  "title": "Replace wall-clock Future.delayed synchronization with deterministic waits in gamification staleness tests",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests: no wall-clock)",
+  "area": "test/features/gamification/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/providers/curriculum_breakdown_staleness_test.dart",
+      "line": 66,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/providers/points_providers_reactive_test.dart",
+      "line": 61,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 20));"
+    },
+    {
+      "file": "learning_tracker/test/features/gamification/presentation/providers/points_providers_reactive_test.dart",
+      "line": 68,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    }
+  ],
+  "sites": 7,
+  "why": "7 sites across 2 files (curriculum_breakdown_staleness_test.dart:66; points_providers_reactive_test.dart:61,68,100,111,154,164) synchronize on a Riverpod stream/FutureProvider re-emission by sleeping a fixed real-world duration instead of awaiting the actual event — the same feature area's achievements_overview_staleness_after_redemption_test.dart shows the deterministic alternative already in use (container.invalidate(...) + await container.read(provider.future)). A fixed delay is a flaky-under-CI-load bet: too short and a legitimately-fixed provider that happens to take longer intermittently fails the test; the tests exist specifically to pin reactive-update timing, so racing against the clock to verify timing is a contradiction in terms.",
+  "recommendation": "Await the stream's next matching emission via a Completer or StreamQueue keyed on the expected value (or pumpEventQueue() for Drift's microtask-driven watch streams) instead of a fixed delay.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Zero `Future<void>.delayed` calls remain in curriculum_breakdown_staleness_test.dart and points_providers_reactive_test.dart.",
+    "Both files pass 20 consecutive runs under --test-randomize-ordering-seed=random without flake."
+  ],
+  "labels": [
+    "flaky-test",
+    "hermeticity",
+    "riverpod"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-055",
+  "normArea": "tests/gamification",
+  "id": "AUD-t-gamification-01",
+  "linearPriority": "Medium"
+}

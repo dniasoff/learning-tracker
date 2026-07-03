@@ -1,0 +1,68 @@
+{
+  "title": "Delete the dead duplicate auth_validators.dart under features/account/onboarding",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-4 / dead code",
+  "area": "features/account/onboarding/domain/validators",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart",
+      "line": 8,
+      "quote": "String? validateEmail(String? value) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/account.dart",
+      "line": 19,
+      "quote": "export 'onboarding/domain/validators/auth_validators.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/validators/auth_validators.dart",
+      "line": 8,
+      "quote": "String? validateEmail(String? value) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/providers/auth_providers.dart",
+      "line": 18,
+      "quote": "Stream<AppUser?> authState(Ref ref) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/account.dart",
+      "line": 28,
+      "quote": "export 'presentation/providers/auth_providers.dart'\n    hide AuthStateProvider, authStateProvider;"
+    }
+  ],
+  "sites": 5,
+  "why": "lib/features/account/onboarding/domain/validators/auth_validators.dart is byte-identical (`diff` clean) to lib/features/onboarding/domain/validators/auth_validators.dart, and defines the same public top-level functions (validateEmail, validatePassword, validateDisplayName). A repo-wide grep found zero importers of the features/account copy inside lib/ or test/ — only the features/onboarding copy is actually imported (by signup_screen.dart, sign_in_screen.dart, and 2 tests). Yet account.dart's public barrel re-exports the dead copy as part of the feature's advertised public surface, so any external caller who imports it via the barrel gets a function that is NOT the one this feature's own screens actually use, and a future fix to one copy (e.g. the password-length policy) will silently not apply to the other.",
+  "recommendation": "Delete lib/features/account/onboarding/domain/validators/auth_validators.dart and its account.dart export line. If validators genuinely need to be shared across features/account and features/onboarding, give them one owning location and have the other import via that feature's barrel.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "File removed; account.dart no longer exports it; flutter analyze / build stays green",
+    "AG-4 duplicate-symbol grep across lib/ no longer flags validateEmail/validatePassword/validateDisplayName twice"
+  ],
+  "labels": [
+    "ag-4",
+    "dead-code",
+    "duplication"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p1",
+  "chunk": "grp-037",
+  "mergedFrom": [
+    "Delete or consolidate the orphaned duplicate features/account/onboarding/domain/validators/auth_validators.dart",
+    "Rename one of the two generated authStateProvider symbols to remove the name clash"
+  ],
+  "coDiscoverers": [
+    "t1-feat-account-p1",
+    "t1-feat-onboarding-p2"
+  ],
+  "normArea": "features/account",
+  "id": "AUD-account-08",
+  "linearPriority": "Medium"
+}

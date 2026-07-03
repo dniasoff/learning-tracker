@@ -1,0 +1,39 @@
+{
+  "title": "Hoist EmptyLoginScreen's getAllAccounts() future out of build()",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "PF-3",
+  "area": "features/onboarding/presentation/screens",
+  "sites": 1,
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/screens/empty_login_screen.dart",
+      "line": 40,
+      "quote": "future: ref.read(deviceRegistryProvider).getAllAccounts(),"
+    }
+  ],
+  "why": "future: is evaluated fresh on every rebuild of EmptyLoginScreen (theme change, locale change, any ancestor rebuild), so FutureBuilder restarts from its loading/no-data state each time, re-querying the device registry and making the account-switch icon flicker/disappear-and-reappear on unrelated rebuilds instead of staying stable.",
+  "recommendation": "Move the Future into a @riverpod FutureProvider (e.g. allDeviceAccountsProvider) and ref.watch it, or cache it in a late final in a stateful wrapper.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "a widget test that triggers an unrelated rebuild of EmptyLoginScreen asserts getAllAccounts() is called exactly once, not once per rebuild"
+  ],
+  "labels": [
+    "performance",
+    "PF-3",
+    "onboarding"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "chunk": "grp-068",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-09",
+  "linearPriority": "Medium"
+}

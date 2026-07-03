@@ -1,0 +1,44 @@
+{
+  "title": "Correct the analyzer lint-rule count in docs/coding-standards.md (claims 83, actual 79)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "doc-accuracy",
+  "area": "docs/coding-standards.md",
+  "evidence": [
+    {
+      "file": "docs/coding-standards.md",
+      "line": 695,
+      "quote": "a deliberately hand-rolled explicit list (83 rules in `analysis_options.yaml`)..."
+    },
+    {
+      "file": "learning_tracker/analysis_options.yaml",
+      "line": 21,
+      "quote": "- always_declare_return_types"
+    }
+  ],
+  "sites": 1,
+  "why": "analysis_options.yaml's linter.rules block has exactly 79 entries (lines 21-99), not 83. development-guide.md's independent '~80 lints' hedge happens to be accurate; coding-standards.md's precise '83' is not, and this is the doc explicitly positioned as authoritative for the lint baseline.",
+  "recommendation": "Change '83 rules' to '79 rules' at coding-standards.md:695, or make the count self-verifying by having Rule 0 tooling count the block.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "docs/coding-standards.md's stated linter.rules count matches `awk '/^linter:/,0' analysis_options.yaml | grep -c '^    - '`"
+  ],
+  "labels": [
+    "docs",
+    "drift",
+    "lint"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p1",
+  "chunk": "grp-166",
+  "normArea": "docs",
+  "id": "AUD-docs-26",
+  "linearPriority": "Low"
+}

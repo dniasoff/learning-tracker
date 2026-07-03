@@ -1,0 +1,51 @@
+{
+  "title": "Fix _cf_helpers.mjs's numeric child_profile_id fixture so listTutorGrants' outgoing-mode test can assert real behavior",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7",
+  "area": "functions/test",
+  "evidence": [
+    {
+      "file": "learning_tracker/functions/test/_cf_helpers.mjs",
+      "line": 66,
+      "quote": "child_profile_id: PROFILE,"
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 572,
+      "quote": "if (typeof childProfileId !== \"string\" || !childProfileId) {"
+    },
+    {
+      "file": "learning_tracker/functions/test/cf_grant_revoke.test.mjs",
+      "line": 289,
+      "quote": "// A length assertion would be fragile due to type coercion in Firestore.\n    assert.ok(res.grants !== undefined);"
+    }
+  ],
+  "sites": 1,
+  "why": "res.grants is always an array (never undefined) per listTutorGrants' own return contract, so `assert.ok(res.grants !== undefined)` cannot fail regardless of whether the outgoing-mode query is correct -- the test labeled 'outgoing mode happy path' gives zero regression protection for that query path. The comment is honest about why (seedActiveGrant stores child_profile_id as a JS number, while inviteTutor -- every real production writer -- requires and stores it as a string, so the '==' query never matches the fixture), but the fix belongs in the shared fixture, not in weakening the assertion, and the weakening carries no `// weaken-ok:` tag per the standard.",
+  "recommendation": "Change seedActiveGrant to store child_profile_id: String(PROFILE), matching every production writer, then strengthen the assertion to check res.grants.length === 1 and the returned grant's fields.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The 'outgoing mode happy path' test asserts res.grants.length === 1 and fails if the outgoing query breaks."
+  ],
+  "labels": [
+    "test-quality",
+    "cloud-functions",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor rule mislabel: git log -p shows this assertion was authored weak in its original commit (b93e1d2c), never a prior stronger assertion that got weakened. TQ-7 ('never weaken a test') is a slight misfit; TQ-8 ('tautological tests... assertions weaker than what the source can do wrong') matches the actual defect more precisely. Does not change the verdict."
+    ]
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "chunk": "grp-158",
+  "normArea": "firebase",
+  "id": "AUD-firebase-07",
+  "linearPriority": "Medium"
+}

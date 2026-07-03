@@ -1,0 +1,57 @@
+{
+  "title": "Extract the duplicated, inconsistently-patched _extractFirebaseCode helper into one shared function",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / EH-2",
+  "area": "features/account error-code parsing",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+      "line": 134,
+      "quote": "final match = RegExp(r'\\[(?:[a-z_]+/)?([a-z-]+)\\]').firstMatch(str);"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/data/services/magic_link_service.dart",
+      "line": 238,
+      "quote": "final match = RegExp(r'\\[([a-z-]+)\\]').firstMatch(str);"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+      "line": 374,
+      "quote": "final match = RegExp(r'\\[([a-z-]+)\\]').firstMatch(str);"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+      "line": 473,
+      "quote": "final match = RegExp(r'\\[([a-z/-]+)\\]').firstMatch(e.toString());"
+    }
+  ],
+  "sites": 4,
+  "why": "The same '_extractFirebaseCode' helper is copy-pasted across 4 files in this batch (plus a 5th in features/settings/presentation/screens/upgrade_to_cloud_screen.dart, outside it) and the copies have drifted: sign_in_controller.dart's own comment documents that the original pattern `\\[([a-z-]+)\\]` fails to match Firebase's real `[plugin/code]` format (e.g. `[firebase_auth/wrong-password]`), silently degrading every mapped error to the generic 'Sign-in failed' message — and fixed it locally. magic_link_service.dart and upgrade_to_cloud_service.dart still carry that exact stale pattern, so an email-already-in-use or wrong-password condition surfacing through either of those paths still silently falls through to a generic error today.",
+  "recommendation": "Extract one shared helper (e.g. core/auth/firebase_error_code.dart, consistent with Rule 3's core/auth placement for Firebase-adjacent parsing) using sign_in_controller.dart's fixed pattern, and delete the other 4 copies (in and out of this batch).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A unit test on the shared helper asserts it extracts the code from both '[code]' and '[plugin/code]' shapes",
+    "AG-4 duplicate-symbol grep no longer finds multiple _extractFirebaseCode definitions"
+  ],
+  "labels": [
+    "duplication",
+    "eh-2",
+    "bugfix-drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The claimed consequence ('email-already-in-use or wrong-password... falls through to generic error') does not apply to magic_link_service.dart, whose only _extractFirebaseCode call site (line 221) checks 'invalid-action-code'/'expired-action-code' for internal pref cleanup, not password/email-collision codes. The real second half of that reachable bug chain is features/settings/presentation/screens/upgrade_to_cloud_screen.dart (mentioned only as an aside 'outside' the batch), which has the identical stale regex and IS used for user-facing error mapping."
+    ]
+  },
+  "sourceBatch": "t1-feat-account-p1",
+  "chunk": "grp-036",
+  "normArea": "features/account",
+  "id": "AUD-account-10",
+  "linearPriority": "Medium"
+}

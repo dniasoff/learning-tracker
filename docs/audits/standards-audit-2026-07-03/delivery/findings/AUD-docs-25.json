@@ -1,0 +1,43 @@
+{
+  "title": "Correct seed-build.md's bundled seed version — doc says 14, seed_version.dart says 15",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs (seed-build.md) vs core/database",
+  "evidence": [
+    {
+      "file": "docs/seed-build.md",
+      "line": 155,
+      "quote": "the on-device DB when the bundled version is higher. Currently **14**."
+    },
+    {
+      "file": "learning_tracker/lib/core/database/seed_version.dart",
+      "line": 13,
+      "quote": "const int bundledSeedVersion = 15;"
+    }
+  ],
+  "sites": 1,
+  "why": "Low-impact but concretely wrong: the doc's stated current bundled seed version (14) is one behind the actual constant (15), meaning the content DB has been rebuilt/re-seeded at least once since this doc's 'Validation checklist' numbers (113,273 text_cache rows etc., also unverified in this pass) were last confirmed. The rest of the doc — pipeline steps, prerequisites, the 10 merger/resolver mechanics — was checked and is accurate and detailed.",
+  "recommendation": "Update the 'Currently 14' line to 15 (or better, drop the hardcoded number and point to the constant), and re-verify the row-count table against the current build/seed.db the next time `make seed` runs.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "seed-build.md's stated bundledSeedVersion matches lib/core/database/seed_version.dart"
+  ],
+  "labels": [
+    "docs",
+    "stale-docs"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-canonical-p2",
+  "chunk": "grp-169",
+  "normArea": "docs",
+  "id": "AUD-docs-25",
+  "linearPriority": "Low"
+}

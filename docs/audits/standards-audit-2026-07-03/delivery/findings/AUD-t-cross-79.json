@@ -1,0 +1,72 @@
+{
+  "title": "Pin StreakStateProvider's day-bucketing seam instead of letting streak_state_provider_test.dart depend on the host machine's timezone",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "TQ-6",
+  "area": "learning_tracker/test/core/streak/streak_state_provider_test.dart; learning_tracker/lib/features/gamification/streak/streak_state_provider.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+      "line": 59,
+      "quote": "clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14, 12));"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/streak/streak_state_provider.dart",
+      "line": 67,
+      "quote": "return const StreakReducer().reduce(events, today: _clock.today());"
+    },
+    {
+      "file": "learning_tracker/lib/core/time/local_day_clock.dart",
+      "line": 49,
+      "quote": "final local = _now.toLocal();"
+    },
+    {
+      "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+      "line": 165,
+      "quote": "await Future<void>.delayed(Duration.zero);"
+    },
+    {
+      "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+      "line": 222,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 10));"
+    },
+    {
+      "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+      "line": 228,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 10));"
+    }
+  ],
+  "sites": 6,
+  "why": "read()/watch() call StreakReducer.reduce() without pinning the injectable `dayOf` seam that streak_reducer.dart's own doc comment says exists precisely 'so tests can pin a fixed UTC offset deterministically without depending on the host machine's timezone.' Both FakeLocalDayClock.today() and the default dayOf (DateUtils.extractLocalDate, date_utils.dart:64) resolve through DateTime.toLocal(), which reads the executing machine's TZ -- confirmed empirically inside the real flutter_tester harness: `TZ=Pacific/Kiritimati flutter test` shows DateTime.utc(2026,5,14,12).toLocal() shift a full calendar day. I could not flip any assertion in this specific file under that TZ (ran the suite 3x under the sandbox default Europe/London and once under forced Pacific/Kiritimati, all 13 tests green each time) because every fixture here sits at hour 0 or hour 12 UTC and every current day-gap still lands inside the reducer's +/-1-day grace window either way -- that is a property of today's specific fixture values, not a guarantee. The sibling unit suite (test/features/sync/domain/reducers/streak_reducer_test.dart:120-158) already tests the local-vs-UTC distinction correctly by injecting dayOf directly; this integration-level file has no such seam and inherits toLocal()'s host dependency instead. A fixture pair whose UTC-hour asymmetry straddles a day boundary differently under some real TZ (e.g. clock seeded at 23:00 UTC, event at 01:00 UTC) would confirm an actual flip -- the D17 rollover test already seeds close to a boundary and is the most likely one to trip this by accident in a future edit.",
+  "recommendation": "Either give StreakStateProvider.read/watch an explicit dayOf override (mirroring the reducer's own seam) or have the test suite pin TZ=UTC explicitly (Makefile/CI env var) so pass/fail can't depend on the runner's locale.",
+  "acceptance_criteria": [
+    "`TZ=Pacific/Kiritimati flutter test test/core/streak/streak_state_provider_test.dart` and the default-TZ run both stay green by construction (pinned dayOf or pinned TZ), not by coincidence of current fixture values."
+  ],
+  "effort": "M",
+  "labels": [
+    "TQ-6",
+    "hermeticity",
+    "clock-skew"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "One narrative claim doesn't hold up: 'the D17 rollover test already seeds close to a boundary' is inaccurate — that test (lines 206-236) seeds both the clock and its event at hour 12 UTC (noon), symmetric and far from a UTC-midnight boundary. The hour-0/hour-12 asymmetry the auditor describes belongs to other tests in the file. This is a minor overstatement in the supporting narrative, not in the cited evidence array, and does not undermine the core, independently-confirmed finding."
+    ]
+  },
+  "sourceBatch": "t1-core-streak",
+  "chunk": "grp-026",
+  "mergedFrom": [
+    "Replace fixed-duration Future.delayed waits with deterministic stream-emission awaits in streak_state_provider_test.dart"
+  ],
+  "coDiscoverers": [
+    "t1-core-streak"
+  ],
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-79",
+  "linearPriority": "Low"
+}

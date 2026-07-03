@@ -1,0 +1,47 @@
+{
+  "title": "Delete the dead app_database_test.dart.skip and dao_merge_methods_test.dart.skip",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6",
+  "area": "learning_tracker/test/core/database",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/app_database_test.dart.skip",
+      "line": 4,
+      "quote": "import 'package:learning_tracker/core/database/app_database.dart';"
+    },
+    {
+      "file": "learning_tracker/test/core/database/dao_merge_methods_test.dart.skip",
+      "line": 3,
+      "quote": "import 'package:learning_tracker/core/database/app_database.dart';"
+    }
+  ],
+  "sites": 2,
+  "why": "Both files import lib/core/database/app_database.dart, which does not exist anywhere in the repo — it was split into ContentDatabase/UserDatabase/DeviceRegistryDatabase per commit ce43a2d9. Both also use a pre-split schema (sefariaRef typed as `int`, schemaVersion 3) that predates today's text-keyed CompletionEvents. The `.dart.skip` extension means flutter test's `*_test.dart` glob never sees these files at all — they're not 'skipped tests', they're 1032 combined lines of uncompilable dead code with zero CI signal. The last touch was a 'fix: DNI-79 Complete compilation error fixes and code cleanup' commit, implying they were parked rather than deleted because they wouldn't compile, and nobody has revisited them since. An agent searching test/core/database/ for existing CompletionDao merge/dedup coverage will find these, spend time working out why they don't run, and only then discover the class they test was deleted long ago.",
+  "recommendation": "Delete both files. If CompletionDao merge/dedup behavior (completionExists, insert dedup) isn't covered by a current test, add fresh coverage at the mirrored path against CompletionDao directly instead of the deleted AppDatabase.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both .dart.skip files are removed (or their commit message states why any surviving assertions were ported first, per TQ-7).",
+    "An audit check bans new *.dart.skip/*.skip files under test/ going forward."
+  ],
+  "labels": [
+    "dead-code",
+    "AG-6",
+    "hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Cited rule AG-6 (TODO/FIXME + commented-code) doesn't literally match; content is neither. Better justified under the digest's separate 'dead code' Everything-sweep category, which the finding still satisfies."
+    ]
+  },
+  "sourceBatch": "t1-core-database-root-p1",
+  "chunk": "grp-011",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-17",
+  "linearPriority": "Medium"
+}

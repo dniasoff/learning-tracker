@@ -1,0 +1,51 @@
+{
+  "title": "Delete the dead test/firestore-rules/ Jest suite, superseded by functions/test/firestore_rules.test.mjs",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code hygiene (AG-6-adjacent)",
+  "area": "firestore-rules-tests (test/firestore-rules, dead code)",
+  "evidence": [
+    {
+      "file": "test/firestore-rules/firestore.rules.test.js",
+      "line": 32,
+      "quote": "// DEPRECATED SUITE — superseded by learning_tracker/functions/test/firestore_rules.test.mjs"
+    },
+    {
+      "file": "test/firestore-rules/firestore.rules.test.js",
+      "line": 106,
+      "quote": "describe('accounts collection', () => {"
+    },
+    {
+      "file": "test/firestore-rules/package.json",
+      "line": 2,
+      "quote": "\"name\": \"firestore-rules-tests\","
+    }
+  ],
+  "sites": 3,
+  "why": "This suite is fully dead: ci.yml (lines 303-307, confirmed) only ever runs functions/test/firestore_rules.test.mjs, and this directory is invoked by no Makefile target. If anyone ran `npm test` here today every '[allow]' case would fail — it targets top-level `accounts`/`learner_profiles`/`track_configs`/`completion_events` collections that do not exist anywhere in the live nested users/{uid}/learner_profiles/{profileId}/... rules (confirmed by a full read of firestore.rules); they would all hit the global default-deny. Meanwhile docs/architecture.md:575, docs/development-guide.md:87, docs/deployment-guide.md:51 and docs/test-options.md:38 still describe `test/firestore-rules/` (Jest) as the live firestore-rules CI job, and docs/api-contracts.md:84 claims deprecated top-level rule blocks are 'retained because... test/firestore-rules/ pin them' — those blocks don't exist in firestore.rules at all. A contributor trusting any of those docs and editing this directory expecting it to gate CI wastes their change; the directory also drags in a fully duplicate devDependency set (jest, firebase, @firebase/rules-unit-testing) plus a committed package-lock.json for zero live test value.",
+  "recommendation": "Delete test/firestore-rules/ (all 4 git-tracked files including package-lock.json) now that functions/test/firestore_rules.test.mjs is the confirmed canonical suite — the file's own header comment already says this is the intended endpoint ('kept only for reference until removed').",
+  "effort": "S",
+  "acceptance_criteria": [
+    "test/firestore-rules/ directory removed from the tree (git rm)",
+    "The 4 canonical docs referencing test/firestore-rules/ as the live CI path are updated in the same change or a follow-up doc-drift ticket is filed"
+  ],
+  "labels": [
+    "dead-code",
+    "hygiene",
+    "doc-drift",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p2",
+  "chunk": "grp-159",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-18",
+  "linearPriority": "Medium"
+}

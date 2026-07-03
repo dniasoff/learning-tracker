@@ -1,0 +1,45 @@
+{
+  "title": "Un-pin the FAB-always-visible-at-cap UX bug in manage_learners_screen_l1_test.dart or file it with a Linear id",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6 (spirit) / TQ-7",
+  "area": "test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart",
+      "line": 361,
+      "quote": "// BUG: ManageLearnersScreen does not visually disable the FAB or show"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart",
+      "line": 377,
+      "quote": "expect(find.byType(FloatingActionButton), findsOneWidget);"
+    }
+  ],
+  "sites": 1,
+  "why": "The test's own comment names this a UX bug ('the FAB should be disabled or hidden at cap') yet asserts the current buggy behavior (findsOneWidget) as passing, with no Linear id anywhere nearby. Anyone who fixes the FAB-cap UX later has to know to come back and flip this specific assertion; nothing links the comment to a backlog item, so the gap is invisible to grooming and easy to forget, unlike a tracked TODO.",
+  "recommendation": "Either give the comment a DNI-#### id and keep the test as an explicit characterization test, or mark it skip: 'DNI-####' with the desired (not current) assertion as a red regression test.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The FAB-cap gap has a Linear id referenced in the test file",
+    "No 'BUG:' comment describing unfixed product behavior remains without an adjacent DNI-#### id in this file"
+  ],
+  "labels": [
+    "hygiene",
+    "ag-6",
+    "testing"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-078",
+  "normArea": "tests/profiles",
+  "id": "AUD-t-profiles-07",
+  "linearPriority": "Low"
+}

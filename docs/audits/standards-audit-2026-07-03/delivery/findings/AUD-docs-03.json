@@ -1,0 +1,68 @@
+{
+  "title": "Archive or rewrite epic-19 sync stories 19-8/19-9 — both still target a SyncEngine/syncEngineProvider architecture that has been deleted",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-4 triage protocol (presents-as-current vs point-in-time); related AG-8/AG-9",
+  "area": "docs/stories/implementation (epic 19 sync)",
+  "evidence": [
+    {
+      "file": "docs/stories/implementation/19-8-syncengine-conditional-activation.md",
+      "line": 3,
+      "quote": "Status: ready-for-dev"
+    },
+    {
+      "file": "docs/stories/implementation/19-8-syncengine-conditional-activation.md",
+      "line": 126,
+      "quote": "final syncEngineProvider = Provider<SyncEngine?>((ref) {"
+    },
+    {
+      "file": "docs/stories/implementation/19-8-syncengine-conditional-activation.md",
+      "line": 637,
+      "quote": "SUPERSEDED-ARCHITECTURE NOTE: This story's activation rule (\"has Firebase account → activate\") is from the March model."
+    },
+    {
+      "file": "docs/stories/implementation/19-9-multi-device-sync.md",
+      "line": 3,
+      "quote": "Status: ready-for-dev"
+    },
+    {
+      "file": "docs/stories/implementation/19-9-multi-device-sync.md",
+      "line": 82,
+      "quote": "Review `_mergeCompletions()` in `sync_engine.dart`:"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+      "line": 81,
+      "quote": "W2.35: [syncEngineProvider] deleted — this is the sole write-path provider."
+    }
+  ],
+  "sites": 2,
+  "why": "These are the only two files in the batch still marked ready-for-dev, i.e. presented as live, pickable backlog rather than history. Both prescribe editing lib/features/sync/data/sync_engine.dart, making syncEngineProvider nullable, and adding SyncEngine.pushAllLocalData()/OfflineQueue.enqueue* calls. None of that exists anymore: SyncEngine, syncEngineProvider, and sync_engine.dart itself were deleted during the SyncOrchestrator+outbox rewrite (proven by the DNI-333/334/335 decomposition stories in this same batch and by the 'syncEngineProvider deleted' comment in sync_providers.dart) — the only remaining trace is a `.skip`-suffixed dead test file (test/features/sync/data/sync_engine_test.dart.skip). This repo runs an autonomous batch/worktree-per-story workflow (evidenced by the DNI-378..383 dev-agent records in this batch); a developer or agent that pulls '19-8' or '19-9' off the ready-for-dev backlog would burn a full worktree cycle trying to resurrect a provider that was deliberately deleted, risking a regression to the pre-outbox sync design. 19-8's own AC-3 goal (SyncStatus.localOnly) is already shipped via SyncOrchestrator, so the story is redundant as well as stale — only 19-8 carries a partial self-aware 'SUPERSEDED-ARCHITECTURE' note (and even that leaves Status at ready-for-dev); 19-9 carries no such warning at all.",
+  "recommendation": "Move 19-8 and 19-9 to docs/_archive/superseded/ (the repo already uses this location, e.g. docs/_archive/superseded/epic-15-stories/15.11-profile-scoped-providers-sync.md) with a pointer to what actually replaced them (DNI-333/334/335 SyncEngine decomp, DNI-342 tier threading, the SyncOrchestrator/outbox architecture) — or rewrite their ACs against SyncOrchestrator if the underlying user-facing goal is still open. Add a cheap Rule-0 doc-lint: for every docs/stories/implementation/*.md with Status in {ready-for-dev, backlog, todo}, grep the class/provider names listed under its 'File:' targets against lib/ and fail the audit if a named symbol doesn't resolve — this would have caught the drift immediately.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "19-8 and 19-9 no longer sit at Status: ready-for-dev while referencing symbols (SyncEngine, syncEngineProvider) absent from lib/ — either archived/superseded-tagged or rewritten against SyncOrchestrator.",
+    "A grep-based checker (make audit target or tool/ script) flags any ready-for-dev/backlog story whose 'File:' targets don't exist in lib/, preventing silent recurrence."
+  ],
+  "labels": [
+    "docs",
+    "stale-story",
+    "sync-architecture",
+    "tier4-triage"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor: other epic-19 stories (19-2,19-3,19-4,19-6,19-10,19-11,19-12) also carry ready-for-dev status, so 'only two files' may be scoped to the source batch rather than all of epic-19 — doesn't invalidate the 19-8/19-9 claims themselves."
+    ]
+  },
+  "sourceBatch": "t4-docs-triage-p5",
+  "chunk": "grp-173",
+  "normArea": "docs",
+  "id": "AUD-docs-03",
+  "linearPriority": "Medium"
+}

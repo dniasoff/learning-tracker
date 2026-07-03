@@ -1,0 +1,52 @@
+{
+  "title": "Delete dead HebrewTerms.getCurriculumDisplayName — unused, violates Rule 5 displayNameHe placement, tested twice by duplicate groups",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 5 (no_curriculum_display_name_bypass, currently unenforced) + dead-code",
+  "area": "learning_tracker/lib/core/constants",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/constants/hebrew_terms.dart",
+      "line": 171,
+      "quote": "static String getCurriculumDisplayName(CurriculumId id) => id.displayNameHe;"
+    },
+    {
+      "file": "learning_tracker/test/core/constants/hebrew_terms_test.dart",
+      "line": 73,
+      "quote": "group('getCurriculumDisplayName', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/constants/hebrew_terms_test.dart",
+      "line": 102,
+      "quote": "group('getCurriculumDisplayName', () {"
+    }
+  ],
+  "sites": 2,
+  "why": "A repo-wide grep of lib/ finds zero production callers of HebrewTerms.getCurriculumDisplayName — the only call sites are two duplicate, identically-named test groups (lines 73 and 102, in the same file) that both just re-assert `== id.displayNameHe`, a tautology restating the implementation. The method also lives in core/constants/, not core/labels/, so its `.displayNameHe` access bypasses the Rule 5 placement boundary that the no_curriculum_display_name_bypass custom lint would flag if custom_lint weren't currently broken (per baseline). core/labels/curriculum_label.dart already has the equivalent, correctly-placed `_curriculumId!.displayNameHe` access, confirming this delegate is a superseded leftover (the doc comment even says the map it replaced was removed 'to eliminate duplication').",
+  "recommendation": "Delete HebrewTerms.getCurriculumDisplayName and both duplicate test groups. If Hebrew curriculum-name lookup is still needed outside core/labels/, route through CurriculumLabelRenderer per Rule 5 instead of a raw `.displayNameHe` access.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "`grep -rn getCurriculumDisplayName lib/ test/` returns no results after removal",
+    "hebrew_terms_test.dart no longer has two groups named 'getCurriculumDisplayName'"
+  ],
+  "labels": [
+    "rule-5",
+    "dead-code",
+    "test-quality"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "A third call site exists: test/story_acceptance/epic_18_track_overhaul_test.dart:511-520 also calls HebrewTerms.getCurriculumDisplayName in a tautological assertion. The finding's 'sites: 2' and 'the only call sites are two duplicate test groups' undercounts by one file; deleting per the stated recommendation alone would break that acceptance test."
+    ]
+  },
+  "sourceBatch": "t1-core-small-a",
+  "chunk": "grp-025",
+  "normArea": "core/constants",
+  "id": "AUD-core-constants-01",
+  "linearPriority": "Low"
+}

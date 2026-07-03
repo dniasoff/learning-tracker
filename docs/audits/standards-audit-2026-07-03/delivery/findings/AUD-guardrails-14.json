@@ -1,0 +1,46 @@
+{
+  "title": "Gate deploy-play-store.yml on a passing CI run for the exact SHA being deployed",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 0 / AG-11 (bypassable gates)",
+  "area": "GitHub Actions / release guardrails",
+  "evidence": [
+    {
+      "file": ".github/workflows/deploy-play-store.yml",
+      "line": 15,
+      "quote": "on:\n  workflow_dispatch:"
+    },
+    {
+      "file": ".github/workflows/deploy-play-store.yml",
+      "line": 28,
+      "quote": "  push:\n    tags:"
+    }
+  ],
+  "sites": 1,
+  "why": "deploy-play-store.yml has no `needs:`/`workflow_run:` dependency on ci.yml and no step that checks the target SHA's check-run status. Its only steps between checkout and Play Store upload are checkout, codegen, and `flutter build appbundle --release` — no `flutter test`, `dart analyze`, `make audit`, or firestore-rules check. A maintainer who tags a commit that never went through review/CI (an emergency hotfix, a stale local branch, the wrong SHA) or whose ci.yml run is still red/in-progress can ship straight to Google Play production with nothing in the committed config to stop it — the only backstop is human diligence, which is exactly the kind of implicit, non-deterministic gate Rule 0 says not to rely on.",
+  "recommendation": "Add a job that queries the GitHub Checks API for the deploying SHA's required workflows before the build/upload steps run (or trigger deploys via a `workflow_call` from a successful ci.yml run instead of independent `push: tags`/`workflow_dispatch` triggers).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "deploy-play-store.yml fails fast if the deploying SHA has no green ci.yml run, before any build/signing steps execute.",
+    "A dry run against a SHA with a failing/missing CI run demonstrates the new gate blocking the deploy."
+  ],
+  "labels": [
+    "ci",
+    "deploy",
+    "bypassable-gate",
+    "release"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-build-ci-guardrails",
+  "chunk": "grp-153",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-14",
+  "linearPriority": "Medium"
+}

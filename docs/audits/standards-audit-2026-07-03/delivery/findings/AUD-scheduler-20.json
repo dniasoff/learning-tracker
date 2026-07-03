@@ -1,0 +1,46 @@
+{
+  "title": "Delete or properly @Deprecated the dead, self-documented-buggy toggleStudyDay provider",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead-code",
+  "area": "scheduler/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/study_day_config_providers.dart",
+      "line": 66,
+      "quote": "  ///   1. It does not push sync (no syncFacade call)."
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/study_day_config_providers.dart",
+      "line": 100,
+      "quote": "  // BUG: this fires before the write completes (STUDYDAY-TOGGLE-RACE-14)."
+    }
+  ],
+  "sites": 1,
+  "why": "toggleStudyDayProvider has zero call sites anywhere in lib/ or test/ (confirmed by repo-wide grep) and its own doc comment states it is dead and buggy (no sync push, plus a documented race condition already fixed in study_day_config_screen.dart's _toggleDay). Yet it is not marked `@Deprecated`, so nothing — not the analyzer, not code review tooling — stops a future contributor from wiring it up and reintroducing the documented race, since a doc-comment warning is easy to miss while an `@Deprecated` annotation surfaces as an analyzer diagnostic at the call site.",
+  "recommendation": "Delete the provider (it has no callers) or, if it must stay for build_runner stability as the comment claims, mark it `@Deprecated('Use study_day_config_screen._toggleDay instead — this has a known race, DNI-####')`.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "toggleStudyDay is either removed or carries an @Deprecated annotation with a Linear id.",
+    "Confirm via grep that no call sites exist before deleting."
+  ],
+  "labels": [
+    "dead-code",
+    "deprecated"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "'Zero call sites...confirmed by repo-wide grep' is inaccurate: generated_providers_coverage_test.dart:250-259 references toggleStudyDayProvider for toString/==/hash coverage (file header: 'No ProviderContainer needed') — not behavioral execution, but a real reference deletion would break. Acceptance criteria should add updating that test. Also the line-66 evidence quote is actually the text at line 65 (off-by-one citation)."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-093",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-20",
+  "linearPriority": "Low"
+}

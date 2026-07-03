@@ -1,0 +1,75 @@
+{
+  "title": "Stop relying on find.byKey(...).last for time-row lookups in notifications_screen_l1_test.dart and notifications_screen_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "hygiene (fragile widget finder / Feathers seam)",
+  "area": "features/notifications/presentation/screens (tests, finder robustness)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+      "line": 86,
+      "quote": "await tester.tap(find.byKey(const Key('reminder_time')).last);"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "line": 232,
+      "quote": "find.byKey(const Key('reminder_time')).last,"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "line": 267,
+      "quote": "find.byKey(const Key('reminder_time')).last,"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "line": 426,
+      "quote": "await tester.tap(find.byKey(const Key('reminder_time')).last);"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "line": 446,
+      "quote": "find.byKey(const Key('reminder_time')).last,"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "line": 494,
+      "quote": "find.byKey(const Key('streak_alert_time')).last,"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "line": 509,
+      "quote": "find.byKey(const Key('streak_alert_time')).last,"
+    },
+    {
+      "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+      "line": 614,
+      "quote": "await tester.tap(find.byKey(const Key('streak_alert_time')).last);"
+    }
+  ],
+  "sites": 8,
+  "why": "_SettingsTimeRow (learning_tracker/lib/features/notifications/presentation/screens/notifications_screen.dart:306, `return ListTile(key: key, ...)`) forwards its own key onto the inner ListTile it builds, so Key('reminder_time')/Key('streak_alert_time') each match 2 elements in the tree. All 8 sites paper over that with `.last`, trusting find.byKey's traversal order to put the ListTile after its wrapper -- an implementation detail, not a documented Flutter API contract -- while the very same file already uses a robust, order-independent alternative for the Switch rows (e.g. l1_test.dart:218-220, `find.descendant(of: reminderRow, matching: find.byType(Switch))`). If the match order ever flipped, `.last` would silently resolve to the wrapper widget and the ensuing `tester.widget<ListTile>(...)` cast would throw, breaking otherwise-unrelated tests with a confusing error.",
+  "recommendation": "Match the ListTile the same way the Switch rows already do -- e.g. `find.widgetWithText(ListTile, l10n.notifReminderTime)` or, on the production side, stop forwarding `key` to the inner ListTile in _SettingsTimeRow and instead expose a distinct key for it -- so the finder resolves to exactly one widget without depending on registration order.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Time-row assertions no longer call `.last` on a byKey finder with 2 matches.",
+    "The 8 call sites are updated or, if `.last` is kept, each carries a comment justifying why the order is guaranteed."
+  ],
+  "labels": [
+    "testing",
+    "widget-finder",
+    "fragility"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-notifications-p2",
+  "chunk": "grp-066",
+  "normArea": "tests/notifications",
+  "id": "AUD-t-notifications-08",
+  "linearPriority": "Low"
+}

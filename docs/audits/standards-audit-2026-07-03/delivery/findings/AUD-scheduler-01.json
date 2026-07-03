@@ -1,0 +1,53 @@
+{
+  "title": "Lazy-load GroupedDailyView's per-curriculum task list instead of List.generate-ing every DailyTaskCard",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "PF-2",
+  "area": "scheduler/presentation — GroupedDailyView (Scheduler screen, grouped-view toggle)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/grouped_daily_view.dart",
+      "line": 39,
+      "quote": "children: curricula.map((curriculum) {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/grouped_daily_view.dart",
+      "line": 45,
+      "quote": "initiallyExpanded: true,"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/grouped_daily_view.dart",
+      "line": 51,
+      "quote": "children: List.generate(tasks.length, (i) {\n            final task = tasks[i];"
+    }
+  ],
+  "sites": 1,
+  "why": "SchedulerScreen's grouped view (one tap on the view-toggle button next to the task count) renders every task for every curriculum synchronously: GroupedDailyView maps curricula (bounded, <=9) into always-expanded ExpansionTiles, and inside each tile calls `List.generate(tasks.length, ...)` to build one DailyTaskCard per task with zero windowing, inside a non-builder `ListView(children:...)`. The daily-task backlog is explicitly unbounded by design — a lapsed user (the app's own core scenario: a child who stops opening the app for weeks) accumulates overdue new-learning/chazara items across every active track. The Learn tab already anticipates exactly this by hard-capping its own preview to `tasks.take(5)` (learning_screen.dart:346) and linking its 'View all' button straight into this screen (SchedulerRoute). Opening the grouped view after a multi-week gap forces dozens of DailyTaskCard widgets (icons, badges, InkWell, Riverpod watches) to build on the main isolate in a single frame — visible jank or a frozen scroll, worst on the older/budget Android devices this app targets for children. The file's own sibling `_TaskList` in scheduler_screen.dart:210 (the default, non-grouped view of the SAME data) already solves the identical problem correctly with `ListView.builder(itemCount: tasks.length, ...)`, so this is a local inconsistency/regression, not an unknown gap.",
+  "recommendation": "Rebuild GroupedDailyView on a CustomScrollView: one SliverToBoxAdapter per curriculum for the expand/collapse header, followed by a SliverList(delegate: SliverChildBuilderDelegate(...)) (or a lazily-built ListView per expanded section) so only on-screen DailyTaskCards are realized — mirroring the SliverList/SliverChildBuilderDelegate pattern gamification_screen.dart already uses for its own (also unbounded) achievements list.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Rule-0: PF-2 checker flags `List.generate(` / `.map(...).toList()` feeding a `children:` list under lib/features/**/presentation/** where the source count is a ref.watch'd/provider-derived collection, excluding verified-bounded enums (e.g. CurriculumId.values).",
+    "Regression test: pump SchedulerScreen with a fixture of ~200 synthetic overdue DailyTasks spread across 3 curricula, switch to grouped view, and assert via find.byType(DailyTaskCard) that only the initial viewport's worth of cards are realized (matching the count already asserted for the compliant _TaskList path) rather than all ~200."
+  ],
+  "labels": [
+    "performance",
+    "PF-2",
+    "scheduler"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "None needed — all cited file:line quotes match the source exactly.",
+      "Severity corrected from P1 to P2; all cited evidence (grouped_daily_view.dart lines, sibling _TaskList pattern, learning_screen.dart:346 take(5), product-rules.md Rule 9) verified accurate. No duplicate/baseline conflict found.",
+      "Strengthens the finding: the claim 'daily-task backlog is explicitly unbounded by design' understates the mechanism — only the chazara/review sub-path is capped (kMaxOverdueChazarahPerDay=20 in scheduler_engine.dart); the overdue/today projection path that dominates allDailyTasksProvider (scheduler_providers.dart _buildProjectionTasks, ~lines 691/890) has no cap whatsoever, making the worst case larger than the original finding implied."
+    ]
+  },
+  "sourceBatch": "sup-pf2",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-01",
+  "linearPriority": "High"
+}

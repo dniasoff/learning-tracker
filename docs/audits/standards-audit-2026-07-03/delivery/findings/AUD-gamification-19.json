@@ -1,0 +1,38 @@
+{
+  "title": "Rename StreakStateProvider — it is a plain service class, not a @riverpod provider",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "naming/placement (suffix encodes role) / SM applicability",
+  "area": "features/gamification/streak",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/streak/streak_state_provider.dart",
+      "line": 24,
+      "quote": "class StreakStateProvider {\n  StreakStateProvider({required UserDatabase db, required LocalDayClock clock})"
+    }
+  ],
+  "sites": 1,
+  "why": "The file/class name (streak_state_provider.dart, StreakStateProvider) matches the app-wide convention for @riverpod codegen providers, but this is a hand-written plain class with no @riverpod annotation, no part '*.g.dart', and no Notifier/AsyncNotifier base — it's constructed directly by 5 different callers (parent_dashboard_aggregator.dart, streak_milestone_analytics_observer.dart, streak_alert_service.dart, streak_service.dart, dashboard_providers.dart). An auditor or agent grepping for '_provider.dart' files to apply the SM-1..8 rule family would misclassify this file and either skip real SM-7 questions (is it constructed only inside a real provider?) or misapply provider-specific rules that don't fit a plain service.",
+  "recommendation": "Rename to streak_state_service.dart / StreakStateService (or similar) to match its actual role.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn 'class StreakStateProvider' lib/ returns zero hits after rename; all 5 call sites updated."
+  ],
+  "labels": [
+    "naming",
+    "riverpod"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-055",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-19",
+  "linearPriority": "Low"
+}

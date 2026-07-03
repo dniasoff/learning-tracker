@@ -1,0 +1,43 @@
+{
+  "title": "Fix completion_events.dart docstring — natural key description omits curriculumId that the enforced index actually includes",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8 / Evans ubiquitous-language self-consistency",
+  "area": "core/database/tables/completion_events.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/tables/completion_events.dart",
+      "line": 7,
+      "quote": "`(profileId, sefariaRef, stageId, trackType)`. The legacy `completions`"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/tables/completion_events.dart",
+      "line": 21,
+      "quote": "columns: {#profileId, #sefariaRef, #stageId, #trackType, #curriculumId},"
+    }
+  ],
+  "sites": 1,
+  "why": "The docstring's stated natural key (4 columns) doesn't match the @TableIndex it sits directly above (5 columns, adds curriculumId). A maintainer trusting the prose when writing a new dedup check or merger elsewhere would build the wrong key.",
+  "recommendation": "Update the docstring to list all 5 columns (or drop curriculumId from the index if it was never intended — needs a one-line confirmation from whoever added it in DNI-323).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Docstring and @TableIndex column list textually match."
+  ],
+  "labels": [
+    "docs-drift",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-tables",
+  "chunk": "grp-015",
+  "normArea": "core/database",
+  "id": "AUD-core-database-12",
+  "linearPriority": "Low"
+}

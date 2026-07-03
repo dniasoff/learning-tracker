@@ -1,0 +1,47 @@
+{
+  "title": "Rename core/utils/date_utils.dart's DateUtils class off the Flutter SDK's own DateUtils name",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-4 (public top-level symbol names unique across lib/)",
+  "area": "lib/core/utils (naming)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/utils/date_utils.dart",
+      "line": 57,
+      "quote": "class DateUtils {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/screens/goal_setup_screen.dart",
+      "line": 1,
+      "quote": "import 'package:flutter/material.dart' hide DateUtils;"
+    }
+  ],
+  "sites": 1,
+  "why": "package:flutter/material.dart exports its own `abstract final class DateUtils` (src/material/date.dart:247, re-exported at material.dart:65) with methods like isSameDay/getDaysInMonth used elsewhere in this repo (e.g. monthly_activity_sliver_calendar.dart calls Flutter's DateUtils.getDaysInMonth). This project's core/utils/date_utils.dart declares a second, unrelated `class DateUtils` with different semantics (isSameLocalDay is deliberately UTC→local-day aware per the P5 streak-boundary pattern; Flutter's isSameDay is a raw field compare). At least 14 lib/ files and 25+ test files import both material.dart and this file unqualified; exactly one file (goal_setup_screen.dart:1) already needed `hide DateUtils` to compile because it calls the project's DateUtils.extractLocalDate. Any of the other ~39 files is one `DateUtils.` autocomplete away from either a hard \"ambiguous import\" compile error or — if an agent \"fixes\" it by hiding the wrong side — silently swapping in Flutter's timezone-naive comparison where the streak-safe local-day comparison was intended, a domain the whole file exists to get right.",
+  "recommendation": "Rename the project's class (e.g. LocalDayUtils) or fold its 4 static methods into DateTimeFactory in the same file, so it no longer shadows the Flutter SDK name. Remove goal_setup_screen.dart's now-unnecessary `hide DateUtils` after the rename.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "`grep -rn \"^class DateUtils\" learning_tracker/lib/` returns no matches (class renamed).",
+    "goal_setup_screen.dart's `hide DateUtils` clause is removed and the file still compiles, confirming no remaining ambiguity."
+  ],
+  "labels": [
+    "naming",
+    "ag-4",
+    "footgun"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "The '25+ test files' claim is overstated: grepping test files that import both core/utils/date_utils.dart and unqualified 'package:flutter/material.dart' finds ~15, not 25+ (several other test importers use show-clauses that exclude DateUtils and are not actually at risk). Core mechanism and the one demonstrated instance remain accurate."
+    ]
+  },
+  "sourceBatch": "t1-core-nav-utils",
+  "chunk": "grp-019",
+  "normArea": "core/utils",
+  "id": "AUD-core-utils-01",
+  "linearPriority": "Medium"
+}

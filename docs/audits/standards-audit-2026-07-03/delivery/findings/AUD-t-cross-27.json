@@ -1,0 +1,44 @@
+{
+  "title": "Fix track_dao_extended_test.dart's deactivateTrack group — neither test calls deactivateTrack",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/core/database/daos",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/track_dao_extended_test.dart",
+      "line": 76,
+      "quote": "test('deactivates an existing active non-personal track', () async {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/track_dao_extended_test.dart",
+      "line": 93,
+      "quote": "test('deactivateTrack with non-existent track is a no-op', () async {\n      await expectLater(() async {"
+    }
+  ],
+  "sites": 2,
+  "why": "Line 76's test is titled 'deactivates an existing active non-personal track' but its body only inserts a track and asserts getActiveTracks is non-empty — trackDao.deactivateTrack is never invoked. Line 93's test wraps a literally empty async closure (`() async {}()`) in `expectLater(..., completes)`, which is trivially true regardless of any DAO behavior — it doesn't call the DAO at all. Both give false confidence that deactivateTrack's non-existent-track and active-track paths are covered in this file; a future regression in deactivateTrack that this specific file's name implies it guards would not be caught here (coverage happens to survive today only because track_dao_test.dart, track_dao_delete_test.dart, and track_dao_deactivate_test.dart independently, correctly test the same scenarios).",
+  "recommendation": "Either make both tests call db.trackDao.deactivateTrack(...) and assert on the resulting row state, or delete the group outright — track_dao_deactivate_test.dart:29-37 already covers the non-existent-track case correctly and track_dao_test.dart/track_dao_delete_test.dart already cover the activate-then-deactivate case.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Every test in track_dao_extended_test.dart's deactivateTrack group either calls the method it names or is removed.",
+    "`dart test test/core/database/daos/track_dao_extended_test.dart` still passes after the fix."
+  ],
+  "labels": [
+    "test-quality",
+    "vacuous-test"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-daos-p3",
+  "chunk": "grp-010",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-27",
+  "linearPriority": "Medium"
+}

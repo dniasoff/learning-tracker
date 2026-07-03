@@ -1,0 +1,57 @@
+{
+  "title": "De-duplicate near-identical CompletionDao test coverage between completion_dao_extended_test.dart and completion_dao_extra_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / TQ-1",
+  "area": "test/core/database/daos",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_dao_extended_test.dart",
+      "line": 317,
+      "quote": "group('CompletionDao.getCompletionsByTrackAndProfile', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_dao_extra_test.dart",
+      "line": 120,
+      "quote": "group('CompletionDao.getCompletionsByTrackAndProfile', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_dao_extended_test.dart",
+      "line": 361,
+      "quote": "group('CompletionDao.completionExistsByTrack', () {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/completion_dao_extra_test.dart",
+      "line": 230,
+      "quote": "group('CompletionDao.completionExistsByTrack', () {"
+    }
+  ],
+  "sites": 5,
+  "why": "Both files were independently written against 'the baseline test' (each file's header says so) and ended up covering the same 5 methods — insertCompletionsBatch(seed helper), getCompletionsByTrackAndProfile, getAggregateCountByTrack, completionExistsByTrack, getCompletionsByDateRangeAndTrack — with near-identical happy-path/profile-scoping/empty-list scenarios. Neither file references the other. This doubles maintenance cost (a behavior change requires updating matching assertions in two places) for zero added coverage on 5 of the two files' groups; completion_dao_review_counts_test.dart by contrast adds real net-new scenarios (track/profile/ref filter edge cases) alongside minor overlap, so it's not implicated here.",
+  "recommendation": "Merge the 5 overlapping groups into one file (extra_test.dart's cases look like a strict subset of extended_test.dart's), or add a comment in the newer file cross-referencing the older one so future authors know not to add a third copy.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "The 5 duplicated method groups exist in exactly one file, or the newer file documents what it adds beyond the older one.",
+    "Total assertion count for these 5 methods is unchanged or increased (dedup must not drop coverage)."
+  ],
+  "labels": [
+    "duplication",
+    "test-maintenance",
+    "fowler"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Recommendation overclaims 'strict subset': completion_dao_extra_test.dart actually has MORE scenarios than completion_dao_extended_test.dart in the getCompletionsByTrackAndProfile and getAggregateCountByTrack groups, not fewer -- overlap exists but neither file is a clean subset of the other."
+    ]
+  },
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "grp-008",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-58",
+  "linearPriority": "Low"
+}

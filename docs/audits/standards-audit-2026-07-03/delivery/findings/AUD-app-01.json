@@ -1,0 +1,58 @@
+{
+  "title": "Fix app_shell.dart's fixed-height context banners — they truncate text under accessibility scaling and undersize the exit-button tap targets",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AX-4 (no fixed heights on text wrappers; 48dp targets)",
+  "area": "app/router",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 672,
+      "quote": "Container(\n  height: 28,"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 769,
+      "quote": "Container(\n  height: 24,"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 535,
+      "quote": "Container(\n  key: const Key('appShellProfileSwitcherBarBackground'),\n  height: 44,"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 704,
+      "quote": "padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),"
+    }
+  ],
+  "sites": 3,
+  "why": "_ChildViewBanner (height: 28), TutorModeIndicatorBar (height: 24), and ProfileSwitcherBar (height: 44) are hardcoded-height Containers wrapping Text with maxLines:1/overflow:ellipsis and fontSize 11-14; none of them scale with MediaQuery.textScaler. At a larger accessibility text-scale setting, a real, present-day user segment sees the child/talmid name or role badge clipped tighter than intended, or the row overflowing the fixed bar. Independent of text scale, the Exit buttons in the first two banners are geometrically provable to be under the 48dp minimum: an icon(12)+padding(vertical:2x2)+text(11sp) inside a 24-28dp-tall parent caps the whole tap target at roughly 20-24dp — well short of 48dp — for a control (exiting parent/tutor mode) that a stressed or motor-impaired user needs to hit reliably.",
+  "recommendation": "Let the banner Containers size to content (IntrinsicHeight or padding-driven, not a literal height:), and grow the Exit InkWell's hit area to kMinInteractiveDimension via padding/ConstrainedBox independent of the visual bar height.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "_ChildViewBanner, TutorModeIndicatorBar, and ProfileSwitcherBar no longer hardcode a literal `height:` that can clip scaled text.",
+    "A widget test pumped at TextScaler.linear(1.3)+ and Locale('he') asserts no RenderFlex overflow and no truncated semantics label on these three banners.",
+    "The Exit/tap affordance in each banner measures >=48dp in its tappable dimension (verified via a hitTestable finder or explicit SizedBox/ConstrainedBox in the widget tree)."
+  ],
+  "labels": [
+    "accessibility",
+    "hotspot",
+    "rtl"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The '20-24dp' tap-target estimate is slightly generous; closer computation gives ~18-20dp for the _ChildViewBanner/TutorModeIndicatorBar Exit buttons — still well short of 48dp, so the conclusion is unaffected."
+    ]
+  },
+  "sourceBatch": "t1-app-l10n-p1",
+  "chunk": "high-001",
+  "normArea": "app",
+  "id": "AUD-app-01",
+  "linearPriority": "High"
+}

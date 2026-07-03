@@ -1,0 +1,51 @@
+{
+  "title": "Complete B18 in siyumim_timeline_and_lifetime_providers_test.dart to actually exercise the unmark-after-mark ledger conflict it documents",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological / weaker-than-claimed test)",
+  "area": "features/progress (test) — lifetime_knowledge hotspot",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/progress/siyumim_timeline_and_lifetime_providers_test.dart",
+      "line": 1151,
+      "quote": "// Then unmark the same seder — FIRST-WRITE WINS per putIfAbsent,\n// so the positive mark placed first takes priority."
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/domain/services/lifetime_tree_builder.dart",
+      "line": 110,
+      "quote": "level1Actions.putIfAbsent(unitId, () => action);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/learning_ledger_dao.dart",
+      "line": 70,
+      "quote": "..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))"
+    }
+  ],
+  "sites": 1,
+  "why": "B18's name and inline comments describe adding a positive seder mark then an unmark entry for the same seder, asserting the 'first (positive) mark' wins per putIfAbsent. The actual ledgerEntries list (lines 1143-1156) contains only the single positive entry -- the unmark _fakeLedgerData call described in the comment was never written -- so B18 exercises nothing beyond a trivial single-entry seder expansion already covered by B17, under a misleading name. computeLearnedLeafRefs' putIfAbsent (builder) plus getEntriesByCurriculum/getEntriesByTrack's orderBy(desc(completedAt)) (DAO) together implement a real 'most-recent-ledger-action-wins' contract with no shared documentation and no runtime assertion tying the two together; only B18b tests the mirror direction (unmark first, mark second). A regression that flips either half of that contract (e.g. a new query path that forgets the desc ordering, or a putIfAbsent that becomes an overwrite) would silently make an old bulk-mark override a later intentional unmark, and nothing in this suite would catch the positive-first/unmark-second direction.",
+  "recommendation": "Add the described second _fakeLedgerData(..., entryScope: 'unmark_seder') entry after the positive one in B18 and assert the leaf remains learned (mirroring B18b's assertion in the opposite order); add a doc comment on computeLearnedLeafRefs stating the newest-first ordering precondition it relies on from callers.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "B18's ledgerEntries list contains both a positive seder entry and a corresponding unmark_seder entry, and the test fails if putIfAbsent semantics regress",
+    "computeLearnedLeafRefs doc comment states its ledgerEntries-must-be-newest-first-by-completedAt precondition"
+  ],
+  "labels": [
+    "testing",
+    "progress",
+    "hotspot",
+    "lifetime-knowledge"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p5",
+  "chunk": "grp-088",
+  "normArea": "tests/progress",
+  "id": "AUD-t-progress-02",
+  "linearPriority": "Medium"
+}

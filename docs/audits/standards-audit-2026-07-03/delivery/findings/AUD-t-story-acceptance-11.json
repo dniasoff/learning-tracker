@@ -1,0 +1,50 @@
+{
+  "title": "Import the real childAwareText instead of re-implementing it inline in epic_18_track_overhaul_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 318,
+      "quote": "// Import the helper function indirectly by testing its logic"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 324,
+      "quote": "String childAwareText(\n              String adult,"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/screens/onboarding_screen.dart",
+      "line": 32,
+      "quote": "String childAwareText(\n  String adultText,"
+    }
+  ],
+  "sites": 1,
+  "why": "The real, public childAwareText already lives at onboarding_screen.dart:32 and is already correctly imported and tested by test/features/onboarding/presentation/screens/onboarding_screen_test.dart and onboarding_bulk_l1_test.dart. This third copy defines its own private closure with the same logic and asserts against that closure. If a future story changes the real substitution rule, this AC-2/AC-3 'story acceptance' test keeps passing against its own frozen copy — a false-green regression gate on exactly the behavior it claims to verify.",
+  "recommendation": "Delete the inline closure; import childAwareText from onboarding_screen.dart and assert against it directly, as the two feature-level tests already do.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test imports and calls the real onboarding_screen.dart childAwareText instead of a local reimplementation",
+    "grep -n 'String childAwareText' learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart returns no match"
+  ],
+  "labels": [
+    "test-quality",
+    "tautological-test",
+    "epic-18"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-17-20",
+  "chunk": "grp-138",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-11",
+  "linearPriority": "Medium"
+}

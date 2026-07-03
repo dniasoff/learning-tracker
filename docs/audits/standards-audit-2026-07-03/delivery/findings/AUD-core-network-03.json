@@ -1,0 +1,40 @@
+{
+  "title": "Cancel or document the leaked DNS-lookup Future in ConnectivityGateway.isOnline on timeout",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard lens — what happens when I/O fails halfway",
+  "area": "core/network (resource handling)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/network/connectivity_gateway.dart",
+      "line": 14,
+      "quote": "final result = await InternetAddress.lookup(\n        'dns.google',\n      ).timeout(const Duration(seconds: 2));"
+    }
+  ],
+  "sites": 1,
+  "why": "Future.timeout() races a Timer against the lookup but cannot cancel the underlying OS-level DNS resolution — dart:io gives no cancellable primitive for InternetAddress.lookup. Under packet loss or a captive portal (exactly when this check matters most), the original lookup keeps running past the 2s timeout with no way to observe or cancel it; repeated calls (e.g. retrying a failed offline-account conversion in account_actions.dart) can accumulate abandoned lookups.",
+  "recommendation": "Either document the accepted tradeoff inline (dart:io has no cancellable DNS API) with a bounded-impact justification, or switch to a primitive that supports cancellation (e.g. a raw socket connect with explicit close on timeout).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Either an inline comment documents the accepted leak and its bound, or a test demonstrates no more than one lookup stays in flight after repeated rapid isOnline calls under a simulated timeout"
+  ],
+  "labels": [
+    "resource-leak",
+    "nygard-lens"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "account_actions.dart:226's isOnline call is inside showDeleteAccountFlow (delete-account-requires-internet), not an offline-account-conversion retry path; the core evidence at connectivity_gateway.dart:14 is unaffected."
+    ]
+  },
+  "sourceBatch": "t1-core-network",
+  "chunk": "grp-022",
+  "normArea": "core/network",
+  "id": "AUD-core-network-03",
+  "linearPriority": "Low"
+}

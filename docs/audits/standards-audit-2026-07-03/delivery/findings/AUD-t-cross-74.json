@@ -1,0 +1,52 @@
+{
+  "title": "Make E2E-1108 in infra_p1_test.dart exercise the real ReminderEnabled notifier instead of round-tripping SharedPreferences",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological / weaker than the failure modes of the code under test)",
+  "area": "test/e2e/journeys/infra_p1_test.dart (E2E-1108) + features/notifications",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/infra_p1_test.dart",
+      "line": 569,
+      "quote": "group('E2E-1108 — Per-profile notification prefs isolated on profile switch', () {"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/infra_p1_test.dart",
+      "line": 617,
+      "quote": "await prefs.setBool(keyB, false);"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/infra_p1_test.dart",
+      "line": 620,
+      "quote": "final aValue = prefs.getBool(keyA) ?? true;"
+    }
+  ],
+  "sites": 1,
+  "why": "The test titled 'Per-profile notification prefs isolated on profile switch' never switches the active profile and never instantiates the real ReminderEnabled Riverpod notifier — it calls prefs.setBool(keyB, false) and then asserts prefs.getBool(keyB) is false, which only proves the SharedPreferences mock stores what it was told (an SDK behavior, not app logic). reminderEnabledKey() is a one-line string formatter (base + profileId). A real regression this journey is meant to catch — e.g. ReminderEnabled.build() caching profile A's value after activeProfileIdProvider flips to B, or the notifier writing under the wrong profile's key — would not be caught here because the notifier is never built or read through ref. The in-file comment even concedes 'provider rebuilds on activeProfileIdProvider are covered by the widget itself' without pointing to where.",
+  "recommendation": "Drive the real flow: mount /notifications for profile A, toggle the reminder switch, then swap the active identity (second E2EHarness or an activeProfileIdProvider override simulating profile B) and assert the widget/notifier reflects B's independently-loaded state, not just that two SharedPreferences keys hold different bytes.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "E2E-1108 fails red if ReminderEnabled.build() is changed to ignore activeProfileIdProvider and read a single shared key.",
+    "Test reads the reminder toggle state through the widget tree (not direct SharedPreferences access) for at least one of the two profiles."
+  ],
+  "labels": [
+    "tautological-test",
+    "notifications",
+    "TQ-8"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "test/features/notifications/presentation/providers/reminder_enabled_cold_start_test.dart K4 ('Mid-session profile switch', lines 201-238) already drives the real ReminderEnabled notifier through activeProfileIdProvider 1->2 via a real overrideWith notifier and asserts isolated per-profile values load correctly — the exact caching/isolation regression the finding claims is uncatchable. Remaining gap is narrower: no test reads the toggle through the widget tree."
+    ]
+  },
+  "sourceBatch": "t1-test-cross-p2",
+  "chunk": "grp-144",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-74",
+  "linearPriority": "Low"
+}

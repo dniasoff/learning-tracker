@@ -1,0 +1,49 @@
+{
+  "title": "Delete or wire up the unused ChazaraStatus/MomentumStatus domain models and their barrel",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler speculative-generality / dead-code",
+  "area": "learning_tracker/lib/features/dashboard/domain/models",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/domain/models/chazara_status.dart",
+      "line": 16,
+      "quote": "class ChazaraStatus with _$ChazaraStatus {"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/domain/models/momentum_status.dart",
+      "line": 20,
+      "quote": "class MomentumStatus with _$MomentumStatus {"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/domain/models/models.dart",
+      "line": 1,
+      "quote": "export 'calendar_position.dart';\nexport 'chazara_status.dart';"
+    }
+  ],
+  "sites": 3,
+  "why": "Repo-wide grep for ChazaraStatus, MomentumStatus, and this models.dart barrel path finds no reference anywhere outside their own declaration and generated .freezed.dart files — no provider constructs them, no widget renders them. They are fully-specified, richly-documented (momentum thresholds, chazara due/overdue semantics) value classes for a feature that was designed but never wired up, and the models.dart barrel that exists to re-export them is itself imported by nothing. Each carries a generated .freezed.dart companion that build_runner keeps regenerating for code nothing calls.",
+  "recommendation": "Delete chazara_status.dart, momentum_status.dart, their .freezed.dart companions, and models.dart, or land the provider/widget that was supposed to consume them.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rln 'ChazaraStatus\\|MomentumStatus' lib/ returns zero results outside the deleted files, or shows a real consumer.",
+    "dart run build_runner build after deletion produces no orphaned .freezed.dart output for these files."
+  ],
+  "labels": [
+    "dead-code",
+    "dashboard"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "grp-048",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-11",
+  "linearPriority": "Low"
+}

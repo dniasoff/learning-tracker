@@ -1,0 +1,56 @@
+{
+  "title": "Route account_actions_sheet.dart's Sign Out / Delete Account icon glyphs through a theme token instead of a Colors.white literal",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "lens:theme-consistency (beyond no_color_literal_outside_theme's Color(0x..) scope; extend lint or document statics-allowed)",
+  "area": "features/settings/presentation/widgets (account actions sheet)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/account_actions_sheet.dart",
+      "line": 225,
+      "quote": "color: Colors.white,"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/widgets/account_actions_sheet.dart",
+      "line": 246,
+      "quote": "color: Colors.white,"
+    },
+    {
+      "file": "learning_tracker/test/features/settings/presentation/widgets/an7_destructive_icon_contrast_test.dart",
+      "line": 207,
+      "quote": "equals(Colors.white),"
+    }
+  ],
+  "sites": 2,
+  "why": "account_actions_sheet.dart's Sign Out and Delete Account icon glyphs are Colors.white literals, even though the rest of the same file consistently routes color through AppTheme.*/AppColors.*/theme.colorScheme.* (e.g. lines 128,140,152,160,178,188,204,261). an7_destructive_icon_contrast_test.dart pins this literal as the expected value rather than a themed constant, so the AN-7 contrast fix has no named, reusable 'high-contrast-on-errorContainer' token — a future theme edit (e.g. a dark-mode errorContainer swap) has no single place to update and could silently reintroduce an AN-7-class invisible-icon bug elsewhere that reuses the same pattern without the literal.",
+  "recommendation": "Add a named theme constant (e.g. an AppTheme.onErrorContainer-style token fixed to a contrasting value) and reference it at both call sites instead of the Colors.white literal; update an7_destructive_icon_contrast_test.dart to assert against that constant.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "account_actions_sheet.dart's two destructive-icon color values reference a named theme constant, not a Colors.white literal.",
+    "`dart run custom_lint` (once its analyzer-version crash is fixed) reports no no_color_literal_outside_theme violation for these two lines."
+  ],
+  "labels": [
+    "custom-lint",
+    "color-literal",
+    "design-system"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 2,
+    "refutations": [
+      "Cited rule no_color_literal_outside_theme only fires on Color(0x…) hex-literal constructor calls (packages/custom_lints/lib/src/rules/no_color_literal_outside_theme.dart:71-88: addInstanceCreationExpression, typeName=='Color'). Its own test asserts Colors.white must NOT be flagged ('Named constants "
+    ],
+    "corrections": [
+      "The 'why' overstates consistency: same file already has untouched Colors.white/grey.shade300/transparent literals at lines 35, 97, 118, so it isn't true that 'the rest of the file consistently routes color through theme tokens' — weakens but doesn't kill the two-site defect claim.",
+      "Rule citation is factually wrong: no_color_literal_outside_theme excludes Colors.* named constants by explicit design and unit test. No other coding-standards.md rule bans Colors.white; it's the established app-wide pattern (app_theme.dart onError/onPrimary/etc., and this very file's own line 97 'color: Colors.white')."
+    ],
+    "adjudicated": "chair"
+  },
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-104",
+  "normArea": "features/settings",
+  "id": "AUD-settings-12",
+  "linearPriority": "Low"
+}

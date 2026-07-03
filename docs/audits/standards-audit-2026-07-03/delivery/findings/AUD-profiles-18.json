@@ -1,0 +1,42 @@
+{
+  "title": "Replace EdgeInsets.only(left:/right:) with EdgeInsetsDirectional in ParentTrackManagementScreen",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AX-1",
+  "area": "features/profiles/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/screens/parent_track_management_screen.dart",
+      "line": 120,
+      "quote": "padding: const EdgeInsets.only(\n              left: 16,"
+    }
+  ],
+  "sites": 1,
+  "why": "AX-1 bans `EdgeInsets.only(left:/right:)` outright because this app is RTL (Hebrew). The values here are symmetric (16/16) so there's no visible bug today, but it's exactly the banned pattern and a latent trap: if a future edit makes left/right asymmetric without switching to Directional, it silently breaks in Hebrew. The digest notes the AX-1 grep 'exists only in ROOT Makefile audit' — this violation surviving in a batch where `make audit` passed suggests that grep doesn't actually scan learning_tracker/lib/** for this pattern, a real coverage gap in an [E]nforced rule.",
+  "recommendation": "Replace with EdgeInsetsDirectional.only(start: 16, end: 16, top: 8, bottom: 96), and verify/extend the AX-1 grep so it actually scans learning_tracker/lib/**.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Line uses EdgeInsetsDirectional.only(start:/end:) instead of left:/right:",
+    "make audit's AX-1 grep is confirmed to scan learning_tracker/lib/** and would have caught this"
+  ],
+  "labels": [
+    "ax-1",
+    "rtl",
+    "i18n"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Acceptance criterion asking to 'verify/extend the AX-1 grep' duplicates novelty-filter known-gap #7 (RTL grep only in root Makefile) — trim that criterion; the underlying line-120 violation instance itself is still novel and stands."
+    ]
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-076",
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-18",
+  "linearPriority": "Low"
+}

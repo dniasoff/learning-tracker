@@ -1,0 +1,85 @@
+{
+  "title": "Add regression tests for GoalRepositoryImpl's not-found and delete-sync payload paths",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2 (typed exceptions surfaced correctly) / TQ-8 (every reachable error branch needs a red-first test)",
+  "area": "features/scheduler/data/repositories tests",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+      "line": 93,
+      "quote": "if (existing == null) {\n        throw ArgumentError('Goal not found: $goalId');"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+      "line": 21,
+      "quote": "@override\n  Future<void> deleteGoal(Map<String, dynamic> payload) async {}"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+      "line": 161,
+      "quote": "test('deleteGoal removes the goal', () async {"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/daily_plan_repository.dart",
+      "line": 113,
+      "quote": "curriculumId: CurriculumId.values.firstWhere(\n        (c) => c.storageKey == row.curriculumId,\n      ),"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/daily_plan_repository.dart",
+      "line": 119,
+      "quote": "priority: DailyTaskPriority.values.firstWhere(\n        (p) => p.name == row.priority,\n        orElse: () => DailyTaskPriority.newLearning,"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+      "line": 192,
+      "quote": "curriculumId: CurriculumId.values.firstWhere(\n        (c) => c.storageKey == goal.curriculumId,\n      ),"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/models/day_type.dart",
+      "line": 7,
+      "quote": "static DayType fromStorageKey(String key) =>\n      DayType.values.firstWhere((e) => e.storageKey == key);"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/models/goal_entity.dart",
+      "line": 198,
+      "quote": "orElse: () =>\n            throw ArgumentError('Unknown curriculumId: $rawCurriculumId'),"
+    }
+  ],
+  "sites": 8,
+  "why": "(a) updateGoal throws ArgumentError when goalId doesn't exist (e.g. the goal was deleted from another device and the sync merge already removed the local row before this device's in-flight edit lands) — no test in this file ever calls updateGoal with a nonexistent id, so nothing pins whether it throws, what it throws, or that a future refactor doesn't silently swallow/change it. (b) The file's own 'sync payload completeness (R4-6)' group exists specifically because create/update once shipped without profile_id/id in the outbox payload — but that hardening was never extended to deleteGoal: _RecordingGoalSyncFacade.deleteGoal is a blind no-op with no payload recorder (unlike goalPayloads for pushGoal), and the sole 'deleteGoal removes the goal' test uses the sync-less `repo` instance, so _syncDeleteGoal's {firestore_id, curriculum_id} payload is completely unverified. A key rename or dropped field in _syncDeleteGoal would ship silently — the exact class of bug R4-6 was written to catch for create/update.",
+  "recommendation": "Add a test asserting updateGoal(goalId: <nonexistent>) throws ArgumentError; add a deletePayloads recorder to _RecordingGoalSyncFacade and a test asserting deleteGoal() pushes the expected firestore_id/curriculum_id payload, mirroring the existing R4-6 create/update tests.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "New red-first test fails against a deliberately-broken updateGoal (e.g. the null check removed) and passes against current code.",
+    "New deleteGoal-payload test fails if _syncDeleteGoal's field names are renamed or dropped, mirroring the existing R4-6 create/update tests."
+  ],
+  "labels": [
+    "tq-8",
+    "eh-2",
+    "coverage-gap"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Rule tags (EH-2/TQ-8) are a loose fit — TQ-8 is framed for bug-fix regressions and EH-2 for exception-conversion, neither exactly matches 'missing coverage for an existing branch' — but this doesn't undermine the underlying, well-evidenced coverage gap.",
+      "none — evidence and reasoning verified accurate as stated."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "chunk": "grp-095",
+  "mergedFrom": [
+    "Guard the remaining bare CurriculumId/DayType.firstWhere enum lookups with the same orElse fallback used elsewhere in these same files"
+  ],
+  "coDiscoverers": [
+    "t1-feat-scheduler-p1",
+    "t1-feat-scheduler-p3"
+  ],
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-04",
+  "linearPriority": "Medium"
+}

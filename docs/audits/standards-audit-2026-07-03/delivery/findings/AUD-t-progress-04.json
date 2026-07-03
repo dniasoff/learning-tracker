@@ -1,0 +1,47 @@
+{
+  "title": "Reuse test/helpers/overflow_harness.dart instead of hand-rolling single-point FlutterError.onError overflow checks in lifetime_folder_styled_and_notif_providers_test.dart",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/features/progress",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/progress/lifetime_folder_styled_and_notif_providers_test.dart",
+      "line": 53,
+      "quote": "Widget _wrap("
+    },
+    {
+      "file": "learning_tracker/test/features/progress/lifetime_folder_styled_and_notif_providers_test.dart",
+      "line": 147,
+      "quote": "final prev = FlutterError.onError;"
+    }
+  ],
+  "sites": 6,
+  "why": "coding-standards.md TQ-3 specifies test/helpers/pump_app.dart as 'the reviewed convention' for widget-test pumping, but that file does not exist anywhere in the repo (only an unrelated pumpApp lives in test/e2e/harness/e2e_harness.dart for E2E journeys) — this file's local _wrap/_pump/_tearDown (lines 53-86) is a from-scratch reimplementation. Separately, 6 tests (lines 147, 269, 343, 507, 797, 1146) hand-roll a FlutterError.onError capture to detect RTL overflow at exactly one (size, textScale) point, duplicating and weakening test/helpers/overflow_harness.dart's expectNoOverflowAcrossDevices — an already-adopted (18 call sites), purpose-built matrix checker with a documented central home at test/overflow/overflow_guard_test.dart. The hand-rolled single-point checks in this file cannot catch overflow that only manifests at the tablet width or the 2.0x text-scale corner, which the shared matrix helper is specifically designed to catch.",
+  "recommendation": "Add the 6 Hebrew-locale/dark-theme cases to test/overflow/overflow_guard_test.dart via expectNoOverflowAcrossDevices instead of the local FlutterError.onError pattern; separately, either build test/helpers/pump_app.dart per TQ-3's spec or point TQ-3 at overflow_harness.dart's _wrap-equivalent so future widget tests have one place to look.",
+  "acceptance_criteria": [
+    "The 6 sites at lines 147/269/343/507/797/1146 are replaced by expectNoOverflowAcrossDevices calls (in this file or test/overflow/overflow_guard_test.dart).",
+    "A shared, importable pump helper exists and this file imports it rather than defining its own _wrap/_pump."
+  ],
+  "effort": "M",
+  "labels": [
+    "testing",
+    "duplication",
+    "TQ-3",
+    "rtl",
+    "a11y"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p3",
+  "chunk": "grp-085",
+  "normArea": "tests/progress",
+  "id": "AUD-t-progress-04",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,54 @@
+{
+  "title": "Type the catch clauses in content_browsing instead of bare catch(e)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-4",
+  "area": "features/content_browsing",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/screens/content_search_screen.dart",
+      "line": 43,
+      "quote": "} catch (_) {\n      return null;"
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/data/repositories/content_repository_impl.dart",
+      "line": 87,
+      "quote": "} catch (e) {\n      throw ContentLoadException("
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+      "line": 755,
+      "quote": "} catch (e, st) {\n      AppLogger.instance.error("
+    },
+    {
+      "file": "learning_tracker/lib/features/content_browsing/data/services/cloud_content_service.dart",
+      "line": 317,
+      "quote": "} catch (_) {\n      // Not gzipped, return as-is\n      return data;"
+    }
+  ],
+  "sites": 6,
+  "why": "None of these restrict the caught type, so each also catches Error subtypes (a TypeError from a bad cast, a StateError from a logic bug) and handles them as an ordinary recoverable failure. The sharpest case is cloud_content_service.dart:317 (currently dead per the separate dead-code finding, but worth fixing if kept): if gzip.decode throws for a reason other than 'not gzipped' (e.g. a truncated download), the function returns the still-compressed bytes as valid data, turning a clear decompression failure into a confusing downstream JSON-parse error. text_display_screen.dart:755's bare catch(e, st) around _handleComplete will show 'Could not save' for a genuine programming bug exactly the same way it shows it for an expected write failure.",
+  "recommendation": "Narrow each to on FormatException/on Exception catch as appropriate; for the gzip fallback specifically, check the gzip magic number (0x1f 0x8b) instead of try/catch.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "a grep-based Rule-0 check for '} catch (' without a preceding 'on ' returns zero hits in these 4 files (or dart run custom_lint once its analyzer-9.0 incompatibility, already baselined, is fixed)"
+  ],
+  "labels": [
+    "eh-4",
+    "error-handling",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "chunk": "grp-044",
+  "normArea": "features/content_browsing",
+  "id": "AUD-content_browsing-09",
+  "linearPriority": "Low"
+}

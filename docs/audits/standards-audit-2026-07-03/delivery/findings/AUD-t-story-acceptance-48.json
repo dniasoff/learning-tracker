@@ -1,0 +1,111 @@
+{
+  "title": "Use DateTimeFactory.nowUtc() instead of raw DateTime.now() for insert timestamps in epic_18/epic_19 story-acceptance tests",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 37,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 38,
+      "quote": "activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 136,
+      "quote": "createdAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 137,
+      "quote": "updatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 147,
+      "quote": "createdAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 148,
+      "quote": "updatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 432,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 433,
+      "quote": "activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 468,
+      "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+      "line": 469,
+      "quote": "activatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "line": 90,
+      "quote": "createdAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "line": 91,
+      "quote": "updatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "line": 116,
+      "quote": "createdAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "line": 117,
+      "quote": "updatedAt: DateTime.now(),"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "line": 185,
+      "quote": "final now = DateTime.now().toUtc();"
+    }
+  ],
+  "sites": 15,
+  "why": "TQ-6 requires tests use a fixed DateTimeFactory rather than the wall clock. None of these 15 sites are currently asserted on, so there is no live flake today — but the codebase already has a working seam (DateTimeFactory.nowUtc(), used correctly by test/helpers/drift_memory.dart's seedProfile in the very same suite and throughout production DAOs) that these two files bypass with raw DateTime.now(). The next author who copies one of these insert blocks into a test that does compare timestamps (an ordering check, a 'recently updated' window) inherits non-determinism silently.",
+  "recommendation": "Replace DateTime.now() with DateTimeFactory.nowUtc() (or a fixed literal) at all 15 sites, matching the pattern already used in test/helpers/drift_memory.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -n 'DateTime.now()' learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart returns no match"
+  ],
+  "labels": [
+    "hygiene",
+    "hermetic-tests",
+    "TQ-6"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor: the 'used correctly... in the very same suite' seam is actually test_database.dart's seedProfile (imported by both files), not drift_memory.dart's seedProfile as stated — both files define a same-named function; wrong one cited. Does not change validity."
+    ]
+  },
+  "sourceBatch": "t1-story-epics-17-20",
+  "chunk": "grp-140",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-48",
+  "linearPriority": "Low"
+}

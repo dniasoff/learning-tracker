@@ -1,0 +1,68 @@
+{
+  "title": "Delete unused features/scheduler/presentation/widgets/pace_indicator.dart — dead code, duplicate class name, hardcoded English",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-4 (duplicate top-level symbol names) / AG-6 (dead code)",
+  "area": "features/scheduler/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/pace_indicator.dart",
+      "line": 9,
+      "quote": "class PaceIndicator extends StatelessWidget {"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/pace_indicator.dart",
+      "line": 16,
+      "quote": "const PaceIndicator({super.key, required this.pace, this.subtitleCaption});"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/widgets/pace_indicator_test.dart",
+      "line": 5,
+      "quote": "import 'package:learning_tracker/features/scheduler/presentation/widgets/pace_indicator.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/pace_indicator.dart",
+      "line": 83,
+      "quote": "\"At current pace, you'll finish by $formatted\","
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/pace_indicator.dart",
+      "line": 15,
+      "quote": "class PaceIndicator extends StatelessWidget {"
+    }
+  ],
+  "sites": 5,
+  "why": "grep -rln \"PaceIndicator(\" lib/ and grep -rln \"features/scheduler/presentation/widgets/pace_indicator.dart\" lib/ both return zero hits outside the file's own definition — this PaceIndicator/ProjectedCompletionText pair is never built into any screen (curriculum_progress_screen.dart uses the DIFFERENT features/progress PaceIndicator instead). 91 lines of widget tests exist purely to exercise unreachable code, and the duplicate class name across two features is exactly the AG-4 hazard the standards name: a future agent asked to fix 'the pace indicator' can edit this file, believe the fix shipped, and see nothing change because it never renders.",
+  "recommendation": "Delete lib/features/scheduler/presentation/widgets/pace_indicator.dart and test/features/scheduler/presentation/widgets/pace_indicator_test.dart. If the scheduler screen is meant to show a pace indicator, wire this widget into scheduler_screen.dart and route its strings through the existing paceAhead/paceBehind/paceOnPace ARB keys (already used by features/progress's PaceIndicator), and rename to avoid the AG-4 clash.",
+  "acceptance_criteria": [
+    "grep -rl \"features/scheduler/presentation/widgets/pace_indicator.dart\" lib/ test/ returns nothing (removed) or exactly one real screen caller (wired).",
+    "grep -rn \"^class PaceIndicator\" lib/ returns exactly one match repo-wide."
+  ],
+  "labels": [
+    "dead-code",
+    "AG-4",
+    "AG-6",
+    "scheduler"
+  ],
+  "effort": "S",
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "chunk": "grp-097",
+  "mergedFrom": [
+    "Rename one of the two unrelated PaceIndicator classes (progress vs scheduler features)"
+  ],
+  "coDiscoverers": [
+    "t1-feat-progress-p2",
+    "t1-feat-scheduler-p5"
+  ],
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-08",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,63 @@
+{
+  "title": "Fix CurriculumLabel.item breadcrumb/parent modes to resolve ancestor Hebrew names, not just the leaf's",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "hebrew-terms.md §6/§10 (Hebrew-Terms domain-term invariant); Rule 5 (CurriculumLabelRenderer is the sole rendering path)",
+  "area": "lib/core/labels — CurriculumLabel widget + CurriculumLabelRenderer",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/labels/curriculum_label_renderer.dart",
+      "line": 168,
+      "quote": "final lastIdx = rawSegments.length - 1;\nhebrewNames[lastIdx] = item.displayNameHe;"
+    },
+    {
+      "file": "learning_tracker/lib/core/labels/curriculum_label_renderer.dart",
+      "line": 87,
+      "quote": ": rawValue)   // named-level fallback when hebrewName is null"
+    },
+    {
+      "file": "learning_tracker/lib/core/labels/curriculum_label.dart",
+      "line": 325,
+      "quote": "case CurriculumLabelMode.breadcrumb:\n  return CurriculumLabelRenderer.renderForItem(_item!, useHebrew: useHebrew, fullPath: true, ...);"
+    },
+    {
+      "file": "learning_tracker/lib/core/labels/curriculum_label.dart",
+      "line": 332,
+      "quote": "case CurriculumLabelMode.parent:\n  return CurriculumLabelRenderer.renderParentForItem(_item!, useHebrew: useHebrew, ...) ?? '';"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+      "line": 211,
+      "quote": "child: CurriculumLabel.item(_selectedLeaf!, mode: CurriculumLabelMode.breadcrumb, ...)"
+    }
+  ],
+  "sites": 2,
+  "why": "renderForItem(fullPath: true) — the function backing CurriculumLabel.item(mode: .breadcrumb) — only knows the leaf ContentItem's own displayNameHe; hebrewNames is filled only at the last index, so renderValue's named-level branch falls back to the raw storage-key value ('Seder Zeraim', 'Berakhot') for every ancestor segment whenever useHebrew=true. CurriculumLabel.item's breadcrumb and parent cases call renderForItem/renderParentForItem without ever supplying hebrewNamesPerSegment — unlike the async curriculum_label_providers.dart path (renderedDisplayForRef/renderedBreadcrumbForRef), which correctly builds ancestor names via curriculumContentProvider. This is reachable today at step_starting_position.dart:211-217, part of add_track_flow_screen's starting-position picker used for every curriculum: with Hebrew Terms on, selecting a leaf under a named ancestor (any Mishnayos masechta, any Chumash sefer, Mussar sefer, etc.) shows a mixed-script breadcrumb like 'Seder Zeraim › ברכות › פרק א' instead of 'זרעים › ברכות › פרק א' — English proper names leaking into a Hebrew-mode screen, the exact class of defect already fixed under IL-2/IL-5/IL-7/PP-5. renderParentForItem's own doc comment and the existing test 'renderParentForItem on a chapter returns the Sefer (Hebrew)' (curriculum_label_renderer_test.dart) already document the raw-fallback contract and assert the English string 'Genesis' as 'expected' — the bug is that curriculum_label.dart's callers never satisfy that contract's precondition (supplying hebrewNamesPerSegment), so the documented fallback leaks into production UI instead of being avoided.",
+  "recommendation": "Give CurriculumLabel.item's breadcrumb/parent modes a path to ancestor Hebrew names: either route them through the existing async renderedBreadcrumbForRefProvider(item.sefariaRef)/renderedParentForRefProvider(item.sefariaRef) (which already do this correctly via curriculumContentProvider), or thread a hebrewNamesPerSegment lookup into renderForItem/renderParentForItem the same way curriculum_label_providers.dart's _hebrewNamesForPath does.",
+  "acceptance_criteria": [
+    "New widget test pumps CurriculumLabel.item(item, mode: CurriculumLabelMode.breadcrumb) for a curriculum with 2 named ancestor levels (e.g. Mishnayos) with Hebrew Terms on, and asserts every rendered segment is Hebrew script — no raw Latin/ASCII ancestor names.",
+    "Test fails on current code and passes once the fix lands; add the analogous case for CurriculumLabelMode.parent."
+  ],
+  "labels": [
+    "hebrew-terms",
+    "i18n",
+    "core-labels",
+    "rendering-bug"
+  ],
+  "effort": "M",
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The finding's 'sites: 2' is loosely justified: only ONE concrete UI call site currently exercises the bug (step_starting_position.dart:211, mode=breadcrumb); CurriculumLabelMode.parent has no current call site in lib/ (confirmed via grep), so 'sites: 2' should be read as '2 broken render modes' rather than '2 live call sites' — a minor overstatement that does not affect the core defect's validity or severity."
+    ]
+  },
+  "sourceBatch": "t1-core-labels",
+  "chunk": "high-013",
+  "normArea": "core/labels",
+  "id": "AUD-core-labels-01",
+  "linearPriority": "High"
+}

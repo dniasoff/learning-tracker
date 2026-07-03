@@ -1,0 +1,48 @@
+{
+  "title": "Wrap the DB write in StudyDayConfigScreen._toggleDay with catch/log and a consistent mounted guard",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2 / EH-3",
+  "area": "scheduler/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/screens/study_day_config_screen.dart",
+      "line": 288,
+      "quote": "ref.invalidate(allDailyTasksProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/screens/study_day_config_screen.dart",
+      "line": 299,
+      "quote": "if (context.mounted && e.code == 'permission-denied') {"
+    }
+  ],
+  "sites": 1,
+  "why": "_toggleDay runs its DB lookup + db.studyDayConfigDao.upsertDayConfig(...) inside a detached `.then()` async closure with no surrounding try/catch and no caller awaiting the result — if upsertDayConfig throws (constraint violation, disk error), the failure is silently swallowed by the Future machinery with no AppLogger call and no user feedback (unlike the sync-push call three lines later, which IS wrapped in `on TutorWriteException catch`). The same closure calls `ref.invalidate(allDailyTasksProvider)` at line 288 with no `context.mounted` check, yet the SAME method DOES check `context.mounted` before the SnackBar at line 299 just after — an inconsistent, incomplete guard that leaves the earlier call exposed to a disposed-widget race if the user navigates away quickly after tapping a day toggle.",
+  "recommendation": "Wrap the DB write in try/catch with an AppLogger.error call and user-facing feedback on failure; check `context.mounted` (or equivalent) before the `ref.invalidate` call, matching the guard already present for the SnackBar.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A thrown exception from upsertDayConfig is logged via AppLogger and does not vanish silently.",
+    "ref.invalidate(allDailyTasksProvider) is only called when the widget is still mounted."
+  ],
+  "labels": [
+    "EH-2",
+    "EH-3",
+    "error-handling"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "The claim 'silently swallowed...no AppLogger call' is factually wrong: main.dart wraps runApp in runZonedGuarded, whose handler calls AppLogger.instance.handle(error, stack) plus Crashlytics.recordError(fatal: true). The failure does surface — just mislabeled as a fatal crash rather than silently vanishing.",
+      "main.dart:15-34 wraps the app in runZonedGuarded; its handler calls AppLogger.instance.handle(error, stack) AND Crashlytics.recordError(fatal:true) for any uncaught error in this unawaited .then() chain — the write's failure is not actually silent/log-less as claimed. Also, the cited 'good' catch at line 298 is itself log-less for non-permission-denied TutorWriteException codes."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-093",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-17",
+  "linearPriority": "Medium"
+}

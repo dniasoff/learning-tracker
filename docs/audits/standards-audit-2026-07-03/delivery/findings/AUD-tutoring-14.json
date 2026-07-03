@@ -1,0 +1,46 @@
+{
+  "title": "Add ref.mounted guards after awaits in manage_tutors_providers.dart's incomingTutorGrantsProvider",
+  "severity": "P3",
+  "confidence": "SUSPECTED",
+  "rule": "SM-4 (ref.mounted after await)",
+  "area": "features/tutoring/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart",
+      "line": 106,
+      "quote": "final cfResult = await useCase.callWithStatus();"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart",
+      "line": 118,
+      "quote": ".read(activeTutoredProfileSelectionProvider)\n        ?.grantId;"
+    }
+  ],
+  "sites": 1,
+  "why": "incomingTutorGrantsProvider watches `authStateProvider.select((s) => s.currentUser?.firebaseUid)` and then awaits two network/DB calls before touching `ref.read` three more times (lines 118, 124, 131). If the watched uid changes mid-flight (e.g. the tutor signs out while this fetch is in progress — the exact account-switch race this file's own comments say it must defend against), Riverpod 3 tears down this build invocation and a subsequent `ref.read` throws UnmountedRefException instead of the intended AsyncError/graceful outcome. No `ref.mounted` check guards any of the three post-await reads.",
+  "recommendation": "Check `if (!ref.mounted) return const <TutorGrant>[];` (or equivalent) immediately after each await before touching ref again, mirroring the SM-4 pattern used elsewhere in Notifier methods.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A test that invalidates authStateProvider's uid while incomingTutorGrantsProvider's future is pending does not throw UnmountedRefException."
+  ],
+  "labels": [
+    "riverpod",
+    "SM-4",
+    "race-condition"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The 'why' text's line list (118, 124, 131) is slightly off — 131 is an await, not a ref.read; the second post-await ref-touch is actually line 121 (ref: ref, passed to buildTutoredMirrorWipeService)."
+    ]
+  },
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "grp-123",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-14",
+  "linearPriority": "Low"
+}

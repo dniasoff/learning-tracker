@@ -1,0 +1,51 @@
+{
+  "title": "Guard inviteTutor against silently resetting an already-active tutor grant",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "functions correctness",
+  "area": "functions/inviteTutor",
+  "evidence": [
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 617,
+      "quote": "state: \"pending\","
+    },
+    {
+      "file": "learning_tracker/functions/src/index.ts",
+      "line": 627,
+      "quote": "await db.collection(\"tutor_grants\").doc(grantId).set(grantData, { merge: false });"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+      "line": 10,
+      "quote": "//   1. Validate preconditions against the local [TutorGrant] aggregate."
+    }
+  ],
+  "sites": 1,
+  "why": "grantId is deterministic ({encodedEmail}__{parentUid}__{childProfileId}), so a second inviteTutor call for the same tutor+child pair overwrites the same doc unconditionally, even when the existing grant is currently 'active'. That silently resets state back to 'pending', issues a fresh invite_token/expires_at, and replaces permissions with the request-supplied defaults (which include can_bulk_prior_completion: true) -- while the already-active tutor_active_access index doc is untouched, so the tutor keeps live read access even though tutor_grants.state now says 'pending'. Neither the Cloud Function nor the Dart InviteTutorUseCase (whose own docstring claims it validates against the local grant aggregate, but whose implementation only validates email format) guards against this, so a parent re-sending an invite, or a duplicate form submission, can silently re-grant a permission the parent had explicitly turned off.",
+  "recommendation": "Before writing, read the existing grant (if any) and reject/short-circuit re-invites while state === 'active' (direct the caller to a permission-editing flow instead), or explicitly preserve prior permissions and keep tutor_active_access consistent with the resulting state.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A new cf_grant_invite.test.mjs test: inviteTutor called twice for the same tutorEmail+childProfileId while the grant is 'active' does not silently reset state/permissions."
+  ],
+  "labels": [
+    "cloud-functions",
+    "correctness",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "manage_tutors_screen.dart:284-286: the 'Invite a tutor' button is always visible per child section, with an explicit comment 'so the parent can add a tutor even when one is already active,' and the screen has no check against re-entering an existing tutor's email. This confirms normal one-tap navigation (not just double-submit/network-retry) reaches the silent-reset path described, and it silently re-applies default permissions (including can_bulk_prior_completion:true) that may override ones the parent had deliberately disabled -- a user-visible, reachable defect against the named invariant that active grants aren't silently reset, warranting P1 over the originally-filed P2."
+    ]
+  },
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "chunk": "grp-157",
+  "normArea": "firebase",
+  "id": "AUD-firebase-02",
+  "linearPriority": "High"
+}

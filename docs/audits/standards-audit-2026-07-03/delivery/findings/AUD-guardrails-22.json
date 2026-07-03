@@ -1,0 +1,45 @@
+{
+  "title": "Delete or wire up tool/curate_curricula/sefaria_settings.py — a vestigial placeholder never referenced by the documented workflow",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6-adjacent (dead code)",
+  "area": "tool/curate_curricula",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/curate_curricula/sefaria_settings.py",
+      "line": 6,
+      "quote": "PYTHONPATH=.:/home/daniel/repos/learning-tracker/learning_tracker/tool/curate_curricula \\"
+    },
+    {
+      "file": "learning_tracker/tool/curate_curricula/sefaria_settings.py",
+      "line": 10,
+      "quote": "# (placeholder — actual settings live in Sefaria-Project's sefaria/local_settings.py)"
+    }
+  ],
+  "sites": 1,
+  "why": "The file documents its own invocation via a PYTHONPATH trick that nothing else in the repo uses; README.md's actual Setup section instead has the developer hand-write a real sefaria/local_settings.py inside the external Sefaria-Project checkout. Repo-wide grep for 'sefaria_settings' finds zero importers or references. Even if it were picked up, its body is only a comment, so it does nothing — it's dead weight with instructions that contradict the real workflow.",
+  "recommendation": "Delete the file. If it's meant to become the real settings module, give it actual content and wire the PYTHONPATH invocation into README.md's Setup steps.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "File is removed, or actively imported/referenced by the documented curate_curricula workflow in README.md"
+  ],
+  "labels": [
+    "dead-code",
+    "tier2-tooling"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "First evidence entry's line number should be 7, not 6 — the quoted text is accurate, just mis-numbered by one line (line 10's quote is exact)."
+    ]
+  },
+  "sourceBatch": "t2-app-tool-p1",
+  "chunk": "grp-152",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-22",
+  "linearPriority": "Low"
+}

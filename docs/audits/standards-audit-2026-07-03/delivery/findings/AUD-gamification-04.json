@@ -1,0 +1,43 @@
+{
+  "title": "Add an accessibility label to RewardConfigHeader's icon-only back button",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AX-3",
+  "area": "features/gamification/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_config_header.dart",
+      "line": 39,
+      "quote": "child: IconButton(\n                padding: EdgeInsets.zero,"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_config_header.dart",
+      "line": 41,
+      "quote": "icon: const Icon(Icons.arrow_back_ios_new_rounded),"
+    }
+  ],
+  "sites": 1,
+  "why": "The back-navigation IconButton has no `tooltip` and the Icon has no semanticLabel, so a screen-reader user (TalkBack/VoiceOver) reaches this control with no announced purpose — unlike the adjacent PopupMenuButton, which gets a Flutter-provided default tooltip. This is a real, checkable AX-3 gap on a primary navigation control in a screen a parent (potentially using assistive tech) uses to configure rewards.",
+  "recommendation": "Add tooltip: AppLocalizations.of(context)!.<backButtonLabel> (or reuse MaterialLocalizations back-button semantics) to the IconButton.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A widget test finds a Semantics node with a non-empty label for the back button via find.bySemanticsLabel or tester.getSemantics."
+  ],
+  "labels": [
+    "a11y",
+    "AX-3"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-056",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-04",
+  "linearPriority": "Medium"
+}

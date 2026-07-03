@@ -1,0 +1,58 @@
+{
+  "title": "Thread AppLogger into database_provider.dart's SeedManager construction — bootstrapSeedDb's logger wiring is dead code and SeedManager's diagnostics are silent in production",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication (dead code) / EH-3 (diagnostic loss)",
+  "area": "lib/app/bootstrap + lib/core/providers/database_provider.dart + lib/core/database/seed_manager.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/app/bootstrap/seed_bootstrap.dart",
+      "line": 14,
+      "quote": "final seedManager = SeedManager(dbDirectory: dbDirectory, logger: log);"
+    },
+    {
+      "file": "learning_tracker/lib/core/providers/database_provider.dart",
+      "line": 54,
+      "quote": "final seedManager = SeedManager(dbDirectory: docsDir.path);\n  return seedManager.ensureContentDb();"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/seed_manager.dart",
+      "line": 69,
+      "quote": "final AppLogger? _logger;"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/seed_manager.dart",
+      "line": 241,
+      "quote": "_logger?.error(event: 'seed_manager_extract_failed', exception: e);"
+    }
+  ],
+  "sites": 1,
+  "why": "Repo-wide grep for `bootstrapSeedDb` finds only its own definition — bootstrap.dart no longer calls it (a prior commit, 6fff5af9, deliberately removed the awaited call to fix cold-start latency, deferring seeding into contentDbPathProvider). The provider that now does the real work (database_provider.dart:51-56) re-implements the SeedManager call but constructs it with `SeedManager(dbDirectory: docsDir.path)` — no `logger:` argument. SeedManager's `_logger` field is `AppLogger?` (nullable) and every one of its ~13 internal diagnostic calls is null-safe-guarded (`_logger?.info(...)`, `_logger?.warning(...)`, `_logger?.error(...)`) at lines covering interrupted-upgrade detection, first-launch extraction, extraction failures, upgrade failures, .bak rollback, and corruption recovery. Because `_logger` is null on the only construction path that runs in a real app, every one of those calls is a silent no-op today. SeedManager's own doc explicitly anticipates 'version-driven upgrades, .bak rollback, and corruption recovery' as real scenarios, and AppLogger's own doc states its ring buffer exists precisely so 'Send Diagnostic Logs' in Settings can capture failures like this — but if content-DB extraction or corruption-recovery ever misbehaves for a real user, there will be zero trace of it anywhere the team can retrieve.",
+  "recommendation": "Pass `logger: AppLogger.instance` in database_provider.dart's `SeedManager(dbDirectory: docsDir.path)` call — keep seeding lazily deferred inside the provider (do not reintroduce an awaited bootstrapSeedDb() call in bootstrap.dart; that would regress the cold-start fix in 6fff5af9). Then delete lib/app/bootstrap/seed_bootstrap.dart, since its only remaining purpose — threading a logger into SeedManager — is met at the real call site and the function itself is unreachable.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "database_provider.dart's contentDbPath provider constructs SeedManager with a non-null logger.",
+    "A regression test forces SeedManager.ensureContentDb() to throw inside contentDbPathProvider (e.g. corrupt/missing seed asset fixture) and asserts a Talker/AppLogger history entry with an event like 'seed_manager_extract_failed' is recorded — proving the logger is wired, not just constructed.",
+    "Rule-0: grep-based `make audit` check that every `SeedManager(` construction site outside test/ passes a `logger:` argument.",
+    "lib/app/bootstrap/seed_bootstrap.dart is removed once its logic is folded into the real call site."
+  ],
+  "labels": [
+    "bootstrap",
+    "dead-code",
+    "logging",
+    "seed-db",
+    "observability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "sup-eh1-bootstrap",
+  "normArea": "app",
+  "id": "AUD-app-07",
+  "linearPriority": "Medium"
+}

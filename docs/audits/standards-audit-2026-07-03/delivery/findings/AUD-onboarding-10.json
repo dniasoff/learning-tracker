@@ -1,0 +1,39 @@
+{
+  "title": "Localize the hardcoded '…yos' decorative chip text in IntroMishnaIllustration",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2",
+  "area": "onboarding/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart",
+      "line": 71,
+      "quote": "'…yos',"
+    }
+  ],
+  "sites": 1,
+  "why": "The sibling chip on the same illustration correctly resolves via AppLocalizations (introMishnaReviewChip: 'Review…' EN / 'חזרה…' HE), but this second floating chip is a literal, unlocalized Latin-script fragment rendered unconditionally regardless of locale. In Hebrew locale a user sees a stray Latin '…yos' fragment floating over an otherwise fully-Hebrew first-run screen. No test in app_intro_screen_l1_test.dart's dedicated l10n-leak regression group — whose stated purpose is guarding this exact screen against exactly this class of bug — catches it, because that group checks a different text element on the same page.",
+  "recommendation": "Add an ARB key for the fragment with a real Hebrew value (or drop it for HE if the design intent doesn't survive translation), and extend app_intro_screen_l1_test.dart's Hebrew l10n group to assert on it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "make arb-parity and flutter analyze stay clean after adding the key",
+    "app_intro_screen_l1_test.dart's 'l10n — Hebrew locale renders Hebrew, not English literals' group gains an assertion that the English fragment does not appear in Locale('he')"
+  ],
+  "labels": [
+    "i18n",
+    "onboarding"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-069",
+  "normArea": "features/onboarding",
+  "id": "AUD-onboarding-10",
+  "linearPriority": "Medium"
+}

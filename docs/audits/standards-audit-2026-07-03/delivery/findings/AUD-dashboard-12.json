@@ -1,0 +1,44 @@
+{
+  "title": "Remove the discarded initialSyncComplete watch in DashboardBody.build (unnecessary rebuild)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "PF-1 / Fowler dead-code",
+  "area": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+      "line": 149,
+      "quote": "final initialSyncComplete =\n        ref.watch(initialSyncCompleteProvider).asData?.value ?? false;"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+      "line": 217,
+      "quote": "// ignore: unused_local_variable — retained for historical documentation.\n    final _ = initialSyncComplete;"
+    }
+  ],
+  "sites": 1,
+  "why": "The value is watched, then explicitly discarded into `_`, and the discard is only possible because the team suppressed the unused_local_variable lint. DashboardBody is a ConsumerWidget rebuilt on every dashboard change; it still re-subscribes to and rebuilds on every emission of initialSyncCompleteProvider purely to throw the value away — 'retained for historical documentation' belongs in a plain code comment, not a live ref.watch with a lint bypass.",
+  "recommendation": "Delete lines 149-150 and 217-218; if the history needs preserving, say so in a plain comment instead of a watched-and-discarded variable.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -n initialSyncComplete on dashboard_body.dart returns nothing (or a real conditional use), and the ignore: unused_local_variable comment is gone."
+  ],
+  "labels": [
+    "dead-code",
+    "performance",
+    "dashboard"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "grp-048",
+  "normArea": "features/dashboard",
+  "id": "AUD-dashboard-12",
+  "linearPriority": "Low"
+}

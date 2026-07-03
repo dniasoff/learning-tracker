@@ -1,0 +1,60 @@
+{
+  "title": "Remove the self-comparison schemaVersion assertion and fix the stale '13' docstring in epic_27_test_infrastructure_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance — test infrastructure",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_test_infrastructure_test.dart",
+      "line": 146,
+      "quote": "expect(db.schemaVersion, db.schemaVersion);"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_test_infrastructure_test.dart",
+      "line": 13,
+      "quote": "///   AC3 — `test/helpers/drift_memory.dart` provides `inMemoryDb()`\n///         returning a fresh schema-v1 (current schemaVersion = 13)"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_test_infrastructure_test.dart",
+      "line": 76,
+      "quote": "test('createFakeFirestore(strictRules: true) honours request.auth.uid '\n          'on uid-scoped collections', () async {"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_27_test_infrastructure_test.dart",
+      "line": 96,
+      "quote": "'fake_firebase_security_rules does not yet evaluate '\n              'request.resource.data — see firestore_fake.dart header. '"
+    }
+  ],
+  "sites": 4,
+  "why": "`expect(db.schemaVersion, db.schemaVersion)` compares a value to itself — always true, verifying nothing about 'the current schemaVersion' as the enclosing test name claims. The file's own top-of-file docstring says 'current schemaVersion = 13'; the real value (lib/core/database/user/user_database.dart:159) is `32` — stale by roughly 19 migrations, suggesting the original pinned-number check was hollowed into a tautology at some point to dodge updating a hardcoded expectation on every schema bump.",
+  "recommendation": "Delete the self-comparison line (the `greaterThanOrEqualTo(1)` check on the next line is a fine minimal sanity check on its own); fix or remove the stale '13' in the docstring.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No self-comparison assertions remain in this test; the docstring's schemaVersion number matches reality or is removed."
+  ],
+  "labels": [
+    "testing",
+    "hygiene",
+    "tautological"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-27",
+  "chunk": "grp-136",
+  "mergedFrom": [
+    "Rename the strict-rules 'honours request.auth.uid' test in epic_27_test_infrastructure_test.dart to match what it proves"
+  ],
+  "coDiscoverers": [
+    "t1-story-epic-27"
+  ],
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-43",
+  "linearPriority": "Low"
+}

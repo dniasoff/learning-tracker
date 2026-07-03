@@ -1,0 +1,61 @@
+{
+  "title": "Fix physical Positioned(right:) badge on AchievementTierCard so it doesn't overlap the title in Hebrew RTL",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AX-1 (EdgeInsetsDirectional/AlignmentDirectional required in this RTL app; no physical left/right)",
+  "area": "features/gamification/presentation/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/achievement_tier_card.dart",
+      "line": 92,
+      "quote": "padding: const EdgeInsetsDirectional.only(end: 96),"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/achievement_tier_card.dart",
+      "line": 94,
+      "quote": "alignment: AlignmentDirectional.topStart,"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/widgets/achievement_tier_card.dart",
+      "line": 110,
+      "quote": "top: 0,\n                      right: 0,"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/point_config_screen.dart",
+      "line": 428,
+      "quote": "right: -36,\n              bottom: -40,"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/point_config_screen.dart",
+      "line": 445,
+      "quote": "right: 40,\n              bottom: -56,"
+    }
+  ],
+  "sites": 3,
+  "why": "The title is positioned with AlignmentDirectional.topStart and padded with EdgeInsetsDirectional.only(end: 96) -- both direction-aware, so in Hebrew (RTL) the title anchors to the physical right and reserves 96px on the physical left. The TrackTagChip badge, however, is pinned with plain Positioned(top:0, right:0) -- direction-UNAWARE, so it stays on the physical right in both locales. In LTR this is correct (title occupies the left zone, badge sits in the reserved right zone). In RTL the title now ALSO occupies the right zone (topStart flips), so the badge renders directly on top of the milestone title text on every achievement card for every Hebrew-locale user. This exact bug class was already found and fixed once in this feature (progress_summary_card.dart's PositionedDirectional comment explicitly describes the identical failure mode), and a dedicated regression test already exists for this widget under Hebrew locale (gamification_screen_l1_test.dart, 'R6-16: AchievementTierCard under RTL has no Directionality(ltr) wrapper') but it only asserts the absence of a forced-LTR Directionality wrapper -- it never checks rendered geometry, so it passes today despite the overlap. point_config_screen.dart:428,445 have the same Positioned(right:) pattern but on purely decorative, content-free background circles (IgnorePointer, low opacity) -- same root cause, cosmetic-only impact.",
+  "recommendation": "Replace Positioned(right: 0) with PositionedDirectional(end: 0) at achievement_tier_card.dart:108-112 (and the two decorative sites in point_config_screen.dart for consistency). Extend the existing R6-16 test to pump under Locale('he') and assert the TrackTagChip's rendered Rect does not intersect the title Text's Rect.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "achievement_tier_card.dart uses PositionedDirectional(end:) instead of Positioned(right:) for the TrackTagChip badge",
+    "gamification_screen_l1_test.dart's R6-16 test (or a new sibling test) asserts non-overlapping geometry between the badge and title under Locale('he'), not just absence of a forced Directionality"
+  ],
+  "labels": [
+    "AX-1",
+    "RTL",
+    "hebrew",
+    "regression"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "high-047",
+  "normArea": "features/gamification",
+  "id": "AUD-gamification-02",
+  "linearPriority": "High"
+}

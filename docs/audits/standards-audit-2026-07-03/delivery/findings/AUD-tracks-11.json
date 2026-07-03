@@ -1,0 +1,75 @@
+{
+  "title": "Delete or wire the abandoned AddTrackController/TrackBlueprintDraftRepository/TrackBlueprint migration trio (~1,200 dead lines)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Dead-code sweep + Fowler (speculative generality never adopted)",
+  "area": "features/tracks/setup",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/controllers/add_track_controller.dart",
+      "line": 36,
+      "quote": "class AddTrackController extends _$AddTrackController {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/controllers/add_track_flow_state.dart",
+      "line": 13,
+      "quote": "sealed class AddTrackFlowState {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/data/repositories/track_blueprint_draft_repository_impl.dart",
+      "line": 49,
+      "quote": "class TrackBlueprintDraftRepositoryImpl"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/repositories/track_blueprint_draft_repository.dart",
+      "line": 15,
+      "quote": "abstract interface class TrackBlueprintDraftRepository {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/aggregates/track_blueprint.dart",
+      "line": 201,
+      "quote": "class TrackBlueprint {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/domain/use_cases/provision_track_use_case.dart",
+      "line": 26,
+      "quote": "class ProvisionTrackUseCase {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart",
+      "line": 66,
+      "quote": "const _kAddTrackStep = 'add_track_step';"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/controllers/add_track_controller.dart",
+      "line": 18,
+      "quote": "const _kStep = 'add_track_step';"
+    }
+  ],
+  "sites": 6,
+  "why": "grep across lib/ shows zero production references to AddTrackController, AddTrackFlowState, TrackBlueprintDraftRepository(+Impl), AddTrackDraft, TrackBlueprint, or ProvisionTrackUseCase outside their own files — the live wizard entry points (add_track_flow_screen.dart, track_management_hub_screen.dart, onboarding_screen.dart, track_management_body.dart) all instantiate the raw AddTrackFlow ConsumerStatefulWidget with its own hand-rolled SharedPreferences persistence and call TrackCreationService.createTrack(AddTrackResult,...) directly, never touching the typed/riverpod replacement layer. Each dead piece still has its own dedicated, passing test suite (add_track_controller_test.dart 298 lines, track_blueprint_draft_repository_impl_test.dart 115 lines, track_blueprint_test.dart 268 lines, provision_track_use_case_test.dart 460 lines = 1,141 test lines) pinning behavior nobody exercises. Worse, AddTrackController's SharedPreferences keys (_kStep='add_track_step' etc.) are byte-identical to the live AddTrackFlow's keys (_kAddTrackStep='add_track_step' etc.) — if either implementation is ever revived independently they will silently clobber each other's saved wizard state.",
+  "recommendation": "Delete the 6 dead source files and their 4 dedicated test files, or finish the migration and actually wire AddTrackFlow through AddTrackController/TrackBlueprint. If kept temporarily, rename one set of SharedPreferences key constants so they cannot collide.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep -rL for AddTrackController/TrackBlueprintDraftRepository/TrackBlueprint outside their own definition files finds a real call site, or the files are removed",
+    "test/features/track_setup/presentation/controllers/add_track_controller_test.dart and the other dead-code test files are deleted or repointed at a live call site"
+  ],
+  "labels": [
+    "dead-code",
+    "tracks-setup",
+    "maintainability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p1",
+  "chunk": "grp-113",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-11",
+  "linearPriority": "Medium"
+}

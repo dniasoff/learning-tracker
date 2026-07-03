@@ -1,0 +1,47 @@
+{
+  "title": "Consolidate the ad hoc MaterialApp test-wrap helpers in story_21 and story_25_9 into a shared pumpApp",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_story_21_multi_account_threading_test.dart",
+      "line": 219,
+      "quote": "Widget wrap({required AuthState authState, required Widget child}) =>"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_25_story_25_9_test.dart",
+      "line": 20,
+      "quote": "Widget _wrap(\n  Widget child, {"
+    }
+  ],
+  "sites": 2,
+  "why": "No shared, reviewed pumpApp helper exists yet (TQ-3 is still [Pending] repo-wide); each file hand-rolls its own MaterialApp wrapper and the two disagree on localization wiring — story_21's wrap() sets localizationsDelegates/supportedLocales but story_25_9's _wrap() sets neither. It only works today because the CurriculumLabel widgets under test in story_25_9 don't call AppLocalizations.of(context); the first future test added to that harness that does will throw MissingLocalizationsDelegate with no forcing function that would have caught it earlier.",
+  "recommendation": "Add test/helpers/pump_app.dart with one canonical ProviderScope + MaterialApp(localizationsDelegates:, supportedLocales:) wrapper taking overrides + child, and migrate both local helpers onto it.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and both files call it instead of their local wrap/_wrap",
+    "a widget added to epic_25_story_25_9_test.dart that calls AppLocalizations.of(context) resolves without a missing-delegate error"
+  ],
+  "labels": [
+    "TQ-3",
+    "test-infra",
+    "duplication"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Minor: a third ad hoc MaterialApp wrap exists in-batch at epic_25_story_25_20_locale_theme_test.dart (undercounts sites: 2 vs true 3+), and 'no shared pumpApp helper exists yet' overlooks test/e2e/harness/e2e_harness.dart's own pumpApp (different test tier, so not directly reusable, but the blanket claim is imprecise). Doesn't change the verdict."
+    ]
+  },
+  "sourceBatch": "t1-story-epic-25",
+  "chunk": "grp-129",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-28",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,55 @@
+{
+  "title": "Localize the hardcoded English strings in ScopeSelectionScreen and CurriculumSettingsScreen",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2",
+  "area": "features/settings/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+      "line": 164,
+      "quote": "'Learning Scope — '"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+      "line": 210,
+      "quote": "? 'All content is included'"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+      "line": 299,
+      "quote": "'${_countLeafItems(allItems)} items will be tracked',"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/curriculum_settings_screen.dart",
+      "line": 54,
+      "quote": "'Settings - ${curriculumLabelText(ref, curriculum: _curriculum)}',"
+    }
+  ],
+  "sites": 10,
+  "why": "This is a bilingual EN/HE, RTL-supported app (1421 ARB keys) where every other screen in this batch routes text through AppLocalizations, but ScopeSelectionScreen has roughly half its visible copy hardcoded in English: the app-bar title (line 164), the 'All content is included'/'Only selected sections are tracked' subtitle (210-211), the 'Select Scope Level'/'Summary' headers (231, 291), the un-pluralized item-count line (299 -- '1 items will be tracked' is grammatically wrong even in English), and both save-confirmation SnackBar messages (425-426). curriculum_settings_screen.dart also hardcodes its app-bar title prefix (54) and a 'Copy' button label (204). A Hebrew-locale parent configuring curriculum scope -- a core settings flow -- sees a screen that switches between Hebrew and untranslated English mid-sentence.",
+  "recommendation": "Add ARB keys (EN+HE) for all listed strings, thread through AppLocalizations.of(context)!, and use an ICU-plural key for the item-count line.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "make arb-parity continues to pass with the new keys present in both app_en.arb and app_he.arb.",
+    "Widget test with Locale('he') renders both screens and asserts no Latin-script sentence fragments remain in the visible text tree."
+  ],
+  "labels": [
+    "i18n",
+    "rtl",
+    "settings"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-settings-p1",
+  "chunk": "high-081",
+  "normArea": "features/settings",
+  "id": "AUD-settings-02",
+  "linearPriority": "High"
+}

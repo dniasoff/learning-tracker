@@ -1,0 +1,45 @@
+{
+  "title": "auth_exceptions_test.dart locks in inconsistent PII redaction between sibling exception types",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5 (stable codes, not pre-formatted messages) / privacy consistency",
+  "area": "test/features/auth/domain/services/auth_exceptions_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/auth/domain/services/auth_exceptions_test.dart",
+      "line": 18,
+      "quote": "expect(ex.toString(), isNot(contains('alice@example.com')));"
+    },
+    {
+      "file": "learning_tracker/test/features/auth/domain/services/auth_exceptions_test.dart",
+      "line": 71,
+      "quote": "expect(ex.toString(), contains('charlie@example.com'));"
+    }
+  ],
+  "sites": 1,
+  "why": "The same test file proves the codebase knows raw emails shouldn't land in an exception's toString() — DuplicateEmailException's docstring (local_auth_service.dart:11-13) says so explicitly and this file asserts it (line 18) — yet asserts the opposite for EmailCollisionException (line 71), whose message is built as '$email is already in use' (upgrade_to_cloud_service.dart:12). The 3 current catch sites in upgrade_to_cloud_screen.dart only branch on the exception's type today, but EH-1's global FlutterError.onError/PlatformDispatcher.onError handler forwards uncaught exceptions to AppLogger, typically by serializing toString(); if EmailCollisionException ever escapes a catch clause (new call site, refactor) the plaintext email reaches the logger/Crashlytics pipeline with nothing to stop it, unlike its sibling.",
+  "recommendation": "Give EmailCollisionException the same email/redactedEmail split as DuplicateEmailException (keep the field, drop the raw address from message/toString), and update this test's assertion accordingly.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "EmailCollisionException.toString() no longer contains the raw email; a redactedEmail (or equivalent) accessor exists for callers that need a log-safe form",
+    "auth_exceptions_test.dart's EmailCollisionException group asserts the same log-safety property as the DuplicateEmailException group"
+  ],
+  "labels": [
+    "privacy",
+    "EH-5",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-auth",
+  "chunk": "grp-043",
+  "normArea": "tests/auth",
+  "id": "AUD-t-auth-03",
+  "linearPriority": "Low"
+}

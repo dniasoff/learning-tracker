@@ -1,0 +1,44 @@
+{
+  "title": "Remove or wire up the unused heritage_navy color resource in android colors.xml",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Everything sweep — dead code",
+  "area": "learning_tracker/android/app/src/main/res/values/colors.xml",
+  "evidence": [
+    {
+      "file": "learning_tracker/android/app/src/main/res/values/colors.xml",
+      "line": 3,
+      "quote": "<color name=\"heritage_navy\">#FF0038A8</color>"
+    },
+    {
+      "file": "learning_tracker/lib/app/router/app_shell.dart",
+      "line": 367,
+      "quote": "color: selected ? const Color(0xFF0038A8) : Colors.transparent,"
+    }
+  ],
+  "sites": 1,
+  "why": "No `@color/heritage_navy` reference exists anywhere under learning_tracker/android/ (checked all res/*.xml and Kotlin sources) — the resource is dead. The same navy (0xFF0038A8) is the app's real brand color, hand-duplicated as raw Color(0x..0038A8) literals across several Dart theme widgets instead. The Android resource is a third, disconnected copy nothing reads; if the brand color ever changes, it silently goes stale with no build warning and no consumer to notice or break.",
+  "recommendation": "Delete the unused resource, or if it's meant to back a native notification-icon tint or similar, wire it up and reference it from the relevant native/Dart code (or leave a comment documenting why a native-only copy must exist).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn \"heritage_navy\" learning_tracker/android/ returns either zero results (removed) or at least one real consumer (wired up)."
+  ],
+  "labels": [
+    "android",
+    "dead-code",
+    "resources"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-platform-config-p1",
+  "chunk": "grp-162",
+  "normArea": "platform",
+  "id": "AUD-platform-06",
+  "linearPriority": "Low"
+}

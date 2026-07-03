@@ -1,0 +1,45 @@
+{
+  "title": "Move LocationFetchResult out of data/services/location_service.dart so presentation stops importing data/ directly",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "presentation->data import ban (Layout/Placement, [P])",
+  "area": "layering",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart",
+      "line": 7,
+      "quote": "import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/sacred_time/data/services/location_service.dart",
+      "line": 25,
+      "quote": "class LocationFetchError extends LocationFetchResult {"
+    }
+  ],
+  "sites": 1,
+  "why": "sacred_time_settings_card.dart is a presentation/widgets file; it imports data/services/location_service.dart purely to pattern-match on LocationFetchResult/LocationFetchSuccess/etc. in _showOutcome(). Every other cross-layer type this feature exposes to presentation (City, SacredLocation, SacredWindow) correctly lives in domain/models/ — LocationFetchResult is the one outcome type stranded in data/, forcing presentation to reach past domain into data, breaking the layering the rest of the feature follows consistently.",
+  "recommendation": "Move the LocationFetchResult sealed hierarchy to domain/models/ (LocationService in data/ still constructs and returns it); presentation then only ever imports domain/ or providers/ from this feature, never data/.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "LocationFetchResult and its variants live under domain/",
+    "No file under sacred_time's presentation/{screens,widgets}/ imports anything from data/",
+    "flutter analyze / make audit stay clean after the move"
+  ],
+  "labels": [
+    "layering",
+    "misplaced-responsibility"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sacred_time",
+  "chunk": "grp-089",
+  "normArea": "features/sacred_time",
+  "id": "AUD-sacred_time-05",
+  "linearPriority": "Medium"
+}

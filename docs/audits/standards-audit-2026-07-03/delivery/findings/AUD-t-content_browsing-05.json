@@ -1,0 +1,44 @@
+{
+  "title": "Fix the tautological 'Gematriya correctness' test in text_display_screen_deep_l1_test.dart to call the real Gematriya.forNumber",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological test — asserts what a local copy returns, not the production code)",
+  "area": "test-quality — content_browsing/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_deep_l1_test.dart",
+      "line": 769,
+      "quote": "expect(_gematriya(15), equals('טו'));"
+    },
+    {
+      "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_deep_l1_test.dart",
+      "line": 805,
+      "quote": "// avoid importing a lib/ class that could pull in unwanted transitive deps."
+    }
+  ],
+  "sites": 1,
+  "why": "The test name promises to verify Gematriya.forNumber's halachically-significant 15/16 substitution (טו/טז instead of spelling the divine name), but it never calls Gematriya.forNumber — it calls a private `_gematriya()` helper in the same test file that hand-copies the lookup table as a literal Dart map. The stated reason ('avoid importing a lib/ class that could pull in unwanted transitive deps') does not hold: lib/core/utils/gematriya.dart is a zero-import, private-constructor pure-static class, and 20+ other tests in this very file already import lib/ classes freely (TutorPermissions, ResolvedSession, MarkLiveCompletionUseCase). If Gematriya.forNumber were changed or broken, this test would keep passing because it only checks the copied table against itself. Real protection for the underlying rule does exist elsewhere — test/core/utils/gematriya_test.dart and gematriya_ts6_test.dart call the real class, and this same file's C1/C2 tests exercise Gematriya.forNumber indirectly through widget rendering — so the concrete risk today is low, but this specific 'Direct assertion for completeness' test contributes zero verification while reading as if it does.",
+  "recommendation": "Delete the local _gematriya helper and its hardcoded table; import package:learning_tracker/core/utils/gematriya.dart and call Gematriya.forNumber directly in the assertions.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test calls Gematriya.forNumber(15)/(16) etc. directly; temporarily corrupting Gematriya's 15/16 special-case in lib/ makes this specific test fail."
+  ],
+  "labels": [
+    "test-quality",
+    "tautological-test",
+    "content_browsing"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p2",
+  "chunk": "grp-046",
+  "normArea": "tests/content_browsing",
+  "id": "AUD-t-content_browsing-05",
+  "linearPriority": "Low"
+}

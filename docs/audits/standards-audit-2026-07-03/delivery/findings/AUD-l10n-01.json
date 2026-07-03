@@ -1,0 +1,66 @@
+{
+  "title": "Deduplicate 5 shadowed top-level keys in app_he.arb/app_en.arb — one silently kills a zero-task notification branch",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 0 gap (no duplicate-key checker for ARB files)",
+  "area": "lib/l10n",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/l10n/app_he.arb",
+      "line": 15,
+      "quote": "\"todaysLearning\": \"הלימוד של היום\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_he.arb",
+      "line": 1154,
+      "quote": "\"todaysLearning\": \"לימוד היום ({count})\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_he.arb",
+      "line": 320,
+      "quote": "\"errorLoadingTasks\": \"שגיאה בטעינת המשימות: {error}\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_he.arb",
+      "line": 1765,
+      "quote": "\"notificationReminderBody\": \"{taskCount,plural, =0{אין משימות להיום — שמרו על הרצף!} …}\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_he.arb",
+      "line": 2636,
+      "quote": "\"notificationReminderBody\": \"יש לכם {taskCount, plural, =1{…} other{…}} …\","
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_he.arb",
+      "line": 356,
+      "quote": "\"today\": \"היום\","
+    }
+  ],
+  "sites": 5,
+  "why": "JSON's last-key-wins behavior is confirmed against the generated Dart output: lib/l10n/app_localizations_he.dart's todaysLearning(count), errorLoadingTasks(error) and notificationReminderBody(taskCount, curriculumCount) all match the SECOND (later) ARB definition, not the first. No checker anywhere (make audit, arb-parity, flutter analyze) catches a duplicate top-level key within a single ARB file, so 3 of the 5 duplicate pairs carry genuinely different text: an editor who fixes the first (now-dead) copy of todaysLearning or errorLoadingTasks has the fix silently discarded. Worse, notificationReminderBody's line-1765 definition had a deliberately-written zero-task branch (he: 'אין משימות להיום — שמרו על הרצף!' / en: 'No tasks today — stay on track!'); a later duplicate insertion at line 2636/2834 (identical pattern in app_en.arb) replaced it with a two-way plural that has no zero case at all. It is not live-broken today only because the sole caller, lib/features/notifications/presentation/providers/notification_providers.dart:517, has an unrelated 'D2 fix' guard (`if (taskCount == 0) { cancel; return; }`) that happens to prevent taskCount=0 from ever reaching the l10n call — if that guard is ever removed or a second caller is added, Intl.pluralLogic falls to `other` and produces 'You have 0 tasks…' instead of the friendly copy that still sits, unused, in the file. The identical 5-key duplicate set exists in app_en.arb too, confirming this is a systemic missing-checker gap, not a one-off typo.",
+  "recommendation": "Add a Rule-0 checker (tool/ script or a test/l10n/ test) that fails when any top-level key string appears more than once in app_en.arb or app_he.arb, wired into make audit/ci. Then resolve the 5 duplicates: keep todaysLearning's parameterized form (matches its @todaysLearning metadata), keep errorLoadingTasks's live copy or fix the grammar deliberately, and decide whether notificationReminderBody's zero-task branch should be restored (and its caller's guard removed) or the dead ARB text deleted — don't leave orphaned content either way.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A new checker/test fails when a top-level ARB key is duplicated, and is part of make audit or make ci.",
+    "app_en.arb and app_he.arb each contain todaysLearning, errorLoadingTasks, today, notificationReminderTitle, and notificationReminderBody exactly once.",
+    "notificationReminderBody's zero-task branch is either wired to a real caller or its vestigial ARB text is removed — no orphaned/unused ICU branch remains."
+  ],
+  "labels": [
+    "l10n",
+    "arb",
+    "data-integrity"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-app-l10n-p2",
+  "chunk": "grp-001",
+  "normArea": "l10n",
+  "id": "AUD-l10n-01",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,67 @@
+{
+  "title": "Update docs/qa/legacy auth scenarios and docs/planning upgrade-flow UX specs for the credential-less offline-account redesign",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs/qa/legacy, docs/planning (auth/onboarding)",
+  "evidence": [
+    {
+      "file": "docs/qa/legacy/01-product-overview.md",
+      "line": 199,
+      "quote": "Password hashed with argon2id, stored in local SQLite | None. No sync, no backup"
+    },
+    {
+      "file": "docs/qa/legacy/02-auth-and-accounts.md",
+      "line": 152,
+      "quote": "AUTH-06: Email/password signup (local-born, airplane mode) ... Enter a password that meets strength requirements"
+    },
+    {
+      "file": "docs/qa/legacy/03-onboarding.md",
+      "line": 75,
+      "quote": "Local-born account created per `02-auth-and-accounts.md`"
+    },
+    {
+      "file": "docs/qa/legacy/13-settings.md",
+      "line": 551,
+      "quote": "The argon2id hash in SQLite is updated to the new password"
+    },
+    {
+      "file": "docs/planning/ux-upgrade-flow-spec.md",
+      "line": 105,
+      "quote": "For security, please enter your account password. This is the same password you use to sign in"
+    },
+    {
+      "file": "docs/planning/ux-upgrade-flow-visual.md",
+      "line": 57,
+      "quote": "W-02 — Confirm password (§5.2)"
+    }
+  ],
+  "sites": 6,
+  "why": "signup_screen.dart's offline path is documented in-code as credential-less ('no email, no password') per the 2026-06-14 product decision, confirmed still true today. All 6 docs above (linked from docs/index.md's active reference sections, none carrying a staleness banner) still describe/design around a password-based local-born account with argon2id verification. A tester running AUTH-06/SET-23 cannot find the password-entry UI they're told to test (false failure or wasted time); an engineer implementing the upgrade flow could copy ux-upgrade-flow-spec.md §5.2's 'verify existing password' step into new code, which cannot work once `passwordHash` is null for a credential-less account.",
+  "recommendation": "Add the same staleness-banner pattern already used well elsewhere in this repo (two-database-architecture.md, v1-developer-roadmap.md) to these 6 files, or rewrite the affected scenarios/screens to match the credential-less flow and the convert-on-reconnect upgrade entry point.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Each of the 6 files carries a dated staleness banner pointing at the current onboarding/upgrade design, or its password-signup content is rewritten to match signup_screen.dart.",
+    "docs/index.md links only to auth docs that are current or explicitly marked historical."
+  ],
+  "labels": [
+    "docs",
+    "auth",
+    "drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "docs/planning/ux-upgrade-flow-spec.md 'For security, please enter your account password' quote is at line 108, not 105; text itself matches verbatim."
+    ]
+  },
+  "sourceBatch": "t4-docs-triage-p2",
+  "chunk": "grp-170",
+  "normArea": "docs",
+  "id": "AUD-docs-20",
+  "linearPriority": "Medium"
+}

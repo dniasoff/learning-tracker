@@ -1,0 +1,45 @@
+{
+  "title": "auth_integration_test.dart is fully subsumed by auth_repository_impl_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / TQ-1 (pyramid-shaped suite)",
+  "area": "test/features/auth/auth_integration_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/auth/auth_integration_test.dart",
+      "line": 11,
+      "quote": "class MockFirebaseAuthGateway extends Mock implements FirebaseAuthGateway {}"
+    },
+    {
+      "file": "learning_tracker/test/features/auth/data/repositories/auth_repository_impl_test.dart",
+      "line": 15,
+      "quote": "class MockFirebaseAuthGateway extends Mock implements FirebaseAuthGateway {}"
+    }
+  ],
+  "sites": 1,
+  "why": "auth_integration_test.dart's single 'end-to-end' test (sign in with email then sign out, asserting the mapped AppUser stream) re-derives, near line-for-line, the same mock setup as auth_repository_impl_test.dart and re-covers ground already split across that file's signInWithEmail/signOut/onAuthStateChanged groups. Both files mock the exact same two gateways with no other collaborator wired in, so this isn't really an integration test — it's a second, smaller unit-test file for the same class, adding no scenario the 536-line sibling doesn't already cover.",
+  "recommendation": "Delete auth_integration_test.dart; if the multi-step subscribe-then-signIn-then-signOut stream sequencing is considered a distinct scenario worth keeping, fold it into auth_repository_impl_test.dart's onAuthStateChanged group instead of maintaining a separate file.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "auth_integration_test.dart removed (or its unique scenario merged) with no loss of asserted behavior",
+    "dart test green after removal"
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-auth",
+  "chunk": "grp-042",
+  "normArea": "tests/auth",
+  "id": "AUD-t-auth-04",
+  "linearPriority": "Low"
+}

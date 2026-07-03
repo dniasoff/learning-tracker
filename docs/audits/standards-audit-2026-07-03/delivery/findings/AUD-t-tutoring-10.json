@@ -1,0 +1,63 @@
+{
+  "title": "Replace tautological isNotNull(Type)/constructor-tearoff compile-checks with real interface/constructor assertions",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/features/tutoring",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/firestore_audit_log_read_repository_test.dart",
+      "line": 24,
+      "quote": "expect(TutorAuditLogReadRepository, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/firestore_tutor_grant_repository_test.dart",
+      "line": 26,
+      "quote": "expect(FirestoreTutorGrantRepository, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/data/repositories/firestore_tutor_grant_repository_test.dart",
+      "line": 230,
+      "quote": "expect(FirestoreTutorGrantRepository.new, isNotNull);"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/data/repositories/firestore_tutor_grant_repository_test.dart",
+      "line": 386,
+      "quote": "expect(grants.length, lessThanOrEqualTo(2));"
+    }
+  ],
+  "sites": 4,
+  "why": "expect(SomeType, isNotNull) and expect(SomeClass.new, isNotNull) can never fail — a bare Type literal and a constructor tear-off are non-null by construction regardless of what the class implements or does. The docstrings explicitly claim these verify 'that FirestoreTutorGrantRepository satisfies the TutorGrantRepository interface' and that 'the class is constructible without error' — neither claim is actually checked: an accidental removal of `implements TutorGrantRepository`, or a constructor that throws on null functions, would leave these tests green.",
+  "recommendation": "Replace with real assertions, e.g. `TutorGrantRepository Function({FirebaseFunctions? functions}) ctor = FirestoreTutorGrantRepository.new;` (fails to compile if the interface isn't satisfied) or actually instantiate and check `is`/`isA<>`.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "each of the 3 tests either performs a real assignability check (typed constructor-tearoff assignment) or instantiates the class and asserts isA<Interface>()",
+    "temporarily removing the `implements`/`extends` clause from the target class locally makes the corresponding test fail"
+  ],
+  "labels": [
+    "TQ-8",
+    "tautological-test",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Second evidence line for firestore_tutor_grant_repository_test.dart is 27, not 26 (quote text itself is exact and unique)."
+    ]
+  },
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "grp-125",
+  "mergedFrom": [
+    "Strengthen the malformed-grant-entry assertion in firestore_tutor_grant_repository_test.dart"
+  ],
+  "coDiscoverers": [
+    "t1-feat-tutoring-p2"
+  ],
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-10",
+  "linearPriority": "Low"
+}

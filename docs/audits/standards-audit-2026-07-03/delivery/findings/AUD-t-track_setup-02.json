@@ -1,0 +1,45 @@
+{
+  "title": "Add a Locale('he') RTL variant and a shared pump helper for curriculum_picker_step_test.dart and track_label_step_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/track_setup/presentation/widgets/curriculum_picker_step_test.dart",
+      "line": 22,
+      "quote": "supportedLocales: AppLocalizations.supportedLocales,"
+    },
+    {
+      "file": "learning_tracker/test/features/track_setup/presentation/widgets/track_label_step_test.dart",
+      "line": 13,
+      "quote": "localizationsDelegates: AppLocalizations.localizationsDelegates,\n        supportedLocales: AppLocalizations.supportedLocales,"
+    }
+  ],
+  "sites": 2,
+  "why": "This app is Hebrew-primary/RTL (AX-1); 102 other test files in the suite already pump a Locale('he') variant for key screens (many under an _l1_test.dart convention), but these two onboarding/track-setup wizard steps — which render Hebrew curriculum and track-name text on a first-run, high-visibility flow — only ever run under the implicit default (English/LTR) locale. Neither uses a shared pump helper either; both hand-roll their own MaterialApp + delegate list (one of 165 files repo-wide doing this), so an RTL layout regression in the Add-Track wizard has no test to catch it, and localization-delegate drift has to be fixed file-by-file.",
+  "recommendation": "Add a Locale('he') pumpWidget variant for both steps asserting no overflow/errors under RTL, and adopt (or create, if genuinely absent) a shared pumpApp-style helper instead of the locally-defined wrapWithL10n/buildWidget.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Each file has at least one testWidgets case that sets locale: Locale('he') and asserts the widget renders without overflow/errors."
+  ],
+  "labels": [
+    "test-quality",
+    "i18n",
+    "rtl",
+    "tracks"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-extras",
+  "chunk": "grp-112",
+  "normArea": "tests/track_setup",
+  "id": "AUD-t-track_setup-02",
+  "linearPriority": "Low"
+}

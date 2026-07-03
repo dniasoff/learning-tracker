@@ -1,0 +1,76 @@
+{
+  "title": "Replace raw Color(0xFF...) literals in core/widgets with AppColors/AppTheme constants (stat_card.dart duplicates AppColors.blueNavy verbatim)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "no_color_literal_outside_theme (custom_lint, currently broken per baseline)",
+  "area": "core/widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/widgets/stat_card.dart",
+      "line": 89,
+      "quote": "shadowColor: const Color(0xFF03174C).withValues(alpha: 0.08),"
+    },
+    {
+      "file": "learning_tracker/lib/core/theme/app_colors.dart",
+      "line": 80,
+      "quote": "static const Color blueNavy = Color(0xFF03174C);"
+    },
+    {
+      "file": "learning_tracker/lib/core/widgets/stat_card.dart",
+      "line": 104,
+      "quote": "color: const Color(0xFF03174C).withValues(alpha: 0.08),"
+    },
+    {
+      "file": "learning_tracker/lib/core/widgets/preference_list_tile.dart",
+      "line": 79,
+      "quote": "color: const Color(0xFF929BAA),"
+    },
+    {
+      "file": "learning_tracker/lib/core/widgets/preference_segmented_tile.dart",
+      "line": 90,
+      "quote": "color: const Color(0xFF929BAA),"
+    },
+    {
+      "file": "learning_tracker/lib/core/widgets/preference_segmented_tile.dart",
+      "line": 82,
+      "quote": "color: const Color(0xFF1D2432),"
+    },
+    {
+      "file": "learning_tracker/lib/core/widgets/preference_segmented_tile.dart",
+      "line": 117,
+      "quote": "side: const BorderSide(color: Color(0xFFD7DEEA)),"
+    },
+    {
+      "file": "learning_tracker/lib/core/widgets/app_dialog.dart",
+      "line": 290,
+      "quote": ": const Color(0xFFF0F1F5),"
+    }
+  ],
+  "sites": 10,
+  "why": "This is exactly what the no_color_literal_outside_theme custom_lint rule exists to catch, but custom_lint is currently broken (analyzer version mismatch, baselined separately) so nothing flags it today. stat_card.dart:89,104 duplicate AppColors.blueNavy's exact hex (0xFF03174C) as an inline literal instead of referencing it; preference_list_tile.dart:79 and preference_segmented_tile.dart:90 independently hardcode the identical 0xFF929BAA. The concrete cost: a rebrand of AppColors.blueNavy or of the settings-tile subtitle grey silently misses these inline copies, producing a visibly inconsistent surface next time the palette shifts.",
+  "recommendation": "Promote the duplicated literals (0xFF03174C, 0xFF929BAA) to named AppColors constants and reference them from both files; name or fold the remaining one-off literals in stat_card.dart/preference_segmented_tile.dart/app_dialog.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep for `Color(0xFF` in lib/core/widgets/ returns no matches for the 3 currently-duplicated values (0xFF03174C, 0xFF929BAA) once fixed.",
+    "Once custom_lint_core/analyzer versions are reconciled (tracked separately), no_color_literal_outside_theme passes clean on these files."
+  ],
+  "labels": [
+    "theming",
+    "duplication",
+    "custom-lint",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-theme-widgets",
+  "chunk": "grp-036",
+  "normArea": "core/widgets",
+  "id": "AUD-core-widgets-03",
+  "linearPriority": "Low"
+}

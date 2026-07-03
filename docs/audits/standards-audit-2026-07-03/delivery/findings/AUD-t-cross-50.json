@@ -1,0 +1,51 @@
+{
+  "title": "progress_p1_test.dart E2E-806 claims to verify the documented R-PG7 cross-profile access-control gap but never passes a differing profileId",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (assertions weaker than what the source can do wrong / tautological test)",
+  "area": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+      "line": 378,
+      "quote": "// profileId here (the tutor sub-test below checks the profileId path"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+      "line": 380,
+      "quote": "path: '/journey',"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+      "line": 411,
+      "quote": "h.expectNotOnScreen('Permission denied');"
+    }
+  ],
+  "sites": 1,
+  "why": "The group's own docstring (progress_p1_test.dart:21-22) and R-PG7 registry entry (docs/planning/e2e-test-suite-plan.md:811) both say this journey should 'assert any auth user can load [another profile's data]', but the single test in the group navigates to '/journey' with no profileId query param at all — it loads the caller's own default profile. The comment references 'the tutor sub-test below' that does not exist anywhere in this file. As written the test provides zero signal on R-PG7 in either direction: if the access-control gap is ever fixed, this test won't notice; if it worsens, this test won't notice either.",
+  "recommendation": "Add the missing sub-test: seed two profiles, request SiyumimMilestonesRoute/journey data for the NON-active profile's id, and assert the returned milestones belong to that other profile — or correct the docstring/comment to stop claiming this scenario is covered here.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "A test in this file seeds >=2 profiles and requests journey data via an explicit profileId different from the active profile's.",
+    "The assertion checks profile-specific content (not just absence of an error banner) to prove the cross-profile read actually happened."
+  ],
+  "labels": [
+    "e2e",
+    "tq-8",
+    "security-adjacent",
+    "tautological-test"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p3",
+  "chunk": "grp-145",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-50",
+  "linearPriority": "Medium"
+}

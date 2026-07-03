@@ -1,0 +1,49 @@
+{
+  "title": "Move scheduler_providers.dart's projection/plan-building business logic into the domain layer",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "layering / Fowler misplaced-responsibility / Feathers seam",
+  "area": "scheduler/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 496,
+      "quote": "Future<List<DailyTask>> _buildProjectionTasks({"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 497,
+      "quote": "  required Ref ref,"
+    }
+  ],
+  "sites": 2,
+  "why": "_buildProjectionTasks and _buildFreshPlan are ~200-line pure-ish business-logic functions (amnesty cutoffs, program-vs-self-paced branching, prior-completion filtering) that belong in domain/services or domain/projection — both of which already exist as sibling directories in this exact feature for exactly this purpose. Worse, both functions take `Ref ref` directly as a parameter even though the SAME function signatures already inject `getScopedContent` and `programRepository` as plain callbacks specifically so the logic can be tested without booting Riverpod — the `ref` param undermines that seam (it's used only for one call, `curriculumLabelTextFromRef(ref, curriculum: ...)`, which could equally be injected as a callback like the others). This is why this file is 1381 lines and why testing this logic requires a real ProviderContainer instead of plain unit tests.",
+  "recommendation": "Extract _buildProjectionTasks/_buildFreshPlan/_applyProgramCalendarOverrides/programCalendarSchedule to a domain/projection or domain/services class; replace the `Ref ref` parameter with a plain `String Function(CurriculumId) trackLabelFor` callback matching the existing DI pattern used for getScopedContent/programRepository.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "_buildProjectionTasks and _buildFreshPlan (or their relocated equivalents) take no Ref parameter.",
+    "A new domain-layer unit test exercises the amnesty-cutoff and program-vs-self-paced branching logic without a ProviderContainer.",
+    "scheduler_all_daily_tasks_test.dart continues to pass unmodified in behavior."
+  ],
+  "labels": [
+    "layering",
+    "testability",
+    "fowler",
+    "hotspot"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "The evidence array only quotes _buildProjectionTasks's signature (lines 496-497); the parallel claim about _buildFreshPlan (line 940 'required Ref ref,' / line 977 sole use) is asserted in prose but not independently cited — I verified it separately and it holds. Also '~200-line' undersells _buildProjectionTasks, which actually spans ~440 lines (496-935)."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-092",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-12",
+  "linearPriority": "Medium"
+}

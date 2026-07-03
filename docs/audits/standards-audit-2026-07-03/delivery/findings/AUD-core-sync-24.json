@@ -1,0 +1,57 @@
+{
+  "title": "Stop FirestoreGatewayImpl.pushGoal from using non-idempotent add() for id-less goals",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "FB-4 / idempotent-write invariant",
+  "area": "core/sync (push/gateway)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 559,
+      "quote": "final docId = data['id']?.toString() ?? data['goal_id']?.toString();"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 566,
+      "quote": "} else {\n      await collection.add({"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+      "line": 320,
+      "quote": "final id = goal['id']?.toString() ?? goal['goal_id']?.toString();\n    if (id != null) return id;"
+    }
+  ],
+  "sites": 1,
+  "why": "Every other push* method here (pushCompletion, pushStreak, pushTrack, pushLedgerEntry...) derives a deterministic Firestore doc id so an outbox retry after a lost ack is a safe overwrite via set(merge:true). pushGoal is the one method that falls back to collection.add() -- a fresh random doc id -- whenever the payload carries no id/goal_id. outbox_sync_write_facade.dart's own _goalKey fallback (a composite curriculum_pct_timestamp key) proves this null case is real, not theoretical: it exists specifically to dedupe local enqueues of such goals. If the server commits the add() but the client never sees the ack (timeout, dropped connection -- exactly what the outbox's at-least-once retry exists to survive), the retry calls add() again and creates a second, permanent duplicate goal document in Firestore, which the pull path then merges back down as a duplicate goal locally.",
+  "recommendation": "Assign every goal a stable id before it is ever enqueued (mirror the ULID pattern already used for streak/ledger/points-ledger entries) and have pushGoal always do doc(id).set(merge:true); delete the add() branch.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Regression test: call pushGoal twice with an id-less payload against a fake/emulator Firestore; assert exactly one document exists afterward.",
+    "pushGoal's add() branch is removed or provably unreachable."
+  ],
+  "labels": [
+    "FB-4",
+    "idempotency",
+    "sync",
+    "data-integrity"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 3,
+    "refutations": [
+      "Traced every real producer of pushGoal payloads: GoalRepositoryImpl._syncGoal (data['id']=entity.firestoreId), LocalDataUploadService's goal-upload loop (payload['id']=firestoreId), and TutoredWriteRouter (pass-through of the same payloads) — all three ALWAYS inject the deterministic firestoreId get"
+    ],
+    "corrections": [
+      "Downgrade to P2/SUSPECTED design-debt, not a live P1 defect: the add() branch and the docId-null path are dead code under every existing caller (goal_repository_impl.dart, local_data_upload_service.dart both always set a deterministic id first). The finding's \"_goalKey fallback proves this is real\" claim is incorrect — that fallback is itself unreachable. The residual risk is real but latent: nothing type-enforces that a future goal-creation path must set id, so the add() fallback remains a landmine, and it literally violates FB-4's \"never add()\" text. Recommendation (delete the add() branch, assign ids unconditionally) is still sound as defensive hardening, just not as an active data-integrity bug happening today.",
+      "Both current call sites (goal_repository_impl.dart:242 via _syncGoal, local_data_upload_service.dart:185) always set data['id'] to a deterministic, non-null firestoreId before calling pushGoal, so the add() branch and the outbox_sync_write_facade.dart _goalKey null-id fallback are both currently unreachable dead code, not live retry-triggered duplication risk as the \"why\" claims.",
+      "Evidence quotes are accurate verbatim, but the reachability claim is wrong: _goalKey's fallback in outbox_sync_write_facade.dart is generic defensive coding (mirrors the pattern in _key for other entities), not proof the null-id branch fires in practice — every actual call site sets data['id'] before pushGoal is invoked."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-root-p1",
+  "chunk": "high-027",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-24",
+  "linearPriority": "Medium"
+}

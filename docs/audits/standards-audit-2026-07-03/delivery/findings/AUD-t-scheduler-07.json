@@ -1,0 +1,46 @@
+{
+  "title": "Fix the sefaria_ref_matcher_test.dart sortOrder test that cannot verify its own claim",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (assertion must match what the source can actually do wrong)",
+  "area": "learning_tracker/test/features/scheduler/domain/services/sefaria_ref_matcher_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/sefaria_ref_matcher_test.dart",
+      "line": 568,
+      "quote": "test('sorts result by sortOrder ascending', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/sefaria_ref_matcher_test.dart",
+      "line": 580,
+      "quote": "// Sets don't preserve insertion order, but the function sorts before"
+    }
+  ],
+  "sites": 1,
+  "why": "leafChildrenForContainer returns Set<String>, so any internal sort is erased before the caller sees it; the test's own comment admits this and falls back to containsAll (membership only, no order check), so the test cannot fail if the production sort() call were deleted entirely — its name promises an ordering guarantee the assertion never checks.",
+  "recommendation": "Rename the test to describe what it actually checks (all three leaves present), or — if callers genuinely depend on order (resolveIndexedUnitRefs re-sorts independently, suggesting they don't) — change the return type to an ordered List and assert order for real.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test name matches its assertion, or the assertion is strengthened to check real order via a List-returning API."
+  ],
+  "labels": [
+    "testing",
+    "hygiene",
+    "scheduler"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Minor imprecision in the finding's framing: Dart's .toSet() actually returns a LinkedHashSet, which preserves insertion order (the sort isn't literally 'erased'), but this doesn't matter — containsAll ignores order regardless, so the core 'test can't catch a missing sort' claim still holds."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p4",
+  "chunk": "grp-097",
+  "normArea": "tests/scheduler",
+  "id": "AUD-t-scheduler-07",
+  "linearPriority": "Low"
+}

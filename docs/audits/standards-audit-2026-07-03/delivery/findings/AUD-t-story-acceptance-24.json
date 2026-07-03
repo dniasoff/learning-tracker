@@ -1,0 +1,38 @@
+{
+  "title": "Add missing tags: ['story_5_2'] to the Story 5.2 group in epic_05_stages_order_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "learning_tracker/CLAUDE.md Test Structure convention",
+  "area": "test/story_acceptance/epic_05_stages_order_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_05_stages_order_test.dart",
+      "line": 152,
+      "quote": "group('Story 5.2 -- Custom learning order', () {"
+    }
+  ],
+  "sites": 1,
+  "why": "Every other numbered Story group across all 10 files in this batch carries `tags: ['story_N_M']` per the documented convention ('tags: [\"story_1_2\"] on each group'); Story 5.2 alone omits it. make test-story-5.2 still works today because its Makefile target filters by `--name \"Story 5.2\"` rather than `--tags`, so this is not currently a functional break, but any future tooling that filters by tag (CI matrix, `dart test --tags`) silently drops all of Story 5.2's tests.",
+  "recommendation": "Add `tags: ['story_5_2']` to the group() call, matching every sibling group in the file.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "epic_05_stages_order_test.dart:152 group carries tags: ['story_5_2']"
+  ],
+  "labels": [
+    "hygiene",
+    "consistency"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-01-08",
+  "chunk": "grp-133",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-24",
+  "linearPriority": "Low"
+}

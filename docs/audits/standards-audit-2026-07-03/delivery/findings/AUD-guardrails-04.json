@@ -1,0 +1,46 @@
+{
+  "title": "Add automated unit tests for sefaria_mongo.dart's ref/address-parsing engine (currently zero, only a manual eyeball script)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Feathers testability lens (TQ-1/TQ-8 spirit applied to tool/)",
+  "area": "tool/seed/lib/sefaria_mongo.dart (Sefaria ref-resolution engine)",
+  "evidence": [
+    {
+      "file": "learning_tracker/tool/seed/lib/sefaria_mongo.dart",
+      "line": 347,
+      "quote": "final daf = int.parse(m.group(1)!);"
+    },
+    {
+      "file": "learning_tracker/tool/seed/sample_validate.dart",
+      "line": 4,
+      "quote": "/// Validates the Mongo ref→text resolution on the required sample refs."
+    }
+  ],
+  "sites": 1,
+  "why": "sefaria_mongo.dart implements longest-prefix title matching, schema-node walking with boundary rules, Talmud daf→array-index arithmetic (2a→2, 2b→3, 3a→4…), multi-section range flattening, and cross-version segment-wise text merging — 542 lines that decide exactly which Hebrew/English text a child sees for any given ref. `find test/tool -type f` returns only android_manifest_deep_links_test.dart, audit_and_arb_parity_test.dart, build_cities_db_admin1_test.dart, and schema_check_test.dart — none touch this file, and a repo-wide grep for 'SefariaMongo'/'sefaria_mongo' under test/ returns nothing. The only check is tool/seed/sample_validate.dart, a 34-line script that prints 9 hardcoded refs for a human to eyeball against a live local Mongo; it asserts nothing, isn't wired into make ci/make seed, and a regression in, say, the Talmud `(daf-1)*2+amud` formula would silently ship the wrong daf's text to every user of that program unless a human happens to notice the printed output looks off.",
+  "recommendation": "Add a unit-test file exercising SchemaNode walking, the Talmud daf-index formula, range flattening, and version-priority merge-first-non-empty against small in-memory fixtures (SefariaMongo's dependency is a concrete mongo_dart Db, but the pure helper methods — _parseTuple, _addressToIndex, _collectAddressed, _flatten — can be tested directly without a live connection).",
+  "effort": "L",
+  "acceptance_criteria": [
+    "A new test file exercises: Talmud daf→index (2a→2, 2b→3, 3a→4), a multi-section range flatten, longest-prefix title matching against a comma-bearing child title, and version-priority merge-first-non-empty, using fixture data with no live Mongo",
+    "That test runs green under `dart test`/`flutter test` without Docker/Mongo present"
+  ],
+  "labels": [
+    "testing",
+    "feathers",
+    "tool",
+    "data-quality"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-app-tool-p2",
+  "chunk": "grp-153",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-04",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,48 @@
+{
+  "title": "AuthStateNotifier._init() must guard reloadCurrentUser() so an offline cold start cannot hang the session state forever",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AU-4",
+  "area": "features/account/presentation/providers (session startup)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/presentation/providers/auth_state_provider.dart",
+      "line": 32,
+      "quote": "if (firebaseUser != null) {\n      final refreshed = await authRepo.reloadCurrentUser();"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/models/auth_state.dart",
+      "line": 9,
+      "quote": "/// App has not yet resolved the initial session (splash window).\n  /// Must not hang — see 19.6 startup hardening."
+    }
+  ],
+  "sites": 1,
+  "why": "FirebaseAuthGatewayImpl.reloadCurrentUser() calls User.reload(), a network round-trip that throws FirebaseAuthException(network-request-failed) when offline — an entirely ordinary cold-start condition for an offline-first app (this exact file set otherwise engineers carefully around it, e.g. sign_in_controller.dart wraps every Firestore/Firebase call in try/catch and timeouts). Nothing in AuthStateNotifier._init() catches this; the exception escapes the fire-and-forget call from build(), so `state` never advances past AuthState.initializing(). AuthGuard never touches Firebase and lets onboarded users straight through to the app shell, which reads authStateProvider downstream — so a returning cloud-born user opening the app with no connectivity can be stuck on an unresolved session state indefinitely, directly violating the SessionStatus.initializing doc comment's own 'must not hang' contract (a lesson the codebase already learned once for the router guard per the '19.6 startup hardening' reference, but that didn't carry over to this newer Notifier-based path).",
+  "recommendation": "Wrap the Firebase-touching logic in _init() (at minimum the reloadCurrentUser() call) in try/catch; on failure, fall back to trusting the cached bare currentUser or the local-born row rather than leaving state unset, mirroring the defensive timeout/try-catch pattern already used elsewhere in sign_in_controller.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Regression test: mock AuthRepository.reloadCurrentUser() to throw (simulating an offline reload()), build AuthStateNotifier, and assert state resolves to a terminal SessionStatus within a bounded time instead of remaining initializing indefinitely.",
+    "On-device check: cold-start the app in airplane mode with a previously-active cloud-born session and confirm no indefinite splash/loading hang."
+  ],
+  "labels": [
+    "auth",
+    "AU-4",
+    "availability",
+    "offline-first"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The cited rule AU-4 is misapplied. AU-4's actual text/Why (\"Gate startup/session routing on authStateChanges()/idTokenChanges() streams, never a bare currentUser read... currentUser can be null before auth finishes initializing (startup race)\") addresses a different defect: using authRepo.currentUser (a bare synchronous read, which _init() also does at line 31) instead of subscribing to the auth-state stream. It says nothing about catching exceptions from reload()/network calls. The defect this finding actually demonstrates — an unhandled exception escaping an unguarded async call and permanently stalling state — is better characterized as an EH-2 violation (raw exception not converted to a value at the data boundary) or filed as a standalone violation of the in-code 'must not hang' invariant, not AU-4. Severity P1 is still justified independently via the digest's 'violated named invariant' clause, and the recommendation (wrap in try/catch, fall back gracefully) is sound regardless of the rule mislabel — but the ticket's rule tag should be corrected before filing.",
+      "AuthGuard (learning_tracker/lib/app/router/guards/auth_guard.dart) never reads authStateProvider/Firebase — it only checks SharedPreferences onboarding flags and a local DeviceRegistryDatabase, so it does not gate on session state and there is no confirmed navigation/splash hang. SessionStatus.isInitializing is unused in all production code (grep confirms only its own definition and one unit test reference), so nothing currently blocks/waits on it. The actual confirmed consequence is silent downstream misbehavior in currentAccountIdProvider (falls back to profileId 1), autoSelectedProfileId (returns null), RestoreGuard.hasCloudAccount, and app_shell's offline-banner/upgrade-nudge logic — not an indefinite UI hang. Rule citation AU-4 is a loose fit; EH-2/EH-3 (uncaught exception not converted to a value at the boundary) better describes the mechanism, though the bare `authRepo.currentUser` read at line 31 is a genuine literal AU-4 violation worth folding in."
+    ]
+  },
+  "sourceBatch": "sup-au-family",
+  "normArea": "features/account",
+  "id": "AUD-account-03",
+  "linearPriority": "High"
+}

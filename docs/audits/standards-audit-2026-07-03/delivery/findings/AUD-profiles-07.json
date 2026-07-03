@@ -1,0 +1,79 @@
+{
+  "title": "Delete four dead domain-layer files in features/profiles/domain (pin_flow_machine.dart, profile_creation_use_case.dart, set_parent_pin_use_case.dart, verify_parent_pin_use_case.dart)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-6 dead code / Fowler dead code",
+  "area": "features/profiles/domain",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/services/pin_flow_machine.dart",
+      "line": 6,
+      "quote": "// The thin Riverpod adapter (PinFlowController) in\n// `features/profiles/presentation/providers/pin_flow_controller.dart`"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/services/pin_flow_machine.dart",
+      "line": 138,
+      "quote": "class PinFlowMachine {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/use_cases/profile_creation_use_case.dart",
+      "line": 59,
+      "quote": "class ProfileCreationUseCase {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/use_cases/set_parent_pin_use_case.dart",
+      "line": 33,
+      "quote": "class SetParentPinUseCase {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/use_cases/verify_parent_pin_use_case.dart",
+      "line": 38,
+      "quote": "class VerifyParentPinUseCase {"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/services/pin_flow_machine.dart",
+      "line": 74,
+      "quote": "/// The Riverpod adapter extends this with async fields (busy, lockedOut)"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/domain/services/pin_flow_machine.dart",
+      "line": 294,
+      "quote": "errorMessage: errorMessage ?? 'Failed to save PIN',"
+    }
+  ],
+  "sites": 7,
+  "why": "Repo-wide grep for the class names (PinFlowMachine, ProfileCreationUseCase, SetParentPinUseCase, VerifyParentPinUseCase) finds zero constructors/imports anywhere in lib/ outside each class's own file. ProfileCreationUseCase has a dedicated passing unit test (profile_creation_use_case_test.dart) that exercises code no production path ever runs; SetParentPinUseCase/VerifyParentPinUseCase have neither callers nor tests. pin_flow_machine.dart's own header claims PinFlowController 'wraps this machine' — false; PinFlowController reimplements the same state machine independently (see next finding). Combined this is 647 lines of orphaned domain logic (atomic profile+curriculum creation, PIN set/verify as sealed results) that misleads a reader into thinking PIN/profile-creation business rules live here, when the real logic is duplicated directly in the presentation layer.",
+  "recommendation": "Delete all four files and their now-orphaned tests, or if the atomic profile+curriculum-seed behavior in ProfileCreationUseCase is actually wanted, wire it into a @riverpod provider and call it from showAddProfileDialog instead of ProfileRepositoryImpl.createProfile.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep for PinFlowMachine/ProfileCreationUseCase/SetParentPinUseCase/VerifyParentPinUseCase across lib/ returns zero hits outside deleted files (or, if kept, returns a real caller)",
+    "flutter analyze and dart run build_runner build stay clean after removal",
+    "orphaned test files for the deleted classes are removed in the same change"
+  ],
+  "labels": [
+    "dead-code",
+    "profiles",
+    "pin-flow",
+    "cleanup"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-074",
+  "mergedFrom": [
+    "Delete unreferenced pin_flow_machine.dart (340 lines) superseded by PinFlowController"
+  ],
+  "coDiscoverers": [
+    "t1-feat-parent_mode",
+    "t1-feat-profiles-p1"
+  ],
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-07",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,60 @@
+{
+  "title": "Surface reorder/reset save failures to the user in the learning-order screens instead of silently swallowing them",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2 (no raw exception reaches presentation without becoming a value) + Nygard I/O-failure-halfway lens",
+  "area": "lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart; lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+      "line": 187,
+      "quote": "unawaited(_persistSedarim(updated));"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+      "line": 214,
+      "quote": "_persistMasechtos(updated);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+      "line": 245,
+      "quote": "Future<void> _resetToDefault(BuildContext context) async {"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+      "line": 155,
+      "quote": "unawaited("
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+      "line": 163,
+      "quote": "Future<void> _resetToDefault(BuildContext context) async {"
+    }
+  ],
+  "sites": 5,
+  "why": "None of these 5 call paths (2 persist + 1 reset in track_learning_order_screen.dart; 1 reorder + 1 reset in learning_order_screen.dart) has a try/catch or .catchError. The UI has already applied the optimistic reorder to local widget state before the write lands, so if saveSedarimOrder/saveMasechtosOrder/saveOrder/resetToDefault throws (DB busy, disk full, offline outbox push failure) the screen keeps showing the new order as saved with zero error affordance and no rollback — the user believes it persisted; it silently didn't, and it reverts on next app load. Sibling screens in the same feature (edit_track_screen.dart, add_track_flow_screen.dart, track_management_hub_screen.dart) all wrap the equivalent save call in try/catch + ScaffoldMessenger SnackBar; this pair is the outlier.",
+  "recommendation": "Wrap each persist/reset call in try/catch (or move the mutation into a proper AsyncNotifier using AsyncValue.guard), show a SnackBar/retry matching the add_track_flow_screen.dart pattern, and revert _local*/_localOrder to the pre-optimistic value on failure.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Widget test: stub the repository/use-case to throw on saveSedarimOrder/saveMasechtosOrder/saveOrder/resetToDefault and assert a visible error affordance appears and local state reverts",
+    "No unawaited(...persist...) or bare .then(...) without an adjacent catch remains in these two files"
+  ],
+  "labels": [
+    "error-handling",
+    "tracks",
+    "ux"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "high-092",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-08",
+  "linearPriority": "High"
+}

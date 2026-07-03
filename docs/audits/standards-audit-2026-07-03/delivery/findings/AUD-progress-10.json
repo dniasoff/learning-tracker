@@ -1,0 +1,51 @@
+{
+  "title": "Delete or wire up the dead MonthlyActivitySliverCalendar spike widget",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Dead code / AG-4 duplicate top-level name",
+  "area": "presentation / widgets",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+      "line": 64,
+      "quote": "/// This widget is **not wired into any screen yet** — it is a layout proof of"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+      "line": 367,
+      "quote": "if (timeRange == ChartTimeRange.allTime)\n            _AllTimeSummaryCard(window: window)"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/tables/monthly_activity_rollups.dart",
+      "line": 16,
+      "quote": "@DataClassName('MonthlyActivityRollup')"
+    }
+  ],
+  "sites": 1,
+  "why": "The device-freeze problem this widget was built to solve (~9,600 daily cells for an All Time streak calendar) was actually solved a different way: recent_activity_screen.dart swaps in a totals-only _AllTimeSummaryCard for the All Time range instead of ever rendering a per-day grid. So this 404-line widget — plus its own hand-rolled MonthlyActivityRollup class, which duplicates the name of the real Drift-generated MonthlyActivityRollup in core/database/tables/monthly_activity_rollups.dart (its own doc comment at lines 4-12 flags this as a temporary stand-in to delete once wired in) — has no live caller and is exercised only by its own dedicated spike test. It sits in lib/ counting toward file-size/symbol-count backlogs for a problem the team already solved elsewhere.",
+  "recommendation": "Delete monthly_activity_sliver_calendar.dart and its spike test, or file a follow-up to actually wire it in and delete the hand-rolled MonthlyActivityRollup DTO in favor of the generated one. Don't leave a superseded proof-of-concept in the production lib/ tree.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn MonthlyActivitySliverCalendar lib/ finds either zero results (deleted) or a real screen-level caller (wired in)."
+  ],
+  "labels": [
+    "dead-code",
+    "hygiene",
+    "ag-4"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Doc-comment quote 'not wired into any screen yet' is actually at line 66, not the cited line 64 (2-line miscite, text itself verbatim correct). The AG-4 'duplicates the name of the real Drift-generated MonthlyActivityRollup class' overstates present tense: that generated class doesn't exist yet (table was never added to a table list, so build_runner never emitted it) — today there is only one class named MonthlyActivityRollup in lib/, so it's a latent future collision, not a current AG-4 violation."
+    ]
+  },
+  "sourceBatch": "t1-feat-progress-p2",
+  "chunk": "grp-083",
+  "normArea": "features/progress",
+  "id": "AUD-progress-10",
+  "linearPriority": "Low"
+}

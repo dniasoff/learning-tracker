@@ -1,0 +1,55 @@
+{
+  "title": "Add a shared pumpApp test helper instead of hand-rolled MaterialApp boilerplate in tutoring widget tests",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-3",
+  "area": "test/features/tutoring",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tutoring/decline_invite_screen_l1_test.dart",
+      "line": 132,
+      "quote": "child: MaterialApp(\n      locale: locale,"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/accept_invite_screen_l1_test.dart",
+      "line": 178,
+      "quote": "child: MaterialApp(\n      locale: locale,"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/decline_invite_screen_overflow_test.dart",
+      "line": 173,
+      "quote": "child: MaterialApp(\n            debugShowCheckedModeBanner: false,"
+    },
+    {
+      "file": "learning_tracker/test/features/tutoring/accept_invite_screen_overflow_test.dart",
+      "line": 184,
+      "quote": "child: MaterialApp(\n            debugShowCheckedModeBanner: false,"
+    }
+  ],
+  "sites": 4,
+  "why": "TQ-3 calls for widget tests to pump through a shared pumpApp helper with l10n delegates. No such helper exists anywhere in test/helpers/ (verified by search) — every one of these 4 files (and 8 more across tutoring alone) independently reconstructs the same MaterialApp + 4 localizationsDelegates + supportedLocales block. If the delegate list or a future global wrapper (e.g. a text-scale clamp) needs to change, every file must be edited individually instead of one helper, and any file that gets the delegate list slightly wrong silently diverges in l10n behavior from its siblings.",
+  "recommendation": "Introduce test/helpers/pump_app.dart exposing a pumpApp(tester, child, {locale, overrides}) helper and migrate these call sites (and the wider suite) onto it.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists with a single MaterialApp+delegates definition",
+    "the 4 files in this batch build their widget-under-test through the shared helper instead of inlining MaterialApp"
+  ],
+  "labels": [
+    "TQ-3",
+    "test-infra",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "grp-124",
+  "normArea": "tests/tutoring",
+  "id": "AUD-t-tutoring-03",
+  "linearPriority": "Medium"
+}

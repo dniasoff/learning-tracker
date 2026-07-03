@@ -1,0 +1,66 @@
+{
+  "title": "Six leftover migration re-export shims in features/sync/ are unused by production code and violate Rule 2's 'only providers.dart barrel' clause",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Rule-2",
+  "area": "features/sync (all layers)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/sync/domain/merge_rules.dart",
+      "line": 2,
+      "quote": "export 'package:learning_tracker/core/sync/merge/merge_rules.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/domain/profile_scoped_preference_keys.dart",
+      "line": 2,
+      "quote": "export 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/domain/services/device_restore_service.dart",
+      "line": 2,
+      "quote": "export 'package:learning_tracker/app/restore/device_restore_service.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/providers/restore_providers.dart",
+      "line": 2,
+      "quote": "export 'package:learning_tracker/app/restore/restore_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/presentation/screens/device_restore_screen.dart",
+      "line": 2,
+      "quote": "export 'package:learning_tracker/app/restore/device_restore_screen.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/sync/sync.dart",
+      "line": 8,
+      "quote": "library sync;"
+    }
+  ],
+  "sites": 6,
+  "why": "Rule 2 states the providers.dart barrel is 'the only sanctioned re-export file. Do not add other barrel/re-export files.' These six are bare `export '...';` shims (or, for sync.dart, an empty library-only file with zero exports) left over from moves labelled W1.4/W1.7/W1.8 in their own comments. Grepping every .dart file in the repo: restore_providers.dart, device_restore_screen.dart, and sync.dart have zero importers anywhere, even in tests. merge_rules.dart, profile_scoped_preference_keys.dart, and device_restore_service.dart are imported only by test files, never by lib/ production code, which already uses the canonical core/app paths directly. sync.dart's comment additionally claims 'the legacy sync stack is being deleted in Wave 2... After deletion, sync infrastructure lives in lib/core/sync/', which is stale -- OutboxSyncWriteFacade and LocalDataUploadService are the live, current replacement and were never meant to be deleted. A developer trusting this comment or grepping 'where is merge_rules defined' gets actively misleading signal.",
+  "recommendation": "Delete all six files; repoint the test files that still import the deprecated paths (merge_rules_test.dart, profile_scoped_preference_keys_test.dart, device_restore_service's story-acceptance tests) at their canonical locations, moving them to the AG-5-mirrored test path in the process.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep confirms zero remaining files under lib/features/sync/ that are bare export re-directs to core/ or app/.",
+    "merge_rules_test.dart and profile_scoped_preference_keys_test.dart import from lib/core/sync/merge/merge_rules.dart and lib/core/preferences/profile_scoped_preference_keys.dart respectively, at the AG-5-mirrored test path."
+  ],
+  "labels": [
+    "Rule-2",
+    "dead-code",
+    "AG-5",
+    "migration-debris"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-106",
+  "normArea": "features/sync",
+  "id": "AUD-sync-06",
+  "linearPriority": "Low"
+}

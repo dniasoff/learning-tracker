@@ -1,0 +1,48 @@
+{
+  "title": "Normalize config.currentDate before delay-stage due-date arithmetic in SchedulerEngine",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "DB-6 / Nygard (clock skew) / date-arithmetic",
+  "area": "scheduler/domain/services",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+      "line": 368,
+      "quote": "final dueDate = previousCompletedAt.add(Duration(days: stage.delayDays));"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+      "line": 369,
+      "quote": "final daysUntilDue = dueDate.difference(config.currentDate).inDays;"
+    }
+  ],
+  "sites": 1,
+  "why": "config.currentDate flows in unnormalized: allDailyTasksProvider sets `now = ref.watch(clockProvider)` (a raw timestamp with time-of-day) and _buildFreshPlan passes it straight through generator.generateAll(activeCurricula, now, ...) -> ScheduleConfig(currentDate: date). previousCompletedAt also carries a real time-of-day (completion timestamps are never normalized — confirmed via completion_writer.dart). Duration.inDays truncates toward zero, so when the true calendar-day gap is exactly 1 day but the elapsed wall-clock time is <24h (e.g. item completed at 20:00 five days ago, now it's 02:00 the next calendar day — only 6h elapsed), daysUntilDue computes 0 instead of -1: a chazara item that is genuinely 1+ calendar days overdue is shown in 'due today' (scheduledTasks) instead of 'overdue' (overdueTasks), silently under-reporting overdue-ness by up to a day. This is the same class of bug (R4-1) this codebase has explicitly fixed elsewhere in the very same feature (local_calendar_engine.dart's UTC-midnight handling, goal_setup_screen.dart's daysRemaining guard, and _buildProjectionTasks's pervasive DateUtils.extractLocalDate use) — just missed in the delay-stage path.",
+  "recommendation": "Normalize both previousCompletedAt/currentCompletedAt and config.currentDate to calendar-date-only (e.g. via DateUtils.extractLocalDate) before computing daysUntilDue in _processDelayStage, matching the pattern already used in _buildProjectionTasks.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "New unit test: a delay-stage item whose previous-stage completedAt time-of-day is later than the current query's time-of-day, with a true 1-calendar-day gap, asserts the task lands in overdueTasks (not scheduledTasks).",
+    "scheduler_engine_schedule_types_test.dart / scheduler_engine_dni346_test.dart (sibling test files) continue to pass."
+  ],
+  "labels": [
+    "date-arithmetic",
+    "chazara",
+    "scheduler-engine",
+    "P2-correctness"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Rule tag 'DB-6' doesn't match (DB-6 covers sync-able entity local-Drift-as-source-of-truth, unrelated to date arithmetic) — the real grounding is the general date-arithmetic/Nygard clock-skew lens, not a named DB rule. Independently found stronger reachability evidence than cited: chazaraTasks generated via this exact code path are merged into allDailyTasksProvider's effectiveTasks, and CurriculumDefaults.defaultStages applies DelaySchedule(1) (Chazara 1) to every curriculum by default, so this isn't a rare configuration."
+    ]
+  },
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-092",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-13",
+  "linearPriority": "Medium"
+}

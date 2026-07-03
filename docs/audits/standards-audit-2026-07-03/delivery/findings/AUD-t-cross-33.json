@@ -1,0 +1,57 @@
+{
+  "title": "Rebuild store_screenshots_test.dart's Progress/Scheduler/Achievements goldens from real screens instead of in-file mockup widgets",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-1",
+  "area": "test/golden",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+      "line": 377,
+      "quote": "testWidgets('Screenshot 3: Progress Overview', (tester) async {"
+    },
+    {
+      "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+      "line": 540,
+      "quote": "testWidgets('Screenshot 4: Scheduler', (tester) async {"
+    },
+    {
+      "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+      "line": 695,
+      "quote": "testWidgets('Screenshot 5: Achievements / Gamification', (tester) async {"
+    },
+    {
+      "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+      "line": 895,
+      "quote": "class _StatCard extends StatelessWidget {"
+    }
+  ],
+  "sites": 3,
+  "why": "Screenshots 3-5 build their entire UI from private classes defined at the bottom of this same test file (_StatCard, _WeeklyChart, _CurriculumProgress, _MilestoneItem, _TaskItem, _SummaryRow, _AchievementTile) with hand-picked constants ('2,847', '47 days left', a fixed achievement list) — the file imports no widget from lib/features/progress, lib/features/scheduler's screen, or any real achievements screen. matchesGoldenFile for these 3 tests therefore only confirms the test file's own copy-pasted mockup still matches its own previous mockup; a real regression or redesign in ProgressScreen/SchedulerScreen/the achievements screen cannot make these tests fail, which is the textbook tautological-test pattern the audit is hunting for, while the file still counts toward AG-3's line cap and the suite's golden/coverage budget as if it were regression coverage.",
+  "recommendation": "Either move this file out of test/ and label it as a marketing-asset generator (e.g. tool/screenshots/), or rebuild Screenshots 3-5 by pumping the actual ProgressScreen/SchedulerScreen/achievements widgets with seeded providers so a real UI regression trips the golden.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "Screenshots 3-5 either import and render the production screen/widget under test, or the file is relocated with a doc comment disclaiming it as non-regression marketing collateral"
+  ],
+  "labels": [
+    "TQ-1",
+    "TQ-8",
+    "golden",
+    "tautological"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Primary rule is better cited as TQ-8 (digest explicitly assigns 'tautological tests' language to TQ-8) rather than TQ-1; finding already lists TQ-8 in labels so this doesn't change the verdict."
+    ]
+  },
+  "sourceBatch": "t1-test-cross-p5",
+  "chunk": "grp-146",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-33",
+  "linearPriority": "Medium"
+}

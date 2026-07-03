@@ -1,0 +1,45 @@
+{
+  "title": "profiles_tutoring_p2_test.dart E2E-721 rename sub-test silently no-ops via bare `return` instead of failing when its UI selector isn't found",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-7 (weakened assertion needs // weaken-ok: reason)",
+  "area": "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart",
+      "line": 503,
+      "quote": "if (!hasEditName && !hasRename) {"
+    },
+    {
+      "file": "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart",
+      "line": 507,
+      "quote": "return;"
+    }
+  ],
+  "sites": 1,
+  "why": "If the ProfilePickerScreen long-press affordance is ever renamed, removed, or regressed so neither 'Edit name' nor 'Rename' text renders, execution hits this early return and the test PASSES without ever reaching lines 519-547 — the actual point of the test ('DuplicateProfileNameException -> snackbar shown; name unchanged in Drift'). No `// weaken-ok:` marker documents this bail-out per the project's own convention for intentional assertion-weakening, so a future reviewer has no signal this branch quietly exists.",
+  "recommendation": "Fail loudly (`fail('rename affordance not found — check ProfilePickerScreen long-press menu')`) instead of returning silently, or resolve the ambiguity once via a stable Key/tooltip on the rename action so the ambivalent selector isn't needed at all.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The test fails (not silently passes) when neither the 'Edit name' nor 'Rename' affordance is found.",
+    "A temporary regression check (rename the button label in source) confirms the test now fails instead of passing green."
+  ],
+  "labels": [
+    "e2e",
+    "tq-7",
+    "weakened-assertion"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p3",
+  "chunk": "grp-145",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-49",
+  "linearPriority": "Medium"
+}

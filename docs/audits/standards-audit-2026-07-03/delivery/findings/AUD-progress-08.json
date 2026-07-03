@@ -1,0 +1,67 @@
+{
+  "title": "Stop interpolating raw error.toString() into localized error messages across progress screens",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5 / custom_lint no_e_to_string_in_ui (currently enforcing nothing repo-wide)",
+  "area": "features/progress presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/screens/lifetime_knowledge_screen.dart",
+      "line": 138,
+      "quote": "message: l10n.lifetimeKnowledgeLoadError(error.toString()),"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/screens/lifetime_knowledge_screen.dart",
+      "line": 243,
+      "quote": "l10n.lifetimeKnowledgeCounterError(error.toString()),"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/screens/curriculum_progress_screen.dart",
+      "line": 208,
+      "quote": "message: l10n.curriculumProgressLoadFailed(error.toString()),"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/screens/siyumim_milestones_screen.dart",
+      "line": 68,
+      "quote": "message: l10n.failedToLoadJourney(error.toString()),"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/screens/progress_screen.dart",
+      "line": 69,
+      "quote": "Center(child: Text(l10n.errorWithMessage(error.toString()))),"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/screens/progress_screen.dart",
+      "line": 291,
+      "quote": "child: Text(l10n.errorWithMessage(error.toString())),"
+    }
+  ],
+  "sites": 6,
+  "why": "error.toString() on a Dart/Firebase/Drift exception is always in English (e.g. 'Bad state: ...', 'SqliteException: ...') and not ICU-pluralizable; interpolating it into an otherwise-Hebrew ARB string means a Hebrew-locale, RTL user who hits any of these error states sees a sentence that switches to raw untranslated English mid-string. recent_activity_screen.dart in the same directory shows the correct pattern (l10n.chartFailedToLoad with no error interpolation, 4 uses) — the other 4 screens in this same feature diverge from it.",
+  "recommendation": "Replace error.toString() interpolation with the generic localized failure string (as recent_activity_screen.dart already does) and, if diagnostic detail is genuinely needed, log error.toString() via AppLogger instead of rendering it to the user.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "None of the 4 screens' AsyncValue.error branches call .toString() on the error object inside a Text/l10n call.",
+    "Once dart run custom_lint is repaired, no_e_to_string_in_ui reports zero hits in lib/features/progress/."
+  ],
+  "labels": [
+    "i18n",
+    "error-handling"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Narrative says recent_activity_screen.dart uses the correct pattern '4 uses' — actual grep shows 5 uses of l10n.chartFailedToLoad; trivial miscount, doesn't affect the finding's validity.",
+      "The corroborating claim 'recent_activity_screen.dart ... 4 uses' undercounts: grep confirms 5 uses of l10n.chartFailedToLoad with no error interpolation (lines 343, 378, 572, 628, 651). Does not affect the primary 6-site defect, which is fully accurate."
+    ]
+  },
+  "sourceBatch": "t1-feat-progress-p1",
+  "chunk": "grp-082",
+  "normArea": "features/progress",
+  "id": "AUD-progress-08",
+  "linearPriority": "Medium"
+}

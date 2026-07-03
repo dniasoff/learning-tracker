@@ -1,0 +1,50 @@
+{
+  "title": "Merge the duplicate TextCacheRepository and TextDisplayScreen test files produced by parallel coverage-wave commits",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication lens (digest step 3) / TQ-1 (pyramid-shaped, non-bloated suite)",
+  "area": "test-quality — content_browsing data/repositories + presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/content_browsing/data/repositories/text_cache_repository_extended_test.dart",
+      "line": 1,
+      "quote": "/// Extended tests for TextCacheRepository covering paths that are"
+    },
+    {
+      "file": "learning_tracker/test/features/content_browsing/data/repositories/text_cache_repository_extra_test.dart",
+      "line": 1,
+      "quote": "// Extra coverage for TextCacheRepository — exercises the text_cache hit path,"
+    },
+    {
+      "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_l1_test.dart",
+      "line": 1,
+      "quote": "// L1 widget tests for TextDisplayScreen — the text reader (67.5% coverage focus)"
+    }
+  ],
+  "sites": 3,
+  "why": "git log shows text_cache_repository_extra_test.dart (commit be671521, 'coverage-f1') and text_cache_repository_extended_test.dart (commit 80a8399a, 'coverage-f2') were both added the same day, 2026-05-14, by two independent automated coverage passes; each docstring claims to cover gaps in the *original baseline* file, but neither checked the *other new* file. Concretely both assert: text_cache exact-match + parsing, child-verse aggregation + sort-by-number, skip-empty-segment, daily_content fallback, and getCachedRefs — roughly 80% of their combined ~600 lines duplicate each other with cosmetically different fixtures. The same pattern repeats one directory over: text_display_screen_test.dart (added Feb, DNI-33) versus text_display_screen_l1_test.dart (added 2026-05-30, 'coverage w3') — the newer file's loading/offline/error/Hebrew-RTL/mark-complete-button tests re-assert what the older file already asserts, without removing or even referencing it. Cost: a future change to TextCacheRepository.getText's fallback chain or TextDisplayScreen's loading/error copy must be updated in 2-3 near-identical places instead of 1, and CI spends real time re-pumping the same widget states repeatedly.",
+  "recommendation": "Pick one canonical file per production class: keep text_cache_repository_extended_test.dart, fold the HTML-entity-decoding case from _extra_test.dart into it, delete _extra_test.dart. Keep text_display_screen_l1_test.dart as primary, fold any assertion unique to text_display_screen_test.dart (e.g. the AppBar-shows-sefariaRef case) into it, then delete the old file. Add a one-line note to the coverage-wave tooling/prompt to grep for an existing test file on the target class before creating a new one.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "One test file per production class in this area with no cross-file scenario-name overlap greater than 1, and combined line count for the merged pair is lower than the sum of the originals with no loss of branch coverage."
+  ],
+  "labels": [
+    "test-quality",
+    "duplication",
+    "content_browsing",
+    "coverage-wave-process"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-content_browsing-p2",
+  "chunk": "grp-046",
+  "normArea": "tests/content_browsing",
+  "id": "AUD-t-content_browsing-06",
+  "linearPriority": "Low"
+}

@@ -1,0 +1,44 @@
+{
+  "title": "Log the malformed-days_of_week fallback in StageDefinitionCodec.decode instead of silently defaulting to []",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 (log-less catch)",
+  "area": "core/sync/codec",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/codec/stage_definition_codec.dart",
+      "line": 85,
+      "quote": "} catch (_) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/codec/stage_definition_codec.dart",
+      "line": 86,
+      "quote": "days = const [];"
+    }
+  ],
+  "sites": 1,
+  "why": "This legacy-quartet fallback (pre-`schedule`-column documents) swallows any jsonDecode/cast failure on days_of_week and silently substitutes an empty day list, changing a family's stage-due schedule with no AppLogger trail. Nobody could diagnose why a days_of_week schedule stopped firing for a given track.",
+  "recommendation": "Log via AppLogger (including the raw malformed value, at debug/warn level) before falling back to const [].",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test feeds a malformed days_of_week string into decode() and asserts an AppLogger call occurs alongside the [] fallback."
+  ],
+  "labels": [
+    "logging",
+    "sync",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-codec",
+  "chunk": "grp-028",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-35",
+  "linearPriority": "Low"
+}

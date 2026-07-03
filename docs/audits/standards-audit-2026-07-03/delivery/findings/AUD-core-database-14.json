@@ -1,0 +1,57 @@
+{
+  "title": "Replace human-readable English StateError messages with stable codes in the DAO layer",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5",
+  "area": "core/database/daos",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/daos/active_curriculum_dao.dart",
+      "line": 110,
+      "quote": "throw StateError(\n        'Cannot deactivate the last active curriculum for this profile',"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/learning_ledger_dao.dart",
+      "line": 30,
+      "quote": "throw StateError(\n        'INSERT OR IGNORE collided but the companion has no ulid set — '"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/study_day_config_dao.dart",
+      "line": 218,
+      "quote": "'Cannot seed study day defaults: curriculum_tracks row $trackId not found',"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/user_profile_dao.dart",
+      "line": 27,
+      "quote": "_ => throw StateError('Unknown tier: $value'),"
+    }
+  ],
+  "sites": 4,
+  "why": "All four throw a plain English sentence instead of a stable code/enum. EH-5 exists because this is an EN+Hebrew app — if any of these ever reaches presentation (a catch-and-display-e.toString() somewhere upstream, or a crash reporter surfaced to a bilingual support flow), the message renders untranslated English with no ARB key to localize it.",
+  "recommendation": "Introduce a small typed error (e.g. sealed DaoError with named variants, or a code enum carried on a custom Exception) for these four call sites; have callers map codes to AppLocalizations strings at the presentation boundary.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "The 4 sites throw a typed/coded error instead of a raw English StateError string.",
+    "A grep-based Rule-0 check (e.g. `grep -rn \"StateError('[A-Z]\" lib/core/database/`) is added to catch new pre-formatted messages in the DAO layer."
+  ],
+  "labels": [
+    "EH-5",
+    "i18n",
+    "error-handling"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "study_day_config_dao.dart quote is actually at line 219, not 218 (218 is the `throw StateError(` line)."
+    ]
+  },
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "grp-008",
+  "normArea": "core/database",
+  "id": "AUD-core-database-14",
+  "linearPriority": "Low"
+}

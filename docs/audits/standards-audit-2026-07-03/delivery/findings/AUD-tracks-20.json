@@ -1,0 +1,38 @@
+{
+  "title": "Delete dead LearningOrderPreferences singleton (superseded by ProfileScopedPreferenceKeys)",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "dead code + SM-7 (no global/static mutable singletons)",
+  "area": "lib/features/tracks/whole_curriculum_order/data/preferences/learning_order_preferences.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/preferences/learning_order_preferences.dart",
+      "line": 7,
+      "quote": "static final LearningOrderPreferences instance = LearningOrderPreferences._();"
+    }
+  ],
+  "sites": 1,
+  "why": "This 34-line hand-rolled singleton duplicates the parent-controls-ordering flag that parentControlsOrderingProvider now reads from ProfileScopedPreferenceKeys (learning_order_providers.dart:70-77), a profile-scoped replacement. LearningOrderPreferences is not profile-scoped (one global bool for every profile on the device) and has zero references anywhere in lib/ or test/; if it were wired back in by mistake it would reintroduce both the SM-7 singleton anti-pattern and a cross-profile setting bug.",
+  "recommendation": "Delete the file now that ProfileScopedPreferenceKeys is the live implementation.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "File removed; no dangling references in lib/ or test/"
+  ],
+  "labels": [
+    "dead-code",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "grp-118",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-20",
+  "linearPriority": "Low"
+}

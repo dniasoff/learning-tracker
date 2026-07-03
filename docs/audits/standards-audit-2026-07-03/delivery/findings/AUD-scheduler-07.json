@@ -1,0 +1,56 @@
+{
+  "title": "Delete or wire up dead _summaryForSection / ComposedDailySchedule.summary — hardcoded-English field is never rendered",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AX-2 [P literals] (no hardcoded user-facing strings) / Fowler dead code",
+  "area": "learning_tracker/lib/features/scheduler/presentation/screens/scheduler_screen.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/screens/scheduler_screen.dart",
+      "line": 195,
+      "quote": "final noun = count == 1 ? 'task' : 'tasks';"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/daily_schedule_composer.dart",
+      "line": 12,
+      "quote": "final String summary;"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/widgets/grouped_daily_view.dart",
+      "line": 26,
+      "quote": "final grouped = schedule.groupedByCurriculum;"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_l1_test.dart",
+      "line": 538,
+      "quote": "'tapping toggle switches from flat list to GroupedDailyView', ("
+    }
+  ],
+  "sites": 1,
+  "why": "_summaryForSection builds an unlocalized English string ('N tasks today', 'N missed/overdue tasks', a literal `count == 1 ? 'task' : 'tasks'` ternary) and stores it as the required `summary` field of ComposedDailySchedule. A repo-wide grep shows nothing ever reads `.summary` — GroupedDailyView, the only consumer of ComposedDailySchedule, reads only `.groupedByCurriculum`. It is already flagged in test/e2e/journeys/scheduler_p1_test.dart:929 ('R-SC2 ... Confirmed gap; document but keep test passing') but left in place rather than deleted, and is not listed in coding-standards.md's baselined-gaps section. Because the field is `required` and sits ~90 lines from `_GoalCard`, which properly localizes the near-identical 'N tasks today' string via `l10n.schedulerGoalTaskCount(count)`, a future engineer adding a summary line to GroupedDailyView (which currently has none) would likely reach for the already-there `schedule.summary` and reintroduce, in the he locale, the exact bug class already fixed once in this same file (SCHED-GOAL-PLURAL-15 / SCHED-GOAL-I18N-R2). scheduler_screen_l1_test.dart:538-582 already pumps and toggles into GroupedDailyView for other assertions but — because nothing renders `.summary` — cannot and does not assert anything about it, so this batch's test suite gives zero signal either way.",
+  "recommendation": "Delete _summaryForSection and the summary field/parameter on ComposedDailySchedule since nothing consumes it. If a grouped-view summary line is actually wanted, route it through AppLocalizations/ARB with ICU plurals matching _GoalCard's pattern, and add a widget-test assertion (both locales) that would fail if it regressed to hardcoded English.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn '\\.summary' lib/features/scheduler returns no hits, or every remaining hit resolves through AppLocalizations.",
+    "If kept, a widget test asserts the rendered grouped-view summary text in Locale('he') contains no Latin-script task-count words."
+  ],
+  "labels": [
+    "i18n",
+    "dead-code",
+    "scheduler",
+    "ax-2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p4",
+  "chunk": "grp-096",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-07",
+  "linearPriority": "Medium"
+}

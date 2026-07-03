@@ -1,0 +1,50 @@
+{
+  "title": "Rebuild TrackLearningOrderScreen's masechtos ReorderableListView with a lazy builder, not shrinkWrap+children",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "PF-2",
+  "area": "tracks/track_order — TrackLearningOrderScreen (masechtos reorder section)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+      "line": 121,
+      "quote": "ReorderableListView(\n                      shrinkWrap: true,"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+      "line": 126,
+      "quote": "for (var i = 0; i < _localMasechtos!.length; i++)\n                          DraggableOrderItem("
+    },
+    {
+      "file": "learning_tracker/lib/core/constants/curriculum_defaults.dart",
+      "line": 1168,
+      "quote": "static bool hasReorderableLevel2(CurriculumId id) =>\n      id != CurriculumId.chumash && id != CurriculumId.tanach;"
+    }
+  ],
+  "sites": 1,
+  "why": "Track Detail's 'Reorder Learning Order' tile (track_detail_screen.dart:642-658, one tap: `onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TrackLearningOrderScreen(...)))`) opens a screen whose masechtos section renders one DraggableOrderItem (a ListTile wrapped in ReorderableDragStartListener, itself a ConsumerWidget with its own label-provider watch) per distinct level-2 hierarchy value of the track's curriculum, via the plain (non-.builder) ReorderableListView constructor with shrinkWrap:true nested inside a SingleChildScrollView. hasReorderableLevel2 enables this section for every curriculum except Chumash/Tanach. I counted distinct level-2 values directly from the bundled assets/content/hierarchy/*.json: Mishna Berurah=697 (Simanim), Mishneh Torah=85, Mussar=59, Mishnayos=63, Yerushalmi=39, Bavli=37. Any user with one of these active tracks — the majority of the app's curricula — who taps 'Reorder Learning Order' forces the screen to synchronously build and lay out every one of those rows in one frame: shrinkWrap:true requires the sliver to size itself before the outer SingleChildScrollView can lay out, so simply swapping to `.builder` without also removing shrinkWrap would not fix it. This is the most severe PF-2 site found in this pass: worst-case count (697) is the highest found, per-item cost is heavier than a bare ListTile, and it is reached by an ordinary, one-tap, documented user action on ordinary curricula (not an edge case).",
+  "recommendation": "Replace `ReorderableListView(children:...)` with `ReorderableListView.builder(itemCount: _localMasechtos!.length, itemBuilder: ...)`, and remove the shrinkWrap:true + SingleChildScrollView nesting — host the sedarim and masechtos sections in a single CustomScrollView with SliverReorderableList sections (or SliverList for read-only rows) instead, so the shrinkWrap-forced full eager layout is eliminated along with the eager builder.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Rule-0: PF-2 checker (grep/custom_lint) flags `ReorderableListView(` (non-.builder) combined with `shrinkWrap: true` anywhere under lib/features/**.",
+    "Regression test: pump TrackLearningOrderScreen for a Mishna Berurah track backed by a 700-item trackMasechtosOrderProvider fixture; assert via find.byType(DraggableOrderItem) that only a viewport's worth of rows are realized (not all 700), and that tester.pumpAndSettle completes within a bounded frame budget instead of timing out."
+  ],
+  "labels": [
+    "performance",
+    "PF-2",
+    "tracks",
+    "reorder"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "sup-pf2",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-05",
+  "linearPriority": "High"
+}

@@ -1,0 +1,56 @@
+{
+  "title": "Fix unsafe `as int?`/`as num?` casts in TrackCodec.decode and GoalCodec.decode that throw instead of returning null",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "EH-2/EH-4 decode() null-on-malformed contract + Nygard partial-failure",
+  "area": "core/sync/codec",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/codec/track_codec.dart",
+      "line": 85,
+      "quote": "raw['profile_id'] as int? ??"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/codec/track_codec.dart",
+      "line": 89,
+      "quote": "raw['track_id'] as int? ??"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/codec/goal_codec.dart",
+      "line": 77,
+      "quote": "((raw['target_percent'] ?? raw['targetPercent']) as num?)"
+    }
+  ],
+  "sites": 3,
+  "why": "entity_codec.dart's decode() contract states it 'Returns null when required fields are missing or malformed — the merger must skip malformed rows rather than crash.' Every other numeric field read across all 15 files in this batch goes through FirestoreCodec.parseInt, built specifically because Firestore fields can arrive as String (its own docstring says so). These 3 sites bypass it with a bare `as` cast: if profile_id/track_id/target_percent ever arrives as anything but exactly int (or num, for target_percent)/null — e.g. a String from a hand-edited doc, an import script, or a legacy document — `as int?`/`as num?` throws instead of returning null. TrackConfigMerger.merge() and GoalMerger.merge() call `_codec.decode(row)` inside a `for` loop with no try/catch, and MergeRouter.dispatch (merge_router.dart:55) awaits merger.merge() with no try/catch either, so one malformed row throws out of the whole pull page mid-iteration, silently dropping every row after it and aborting the sync pass instead of just skipping the bad row.",
+  "recommendation": "Replace `raw['profile_id'] as int?` / `raw['track_id'] as int?` with `FirestoreCodec.parseInt(raw['profile_id'])` / `FirestoreCodec.parseInt(raw['track_id'])` (the int.tryParse fallback lines become redundant and can be deleted). Add a `FirestoreCodec.parseDouble` helper mirroring parseInt and use it for GoalCodec's target_percent instead of the raw `as num?` cast.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Unit test: TrackCodec().decode({'profile_id': '5', 'track_id': '7', 'curriculum_id': 'x', 'activated_at': <iso>}) returns a TrackRow, not a thrown exception.",
+    "Unit test: GoalCodec().decode({...,'target_percent': '55'}) returns a GoalRow with targetPercent 55.0 instead of throwing.",
+    "grep for 'as int?' / 'as num?' / 'as double?' / 'as bool?' across lib/core/sync/codec/*.dart returns zero matches (wire into make audit)."
+  ],
+  "labels": [
+    "sync",
+    "codec",
+    "crash",
+    "nygard"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "None needed — evidence lines and quotes are exact. Addition: actual blast radius is larger than described — it aborts the whole multi-collection pull-on-launch pass (all subsequent steps: learner_profiles, goals, ledger, etc.), not merely 'silently dropping every row after it' within one page.",
+      "The GoalCodec.decode() citation (goal_codec.dart:77) is misleading: GoalMerger.merge() does NOT call `_codec.decode(row)` at all — GoalCodec.decode() is dead code, never invoked in production (only GoalCodec.encode() is used, for push). GoalMerger instead does its own inline parsing and independently has the identical unguarded-cast bug live at goal_merger.dart:91 (`(row['target_percent'] as num?)?.toDouble() ?? 100.0`), uncited by the finding. Net effect: the defect class is real and reachable for goals too, just at a different, uncited file/line than claimed; the fix recommendation (patch GoalCodec) would not actually fix the live goal bug. The TrackCodec evidence (2 of 3 cited sites) is fully solid and independently sufficient to uphold at P1.",
+      "Site 3 (goal_codec.dart:77) is not reachable the way the finding describes. GoalMerger.merge() never calls GoalCodec.decode() — it has its own independent, equally-unsafe cast at goal_merger.dart:91 (`(row['target_percent'] as num?)?.toDouble() ?? 100.0`), which IS reachable via the same unguarded merge-loop/pull-abort chain as the track_codec sites. GoalCodec.decode() itself is dead code in production (only exercised by test/sync/merge/goals_roundtrip_test.dart), so it should be fixed for contract-correctness/future-proofing but is not currently the live crash site — goal_merger.dart:91 is. Recommend adding goal_merger.dart:91 to the fix list (or replacing it entirely with `_codec.decode(row)` + `FirestoreCodec.parseDouble`) rather than treating goal_codec.dart:77 as reachable as originally written. Sites 1-2 (track_codec.dart:85,89) and the overall reachability/severity narrative for those two are fully confirmed as described."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-codec",
+  "chunk": "high-018",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-05",
+  "linearPriority": "High"
+}

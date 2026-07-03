@@ -1,0 +1,45 @@
+{
+  "title": "Convert TutorPinResult switches in gate/setup screens from statements to switch expressions per EH-6",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "EH-6",
+  "area": "features/tutoring/presentation/screens",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+      "line": 98,
+      "quote": "switch (result) {\n        case TutorPinSuccess():"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart",
+      "line": 125,
+      "quote": "switch (result) {\n        case TutorPinSuccess():"
+    }
+  ],
+  "sites": 2,
+  "why": "coding-standards.md EH-6 states closed variant sets must be modeled as sealed + 'switch over it with switch expressions; never add a default:/_ arm.' Both files use switch STATEMENTS (case Pattern: followed by statement blocks) over the sealed TutorPinResult, not the mandated expression form (contrast with tutor_pin_reset_screen.dart's `child: switch (_step) { ... => ..., }`, which does it correctly). Functionally harmless today — Dart's exhaustiveness checker covers statement-form switches too — but it's a textual violation of an explicitly documented, partially-enforced standard, and inconsistent with the sibling file in the same feature.",
+  "recommendation": "Rewrite both switches as switch expressions (`TutorPinSuccess() => widget.onPinVerified(), ...`), matching tutor_pin_reset_screen.dart's style.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "both switches use the `Pattern => ...,` expression form with no default/_ arm",
+    "flutter analyze remains clean and existing gate/setup widget tests pass unchanged"
+  ],
+  "labels": [
+    "EH-6",
+    "style",
+    "P3"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "grp-126",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-16",
+  "linearPriority": "Low"
+}

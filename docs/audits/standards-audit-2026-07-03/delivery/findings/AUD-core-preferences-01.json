@@ -1,0 +1,64 @@
+{
+  "title": "Add the IL-1 sentinel-0 guard to UseHebrewDate/ShowNikudPref/CurrentTransliterationVariant/CurrentFontSize in preference_providers.dart",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "SM-2/SM-3 (notifier state consistency across rebuilds) — documented bug class (IL-1) only partially fixed",
+  "area": "core/preferences (state management)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 104,
+      "quote": "if (profileId == 0 && _hasBindingForRealProfile) {\n      // Transient sentinel — keep the last valid state."
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 128,
+      "quote": "final profileId = ref.watch(activeProfileIdProvider);\n    final pref = ref.watch(hebrewDatePreferenceProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 148,
+      "quote": "final profileId = ref.watch(activeProfileIdProvider);\n    final pref = ref.watch(nikudPreferenceProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 213,
+      "quote": "final profileId = ref.watch(activeProfileIdProvider);\n    final pref = ref.watch(transliterationVariantPreferenceProvider);"
+    },
+    {
+      "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+      "line": 234,
+      "quote": "final profileId = ref.watch(activeProfileIdProvider);\n    final pref = ref.watch(textDisplayPreferenceProvider);"
+    }
+  ],
+  "sites": 4,
+  "why": "The file's own comment documents that activeProfileIdProvider transiently emits sentinel 0 during the offline-signup DB switch (ref.invalidate(userDatabaseProvider)) before settling back to the real profile id. UseHebrewTerms guards against this; UseHebrewDate, ShowNikudPref, CurrentTransliterationVariant and CurrentFontSize use the byte-for-byte identical ref.watch(activeProfileIdProvider) + _bindObserver(...) shape but have no guard, so each transiently rebinds to profile-0's stored/legacy/default value — visibly flipping the Hebrew-calendar, nikud, transliteration-dialect and font-size settings away from the user's real choice until the id resettles, and silently misfiling any toggle tapped inside that window under profile 0's SharedPreferences key instead of the real profile's.",
+  "recommendation": "Extract _hasBindingForRealProfile plus the early-return into a small shared helper (e.g. a mixin or a wrapper around _bindObserver) so all 5 sentinel-sensitive notifiers share one implementation instead of one having the fix and four re-deriving (and missing) it.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "UseHebrewDate, ShowNikudPref, CurrentTransliterationVariant and CurrentFontSize all preserve state instead of rebinding when profileId==0 after a real profile id was already observed.",
+    "Behavioral regression tests (ProviderContainer-based, see companion test-coverage finding) exist for all 5 notifiers driving a real-id -> 0 -> real-id transition."
+  ],
+  "labels": [
+    "preferences",
+    "state-management",
+    "riverpod",
+    "P1"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "All four site line citations are off by exactly one line: the finding cites the `build() {` signature line (128/148/213/234) instead of the actual quoted `final profileId = ...` line, which is one line below (129/149/214/235 respectively). The quoted text itself is verbatim-correct at the corrected line numbers; this is a cosmetic citation offset, not a fabrication.",
+      "All four cited line numbers (128, 148, 213, 234) are off by exactly one line low -- the quoted two-line text actually starts at 129, 149, 214, and 235 respectively (each cited line lands on the build() signature line just above the quoted watch calls). The quoted text itself is verbatim and correctly located in substance; only the line pointer is off by one throughout."
+    ]
+  },
+  "sourceBatch": "t1-core-providers-prefs",
+  "chunk": "high-015",
+  "normArea": "core/preferences",
+  "id": "AUD-core-preferences-01",
+  "linearPriority": "High"
+}

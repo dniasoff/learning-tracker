@@ -1,0 +1,51 @@
+{
+  "title": "Fix or rename AT-19.3.6 — it never exercises SeedManager's first-launch gzip decompression",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "line": 318,
+      "quote": "'AT-19.3.6 SeedManager decompresses a gzipped seed on first launch',"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+      "line": 344,
+      "quote": "// Verify SeedManager's path/backup plumbing without mocking the"
+    },
+    {
+      "file": "learning_tracker/test/core/database/seed_manager_test.dart",
+      "line": 12,
+      "quote": "/// 6. No DB at all (first launch) — _extractSeedDb called → throws SeedManagerException"
+    }
+  ],
+  "sites": 1,
+  "why": "The test pre-writes a plain content.db into the target dir before calling ensureContentDb, so dbFile.existsSync() is true and SeedManager takes the Step-3 'already installed, check version, no-op' branch (seed_manager.dart:96-148) — never Step 2's first-launch _extractSeedDb/_decompressAndWrite gzip path (seed_manager.dart:220-247). This isn't just a misfiled test: the dedicated unit suite test/core/database/seed_manager_test.dart documents in its own header that its 'first launch' branch only covers the rootBundle-unavailable throw, never a successful decompress. No automated test anywhere in the repo verifies that the gzip stream decode which installs every user's content database on first run actually produces correct output, while this acceptance test's title asserts that exact AC is proven.",
+  "recommendation": "Either expose _decompressAndWrite as @visibleForTesting and feed it a real gzip fixture asserting byte-correct round-trip, or add a widget-test that overrides the asset bundle with a small gzip fixture through ensureContentDb end-to-end; rename this test to describe what it actually checks (no-op on an up-to-date DB) if the coverage gap is filed separately.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A test exists that feeds SeedManager real (or fixture) gzip bytes through the first-launch code path and asserts the decompressed content.db is byte-correct / opens with expected rows",
+    "AT-19.3.6's title matches the branch it exercises, or is superseded by the new test"
+  ],
+  "labels": [
+    "test-quality",
+    "coverage-gap",
+    "epic-19",
+    "seed-manager"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epics-17-20",
+  "chunk": "grp-138",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-10",
+  "linearPriority": "Medium"
+}

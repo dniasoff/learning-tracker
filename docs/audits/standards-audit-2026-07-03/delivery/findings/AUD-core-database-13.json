@@ -1,0 +1,43 @@
+{
+  "title": "Rename outbox_table.dart and text_download_status.dart to match their table class names",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "File naming conventions (filename = snake_case of its class)",
+  "area": "core/database/tables",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/database/tables/outbox_table.dart",
+      "line": 11,
+      "quote": "class Outbox extends Table {"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/tables/text_download_status.dart",
+      "line": 8,
+      "quote": "class TextDownloadStatuses extends Table {"
+    }
+  ],
+  "sites": 2,
+  "why": "Every other file in this 27-file directory names itself as the exact snake_case of its table class (bookmarks.dart↔Bookmarks, curriculum_tracks.dart↔CurriculumTracks, ...). outbox_table.dart carries a redundant `_table` suffix no sibling has (class is just `Outbox`); text_download_status.dart is singular while its class `TextDownloadStatuses` is plural. Minor but real: `grep -l 'class TextDownloadStatus'` or guessing the file for `Outbox` from the class name fails.",
+  "recommendation": "Rename outbox_table.dart → outbox.dart and text_download_status.dart → text_download_statuses.dart; update imports.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "git grep for the old filenames returns nothing; flutter analyze / build_runner stay green after rename."
+  ],
+  "labels": [
+    "naming",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-database-tables",
+  "chunk": "grp-015",
+  "normArea": "core/database",
+  "id": "AUD-core-database-13",
+  "linearPriority": "Low"
+}

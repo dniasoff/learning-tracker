@@ -1,0 +1,43 @@
+{
+  "title": "Parameterize insertEvent() by profileId in streak_state_provider_test.dart instead of duplicating the raw companion insert",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication (lens pass)",
+  "area": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+      "line": 21,
+      "quote": "Future<void> insertEvent(UserDatabase db, DateTime timestamp) async {"
+    },
+    {
+      "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+      "line": 113,
+      "quote": "await db.streakEventDao.appendEvent("
+    }
+  ],
+  "sites": 1,
+  "why": "insertEvent() hardcodes the outer profileId constant, so the one test needing a second profile ('does not count events from another profile', line 111) can't reuse it and instead re-spells the same StreakEventsCompanion.insert(...) call inline (lines 113-121). A future change to the companion's required fields now has two call sites in this file to update instead of one, and they can silently drift apart.",
+  "recommendation": "Add an optional `{int? profileId}` parameter to insertEvent() (defaulting to the outer constant) and use it at line 113 instead of the inline duplicate.",
+  "acceptance_criteria": [
+    "Only one StreakEventsCompanion.insert(...) call site remains in streak_state_provider_test.dart."
+  ],
+  "effort": "S",
+  "labels": [
+    "duplication",
+    "test-hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-streak",
+  "chunk": "grp-027",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-78",
+  "linearPriority": "Low"
+}

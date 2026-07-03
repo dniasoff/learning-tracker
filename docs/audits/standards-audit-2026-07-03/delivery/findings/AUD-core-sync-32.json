@@ -1,0 +1,51 @@
+{
+  "title": "Deduplicate the copy-pasted cause-suffix toString() snippet across 3 sync exception classes",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication (digest lens pass) — Extract Method / Pull Up Field",
+  "area": "core/sync/exceptions",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/exceptions/firestore_permission_denied_exception.dart",
+      "line": 37,
+      "quote": "'${cause != null ? ' caused by: $cause' : ''}';"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/exceptions/merge_exception.dart",
+      "line": 25,
+      "quote": "'${cause != null ? ' caused by: $cause' : ''}';"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/exceptions/outbox_dead_letter_exception.dart",
+      "line": 27,
+      "quote": "'${cause != null ? ' caused by: $cause' : ''}';"
+    }
+  ],
+  "sites": 3,
+  "why": "The identical ternary-interpolation snippet is hand-copied into 3 of the 4 exception classes in this directory (SyncPushException uses a 4th, differently-shaped cause format). Each also hand-declares its own nullable cause field because their respective category bases (PermissionException, InternalException) don't carry one — only NetworkException does, per app_exception.dart's hierarchy. If cause-formatting ever needs to change — e.g. to redact a PII-bearing FirebaseException payload before it reaches AppLogger/Crashlytics, a real concern given this app's child-privacy posture — a maintainer has to remember to update 3+ near-identical copies instead of one, and any future 5th leaf exception is likely to copy the same snippet again.",
+  "recommendation": "Extract a shared `causeSuffix` getter (or mixin) that formats cause consistently, or lift a cause field plus a shared toString helper onto AppException itself so leaf exceptions compose it instead of reimplementing the ternary.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "no more than one definition of the `cause != null ? ... : ''` formatting logic remains under lib/core/sync/exceptions/ and lib/core/exceptions/"
+  ],
+  "labels": [
+    "duplication",
+    "hygiene",
+    "sync"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "OutboxDeadLetterException does not hand-declare its own `cause` field — it inherits it from NetworkException via `super.cause` in the constructor. Only FirestorePermissionDeniedException and MergeException hand-declare, since PermissionException/InternalException lack a cause field. 'Each' in the why-text overstates this for the 3rd site."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-exceptions",
+  "chunk": "grp-029",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-32",
+  "linearPriority": "Low"
+}

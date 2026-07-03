@@ -1,0 +1,44 @@
+{
+  "title": "Replace magic_link_service_test.dart's 20 fixed-delay waits with a deterministic completion signal",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6 (hermetic tests, no wall-clock reliance)",
+  "area": "features/account/testing",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/account/data/services/magic_link_service_test.dart",
+      "line": 256,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+      "file": "learning_tracker/test/features/account/data/services/magic_link_service_test.dart",
+      "line": 341,
+      "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    }
+  ],
+  "sites": 20,
+  "why": "This file uses plain test() (no fakeAsync/tester.runAsync wrapper), so all 20 of these are real wall-clock waits used to let the fake uriLinkStream's listener finish processing before the following assertions run. Each adds ~50ms of guaranteed dead time (~1s total for this file), and because 50ms is a guess rather than a guarantee, the assertions are one slow/contended CI runner away from a flaky false failure if the listener callback hasn't finished when the wait ends.",
+  "recommendation": "Await an explicit completion signal instead — e.g. have the test await a Completer that the fake onSignedIn/mock callback completes, rather than guessing a fixed sleep.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "magic_link_service_test.dart's stream-driven tests await an explicit completion signal (e.g. a Completer) instead of a fixed-millisecond Future.delayed"
+  ],
+  "labels": [
+    "testing",
+    "tq-6",
+    "flakiness"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-account-p2",
+  "chunk": "grp-039",
+  "normArea": "tests/account",
+  "id": "AUD-t-account-07",
+  "linearPriority": "Low"
+}

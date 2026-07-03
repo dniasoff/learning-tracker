@@ -1,0 +1,134 @@
+{
+  "title": "Fix the cross-feature-deep-import checker (Makefile audit 15/15) — its awk logic can never fire",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "Rule 0 / Rule 2",
+  "area": "tool/Makefile audit + features/account, features/onboarding layering",
+  "evidence": [
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 378,
+      "quote": "awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}'"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/domain/services/pending_local_signup.dart",
+      "line": 11,
+      "quote": "import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/presentation/screens/onboarding_screen.dart",
+      "line": 10,
+      "quote": "import 'package:learning_tracker/features/account/onboarding/presentation/screens/onboarding_intent_screen.dart'; // W6.1"
+    },
+    {
+      "file": "learning_tracker/lib/features/profiles/profiles.dart",
+      "line": 6,
+      "quote": "library profiles;"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/widgets/track_stat_grid.dart",
+      "line": 8,
+      "quote": "import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 377,
+      "quote": "| grep -P \"features/([^/]+)/(?!\\1\\.dart)\" \\"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+      "line": 20,
+      "quote": "import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart",
+      "line": 6,
+      "quote": "import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+      "line": 13,
+      "quote": "import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/streak_alert_service.dart",
+      "line": 7,
+      "quote": "import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 384,
+      "quote": "awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}';"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 386,
+      "quote": "echo \"16/17 — No raw profile.mode string comparisons (use ProfileMode enum) (W5.10)\"; \\"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 412,
+      "quote": "echo \"18/18 — No direct FirestoreGateway.push* outside lib/core/sync/ (Plan §F Phase 5 deliverable 8 — no-direct-gateway-push)\"; \\"
+    },
+    {
+      "file": "learning_tracker/Makefile",
+      "line": 450,
+      "quote": "echo \"20/22 — No raw curriculumId/storageKey rendered in Text() (render via CurriculumLabel / rendered*ForRef)\"; \\"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "line": 16,
+      "quote": "import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';"
+    }
+  ],
+  "sites": 14,
+  "why": "The awk derives BOTH the importing-file's feature name and the imported feature name from $0, which is the full grep -rn output line beginning with the FILE PATH — so match($0,...) always finds the importer's OWN feature name (from the path prefix) before ever reaching the import statement, making a[1]!=b[1] always false. Verified by feeding the exact grep -rn output line for pending_local_signup.dart through the isolated awk: it printed 'SUPPRESSED (bug present)'. Because of this, Rule 2 has zero real enforcement repo-wide despite 'make audit' reporting 15/15 clean, and two concrete violations sit undetected in this batch alone: pending_local_signup.dart (a domain/services file) reaches directly into a different feature's presentation/providers instead of a barrel — profiles' own barrel (features/profiles/profiles.dart) is an empty stub with nothing exported, so there was no barrel path available — and onboarding_screen.dart in a different feature deep-imports account's onboarding_intent_screen.dart because account.dart's barrel doesn't export it.",
+  "recommendation": "Fix the awk to extract the imported-feature name from the import-statement TEXT only (e.g. split the grep -rn line on the first ':' twice to isolate the content, or use grep -oP 'features/\\K[^/]+' scoped to the substring after the import path's package: prefix) so it stops reading the file-path prefix. Then resolve the two concrete violations: export a currentAccountId-style accessor from features/profiles/profiles.dart and import through it, and export OnboardingIntentStep from features/account/account.dart. Add a tiny fixture-based regression so a bad cross-feature import always reproduces a checker failure.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "Feeding a synthetic 'file/features/A/x.dart:N:import ...features/B/y.dart' line through the fixed awk prints the line (not suppressed)",
+    "make audit check 15/15 stops being silently no-op and either fails on the two known violations or passes because they were fixed",
+    "pending_local_signup.dart and onboarding_screen.dart no longer deep-import another feature's non-barrel path"
+  ],
+  "labels": [
+    "rule-0",
+    "rule-2",
+    "layering",
+    "tooling-bug"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The profiles.dart evidence line is off by one: \"library profiles;\" is actually at line 7, not line 6 as quoted (line 6 is a trailing comment). Immaterial to the finding — the barrel-is-empty claim and the awk-suppression claim are both independently confirmed correct."
+    ]
+  },
+  "sourceBatch": "t1-feat-account-p1",
+  "chunk": "high-036",
+  "mergedFrom": [
+    "Fix make audit check 15/15's self-comparing awk so cross-feature deep imports are ever detected",
+    "Fix Makefile check 15/15 cross-feature-deep-import detector — awk comparison always matches a feature against itself",
+    "Fix learning_tracker/Makefile check 15/15 cross-feature-import awk — it can never detect a violation",
+    "Fix the always-passing awk comparison in Makefile check 15/15 (no-cross-feature-deep-imports)",
+    "Fix the Makefile check-15 awk pipeline so cross-feature deep-import detection can actually fire",
+    "Fix Makefile check 15's awk logic — it structurally can never flag a cross-feature deep import",
+    "Fix inconsistent check-count labels in learning_tracker/Makefile's audit target",
+    "Fix the tautological awk comparison in make audit check 15 so cross-feature deep imports are ever reported"
+  ],
+  "coDiscoverers": [
+    "t1-feat-account-p1",
+    "t1-feat-content_browsing-p3",
+    "t1-feat-dashboard-p2",
+    "t1-feat-gamification-p1",
+    "t1-feat-onboarding-p2",
+    "t1-feat-progress-p1",
+    "t1-feat-tracks-p1",
+    "t2-build-ci-guardrails"
+  ],
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-02",
+  "linearPriority": "High"
+}

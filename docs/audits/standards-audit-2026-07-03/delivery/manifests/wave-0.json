@@ -1,0 +1,284 @@
+[
+  {
+    "id": "AUD-learning-01",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "features/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "learning_tracker/test/features/learning/data/repositories/h4_lifetime_only_detection_test.dart",
+      "learning_tracker/test/features/learning/domain/use_cases/mark_completion_use_case_siyum_routing_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-01.json"
+  },
+  {
+    "id": "AUD-learning-04",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "features/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-04.json"
+  },
+  {
+    "id": "AUD-learning-06",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "features/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-06.json"
+  },
+  {
+    "id": "AUD-learning-07",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "features/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/data/completion_writer.dart",
+      "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+      "learning_tracker/lib/features/learning/domain/entities/batch_plan.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-07.json"
+  },
+  {
+    "id": "AUD-learning-10",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "features/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-10.json"
+  },
+  {
+    "id": "AUD-learning-11",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "features/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/domain/use_cases/mark_completion_use_case.dart",
+      "learning_tracker/test/features/learning/domain/use_cases/mark_completion_use_case_siyum_routing_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-11.json"
+  },
+  {
+    "id": "AUD-guardrails-01",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "guardrails",
+    "files": [
+      ".github/workflows/ci.yml",
+      "Makefile",
+      "docs/coding-standards.md",
+      "docs/planning/epics.md",
+      "learning_tracker/lib/core/database/daos/goal_dao.dart",
+      "learning_tracker/lib/core/database/tables/goals.dart",
+      "tool/schema_check.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-guardrails-01.json"
+  },
+  {
+    "id": "AUD-guardrails-02",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "guardrails",
+    "files": [
+      "learning_tracker/Makefile",
+      "learning_tracker/lib/features/account/domain/services/pending_local_signup.dart",
+      "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+      "learning_tracker/lib/features/dashboard/presentation/widgets/track_stat_grid.dart",
+      "learning_tracker/lib/features/notifications/domain/services/streak_alert_service.dart",
+      "learning_tracker/lib/features/onboarding/presentation/screens/onboarding_screen.dart",
+      "learning_tracker/lib/features/profiles/profiles.dart",
+      "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+      "learning_tracker/lib/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart",
+      "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-guardrails-02.json"
+  },
+  {
+    "id": "AUD-learning-02",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "features/learning",
+    "files": [
+      "docs/coding-standards.md",
+      "learning_tracker/CLAUDE.md",
+      "learning_tracker/Makefile",
+      "learning_tracker/lib/features/account/account.dart",
+      "learning_tracker/lib/features/content_browsing/content_browsing.dart",
+      "learning_tracker/lib/features/content_browsing/presentation/screens/content_hierarchy_screen.dart",
+      "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart",
+      "learning_tracker/lib/features/notifications/domain/services/notification_scheduler.dart",
+      "learning_tracker/lib/features/onboarding/presentation/screens/permission_prompt_screen.dart",
+      "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+      "learning_tracker/lib/features/progress/presentation/widgets/siyumim_grouped_view.dart",
+      "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+      "learning_tracker/lib/features/sacred_time/sacred_time.dart",
+      "learning_tracker/lib/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart",
+      "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_stage_repository.dart",
+      "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+      "learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart",
+      "learning_tracker/lib/features/tracks/setup/presentation/steps/step_chazara.dart",
+      "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_info_card.dart",
+      "learning_tracker/lib/features/tracks/tracks.dart",
+      "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+      "learning_tracker/lib/features/tutoring/tutoring.dart",
+      "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_schedule_types_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-02.json"
+  },
+  {
+    "id": "AUD-learning-05",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "features/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-05.json"
+  },
+  {
+    "id": "AUD-repo-01",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "repo",
+    "files": [
+      "learning_tracker/lib"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-repo-01.json"
+  },
+  {
+    "id": "AUD-repo-02",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "repo",
+    "files": [
+      "learning_tracker/lib"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-repo-02.json"
+  },
+  {
+    "id": "AUD-core-labels-03",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "core/labels",
+    "files": [
+      "learning_tracker/lib/core/labels/curriculum_label_providers.g.dart",
+      "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.g.dart",
+      "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.g.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-labels-03.json"
+  },
+  {
+    "id": "AUD-core-logging-01",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "core/logging",
+    "files": [
+      "learning_tracker/lib/core/logging/crashlytics_service.dart",
+      "learning_tracker/lib/main.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-logging-01.json"
+  },
+  {
+    "id": "AUD-docs-04",
+    "severity": "P2",
+    "effort": "S",
+    "normArea": "docs",
+    "files": [
+      "coding-standards.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-04.json"
+  },
+  {
+    "id": "AUD-guardrails-03",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "guardrails",
+    "files": [
+      "learning_tracker/pubspec.yaml"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-guardrails-03.json"
+  },
+  {
+    "id": "AUD-guardrails-17",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "guardrails",
+    "files": [
+      "packages/custom_lints/pubspec.yaml",
+      "packages/custom_lints/test/no_raw_talker_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-guardrails-17.json"
+  },
+  {
+    "id": "AUD-learning-03",
+    "severity": "P1",
+    "effort": "M",
+    "normArea": "features/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/data/repositories/learning_ledger_repository_impl.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-03.json"
+  },
+  {
+    "id": "AUD-learning-08",
+    "severity": "P2",
+    "effort": "M",
+    "normArea": "features/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/presentation/widgets/completion_animation.dart",
+      "learning_tracker/lib/features/learning/presentation/widgets/completion_feedback_controller.dart",
+      "learning_tracker/test/story_acceptance/epic_08_gamification_test.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-08.json"
+  },
+  {
+    "id": "AUD-learning-09",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "features/learning",
+    "files": [
+      "learning_tracker/lib/features/learning/presentation/providers/completion_writer_providers.dart",
+      "learning_tracker/lib/features/learning/presentation/providers/optimistic_completion_provider.dart"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-learning-09.json"
+  },
+  {
+    "id": "AUD-repo-03",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "repo",
+    "files": [
+      "_bmad-output/refactor-task-tracker.md"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-repo-03.json"
+  },
+  {
+    "id": "AUD-repo-04",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "repo",
+    "files": [
+      "build/calendar_build.log",
+      "build/seed.db",
+      "clear"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-repo-04.json"
+  },
+  {
+    "id": "AUD-repo-05",
+    "severity": "P3",
+    "effort": "S",
+    "normArea": "repo",
+    "files": [
+      ".gitattributes",
+      ".gitignore"
+    ],
+    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-repo-05.json"
+  }
+]

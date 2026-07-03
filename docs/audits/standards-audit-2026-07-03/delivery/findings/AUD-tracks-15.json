@@ -1,0 +1,46 @@
+{
+  "title": "Stop TrackLearningOrderRepositoryImpl importing ContentRepository directly — compose in a service/notifier (SM-8)",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-8",
+  "area": "data/tracks-track_order",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart",
+      "line": 3,
+      "quote": "import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart",
+      "line": 11,
+      "quote": "required ContentRepository contentRepository,"
+    }
+  ],
+  "sites": 1,
+  "why": "TrackLearningOrderRepositoryImpl takes a ContentRepository constructor dependency and calls `_contentRepository.getContentForCurriculum(...)` directly from three of its own methods (_buildSedarimIndex, _buildMasechtosIndex). This is exactly the repository-imports-repository shape SM-8 forbids: unit-testing this repository now requires faking or booting ContentRepository's dependency chain instead of a clean seam, and the file's own doc comments on MasechtaOrderingPolicy already flag this as a known-wrong coupling ('Unblocks W4.22 (_buildMasechtosIndex removal from the repository impl)') that the team is mid-way through unwinding.",
+  "recommendation": "Move the content-fetch + index-build orchestration into a domain service or the notifier that currently constructs TrackLearningOrderRepositoryImpl, passing the already-resolved content list/indices into the repository (or into MasechtaOrderingPolicy directly), so the repository itself only talks to its own DAO.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "TrackLearningOrderRepositoryImpl no longer imports anything under features/content_browsing/.",
+    "A unit test constructs TrackLearningOrderRepositoryImpl with only a fake/in-memory database (no ContentRepository fake required).",
+    "SM-8's grep/lint (once implemented) reports zero repository→repository imports in lib/features/tracks/."
+  ],
+  "labels": [
+    "state-management",
+    "repository-composition",
+    "testability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "grp-115",
+  "normArea": "features/tracks",
+  "id": "AUD-tracks-15",
+  "linearPriority": "Medium"
+}

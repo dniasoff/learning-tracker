@@ -1,0 +1,47 @@
+{
+  "title": "Fix misleading 'debitRedemption' test title in points_balance_dao_test.dart that never calls a method by that name",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/core/database/daos/points_balance_dao_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+      "line": 56,
+      "quote": "test('debitRedemption returns false when balance is insufficient', () async {"
+    },
+    {
+      "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+      "line": 63,
+      "quote": "// Use parentAdjust as a proxy since debitRedemption needs a redemptionId."
+    }
+  ],
+  "sites": 1,
+  "why": "points_balance_dao.dart has no method named debitRedemption (grep-confirmed against lib/core/database/daos/points_balance_dao.dart: only getBalance/creditCompletion/parentAdjust/createRedemption/fulfilRedemption/declineRedemption exist). The test's own comment admits it substitutes parentAdjust 'as a proxy' — the body actually just re-verifies parentAdjust's clamp-at-zero behavior, already covered 3 tests earlier by 'parentAdjust deducts points (clamped at 0)'. A developer searching for debitRedemption/insufficient-balance coverage will find this test, believe it verifies that path, and waste time chasing a nonexistent API; the real insufficient-balance-on-redemption case is separately and correctly covered by the 'createRedemption returns null when balance is insufficient' test later in the same file.",
+  "recommendation": "Rename the test to describe what it verifies ('parentAdjust clamps balance at 0 for a large negative delta') or delete it as a duplicate of the adjacent parentAdjust clamp test.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test renamed to match its actual body, or removed as a duplicate of the parentAdjust clamp test",
+    "No reference to a non-existent debitRedemption method remains in the file"
+  ],
+  "labels": [
+    "testing",
+    "misleading-test",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Second evidence entry cites line 63 for the quote '// Use parentAdjust as a proxy since debitRedemption needs a redemptionId.' — that comment is actually at line 59; line 63 is 'await db.pointsBalanceDao.parentAdjust(1, -100);'. The underlying claim (no such method; duplicate test) is independently confirmed by fresh grep despite the line-number slip."
+    ]
+  },
+  "sourceBatch": "t1-core-database-daos-p2",
+  "chunk": "grp-009",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-70",
+  "linearPriority": "Low"
+}

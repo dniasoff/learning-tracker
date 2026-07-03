@@ -1,0 +1,47 @@
+{
+  "title": "Stop using app_localizations_coverage_test.dart's 1482 zero-assertion lines to pad the CI coverage floor over generated l10n code",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 / Rule 0 (coverage floor's stated generated-file exclusion is unenforced)",
+  "area": "test/l10n",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/l10n/app_localizations_coverage_test.dart",
+      "line": 3,
+      "quote": "return paths. No assertion is made on the text — the goal is line coverage of the generated translation strings."
+    },
+    {
+      "file": "learning_tracker/.github/workflows/ci.yml",
+      "line": 256,
+      "quote": "SUMMARY=$(lcov --summary \"$LCOV_FILE\" 2>&1)"
+    }
+  ],
+  "sites": 1,
+  "why": "grep -c 'expect(' on the file returns 0 — in 1482 lines, nothing can ever fail except a compile error (e.g. a renamed getter), which would abort the whole file rather than flag the specific key. The file's own docstring admits its purpose is purely to drive line-execution through lib/l10n/app_localizations_en.dart and _he.dart (5100+ generated lines each) for the CI-enforced coverage floor. docs/coding-standards.md states the 60% line-coverage floor is measured with 'generated files excluded', but .github/workflows/ci.yml's coverage-floor step runs `lcov --summary` directly on the raw lcov.info with no `lcov --remove` step anywhere in the repo (verified: no lcov --remove/genhtml exclude pattern exists in Makefile or ci.yml) — so generated files are NOT excluded in practice, and this file's 725-getter roll call launders thousands of auto-generated, logic-free lines into the numerator that the doc claims shouldn't count. Concrete cost: every new l10n key needs a manual line added here (already 725, and easy to forget silently since forgetting produces no failure), for a test that cannot catch a wrong translation, a missing plural case, or the exact ARB duplicate-key bug found elsewhere in this batch.",
+  "recommendation": "Either (a) wire the promised exclusion into the CI coverage step (lcov --remove coverage/lcov.info 'lib/l10n/app_localizations_*.dart' '*.g.dart' ... before lcov --summary) and delete this file, or (b) if kept for its doc-verification role, replace the per-getter roll call with a real check (e.g. that every ARB key has a corresponding generated getter) instead of 1482 lines that assert nothing.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "CI's coverage-floor step excludes generated files from the denominator (matching the doc's claim) OR this file is deleted/replaced with an assertive test.",
+    "docs/coding-standards.md's 'generated files excluded' claim matches what .github/workflows/ci.yml actually does."
+  ],
+  "labels": [
+    "testing",
+    "coverage-gaming",
+    "ci"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Second evidence entry's file path 'learning_tracker/.github/workflows/ci.yml' is wrong — the file is at repo-root '.github/workflows/ci.yml' (no learning_tracker/ prefix). Content and line 256 quote are otherwise verified correct at that path."
+    ]
+  },
+  "sourceBatch": "t1-app-l10n-p2",
+  "chunk": "grp-002",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-44",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,66 @@
+{
+  "title": "Stop keying GoalEntity.firestoreId on mutable targetPercent — every goal-percent edit orphans a Firestore document instead of updating it",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Evans invariant (aggregate identity must be stable across normal mutation); adjacent to the FB family's stable-natural-key principle",
+  "area": "features/scheduler/domain models + data repositories",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/models/goal_entity.dart",
+      "line": 160,
+      "quote": "targetPercent.toStringAsFixed(1),\n      createdAt.millisecondsSinceEpoch.toString(),"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+      "line": 136,
+      "quote": "targetPercent: drift.Value(targetPercent ?? existing.targetPercent),"
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+      "line": 143,
+      "quote": "createdAt: drift.Value(existing.createdAt),"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+      "line": 363,
+      "quote": "targetPercent: 50.0,"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+      "line": 367,
+      "quote": "await repoWithSync.updateGoal(goalId: goal.id!, targetPercent: 75.0);"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/models/goal_entity_extended_test.dart",
+      "line": 129,
+      "quote": "test('two goals with different createdAt have different firestoreIds', () {"
+    }
+  ],
+  "sites": 2,
+  "why": "firestoreId = curriculumId + '_' + targetPercent.toStringAsFixed(1) + '_' + createdAt.millisecondsSinceEpoch. updateGoal preserves createdAt but allows targetPercent to change, so any 'adjust my goal target %' edit (a routine, expected user action) computes a DIFFERENT firestoreId and _syncGoal pushes a brand-new Firestore document instead of updating the original — the original document is never touched again and deleteGoal only ever removes the CURRENT firestoreId's doc, so the old one is orphaned forever. GoalMerger happens to key its LWW arbitration by track_id rather than firestoreId, so the local state pulled on other devices generally self-heals to the latest edit — but Firestore itself accumulates one permanent garbage document per percent-edit for the life of the account, silently inflating every future full pull of that profile's goals collection. The test suite tests firestoreId's format exhaustively (contains curriculumId / contains targetPercent / contains createdAt, in TWO separate near-duplicate files) and even exercises the exact repro (create at 50.0, update to 75.0) but never asserts the one invariant that matters: the id must stay the same across that edit.",
+  "recommendation": "Derive firestoreId only from fields that cannot change through updateGoal (drop targetPercent from the id, or key on the DB row id / trackId+curriculumId+createdAt) so an update always resolves to the same document.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "GoalEntity.firestoreId no longer includes targetPercent (or any other field updateGoal can change).",
+    "New regression test: create a goal, call updateGoal changing only targetPercent, and assert the pushed sync payload's id/firestoreId is identical to the create call's."
+  ],
+  "labels": [
+    "sync",
+    "firestore",
+    "goal",
+    "data-hygiene"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "chunk": "grp-090",
+  "normArea": "features/scheduler",
+  "id": "AUD-scheduler-16",
+  "linearPriority": "Medium"
+}

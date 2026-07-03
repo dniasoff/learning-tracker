@@ -1,0 +1,47 @@
+{
+  "title": "Remove the stale R-GA-boot skip on gamification_p0_test.dart E2E-601 — the bug it cites is already fixed",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/e2e/journeys/gamification_p0_test.dart (E2E-601 — parent creates a reward, child redeems it)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/e2e/journeys/gamification_p0_test.dart",
+      "line": 197,
+      "quote": "// BUG R-GA-boot: RewardConfigurationScreen.initState calls\n    // `unawaited(ref.read(rewardConfigControllerProvider.notifier).bootstrap())`"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+      "line": 59,
+      "quote": "WidgetsBinding.instance.addPostFrameCallback((_) {\n      if (!mounted) return;"
+    }
+  ],
+  "sites": 1,
+  "why": "The skip's doc-comment says bootstrap() runs synchronously inside initState and trips Riverpod's build-phase-mutation guard. That was true when the test was authored (commit d89bbb41, 2026-06-19 07:55) but commit 7bfc3669 landed the same day at 11:24 titled '...defer reward bootstrap (R-PR10, R-GA-boot)' — it moved the bootstrap() call into WidgetsBinding.instance.addPostFrameCallback, the exact bug this skip cites. I removed the skip locally and ran `flutter test --plain-name E2E-601`: the app navigated past RestoreGuard/ProfileGuard into RewardConfigurationScreen with zero Riverpod build-phase exception, proving the cited bug does not reproduce. (It then hit an unrelated `find.text('Save Reward')` \"Too many elements\" StateError inside scrollUntilVisible, so the group needs a small fix, not just an unskip.) Net effect: E2E-601 — the file's #1-listed journey and the catalog's P0 'parent creates reward / child redeems it' scenario — has had zero active coverage for about two weeks, silently, because the doc comment describing why it's skipped no longer describes the code.",
+  "recommendation": "Delete the stale skip and its doc-comment (file header lines 4-5 and group lines 196-209), disambiguate the Save Reward finder (add a Key or `.first`), and get E2E-601 green so the P0 happy path is exercised again.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "`flutter test test/e2e/journeys/gamification_p0_test.dart --plain-name E2E-601` passes with no `skip:`",
+    "File header doc-comment no longer lists E2E-601 as 'SKIP — BUG R-GA-boot'",
+    "make ci / make test-all-stories runs this group as part of the normal suite"
+  ],
+  "labels": [
+    "TQ-8",
+    "stale-test",
+    "gamification",
+    "P0-coverage-gap"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-test-cross-p1",
+  "chunk": "grp-142",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-35",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,63 @@
+{
+  "title": "Wire core/learning/completion_constants.dart's kBulkPriorSentinelMs into its would-be callers instead of leaving it dead and re-duplicated 3x",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication / Evans (invariant re-derived instead of enforced in one place)",
+  "area": "core/learning (completion semantics)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/learning/completion_constants.dart",
+      "line": 3,
+      "quote": "These constants are used across domain services and providers to identify"
+    },
+    {
+      "file": "learning_tracker/lib/core/learning/completion_constants.dart",
+      "line": 18,
+      "quote": "const int kBulkPriorSentinelMs ="
+    },
+    {
+      "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+      "line": 43,
+      "quote": "static final int kBulkPriorSentinelMs = DateTime.utc("
+    },
+    {
+      "file": "learning_tracker/lib/features/onboarding/domain/services/bulk_prior_completion_service.dart",
+      "line": 27,
+      "quote": "core→features layering violation and is the single source of truth for the"
+    },
+    {
+      "file": "learning_tracker/lib/features/gamification/streak/streak_restorer.dart",
+      "line": 46,
+      "quote": "const bulkPriorSentinelMs = 946684800000; // DateTime.utc(2000,1,1) ms"
+    }
+  ],
+  "sites": 4,
+  "why": "completion_constants.dart's docstring claims kBulkPriorSentinelMs is 'used across domain services and providers,' but a repo-wide grep shows zero imports of this file anywhere in lib/ or test/ — it is dead code. Meanwhile SchedulerEngine, BulkPriorCompletionService, and StreakRestorer each independently hand-redefine the identical magic literal 946684800000 (DateTime.utc(2000,1,1)). Two of the three duplicate definitions explicitly self-describe as 'the single source of truth,' a direct contradiction between files. All copies currently agree, so there is no live bug today, but the sentinel governs whether a completion counts toward streak/daily-bar-chart 'live activity' — if any one of the 4 independent copies is ever edited (e.g. during the W3.27-style migrations already underway elsewhere in this codebase) without updating the others, gamification data would silently miscategorize bulk-imported completions as live activity or vice versa for affected users, with no compiler or test signal since nothing imports the canonical constant to compare against.",
+  "recommendation": "Pick one true source (core/learning/completion_constants.dart is the natural core-layer home) and have SchedulerEngine, BulkPriorCompletionService, and StreakRestorer import and reuse it; if a core→features layering constraint genuinely blocks that, document why in coding-standards.md and delete the now-provably-false 'used across... providers' claim from whichever copy remains a local duplicate.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "grep for the literal 946684800000 (or DateTime.utc(2000, 1, 1) used as a sentinel) outside test/ resolves to exactly one definition plus its importers, not 4 independent literals.",
+    "core/learning/completion_constants.dart's docstring claim is verifiably true (has real importers) or the file is removed.",
+    "Existing bulk-prior/streak/scheduler regression tests continue passing after de-duplication (points_service_test.dart, chart_data_service tests, streak tests already reference the sentinel and act as the regression check)."
+  ],
+  "labels": [
+    "duplication",
+    "dead-code",
+    "gamification"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "bulk_prior_completion_service.dart quote is at line 29, not 27; streak_restorer.dart quote is at line 44, not 46. Substance otherwise confirmed exact at all other cited lines."
+    ]
+  },
+  "sourceBatch": "t1-core-domain-learning",
+  "chunk": "grp-017",
+  "normArea": "core/learning",
+  "id": "AUD-core-learning-01",
+  "linearPriority": "Medium"
+}

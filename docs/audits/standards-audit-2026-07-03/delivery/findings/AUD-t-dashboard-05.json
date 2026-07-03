@@ -1,0 +1,39 @@
+{
+  "title": "Replace DateTime.now() with a fixed clock in dashboard_providers_test's streak fixture",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-6",
+  "area": "test/features/dashboard/presentation/providers/dashboard_providers_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/dashboard/presentation/providers/dashboard_providers_test.dart",
+      "line": 662,
+      "quote": "final today = DateTime.now().toUtc();"
+    }
+  ],
+  "sites": 1,
+  "why": "The seeded streak event's dayUtc is derived from this real-clock read, then the test asserts dashboardStreakProvider.currentStreak >= 1 for 'today'. If the process clock crosses UTC midnight between this read and the provider's own internal 'now' computation — a real, if rare, window on a loaded CI runner — the seeded event lands on 'yesterday' relative to the provider and the test fails intermittently with no code change: the classic wall-clock flake TQ-6 exists to prevent. Every other test in this 1325-line file already uses a fixed DateTime.utc(...) constant.",
+  "recommendation": "Use a fixed DateTime.utc(2026, 5, 20) (or similar) instead of DateTime.now().",
+  "effort": "S",
+  "acceptance_criteria": [
+    "dashboard_providers_test.dart contains zero calls to DateTime.now()"
+  ],
+  "labels": [
+    "test-quality",
+    "flaky-test",
+    "hermeticity"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "chunk": "grp-049",
+  "normArea": "tests/dashboard",
+  "id": "AUD-t-dashboard-05",
+  "linearPriority": "Low"
+}

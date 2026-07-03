@@ -1,0 +1,52 @@
+{
+  "title": "Lazy-load the tutor-grants roster in ManageGrantsScreen and Settings' embedded pending-invites section",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "PF-2",
+  "area": "tutoring/manage_grants_screen.dart + settings/settings_screen.dart (_PendingInvitesSection)",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+      "line": 83,
+      "quote": "return ListView("
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+      "line": 91,
+      "quote": "for (final grant in activeGrants)\n                    _GrantRow(grant: grant, canResign: true),"
+    },
+    {
+      "file": "learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart",
+      "line": 730,
+      "quote": "for (final grant in pendingGrants) ...[\n          _TutorGrantTile(grant: grant, isPending: true),"
+    }
+  ],
+  "sites": 2,
+  "why": "Both screens map `incomingTutorGrantsProvider`/`pendingTutorInvitesProvider` (a tutor's full roster of children/parents who granted them access) into rows via a `for` loop feeding a non-lazy ListView/Column, in two independent places, and no cap on roster size exists anywhere in the codebase (grepped for maxTutor/tutorLimit/kMaxTutors and product-rules.md — none found). A dedicated tutor (e.g. a rebbi/melamed tracking many talmidim across seasons — the tutoring feature's own stated use case) accumulates one grant per student relationship over time with no visible archiving path; both the dedicated Manage Grants hub and the every-visit Settings screen's embedded pending-invites card rebuild every row on every open/rebuild. This is lower-urgency than the curriculum-hierarchy findings above (realistic roster sizes are more plausibly in the tens than the hundreds), but it is a genuine, duplicated PF-2 pattern on two commonly-visited screens — Settings in particular re-renders the full roster inline on its own top-level ListView every time any grant's state changes.",
+  "recommendation": "Swap the `for`-loop expansion in ManageGrantsScreen (which already scrolls independently) for ListView.builder/ListView.separated. For Settings' embedded _PendingInvitesSection (which must stay non-scrolling inside the outer settings ListView), cap the inline preview (e.g. first 3-5 grants + a 'View all' link into Manage Grants) instead of rendering the full roster inline.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Rule-0: PF-2 checker flags `for (final ... in ...)`/`.map(...)` expansions feeding ListView(/Column( children under lib/features/** where the source is a ref.watch'd stream/future provider rather than a literal bounded enum.",
+    "Regression test: seed 50 tutor grants in the fixture repo; pump ManageGrantsScreen and SettingsScreen and assert both build within a bounded frame budget, and (post-fix) that off-screen _GrantRow/_TutorGrantTile widgets are not realized via find.byType counts."
+  ],
+  "labels": [
+    "performance",
+    "PF-2",
+    "tutoring",
+    "settings"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "A third analogous site exists (manage_tutors_screen.dart:261-278, parent-side per-child tutor list) not counted in 'sites: 2' — an undercount, not an overclaim, so it doesn't weaken the finding."
+    ]
+  },
+  "sourceBatch": "sup-pf2",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-08",
+  "linearPriority": "Medium"
+}

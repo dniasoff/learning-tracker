@@ -1,0 +1,44 @@
+{
+  "title": "Fix epic_26_story_26_31 AC4's add_track_flow.dart check — dead branch references the deleted track_setup/ directory",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/story_acceptance",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_31_rtl_audit_test.dart",
+      "line": 233,
+      "quote": "'${root.path}/lib/features/tracks/setup/presentation/screens/add_track_flow.dart',"
+    },
+    {
+      "file": "learning_tracker/test/story_acceptance/epic_26_story_26_31_rtl_audit_test.dart",
+      "line": 242,
+      "quote": "'track_setup/presentation/screens/add_track_flow.dart',"
+    }
+  ],
+  "sites": 1,
+  "why": "The candidates list checks lib/features/tracks/setup/presentation/screens/add_track_flow.dart (the real, current directory, confirmed via find lib/features -iname add_track_flow*.dart). But if that existence check ever passes, line 242 calls readFeatureFile('track_setup/presentation/screens/add_track_flow.dart') — 'track_setup' without the 'tracks/' prefix, the old directory that commit e365a4c8 ('delete duplicate features/track_setup/ tree — canonical: features/tracks/setup/') removed. readFeatureFile would then throw StateError('File not found: track_setup/...') for a reason unrelated to RTL migration. Today add_track_flow.dart stays deleted so `if (!exists) return;` always fires first and this bug is unreachable — but the test also never verifies its own claim that 'add_track_flow_screen.dart already uses AlignmentDirectional' (asserted only in a comment); AC1-AC3's repo-wide regex sweep already covers add_track_flow_screen.dart, so this test currently contributes nothing and would misfire with an unrelated error if the guard condition ever changed.",
+  "recommendation": "Delete this test (AC1-3's regex sweep already covers add_track_flow_screen.dart across all of lib/features/), or fix line 242 to 'tracks/setup/presentation/screens/add_track_flow.dart' and point it at add_track_flow_screen.dart instead of the long-deleted add_track_flow.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "epic_26_story_26_31_rtl_audit_test.dart contains no path string referencing the deleted track_setup/ directory"
+  ],
+  "labels": [
+    "testing",
+    "stale-path",
+    "epic-26"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-131",
+  "normArea": "tests/story-acceptance",
+  "id": "AUD-t-story-acceptance-35",
+  "linearPriority": "Low"
+}

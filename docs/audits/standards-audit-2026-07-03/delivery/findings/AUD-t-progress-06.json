@@ -1,0 +1,45 @@
+{
+  "title": "Rewrite track_dual_progress_reactivity_test.dart so it stops overriding the provider it claims to guard",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 (tautological regression test)",
+  "area": "test/features/progress/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/progress/presentation/providers/track_dual_progress_reactivity_test.dart",
+      "line": 23,
+      "quote": "trackDualProgressMetricsProvider(1).overrideWith((ref) async {"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/presentation/providers/track_dual_progress_reactivity_test.dart",
+      "line": 68,
+      "quote": "trackDualProgressMetricsProvider(99).overrideWith((ref) async {"
+    }
+  ],
+  "sites": 2,
+  "why": "Both tests replace trackDualProgressMetricsProvider's own body with a stub that independently calls ref.watch<int>(completionCommittedProvider) itself (lines 27, 69). A Riverpod .overrideWith fully replaces the provider's create function, so the real body in lifetime_knowledge_providers.dart:357 is never invoked by either test. Deleting that real ref.watch<int>(completionCommittedProvider) line today — silently breaking the dashboard/progress-hub's live refresh after a completion — would not fail either test in this file, despite the file's own docstring calling itself 'Regression test for Fix 3'. Contrast with the correctly-built sibling recent_activity_reactivity_test.dart, which drives the real production provider body over a real in-memory DB with no override of the provider under test.",
+  "recommendation": "Rewrite using the recent_activity_reactivity_test.dart pattern: real in-memory DB, unmodified trackDualProgressMetricsProvider, seed a completion, tick completionCommittedProvider, assert the provider's actual output changes.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Test constructs trackDualProgressMetricsProvider without overriding that same provider family",
+    "Test goes red when ref.watch<int>(completionCommittedProvider) is deleted from lifetime_knowledge_providers.dart:357"
+  ],
+  "labels": [
+    "testing",
+    "riverpod",
+    "progress"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p4",
+  "chunk": "grp-086",
+  "normArea": "tests/progress",
+  "id": "AUD-t-progress-06",
+  "linearPriority": "Medium"
+}

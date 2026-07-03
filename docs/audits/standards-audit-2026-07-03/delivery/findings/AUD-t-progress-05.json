@@ -1,0 +1,74 @@
+{
+  "title": "Rewrite CP-02/ILP-01/PP-4 progress-provider regression guards to exercise the real provider instead of a hand-rewritten stand-in",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/features/progress/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/progress/presentation/providers/curriculum_progress_reactivity_test.dart",
+      "line": 27,
+      "quote": "curriculumProgressProvider('mishnayos').overrideWith((ref) async {"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/presentation/providers/curriculum_progress_reactivity_test.dart",
+      "line": 29,
+      "quote": "ref.watch<int>(completionCommittedProvider);"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/presentation/providers/items_learned_reactivity_test.dart",
+      "line": 41,
+      "quote": "              )).overrideWith((ref) async {"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/presentation/providers/items_learned_reactivity_test.dart",
+      "line": 99,
+      "quote": "              )).overrideWith((ref) async {"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/presentation/providers/items_learned_reactivity_test.dart",
+      "line": 146,
+      "quote": "itemsLearnedSummariesProvider(1).overrideWith((ref) async {"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/presentation/providers/pp4_lifetime_chazaros_count_test.dart",
+      "line": 107,
+      "quote": "final buggyCount = completions.length;"
+    },
+    {
+      "file": "learning_tracker/test/features/progress/presentation/providers/pp4_lifetime_chazaros_count_test.dart",
+      "line": 118,
+      "quote": "final fixedCount = completions.where((c) => c.stageId > 1).length;"
+    }
+  ],
+  "sites": 6,
+  "why": "Each 'regression guard' replaces the real provider body with a hand-written stub (curriculum_progress_reactivity_test.dart, items_learned_reactivity_test.dart x3) or bypasses the provider entirely and recomputes the intended formula inline (pp4_lifetime_chazaros_count_test.dart x2, which never touches lifetimeHeaderCountersProvider or even a ProviderContainer). I confirmed the real implementations at progress_providers.dart:67/118/166, items_learned_providers.dart:182/221, and lifetime_knowledge_providers.dart:531/562 currently contain the fix (ref.watch(completionCommittedProvider) / .where((c) => c.stageId > 1)), and that these are the ONLY tests tagged CP-02/ILP-01/PP-4 in the repo. If a future refactor of any of these 6 providers drops the watch call or reverts totalChazaros to completions.length, all 6 tests keep passing and CI stays green while the previously-shipped, user-visible bugs (stale Progress/Items-Learned/Lifetime-View screens after a completion; self-contradictory 'N chazaros' header) silently ship again.",
+  "recommendation": "Follow the pattern already used correctly in this same batch (lifetime_knowledge_providers_test.dart's 'D9' group, journey_providers_test.dart): seed a real in-memory UserDatabase, read the REAL provider via ProviderContainer with only DB/content-repo/profile overridden, mutate the DB, tick completionCommittedProvider, and assert the real provider's re-fetched value changed. For PP-4, call container.read(lifetimeHeaderCountersProvider(...).future) against seeded rows instead of recomputing the formula in the test.",
+  "acceptance_criteria": [
+    "Temporarily reverting the ref.watch(completionCommittedProvider) line in curriculumProgressProvider/itemsLearnedDataProvider/lifetimeViewDataProvider/itemsLearnedSummariesProvider makes the corresponding rewritten test fail red.",
+    "Temporarily reverting lifetimeHeaderCountersProvider's totalChazaros to completions.length makes the PP-4 test fail red.",
+    "No test in these 3 files fully overrides the provider under test with a hand-written body that duplicates the fix logic."
+  ],
+  "effort": "M",
+  "labels": [
+    "testing",
+    "riverpod",
+    "progress",
+    "tautological-test"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "lifetime_knowledge_screen_test.dart (F3 group, ~line 500-580) and siyumim_timeline_and_lifetime_providers_test.dart also reference PP-4 and are omitted from the finding's claim of exclusivity. The F3 test calls container.read(lifetimeHeaderCountersProvider(_profileId).future) against a real seeded in-memory DB and asserts totalChazaros==1, which would fail red if the completions.length bug were reintroduced — an independent, working regression guard already exists for the PP-4 fix, narrowing the finding's true 'undetectable regression' scope from 6 sites to 4 (CP-02, ILP-01)."
+    ]
+  },
+  "sourceBatch": "t1-feat-progress-p3",
+  "chunk": "grp-085",
+  "normArea": "tests/progress",
+  "id": "AUD-t-progress-05",
+  "linearPriority": "Medium"
+}

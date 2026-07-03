@@ -1,0 +1,58 @@
+{
+  "title": "Add profileId to TrackLearningOrder — the one user_database table with a bare autoincrement PK, and make audit's claimed profileId check doesn't exist",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "profileId-in-PK [E] / Rule 0",
+  "area": "lib/core/database/tables/track_learning_order.dart (evidenced via test/core/database)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/core/database/user_database_companion_coverage_test.dart",
+      "line": 887,
+      "quote": "final insertable = TrackLearningOrderCompanion.custom(\n        trackId: const Variable(1),"
+    },
+    {
+      "file": "learning_tracker/test/core/database/user_database_dataclass_extended_test.dart",
+      "line": 838,
+      "quote": "TrackLearningOrderCompanion.insert(\n              trackId: trackId,"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/tables/track_learning_order.dart",
+      "line": 4,
+      "quote": "IntColumn get id => integer().autoIncrement()();"
+    },
+    {
+      "file": "learning_tracker/docs/coding-standards.md",
+      "line": 689,
+      "quote": "**Enforcement:** `make audit` flags any user-DB table without a `profileId` column."
+    }
+  ],
+  "sites": 1,
+  "why": "Both test files in this batch construct TrackLearningOrderCompanion.insert()/.custom() with only trackId/sefariaRef/sortOrder — never profileId — because lib/core/database/tables/track_learning_order.dart has no profileId column at all (confirmed by direct read: bare autoIncrement `id`, only trackId + sefariaRef + sortOrder, uniqueKeys is {trackId, sefariaRef}). Every sibling user-data table in the batch's test evidence (bookmarks, goals, daily_plans, learning_order, streak_events, completion_events, stage_definitions, ...) carries an explicit profileId. Isolation for this table depends entirely on trackId never being confused across profiles; a caching or profile-switch bug elsewhere that reuses a stale trackId would silently read/write another profile's (e.g. a sibling child's) custom text ordering with no schema-level guard to catch it. This gap is currently invisible: `grep -n profileId learning_tracker/Makefile` returns zero matches, so none of the 22 `make audit` checks actually implements the check the standards doc says exists — the rule is marked [E] (Enforced) but enforces nothing for this table.",
+  "recommendation": "Add a profileId IntColumn (FK to learner_profiles, cascade delete) to TrackLearningOrder, fold it into the uniqueKeys constraint with trackId/sefariaRef, ship it as a schemaVersion bump per DB-4 discipline (migration step + schema export + migration test), and update the DAO. Separately, write the actual `make audit` grep the doc already claims exists so this class of gap is caught mechanically going forward.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "lib/core/database/tables/track_learning_order.dart has a profileId column referencing learner_profiles, with a migration step and committed schema export at the new schemaVersion.",
+    "A `make audit` check greps every table in lib/core/database/tables/*.dart used by UserDatabase and fails if profileId is absent (unless the table is on a documented content-table exemption list), closing the doc/reality gap at docs/coding-standards.md:689."
+  ],
+  "labels": [
+    "DB",
+    "profileId-in-PK",
+    "schema",
+    "enforcement-gap"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "Title's 'the one user_database table with a bare autoincrement PK' overstates uniqueness: accounts.dart, learner_profiles.dart, and sacred_window_entries.dart also have autoIncrement PKs with no profileId column. Those are defensibly out of scope (identity backbone / device-level cache, not per-profile leaf data like TrackLearningOrder's true siblings bookmarks/goals/streak_events which all carry profileId directly), so the core violation and recommendation still stand."
+    ]
+  },
+  "sourceBatch": "t1-core-database-root-p2",
+  "chunk": "grp-013",
+  "normArea": "tests/cross",
+  "id": "AUD-t-cross-06",
+  "linearPriority": "Medium"
+}

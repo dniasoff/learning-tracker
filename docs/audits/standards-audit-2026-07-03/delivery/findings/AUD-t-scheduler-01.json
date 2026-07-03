@@ -1,0 +1,65 @@
+{
+  "title": "Deduplicate near-identical scheduler test files added across separate fix waves",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / TQ-7",
+  "area": "features/scheduler tests (domain/models, domain/repositories, data/repositories, domain/services)",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/models/goal_entity_extended_test.dart",
+      "line": 95,
+      "quote": "group('GoalEntity.firestoreId', () {\n    test('firestoreId contains curriculumId storageKey', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/models/goal_entity_extra_test.dart",
+      "line": 76,
+      "quote": "group('GoalEntity.firestoreId', () {\n    test('firestoreId contains curriculum storageKey', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/data/repositories/scheduler_content_repository_impl_test.dart",
+      "line": 56,
+      "quote": "test('filters to only leaf items', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/repositories/scheduler_content_repository_test.dart",
+      "line": 99,
+      "quote": "test('filters out non-leaf items and returns only leaves', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_extended_test.dart",
+      "line": 107,
+      "quote": "test('returns empty list for empty curricula list', () async {"
+    },
+    {
+      "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_generate_all_test.dart",
+      "line": 71,
+      "quote": "test('returns empty list for empty curricula list', () async {"
+    }
+  ],
+  "sites": 3,
+  "why": "Three independent pairs of test files pin the exact same production behavior with near/exact-duplicate assertions, evidently written by separate fix-wave passes that never checked for existing coverage: (1) goal_entity_extended_test.dart and goal_entity_extra_test.dart both re-derive DeadlineTarget/PacePeriodTarget hashCode+toString, GoalEntity.firestoreId's format, and fromFirestore's paceGranularity mapping — roughly 20 overlapping tests across two ~230-line files; (2) scheduler_content_repository_impl_test.dart and scheduler_content_repository_test.dart both carry a near-identical 'getLeafItems filters/sorts/maps' suite; (3) daily_task_generator_extended_test.dart and daily_task_generator_generate_all_test.dart both have an identically-named 'returns empty list for empty curricula list' test plus duplicate 'sorted by priority' and skippedRefs coverage. None of the three newer files' doc comments ('not covered by X') acknowledge the sibling file that duplicates them. Cost: any behavior change to GoalEntity.firestoreId's format, getLeafItems' sort key, or generateAll's empty-input handling now requires editing two files in lockstep or one silently goes stale while still looking like coverage; CI pays for the duplicate runs with zero added defect-catching power.",
+  "recommendation": "Merge each pair, keeping the union of distinct assertions and deleting the fully-subsumed tests; for the content-repository pair, keep the coarseUnitKey-only tests in domain/repositories/ and keep the getLeafItems suite solely in data/repositories/ (its correctly-mirrored home per AG-5).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "No two files under test/features/scheduler/ share a >=80%-similar block of assertions against the same production symbol (spot-checked; flag as a candidate Rule-0 checker: a test-name/body similarity script).",
+    "Total test count for the three affected areas drops by roughly the duplicated fraction with no reduction in line/branch coverage (verify via `flutter test --coverage` diff before/after)."
+  ],
+  "labels": [
+    "test-quality",
+    "duplication",
+    "fowler"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "chunk": "grp-094",
+  "normArea": "tests/scheduler",
+  "id": "AUD-t-scheduler-01",
+  "linearPriority": "Medium"
+}

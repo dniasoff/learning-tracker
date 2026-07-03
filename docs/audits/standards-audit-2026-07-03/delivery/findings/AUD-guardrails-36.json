@@ -1,0 +1,65 @@
+{
+  "title": "Stop hand-copying private lint-rule path helpers into test files; assert through the real rule only",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-4 (lens: Feathers — fake seam)",
+  "area": "custom_lints",
+  "evidence": [
+    {
+      "file": "packages/custom_lints/test/no_color_literal_outside_theme_test.dart",
+      "line": 152,
+      "quote": "bool _invokeIsWhitelisted(String path) {\n  final normalised = path.replaceAll(r'\\', '/');"
+    },
+    {
+      "file": "packages/custom_lints/test/no_curriculum_display_name_bypass_test.dart",
+      "line": 31,
+      "quote": "bool _invokeIsWhitelisted(String path) {\n  final normalised = path.replaceAll(r'\\', '/');"
+    },
+    {
+      "file": "packages/custom_lints/test/no_feature_cross_import_test.dart",
+      "line": 28,
+      "quote": "bool _isBarrel(String importedFeature, String importedPath) {\n  return importedPath == '$importedFeature.dart';"
+    },
+    {
+      "file": "packages/custom_lints/test/no_firebase_outside_core_test.dart",
+      "line": 157,
+      "quote": "bool _invokeIsWhitelisted(String path) {\n  final normalised = path.replaceAll(r'\\', '/');"
+    },
+    {
+      "file": "packages/custom_lints/test/no_hardcoded_text_direction_test.dart",
+      "line": 201,
+      "quote": "bool _invokeIsGenerated(String path) {\n  final normalised = path.replaceAll(r'\\', '/');"
+    },
+    {
+      "file": "packages/custom_lints/test/no_raw_talker_test.dart",
+      "line": 148,
+      "quote": "bool _invokeIsWhitelisted(String path) {\n  final normalised = path.replaceAll(r'\\', '/');"
+    }
+  ],
+  "sites": 6,
+  "why": "Because each rule's `_isWhitelisted`/`_isGenerated`/`_isBarrel`/`_featureOf` helper is private and static, the test authors copy-pasted a second implementation into the test file rather than exposing a testable seam (e.g. @visibleForTesting) or relying solely on the full testAnalyzeAndRun assertions the same files already have. If a rule's real whitelist changes (as F1b's recommended fix would do), the hand-copied test function has to be remembered and updated separately, or the 'whitelist — file path checks' group keeps passing while asserting stale behavior that no longer matches the shipped rule — a false sense of unit coverage on top of the genuine end-to-end tests in the same file.",
+  "recommendation": "Delete the six _invoke*/_isBarrel/_featureOf copies and keep only the testAnalyzeAndRun-based violation/allowed groups (already present in every file and sufficient to exercise the same whitelist logic through the real code path).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No custom_lints test file re-implements a rule's private path-matching logic; whitelist behavior is asserted only via rule.testAnalyzeAndRun.",
+    "dart test coverage of whitelist behavior is unchanged or improved after removal."
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "custom-lint"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t2-lints-hooks",
+  "chunk": "grp-160",
+  "normArea": "guardrails",
+  "id": "AUD-guardrails-36",
+  "linearPriority": "Low"
+}

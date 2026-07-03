@@ -1,0 +1,55 @@
+{
+  "title": "auth_state_test.dart triplicates the same AuthState assertions across parallel groups",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler duplication / test hygiene",
+  "area": "test/features/auth/domain/models/auth_state_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/auth/domain/models/auth_state_test.dart",
+      "line": 95,
+      "quote": "test('AuthState.initializing sets sessionStatus=initializing', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/auth/domain/models/auth_state_test.dart",
+      "line": 202,
+      "quote": "test('has sessionStatus=initializing and null user/tier', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/auth/domain/models/auth_state_test.dart",
+      "line": 149,
+      "quote": "test('displayIdentifier returns display name when present', () {"
+    },
+    {
+      "file": "learning_tracker/test/features/auth/domain/models/auth_state_test.dart",
+      "line": 229,
+      "quote": "test('returns displayName when non-empty', () {"
+    }
+  ],
+  "sites": 1,
+  "why": "The 'AuthState' group (lines 88-199) and the three later groups 'AuthState.initializing' (201-210), 'AuthState.displayIdentifier' (222-254) and 'AuthState.copyWith' (256-306) each re-assert behavior the earlier group already covers, with only cosmetic renaming — 307 lines cover roughly what ~180 would. Every future field added to AuthState needs the same edit made twice to stay accurate.",
+  "recommendation": "Delete the three later duplicate groups (or the earlier inline assertions) and keep one canonical group per behavior.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "No two groups in the file assert the same AuthState behavior",
+    "dart test on the trimmed file is green with the same set of distinct behaviors covered"
+  ],
+  "labels": [
+    "testing",
+    "duplication",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-auth",
+  "chunk": "grp-042",
+  "normArea": "tests/auth",
+  "id": "AUD-t-auth-05",
+  "linearPriority": "Low"
+}

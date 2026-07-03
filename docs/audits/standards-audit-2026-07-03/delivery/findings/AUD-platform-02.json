@@ -1,0 +1,54 @@
+{
+  "title": "Drop dead UIBackgroundModes (fetch, remote-notification) from ios/Runner/Info.plist — no backing implementation exists",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Tier-2 config correctness / dead-target directive (no numbered coding-standards.md rule; general dead-code + AG posture)",
+  "area": "ios-platform-config",
+  "evidence": [
+    {
+      "file": "learning_tracker/ios/Runner/Info.plist",
+      "line": 56,
+      "quote": "<string>fetch</string>\n\t\t\t\t\t\t<string>remote-notification</string>"
+    },
+    {
+      "file": "learning_tracker/ios/Runner/AppDelegate.swift",
+      "line": 7,
+      "quote": "_ application: UIApplication,\n    didFinishLaunchingWithOptions launchOptions:"
+    },
+    {
+      "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+      "line": 184,
+      "quote": "await _plugin.zonedSchedule("
+    }
+  ],
+  "sites": 1,
+  "why": "Info.plist declares both `fetch` and `remote-notification` background modes, but AppDelegate.swift (6-18) implements no `application(_:performFetchWithCompletionHandler:)` or `application(_:didReceiveRemoteNotification:fetchCompletionHandler:)` override and never calls `registerForRemoteNotifications()`; pubspec.yaml has no `firebase_messaging` dependency; every reminder in NotificationGateway is scheduled locally via `zonedSchedule`. The keys were added wholesale in the initial iOS scaffold (b9d3a8b0) and never exercised. Concrete cost: Apple App Review Guideline 2.5.4 explicitly targets apps that declare background modes without a corresponding implementation (submission friction/rejection risk), and the stale declaration will mislead whoever next builds real push notifications into thinking server-side delivery already exists.",
+  "recommendation": "Remove the `UIBackgroundModes` key (and its two entries) from Info.plist since notification delivery is 100% local today. If server push is genuinely planned, land the capability declaration in the same change as the `firebase_messaging` dependency, the AppDelegate handler(s), and `registerForRemoteNotifications()` — not ahead of the implementation.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Info.plist has no UIBackgroundModes key, or each remaining mode has a matching handler in AppDelegate.swift referenced by a Linear ticket.",
+    "grep -A2 'UIBackgroundModes' learning_tracker/ios/Runner/Info.plist returns nothing (or only modes with matching AppDelegate.swift handlers) — usable as a Rule-0 grep checker."
+  ],
+  "labels": [
+    "ios",
+    "config",
+    "dead-code",
+    "tier2",
+    "AG"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Lowered P2->P3: the stated 'concrete cost' (App Review rejection) is unlikely in practice for fetch+remote-notification specifically; only the maintenance/misleading-signal cost is solidly concrete, which fits P3 hygiene better than P2 design debt."
+    ]
+  },
+  "sourceBatch": "t2-platform-config-p2",
+  "chunk": "grp-162",
+  "normArea": "platform",
+  "id": "AUD-platform-02",
+  "linearPriority": "Low"
+}

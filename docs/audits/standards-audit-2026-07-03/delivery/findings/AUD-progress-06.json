@@ -1,0 +1,67 @@
+{
+  "title": "Log the two silent catch blocks in lifetime_knowledge_providers.dart via AppLogger",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 (log-less catch)",
+  "area": "lib/features/progress/presentation/providers",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+      "line": 436,
+      "quote": "} catch (_) {\n            overdueCount = 0;"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+      "line": 654,
+      "quote": "} catch (_) {\n    return null;"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/items_learned_providers.dart",
+      "line": 57,
+      "quote": "} catch (_) {\n    return null;"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/items_learned_providers.dart",
+      "line": 119,
+      "quote": "} catch (_) {\n    return null;"
+    },
+    {
+      "file": "learning_tracker/lib/features/progress/presentation/providers/items_learned_providers.dart",
+      "line": 272,
+      "quote": "} catch (_) {\n    return const {};"
+    }
+  ],
+  "sites": 5,
+  "why": "Both catches swallow every exception with no AppLogger call. If programCalendarPositionProvider throws (line 430-431), overdueCount/todayDueCount silently become 0 — a falsely reassuring 'nothing overdue' on the dashboard per-track row — with zero breadcrumb to diagnose it. If getScopedContent throws inside _safeLoadLeavesForTrack (line 648), the track just vanishes from trackDualProgressMetricsProvider's output with no trace. The same file already fixes this exact anti-pattern under the F20 label for _safeLoadLeaves/_safeHeLabelLookup (lines ~570-609, which log via AppLogger.warning with event/fields/exception/stackTrace) — these two catches were never brought in line with that established, documented convention.",
+  "recommendation": "Log both catches via AppLogger.warning(event:, exception:, stackTrace:) before falling back, matching the F20 pattern used elsewhere in the same file.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both catch blocks call AppLogger before returning/defaulting",
+    "No 'catch (_) {' block in lifetime_knowledge_providers.dart lacks an adjacent AppLogger call"
+  ],
+  "labels": [
+    "error-handling",
+    "observability",
+    "progress"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-progress-p4",
+  "chunk": "grp-086",
+  "mergedFrom": [
+    "Log the 5 silent catch blocks in items_learned_providers.dart and lifetime_knowledge_providers.dart (EH-3 log-less catch)"
+  ],
+  "coDiscoverers": [
+    "t1-feat-progress-p1",
+    "t1-feat-progress-p4"
+  ],
+  "normArea": "features/progress",
+  "id": "AUD-progress-06",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,72 @@
+{
+  "title": "Migrate core/domain/value_objects/ hand-written ==/hashCode/toString classes to @freezed",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Naming/placement — \"Domain/state models are immutable @freezed classes; never hand-write ==/hashCode for data classes\"",
+  "area": "core/domain/value_objects",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/pin.dart",
+      "line": 58,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/program_starting_position.dart",
+      "line": 163,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/schedule_spec.dart",
+      "line": 106,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/scope.dart",
+      "line": 26,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/sefaria_ref.dart",
+      "line": 113,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/stage_order.dart",
+      "line": 77,
+      "quote": "bool operator ==(Object other) =>"
+    },
+    {
+      "file": "learning_tracker/lib/core/domain/value_objects/study_day_pattern.dart",
+      "line": 125,
+      "quote": "bool operator ==(Object other) {"
+    }
+  ],
+  "sites": 7,
+  "why": "Every non-enum class in this batch (Pin; ProgramStartingPosition; DelaySchedule/WeeklySchedule/RollingSchedule; ScopeLevel/ScopeValue/CurriculumScope; SefariaRef; StageOrder; StudyDayPattern — 10 classes across 7 files) hand-writes operator==/hashCode/toString rather than using @freezed, contrary to the stated codebase convention. All the ones I traced are currently correct, so this is not a live bug, but it is the exact pattern the standard calls out as risky: every future field addition to any of these classes requires manually keeping three methods in sync by hand with no compiler help, whereas @freezed generates all three from the field list and can't drift.",
+  "recommendation": "Migrate these VOs to @freezed where the validating-factory pattern (private const constructor + public validating factory) fits, which all of these already structurally resemble; note any VO where freezed genuinely doesn't fit as a documented exception in coding-standards.md rather than leaving it a silent inconsistency.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "New or materially-changed value objects in core/domain/value_objects/ use @freezed, or coding-standards.md documents an explicit lightweight-VO exception.",
+    "No behavior change: existing equality/hashCode/toString tests for these 7 files continue passing unmodified after any migration."
+  ],
+  "labels": [
+    "freezed",
+    "naming-placement",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "Finding's own enumerated list totals 11 classes, not 10 (Pin, ProgramStartingPosition, DelaySchedule, WeeklySchedule, RollingSchedule, ScopeLevel, ScopeValue, CurriculumScope, SefariaRef, StageOrder, StudyDayPattern)."
+    ]
+  },
+  "sourceBatch": "t1-core-domain-learning",
+  "chunk": "grp-017",
+  "normArea": "core/domain",
+  "id": "AUD-core-domain-07",
+  "linearPriority": "Low"
+}

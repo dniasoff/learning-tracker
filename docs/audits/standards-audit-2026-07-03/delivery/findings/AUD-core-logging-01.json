@@ -1,0 +1,54 @@
+{
+  "title": "Guard CrashlyticsService's unawaited analytics calls with catchError — unguarded rejection can re-enter the runZonedGuarded fatal-error handler",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "EH-2 / Nygard (I/O failure mid-flight)",
+  "area": "core/logging",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+      "line": 51,
+      "quote": "unawaited(_analytics.logCrashReported(fatal: true));"
+    },
+    {
+      "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+      "line": 62,
+      "quote": "unawaited(_analytics.logCrashReported(fatal: fatal));"
+    },
+    {
+      "file": "learning_tracker/lib/main.dart",
+      "line": 27,
+      "quote": "_crashlytics.recordError(error, stack, fatal: true);"
+    }
+  ],
+  "sites": 2,
+  "why": "main.dart wraps the whole app in runZonedGuarded whose error callback (lines 26-31) calls _crashlytics.recordError(...) — which is FirebaseCrashlyticsService.recordError, firing `unawaited(_analytics.logCrashReported(...))` with no .catchError attached at either of the two sites cited. If the Firebase Analytics plugin call itself rejects (platform-channel failure, SDK not yet initialized, offline queue full), that unhandled Future error is delivered back into the very same Zone installed by runZonedGuarded, invoking the identical error callback again, which calls recordError again, firing another unawaited call — a self-feeding loop precisely at the moment (an active fatal-crash report) when the app's error-handling path most needs to be inert. Contrast with streak_milestone_analytics_observer.dart in the same directory tree, which does guard its own fire-and-forget analytics call with `.catchError(...)` (line 63-70) — the inconsistency shows this omission wasn't a deliberate choice. Needs runtime confirmation: inject an AnalyticsService whose logCrashReported always rejects inside a runZonedGuarded harness and observe whether recordError re-enters.",
+  "recommendation": "Add `.catchError((_, __) {})` (or route failures through AppLogger only) to both unawaited(_analytics.logCrashReported(...)) calls in crashlytics_service.dart, matching the guard pattern already used in streak_milestone_analytics_observer.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Both fire-and-forget analytics calls in crashlytics_service.dart have an attached .catchError/try-catch so a rejected Future never re-enters the zone's onError",
+    "A regression test injects an AnalyticsService whose logCrashReported always throws, calls recordError once, and asserts it is not invoked a second time"
+  ],
+  "labels": [
+    "error-handling",
+    "crashlytics",
+    "P2",
+    "reliability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 2,
+    "totalVotes": 2,
+    "refutations": [],
+    "corrections": [
+      "main.dart citation line is off by 4: the quoted `_crashlytics.recordError(error, stack, fatal: true);` is actually at line 31 (comments above it push it down from the cited 27). Quote text itself is exact and uniquely locatable, so this is a minor citation drift, not fabrication.",
+      "main.dart quote is at line 31, not 27. The claimed mechanism ('delivered back into the very same Zone installed by runZonedGuarded') is wrong: reading dart-sdk/lib/async/zone_api.dart shows onError runs via parentZone.runBinary(), i.e. in the zone that CALLED runZonedGuarded, not the forked/guarded zone. A more plausible reentrant path is PlatformDispatcher.instance.onError, separately overridden in crashlytics_bootstrap.dart:30-34 to also call recordError — uncited evidence that would actually support the claim."
+    ]
+  },
+  "sourceBatch": "t1-core-analytics-logging",
+  "chunk": "grp-003",
+  "normArea": "core/logging",
+  "id": "AUD-core-logging-01",
+  "linearPriority": "Medium"
+}

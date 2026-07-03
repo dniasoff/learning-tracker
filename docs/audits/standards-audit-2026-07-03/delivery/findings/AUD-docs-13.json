@@ -1,0 +1,76 @@
+{
+  "title": "Reconcile qa/legacy and ux-patterns-quick-reference tutor-mode docs with the grant-based tutoring redesign",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs/qa/legacy, docs/planning",
+  "evidence": [
+    {
+      "file": "docs/qa/legacy/11-tutor-mode.md",
+      "line": 3,
+      "quote": "all 5 routes, `TutorPinGuard` active, 7 screens ... deprioritized ... no new investment"
+    },
+    {
+      "file": "docs/qa/legacy/11-tutor-mode.md",
+      "line": 265,
+      "quote": "TUTOR-10 | P0 | Cannot mark completions in tutor mode"
+    },
+    {
+      "file": "docs/qa/legacy/05-multi-track.md",
+      "line": 292,
+      "quote": "TRACK-10 | P1 | Activate tutor track prompts PIN setup"
+    },
+    {
+      "file": "docs/qa/legacy/10-parent-mode.md",
+      "line": 832,
+      "quote": "Tutor mode is read-only (FR100) while parent mode has full write access."
+    },
+    {
+      "file": "docs/planning/ux-patterns-quick-reference.md",
+      "line": 75,
+      "quote": "`TutorPinGuard` — Requires tutor PIN entry (both modes)"
+    },
+    {
+      "file": "docs/planning/ux-patterns-quick-reference.md",
+      "line": 6,
+      "quote": "linked to `ux-design-specification.md` which has been archived under [`docs/_archive/superseded/`]"
+    },
+    {
+      "file": "docs/planning/ux-patterns-quick-reference.md",
+      "line": 508,
+      "quote": "Check [UX Design Specification](ux-design-specification.md) for full rationale and mockups."
+    }
+  ],
+  "sites": 7,
+  "why": "grep confirms TutorPinGuard no longer exists anywhere in lib/ — superseded by an invite/accept/revoke M:N grant model under lib/features/tutoring/ (tutor_grant.dart, tutor_pin_entry_gate.dart, invite_tutor_screen.dart, manage_tutors_screen.dart). The 'deprioritized, no new investment' claim in 11-tutor-mode.md's own callout is itself now contradicted by this same repo's later planning docs (tutor-mode-brief.md 2026-05-20, tutor-talmid-view-plan 2026-05-26, tutor-edit-propagation-plan 2026-05-28), whose trackers record a completed multi-week rebuild that also gave tutors Manage-Tracks and Bulk-prior write access beyond 'strictly read-only.' A tester using these docs looks for a self-service Settings PIN flow that no longer exists, and would flag the now-intentional edit capability as a regression against a stale spec.",
+  "recommendation": "Mark 11-tutor-mode.md and the tutor cross-references in 05-multi-track.md/10-parent-mode.md as superseded by the grant-based model (or move 11-tutor-mode.md fully under docs/_archive, matching the existing Epic-11 archive entry), and correct the ux-patterns-quick-reference.md route-guard table.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "11-tutor-mode.md's banner reflects the grant-based redesign instead of asserting 'no new investment,' or the file moves to docs/_archive.",
+    "grep -r TutorPinGuard docs/ returns only files explicitly marked historical."
+  ],
+  "labels": [
+    "docs",
+    "tutoring",
+    "drift"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p2",
+  "chunk": "grp-170",
+  "mergedFrom": [
+    "Fix dead link to archived ux-design-specification.md in docs/planning/ux-patterns-quick-reference.md"
+  ],
+  "coDiscoverers": [
+    "t4-docs-triage-p2"
+  ],
+  "normArea": "docs",
+  "id": "AUD-docs-13",
+  "linearPriority": "Medium"
+}

@@ -1,0 +1,54 @@
+{
+  "title": "Migrate SignInController's hand-rolled Idle/Submitting/Error state to AsyncNotifier + AsyncValue.guard",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-5",
+  "area": "features/account/presentation/notifiers/sign_in_controller.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+      "line": 704,
+      "quote": "    state = const SignInSubmitting();"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+      "line": 906,
+      "quote": "        // DG-GAUTH-01: signInWithGoogle() returned without throwing (no\n        // user-cancel / interrupt) but left currentUser null — a silent JWT"
+    },
+    {
+      "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+      "line": 1013,
+      "quote": "final signInControllerProvider =\n    NotifierProvider.autoDispose<SignInController, SignInState>("
+    }
+  ],
+  "sites": 2,
+  "why": "SignInController extends plain `Notifier<SignInState>` (a hand-written sealed union: SignInIdle/SignInSubmitting/SignInError) instead of `AsyncNotifier<void>`, then hand-manages the loading/error lifecycle with ~15 manual `state = ...` assignments spread across try/catch/finally blocks in signInWithEmail and signInWithGoogle — duplicating exactly what AsyncValue.guard provides for free. This maps cleanly onto AsyncValue<void> (AsyncLoading=Submitting, AsyncData(null)=Idle, AsyncError=Error) but the team hand-rolled it instead. The class's own DG-GAUTH-01 comment documents a previously-shipped bug caused by exactly this pattern: a code path where signInWithGoogle() completed without throwing but left currentUser null previously fell through with 'zero feedback' (state silently stayed at whatever it was rather than transitioning to Error) — proof this hand-rolled machinery has already let a state-transition gap through undetected by the type system. Any new branch added to this 1017-line method carries the same risk; AsyncValue.guard would make 'forgot to set error state' structurally much harder.",
+  "recommendation": "Migrate to `class SignInController extends AsyncNotifier<void>` (or keep the SignInIdle/Submitting/Error shape but derive it FROM an underlying AsyncValue via a getter) so state transitions on the unhappy path are guaranteed by the framework rather than manually tracked across ~15 call sites.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "No code path in signInWithEmail/signInWithGoogle can leave `state` at SignInSubmitting after the method's Future completes (success or failure) — verified structurally by the AsyncNotifier/AsyncValue.guard migration rather than by manual review.",
+    "Regression test: extend the existing ensureCloudEmailVerifiedForTest-style coverage with a case asserting that EVERY awaited external call, if it throws, ends in `state is SignInError`/`AsyncError` — not silently at Idle/Submitting.",
+    "Rule-0 checker: once custom_lint is unbroken, add a rule flagging hand-rolled sealed `*State` classes with Idle/Submitting/Error (or Loading/Success/Failure)-shaped variants used as Notifier state as SM-5 AsyncNotifier-migration candidates."
+  ],
+  "labels": [
+    "sm-5",
+    "riverpod",
+    "auth",
+    "sign-in",
+    "tech-debt"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": [
+      "DG-GAUTH-01 comment (L906-910) actually describes a missed postcondition check (googleUser == null after a successful call), not a case where state 'silently stayed' un-transitioned — the prior bug explicitly returned SignInIdle; AsyncValue.guard would not have structurally prevented it since no exception was thrown. Also 'this 1017-line method' is a misnomer — the FILE is 1016 lines; the largest method (signInWithEmail) is ~186 lines. Neither error changes the core verdict: the file, and both target methods, are real, live, and match SM-5's named anti-pattern."
+    ]
+  },
+  "sourceBatch": "sup-sm5",
+  "normArea": "features/account",
+  "id": "AUD-account-14",
+  "linearPriority": "Medium"
+}

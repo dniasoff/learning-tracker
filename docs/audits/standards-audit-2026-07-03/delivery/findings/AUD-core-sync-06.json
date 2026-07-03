@@ -1,0 +1,62 @@
+{
+  "title": "Give OutboxProcessor's single-flight guard a generation token so stale-reclaim can't run concurrent drains",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard-lens (offline-queue concurrency invariant)",
+  "area": "core/sync/outbox",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 85,
+      "quote": "Duration drainStaleAfter = const Duration(seconds: 90),"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 202,
+      "quote": "if (since != null &&\n          _clock.nowUtc().difference(since) < _drainStaleAfter) {"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+      "line": 219,
+      "quote": "} finally {\n      _draining = false;"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+      "line": 228,
+      "quote": "Duration periodicDrainInterval = const Duration(seconds: 60),"
+    },
+    {
+      "file": "learning_tracker/test/core/sync/outbox/outbox_processor_test.dart",
+      "line": 1392,
+      "quote": "// reclaim only inspects the *same instance's* private state we also"
+    }
+  ],
+  "sites": 1,
+  "why": "The single-flight guard is two plain fields (_draining/_drainingSince) with no per-invocation identity. In production, OutboxProcessor is built with unmodified defaults (outbox_providers.dart:98-105: pushTimeout/drainStaleAfter never overridden) and sync_orchestrator.dart fires a periodic drain every 60s forever (Timer.periodic(_periodicDrainInterval, ...)) while drainStaleAfter is 90s. Non-completion kinds are pushed one row at a time, individually awaited (up to 50 rows x ~18 kinds) — a real multi-kind backlog on a slow connection easily exceeds 90s. When that happens, the next periodic (or connectivity/lifecycle) trigger sees the guard as 'stale', resets it, and starts a second, genuinely concurrent `_doDrain()` while the first is still running — the code comment at line 206-211 only reasons about two *reclaimers* racing each other synchronously; it never accounts for the *original* stale-but-still-running drain's own `finally` unconditionally zeroing `_draining`/`_drainingSince` once it eventually completes, which can then let a THIRD trigger barge in on top of the second. This directly breaks the documented contract ('collapses them to one push round' / sync_orchestrator.dart:568 'the OutboxProcessor's single-flight guard collapses races with other triggers'), producing duplicate concurrent Firestore pushes and racy interleaved deleteRow/markAttempted calls that can double-count a row's attempts and dead-letter a recoverable failure roughly twice as fast as _maxAttempts=10 implies. The R6-13 regression test that targets exactly this code path never builds true overlap: every scenario releases and awaits the 'wedged' pipeline to full completion before the next drain runs (its own comment admits the limitation at line 1392/1396), so the actual race is untested.",
+  "recommendation": "Replace the boolean+timestamp guard with a construct that can tell 'my invocation' apart from a later reclaimer — e.g. a monotonically increasing generation counter captured at acquire time, checked before `finally` clears state (`if (_generation == myGeneration) { _draining = false; ... }`), or switch to chaining onto the in-flight Future (a late caller awaits/joins the existing drain rather than racing a flag).",
+  "effort": "M",
+  "acceptance_criteria": [
+    "New/updated unit test keeps the first drain's pipeline call parked on a Completer, advances the clock past drainStaleAfter, drives a second (reclaiming) drain to full completion, then completes the first — and asserts the pipeline was invoked exactly once for the outstanding rows, or that DAO state is never corrupted by true overlap.",
+    "Guard implementation carries a generation token (or equivalent) so a finally block from an earlier invocation cannot clear state established by a later one."
+  ],
+  "labels": [
+    "sync",
+    "concurrency",
+    "reliability"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": [
+      "The finding's characterization of the R6-13 test as \"never builds true overlap\" is only partially accurate. Two of its three sub-scenarios (p and p2) do complete the wedged drain before proceeding. But the third sub-scenario (p3, using _TogglePipeline, lines 1440-1483) genuinely does produce true overlap: setting `hang=false` does not unblock the already-parked first call (only affects future calls), so `reclaimedCount = await p3.drain(profileId)` at line 1464 runs concurrently with the still-suspended wedgedDrain3. However, the test asserts nothing about the consequence of that overlap (no pipeline-invocation-count or DAO-corruption assertion, just `>=1`), so the finding's substantive point — no regression test guards against duplicate/racy work from true overlap — still holds even though the \"never builds true overlap\" phrasing overstates the test's limitation."
+    ]
+  },
+  "sourceBatch": "t1-core-sync-outbox",
+  "chunk": "high-024",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-06",
+  "linearPriority": "High"
+}

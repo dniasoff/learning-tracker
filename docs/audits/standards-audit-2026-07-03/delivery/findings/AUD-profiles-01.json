@@ -1,0 +1,111 @@
+{
+  "title": "Fix ParentTrackManagementScreen 'Archive (keep history)' — it wipes stage/goal/point config via deleteTrackAndData exactly like 'Delete and wipe history', and ts3_parent_track_archive_test.dart doesn't catch it",
+  "severity": "P0",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "features/profiles/presentation/screens/parent_track_management_screen.dart + features/tracks/domain/services/curriculum_activation_service.dart + core/database/daos/{active_curriculum_dao,track_dao}.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/profiles/presentation/screens/parent_track_management_screen.dart",
+      "line": 293,
+      "quote": ".read(curriculumActivationServiceProvider)\n.deactivate(curriculum);"
+    },
+    {
+      "file": "learning_tracker/lib/features/tracks/domain/services/curriculum_activation_service.dart",
+      "line": 125,
+      "quote": "await _database.activeCurriculumDao.deactivateByProfile("
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/active_curriculum_dao.dart",
+      "line": 101,
+      "quote": "/// Delegates to [TrackDao.deleteTrackAndData] for each track belonging to"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/active_curriculum_dao.dart",
+      "line": 124,
+      "quote": "await attachedDatabase.trackDao.deleteTrackAndData(track.id);"
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+      "line": 208,
+      "quote": "/// Soft-delete a track by setting state = 'deleted' and clearing config."
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+      "line": 245,
+      "quote": "state: const Value(TrackState.deleted),"
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 1935,
+      "quote": "\"deleteTrackArchive\": \"Archive (keep history)\","
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/ts3_parent_track_archive_test.dart",
+      "line": 179,
+      "quote": "// Simulate exactly what the fixed archive path does:\n// set state='archived' without deleting config rows."
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/ts3_parent_track_archive_test.dart",
+      "line": 270,
+      "quote": "child: const Text('Archive (keep history)'),"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+      "line": 558,
+      "quote": "final active = await db.trackDao.getActiveTracksForProfile(_kProfileId);\nexpect(active.any((t) => t.id == trackId), isFalse,"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/ws4_mode_boundaries_test.dart",
+      "line": 90,
+      "quote": "Widget dialogTestWidget({\n      required String childName,"
+    },
+    {
+      "file": "learning_tracker/test/features/profiles/presentation/ws4_mode_boundaries_test.dart",
+      "line": 104,
+      "quote": "return AlertDialog(\n                      title: Text(dl10n.switchIntoChildTitle),"
+    },
+    {
+      "file": "learning_tracker/lib/l10n/app_en.arb",
+      "line": 729,
+      "quote": "\"switchIntoChildTitle\": \"Switch to child view\","
+    }
+  ],
+  "sites": 13,
+  "why": "A parent long-presses a track and taps 'Archive (keep history)'; the dialog literally asks 'What should happen to your child's completion history?' implying preservation. The real handler calls curriculumActivationServiceProvider.deactivate() -> ActiveCurriculumDao.deactivateByProfile() -> TrackDao.deleteTrackAndData(), whose own doc-comment says it 'clears config' by hard-deleting goals, stage_definitions, daily_plan rows, point_config, curriculum_scope, study_day_config, track_learning_order and the program-enrolment row, then sets state='deleted' — functionally identical to the 'Delete and wipe history' option (purgeHistory), which only additionally hard-deletes the track row and tombstones completions. `grep -rn TrackState.archived lib/` finds zero writers anywhere in production code — the 'archived' state the TS-3 fix was supposed to introduce is dead. None of the tests that claim to guard this catch it: ts3's 'DB unit' test hand-writes state=archived directly instead of calling deactivate()/deactivateByProfile(); its 'widget' test discards the real screen and shows a hand-built AlertDialog with hardcoded 'Archive (keep history)' text, so it always passes regardless of what the production dialog does; and the l1 suite's archive test only checks the track is absent from the *active* list, which is equally true whether state is 'archived' or 'deleted'. Repo-wide search found no other test (active_curriculum_dao_test.dart, track_dao_last_curriculum_guard_test.dart, epic_26_story_26_22_track_management_body_test.dart) asserting config survives a real deactivate() call — one of those files even names deleteTrackAndData's soft-delete '(archive)' in its own test description, i.e. the codebase's own test suite has internalised 'archive = wipe config' as normal, contradicting the UI copy and the TS-3 docstring's stated intent.",
+  "recommendation": "Product decision required: (a) implement genuine archive semantics — set state=TrackState.archived and skip the config-table deletes in the code path 'archive' actually calls, or (b) if wiping config on archive is intentional, fix the misleading 'Archive (keep history)' / 'your child's completion history' copy to say what really happens and delete the dead TrackState.archived constant. Either way, rewrite ts3_parent_track_archive_test.dart's widget test to drive the real ParentTrackManagementScreen (longPress + tap on the actual widget tree, as parent_track_management_screen_l1_test.dart already does) and assert on stage_definitions/goal/point_config row survival, not a hand-rolled dialog.",
+  "effort": "M",
+  "acceptance_criteria": [
+    "A widget test that longPresses a track on the real ParentTrackManagementScreen, taps the real 'Archive (keep history)' action, and asserts stage_definitions/goals/point_config rows for that track still exist afterward — this test fails on current main and passes only after the fix.",
+    "`grep -rn 'TrackState.archived' learning_tracker/lib/` finds at least one write site (currently zero).",
+    "ts3_parent_track_archive_test.dart's widget test pumps ParentTrackManagementScreen and interacts with its actual dialog, not a hand-built AlertDialog."
+  ],
+  "labels": [
+    "data-loss",
+    "profiles",
+    "tracks",
+    "test-quality",
+    "TS-3",
+    "child-data"
+  ],
+  "originalSeverity": "P0",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 3,
+    "totalVotes": 3,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-profiles-p3",
+  "chunk": "high-066",
+  "mergedFrom": [
+    "Replace ws4_mode_boundaries_test.dart's hand-rolled WS4.boundary dialog with the real production widget"
+  ],
+  "coDiscoverers": [
+    "t1-feat-profiles-p3",
+    "t1-feat-profiles-p4"
+  ],
+  "normArea": "features/profiles",
+  "id": "AUD-profiles-01",
+  "linearPriority": "Urgent"
+}

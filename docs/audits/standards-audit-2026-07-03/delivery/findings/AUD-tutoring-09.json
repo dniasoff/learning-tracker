@@ -1,0 +1,51 @@
+{
+  "title": "Localize TutorPinValidationError.message instead of leaking raw English into tutor PIN screens",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-5 / AX-2",
+  "area": "features/tutoring/domain+presentation",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_pin_service.dart",
+      "line": 93,
+      "quote": "return const TutorPinValidationError(\n        message: 'Tutor PIN must be exactly 4 numeric digits.',"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart",
+      "line": 130,
+      "quote": "_errorMessage = message;"
+    },
+    {
+      "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+      "line": 114,
+      "quote": "_errorMessage = message;"
+    }
+  ],
+  "sites": 3,
+  "why": "TutorPinValidationError carries a hand-written English message that both tutor_pin_setup_screen.dart and tutor_pin_entry_gate.dart assign straight into _errorMessage with no AppLocalizations resolution. The on-screen numpad only ever calls verifyTutorPin/setTutorPin with exactly 4 digits, so this specific branch is currently unreachable via the shipped UI — but it is a live landmine: any future caller (automation, a text-entry fallback, a reused validator) will render untranslated English to Hebrew users. This is the exact pattern already fixed for TutorGrantFailure elsewhere in the same feature, so the fix here is a straightforward extension of an established precedent.",
+  "recommendation": "Replace the message field with a stable code/enum and resolve it via AppLocalizations in both screens, mirroring the TutorGrantFailure fix.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "TutorPinValidationError carries a code, not a literal English string",
+    "tutor_pin_setup_screen.dart and tutor_pin_entry_gate.dart resolve the code via AppLocalizations with EN+HE parity",
+    "a widget test forces the validation-error branch (e.g. directly invoking the service with a malformed pin) and asserts the localized string renders"
+  ],
+  "labels": [
+    "EH-5",
+    "i18n",
+    "P2"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "grp-123",
+  "normArea": "features/tutoring",
+  "id": "AUD-tutoring-09",
+  "linearPriority": "Medium"
+}

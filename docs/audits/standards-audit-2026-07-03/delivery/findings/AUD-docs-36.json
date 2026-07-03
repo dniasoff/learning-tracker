@@ -1,0 +1,45 @@
+{
+  "title": "Strip leaked `</content>`/`</invoke>` tool-call artifacts from committed planning docs",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8",
+  "area": "docs/planning",
+  "evidence": [
+    {
+      "file": "docs/planning/test-coverage-matrix.md",
+      "line": 224,
+      "quote": "</content>"
+    },
+    {
+      "file": "docs/planning/test-fix-bug-log.md",
+      "line": 841,
+      "quote": "</content>"
+    }
+  ],
+  "sites": 2,
+  "why": "Both files end with literal leftover XML-ish tags from whatever agent tool call authored them (an unstripped Write/Edit tool-call content boundary), not markdown content — verified via direct `tail`/`grep` on disk, independent of any tool rendering. Harmless to rendering but signals the authoring pipeline occasionally commits raw tool-call framing into tracked docs.",
+  "recommendation": "Delete the trailing artifact lines; add a pre-commit/`make audit` grep for `^</(content|invoke)>$` under docs/ to catch this class of leak before commit (Rule 0 style).",
+  "effort": "S",
+  "acceptance_criteria": [
+    "grep -rn '</content>\\|</invoke>' docs/ returns no matches.",
+    "A committed check greps docs/ for stray tool-tag artifacts."
+  ],
+  "labels": [
+    "docs",
+    "hygiene",
+    "tooling"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t4-docs-triage-p2",
+  "chunk": "grp-171",
+  "normArea": "docs",
+  "id": "AUD-docs-36",
+  "linearPriority": "Low"
+}

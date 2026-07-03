@@ -1,0 +1,43 @@
+{
+  "title": "Delete or fix the redundant weak step-count assertion in add_track_flow_screen_l1_test.dart",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8 / TQ-7 (weakened assertion; redundant test)",
+  "area": "test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart",
+      "line": 360,
+      "quote": "'self-paced Chumash step count is >= 5 (includes all self-paced steps)',"
+    },
+    {
+      "file": "learning_tracker/test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart",
+      "line": 378,
+      "quote": "expect(total, greaterThanOrEqualTo(4));"
+    }
+  ],
+  "sites": 1,
+  "why": "The test name claims '>= 5', the inline comment says the real count is '6', but the assertion only requires '>= 4' — three different numbers for one check. The very next test ('self-paced Chumash shows exactly 6 total steps', line 383) already asserts the precise, correct invariant (== 6), making this one both weaker than its own documentation and fully redundant.",
+  "recommendation": "Delete this test (superseded by the exact-6 test immediately below it), or tighten its assertion to match its name/comment.",
+  "effort": "S",
+  "acceptance_criteria": [
+    "Only the exact-count assertion remains for this scenario"
+  ],
+  "labels": [
+    "test-quality",
+    "hygiene"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "grp-118",
+  "normArea": "tests/tracks",
+  "id": "AUD-t-tracks-07",
+  "linearPriority": "Low"
+}

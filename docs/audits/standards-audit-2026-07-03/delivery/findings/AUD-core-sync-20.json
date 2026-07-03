@@ -1,0 +1,62 @@
+{
+  "title": "Extend FirestorePermissionDeniedException conversion beyond the 2 read call sites it currently covers",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Nygard lens (mandatory for this area) — permission-denied at every I/O point; EH-2 typed-exception boundary",
+  "area": "core/sync/exceptions (firestore_permission_denied_exception.dart) + its callers in firestore_gateway_impl.dart/outbox_dao.dart",
+  "evidence": [
+    {
+      "file": "learning_tracker/lib/core/sync/exceptions/firestore_permission_denied_exception.dart",
+      "line": 3,
+      "quote": "Thrown when a Firestore operation returns PERMISSION_DENIED."
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 1206,
+      "quote": "throw FirestorePermissionDeniedException("
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 527,
+      "quote": "operation: 'read',"
+    },
+    {
+      "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+      "line": 277,
+      "quote": "throw SyncPushException("
+    },
+    {
+      "file": "learning_tracker/lib/core/database/daos/outbox_dao.dart",
+      "line": 149,
+      "quote": "(t.lastError.like('%permission-denied%') |"
+    }
+  ],
+  "sites": 1,
+  "why": "_guardPermission (firestore_gateway_impl.dart:1197-1215) is the ONLY code in the app that ever throws FirestorePermissionDeniedException, and it wraps exactly 2 of this gateway's ~30 Firestore I/O methods — fetchPage (524) and fetchChildPage (1051), both reads, both with operation hardcoded to 'read'. None of the ~23 push* (write) methods route through it: pushStreak/pushSettings/pushTrack (288-337) issue raw .set() calls with no try/catch at all, and pushCompletionsBatch (246-285) wraps any commit failure — including permission-denied — as a generic SyncPushException instead. Traced end to end: OutboxProcessor absorbs every push failure internally (never rethrows to any AsyncValue/UI, so this is not a UI-facing bug), but the dedicated permission_denied analytics event in sync_orchestrator.dart (gated on `e is FirestorePermissionDeniedException`) therefore fires only from the pull path and never from an outbox push. The write path's only detector of this failure class is outbox_dao.dart's reviveIdentityDeadLetters, which pattern-matches raw persisted error text (`lastError.like('%permission-denied%')`) instead of a structured type — a duplicated, Firestore-SDK-wording-dependent re-derivation of the exact fact this exception exists to represent. This repo's own docs (on-device-preflight-cheatsheet.md, bug-hunt-findings-2026-05-31.md) call permission-denied on writes 'a known recurring failure mode in this project,' yet the typed signal for it covers roughly 1 in 15 of the gateway's I/O surface.",
+  "recommendation": "Route every push*/fetch* method in firestore_gateway_impl.dart through _guardPermission (or an equivalent shared wrapper) with an accurate operation value (read/write/delete) instead of only the 2 fetch methods, so FirestorePermissionDeniedException becomes the single source of truth for 'this failure was permission-denied' on both read and write paths. Then simplify outbox_dao.dart's reviveIdentityDeadLetters to check a structured signal instead of a LIKE-pattern on free text.",
+  "effort": "L",
+  "acceptance_criteria": [
+    "count of _guardPermission( call sites in firestore_gateway_impl.dart increases beyond the current 2 to cover write (push*) methods",
+    "a new test asserts a push method (e.g. pushCompletionsBatch) surfaces FirestorePermissionDeniedException — not a generic SyncPushException/raw FirebaseException — when the underlying commit fails with code permission-denied",
+    "a test shows sync_orchestrator's permission_denied analytics event firing from a simulated outbox push failure, not only from pullOnLaunch"
+  ],
+  "labels": [
+    "sync",
+    "observability",
+    "nygard-lens",
+    "permission-denied"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+    "status": "UPHELD",
+    "upheldVotes": 1,
+    "totalVotes": 1,
+    "refutations": [],
+    "corrections": []
+  },
+  "sourceBatch": "t1-core-sync-exceptions",
+  "chunk": "grp-028",
+  "normArea": "core/sync",
+  "id": "AUD-core-sync-20",
+  "linearPriority": "Medium"
+}
