@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
@@ -401,6 +403,87 @@ void main() {
       // Should have seen: Submitting → Idle (cancelled, no error).
       expect(states, contains(isA<SignInSubmitting>()));
       expect(states.last, isA<SignInIdle>());
+    });
+  });
+
+  // ── AUD-account-02: autoDispose mid-await safety ────────────────────────────
+  //
+  // SignInController is registered `autoDispose`. If the user backs out of
+  // the sign-in screen while a request is in flight, Riverpod tears the
+  // notifier down; any subsequent `ref.read`/`state =` touch throws
+  // UnmountedRefException. Pre-fix, sign_in_controller.dart had zero
+  // `ref.mounted` guards anywhere, so this exception escaped uncaught from
+  // both the happy-path continuation and the notifier's own catch/finally
+  // blocks (which themselves wrote to `state`).
+  //
+  // BUG LOG:
+  //   - RED (pre-fix): the "container disposed mid-await" case below threw
+  //     UnmountedRefException out of the awaited signInWithGoogle() future
+  //     (state = SignInError(...) in the catch block touched the disposed
+  //     notifier).
+
+  group('SignInController — autoDispose mid-await safety (AUD-account-02)', () {
+    test('signInWithGoogle: disposing the container mid-await does not let '
+        'UnmountedRefException escape', () async {
+      final mockAuth = _MockAuthRepository();
+      final completer = Completer<void>();
+      when(
+        () => mockAuth.signInWithGoogle(),
+      ).thenAnswer((_) => completer.future);
+
+      final container = _makeContainer(authRepo: mockAuth);
+      final l10n = await _stubL10n();
+      final controller = container.read(signInControllerProvider.notifier);
+
+      // Kick off the sign-in — it suspends on the completer below, mirroring
+      // the real await on Firebase's Google token exchange.
+      final future = controller.signInWithGoogle(
+        router: _StubRouter(),
+        l10n: l10n,
+      );
+
+      // The user backs out of the sign-in screen while "Signing in..." is
+      // showing — autoDispose tears the notifier down mid-request.
+      container.dispose();
+
+      // The pending signInWithGoogle() call now resolves, resuming the
+      // controller's code with a disposed `ref`.
+      completer.complete();
+
+      // Must complete WITHOUT throwing. Pre-fix, the resumed continuation's
+      // `_ref.read(authRepositoryProvider)` (and, once caught, the catch
+      // block's `state = SignInError(...)`) threw UnmountedRefException.
+      await expectLater(future, completes);
+    });
+
+    test('signInWithGoogle: a GoogleSignInException thrown after the container '
+        'is disposed does not let UnmountedRefException escape', () async {
+      final mockAuth = _MockAuthRepository();
+      final completer = Completer<void>();
+      when(
+        () => mockAuth.signInWithGoogle(),
+      ).thenAnswer((_) => completer.future);
+
+      final container = _makeContainer(authRepo: mockAuth);
+      final l10n = await _stubL10n();
+      final controller = container.read(signInControllerProvider.notifier);
+
+      final future = controller.signInWithGoogle(
+        router: _StubRouter(),
+        l10n: l10n,
+      );
+
+      container.dispose();
+      completer.completeError(
+        const GoogleSignInException(
+          code: GoogleSignInExceptionCode.unknownError,
+          description: 'unknown error',
+        ),
+      );
+
+      // Exercises the `on GoogleSignInException catch` branch specifically
+      // (not the generic `catch`) with a disposed ref.
+      await expectLater(future, completes);
     });
   });
 
