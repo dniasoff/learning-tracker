@@ -34,6 +34,16 @@
 // [TutorWriteException] so callers can surface a clear snackbar. This matches
 // the offline-first contract — the local Drift write already happened before
 // this layer is consulted.
+//
+// AUD-tutoring-07 — partial multi-stage failure (pushStageDefinitions):
+// stage upserts are sequential CF calls, not one atomic batch. If a call
+// fails partway through, the earlier stages have already committed
+// server-side and there is no local outbox to pick them back up (see
+// above — tutored writes deliberately bypass the outbox). Decision:
+// accepted as a surfaced-not-silent risk, not an automatic retry path.
+// [TutorWriteException.succeededStageIds] carries the stage IDs that
+// committed before the failing one so the caller can decide whether to
+// retry just the remaining subset instead of losing state silently.
 
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
@@ -44,9 +54,20 @@ import 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 ///
 /// Callers should catch this and surface a snackbar — never silently strand.
 class TutorWriteException implements Exception {
-  const TutorWriteException(this.message, {this.code});
+  const TutorWriteException(
+    this.message, {
+    this.code,
+    this.succeededStageIds = const [],
+  });
   final String message;
   final String? code;
+
+  /// AUD-tutoring-07 — for [TutoredWriteRouter.pushStageDefinitions], the
+  /// stage IDs (`{trackId}_{stageOrder}`) that already committed
+  /// server-side before this failure. Empty for every other (single-write)
+  /// failure. Lets the caller retry just the remaining subset instead of
+  /// losing the partial-success state silently.
+  final List<String> succeededStageIds;
 
   @override
   String toString() => 'TutorWriteException($code): $message';
@@ -138,6 +159,10 @@ class TutoredWriteRouter implements SyncWriteFacade {
     }
 
     final profileIdInt = int.parse(sel.profileId);
+    // AUD-tutoring-07: track which stages already committed so a mid-loop
+    // CF failure can name them instead of throwing an opaque exception —
+    // see the class header for the accepted-risk decision.
+    final succeededStageIds = <String>[];
     for (final stage in stages) {
       final stageOrder = stage['stage_order']?.toString() ?? '';
       final stageId = '${trackId}_$stageOrder';
@@ -154,7 +179,22 @@ class TutoredWriteRouter implements SyncWriteFacade {
         stageId: stageId,
         stageData: payload,
       );
-      _handleResult(result, 'tutorUpsertStageDefinition[$stageId]');
+      if (result case TutorWriteFailure(:final message, :final code)) {
+        AppLogger.instance.error(
+          event: 'tutored_write_router_cf_failure',
+          fields: {
+            'fn': 'tutorUpsertStageDefinition[$stageId]',
+            'code': code ?? 'unknown',
+            'succeededStageIds': succeededStageIds.join(','),
+          },
+        );
+        throw TutorWriteException(
+          message,
+          code: code,
+          succeededStageIds: List.unmodifiable(succeededStageIds),
+        );
+      }
+      succeededStageIds.add(stageId);
     }
   }
 
