@@ -465,13 +465,23 @@
     {
       "id": "AUD-core-database-03",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Add UNIQUE(profileId, ulid) to PointsLedger and RewardRedemptions — sync merge can double-credit a child's points",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "1dd456b3bf684dff75c014f33a43150832feb684"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-database-03 AC1 OK: UNIQUE @TableIndex(profileId,ulid) added to both PointsLedger + RewardRedemptions (points_balance.dart:37,101; .g.dart Index defs+registered)",
+        "AUD-core-database-03 AC1 OK: v34 onUpgrade dedups pre-existing dupes, m.createIndex both, re-derives stale balance; partial-schema-fixture guarded (user_database.dart)",
+        "AUD-core-database-03 AC1 OK: v33_to_v34_test.dart PASS - dedup, balance 23->13 repair, NULL-ulid+clean profile untouched, LWW redemption survives, dup insert throws",
+        "AUD-core-database-03 AC1 NOTE: schema-export not shipped - documented repo-wide DB-4 gap (coding-standards.md:878, no drift_schemas/); out of scope",
+        "AUD-core-database-03 AC2 OK: dao_test Future.wait of two same-ulid inserts asserts exactly 1 win, ledger len 1, balance==10; PASS on real DB",
+        "AUD-core-database-03 fix-real OK: DAO SELECT-then-INSERT -> insertReturningOrNull+insertOrIgnore closes TOCTOU at DB layer; caller merger:53-66 keeps semantics",
+        "AUD-core-database-03 red-first OK: commit body shows red run (Expected<1> Actual<2>); race reproduces via await points; test asserts behavior not mocks"
+      ],
+      "notes": "Added UNIQUE(profileId,ulid) index to both tables, v33->v34 migration (dedups + repairs balance), switched to insertReturningOrNull+insertOrIgnore. Red test caught plain insert() rowid!=0 unreliable. Schema-export JSON omitted per documented DB-4 gap + v33 precedent."
     },
     {
       "id": "AUD-core-preferences-03",
