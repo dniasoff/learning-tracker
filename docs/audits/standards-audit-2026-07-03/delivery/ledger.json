@@ -1531,13 +1531,18 @@
     {
       "id": "AUD-tutoring-12",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Stop misreporting a failed local PIN clear as a failed reset email in TutorPinResetScreen",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "012b041c130c84b102649ed8977fb577e5a64a96"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-tutoring-12 AC1 OK: clear step now own catch, only logs, never sets _errorMessage; clear-throw after send cannot show tutorPinResetSendFailed",
+        "AUD-tutoring-12 AC2 OK: test stubs send-ok + clear throw, asserts send-failed string findsNothing + failure logged; red-first 0b70e59b; 11/11 PASS"
+      ],
+      "notes": "Confirmed: one shared catch always set tutorPinResetSendFailed even if clearTutorPin failed after a successful send. Split into independent try/catch blocks; clear failure no longer shown as send failure, is logged via AppLogger instead. Red-first test failed then passed. Commit 0b70e59b."
     },
     {
       "id": "AUD-t-tutoring-06",
@@ -4589,13 +4594,18 @@
     {
       "id": "AUD-tutoring-13",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Type and log the catch block in TutorPinResetScreen._sendResetEmail",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "de52d320a90ed23584fb5b72a8a85f22125fa960"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-tutoring-13 AC1 OK: send catch calls AppLogger.error(event,exception,stackTrace) before setState; test asserts exception+stackTrace isNotNull",
+        "AUD-tutoring-13 AC2 OK: both catches 'on Exception catch (e, stackTrace)', no bare catch(e); satisfies EH-4, analyze+custom_lint clean"
+      ],
+      "notes": "Confirmed: bare catch(e) trapped Errors and logged nothing. Narrowed both catches to on Exception catch(e, stackTrace) (real throws are FirebaseAuthException/PlatformException, both Exception subtypes); added AppLogger.error before setState. Red-first test failed then passed. Commit 85b3e9e9."
     },
     {
       "id": "AUD-t-tutoring-05",
