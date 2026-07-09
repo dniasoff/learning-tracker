@@ -12,56 +12,57 @@
 // preserve the hard security invariant (canMarkLiveCompletion is always false —
 // it is not configurable).
 
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'tutor_permissions.freezed.dart';
+
 /// Immutable value object encapsulating tutor permissions for a single grant.
 ///
 /// The ONLY immutable invariant: [canMarkLiveCompletion] is always `false`.
 /// Tutors are NEVER permitted to write live-forward completions regardless of
 /// parent configuration. The Cloud Function enforces this independently.
-class TutorPermissions {
-  const TutorPermissions({
-    this.canViewProgress = true,
-    this.canViewContent = true,
-    this.canBulkPriorCompletion = true,
-    this.canResetCompletion = false,
-    this.canEditGoals = true,
-    this.canEditStages = true,
-    this.canEditRewards = true,
-    this.canEditStudyDays = true,
-    this.canEditPoints = true,
-  }) : canMarkLiveCompletion = false;
+@freezed
+abstract class TutorPermissions with _$TutorPermissions {
+  // Private const constructor required for the custom canMarkLiveCompletion
+  // getter and toFirestore/fromFirestore methods below.
+  const TutorPermissions._();
 
-  // Intentionally not in constructor — always false.
-  // ignore: prefer_const_constructors_in_immutables (it IS const — the field is final)
-  final bool canMarkLiveCompletion;
+  const factory TutorPermissions({
+    /// Tutor can view the learner's progress dashboards and reports.
+    @Default(true) bool canViewProgress,
 
-  /// Tutor can view the learner's progress dashboards and reports.
-  final bool canViewProgress;
+    /// Tutor can browse and navigate the curriculum content.
+    @Default(true) bool canViewContent,
 
-  /// Tutor can browse and navigate the curriculum content.
-  final bool canViewContent;
+    /// Tutor can submit bulk-prior completions (via Cloud Function proxy).
+    @Default(true) bool canBulkPriorCompletion,
 
-  /// Tutor can submit bulk-prior completions (via Cloud Function proxy).
-  final bool canBulkPriorCompletion;
+    /// Tutor can reset completion state for a specific item.
+    @Default(false) bool canResetCompletion,
 
-  /// Tutor can reset completion state for a specific item.
-  final bool canResetCompletion;
+    /// Tutor can create, edit, or delete learning goals.
+    @Default(true) bool canEditGoals,
 
-  /// Tutor can create, edit, or delete learning goals.
-  final bool canEditGoals;
+    /// Tutor can change stage configuration (delay days, pace).
+    @Default(true) bool canEditStages,
 
-  /// Tutor can change stage configuration (delay days, pace).
-  final bool canEditStages;
+    /// Tutor can configure reward settings (points per item, etc.).
+    @Default(true) bool canEditRewards,
 
-  /// Tutor can configure reward settings (points per item, etc.).
-  final bool canEditRewards;
+    /// Tutor can change the learner's scheduled study days.
+    @Default(true) bool canEditStudyDays,
 
-  /// Tutor can change the learner's scheduled study days.
-  final bool canEditStudyDays;
+    /// H5: Tutor can configure point settings and apply manual point
+    /// adjustments (`parent_points_adjust`). Distinct from [canEditGoals]
+    /// (learning goals) and [canEditRewards] (reward catalogue).
+    @Default(true) bool canEditPoints,
+  }) = _TutorPermissions;
 
-  /// H5: Tutor can configure point settings and apply manual point
-  /// adjustments (`parent_points_adjust`). Distinct from [canEditGoals]
-  /// (learning goals) and [canEditRewards] (reward catalogue).
-  final bool canEditPoints;
+  /// Intentionally NOT a constructor field — always false, and therefore
+  /// structurally excluded from the generated `==`/`hashCode`/`copyWith`.
+  /// Tutors can never set this regardless of parent configuration; the
+  /// Cloud Function enforces the invariant independently.
+  bool get canMarkLiveCompletion => false;
 
   /// Default permissions for a newly accepted grant.
   ///
@@ -78,29 +79,6 @@ class TutorPermissions {
     canEditRewards: false,
     canEditStudyDays: false,
     canEditPoints: false,
-  );
-
-  TutorPermissions copyWith({
-    bool? canViewProgress,
-    bool? canViewContent,
-    bool? canBulkPriorCompletion,
-    bool? canResetCompletion,
-    bool? canEditGoals,
-    bool? canEditStages,
-    bool? canEditRewards,
-    bool? canEditStudyDays,
-    bool? canEditPoints,
-  }) => TutorPermissions(
-    canViewProgress: canViewProgress ?? this.canViewProgress,
-    canViewContent: canViewContent ?? this.canViewContent,
-    canBulkPriorCompletion:
-        canBulkPriorCompletion ?? this.canBulkPriorCompletion,
-    canResetCompletion: canResetCompletion ?? this.canResetCompletion,
-    canEditGoals: canEditGoals ?? this.canEditGoals,
-    canEditStages: canEditStages ?? this.canEditStages,
-    canEditRewards: canEditRewards ?? this.canEditRewards,
-    canEditStudyDays: canEditStudyDays ?? this.canEditStudyDays,
-    canEditPoints: canEditPoints ?? this.canEditPoints,
   );
 
   /// Serialise to the nested Firestore map stored in tutor_grants/{grantId}.
@@ -132,45 +110,4 @@ class TutorPermissions {
         canEditStudyDays: data['can_edit_study_days'] as bool? ?? true,
         canEditPoints: data['can_edit_points'] as bool? ?? true,
       );
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is TutorPermissions &&
-          other.canViewProgress == canViewProgress &&
-          other.canViewContent == canViewContent &&
-          other.canBulkPriorCompletion == canBulkPriorCompletion &&
-          other.canResetCompletion == canResetCompletion &&
-          other.canEditGoals == canEditGoals &&
-          other.canEditStages == canEditStages &&
-          other.canEditRewards == canEditRewards &&
-          other.canEditStudyDays == canEditStudyDays &&
-          other.canEditPoints == canEditPoints;
-
-  @override
-  int get hashCode => Object.hash(
-    canViewProgress,
-    canViewContent,
-    canBulkPriorCompletion,
-    canResetCompletion,
-    canEditGoals,
-    canEditStages,
-    canEditRewards,
-    canEditStudyDays,
-    canEditPoints,
-  );
-
-  @override
-  String toString() =>
-      'TutorPermissions('
-      'viewProgress=$canViewProgress, '
-      'viewContent=$canViewContent, '
-      'bulkPrior=$canBulkPriorCompletion, '
-      'resetCompletion=$canResetCompletion, '
-      'editGoals=$canEditGoals, '
-      'editStages=$canEditStages, '
-      'editRewards=$canEditRewards, '
-      'editStudyDays=$canEditStudyDays, '
-      'editPoints=$canEditPoints, '
-      'markLive=false[invariant])';
 }
