@@ -63,7 +63,13 @@ export async function seedActiveGrant(permissions = {}, overrides = {}) {
     .set({
       tutor_uid: TUTOR,
       parent_uid: PARENT,
-      child_profile_id: PROFILE,
+      // AUD-firebase-07: String(PROFILE), matching every production writer
+      // (inviteTutor requires childProfileId to be a string — see
+      // functions/src/index.ts). Storing PROFILE as a bare JS number here
+      // made listTutorGrants' outgoing-mode Firestore '==' query (which
+      // compares against a string) never match, silently returning zero
+      // results and making that test path untestable for regressions.
+      child_profile_id: String(PROFILE),
       state: 'active',
       permissions,
       tutor_name_snapshot: 'Mr Tutor',

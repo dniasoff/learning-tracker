@@ -273,8 +273,12 @@ describe('listTutorGrants', () => {
   });
 
   test('outgoing mode happy path → returns grant for parent+child', async () => {
-    // child_profile_id is stored as a number (PROFILE=5) in seedActiveGrant;
-    // outgoing query uses childProfileId as a string — check the query matches.
+    // AUD-firebase-07: seedActiveGrant stores child_profile_id as a STRING
+    // (String(PROFILE)) matching every production writer (inviteTutor
+    // requires childProfileId to be a string). The outgoing-mode Firestore
+    // '==' query is type-strict, so this genuinely exercises the query
+    // path — a real regression in listTutorGrants' outgoing query would
+    // fail this assertion.
     await seedActiveGrant();
 
     const res = await call(
@@ -283,11 +287,10 @@ describe('listTutorGrants', () => {
       parentAuth,
     );
 
-    assert.equal(Array.isArray(res.grants), true);
-    // The Firestore '==' query on child_profile_id (stored as number) vs string
-    // may return 0 results — this exercises the path without asserting count.
-    // A length assertion would be fragile due to type coercion in Firestore.
-    assert.ok(res.grants !== undefined);
+    assert.equal(res.grants.length, 1);
+    assert.equal(res.grants[0].id, GRANT);
+    assert.equal(res.grants[0].parent_uid, PARENT);
+    assert.equal(res.grants[0].child_profile_id, String(PROFILE));
   });
 
   test('pending_for_me mode with no email on token → returns empty array', async () => {
