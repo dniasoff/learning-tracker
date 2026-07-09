@@ -590,6 +590,24 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
   const normalEmail = tutorEmail.trim().toLowerCase();
   const encodedEmail = encodeEmailForDocId(normalEmail);
   const grantId = `${encodedEmail}__${callerUid}__${childProfileId}`;
+
+  // AUD-firebase-02: grantId is deterministic, so a second inviteTutor call
+  // for the same tutor+child pair would otherwise silently overwrite the
+  // SAME doc unconditionally — resetting an already-active grant back to
+  // 'pending' with fresh request-supplied default permissions (while the
+  // existing tutor_active_access index doc is untouched, leaving the tutor
+  // with live read access even though tutor_grants.state now says
+  // 'pending'). Reject re-invites while the grant is active; the caller
+  // should use the permission-editing flow instead.
+  const existingSnap = await db.collection("tutor_grants").doc(grantId).get();
+  if (existingSnap.exists && existingSnap.data()!.state === "active") {
+    throw new HttpsError(
+      "failed-precondition",
+      `A tutor grant for ${normalEmail} on this child is already active. ` +
+        "Use the permission-editing flow to change it instead of re-inviting."
+    );
+  }
+
   const now = admin.firestore.Timestamp.now();
   const expiresAt = new Date(now.toDate().getTime() + 7 * 24 * 60 * 60 * 1000);
 

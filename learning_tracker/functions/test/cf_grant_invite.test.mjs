@@ -100,6 +100,47 @@ describe('inviteTutor', () => {
     assert.equal(data.state, 'pending');
     assert.equal(data.parent_uid, PARENT);
   });
+
+  // AUD-firebase-02: grantId is deterministic ({email}__{parentUid}__{profileId}),
+  // so a second inviteTutor call for the same tutor+child pair must not
+  // silently reset an already-active grant back to 'pending' with fresh
+  // default permissions — a parent re-sending an invite (or a duplicate form
+  // submission) must not silently re-grant a permission the parent had
+  // explicitly turned off.
+  test('AUD-firebase-02: re-inviting while the grant is already active does not silently reset state/permissions', async () => {
+    const res1 = await call(fns.inviteTutor, goodArgs, parentAuth);
+    const grantId = res1.grantId;
+    const customPermissions = {
+      can_view_progress: true,
+      can_view_content: true,
+      can_bulk_prior_completion: false, // parent explicitly turned this OFF
+      can_reset_completion: false,
+      can_edit_goals: false,
+      can_edit_stages: false,
+      can_edit_rewards: false,
+      can_edit_study_days: false,
+      can_edit_points: false,
+    };
+    await db.collection('tutor_grants').doc(grantId).update({
+      state: 'active',
+      tutor_uid: TUTOR,
+      permissions: customPermissions,
+    });
+
+    await expectHttpsError(
+      call(fns.inviteTutor, goodArgs, parentAuth),
+      'failed-precondition',
+    );
+
+    const after = (await db.collection('tutor_grants').doc(grantId).get()).data();
+    assert.equal(after.state, 'active', 'state must remain active, not reset to pending');
+    assert.deepEqual(
+      after.permissions,
+      customPermissions,
+      'permissions must not be silently reset to the request-supplied defaults',
+    );
+    assert.equal(after.tutor_uid, TUTOR, 'tutor_uid must not be cleared');
+  });
 });
 
 // ── acceptTutorInvite ─────────────────────────────────────────────────────────
