@@ -31,6 +31,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -601,6 +602,80 @@ void main() {
 
         // No errors thrown; banner correctly absent.
         expect(find.textContaining('Offline'), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+  });
+
+  // ── AX-4 — large text scale must not silently clip the banner ─────────────
+  //
+  // AUD-account-15: the banner Container hard-coded height: 32, which forces
+  // the same tight cross-axis height onto the Row wrapping the icon + label.
+  // Container does not clip its child by default, so at large accessibility
+  // text scales the label painted past the 32px band instead of the banner
+  // growing to fit it — and because this is a *cross*-axis (vertical) squeeze
+  // inside a Row, Flutter's "RenderFlex overflowed" detector never fires (it
+  // only reports *main*-axis overflow), so `tester.takeException()` stays
+  // null even while the label clips. This test therefore measures the
+  // label's true single-line intrinsic height directly against the banner's
+  // rendered height rather than relying on a thrown overflow error.
+  group('OfflineTopBanner — AX-4 large text scale', () {
+    testWidgets(
+      'banner grows to fit its label at 2.5x text scale (no silent clip)',
+      (tester) async {
+        // Wide viewport so only the VERTICAL fit is under test — a narrow
+        // viewport would also trip an unrelated horizontal overflow that has
+        // nothing to do with AUD-account-15's fixed-height defect.
+        tester.view.physicalSize = const Size(2400, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) {
+              final media = MediaQuery.of(context);
+              return MediaQuery(
+                data: media.copyWith(textScaler: const TextScaler.linear(2.5)),
+                child: child!,
+              );
+            },
+            home: const Scaffold(body: OfflineTopBanner(visible: true)),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final bannerSize = tester.getSize(find.byType(OfflineTopBanner));
+        final textFinder = find.descendant(
+          of: find.byType(OfflineTopBanner),
+          matching: find.byType(Text),
+        );
+        final textRenderObject = tester.renderObject<RenderParagraph>(
+          textFinder,
+        );
+        final singleLineHeight = textRenderObject.getMinIntrinsicHeight(
+          double.infinity,
+        );
+
+        expect(
+          bannerSize.height,
+          greaterThanOrEqualTo(singleLineHeight),
+          reason:
+              'AUD-account-15: the banner must grow to fit its label at '
+              'large text scale rather than clip it inside a fixed-height '
+              'band. Rendered banner height ${bannerSize.height} must be >= '
+              "the label's single-line intrinsic height $singleLineHeight "
+              'at 2.5x text scale.',
+        );
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);
