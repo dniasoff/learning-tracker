@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -150,6 +151,13 @@ void main() {
       when(
         () => mockAuthRepo.sendPasswordResetEmail(_kEmail),
       ).thenAnswer((_) => completer.future);
+      // clearTutorPin runs after the send completes below — stub it so the
+      // post-completion continuation resolves cleanly instead of hitting an
+      // unstubbed-mock error (this test only cares about the in-flight
+      // state, not the post-completion step).
+      when(
+        () => mockPinService.clearTutorPin(_kProfileId),
+      ).thenAnswer((_) async {});
 
       await tester.pumpWidget(buildSubject());
       await tester.pump();
@@ -233,6 +241,109 @@ void main() {
     expect(find.text('Check your email'), findsNothing);
 
     await tearDownWidget(tester);
+  });
+
+  // ── AUD-tutoring-12 — clearTutorPin failure after a successful send ──────
+  //
+  // A clearTutorPin failure AFTER a successful sendPasswordResetEmail must
+  // NOT be reported as a send failure — the email genuinely sent, so telling
+  // the user otherwise would prompt a retry that sends a second real reset
+  // email while the true failure (local PIN not cleared) goes unaddressed.
+  group('AUD-tutoring-12 — clearTutorPin failure after a successful send', () {
+    setUp(() => AppLogger.init());
+
+    testWidgets(
+      'clearTutorPin failing after a successful send does not claim the '
+      'email failed',
+      (tester) async {
+        when(
+          () => mockAuthRepo.sendPasswordResetEmail(_kEmail),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockPinService.clearTutorPin(_kProfileId),
+        ).thenThrow(Exception('secure storage delete failed'));
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+
+        await tester.tap(find.text('Send reset email'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // Must NOT show the "send failed" string — the email really sent.
+        expect(
+          find.text('Failed to send reset email. Please try again.'),
+          findsNothing,
+        );
+
+        // The clearTutorPin failure must still be recorded, not dropped
+        // (AUD-tutoring-12's own "why" — full typed logging is AUD-13).
+        final failureEntry = AppLogger.instance.talker.history.where(
+          (e) => e.generateTextMessage().contains(
+            'tutor_pin_reset_clear_local_pin_failed',
+          ),
+        );
+        expect(
+          failureEntry,
+          isNotEmpty,
+          reason:
+              'Expected the clearTutorPin failure to be logged via '
+              'AppLogger. Talker history: '
+              '${AppLogger.instance.talker.history.map((e) => e.generateTextMessage()).toList()}',
+        );
+        expect(failureEntry.first.exception, isNotNull);
+
+        await tearDownWidget(tester);
+      },
+    );
+  });
+
+  // ── AUD-tutoring-13 — type and log the catch block ────────────────────────
+  //
+  // The bare `catch (e)` in _sendResetEmail's send step had no `on X` type,
+  // so it also trapped Error subtypes (StateError, TypeError, ...) from a
+  // programmer bug and converted them into the same generic "send failed"
+  // message with zero AppLogger call — a real defect would look identical
+  // to a normal network failure, with no trace to diagnose it.
+  group('AUD-tutoring-13 — type and log the catch block', () {
+    setUp(() => AppLogger.init());
+
+    testWidgets('a failed send logs the exception and stack trace via AppLogger '
+        'before surfacing the error message', (tester) async {
+      when(
+        () => mockAuthRepo.sendPasswordResetEmail(_kEmail),
+      ).thenThrow(Exception('network error'));
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      await tester.tap(find.text('Send reset email'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.text('Failed to send reset email. Please try again.'),
+        findsOneWidget,
+      );
+
+      final failureEntry = AppLogger.instance.talker.history.where(
+        (e) => e.generateTextMessage().contains(
+          'tutor_pin_reset_send_email_failed',
+        ),
+      );
+      expect(
+        failureEntry,
+        isNotEmpty,
+        reason:
+            'Expected the send failure to be logged via AppLogger before '
+            'surfacing the UI error message. Talker history: '
+            '${AppLogger.instance.talker.history.map((e) => e.generateTextMessage()).toList()}',
+      );
+      expect(failureEntry.first.exception, isNotNull);
+      expect(failureEntry.first.stackTrace, isNotNull);
+
+      await tearDownWidget(tester);
+    });
   });
 
   // ── Test: no-email → shows tutorPinResetNoEmail error ───────────────────

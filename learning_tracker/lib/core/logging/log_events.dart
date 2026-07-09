@@ -172,6 +172,13 @@ final class _TutorEvents {
   String get pinVerified => 'tutor_pin_verified';
   String get pinFailed => 'tutor_pin_failed';
 
+  // PIN reset flow (AUD-tutoring-12 / AUD-tutoring-13) — the two steps of
+  // TutorPinResetScreen's reset flow are logged separately so a failure is
+  // attributable to the step that actually failed.
+  String get pinResetSendEmailFailed => 'tutor_pin_reset_send_email_failed';
+  String get pinResetClearLocalPinFailed =>
+      'tutor_pin_reset_clear_local_pin_failed';
+
   // Blocked operation
   String get liveMarkBlocked => 'tutor_live_mark_blocked';
 }

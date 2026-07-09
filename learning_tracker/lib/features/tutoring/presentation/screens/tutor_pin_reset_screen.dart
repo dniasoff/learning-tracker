@@ -16,6 +16,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -71,26 +73,58 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
       _isSending = true;
       _errorMessage = null;
     });
-    try {
-      final authRepo = ref.read(authRepositoryProvider);
-      await authRepo.sendPasswordResetEmail(email);
 
-      // Clear the local PIN so the user can re-create it after reset.
-      final pinService = ref.read(tutorPinServiceProvider);
-      await pinService.clearTutorPin(widget.profileId);
+    // AUD-tutoring-12 / AUD-tutoring-13: send and local-PIN-clear are two
+    // independent operations, each in its own typed try/catch, so a failure
+    // is attributed to the step that actually failed and is always logged.
+    // Previously both awaits shared one bare `catch (e)`, which (a) reported
+    // a clearTutorPin failure as "failed to send" even though the email had
+    // already sent — a real risk of the user retrying and triggering a
+    // second reset email — and (b) trapped Error subtypes (masking real
+    // programming bugs) with zero AppLogger call, making a genuine defect
+    // indistinguishable from a normal network failure.
+    try {
+      try {
+        final authRepo = ref.read(authRepositoryProvider);
+        await authRepo.sendPasswordResetEmail(email);
+      } on Exception catch (e, stackTrace) {
+        AppLogger.instance.error(
+          event: LogEvents.tutor.pinResetSendEmailFailed,
+          exception: e,
+          stackTrace: stackTrace,
+        );
+        if (mounted) {
+          setState(
+            () => _errorMessage = AppLocalizations.of(
+              context,
+            )!.tutorPinResetSendFailed,
+          );
+        }
+        return;
+      }
+
+      // The reset email has been sent successfully at this point. Clearing
+      // the local Tutor PIN is best-effort bookkeeping — TutorPinSetupScreen
+      // unconditionally overwrites the stored PIN hash when the tutor sets
+      // their new PIN, so a failure here does not block the reset flow. It
+      // must never be reported as a send failure, but it must still be
+      // recorded rather than silently dropped.
+      try {
+        final pinService = ref.read(tutorPinServiceProvider);
+        await pinService.clearTutorPin(widget.profileId);
+      } on Exception catch (e, stackTrace) {
+        AppLogger.instance.error(
+          event: LogEvents.tutor.pinResetClearLocalPinFailed,
+          fields: {'profileId': widget.profileId},
+          exception: e,
+          stackTrace: stackTrace,
+        );
+      }
 
       if (!mounted) return;
       // Invalidate so TutorPinEntryGate sees pinIsSet = false.
       ref.invalidate(tutorPinIsSetProvider(widget.profileId));
       setState(() => _step = _ResetStep.emailSent);
-    } catch (e) {
-      if (mounted) {
-        setState(
-          () => _errorMessage = AppLocalizations.of(
-            context,
-          )!.tutorPinResetSendFailed,
-        );
-      }
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
