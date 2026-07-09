@@ -421,6 +421,66 @@ void main() {
   });
 
   // ────────────────────────────────────────────────────────────────────────────
+  // AUD-tutoring-17: a malformed (non-numeric) profileId must surface the
+  // class's documented TutorWriteException contract, never a raw
+  // FormatException that callers catching TutorWriteException won't see.
+  // ────────────────────────────────────────────────────────────────────────────
+
+  group(
+    'AUD-tutoring-17 — malformed profileId guarded (not raw FormatException)',
+    () {
+      test('pushGoal with non-numeric profileId → TutorWriteException, not '
+          'FormatException', () async {
+        final record = _FakeInvokerRecord();
+        final delegate = _FakeDelegate();
+        const badSelection = TutoredProfileSelection(
+          profileId: 'not-a-number',
+          ownerUid: _ownerUid,
+          grantId: _grantId,
+          permissions: _fullPerms,
+        );
+        final router = TutoredWriteRouter(
+          delegate: delegate,
+          writeService: TutorWriteService(invoker: record.call),
+          selection: badSelection,
+        );
+
+        await expectLater(
+          () => router.pushGoal({'id': 'goal_xyz'}),
+          throwsA(isA<TutorWriteException>()),
+        );
+        // The CF must never be reached with an unparseable profileId.
+        expect(record.wasCalled, isFalse);
+      });
+
+      test(
+        'deleteCompletion with non-numeric profileId → TutorWriteException',
+        () async {
+          final record = _FakeInvokerRecord();
+          final delegate = _FakeDelegate();
+          const badSelection = TutoredProfileSelection(
+            profileId: 'nan',
+            ownerUid: _ownerUid,
+            grantId: _grantId,
+            permissions: _fullPerms,
+          );
+          final router = TutoredWriteRouter(
+            delegate: delegate,
+            writeService: TutorWriteService(invoker: record.call),
+            selection: badSelection,
+          );
+
+          await expectLater(
+            () => router.deleteCompletion('comp_1'),
+            throwsA(isA<TutorWriteException>()),
+          );
+          expect(record.wasCalled, isFalse);
+        },
+      );
+    },
+  );
+
+  // ────────────────────────────────────────────────────────────────────────────
   // AC2: non-tutored session → delegate called, CF NOT invoked
   // ────────────────────────────────────────────────────────────────────────────
 
