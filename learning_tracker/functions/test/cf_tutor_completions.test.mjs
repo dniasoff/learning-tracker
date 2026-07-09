@@ -1,5 +1,6 @@
-// CF tests — tutor completion mutations: tutorResetCompletion,
-// tutorBulkPriorCompletions. See _cf_helpers.mjs for the harness.
+// CF tests — tutor completion mutations: tutorResetCompletion.
+// tutorBulkPriorCompletions is tested in cf_tutor_settings_profile.test.mjs.
+// See _cf_helpers.mjs for the harness.
 
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
