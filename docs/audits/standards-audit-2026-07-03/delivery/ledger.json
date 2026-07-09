@@ -1347,13 +1347,18 @@
     {
       "id": "AUD-account-06",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Add try/catch around onSendAgain/onVerified in EmailVerificationConfirmPanel and un-skip the C6/E5 regression tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "44988a1b8df87311e5ab08bf8fb25609364aaac7"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-account-06 AC1 OK: panel.dart:170/191 both wrappers now catch(e,st)+AppLogger.warning(exception,stackTrace), finally resets flag; no bare try/finally",
+        "AUD-account-06 AC2 OK: skip:true removed from C6 & E5; reporter shows C6 +11, E5 +18 both pass; only unrelated H1 skip remains"
+      ],
+      "notes": "Verified try/finally-no-catch bug at cited lines; reload path unguarded, reachable. Red-first: un-skipped C6/E5, 2 failed w/ unhandled Exception. Fix: catch + AppLogger.warning in both wrappers (matches existing signOut-failure pattern). Re-ran: all pass."
     },
     {
       "id": "AUD-dashboard-06",
