@@ -36,13 +36,37 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Displays all device accounts from the registry with tier badges,
 /// session status, and swipe-to-remove/delete actions.
 @RoutePage()
-class AccountPickerScreen extends ConsumerWidget {
+class AccountPickerScreen extends ConsumerStatefulWidget {
   const AccountPickerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AccountPickerScreen> createState() =>
+      _AccountPickerScreenState();
+}
+
+class _AccountPickerScreenState extends ConsumerState<AccountPickerScreen> {
+  // AUD-account-07: captured ONCE in initState, not rebuilt inside build().
+  // registry.getAllAccounts() called directly inside `Widget build()`
+  // (via `FutureBuilder(future: registry.getAllAccounts())`) returned a
+  // brand-new Future every rebuild — FutureBuilder tracks futures by
+  // identity, so any unrelated rebuild of this widget (switching accounts,
+  // a locale/theme change, any ancestor rebuild) restarted the
+  // FutureBuilder into ConnectionState.waiting, flashing the loading
+  // spinner over an already-rendered list and re-querying the device
+  // registry. deviceRegistryProvider is `keepAlive: true` (an app-lifetime
+  // singleton opened once at startup), so reading it once here — rather
+  // than watching it in build() — loses no reactivity.
+  late final Future<List<DeviceAccount>> _accountsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _accountsFuture = ref.read(deviceRegistryProvider).getAllAccounts();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final registry = ref.watch(deviceRegistryProvider);
     // AN-4: read the active DB filename so we can pin the active account
     // at position 0 for a stable, deterministic ordering. The remaining
     // accounts are sorted by createdAt-equivalent (accountId UUID is v4 and
@@ -57,7 +81,7 @@ class AccountPickerScreen extends ConsumerWidget {
       backgroundColor: AppColors.surfaceF5,
       body: SafeArea(
         child: FutureBuilder<List<DeviceAccount>>(
-          future: registry.getAllAccounts(),
+          future: _accountsFuture,
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
