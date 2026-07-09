@@ -1,0 +1,21 @@
+# bmad-prfaq override for bmad-docmost (wiki-first; the PRFAQ is DURABLE product-concept canon).
+# Sparse, append-only — copy to {project-root}/_bmad/custom/bmad-prfaq.toml during install.
+# A Working-Backwards PRFAQ (press release + FAQ) is a durable strategic artifact, not
+# ephemeral scratch: one living node per product concept, updated in place. Closes the gap
+# where an analyst running PRFAQ was still file-first. Routing delegates to skill:doc-amend.
+
+[workflow]
+
+activation_steps_prepend = [
+  "WIKI-FIRST — this is a living-wiki project and the wiki manual OUTRANKS local files. The PRFAQ is DURABLE product-concept canon, never ephemeral scratch. Before any local-file discovery, resolve what the manual already holds for this concept: invoke skill:doc-read-first (`docmost-cli search '\"<product concept / PRFAQ title>\"' --cached --content --space {docmost_space} --output json`, then `docmost-cli page get <slug> --output json`); also try `docmost-cli ai ask \"<the concept question>\" --output json` for a cited answer from existing canon. Treat the wiki page — not the local filesystem — as the source of truth and the PRIMARY existing input. How to access the wiki: file:{project-root}/_bmad/doc/data/wiki-first-mandate.md.",
+  "Report the WIKI status FIRST (PRFAQ / product-concept page: exists or absent; status draft|canonical, slug, one-line summary), then any local artifacts. NEVER conclude 'no PRFAQ exists' or 'create a new file' from the local filesystem alone. If a living page EXISTS, amend it in place (current-state-only, P4); never spawn a dated sibling (P1).",
+]
+
+# Route the finished PRFAQ into the living manual as durable product-concept canon.
+on_complete = "Route the finished PRFAQ into the project's living manual via skill:doc-amend (find-before-create across drafts AND canonical for this product concept → ASK one plain-English question on a fuzzy match → AMEND the existing node in place with `docmost-cli page patch <slug> --if-version <updated_at>` keeping the body current-state-only → else CREATE `docmost-cli page create '<PRFAQ / product concept>' --space {docmost_space} --parent <product-brief-ia-node-slug> --doc-type product-brief --status draft --content @<local-artifact> --output json`, NEVER --status canonical; the PRFAQ anchors under the product-brief / product IA node as the concept's living record). Surface the url/slug; the page lands as DRAFT pending human ratification (doc-ratify) — AI never self-promotes. The wiki node is authoritative — any local file is a transient working draft. If docmost-cli is unavailable or exits non-zero, WARN the user and name the unsynced local draft; do not silently demote it to authoritative."
+
+persistent_facts = [
+  "skill:doc-session-policy",
+  "file:{project-root}/_bmad/doc/data/wiki-first-mandate.md",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+]

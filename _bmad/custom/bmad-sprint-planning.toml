@@ -1,0 +1,14 @@
+# bmad-sprint-planning override for bmad-linear
+# Sparse — only fields changed from stock. Copy to _bmad/custom/bmad-sprint-planning.toml.
+# tracking_system is read by the skill after _bmad/lnr/bin/apply-patch.sh is applied (Wave 3 / S6).
+# status_file maps to the status_file variable used in the sprint-planning SKILL.md paths block.
+
+[workflow]
+tracking_system = "linear"
+tracking_adapter = "lnr-tracking-adapter"
+status_file = "linear://{linear_scope}/work-status"
+persistent_facts = [
+  "skill:lnr-session-policy",
+  "skill:lnr-tracking-adapter",
+  "Tracking system is Linear. Read work-status from the repo-local cache (.cache/linear/work-status.yaml, gitignored); auto-run `_bmad/lnr/tools/linear-sync.sh sync` if cache is missing or > 30 min old. Sprint planning creates project-milestones and issues in Linear via lnr-tracking-adapter.create_issue (linearis CLI) — an issue is tagged to its milestone (former BMAD epic) via the issue projectMilestone field, a sub-task is a sub-issue via parentId, and a cycle is the ~1-week team time-box (former BMAD sprint, orthogonal to the milestone hierarchy) (transport: verify the linearis/Linear flag; project-milestone assignment and cycle creation may require the Linear UI or a future linear-cli verb). Run `_bmad/lnr/tools/linear-sync.sh sync` after bulk creation to populate cache. Linear is canonical; do not write a local work-status.yaml.",
+]

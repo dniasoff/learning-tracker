@@ -1,0 +1,15 @@
+# Dual version pin (PLAN §C.2.5): upstream BMAD version + cross-guard composition.
+# Re-validate after every BMAD install / Quick Update.
+#
+# bmm (upstream):           6.8.0
+# composition (cross-guard): linear v0.2.0  (rank 0)
+#                            docmost v0.1.0 (rank 1, applies against linear's REPLACE output)
+#
+# linear v0.2.0 (no-epics remodel: milestones/cycles + repo-local .cache/linear/ cache)
+# bumped the per-guard version comments only — anchors and REPLACE bodies are unchanged.
+# MUST be re-validated against BMAD 6.8 before relying on it: re-derive every anchor
+# against the installed 6.8 skill sources and re-confirm the cross-guard composition.
+#
+6.8.0 — 2026-05-29 — S6-region-merge-composer — linear v0.2.0 + docmost v0.1.0
+  anchors verified against ~/repos/BMAD-METHOD-UPSTREAM/src/bmm-skills/4-implementation/ (under linear v0.1.0; PENDING re-validation for v0.2.0 against BMAD 6.8)
+  docmost create-story anchor re-derived against bmad-linear-patch v0.2.0 Guard 3 REPLACE output

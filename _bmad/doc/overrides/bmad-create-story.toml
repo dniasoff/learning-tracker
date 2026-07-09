@@ -1,0 +1,67 @@
+# bmad-create-story override for bmad-docmost (the wiki-first spec gate).
+#
+# === CROSS-MODULE COMPOSITION — READ BEFORE INSTALLING ===
+# This is the ONE override skill that bmad-docmost AND bmad-linear BOTH
+# contribute. bmad-linear ships its own overrides/bmad-create-story.toml, and
+# BOTH modules' install notes say "copy to {project-root}/_bmad/custom/" — i.e.
+# the SAME destination file: _bmad/custom/bmad-create-story.toml.
+#
+# The BMAD customization resolver (src/scripts/resolve_customization.py) merges
+# exactly THREE layers per skill — {skill}/customize.toml -> _bmad/custom/{skill}.toml
+# -> _bmad/custom/{skill}.user.toml. It reads ONE team file per skill; it has NO
+# notion of two modules each shipping a bmad-create-story.toml. There is also no
+# installer step that merges module override files: install is a manual
+# `cp overrides/*.toml _bmad/custom/` per module. So a second blind copy CLOBBERS
+# the first (last-writer-wins) — whichever module is copied last silently wins,
+# dropping the other module's keys (breaking either Linear tracking OR the
+# wiki-first facts).
+#
+# THEREFORE: do NOT blind-copy this file over Linear's. MERGE the two into a
+# single _bmad/custom/bmad-create-story.toml. The composition is additive and
+# conflict-free at the key level:
+#   - bmad-linear OWNS: tracking_system, tracking_adapter, status_file,
+#     default_output_file, and its lnr-* persistent_facts. Keep them verbatim.
+#   - bmad-docmost ADDS ONLY the persistent_facts below. They union with Linear's
+#     (resolve_customization arrays without code/id append — base then override),
+#     so the merged [workflow].persistent_facts is Linear's list FOLLOWED BY these.
+#
+# Merged result (copy Linear's file to _bmad/custom/bmad-create-story.toml first,
+# then append these four strings to its persistent_facts array):
+#
+#   [workflow]
+#   tracking_system    = "linear"          # from bmad-linear
+#   tracking_adapter   = "lnr-tracking-adapter"
+#   status_file        = "linear://{linear_scope}/sprint-status"
+#   default_output_file = "linear://{linear_scope}/stories/{story_key}"
+#   persistent_facts = [
+#     "skill:lnr-session-policy",          # ── Linear's (keep verbatim) ──
+#     "skill:lnr-tracking-adapter",
+#     "Tracking system is Linear. ...",
+#     "skill:doc-spec-gate",               # ── docmost adds (below) ──
+#     "skill:doc-read-first",
+#     "file:{project-root}/_bmad/doc/data/decision-order.md",
+#     "the manual outranks the code; record+confirm intent before implementing",
+#   ]
+#
+# If bmad-linear is NOT installed, copy this file's [workflow] block alone to
+# _bmad/custom/bmad-create-story.toml (the wiki-first facts stand on their own;
+# the gate behaviour itself is injected by the SKILL.md patch, not by this file).
+#
+# Why facts, not behaviour: the create-story wiki-first gate (record intent via
+# doc-amend -> human confirm <ask> -> server mints the spec token, gated by
+# wiki_first_enforcement) is INJECTED into the skill by
+# bmad-docmost/bin/patches/6.8/bmad-create-story.patch. This override only LOADS
+# doc-spec-gate / doc-read-first and the wiki-first doctrine as persistent session
+# facts so they are active when create-story runs.
+
+[workflow]
+
+# Additive — these UNION onto bmad-linear's persistent_facts (see header). Never
+# drop Linear's tracking_system / tracking_adapter / status_file /
+# default_output_file or its lnr-* facts.
+persistent_facts = [
+  "skill:doc-spec-gate",
+  "skill:doc-read-first",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+  "the manual outranks the code; record+confirm intent before implementing",
+]

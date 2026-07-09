@@ -1,0 +1,49 @@
+# Linear entity → field mapping for bmad-linear.
+# Copy to _bmad/custom/ and fill in project-specific values.
+#
+# Model (no epics): BMAD epic → Linear project-milestone; BMAD story → Linear issue
+# (tagged to its milestone via the issue projectMilestone field + parentId for sub-issues);
+# BMAD sprint → Linear cycle. Issues are NOT classified by title regex — they carry an
+# explicit projectMilestone and (optionally) parentId. The repo-local cache is populated by
+# linear-sync.sh sync into .cache/linear/work-status.yaml.
+
+# --- scope identity ---
+linear_initiative: <linear-initiative>   # matches config.yaml: linear_initiative (REQUIRED scope)
+# linear_project: <linear-project>       # legacy single-project scope (sync command only); NOT a
+                                          # substitute for linear_initiative — see config.yaml
+team_key: <team-key>                      # e.g. ENG, DNI  (example team keys)
+default_branch: dev
+
+# --- milestone name → Linear project-milestone identifier ---
+# A milestone is a ProjectMilestone inside the project (the former "epic", now a real
+# milestone — NOT a parent "[Epic N]" issue). Issues attach to it via projectMilestone.
+# Format: milestone name (e.g. "Foundations") → project-milestone id (UUID).
+# Populated automatically by linear-sync.sh sync.
+milestones: {}
+
+# --- cycle number → Linear cycle identifier (optional) ---
+# A cycle is a ~1-week team time-box (the former "sprint"); orthogonal to milestones.
+# Format: cycle number (e.g. "12") → cycle id (UUID).
+# Populated automatically by linear-sync.sh sync.
+cycles: {}
+
+# --- status mapping ---
+# BMAD internal status → Linear state name (must match your workspace state names exactly).
+# Passed verbatim as `linearis issues update --status "<value>"`.
+status_map:
+  backlog:       "Backlog"
+  ready-for-dev: "Todo"
+  in-progress:   "In Progress"
+  done:          "Done"
+  cancelled:     "Cancelled"
+
+# --- assignee mapping ---
+# Linear user identifier for default issue assignee (optional; leave blank for unassigned).
+# Accepts user UUID, name, email, or "me" — passed verbatim by the tracking adapter.
+default_assignee_id: ""
+
+# Note: issues are no longer classified by title regex. Each issue carries an explicit
+# projectMilestone (its milestone) and, for sub-issues, a parentId — so the former
+# epic_title_pattern / story_title_pattern contracts are retired. The Linear write
+# capabilities (CLI flag contracts) live in the lnr-tracking-adapter, which keeps
+# dispatching writes through its current transport.

@@ -1,0 +1,24 @@
+# Dual version pin (PLAN §C.2.5) for the bmad-docmost contributor.
+# This contributor's guards are composed AFTER bmad-linear (rank 1 vs rank 0) by
+# the shared bmad-patch-engine. Re-validate after every BMAD install / Quick Update
+# AND whenever bmad-linear's create-story Guard 3 REPLACE output changes.
+#
+# bmm (upstream):            6.9.0
+# this contributor:          docmost v0.1.0
+# composes against:          bmad-linear-patch v0.2.0 (create-story Guard 3 REPLACE output)
+#
+6.9.0 — 2026-06-25 — promoted from 6.8 — docmost v0.1.0 against linear v0.2.0
+  Patch set promoted from 6.8 → 6.9: anchors verified present in BMAD 6.9.0 installed
+  2026-06-25 on orvex-studio-mcp. Patch bodies and composition unchanged from 6.8.
+
+6.8.0 — 2026-05-29 — wiki-first gate (create-story only) — docmost v0.1.0 against linear v0.1.0
+  bmad-create-story has TWO anchors (BOTH branches of Linear Guard 3, so the gate fires
+  regardless of tracking_system — production ships tracking_system="linear"):
+    Guard 1 = Linear Guard 3 FILE-SYSTEM branch status-flip + completion note.
+    Guard 2 = Linear Guard 3 NON-file-system (tracking-adapter/Linear) branch: deferral action + status flip.
+
+6.8.0 — 2026-05-31 — wiki-first orientation (brainstorming) — docmost v0.1.0 (no linear dependency)
+  bmad-brainstorming is a CORE-skill (no customize.toml / resolver), so a [workflow]
+  override would be dead config — it is made wiki-first by this SKILL.md patch instead.
+    Guard 1 = anchors on the clean upstream SKILL.md line "Follow the instructions in
+    ./workflow.md." (no Linear guard touches brainstorming, so no re-derivation/collision).

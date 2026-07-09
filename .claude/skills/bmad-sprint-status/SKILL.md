@@ -140,8 +140,16 @@ Run `/bmad:bmm:workflows:sprint-planning` to generate it, then rerun sprint-stat
 
 Enter corrections (e.g., "1=in-progress, 2=backlog") or "skip" to continue without fixing:</ask>
 <check if="user provided corrections">
-<action>Update sprint-status.yaml with corrected values</action>
-<action>Re-parse the file with corrected statuses</action>
+  <check if="{workflow.tracking_system}=='file-system'">
+    <!-- bmad-linear-patch v0.2.0 -->
+    <action>Update sprint-status.yaml with corrected values</action>
+    <action>Re-parse the file with corrected statuses</action>
+  </check>
+  <check if="{workflow.tracking_system}!='file-system'">
+    <!-- bmad-linear-patch v0.2.0 -->
+    <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local sprint-status.yaml.</action>
+    <action>Re-parse status from the tracking adapter cache with corrected statuses</action>
+  </check>
 </check>
 </check>
 
@@ -296,3 +304,5 @@ If the command targets a story, set `story_key={{next_story_id}}` when prompted.
 </step>
 
 </workflow>
+
+<!-- bmad-linear-patch:applied:v0.2.0 -->

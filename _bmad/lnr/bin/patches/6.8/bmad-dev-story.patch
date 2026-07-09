@@ -1,0 +1,107 @@
+# bmad-dev-story.patch — guards for bmad-dev-story/SKILL.md
+# Validated against BMAD-METHOD 6.8.0 on 2026-05-28.
+#
+# Four guards. When tracking_system == 'file-system' the original behaviour
+# is preserved; otherwise control defers to the tracking adapter.
+#
+# Guard 1: Step 4 — baseline_commit frontmatter write (defers to adapter.set_baseline_commit on Linear).
+# Guard 2: Step 4 — sprint-status "in-progress" write.
+# Guard 3: Step 8 — "Save the story file".
+# Guard 4: Step 9 — sprint-status "review" write block.
+
+# Guard 1: baseline_commit frontmatter write (file-system only; adapter stores it on the Linear issue).
+GUARD_START
+ANCHOR_BEGIN
+    <check if="{{current_status}} == 'ready-for-dev' AND story file YAML frontmatter does NOT contain baseline_commit">
+      <action>Run `git rev-parse HEAD` to capture current commit into {{baseline_commit}}; if git/version control is unavailable, set {{baseline_commit}} = `NO_VCS`</action>
+      <action>If story file YAML frontmatter exists, add `baseline_commit: {{baseline_commit}}` to the frontmatter</action>
+      <action>If story file has no YAML frontmatter, create frontmatter at the top containing only `baseline_commit: {{baseline_commit}}`</action>
+    </check>
+ANCHOR_END
+REPLACE_BEGIN
+    <check if="{workflow.tracking_system}=='file-system'">
+      <!-- bmad-linear-patch v0.2.0 -->
+      <check if="{{current_status}} == 'ready-for-dev' AND story file YAML frontmatter does NOT contain baseline_commit">
+        <action>Run `git rev-parse HEAD` to capture current commit into {{baseline_commit}}; if git/version control is unavailable, set {{baseline_commit}} = `NO_VCS`</action>
+        <action>If story file YAML frontmatter exists, add `baseline_commit: {{baseline_commit}}` to the frontmatter</action>
+        <action>If story file has no YAML frontmatter, create frontmatter at the top containing only `baseline_commit: {{baseline_commit}}`</action>
+      </check>
+    </check>
+    <check if="{workflow.tracking_system}!='file-system'">
+      <!-- bmad-linear-patch v0.2.0 -->
+      <check if="{{current_status}} == 'ready-for-dev'">
+        <action>Run `git rev-parse HEAD` to capture current commit into {{baseline_commit}}; if git/version control is unavailable, set {{baseline_commit}} = `NO_VCS`</action>
+        <action>Call {workflow.tracking_adapter}.set_baseline_commit(issue_id={{story_key}}, sha={{baseline_commit}}) — posts a discussion comment to the Linear issue.</action>
+      </check>
+    </check>
+REPLACE_END
+GUARD_END
+
+# Guard 2: Mark story in-progress in sprint-status.yaml (step 4).
+GUARD_START
+ANCHOR_BEGIN
+        <action>Update the story in the sprint status report to = "in-progress"</action>
+        <action>Update last_updated field to current date</action>
+ANCHOR_END
+REPLACE_BEGIN
+        <check if="{workflow.tracking_system}=='file-system'">
+          <!-- bmad-linear-patch v0.2.0 -->
+          <action>Update the story in the sprint status report to = "in-progress"</action>
+          <action>Update last_updated field to current date</action>
+        </check>
+        <check if="{workflow.tracking_system}!='file-system'">
+          <!-- bmad-linear-patch v0.2.0 -->
+          <action>Defer to {workflow.tracking_adapter} for this operation. Update story status to in-progress via the tracking adapter.</action>
+        </check>
+REPLACE_END
+GUARD_END
+
+# Guard 3: Save the story file (step 8).
+GUARD_START
+ANCHOR_BEGIN
+    <action>Save the story file</action>
+ANCHOR_END
+REPLACE_BEGIN
+    <check if="{workflow.tracking_system}=='file-system'">
+      <!-- bmad-linear-patch v0.2.0 -->
+      <action>Save the story file</action>
+    </check>
+    <check if="{workflow.tracking_system}!='file-system'">
+      <!-- bmad-linear-patch v0.2.0 -->
+      <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local file.</action>
+    </check>
+REPLACE_END
+GUARD_END
+
+# Guard 4: Sprint-status "review" write block (step 9).
+GUARD_START
+ANCHOR_BEGIN
+    <check if="{sprint_status} file exists AND {{current_sprint_status}} != 'no-sprint-tracking'">
+      <action>Load the FULL file: {sprint_status}</action>
+      <action>Find development_status key matching {{story_key}}</action>
+      <action>Verify current status is "in-progress" (expected previous state)</action>
+      <action>Update development_status[{{story_key}}] = "review"</action>
+      <action>Update last_updated field to current date</action>
+      <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
+      <output>✅ Story status updated to "review" in sprint-status.yaml</output>
+    </check>
+ANCHOR_END
+REPLACE_BEGIN
+    <check if="{workflow.tracking_system}=='file-system'">
+      <!-- bmad-linear-patch v0.2.0 -->
+      <check if="{sprint_status} file exists AND {{current_sprint_status}} != 'no-sprint-tracking'">
+        <action>Load the FULL file: {sprint_status}</action>
+        <action>Find development_status key matching {{story_key}}</action>
+        <action>Verify current status is "in-progress" (expected previous state)</action>
+        <action>Update development_status[{{story_key}}] = "review"</action>
+        <action>Update last_updated field to current date</action>
+        <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
+        <output>✅ Story status updated to "review" in sprint-status.yaml</output>
+      </check>
+    </check>
+    <check if="{workflow.tracking_system}!='file-system'">
+      <!-- bmad-linear-patch v0.2.0 -->
+      <action>Defer to {workflow.tracking_adapter} for this operation. Update story status to review via the tracking adapter.</action>
+    </check>
+REPLACE_END
+GUARD_END

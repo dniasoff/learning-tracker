@@ -232,7 +232,14 @@ Activation is complete. If `activation_steps_prepend` or `activation_steps_appen
 - Define success criteria for implementation
 
 <action>Present complete Sprint Change Proposal to user</action>
-<action>Write Sprint Change Proposal document to {default_output_file}</action>
+<check if="{workflow.tracking_system}=='file-system'">
+  <!-- bmad-linear-patch v0.2.0 -->
+  <action>Write Sprint Change Proposal document to {default_output_file}</action>
+</check>
+<check if="{workflow.tracking_system}!='file-system'">
+  <!-- bmad-linear-patch v0.2.0 -->
+  <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local file. Record the Sprint Change Proposal via the tracking adapter.</action>
+</check>
 <ask>Review complete proposal. Continue [c] or Edit [e]?</ask>
 </step>
 
@@ -299,3 +306,5 @@ Activation is complete. If `activation_steps_prepend` or `activation_steps_appen
 </step>
 
 </workflow>
+
+<!-- bmad-linear-patch:applied:v0.2.0 -->

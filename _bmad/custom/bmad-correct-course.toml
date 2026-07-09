@@ -1,0 +1,15 @@
+# bmad-correct-course override for bmad-linear
+# Sparse — only fields changed from stock. Copy to _bmad/custom/bmad-correct-course.toml.
+# tracking_system is read by the skill after _bmad/lnr/bin/apply-patch.sh is applied (Wave 3 / S6).
+# default_output_file maps to {default_output_file} used in the correct-course SKILL.md paths block.
+
+[workflow]
+tracking_system = "linear"
+tracking_adapter = "lnr-tracking-adapter"
+status_file = "linear://{linear_scope}/work-status"
+default_output_file = "linear://{linear_scope}/change-proposals/sprint-change-proposal-{date}"
+persistent_facts = [
+  "skill:lnr-session-policy",
+  "skill:lnr-tracking-adapter",
+  "Tracking system is Linear. Read work-status and issues from the repo-local cache (.cache/linear/, gitignored — work-status.yaml index plus issues/<ID>.yaml); auto-run `_bmad/lnr/tools/linear-sync.sh sync` if cache is missing or > 30 min old. Change proposals are written to Linear as issue discussion comments or new issues via lnr-tracking-adapter (linearis CLI) rather than local planning_artifacts files.",
+]

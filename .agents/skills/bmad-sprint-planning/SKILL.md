@@ -212,7 +212,14 @@ development_status:
   # All epics, stories, and retrospectives in order
 ```
 
-<action>Write the complete sprint status YAML to {status_file}</action>
+<check if="{workflow.tracking_system}=='file-system'">
+  <!-- bmad-linear-patch v0.2.0 -->
+  <action>Write the complete sprint status YAML to {status_file}</action>
+</check>
+<check if="{workflow.tracking_system}!='file-system'">
+  <!-- bmad-linear-patch v0.2.0 -->
+  <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local sprint-status.yaml. Sync sprint structure to the tracking adapter instead.</action>
+</check>
 <action>CRITICAL: Metadata appears TWICE - once as comments (#) for documentation, once as YAML key:value fields for parsing</action>
 <action>Ensure all items are ordered: epic, its stories, its retrospective, next epic...</action>
 </step>
@@ -298,3 +305,5 @@ optional ↔ done
 3. **Parallel Work Supported**: Multiple stories can be `in-progress` if team capacity allows
 4. **Review Before Done**: Stories should pass through `review` before `done`
 5. **Learning Transfer**: Developer typically creates next story after previous one is `done` to incorporate learnings
+
+<!-- bmad-linear-patch:applied:v0.2.0 -->

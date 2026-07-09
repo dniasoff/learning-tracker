@@ -1,0 +1,216 @@
+# bmad-create-story.patch — guards for bmad-create-story/SKILL.md
+# Validated against BMAD-METHOD 6.8.0 on 2026-05-28.
+#
+# Five guards wrap every local-write site so they fire only when
+# tracking_system == 'file-system'. When tracking_system != 'file-system',
+# control defers to the tracking adapter (lnr-tracking-adapter for Linear).
+#
+# Guard 1: Step 1 — epic-status update inside the user-input block (6-space indent).
+# Guard 2: Step 1 — epic-status update inside the fallthrough block (4-space indent).
+# Guard 3: Step 5 — story-file initialization + template-output block.
+# Guard 4: Step 6 — "Save story document unconditionally".
+# Guard 5: Step 6 — sprint-status.yaml update block (inside <check if="sprint status file exists">).
+
+# Guard 1: Step 1 (user-input block) — epic-status update pair inside <check if="this is first story...">.
+# Anchors on the two write actions with 6-space indent (unique due to indentation difference vs Guard 2).
+GUARD_START
+ANCHOR_BEGIN
+      <action>If epic status is "backlog" → update to "in-progress"</action>
+      <action>If epic status is "contexted" (legacy status) → update to "in-progress" (backward compatibility)</action>
+ANCHOR_END
+REPLACE_BEGIN
+      <check if="{workflow.tracking_system}=='file-system'">
+        <!-- bmad-linear-patch v0.2.0 -->
+        <action>If epic status is "backlog" → update to "in-progress"</action>
+        <action>If epic status is "contexted" (legacy status) → update to "in-progress" (backward compatibility)</action>
+      </check>
+      <check if="{workflow.tracking_system}!='file-system'">
+        <!-- bmad-linear-patch v0.2.0 -->
+        <action>Defer to {workflow.tracking_adapter} for epic status updates.</action>
+      </check>
+REPLACE_END
+GUARD_END
+
+# Guard 2: Step 1 (fallthrough block) — epic-status update pair inside <check if="this is first story...">.
+# Anchors on the two write actions with 4-space indent (unique due to indentation difference vs Guard 1).
+GUARD_START
+ANCHOR_BEGIN
+    <action>If epic status is "backlog" → update to "in-progress"</action>
+    <action>If epic status is "contexted" (legacy status) → update to "in-progress" (backward compatibility)</action>
+ANCHOR_END
+REPLACE_BEGIN
+    <check if="{workflow.tracking_system}=='file-system'">
+      <!-- bmad-linear-patch v0.2.0 -->
+      <action>If epic status is "backlog" → update to "in-progress"</action>
+      <action>If epic status is "contexted" (legacy status) → update to "in-progress" (backward compatibility)</action>
+    </check>
+    <check if="{workflow.tracking_system}!='file-system'">
+      <!-- bmad-linear-patch v0.2.0 -->
+      <action>Defer to {workflow.tracking_adapter} for epic status updates.</action>
+    </check>
+REPLACE_END
+GUARD_END
+
+# Guard 3: Step 5 — story-file initialization + template-output block.
+GUARD_START
+ANCHOR_BEGIN
+  <action>Initialize from template.md:
+  {default_output_file}</action>
+  <template-output file="{default_output_file}">story_header</template-output>
+
+  <!-- Story foundation from epics analysis -->
+  <template-output
+    file="{default_output_file}">story_requirements</template-output>
+
+  <!-- Developer context section - MOST IMPORTANT PART -->
+  <template-output file="{default_output_file}">
+  developer_context_section</template-output> **DEV AGENT GUARDRAILS:** <template-output file="{default_output_file}">
+  technical_requirements</template-output>
+  <template-output file="{default_output_file}">architecture_compliance</template-output>
+  <template-output
+    file="{default_output_file}">library_framework_requirements</template-output>
+  <template-output file="{default_output_file}">
+  file_structure_requirements</template-output>
+  <template-output file="{default_output_file}">testing_requirements</template-output>
+
+  <!-- Previous story intelligence -->
+  <check
+    if="previous story learnings available">
+    <template-output file="{default_output_file}">previous_story_intelligence</template-output>
+  </check>
+
+  <!-- Git intelligence -->
+  <check
+    if="git analysis completed">
+    <template-output file="{default_output_file}">git_intelligence_summary</template-output>
+  </check>
+
+  <!-- Latest technical specifics -->
+  <check if="web research completed">
+    <template-output file="{default_output_file}">latest_tech_information</template-output>
+  </check>
+
+  <!-- Project context reference -->
+  <template-output
+    file="{default_output_file}">project_context_reference</template-output>
+
+  <!-- Final status update -->
+  <template-output file="{default_output_file}">
+  story_completion_status</template-output>
+
+  <!-- CRITICAL: Set status to ready-for-dev -->
+  <action>Set story Status to: "ready-for-dev"</action>
+  <action>Add completion note: "Ultimate
+  context engine analysis completed - comprehensive developer guide created"</action>
+ANCHOR_END
+REPLACE_BEGIN
+  <check if="{workflow.tracking_system}=='file-system'">
+    <!-- bmad-linear-patch v0.2.0 -->
+    <action>Initialize from template.md:
+  {default_output_file}</action>
+    <template-output file="{default_output_file}">story_header</template-output>
+
+    <!-- Story foundation from epics analysis -->
+    <template-output
+      file="{default_output_file}">story_requirements</template-output>
+
+    <!-- Developer context section - MOST IMPORTANT PART -->
+    <template-output file="{default_output_file}">
+  developer_context_section</template-output> **DEV AGENT GUARDRAILS:** <template-output file="{default_output_file}">
+  technical_requirements</template-output>
+    <template-output file="{default_output_file}">architecture_compliance</template-output>
+    <template-output
+      file="{default_output_file}">library_framework_requirements</template-output>
+    <template-output file="{default_output_file}">
+  file_structure_requirements</template-output>
+    <template-output file="{default_output_file}">testing_requirements</template-output>
+
+    <!-- Previous story intelligence -->
+    <check
+      if="previous story learnings available">
+      <template-output file="{default_output_file}">previous_story_intelligence</template-output>
+    </check>
+
+    <!-- Git intelligence -->
+    <check
+      if="git analysis completed">
+      <template-output file="{default_output_file}">git_intelligence_summary</template-output>
+    </check>
+
+    <!-- Latest technical specifics -->
+    <check if="web research completed">
+      <template-output file="{default_output_file}">latest_tech_information</template-output>
+    </check>
+
+    <!-- Project context reference -->
+    <template-output
+      file="{default_output_file}">project_context_reference</template-output>
+
+    <!-- Final status update -->
+    <template-output file="{default_output_file}">
+  story_completion_status</template-output>
+
+    <!-- CRITICAL: Set status to ready-for-dev -->
+    <action>Set story Status to: "ready-for-dev"</action>
+    <action>Add completion note: "Ultimate
+  context engine analysis completed - comprehensive developer guide created"</action>
+  </check>
+  <check if="{workflow.tracking_system}!='file-system'">
+    <!-- bmad-linear-patch v0.2.0 -->
+    <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local file. Compose story content in memory and write via the tracking adapter.</action>
+    <action>Set story Status to: "ready-for-dev"</action>
+  </check>
+REPLACE_END
+GUARD_END
+
+# Guard 4: "Save story document unconditionally" — the explicit save in step 6.
+GUARD_START
+ANCHOR_BEGIN
+  <action>Save story document unconditionally</action>
+ANCHOR_END
+REPLACE_BEGIN
+  <check if="{workflow.tracking_system}=='file-system'">
+    <!-- bmad-linear-patch v0.2.0 -->
+    <action>Save story document unconditionally</action>
+  </check>
+  <check if="{workflow.tracking_system}!='file-system'">
+    <!-- bmad-linear-patch v0.2.0 -->
+    <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local file.</action>
+  </check>
+REPLACE_END
+GUARD_END
+
+# Guard 5: Sprint-status update block in step 6.
+GUARD_START
+ANCHOR_BEGIN
+  <!-- Update sprint status -->
+  <check if="sprint status file exists">
+    <action>Update {{sprint_status}}</action>
+    <action>Load the FULL file and read all development_status entries</action>
+    <action>Find development_status key matching {{story_key}}</action>
+    <action>Verify current status is "backlog" (expected previous state)</action>
+    <action>Update development_status[{{story_key}}] = "ready-for-dev"</action>
+    <action>Update last_updated field to current date</action>
+    <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
+  </check>
+ANCHOR_END
+REPLACE_BEGIN
+  <!-- Update sprint status -->
+  <check if="{workflow.tracking_system}=='file-system'">
+    <!-- bmad-linear-patch v0.2.0 -->
+    <check if="sprint status file exists">
+      <action>Update {{sprint_status}}</action>
+      <action>Load the FULL file and read all development_status entries</action>
+      <action>Find development_status key matching {{story_key}}</action>
+      <action>Verify current status is "backlog" (expected previous state)</action>
+      <action>Update development_status[{{story_key}}] = "ready-for-dev"</action>
+      <action>Update last_updated field to current date</action>
+      <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
+    </check>
+  </check>
+  <check if="{workflow.tracking_system}!='file-system'">
+    <!-- bmad-linear-patch v0.2.0 -->
+    <action>Defer to {workflow.tracking_adapter} for this operation. Update story status to ready-for-dev via the tracking adapter.</action>
+  </check>
+REPLACE_END
+GUARD_END

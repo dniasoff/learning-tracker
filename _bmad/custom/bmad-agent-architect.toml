@@ -1,0 +1,20 @@
+# Wiki-first agent override for the stock BMAD Architect (Winston).
+# Sparse, append-only — copy to {project-root}/_bmad/custom/bmad-agent-architect.toml
+# during install. Merged at activation by resolve_customization.py (base -> team -> user;
+# arrays append). See bmad-agent-analyst.toml for the full rationale and the BMAD-6.8
+# requirement. Append-only, so it unions conflict-free with any other module's override.
+
+[agent]
+
+activation_steps_prepend = [
+  "WIKI-FIRST (MANDATORY) — this is a living-wiki project and the project's Docmost wiki manual is the PRIMARY source of truth; it OUTRANKS the local filesystem (README, source, schemas, planning files). This binds EVERY turn — structured workflows AND free-form discussion. Before you read any local file to establish project state or 'ground truth', resolve what the wiki already holds: prefer skill:doc-read-first, or `docmost-cli ai ask \"<question>\" --output json` (cited answer), or `docmost-cli search \"<topic>\" --cached --content --space {docmost_space} --output json` then `docmost-cli page get <slug> --output json`. NEVER conclude project state, 'no X exists', or any project fact from the local filesystem alone — the wiki is primary; local files are transient working drafts. Full doctrine: file:{project-root}/_bmad/doc/data/wiki-first-mandate.md.",
+  "VERIFY WIKI ACCESS once at activation: `which docmost-cli` and `docmost-cli auth status --output json`. If docmost-cli is absent or auth fails, tell {user_name} to run `docmost-cli auth login --instance {docmost_url} --token <api-key>`, and until the wiki is reachable WARN before treating any local file as authoritative — never silently demote the wiki. Branch on exit code + the errorCode field, never on stderr text.",
+  "AS THE ARCHITECT — the architecture, ADRs, and technical specs you produce are DURABLE wiki canon: resolve the living architecture node first and amend it in place at status:draft; never regenerate from scratch or spawn a dated sibling. Architecture decisions conform to the manual; the local architecture.md is a transient working draft reconciled to the wiki. Route authoring via skill:doc-amend.",
+]
+
+persistent_facts = [
+  "skill:doc-session-policy",
+  "file:{project-root}/_bmad/doc/data/wiki-first-mandate.md",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+  "the wiki manual outranks the code and the local filesystem; it is the PRIMARY source of truth for every planning/design/spec artifact, in workflows AND in free-form discussion",
+]

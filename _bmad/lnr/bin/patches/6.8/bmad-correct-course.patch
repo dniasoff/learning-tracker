@@ -1,0 +1,20 @@
+# bmad-correct-course.patch — guards for bmad-correct-course/SKILL.md
+# Validated against BMAD-METHOD-UPSTREAM 6.8.0 on 2026-05-28.
+#
+# Guard 1: Step 4 — write Sprint Change Proposal document.
+
+GUARD_START
+ANCHOR_BEGIN
+<action>Write Sprint Change Proposal document to {default_output_file}</action>
+ANCHOR_END
+REPLACE_BEGIN
+<check if="{workflow.tracking_system}=='file-system'">
+  <!-- bmad-linear-patch v0.2.0 -->
+  <action>Write Sprint Change Proposal document to {default_output_file}</action>
+</check>
+<check if="{workflow.tracking_system}!='file-system'">
+  <!-- bmad-linear-patch v0.2.0 -->
+  <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local file. Record the Sprint Change Proposal via the tracking adapter.</action>
+</check>
+REPLACE_END
+GUARD_END

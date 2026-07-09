@@ -1,0 +1,15 @@
+# bmad-sprint-status override for bmad-linear
+# Sparse — only fields changed from stock. Copy to _bmad/custom/bmad-sprint-status.toml.
+# tracking_system is read by the skill after _bmad/lnr/bin/apply-patch.sh is applied (Wave 3 / S6).
+# status_file maps to the sprint_status_file variable used in the sprint-status SKILL.md paths block.
+
+[workflow]
+tracking_system = "linear"
+tracking_adapter = "lnr-tracking-adapter"
+status_file = "linear://{linear_scope}/work-status"
+persistent_facts = [
+  "skill:lnr-session-policy",
+  "skill:lnr-tracking-adapter",
+  "Tracking system is Linear. Work-status data lives in the repo-local cache (.cache/linear/work-status.yaml, gitignored). Auto-run `_bmad/lnr/tools/linear-sync.sh sync` if cache is missing or > 30 min old. Status updates go via lnr-tracking-adapter.update_status (linearis issues update --status).",
+  "When tracking_system=linear, {status_file} is a VIRTUAL PATH (linear://...); ALL reads of work-status must come from the repo-local cache (.cache/linear/), NEVER attempt to read the literal path.",
+]

@@ -1,0 +1,26 @@
+# Wiki-first agent override for the stock BMAD Developer (Amelia / "dev").
+# Sparse, append-only — copy to {project-root}/_bmad/custom/bmad-agent-dev.toml during
+# install. Merged at activation by resolve_customization.py (base -> team -> user;
+# arrays append). See bmad-agent-analyst.toml for the full rationale and the BMAD-6.8
+# requirement. Append-only, so it unions conflict-free with any other module's override.
+#
+# The dev loop is autonomous ("execute continuously without pausing"); these prepend
+# steps are read-only orientation that must NOT introduce a human pause in the happy
+# path. The wiki-first GATE itself (record + human-confirm intent) fires earlier at
+# create-story, where a human is present; at dev-story the gate is only a read-only
+# token check (skill:doc-spec-gate, honouring wiki_first_enforcement off|warn|block).
+
+[agent]
+
+activation_steps_prepend = [
+  "WIKI-FIRST (MANDATORY) — this is a living-wiki project and the project's Docmost wiki manual is the PRIMARY source of truth; it OUTRANKS the local filesystem. This binds EVERY turn — implementation AND free-form discussion. To answer any question about what the project IS or SHOULD do, resolve the wiki first (skill:doc-read-first, or `docmost-cli ai ask \"<question>\" --output json`, or `docmost-cli search \"<topic>\" --cached --content --space {docmost_space} --output json` then `docmost-cli page get <slug> --output json`) rather than inferring from the code alone. The code conforms to the manual, never the reverse. Full doctrine: file:{project-root}/_bmad/doc/data/wiki-first-mandate.md.",
+  "VERIFY WIKI ACCESS once at activation: `which docmost-cli` and `docmost-cli auth status --output json`. If docmost-cli is absent or auth fails, tell {user_name} to run `docmost-cli auth login --instance {docmost_url} --token <api-key>`. Branch on exit code + the errorCode field, never on stderr text.",
+  "AS THE DEVELOPER — NEVER implement anything that is not mapped to a human-confirmed intent node in the wiki. The manual outranks the code: read the confirmed spec/intent node from the wiki as your grounding BEFORE writing code. The wiki-first gate is a read-only token check at dev-story (`docmost-cli spec gate check <story-id> --output json` via skill:doc-spec-gate) honouring wiki_first_enforcement (off|warn|block); in the happy path it is a silent no-op — do NOT pause the autonomous loop. On a genuine miss under block, HALT and tell the user intent must be recorded + confirmed (run create-story).",
+]
+
+persistent_facts = [
+  "skill:doc-session-policy",
+  "file:{project-root}/_bmad/doc/data/wiki-first-mandate.md",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+  "the wiki manual outranks the code; NEVER implement anything not mapped to a human-confirmed intent node in the wiki (wiki-first spec gate)",
+]

@@ -1,0 +1,5 @@
+module,skill,display-name,menu-code,description,action,args,phase,preceded-by,followed-by,required,output-location,outputs
+bmad-linear,lnr-session-policy,Linear Session Policy,LSP,Cache-only reads + linearis-via-adapter writes. Loaded automatically when tracking_system=linear.,activate,,anytime,,,false,,session policy
+bmad-linear,lnr-tracking-adapter,Linear Tracking Adapter,LTA,linearis CLI dispatch adapter for create_issue / update_status / add_comment / set_baseline_commit / list_issues / get_issue.,activate,,anytime,,,false,,dispatch adapter
+bmad-linear,linear-sync,Linear Sync,LS,Repo-local cache engine via linearis (sync / issue <ID> / update <ID> --status / check).,run,_bmad/lnr/tools/linear-sync.sh,anytime,,,false,.cache/linear/,work-status.yaml + per-issue files
+bmad-linear,apply-patch,Apply Patch,AP,Patches bmad-create-story / bmad-dev-story / bmad-sprint-planning / bmad-sprint-status / bmad-correct-course so that local artifact writes are suppressed when tracking_system=linear. Run after every install or Quick Update.,run,_bmad/lnr/bin/apply-patch.sh,implementation,,,false,,patched skills

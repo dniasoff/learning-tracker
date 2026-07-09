@@ -1,0 +1,14 @@
+# bmad-dev-story override for bmad-linear
+# Sparse — only fields changed from stock. Copy to _bmad/custom/bmad-dev-story.toml.
+# tracking_system is read by the skill after _bmad/lnr/bin/apply-patch.sh is applied (Wave 3 / S6).
+
+[workflow]
+tracking_system = "linear"
+tracking_adapter = "lnr-tracking-adapter"
+status_file = "linear://{linear_scope}/work-status"
+default_output_file = "linear://{linear_scope}/issues/{issue_key}"
+persistent_facts = [
+  "skill:lnr-session-policy",
+  "skill:lnr-tracking-adapter",
+  "Tracking system is Linear. Read work-status and issues from the repo-local cache (.cache/linear/, gitignored — work-status.yaml index plus issues/<ID>.yaml); auto-run `_bmad/lnr/tools/linear-sync.sh sync` if cache is missing or > 30 min old. Writes (update_status, add_comment, set_baseline_commit) go via the lnr-tracking-adapter skill which dispatches the linearis CLI. baseline_commit is captured as an issue discussion comment via lnr-tracking-adapter.set_baseline_commit, not as YAML frontmatter on a local file.",
+]

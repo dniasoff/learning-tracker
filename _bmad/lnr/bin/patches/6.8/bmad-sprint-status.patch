@@ -1,0 +1,27 @@
+# bmad-sprint-status.patch — guards for bmad-sprint-status/SKILL.md
+# Validated against BMAD-METHOD-UPSTREAM 6.8.0 on 2026-05-28.
+#
+# Guard 1: Step 2 — "Update sprint-status.yaml with corrected values" block.
+
+GUARD_START
+ANCHOR_BEGIN
+<check if="user provided corrections">
+<action>Update sprint-status.yaml with corrected values</action>
+<action>Re-parse the file with corrected statuses</action>
+</check>
+ANCHOR_END
+REPLACE_BEGIN
+<check if="user provided corrections">
+  <check if="{workflow.tracking_system}=='file-system'">
+    <!-- bmad-linear-patch v0.2.0 -->
+    <action>Update sprint-status.yaml with corrected values</action>
+    <action>Re-parse the file with corrected statuses</action>
+  </check>
+  <check if="{workflow.tracking_system}!='file-system'">
+    <!-- bmad-linear-patch v0.2.0 -->
+    <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local sprint-status.yaml.</action>
+    <action>Re-parse status from the tracking adapter cache with corrected statuses</action>
+  </check>
+</check>
+REPLACE_END
+GUARD_END

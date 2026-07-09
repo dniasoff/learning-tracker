@@ -1,0 +1,93 @@
+# bmad-create-story.patch — bmad-docmost WIKI-FIRST GATE guard (create-story ONLY).
+# Validated against BMAD-METHOD 6.8.0 + bmad-linear-patch v0.1.0 on 2026-05-29.
+#
+# CONTRIBUTOR: docmost (rank 1). Applies AFTER bmad-linear (rank 0).
+# This guard is composed against the ALREADY-PATCHED running buffer — its anchor
+# is Linear Guard 3's REPLACE output (the file-system branch's ready-for-dev
+# flip + "Ultimate context engine" completion note), NOT the upstream original.
+# See contributors.yaml COLLISION RULE.
+#
+# PLAN §C.3 (create-story ONLY): record the spec as an intent node via doc-amend
+# and insert a CONFIRM <ask> (one plain-English question) BEFORE the story flips
+# to ready-for-dev. A human is present at create-story, so the record+confirm is
+# synchronous here. There is NO dev-story guard — dev-story keeps ONLY Linear's
+# write-suppression guards, untouched, preserving its "Execute continuously
+# without pausing" contract.
+#
+# Guard 1: Step 5 — wiki-first record+confirm gate, anchored on the FILE-SYSTEM
+#          branch's status-flip block inside Linear Guard 3's replacement.
+# Guard 2: Step 5 — the SAME gate in Linear Guard 3's NON-file-system (tracking-
+#          adapter / Linear) branch, anchored on the deferral action + status flip.
+#          REQUIRED: production ships tracking_system="linear", so create-story takes
+#          the != 'file-system' branch; without this guard the gate is UNREACHABLE
+#          in production. The gate must fire regardless of tracking_system.
+
+GUARD_START
+ANCHOR_BEGIN
+    <!-- CRITICAL: Set status to ready-for-dev -->
+    <action>Set story Status to: "ready-for-dev"</action>
+    <action>Add completion note: "Ultimate
+  context engine analysis completed - comprehensive developer guide created"</action>
+ANCHOR_END
+REPLACE_BEGIN
+    <!-- bmad-docmost-patch v0.1.0 — WIKI-FIRST GATE (create-story only, PLAN C.3) -->
+    <!-- Record the spec as an intent node and CONFIRM with the human BEFORE the -->
+    <!-- story flips to ready-for-dev. A human is present here, so this is synchronous. -->
+    <check if="{workflow.wiki_first_enforcement} != 'off'">
+      <invoke-skill name="doc-spec-gate" mode="create-story">
+        <action>Record the spec/intent for this story as an intent node in the living manual via skill:doc-amend (find-before-create across drafts AND canonical, ASK on a fuzzy match, write at status: draft). Capture {page_slug, page_url}.</action>
+        <ask>Here is the intent recorded for this story in the manual: "{{intent_node_title}}" ({{page_url}}). In one line, this story will: {{one_line_intent_summary}}. Confirm this is the intent to build before the story becomes ready-for-dev? [y to confirm / n to revise]</ask>
+        <check if="user revises">
+          <action>Capture the correction, re-amend the intent node in place via skill:doc-amend, and re-ask. Stay in this loop until the human confirms or abandons.</action>
+        </check>
+        <check if="user confirms">
+          <action>Submit the human confirmation to the server so it sets spec_confirmed = true on the intent node and mints a fresh, work-item-scoped SPEC_CONFIRM_TOKEN. The confirmation MUST be human-attributed; an AI/service-account confirm is rejected server-side. Never fabricate a token.</action>
+        </check>
+        <check if="user abandons OR wiki_first_enforcement == 'block' AND not confirmed">
+          <output>🚫 Wiki-first gate not satisfied for this story. The intent node was recorded at status: draft but NOT confirmed. Under block mode the story should not proceed to ready-for-dev until intent is confirmed.</output>
+        </check>
+      </invoke-skill>
+    </check>
+    <!-- CRITICAL: Set status to ready-for-dev -->
+    <action>Set story Status to: "ready-for-dev"</action>
+    <action>Add completion note: "Ultimate
+  context engine analysis completed - comprehensive developer guide created"</action>
+REPLACE_END
+GUARD_END
+
+# Guard 2: Step 5 — the SAME wiki-first gate, anchored inside Linear Guard 3's
+#          NON-file-system (tracking-adapter / Linear) branch. Production ships
+#          tracking_system="linear", so create-story takes THIS branch — the gate
+#          must fire here too, or it is unreachable. Anchored on the deferral
+#          action + the status flip (the "Compose story content in memory" text is
+#          unique to this branch, so the anchor is unambiguous).
+
+GUARD_START
+ANCHOR_BEGIN
+    <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local file. Compose story content in memory and write via the tracking adapter.</action>
+    <action>Set story Status to: "ready-for-dev"</action>
+ANCHOR_END
+REPLACE_BEGIN
+    <action>Defer to {workflow.tracking_adapter} for this operation. Do not write a local file. Compose story content in memory and write via the tracking adapter.</action>
+    <!-- bmad-docmost-patch v0.1.0 — WIKI-FIRST GATE (create-story only, PLAN C.3) -->
+    <!-- Same gate as the file-system branch, in the tracking-adapter (non-file-system) -->
+    <!-- branch — so the gate fires regardless of tracking_system. This is the branch -->
+    <!-- taken when tracking_system != 'file-system' (e.g. Linear, the shipped config). -->
+    <check if="{workflow.wiki_first_enforcement} != 'off'">
+      <invoke-skill name="doc-spec-gate" mode="create-story">
+        <action>Record the spec/intent for this story as an intent node in the living manual via skill:doc-amend (find-before-create across drafts AND canonical, ASK on a fuzzy match, write at status: draft). Capture {page_slug, page_url}.</action>
+        <ask>Here is the intent recorded for this story in the manual: "{{intent_node_title}}" ({{page_url}}). In one line, this story will: {{one_line_intent_summary}}. Confirm this is the intent to build before the story becomes ready-for-dev? [y to confirm / n to revise]</ask>
+        <check if="user revises">
+          <action>Capture the correction, re-amend the intent node in place via skill:doc-amend, and re-ask. Stay in this loop until the human confirms or abandons.</action>
+        </check>
+        <check if="user confirms">
+          <action>Submit the human confirmation to the server so it sets spec_confirmed = true on the intent node and mints a fresh, work-item-scoped SPEC_CONFIRM_TOKEN. The confirmation MUST be human-attributed; an AI/service-account confirm is rejected server-side. Never fabricate a token.</action>
+        </check>
+        <check if="user abandons OR wiki_first_enforcement == 'block' AND not confirmed">
+          <output>🚫 Wiki-first gate not satisfied for this story. The intent node was recorded at status: draft but NOT confirmed. Under block mode the story should not proceed to ready-for-dev until intent is confirmed.</output>
+        </check>
+      </invoke-skill>
+    </check>
+    <action>Set story Status to: "ready-for-dev"</action>
+REPLACE_END
+GUARD_END

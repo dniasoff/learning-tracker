@@ -29,9 +29,9 @@ tea_browser_automation = "auto"
 tea_execution_mode = "auto"
 tea_capability_probe = true
 test_stack_type = "auto"
-ci_platform = "auto"
+ci_platform = "github-actions"
 test_framework = "auto"
-risk_threshold = "p1"
+risk_threshold = "p2"
 test_design_output = "docs/test-artifacts/test-design"
 test_review_output = "docs/test-artifacts/test-reviews"
 trace_output = "docs/test-artifacts/traceability"
@@ -44,6 +44,15 @@ design_system_mode = "component_library"
 methodology_version = "wds-v6"
 product_languages = "[\"en\"]"
 design_experience = "intermediate"
+
+[modules.lnr]
+tracking_system = "linear"
+linear_tenant = "orvexai"
+linear_initiative = "Learning Tracker"
+team_key = "DNI"
+
+[modules.doc]
+docmost_url = "https://docs.eu-central-1.myidp.cloud"
 
 [agents.bmad-agent-analyst]
 module = "bmm"

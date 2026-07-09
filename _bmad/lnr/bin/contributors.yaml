@@ -1,0 +1,133 @@
+# contributors.yaml — the contributor registry for the shared bmad-patch-engine.
+#
+# THIS FILE IS THE CONTRIBUTOR REGISTRY (PLAN §C.2.4). It lives in the patch
+# engine, NOT in any module.yaml. SKILL_NAMES is no longer hardcoded in
+# apply_patch_impl.py; every skill a contributor patches is declared here.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# CONTRIBUTOR PATCH-SET FORMAT (the guards phase MUST conform to this).
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Top-level key:
+#   contributors:   an ordered LIST of contributor entries (each a mapping).
+#
+# Each contributor entry has these fields:
+#
+#   code          (required, string)  Short id used in log/error messages and as
+#                                      the secondary sort key. e.g. "linear".
+#
+#   rank          (required, int)      Application order, ASCENDING. The engine
+#                                      sorts contributors by (rank, code) and
+#                                      applies their guard sets in that order
+#                                      against ONE running buffer. A lower-rank
+#                                      contributor patches first; a higher-rank
+#                                      contributor's anchors are matched against
+#                                      the ALREADY-PATCHED buffer, so they may
+#                                      (and must) anchor on a lower-rank
+#                                      contributor's REPLACE output.
+#                                      Convention: linear=0, docmost=1.
+#
+#   marker        (required, string)   Marker STEM. The engine derives two things
+#                                      from it:
+#                                        - terminal marker (idempotency stamp):
+#                                            <!-- <marker>:applied:v<version> -->
+#                                          appended once this contributor's guards
+#                                          land. Each contributor's marker is
+#                                          checked INDEPENDENTLY, so re-runs are a
+#                                          no-op per contributor and a second
+#                                          contributor is never silently skipped.
+#                                        - inline marker version check: every
+#                                            "<marker> v<x.y.z>" string found in a
+#                                          REPLACE block must equal <version>.
+#                                      MUST be unique per contributor.
+#
+#   version       (required, semver)   The contributor's patch-set version. Dual
+#                                      pin (PLAN §C.2.5): combined with the bmm
+#                                      version this composition is validated
+#                                      against (see each patches dir's
+#                                      LAST_VALIDATED.txt). Every inline
+#                                      "<marker> vX.Y.Z" in the contributor's
+#                                      REPLACE blocks must match this exactly, or
+#                                      the engine refuses to run.
+#
+#   patches_root  (optional, path)     Directory CONTAINING the per-bmm-minor
+#                                      patch dirs. The engine picks the HIGHEST
+#                                      <MAJOR.MINOR> dir (e.g. "6.8", "6.9") that
+#                                      is <= the installed bmm version — an EXACT
+#                                      match is NOT required (floor match, see
+#                                      resolve_patch_dirs()). A bmm minor bump
+#                                      with no upstream skill-text change just
+#                                      reuses the nearest older validated dir; no
+#                                      new dir needs authoring on every bump. The
+#                                      real safety net is anchor matching at
+#                                      apply time — it fails loudly if the reused
+#                                      anchors no longer match the installed
+#                                      skill text. Only add a new <MAJOR.MINOR>/
+#                                      dir when anchors actually need to change
+#                                      (upstream skill text moved). Relative
+#                                      paths resolve against THIS registry file's
+#                                      directory. When omitted, falls back to the
+#                                      engine's --patches-dir (i.e. bmad-linear's
+#                                      own bin/patches). At install time modules
+#                                      are siblings under _bmad/, so docmost's
+#                                      patches resolve via a sibling path (see
+#                                      below).
+#
+#   skills        (required, list)     The skill names this contributor patches.
+#                                      One "<skill>.patch" DSL file must exist in
+#                                      "<patches_root>/<MAJOR.MINOR>/" for each.
+#                                      This REPLACES the old hardcoded
+#                                      SKILL_NAMES list.
+#
+# Patch DSL inside each <skill>.patch is unchanged: one or more
+#   GUARD_START / ANCHOR_BEGIN..ANCHOR_END / REPLACE_BEGIN..REPLACE_END / GUARD_END
+# blocks. See apply_patch_impl.py's module docstring for the grammar.
+#
+# COLLISION RULE (create-story): Linear (rank 0) REPLACES the whole Step-5 body
+# of bmad-create-story. Docmost (rank 1) anchors its confirm-<ask> guard INSIDE
+# Linear's REPLACE output. Because docmost applies after linear against the same
+# running buffer, its anchor is re-derived against the patched text automatically.
+# ─────────────────────────────────────────────────────────────────────────────
+
+contributors:
+  # ── Linear: write-suppression guards (12 guards across 5 skills). Rank 0. ──
+  - code: linear
+    rank: 0
+    marker: bmad-linear-patch
+    version: "0.2.0"
+    # patches_root omitted → falls back to --patches-dir (bmad-linear/bin/patches).
+    skills:
+      - bmad-create-story
+      - bmad-dev-story
+      - bmad-sprint-planning
+      - bmad-sprint-status
+      - bmad-correct-course
+
+  # ── Docmost: wiki-first spec gate. Rank 1 — applies AFTER linear. ──
+  # create-story ONLY (PLAN §C.3). No dev-story guard; dev-story keeps ONLY
+  # Linear's existing write-suppression guards, untouched.
+  #
+  # patches_root points at the docmost module's patch set. It lives under data/
+  # (NOT bin/): bmad-method installs a module's data/ dir WITH its subdirs (e.g.
+  # _bmad/doc/data/doc-type-templates/), but does NOT copy a module's bin/ — so
+  # hosting the patches under data/ is what makes them install. It is an ORDERED
+  # CANDIDATE LIST (resolved relative to this registry, bmad-linear/bin/) — the
+  # engine uses the FIRST whose <MAJOR.MINOR> subdir exists, so ONE registry works
+  # in BOTH layouts:
+  #   - INSTALLED: modules under code dirs — engine at _bmad/lnr/bin/, docmost at
+  #     _bmad/doc/ → ../../doc/data/patches.
+  #   - SOURCE TREE / monorepo: sibling module dirs bmad-linear/ + bmad-docmost/
+  #     → ../../bmad-docmost/data/patches (used by bin/test-apply-patch.sh).
+  - code: docmost
+    rank: 1
+    marker: bmad-docmost-patch
+    version: "0.1.0"
+    patches_root:
+      - ../../doc/data/patches           # installed layout (data/ installs with subdirs; bin/ does not)
+      - ../../bmad-docmost/data/patches  # source-tree / monorepo (sibling dirs)
+    skills:
+      - bmad-create-story
+      # bmad-brainstorming is a CORE-skill with no customize.toml / resolver, so it
+      # cannot take a [workflow] override — it is made wiki-first by a SKILL.md patch.
+      # No Linear guard touches it, so the docmost guard anchors on clean upstream text.
+      - bmad-brainstorming

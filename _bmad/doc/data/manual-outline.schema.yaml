@@ -1,0 +1,141 @@
+# manual-outline.schema.yaml
+# ============================================================================
+# SCHEMA (with field docs) for a per-project, GENERATED `manual-outline.yaml`.
+#
+# This file is the SCHEMA + a minimal generic example — NOT a shipped skeleton.
+# The module ships NO fixed section taxonomy. A project's actual sections are
+# DERIVED at scaffold time from that project's own planning artifacts and
+# CONFIRMED with a human (one question), per `manual-ia.md`. The result is
+# written to a `manual-outline.yaml` the PROJECT owns; this schema only defines
+# that file's shape.
+#
+# Consumed by: `manual-scaffold`, which TRANSFORMS this `manual: {root, sections}`
+#   outline into a FLAT top-level node list ({title,icon,status,doc_type,content,
+#   children}) and feeds it to `docmost-cli page tree apply <flat-nodes-file>` (a
+#   POSITIONAL <file> — there is NO --outline flag; the CLI does not consume this
+#   wrapper shape natively). See doc-librarian Step 7 for the exact transform.
+# Re-run semantics: IDEMPOTENT. `page tree apply` matches existing pages by TITLE
+#   under the parent (case-sensitive) and UPDATES IN PLACE; it NEVER re-creates
+#   (P1 — no v2 sprawl). `--on-existing skip|update|recreate` (default skip) controls
+#   whether a title-matched sibling's content is overwritten. Removed nodes are
+#   flagged, not auto-deleted (removal goes through supersede/archive, P5).
+#   Rename-safe `key`-matching is PENDING (the CLI does not yet match on `key`).
+#
+# Conventions:
+#   - `doc_type` values are lowercase-kebab from the universal catalog
+#     (taxonomy.md §4). Skills never invent or recase a doc_type.
+#   - `status` starts `draft` on every generated node; promotion to `canonical`
+#     is human-gated via doc-ratify (P3/P6). The scaffold never emits `canonical`.
+#   - A trailing date segment in a child is permitted ONLY when `dated: true`,
+#     which is valid ONLY for doc_type ∈ {release-notes, retrospective, adr}.
+#     Every other doc-type is living/update-in-place (dates banned).
+# ============================================================================
+
+
+# ----------------------------------------------------------------------------
+# FIELD REFERENCE
+# ----------------------------------------------------------------------------
+# manual:                       # top-level wrapper (required)
+#
+#   root:                       # the single manual root page (required, exactly one)
+#     title:    string          # human Title Case. May contain {project_name}, expanded at apply.
+#     doc_type: enum            # the root's doc_type — typically `project-overview`
+#                               #   (or `user-guide` for a guide-style root). From taxonomy §4.
+#     icon:     string          # emoji shown in the page tree (e.g. "📖"). Required (icon-presence lint).
+#     scaffold: enum            # body skeleton the scaffold stamps. For root, use `manual-root`:
+#                               #   story lead + `tldr` "In short" + "How this manual works"
+#                               #   (transcluded canon) + a card view of the sections.
+#     status:   enum            # draft|canonical|deprecated|superseded|archived. Scaffold emits `draft`.
+#     cover:    bool            # optional. true → stamp a cover image placeholder on the root.
+#
+#   sections:                   # ORDERED list of top-level sections (required; may be empty on first
+#                               # derivation, but a real manual has the project's DERIVED sections here).
+#                               # THERE IS NO FIXED SECTION SET — these come from `manual-ia.md` §2.
+#     - key:        string      # stable IA identifier (lowercase-kebab). INTENDED as the
+#                               #   rename-safe idempotency key. NOTE: `page tree apply` does
+#                               #   NOT match on `key` yet — it matches by TITLE under the parent
+#                               #   (case-sensitive). Rename-safe key-matching is PENDING; until it
+#                               #   ships, keep titles stable across re-applies or route a rename
+#                               #   through manual-supersede. (`--on-existing` default skip.)
+#       title:      string      # human Title Case shown in the tree. May contain {project_name}.
+#       icon:       string      # emoji (required).
+#       importance: enum        # high|medium|low. Orders card prominence on the root landing.
+#       scaffold:   enum        # body skeleton — sections use `section-landing`:
+#                               #   icon + `tldr` (covers / doesn't-cover) + orientation paragraph
+#                               #   + child card grid (≥3 cards, P7 lint) + optional section diagram.
+#       status:     enum        # draft|canonical|… Scaffold emits `draft`.
+#       children:               # leaf pages (and/or nested subsections) under this section. May be empty.
+#         - title:    string    # human Title Case.
+#           doc_type: enum      # universal doc-type (taxonomy §4). Determines the body template.
+#           scaffold: enum      # leaf skeleton: concept | how-to | reference | index.
+#                               #   concept   → tldr → why-this-exists → diagram-before-prose → example
+#                               #   how-to    → tldr → prerequisites → numbered steps
+#                               #   reference → tldr (scope) → tables-first → minimal prose
+#                               #   index     → tldr → card/list of dated children (for dated collections)
+#           status:   enum      # draft|canonical|… Scaffold emits `draft`.
+#           dated:    bool      # optional, default false. true ONLY for release-notes|retrospective|adr.
+#                               #   Marks this node as a DATED/APPEND collection; its children may carry
+#                               #   a date segment in their slug. Everything else is living (dates banned).
+#           children: [...]     # optional. Same child shape, for deeper nesting.
+#
+# Validation the applier enforces:
+#   - exactly one `manual.root`; `root.doc_type`, `root.icon`, `root.scaffold` required.
+#   - every `section.key` unique within the file; `key` is lowercase-kebab.
+#   - every `doc_type` is in the universal catalog (taxonomy §4); else REJECTED.
+#   - `dated: true` only where doc_type ∈ {release-notes, retrospective, adr}; else REJECTED.
+#   - banned slug/title suffixes (-v2/-final/-new/-wip/-revised/-copy/-updated/-2..-9) REJECTED.
+
+
+# ----------------------------------------------------------------------------
+# MINIMAL GENERIC EXAMPLE
+# ----------------------------------------------------------------------------
+# This is the SMALLEST VALID outline: a root and ZERO sections. It is what the
+# schema looks like BEFORE a project's sections are derived. It is intentionally
+# NOT a seven-section skeleton — the module ships no sections. The derivation
+# procedure (manual-ia.md) fills `sections:` from the project's own artifacts,
+# confirmed by a human. A real project-owned `manual-outline.yaml` replaces the
+# empty list below with its DERIVED sections.
+#
+# For a worked example of what a DERIVED `sections:` list looks like (a
+# hypothetical project's structure, shown as one illustration, not a template),
+# see manual-ia.md §5.
+# ----------------------------------------------------------------------------
+
+manual:
+  root:
+    title: "The {project_name} Manual"
+    doc_type: project-overview      # the root's type; from the universal catalog
+    icon: "📖"
+    scaffold: manual-root           # story + tldr "In short" + how-this-works + section cards
+    status: draft                   # promotion to canonical is human-gated (doc-ratify)
+    cover: true
+
+  # NO FIXED SECTIONS. This list is DERIVED per project (manual-ia.md) and
+  # CONFIRMED with a human before `page tree apply`. Left empty here on purpose:
+  # the module does not presuppose a project's audience-facing structure.
+  sections: []
+
+  # --------------------------------------------------------------------------
+  # Once derived + confirmed, each section follows the shape below. Reproduced
+  # here as a COMMENTED shape reference only — uncommenting it would be adopting
+  # ONE example's structure as a default, which this module forbids. Generate
+  # real sections via the scaffold; do not hand-copy this block.
+  #
+  # sections:
+  #   - key: <derived-section-key>          # e.g. derived from the product brief's audience
+  #     title: "<Section Title>"
+  #     icon: "🧩"
+  #     importance: high
+  #     scaffold: section-landing
+  #     status: draft
+  #     children:
+  #       - title: "<Leaf Page Title>"
+  #         doc_type: <catalog-doc-type>    # e.g. prd, architecture, runbook, glossary, research
+  #         scaffold: concept               # or how-to | reference | index
+  #         status: draft
+  #       - title: "Decision Records"
+  #         doc_type: adr
+  #         scaffold: index
+  #         status: draft
+  #         dated: true                     # ONLY release-notes | retrospective | adr may be dated
+  # --------------------------------------------------------------------------

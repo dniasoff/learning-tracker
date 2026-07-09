@@ -1,0 +1,33 @@
+# Wiki-first agent override for the stock BMAD Analyst (Mary).
+# Sparse, append-only override — copy to {project-root}/_bmad/custom/bmad-agent-analyst.toml
+# during install. Merged into the agent at activation by resolve_customization.py
+# (Step 1 of the agent's "On Activation"): base customize.toml -> THIS team file ->
+# {skill}.user.toml. Arrays append, so the agent keeps all its defaults PLUS these.
+#
+# WHY THIS EXISTS: activation_steps_prepend runs BEFORE persona adoption and any
+# local-file discovery, and persistent_facts load as standing session context — so the
+# wiki-first orientation binds EVERY turn, including free-form chat, not just the
+# workflows the agent dispatches. This is the agent-layer companion to the workflow
+# overrides (bmad-product-brief.toml, …); together they make the wiki primary at both
+# the read (discovery) and write (routing) edges.
+#
+# Requires BMAD 6.8+ skill-based agents (the agent SKILL.md runs resolve_customization
+# at activation). On the legacy compiled-agent layout (_bmad/bmm/agents/*.md with an
+# inline <activation> and no resolver) this override silently no-ops — upgrade to 6.8.
+# Append-only (no scalar keys), so it unions conflict-free with any other module's
+# agent override.
+
+[agent]
+
+activation_steps_prepend = [
+  "WIKI-FIRST (MANDATORY) — this is a living-wiki project and the project's Docmost wiki manual is the PRIMARY source of truth; it OUTRANKS the local filesystem (README, source, schemas, planning files). This binds EVERY turn — structured workflows AND free-form discussion. Before you read any local file to establish project state or 'ground truth', resolve what the wiki already holds: prefer skill:doc-read-first, or `docmost-cli ai ask \"<question>\" --output json` (cited answer), or `docmost-cli search \"<topic>\" --cached --content --space {docmost_space} --output json` then `docmost-cli page get <slug> --output json`. NEVER conclude project state, 'no X exists', or any project fact from the local filesystem alone — the wiki is primary; local files are transient working drafts. Full doctrine: file:{project-root}/_bmad/doc/data/wiki-first-mandate.md.",
+  "VERIFY WIKI ACCESS once at activation: `which docmost-cli` and `docmost-cli auth status --output json`. If docmost-cli is absent or auth fails, tell {user_name} to run `docmost-cli auth login --instance {docmost_url} --token <api-key>`, and until the wiki is reachable WARN before treating any local file as authoritative — never silently demote the wiki. Branch on exit code + the errorCode field, never on stderr text.",
+  "AS THE ANALYST — every brief, research, brainstorm, and domain artifact you produce is DURABLE wiki canon (P2), not ephemeral scratch. Find-before-create against the living node, amend it in place at status:draft, and never spawn a dated sibling or regenerate from scratch. Research and brainstorm live in the wiki forever; route them via skill:doc-amend / skill:doc-research.",
+]
+
+persistent_facts = [
+  "skill:doc-session-policy",
+  "file:{project-root}/_bmad/doc/data/wiki-first-mandate.md",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+  "the wiki manual outranks the code and the local filesystem; it is the PRIMARY source of truth for every planning/design/spec artifact, in workflows AND in free-form discussion",
+]

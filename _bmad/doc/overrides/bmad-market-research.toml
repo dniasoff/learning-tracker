@@ -1,0 +1,21 @@
+# bmad-market-research override for bmad-docmost (wiki-first; research is DURABLE canon).
+# Sparse, append-only — copy to {project-root}/_bmad/custom/bmad-market-research.toml during
+# install. Research is first-class living wiki canon (P2 — NOT ephemeral): ONE living
+# research doc per topic, updated in place. Closes the gap where an analyst running
+# market research was still file-first. Routing delegates to skill:doc-research.
+
+[workflow]
+
+activation_steps_prepend = [
+  "WIKI-FIRST — this is a living-wiki project and the wiki manual OUTRANKS local files. Market/competitive research is DURABLE wiki canon (P2), never ephemeral scratch. Before any local-file discovery, resolve what the manual already holds for this topic: invoke skill:doc-read-first for doc_type=research (`docmost-cli search '\"<research topic>\"' --cached --content --space {docmost_space} --output json`, then `docmost-cli page get <slug> --output json`); also try `docmost-cli ai ask \"<the research question>\" --output json` for a cited answer from existing canon before researching from scratch. Treat the wiki page — not the local filesystem — as the source of truth and the PRIMARY existing input. How to access the wiki: file:{project-root}/_bmad/doc/data/wiki-first-mandate.md.",
+  "Report the WIKI status FIRST (research page for this topic: exists or absent; status draft|canonical, slug, one-line summary), then any local artifacts. A SECOND research input on the same topic UPDATES the same living doc — never spawn a dated sibling (P1). If a living page EXISTS, amend it in place (current-state-only, P4).",
+]
+
+# Route the finished research into the living manual as durable Tier-A canon.
+on_complete = "Route the finished research into the project's living manual via skill:doc-research (it drives the synthesis and hands the finished content to doc-amend's routing spine: find-before-create for doc_type=research on this topic → ASK on a fuzzy match → AMEND the existing research node in place at draft → else CREATE at `--doc-type research --status draft`, NEVER canonical; market/competitive research files under a Product-facing IA node). A second input on the same topic amends the same doc rather than spawning a dated sibling. Surface the url/slug; the page lands as DRAFT pending human ratification (doc-ratify). The wiki node is authoritative — any local file is a transient working draft. If docmost-cli is unavailable or exits non-zero, WARN the user and name the unsynced local draft; do not silently demote it to authoritative."
+
+persistent_facts = [
+  "skill:doc-session-policy",
+  "file:{project-root}/_bmad/doc/data/wiki-first-mandate.md",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+]

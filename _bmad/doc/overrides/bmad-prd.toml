@@ -1,0 +1,32 @@
+# Sparse override — copy to {project-root}/_bmad/custom/bmad-prd.toml during install.
+# Append-only per BMAD merge rules: only the fields listed here are changed;
+# all other bmad-prd defaults remain in effect.
+
+[workflow]
+
+# Wiki-first activation — runs BEFORE the file-first discovery (skill activation Step 2).
+# Orients the workflow to the living manual as the source of truth, so the existence
+# check and the amend-vs-create decision are made against the WIKI, not the local files.
+activation_steps_prepend = [
+  "WIKI-FIRST — this is a living-wiki project and the wiki manual OUTRANKS local files. Before any local-file discovery or existence check, resolve what the manual already holds: invoke skill:doc-read-first for doc_type=prd (it runs `docmost-cli search '\"PRD: {project_name}\"' --cached --content --space {docmost_space} --output json`, then `docmost-cli page get <slug> --output json`). Treat the wiki page — not the local filesystem — as the source of truth and the PRIMARY existing input.",
+  "Report the WIKI status FIRST in your discovery summary (PRD page: exists or absent; if it exists, its status draft|canonical, slug, and a one-line content summary), then any local artifacts. NEVER conclude 'no PRD exists' or 'create prd.md from the template' from the local filesystem alone — 'exists' means exists in the WIKI.",
+  "If the living page EXISTS, load its body in full and run this whole session as AMENDING that one page in place (current-state-only, P4) — build on it; never regenerate from scratch or spawn a dated copy. A local {doc_workspace}/prd.md is only a transient working draft reconciled to the wiki. If it is ABSENT, you create it in the wiki at draft when ready (the existing handoff). The wiki stays primary throughout.",
+]
+
+# Route the finalized PRD into the living manual at Finalize step 6.
+# Runs after polish, before the final user-facing message.
+#
+# Decision-order (READ -> FIND-BEFORE-CREATE -> ASK-if-ambiguous -> AMEND-in-place
+# as DRAFT -> else CREATE at draft): the finalized artifact is NOT published as a
+# new canonical page and is NEVER a dated sibling. It is amended into the one living
+# manual node for the PRD, in place, and lands at status: draft pending human
+# ratification. The manual is canonical; the local file is a transient working draft.
+external_handoffs = [
+  "After finalize, route {doc_workspace}/prd.md into the project's living manual via the doc-amend skill (skill:doc-amend — it is BUILT and registered; invoke it as the real call. The procedure below is the contract doc-amend runs and the fallback to perform inline ONLY if doc-amend is unavailable). Procedure: (1) READ — resolve the manual node for doc_type=prd via doc-read-first (status-filtered, manual root + IA path); (2) FIND-BEFORE-CREATE — locate the existing PRD node across drafts AND canonical (`docmost-cli search '\"PRD: {project_name}\"' --cached --content --space {docmost_space} --output json`; PENDING: upgrade to the synchronous duplicate-check endpoint when built); (3) ASK-if-ambiguous — on a fuzzy candidate, suspend with ONE plain-English question (existing title + a one-line diff) and auto-resume from the reply; (4) AMEND-in-place — when a node exists, capture its updated_at with `docmost-cli page get <slug> --output json` and amend ONLY the affected sections in place with `docmost-cli page patch <slug> --find '<old>' --replace '<new>' --if-version '<updated_at>'`, keeping the body current-state-only (P4) and never rewriting the protected story / tldr / 'how this manual works' transcluded zones; (5) else CREATE — only when no candidate, `docmost-cli page create 'PRD: {project_name}' --space {docmost_space} --parent <prd-ia-node-slug> --doc-type prd --status draft --content @{doc_workspace}/prd.md --output json` (NEVER --status canonical on create). If `{doc_workspace}/addendum.md` exists, route it the same way into the addendum's living node (amend-first; create as a draft child of the PRD node only if none exists). Capture the `url`/`slug` from each receipt and surface it, noting the page lands as DRAFT pending human ratification (doc-ratify) — AI never self-promotes to canonical. The manual node is authoritative — the local files are transient working drafts. If `docmost-cli` is not installed or exits non-zero, WARN the user that manual amend failed, name {doc_workspace}/prd.md (and addendum if present) as unpublished local drafts, and ask the user to retry once docmost-cli is available; do not silently demote the local files to authoritative.",
+]
+
+# Load the session taxonomy policy and the project's routing rules once at activation.
+persistent_facts = [
+  "skill:doc-session-policy",
+  "file:{project-root}/_bmad/doc/data/decision-order.md",
+]

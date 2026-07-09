@@ -1,0 +1,18 @@
+{
+  "name": "Grounding reads exclude draft / superseded / archived",
+  "skills": ["doc-read-first"],
+  "query": "What does the manual say about the deployment pipeline? (grounding read for planning)",
+  "context": "The wiki has a canonical 'Deployment' page, plus a competing draft revision and an older superseded page on the same topic.",
+  "expected_behavior": [
+    "Resolves the living manual node (root + IA path) for the concept.",
+    "For a GROUNDING read, status-filters to canonical — EXCLUDES draft / superseded / archived so a quarantined body never poisons reasoning.",
+    "If a candidate is superseded, follows superseded_by and reads the live successor instead.",
+    "Uses docmost-cli reads only (page get / search --cached); never reads the SQLite cache files directly.",
+    "In spec mode (wiki-first), instead resolves the INTENT node for the story being built."
+  ],
+  "success_criteria": [
+    "The draft and superseded pages did not contribute to the grounding answer.",
+    "Only currently-true canonical content was used (P6).",
+    "A superseded hit was redirected to its live successor."
+  ]
+}

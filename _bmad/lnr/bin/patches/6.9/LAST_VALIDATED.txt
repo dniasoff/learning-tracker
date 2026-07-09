@@ -1,0 +1,14 @@
+# Dual version pin (PLAN §C.2.5): upstream BMAD version + cross-guard composition.
+# Re-validate after every BMAD install / Quick Update.
+#
+# bmm (upstream):           6.9.0
+# composition (cross-guard): linear v0.2.0  (rank 0)
+#                            docmost v0.1.0 (rank 1, applies against linear's REPLACE output)
+#
+# linear v0.2.0 — patch set promoted from 6.8 → 6.9: all 12 anchors verified present
+# in the installed 6.9 skill sources (zero missing). Patch bodies and composition
+# unchanged from 6.8.
+#
+6.9.0 — 2026-06-25 — promoted from 6.8 — linear v0.2.0 + docmost v0.1.0
+  anchors verified against orvex-studio-mcp/.claude/skills/ (BMAD 6.9.0 installed 2026-06-25)
+  all 12 linear anchors present; docmost create-story anchor re-derivation unchanged
