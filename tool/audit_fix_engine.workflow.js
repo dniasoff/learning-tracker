@@ -121,6 +121,7 @@ const GATES = [
   '- If you changed codegen-adjacent files (@riverpod, @freezed, @JsonSerializable, *.g.dart neighbors): cd learning_tracker && dart run build_runner build --delete-conflicting-outputs, then git diff --exit-code on generated files (commit regenerated files with your change).',
   '- If your findings touch firestore.rules or learning_tracker/functions/: the firestore rules test suite (learning_tracker/functions/test/firestore_rules.test.mjs, runner per functions/package.json, needs the firebase emulator) is part of YOUR gate set. If the emulator cannot start, outcome=blocked with the exact command + error - never a silent skip.',
   (CUSTOM_LINT ? '- cd learning_tracker && dart run custom_lint   (repaired in Wave 0 - now a required gate)' : '- custom_lint is known-broken this wave (AUD-guardrails-03) and NOT in the gate set.'),
+  'Worktree environment note: fresh worktrees LACK gitignored local artifacts. Before judging any gate, set up: (1) copy learning_tracker/lib/firebase_options.dart from the main checkout at ' + REPO + '; (2) if tests need assets/db/content.db.gz, regenerate via dart run tool/prepare_asset.dart; (3) flutter pub get + dart run build_runner build --delete-conflicting-outputs for generated .g.dart/.freezed.dart files. These env gaps are NEVER defects, findings, or bounce reasons.',
 ].join('\n')
 
 function builderPrompt(comp, cid, dispatchIds) {
@@ -157,6 +158,7 @@ function reviewerPrompt(cid, tipSha, dispatchIds, buildJson) {
   lines.push('')
   lines.push('BUILDER CLAIM (JSON): ' + buildJson)
   lines.push('')
+  lines.push('Environment setup FIRST (never a bounce reason): fresh worktrees lack gitignored artifacts - copy learning_tracker/lib/firebase_options.dart from the main checkout at ' + REPO + ', regenerate assets/db/content.db.gz via dart run tool/prepare_asset.dart if tests need it, and run flutter pub get + dart run build_runner build --delete-conflicting-outputs for .g.dart/.freezed.dart files. Only judge the diff and gates AFTER env setup; an env gap in YOUR worktree is not a defect in the build under review.')
   lines.push('Your job, in order:')
   lines.push('1. RE-RUN the gates yourself in this worktree - make audit, flutter analyze, the targeted tests (builder testsAdded + touched areas), make arb-parity if strings/.arb changed' + (CUSTOM_LINT ? ', dart run custom_lint' : '') + ', rules tests if firestore.rules/functions touched. Judge by exit codes.')
   lines.push('2. Verify EVERY acceptance criterion of every claimed-fixed finding INDIVIDUALLY, against the actual tree, with evidence (file:line or command output). An AC you cannot verify = bounce.')
