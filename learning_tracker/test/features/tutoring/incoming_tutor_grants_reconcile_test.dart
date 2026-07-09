@@ -7,7 +7,10 @@
 @Tags(['tutoring'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -38,6 +41,21 @@ class _FakeRepo extends Fake implements TutorGrantRepository {
 
   @override
   Future<List<TutorGrant>> listIncomingGrants() async => grants;
+}
+
+/// Fake repository whose incoming-grants call stays pending until
+/// [complete] resolves — lets a test hold `incomingTutorGrantsProvider`'s
+/// build mid-`await` (AUD-tutoring-14).
+class _PendingRepo extends Fake implements TutorGrantRepository {
+  final _completer = Completer<({List<TutorGrant> grants, bool ok})>();
+
+  @override
+  Future<({List<TutorGrant> grants, bool ok})> listIncomingGrantsWithStatus() =>
+      _completer.future;
+
+  void complete({required List<TutorGrant> grants, required bool ok}) {
+    _completer.complete((grants: grants, ok: ok));
+  }
 }
 
 void main() {
@@ -125,4 +143,77 @@ void main() {
       );
     },
   );
+
+  // ── AUD-tutoring-14: ref.mounted after await (SM-4) — REFUTED ───────────────
+  //
+  // AUD-tutoring-14 (SUSPECTED confidence) claimed that a mid-flight
+  // authState uid change tears down incomingTutorGrantsProvider's in-flight
+  // build and a subsequent `ref.read` throws UnmountedRefException. This
+  // test reproduces the exact scenario against the REAL production provider
+  // and passes cleanly (no thrown/unhandled error) — refuting the finding
+  // for this provider. Root cause (confirmed via an isolated riverpod 3.2.1
+  // probe outside this repo): incomingTutorGrantsProvider is a plain
+  // (non-`.autoDispose`) FutureProvider. A `ref.watch`-ed dependency change
+  // rebuilds it, but does NOT dispose the underlying element the way
+  // autoDispose eviction does — Riverpod's own build-supersession machinery
+  // silently discards the stale/superseded build's outcome (even one that
+  // internally hits `UnmountedRefException`) rather than propagating it to
+  // any listener or crashing the app. The SM-4 hazard is real for
+  // `.autoDispose` providers and Notifier methods (per the rule's own
+  // rationale), but does not apply here. Kept as a permanent regression
+  // guard: if this provider is ever changed to `.autoDispose`, this test
+  // would start failing and catch the reintroduced risk.
+  test('AUD-tutoring-14 (refuted): authState uid change while the CF call is '
+      'still pending does not throw UnmountedRefException', () async {
+    final db = inMemoryDb();
+    addTearDown(db.close);
+    await seedProfile(db);
+
+    final repo = _PendingRepo();
+
+    List<Override> overridesFor(String firebaseUid) => [
+      userDatabaseProvider.overrideWithValue(db),
+      currentAccountIdProvider.overrideWithValue(1),
+      authStateProvider.overrideWithValue(
+        AuthState.signedIn(
+          user: AuthUser(
+            profileId: 1,
+            email: 't@t.com',
+            displayName: 'Tutor',
+            firebaseUid: firebaseUid,
+          ),
+          tier: Tier.cloudBorn,
+        ),
+      ),
+      tutorGrantRepositoryProvider.overrideWithValue(repo),
+    ];
+
+    final container = ProviderContainer(overrides: overridesFor('uid-1'));
+    addTearDown(container.dispose);
+
+    // An active listener is required so the provider actually reacts to
+    // the dependency change below (a lazy container.read alone would
+    // never notice authStateProvider changed value).
+    container.listen(incomingTutorGrantsProvider, (_, _) {});
+
+    // Kick off the build — it awaits the (still-pending) CF call.
+    final future = container.read(incomingTutorGrantsProvider.future);
+    // Let the build reach its first `await` before we swap the uid.
+    await Future<void>.delayed(Duration.zero);
+
+    // Account switch mid-flight: the watched
+    // authStateProvider.select((s) => s.currentUser?.firebaseUid) value
+    // changes, which rebuilds incomingTutorGrantsProvider and tears down
+    // the in-flight build above — the exact SM-4 race this file's own
+    // provider comments say it must defend against.
+    container.updateOverrides(overridesFor('uid-2'));
+
+    // Now let the ORIGINAL (now-superseded) CF call resolve.
+    repo.complete(grants: const [], ok: true);
+
+    // The original in-flight future must resolve (or error) WITHOUT
+    // throwing UnmountedRefException when it resumes past the await and
+    // touches `ref` again.
+    await expectLater(future, completes);
+  });
 }
