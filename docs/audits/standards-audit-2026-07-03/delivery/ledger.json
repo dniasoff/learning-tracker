@@ -1508,13 +1508,15 @@
     {
       "id": "AUD-tutoring-04",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Catch and log exceptions around TutorPinService calls in the PIN entry/setup async handlers",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "f8ba8b48"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Verified: no catch in _onPinComplete/_onConfirmPinEntered. Added catch(e,st) logging via AppLogger + localized generic error (reused existing l10n keys). Red-first tests failed pre-fix, pass post-fix. Commit e75da622 (rebased f8ba8b48). Merged via w1r0c6 (3d91a7c7)."
     },
     {
       "id": "AUD-tutoring-12",
@@ -5672,13 +5674,15 @@
     {
       "id": "AUD-tutoring-15",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Add semantics to PIN numpad icon-only controls and remove the fixed-height digit-key wrapper",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "304449b0"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Verified: close/backspace icons had no semantic label; fixed-height SizedBox(52). Added tooltip/semanticLabel (existing l10n keys), replaced SizedBox with content-sized Padding. Semantic-label tests red pre-fix, green post-fix. Commit a15042d3 (rebased 304449b0). Merged via w1r0c6 (3d91a7c7)."
     },
     {
       "id": "AUD-t-story-acceptance-46",
@@ -7409,13 +7413,15 @@
     {
       "id": "AUD-tutoring-16",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Convert TutorPinResult switches in gate/setup screens from statements to switch expressions per EH-6",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "666580a5"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Verified: statement-form switches over sealed TutorPinResult. Rewrote as expr assigned to nullable errorMessage, acted on once. No default arm. analyze clean, 43 existing tests pass unchanged. Commit 9993b7aa (rebased 666580a5). Merged via w1r0c6 (3d91a7c7)."
     },
     {
       "id": "AUD-t-tutoring-12",
