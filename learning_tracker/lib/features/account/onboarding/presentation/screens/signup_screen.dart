@@ -288,8 +288,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     } catch (e) {
       final docs = await getApplicationDocumentsDirectory();
       await recover(docs.path);
-      if (mounted)
-        _showError(AppLocalizations.of(context)!.signUpFailed(e.toString()));
+      // AUD-account-24: do not interpolate the raw exception into the
+      // user-facing message (untranslated + leaks implementation detail).
+      // Log it for diagnostics and show the existing localized generic
+      // fallback instead — mirrors the cloud-signup path's own fallback for
+      // an unmapped Firebase error code (see _mapAuthError's default arm).
+      AppLogger.instance.warning(event: 'sign_up_local_failed', exception: e);
+      if (mounted) {
+        _showError(AppLocalizations.of(context)!.signUpErrGeneric);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
