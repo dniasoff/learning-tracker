@@ -1,6 +1,6 @@
 {
  "wave": 1,
- "maxParallel": 4,
+ "maxParallel": 2,
  "excludeOverlapFiles": [
   "docs/coding-standards.md",
   "Makefile",
@@ -696,6 +696,78 @@
      "firestore rules suite": "n/a - no rules/functions changes"
     },
     "notes": "6 findings terminal (5 fixed, 1 refuted). Register not drifted at dispatch.\n\nFollow-ups NOT fixed: (1) revoke/resignTutorGrantUseCaseProvider duplicated in 2 files (AG-4). (2) manage_tutors_screen.dart per-child list is a 3rd PF-2 site, outside AUD-08 scope.\n\ncustom_lint CLI discovers 0 projects (doc-confirmed) - built audit checks 26/27 as substitutes.\n\nMakefile: a comment before check 27 made audit drop its final echo (exit 0 still); worked around; verified via exit code + injected violation."
+   }
+  },
+  {
+   "ids": [
+    "AUD-tutoring-06",
+    "AUD-tutoring-10"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "f65cc282b96f9480d7c9ea9f37dff9f7c1e57f86",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_1fb98597-91f-19",
+    "perFinding": [
+     {
+      "id": "AUD-tutoring-06",
+      "outcome": "fixed",
+      "note": "Confirmed writer/write-repo never constructed; CF writeAuditLog is sole live writer. Deleted tutor_audit_log_writer.dart, barrel export, stub write provider. AC1/AC2 grep-clean. Commit 1c95f3f8."
+     },
+     {
+      "id": "AUD-tutoring-10",
+      "outcome": "fixed",
+      "note": "Confirmed data->presentation import + misplacement. Moved 2 interfaces to domain/repositories/, updated 28 importers. AC1 clean. 3rd AC interface already deleted as dead code by AUD-06 (ran first); remaining 2 fully relocated. Commit f65cc282."
+     }
+    ],
+    "testsAdded": [],
+    "gateResults": {
+     "make audit": "PASS 25/25 greps clean incl. AG-4 no-dupe-types",
+     "flutter analyze": "PASS No issues found!",
+     "dart format": "PASS 0 changed",
+     "flutter test targeted": "PASS ~460 examples across 20 tutoring/account files incl. both e2e journeys",
+     "dart run custom_lint": "PASS No issues found!",
+     "build_runner+gen diff": "PASS git diff --exit-code clean on *.g.dart/*.freezed.dart",
+     "arb-parity": "n/a no .arb/string changes",
+     "firestore rules suite": "n/a rules/functions untouched"
+    },
+    "notes": "Fresh worktree env setup (not a defect): copied firebase_options.dart, pub get, build_runner build (21 gitignored .g.dart missing -> ~3000 spurious pre-existing analyze errors), prepare_asset.dart for content.db.gz. Resolved before touching tutoring code. Follow-up candidate (out of scope): tutor_audit_log_screen.dart:10 stale comment names old write interface instead of TutorAuditLogReadRepository. Result types co-located with TutorGrantRepository to avoid circular import with use_cases/."
+   }
+  },
+  {
+   "ids": [
+    "AUD-account-16",
+    "AUD-account-24"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "0423d33f663a0701fa242567fe1daa70f879dbba",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_1fb98597-91f-20",
+    "perFinding": [
+     {
+      "id": "AUD-account-16",
+      "outcome": "fixed",
+      "note": "Barrel (onboarding.dart) was an 8-line stub; populated it with real exports (auth_validators.dart + kOnboardingComplete) and repointed signup_screen.dart + sign_in_screen.dart off deep paths. make audit check 15/15 no longer lists either file for features/onboarding/. Commit 0dbe906f."
+     },
+     {
+      "id": "AUD-account-24",
+      "outcome": "fixed",
+      "note": "Red-first regression test forced the generic catch(e) branch (mocked registry.findByEmail throw, offline path) - captured RED (raw e.toString() shown), then swapped signUpFailed(e.toString()) for the existing signUpErrGeneric l10n fallback + AppLogger warning - captured GREEN. Commit 0423d33f."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/account/onboarding/presentation/screens/signup_screen_local_generic_error_test.dart"
+    ],
+    "gateResults": {
+     "make audit": "PASS (exit 0, all 25 greps clean)",
+     "flutter analyze": "PASS (0 issues)",
+     "dart format": "PASS (0 changed)",
+     "flutter test (targeted)": "PASS (63/63)",
+     "make arb-parity": "PASS (1421 keys OK)",
+     "build_runner": "PASS (env setup only, diff clean)",
+     "dart run custom_lint": "PASS (exit 0, see notes)",
+     "firestore rules suite": "n/a (not touched)"
+    },
+    "notes": "Both fixed, committed separately, tree clean. Doc-drift note (AUD-16): standards doc still names barrel providers.dart though real convention is Y.dart; followed convention. custom_lint exits 0 even on a planted violation (repo-wide detection issue, out of scope) - AUD-24 AC verified via grep instead. Follow-ups only, not fixed: duplicate auth_validators.dart copy; one unrelated deep import remains. Env setup: firebase_options.dart, pub get, prepare_asset.dart, build_runner."
    }
   }
  ],
