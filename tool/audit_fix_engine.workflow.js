@@ -203,7 +203,7 @@ function mergePrompt(mode, payloadJson) {
     'You are the SERIALIZED MERGE-LANE tooling agent (sonnet) for the standards-audit delivery engine. You operate the MAIN checkout at ' + REPO + ' (no worktree isolation). You are the ONLY writer to branch ' + BRANCH + ' and to the ledger right now.',
     'PAYLOAD (JSON): ' + payloadJson,
     '',
-    'Invariant: when you finish - success or failure - the main checkout MUST be on ' + BRANCH + ' with a clean status. Verify at start (branch + clean; if dirty or wrong branch, report failed with evidence and touch nothing) and verify again at the end.',
+    'Invariant: when you finish - success or failure - the main checkout MUST be on ' + BRANCH + ' with no MODIFIED/STAGED tracked files and no in-progress rebase/merge. UNTRACKED files are TOLERATED (a concurrent TEA-audit session writes untracked outputs under docs/test-artifacts/ - never touch, delete, or commit them; just note them). Verify at start (branch + no tracked modifications + no rebase/merge in progress; on violation report failed with evidence and touch nothing) and verify again at the end.',
     (mode === 'merge' ? [
       'MODE merge - steps:',
       '1. git checkout --detach <payload.tipSha>; git rebase ' + BRANCH + '. On conflict: git rebase --abort; git checkout ' + BRANCH + '; return status=conflict-bounce with mergeBase (git merge-base <tipSha> ' + BRANCH + ') and the conflicting files.',
@@ -413,7 +413,7 @@ const RECON_SCHEMA = {
   properties: { status: { type: 'string', enum: ['green', 'red'] }, merged: { type: 'integer' }, refuted: { type: 'integer' }, blocked: { type: 'integer' }, notes: { type: 'string', maxLength: 400 } },
 }
 const recon = await ga([
-  'You are the wave-' + WAVE + ' ledger reconciliation agent (sonnet) for the standards-audit delivery engine, operating the main checkout at ' + REPO + ' on branch ' + BRANCH + ' (verify branch + clean-except-ledger first).',
+  'You are the wave-' + WAVE + ' ledger reconciliation agent (sonnet) for the standards-audit delivery engine, operating the main checkout at ' + REPO + ' on branch ' + BRANCH + ' (verify branch first; no modified tracked files except the ledger itself; untracked files from the concurrent TEA session are tolerated - never touch them).',
   'Engine outcome (in-memory truth): merged=' + JSON.stringify(outcomes.merged) + ' refuted=' + JSON.stringify(outcomes.refuted) + ' blocked=' + JSON.stringify(outcomes.blocked) + ' unprocessed=' + JSON.stringify(residue) + ' (unprocessed reason: ' + residueReason + ').',
   'Steps: 1) Read ' + LEDGER + '; every wave-' + WAVE + ' row must be in a terminal state matching the engine outcome. Rows the merge lane already updated should agree - flag any mismatch. 2) Unprocessed ids: set status=blocked, notes="not attempted: ' + residueReason + '". 3) Verify kill-log addendum entries exist for every skipped-refuted row (add missing ones). 4) jq-validate, commit "ledger(wave-' + WAVE + '): reconcile - <counts>" with trailer Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>, and report the final counts for wave-' + WAVE + ' rows.',
   'Return: status (green if ledger consistent), merged, refuted, blocked (final wave-' + WAVE + ' counts from the LEDGER, not from memory), notes.',
@@ -437,7 +437,7 @@ const GATE_SCHEMA = {
 }
 function gatePrompt(attempt) {
   return [
-    'You are the WAVE-' + WAVE + ' CLOSING GATE (opus) for the standards-audit delivery engine' + (attempt > 1 ? ' - RE-CERTIFICATION attempt ' + attempt + ' after repairs' : '') + '. Wave ' + WAVE + ' claims done. You certify it or fail it; a wrong pass poisons everything after it. Operate the main checkout at ' + REPO + ' on ' + BRANCH + ' (verify branch + clean).',
+    'You are the WAVE-' + WAVE + ' CLOSING GATE (opus) for the standards-audit delivery engine' + (attempt > 1 ? ' - RE-CERTIFICATION attempt ' + attempt + ' after repairs' : '') + '. Wave ' + WAVE + ' claims done. You certify it or fail it; a wrong pass poisons everything after it. Operate the main checkout at ' + REPO + ' on ' + BRANCH + ' (verify branch; no modified tracked files; untracked files from the concurrent TEA session under docs/test-artifacts/ are tolerated, not residue - never touch them).',
     'Independently, judging only by exit codes and file evidence:',
     '1. Full gate suite: cd learning_tracker && make audit; flutter analyze; make ci (the learning_tracker ci target ONLY - the root Makefile ci runs a write-mode formatter and is BANNED); root make arb-parity' + (CUSTOM_LINT ? '; cd learning_tracker && dart run custom_lint' : ' (custom_lint still known-broken this wave - not in the set)') + '. If the wave touched codegen-adjacent files (check git log for .g.dart or build_runner mentions since the wave started): dart run build_runner build --delete-conflicting-outputs then git diff --exit-code on generated files.',
     '2. Ledger reconcile: every wave-' + WAVE + ' row in ' + LEDGER + ' is merged, skipped-refuted, or blocked - with commits/acVerified/notes evidence. Blocked rows need a concrete reason. Any todo/building row = fail.',
@@ -481,7 +481,7 @@ const BOUND_SCHEMA = {
 }
 const blockedDetail = outcomes.blocked.map(function (id) { return id + ': ' + (F[id].note || 'see ledger') }).slice(0, 30)
 const boundary = await ga([
-  'You are the WAVE-' + WAVE + ' BOUNDARY agent (sonnet) for the standards-audit delivery engine. The closing gate CERTIFIED the wave. Main checkout ' + REPO + ' currently on ' + BRANCH + ' (verify + clean first).',
+  'You are the WAVE-' + WAVE + ' BOUNDARY agent (sonnet) for the standards-audit delivery engine. The closing gate CERTIFIED the wave. Main checkout ' + REPO + ' currently on ' + BRANCH + ' (verify branch; untracked TEA-session files under docs/test-artifacts/ are tolerated - never touch them; abort only on modified tracked files).',
   'Git steps (judge by exit codes):',
   '1. git checkout dev; git merge --ff-only ' + BRANCH + '  (dev must fast-forward; if it cannot, STOP: return red with evidence, and git checkout ' + (FINAL_WAVE ? 'dev' : BRANCH) + ' before returning).',
   '2. git push origin dev; git push origin ' + BRANCH + '.',
