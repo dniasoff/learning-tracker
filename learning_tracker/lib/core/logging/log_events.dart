@@ -172,6 +172,12 @@ final class _TutorEvents {
   String get pinVerified => 'tutor_pin_verified';
   String get pinFailed => 'tutor_pin_failed';
 
+  // PIN reset flow (AUD-tutoring-12) — clearTutorPin runs after the reset
+  // email has already sent, so its failure must be recorded even though it
+  // must never be reported to the user as a send failure.
+  String get pinResetClearLocalPinFailed =>
+      'tutor_pin_reset_clear_local_pin_failed';
+
   // Blocked operation
   String get liveMarkBlocked => 'tutor_live_mark_blocked';
 }
