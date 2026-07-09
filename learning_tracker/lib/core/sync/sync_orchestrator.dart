@@ -735,7 +735,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     try {
       await _analytics
           ?.logEvent(
-            LogEvents.sync.pullStarted,
+            AnalyticsEvent.syncPullStarted,
             parameters: {'triggered_from_resume': triggeredFromResume},
           )
           .timeout(const Duration(seconds: 3));
@@ -915,7 +915,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       unawaited(_recomputeOutboxStatus());
       // W7.9: fire analytics pull_completed at the exit boundary.
       await _analytics?.logEvent(
-        LogEvents.sync.pullCompleted,
+        AnalyticsEvent.syncPullCompleted,
         parameters: {'triggered_from_resume': triggeredFromResume},
       );
 
@@ -952,7 +952,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       // event so dashboards can track auth/rules issues separately).
       if (e is FirestorePermissionDeniedException) {
         await _analytics?.logEvent(
-          LogEvents.sync.permissionDenied,
+          AnalyticsEvent.syncPermissionDenied,
           parameters: {
             'collection': e.collection ?? 'unknown',
             'operation': e.operation ?? 'read',
@@ -960,11 +960,16 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         );
       }
       // W7.9: fire analytics pull_failed at the error boundary.
+      // AUD-core-analytics-01 (PV-1): the raw `e.toString()` is dropped —
+      // for Firestore permission/not-found errors it routinely embeds the
+      // full document resource path (profiles/{id}/completions/{ref}).
+      // `_analyticsErrorKind` gives a coarse, low-cardinality category
+      // instead, matching the SY-3 friendly-message classification below.
       await _analytics?.logEvent(
-        LogEvents.sync.pullFailed,
+        AnalyticsEvent.syncPullFailed,
         parameters: {
           'triggered_from_resume': triggeredFromResume,
-          'error': e.toString(),
+          'error_kind': _analyticsErrorKind(e),
         },
       );
       // SY-3: map known exception types to friendly, user-facing messages.
@@ -1396,12 +1401,29 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // W7.8: fire analytics listener_error event for dashboards (in addition
     // to the Crashlytics non-fatal above — both are needed: Crashlytics for
     // developer triage, Analytics for trend detection).
+    // AUD-core-analytics-01 (PV-1): the raw `error.toString()` is dropped —
+    // see `_analyticsErrorKind` for why a coarse category replaces it.
     final future = _analytics?.logEvent(
-      LogEvents.sync.listenerError,
-      parameters: {'channel': channel, 'error': error.toString()},
+      AnalyticsEvent.syncListenerError,
+      parameters: {
+        'channel': channel,
+        'error_kind': _analyticsErrorKind(error),
+      },
     );
     if (future != null) unawaited(future);
   }
+
+  /// Coarse, low-cardinality classification of a sync error for analytics
+  /// parameters (PV-1). Mirrors the SY-3 friendly-message switch above —
+  /// never pass a raw exception `.toString()` to an analytics event, since
+  /// Firestore exceptions routinely embed document resource paths
+  /// (`profiles/{id}/completions/{ref}`) that identify a specific child and
+  /// the content they studied.
+  static String _analyticsErrorKind(Object error) => switch (error) {
+    TimeoutException() => 'timeout',
+    FirestorePermissionDeniedException() => 'permission_denied',
+    _ => 'other',
+  };
 
   static String? _channelToKind(String channel) => switch (channel) {
     'completions' => EntityKind.completion,

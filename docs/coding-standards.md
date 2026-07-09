@@ -324,8 +324,8 @@ The sync engine writes ordinary collections as the owner, so for those paths `fi
 This is a children's app (COPPA / GDPR-K / Play Families posture). These rules are load-bearing for store presence, not style.
 
 **PV-1 — Analytics event parameters never include content identifiers or per-child identifiers: no `sefaria_ref`, no `profile_id`, no names. Params are coarse, low-cardinality categories (`track_type`, `curriculum_id`).**
-**Why:** "which religious text a specific child studied" is sensitive personal information about a child; exporting it to Google Analytics is what Play Families / COPPA disclosure rules restrict. **Live violation:** `analytics_service.dart` currently sends both (see [Compliance Gaps](#current-compliance-gaps-2026-07-02)).
-**Enforce:** [Pending] audit grep over `core/analytics/` banning the identifiers in `logEvent`/param maps and Crashlytics `setCustomKey`/`.log(`.
+**Why:** "which religious text a specific child studied" is sensitive personal information about a child; exporting it to Google Analytics is what Play Families / COPPA disclosure rules restrict. **Live violation:** `analytics_service.dart`'s 3 Story 27.14 convenience methods still send `sefaria_ref`/`profile_id` (see [Compliance Gaps](#current-compliance-gaps-2026-07-02)). AUD-core-analytics-01 (2026-07) closed the larger gap: 7 call sites reached via the uncatalogued `.logEvent()` bypass (PV-5) that combined `entity_key`/`profile_id`/`target`/raw exception text with analytics events — `entity_key` alone combined a per-child id with the exact content studied in one string.
+**Enforce:** [Pending] audit grep over `core/analytics/` banning the identifiers in `logEvent`/param maps and Crashlytics `setCustomKey`/`.log(`. PV-5's catalog checker (`make audit` check 26/26) is a partial backstop — it forces every event through the reviewed `AnalyticsEvent` catalog, but doesn't itself inspect parameter contents.
 **Source:** support.google.com/googleplay/android-developer/answer/9893335
 
 **PV-2 — `setUserIdentifier`/`setUserId` receive only an opaque local id or hash — never a display name, email, or phone. Keep the Crashlytics arg type-locked to `int?`.**
@@ -344,8 +344,8 @@ This is a children's app (COPPA / GDPR-K / Play Families posture). These rules a
 **Source:** firebase.google.com/docs/analytics/configure-data-collection
 
 **PV-5 — Every Analytics event routes through an `AnalyticsEvent` constant matching `^[a-z][a-z0-9_]{0,39}$` (no reserved `firebase_`/`google_`/`ga_` prefixes); no inline event-name literals at call sites.**
-**Why:** ad-hoc names risk truncation and reserved-prefix rejection, and a single registry keeps every event auditable for PII in one place.
-**Enforce:** [Pending] audit grep that `logEvent(` call sites reference `AnalyticsEvent.`; unit test asserting each constant matches the regex.
+**Why:** ad-hoc names risk truncation and reserved-prefix rejection, and a single registry keeps every event auditable for PII in one place. AUD-core-analytics-01 found ~15 `.logEvent()` call sites bypassing the catalog entirely by passing `LogEvents.*` constants (a *separate* catalog scoped to `AppLogger` structured logs) straight through to real Firebase Analytics — several combined with per-child/content identifiers with zero PV-1 review.
+**Enforce:** [Enforced] `dart run tool/check_analytics_catalog.dart` (wired into `make audit` check 26/26) fails with `file:line` on any `.logEvent()` call site in `lib/` whose event-name argument is not an `AnalyticsEvent.*` member.
 **Source:** firebase.google.com/docs/analytics/flutter/events
 
 **PV-6 — App Check: debug providers and emulator wiring appear only in the `kDebugMode`-guarded bootstrap; activation is non-fatal (a failed attestation never blocks local-first startup); debug tokens are injected via `FIREBASE_APPCHECK_DEBUG_TOKEN` from secrets and never committed; enforcement flips only after CI/device tokens are registered and metrics reviewed, recorded in `docs/appcheck-enforcement.md`.**
@@ -714,20 +714,20 @@ Already enabled and load-bearing (do not remove): `unawaited_futures`, `use_buil
 
 ## Enforcement — `make audit` and CI
 
-> ⚠️ **Two Makefiles currently exist with divergent audit sets.** The **authoritative** target is `learning_tracker/Makefile`'s `audit` (25 checks, below). The repo-root `Makefile` carries an older 12-grep variant whose RTL check (`EdgeInsets.only(left:/right:)`) was never ported to the inner set. **Consolidation is required** (tracked in [Compliance Gaps](#current-compliance-gaps-2026-07-02)): union the check sets into one target, renumber sequentially, and have the other Makefile delegate.
+> ⚠️ **Two Makefiles currently exist with divergent audit sets.** The **authoritative** target is `learning_tracker/Makefile`'s `audit` (26 checks, below). The repo-root `Makefile` carries an older 12-grep variant whose RTL check (`EdgeInsets.only(left:/right:)`) was never ported to the inner set. **Consolidation is required** (tracked in [Compliance Gaps](#current-compliance-gaps-2026-07-02)): union the check sets into one target, renumber sequentially, and have the other Makefile delegate.
 
 Run before pushing:
 
 ```bash
-cd learning_tracker && make audit   # 25 enforcement checks + packages/custom_lints unit tests
+cd learning_tracker && make audit   # 26 enforcement checks + packages/custom_lints unit tests
 dart run custom_lint                # currently non-functional — see "custom_lint toolchain status" below; do not rely on its exit code
 ```
 
 `make audit` (and `make ci`) depend on `lint-rules-test`, which runs `dart test` inside `packages/custom_lints/` — the unit-test suite that exercises each of the 9 custom lint rules' own matching/whitelist logic (independent of whether the `custom_lint` plugin itself can attach to the analyzer — see the warn-only note below). This is a hard gate: it never soft-skips (AUD-guardrails-17).
 
-### The 25 enforcement checks (`learning_tracker/Makefile`)
+### The 26 enforcement checks (`learning_tracker/Makefile`)
 
-Each check must return zero matching lines (except the two marked warn-only). The odd numbering (`1/15 … 25/25`) is accretion from fix waves — renumber on consolidation.
+Each check must return zero matching lines (except the two marked warn-only). The odd numbering (`1/15 … 26/26`) is accretion from fix waves — renumber on consolidation.
 
 | # | What it checks |
 |---|----------------|
@@ -756,6 +756,7 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 23 | No `custom_lint` analyzer plugin marker in `analysis_options.yaml` (AUD-guardrails-03 — breaks the `dart analyze --fatal-infos` hard gate; see "custom_lint toolchain status" below) |
 | 24 | No duplicate public top-level type (`class`/`enum`/`mixin`) names across `lib/` (AG-4, AUD-repo-01) |
 | 25 | Only one file named `coding-standards.md` exists outside `docs/_archive/` (AG-8, AUD-docs-04) |
+| 26 | Every `.logEvent()` call site in `lib/` passes an `AnalyticsEvent.*` catalog member as the event name — `tool/check_analytics_catalog.dart` (PV-5, AUD-core-analytics-01) |
 
 Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|right:)`** (RTL violation — AX-1).
 
@@ -866,7 +867,7 @@ Live violations of the rules above, verified in the working tree on this date. E
 
 | Gap | Violates | Detail |
 |-----|----------|--------|
-| Analytics sends `sefaria_ref` and `profile_id` as event params | PV-1 | `lib/core/analytics/analytics_service.dart:56,82,87` |
+| Analytics sends `sefaria_ref` and `profile_id` as event params on the 3 Story 27.14 convenience methods (`logCompletionRecorded`, `logPinLockedOut`, `logParentModeEntered`) | PV-1 | `lib/core/analytics/analytics_service.dart:86,112,117` — narrower than it was: AUD-core-analytics-01 (2026-07) closed the larger uncatalogued-`.logEvent()` bypass (see PV-5 row below); these 3 catalog-native sites are the remaining known gap |
 | Crashlytics enabled unconditionally at bootstrap | PV-3 | `lib/app/bootstrap/firebase_bootstrap.dart:45` |
 | No committed `storage.rules` | ST-1 | Storage serves `content/v1/...` on console-only rules |
 | Two `firebase.json` disagree on the Firestore emulator port (9090 vs 8080) | TQ-9 | root vs `learning_tracker/`; rules suite hardcodes 8080 |

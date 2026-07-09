@@ -12,7 +12,6 @@ library;
 import 'dart:async';
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
@@ -40,7 +39,7 @@ class ProfileProgramMerger implements EntityMerger {
       if (decoded == null) {
         // W7.5: fire telemetry for every silently-skipped row.
         final future = _analytics?.logEvent(
-          LogEvents.sync.mergeRowSkipped,
+          AnalyticsEvent.syncMergeRowSkipped,
           parameters: {
             'entity_kind': EntityKind.profileProgram,
             'reason': 'malformed_fields',

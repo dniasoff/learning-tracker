@@ -800,8 +800,16 @@ void main() {
           .firstWhere((e) => e.$1 == 'sync_outbox_dead_lettered')
           .$2;
       expect(params?['entity_kind'], OutboxEntityKind.streak);
-      expect(params?['entity_key'], 'dead-streak');
       expect(params?['attempts'], 10);
+      // AUD-core-analytics-01 (PV-1): entity_key must NEVER reach analytics —
+      // for completions it embeds `${profileId}:${sefariaRef}:...` (see
+      // completion_writer.dart), combining a per-child identifier with the
+      // exact content the child studied in one uncatalogued event.
+      expect(
+        params?.containsKey('entity_key'),
+        isFalse,
+        reason: 'entity_key must be stripped from the analytics payload',
+      );
     });
 
     test(
@@ -833,7 +841,16 @@ void main() {
             .firstWhere((e) => e.$1 == 'sync_outbox_dead_lettered')
             .$2;
         expect(params?['entity_kind'], OutboxEntityKind.completion);
-        expect(params?['entity_key'], 'dead-c1');
+        // AUD-core-analytics-01 (PV-1): entity_key must NEVER reach
+        // analytics for completions — it embeds
+        // `${profileId}:${sefariaRef}:${stageId}:${trackType}:${curriculumId}`
+        // (see completion_writer.dart), a per-child identifier combined
+        // with the exact content the child was studying.
+        expect(
+          params?.containsKey('entity_key'),
+          isFalse,
+          reason: 'entity_key must be stripped from the analytics payload',
+        );
       },
     );
 

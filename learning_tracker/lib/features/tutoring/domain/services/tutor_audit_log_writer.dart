@@ -27,7 +27,6 @@
 // and writes to tutor_grants/{grantId}/audit_log/{entryId}.
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
 
@@ -214,13 +213,13 @@ class TutorAuditLogWriter {
 
     // W7.11: fire tutor_action_recorded for every audit log entry so
     // analytics dashboards can track tutor activity trends.
+    // AUD-core-analytics-01 (PV-1): `target` dropped — its own documented
+    // shape is a resource path like "profile/42.displayName" (see the
+    // [target] doc comment above), i.e. a per-child identifier attached to
+    // a description of what was changed.
     _analytics?.logEvent(
-      LogEvents.tutor.actionRecorded,
-      parameters: {
-        'grant_id': grantId,
-        'action': action.toJson(),
-        'target': target,
-      },
+      AnalyticsEvent.tutorActionRecorded,
+      parameters: {'grant_id': grantId, 'action': action.toJson()},
     );
 
     return repository.appendEntry(entry);

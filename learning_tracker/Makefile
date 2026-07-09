@@ -274,7 +274,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 25 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 26 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -532,7 +532,7 @@ audit: lint-rules-test ## Run all 25 enforcement greps (NFR19) — exits non-zer
 	  echo "$$DUPES"; \
 	  FAIL=1; \
 	fi; \
-	echo "25/25 — Only one file named coding-standards.md outside docs/_archive (AUD-docs-04, AG-8)"; \
+	echo "25/26 — Only one file named coding-standards.md outside docs/_archive (AUD-docs-04, AG-8)"; \
 	# docs/coding-standards.md is the sole canonical standards doc; a second \
 	# file with the same name (e.g. a stale root copy) is a doc that can lie \
 	# to an agent that lands on the wrong one — AG-8. \
@@ -548,9 +548,17 @@ audit: lint-rules-test ## Run all 25 enforcement greps (NFR19) — exits non-zer
 	  echo "$$HITS"; \
 	  FAIL=1; \
 	fi; \
+	echo "26/26 — Every .logEvent() call site in lib/ uses an AnalyticsEvent.* catalog member (AUD-core-analytics-01, PV-1/PV-5)"; \
+	if ! dart run tool/check_analytics_catalog.dart > /tmp/analytics_catalog_check.$$$$.log 2>&1; then \
+	  cat /tmp/analytics_catalog_check.$$$$.log; \
+	  rm -f /tmp/analytics_catalog_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/analytics_catalog_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 25 greps clean ==="; \
+	  echo "=== audit PASSED — all 26 greps clean ==="; \
 	fi

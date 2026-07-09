@@ -16,7 +16,6 @@
 // Cloud Functions.
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 
@@ -130,7 +129,7 @@ class InviteTutorUseCase {
     // W7.11: fire tutor_invite_sent on success.
     if (result is TutorGrantSuccess) {
       await _analytics?.logEvent(
-        LogEvents.tutor.inviteSent,
+        AnalyticsEvent.tutorInviteSent,
         parameters: {'child_profile_id': childProfileId},
       );
     }
@@ -159,7 +158,7 @@ class AcceptTutorInviteUseCase {
     // W7.11: fire tutor_invite_accepted on success.
     if (result is TutorGrantSuccess) {
       await _analytics?.logEvent(
-        LogEvents.tutor.inviteAccepted,
+        AnalyticsEvent.tutorInviteAccepted,
         parameters: {'grant_id': grant.grantId},
       );
     }
@@ -188,7 +187,7 @@ class DeclineTutorInviteUseCase {
     // W7.11: fire tutor_invite_declined on success.
     if (result is TutorGrantSuccess) {
       await _analytics?.logEvent(
-        LogEvents.tutor.inviteDeclined,
+        AnalyticsEvent.tutorInviteDeclined,
         parameters: {'grant_id': grant.grantId},
       );
     }
@@ -219,7 +218,7 @@ class RescindTutorInviteUseCase {
     // W7.11: fire tutor_grant_rescinded on success.
     if (result is TutorGrantSuccess) {
       await _analytics?.logEvent(
-        LogEvents.tutor.grantRescinded,
+        AnalyticsEvent.tutorGrantRescinded,
         parameters: {'grant_id': grant.grantId},
       );
     }

@@ -4,7 +4,6 @@ import 'dart:math' as math;
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
-import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
@@ -260,11 +259,14 @@ class OutboxProcessor {
     final eligibleCompletions = completionRows.where((row) {
       if (row.attempts >= _maxAttempts) {
         // W7.7: fire analytics for every dead-lettered completion row.
+        // AUD-core-analytics-01 (PV-1): entity_key is dropped — it embeds
+        // `${profileId}:${sefariaRef}:${stageId}:${trackType}:${curriculumId}`
+        // (see completion_writer.dart), combining a per-child identifier
+        // with the exact content the child was studying in one string.
         final future = _analytics?.logEvent(
-          LogEvents.sync.outboxDeadLettered,
+          AnalyticsEvent.syncOutboxDeadLettered,
           parameters: {
             'entity_kind': OutboxEntityKind.completion,
-            'entity_key': row.entityKey,
             'attempts': row.attempts,
           },
         );
@@ -365,13 +367,10 @@ class OutboxProcessor {
       for (final row in rows) {
         if (row.attempts >= _maxAttempts) {
           // W7.7: fire analytics for every dead-lettered non-completion row.
+          // AUD-core-analytics-01 (PV-1): entity_key dropped, see above.
           final future = _analytics?.logEvent(
-            LogEvents.sync.outboxDeadLettered,
-            parameters: {
-              'entity_kind': kind,
-              'entity_key': row.entityKey,
-              'attempts': row.attempts,
-            },
+            AnalyticsEvent.syncOutboxDeadLettered,
+            parameters: {'entity_kind': kind, 'attempts': row.attempts},
           );
           if (future != null) unawaited(future);
           continue; // dead-lettered
