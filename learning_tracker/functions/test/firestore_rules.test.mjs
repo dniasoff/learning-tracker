@@ -331,7 +331,32 @@ describe('completions — owner write + validation + TUTOR WRITE BLOCK', () => {
     await assertFails(getDoc(doc(stranger(), `${COMPLETIONS}/c1`)));
     await assertFails(deleteDoc(doc(owner(), `${COMPLETIONS}/c1`)));
   });
+  // SR-1 (AUD-docs-01): append-only collections deny value mutation on
+  // update — only an idempotent identical replay is permitted. c1 is
+  // seeded in beforeEach with points: 10.
+  test('SR-1: owner CANNOT change points on an existing completion (value mutation denied)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${COMPLETIONS}/c1`), { points: 99, completed_at: pastTs }),
+    );
+  });
+  test('SR-1: owner CAN replay the identical completion value (idempotent retry)', async () => {
+    await assertSucceeds(
+      setDoc(doc(owner(), `${COMPLETIONS}/c1`), { points: 10, completed_at: pastTs }),
+    );
+  });
 });
+
+// ── SR-1 helper: changed-value update denied, identical replay allowed ──────
+// (AUD-docs-01) Seeds `path` with `seedDoc`, then asserts an owner update
+// with `changedDoc` (a different field value) FAILS, and an owner update
+// re-sending `seedDoc` unchanged (idempotent retry) SUCCEEDS.
+async function expectSR1ChangedValueDenied(path, seedDoc, changedDoc) {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), path), seedDoc);
+  });
+  await assertFails(setDoc(doc(owner(), path), changedDoc));
+  await assertSucceeds(setDoc(doc(owner(), path), seedDoc));
+}
 
 // ── Path 8: streak_events ────────────────────────────────────────────────────
 describe('streak_events — owner write, tutor read, delete denied', () => {
@@ -340,6 +365,13 @@ describe('streak_events — owner write, tutor read, delete denied', () => {
   });
   test('tutor cannot write streak_events', async () => {
     await assertFails(setDoc(doc(tutor(), `${LP}/streak_events/x`), { event: 'x' }));
+  });
+  test('SR-1: owner CANNOT change an existing streak_events value (identical replay still allowed)', async () => {
+    await expectSR1ChangedValueDenied(
+      `${LP}/streak_events/s2`,
+      { event: 'start' },
+      { event: 'tampered' },
+    );
   });
 });
 
@@ -351,6 +383,13 @@ describe('learning_ledger — owner write, tutor read, delete denied', () => {
   test('tutor cannot write learning_ledger', async () => {
     await assertFails(setDoc(doc(tutor(), `${LP}/learning_ledger/x`), { minutes: 1 }));
   });
+  test('SR-1: owner CANNOT change an existing learning_ledger value (identical replay still allowed)', async () => {
+    await expectSR1ChangedValueDenied(
+      `${LP}/learning_ledger/ll2`,
+      { minutes: 30 },
+      { minutes: 9999 },
+    );
+  });
 });
 
 // ── Path 10: points_ledger ───────────────────────────────────────────────────
@@ -360,6 +399,13 @@ describe('points_ledger — owner write, tutor read, delete denied', () => {
   });
   test('tutor cannot write points_ledger', async () => {
     await assertFails(setDoc(doc(tutor(), `${LP}/points_ledger/x`), { points: 5 }));
+  });
+  test('SR-1: owner CANNOT change an existing points_ledger value (identical replay still allowed)', async () => {
+    await expectSR1ChangedValueDenied(
+      `${LP}/points_ledger/pl2`,
+      { points: 10 },
+      { points: 500 },
+    );
   });
 });
 

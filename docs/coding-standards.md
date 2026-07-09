@@ -293,8 +293,8 @@ These rules govern `lib/core/sync/` — the only place Firestore is touched (Rul
 The sync engine writes ordinary collections as the owner, so for those paths `firestore.rules` is the **only** server-side gate. Keep rule validation minimal and fixture-driven (this repo has self-inflicted `permission-denied` outages by over-tightening rules against schema drift — the PHASE-D zero-denial oracle in the rules suite exists to prevent that); never encode business logic in rules. Within that budget:
 
 **SR-1 — Append-only collections (`completions`, `streak_events`, `learning_ledger`, `points_ledger`) deny value mutation on update: allow only idempotent identical replay (`request.resource.data == resource.data`).**
-**Why:** today an owner token can silently rewrite a past completion's points or timestamp — the document ID is the only thing making these "append-only," so a child's study record is tamperable.
-**Enforce:** [Pending] deny-tests in `functions/test/firestore_rules.test.mjs`: changed-value update `assertFails`, identical replay `assertSucceeds`.
+**Why:** previously an owner token could silently rewrite a past completion's points or timestamp — the document ID was the only thing making these "append-only," so a child's study record was tamperable.
+**Enforce:** [Enforced] `firestore.rules` gates `update` on each of the 4 collections with `request.resource.data == resource.data` (split from `create`, which alone carries field validation); deny-tests in `functions/test/firestore_rules.test.mjs` (`make test-rules`) — changed-value update `assertFails`, identical replay `assertSucceeds` — for all 4 collections (AUD-docs-01).
 **Source:** firebase.google.com/docs/rules/data-validation
 
 **SR-2 — Validate value types and cap string sizes in rules (`is timestamp`, `is number`, `s.size() <= N`), not just key sets via `hasOnly()`.**
