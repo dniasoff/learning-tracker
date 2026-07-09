@@ -2224,6 +2224,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountDeleteForever => 'Delete Forever';
 
   @override
+  String get accountRemovePendingSyncTitle => 'Not backed up yet';
+
+  @override
+  String accountRemovePendingSyncBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count changes haven\'t',
+      one: '1 change hasn\'t',
+    );
+    return '$_temp0 been backed up to the cloud yet. Connect to the internet, wait for sync to finish, then try again.';
+  }
+
+  @override
   String accountPickerAddAnother(int remaining) {
     return 'Add another account ($remaining slots remaining)';
   }

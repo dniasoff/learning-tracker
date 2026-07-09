@@ -756,7 +756,8 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
   }
 
   Future<bool> _confirmDismiss(BuildContext context, bool isCloud) async {
-    return await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (ctx) {
             final d = AppLocalizations.of(ctx)!;
@@ -790,6 +791,51 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
           },
         ) ??
         false;
+
+    if (!confirmed || !isCloud) return confirmed;
+
+    // AUD-account-01: the dialog above just promised "your cloud data is
+    // safe" — that promise only holds if nothing is still queued locally.
+    // Check the outbox BEFORE letting Dismissible remove the tile (and
+    // before _onDismissed tears the session down for the active account).
+    final registry = ref.read(deviceRegistryProvider);
+    final docsDir = await getApplicationDocumentsDirectory();
+    final service = AccountLifecycleService(
+      registry: registry,
+      databasesPath: docsDir.path,
+      authRepository: ref.read(authRepositoryProvider),
+    );
+    final pending = await service.pendingOutboxDepth(account.accountId);
+    if (pending > 0) {
+      if (context.mounted) {
+        await _showPendingSyncBlockedDialog(context, pending);
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _showPendingSyncBlockedDialog(
+    BuildContext context,
+    int pendingCount,
+  ) {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        final d = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(d.accountRemovePendingSyncTitle),
+          content: Text(d.accountRemovePendingSyncBody(pendingCount)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(d.actionOk),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _onDismissed(BuildContext context, WidgetRef ref) async {

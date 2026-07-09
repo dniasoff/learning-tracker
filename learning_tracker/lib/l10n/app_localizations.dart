@@ -3957,6 +3957,18 @@ abstract class AppLocalizations {
   /// **'Delete Forever'**
   String get accountDeleteForever;
 
+  /// No description provided for @accountRemovePendingSyncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not backed up yet'**
+  String get accountRemovePendingSyncTitle;
+
+  /// AUD-account-01: blocks swipe-to-remove on a cloud account while its outbox still has undrained rows.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 change hasn\'t} other{{count} changes haven\'t}} been backed up to the cloud yet. Connect to the internet, wait for sync to finish, then try again.'**
+  String accountRemovePendingSyncBody(int count);
+
   /// No description provided for @accountPickerAddAnother.
   ///
   /// In en, this message translates to:

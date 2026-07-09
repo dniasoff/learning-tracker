@@ -1101,6 +1101,14 @@
   "accountDeleteAccountBody": "All learning data will be permanently lost. This cannot be undone.",
   "accountRemove": "Remove",
   "accountDeleteForever": "Delete Forever",
+  "accountRemovePendingSyncTitle": "Not backed up yet",
+  "accountRemovePendingSyncBody": "{count, plural, one{1 change hasn't} other{{count} changes haven't}} been backed up to the cloud yet. Connect to the internet, wait for sync to finish, then try again.",
+  "@accountRemovePendingSyncBody": {
+    "description": "AUD-account-01: blocks swipe-to-remove on a cloud account while its outbox still has undrained rows.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "accountPickerAddAnother": "Add another account ({remaining} slots remaining)",
   "@accountPickerAddAnother": {
     "placeholders": {

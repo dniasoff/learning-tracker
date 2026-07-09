@@ -1,8 +1,28 @@
 import 'dart:io';
 
+import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+
+/// Thrown by [AccountLifecycleService.removeCloudFromDevice] when the
+/// account's local DB still has outbox rows that have not reached Firestore.
+///
+/// The outbox is the only copy of a queued mutation until it is pushed;
+/// deleting the local DB file while [pendingCount] is nonzero would
+/// permanently destroy that data even though the Account Picker's
+/// confirmation dialog promises "your cloud data is safe" unconditionally.
+/// See AUD-account-01.
+class UndrainedOutboxException extends ConflictException {
+  const UndrainedOutboxException(this.pendingCount)
+    : super('$pendingCount change(s) have not been backed up to the cloud yet');
+
+  /// Number of outbox rows across every profile under the account that have
+  /// not yet been pushed to Firestore.
+  final int pendingCount;
+}
 
 /// Service handling account removal and deletion for all tiers.
 ///
@@ -31,6 +51,11 @@ class AccountLifecycleService {
   /// Light removal: deletes local DB file + registry entry.
   /// Firestore data and Firebase Auth are NOT touched — user can
   /// sign back in on any device and recover everything.
+  ///
+  /// Throws [UndrainedOutboxException] if any profile under this account
+  /// still has outbox rows that have not reached Firestore — deleting the
+  /// DB file now would destroy that data permanently, contradicting the
+  /// "your cloud data is safe" promise shown at the confirmation prompt.
   Future<void> removeCloudFromDevice(String accountId) async {
     final account = await _registry.findById(accountId);
     if (account == null) return;
@@ -39,6 +64,11 @@ class AccountLifecycleService {
         'removeCloudFromDevice requires a cloud-born account. '
         'Use deleteLocalAccount for local-born.',
       );
+    }
+
+    final pending = await pendingOutboxDepth(accountId);
+    if (pending > 0) {
+      throw UndrainedOutboxException(pending);
     }
 
     // If we're removing the Firebase user whose token is currently
@@ -118,19 +148,49 @@ class AccountLifecycleService {
     await _registry.removeAccount(accountId);
   }
 
-  void _deleteDbFile(String dbFileName) {
-    // drift_flutter 0.2.8 stores driftDatabase(name: 'foo.db') as 'foo.db.sqlite'
-    // on the filesystem (see drift_flutter/src/native.dart line 51:
-    // `'$name.sqlite'`).  Try the .sqlite-suffixed path first; fall back to the
-    // bare name so registry entries written before this fix are also cleaned up.
+  // ─── AUD-account-01: pre-delete outbox guard ───────────────────
+
+  /// Total number of undrained outbox rows across every profile under
+  /// [accountId]'s local DB, or 0 if the account or its DB file cannot be
+  /// found (nothing to lose).
+  ///
+  /// The outbox table is per-account (one row per profile column), so a
+  /// single unfiltered count over the account's own DB file already sums
+  /// every profile it holds — there is no need to enumerate profile ids
+  /// first.
+  Future<int> pendingOutboxDepth(String accountId) async {
+    final account = await _registry.findById(accountId);
+    if (account == null) return 0;
+
+    final driftFile = _resolveDbFile(account.dbFileName);
+    if (driftFile == null) return 0;
+
+    final db = UserDatabase(NativeDatabase(driftFile));
+    try {
+      return await db.outboxDao.totalDepth();
+    } finally {
+      await db.close();
+    }
+  }
+
+  /// Resolves [dbFileName] to the drift_flutter on-disk file, or null if
+  /// neither the `.sqlite`-suffixed nor the bare-name file exists.
+  ///
+  /// drift_flutter 0.2.8 stores driftDatabase(name: 'foo.db') as
+  /// 'foo.db.sqlite' on the filesystem (see drift_flutter/src/native.dart
+  /// line 51: `'$name.sqlite'`). Try the .sqlite-suffixed path first; fall
+  /// back to the bare name so registry entries written before this fix are
+  /// also handled.
+  File? _resolveDbFile(String dbFileName) {
     final driftFile = File('$_dbPath/$dbFileName.sqlite');
-    if (driftFile.existsSync()) {
-      driftFile.deleteSync();
-      return;
-    }
+    if (driftFile.existsSync()) return driftFile;
     final bareFile = File('$_dbPath/$dbFileName');
-    if (bareFile.existsSync()) {
-      bareFile.deleteSync();
-    }
+    if (bareFile.existsSync()) return bareFile;
+    return null;
+  }
+
+  void _deleteDbFile(String dbFileName) {
+    final file = _resolveDbFile(dbFileName);
+    file?.deleteSync();
   }
 }

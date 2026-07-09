@@ -990,6 +990,8 @@
   "accountDeleteAccountBody": "כל נתוני הלמידה יימחקו לצמיתות. לא ניתן לבטל.",
   "accountRemove": "הסרה",
   "accountDeleteForever": "מחיקה לצמיתות",
+  "accountRemovePendingSyncTitle": "טרם גובה",
+  "accountRemovePendingSyncBody": "{count, plural, one{שינוי אחד טרם גובה בענן.} other{{count} שינויים טרם גובו בענן.}} יש להתחבר לאינטרנט, להמתין לסיום הסנכרון, ולנסות שוב.",
   "accountPickerAddAnother": "הוספת חשבון ({remaining} מקומות פנויים)",
   "@accountPickerAddAnother": {
     "placeholders": {
