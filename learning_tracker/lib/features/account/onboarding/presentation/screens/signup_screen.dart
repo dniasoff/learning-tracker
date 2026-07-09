@@ -22,10 +22,11 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
     as auth_state;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
-import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
-    as validators;
-import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
+import 'package:learning_tracker/features/onboarding/onboarding.dart'
     show kOnboardingComplete;
+import 'package:learning_tracker/features/onboarding/onboarding.dart'
+    as validators
+    show validateDisplayName, validateEmail, validatePassword;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
