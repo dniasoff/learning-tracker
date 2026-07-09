@@ -1,6 +1,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
@@ -179,10 +180,21 @@ class AccountManagementService {
         'deleteAccountData',
       );
       await callable.call<Map<String, dynamic>>(<String, dynamic>{'uid': uid});
-    } catch (e) {
+    } catch (e, stackTrace) {
       // Log but don't rethrow — auth deletion + local cleanup still proceed.
       // The onUserDeleted Cloud Function will also fire when Auth account is
       // deleted and will handle any remaining data as a safety net.
+      //
+      // AUD-account-13: this catch previously had zero AppLogger call despite
+      // the comment above claiming "Log but don't rethrow" — a failure of the
+      // primary Firestore-deletion path (network error, quota, not-yet-deployed
+      // CF, permission-denied) had zero telemetry. uid only, no other PII.
+      AppLogger.instance.error(
+        event: 'delete_firestore_user_data_failed',
+        fields: {'uid': uid},
+        exception: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
