@@ -67,6 +67,22 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
       updated_at: now,
       _delete_cascade: true, // sentinel: revoked because parent account deleted
     });
+    // AUD-firebase-06: mirror Step 3 — hasActiveTutorAccess() in
+    // firestore.rules grants a tutor read access purely by the existence of
+    // a tutor_active_access doc, so every code path that ends an active
+    // grant must also delete it. Only an 'active' grant ever had one
+    // written (by acceptTutorInvite); a still-'pending' grant has
+    // tutor_uid == null and no access doc — the delete is a safe no-op in
+    // that case regardless, but skip building a nonsense doc-id for it.
+    const grant = grantDoc.data();
+    if (grant.tutor_uid) {
+      const accessId = buildAccessId(
+        String(grant.tutor_uid),
+        uid,
+        String(grant.child_profile_id ?? "")
+      );
+      parentGrantBatch.delete(db.collection("tutor_active_access").doc(accessId));
+    }
   }
   if (parentGrantsSnap.size > 0) {
     await parentGrantBatch.commit();
