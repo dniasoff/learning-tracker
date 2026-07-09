@@ -594,6 +594,122 @@ void main() {
     );
   });
 
+  group('TutorPinSetupScreen — AUD-tutoring-15: accessibility', () {
+    testWidgets('backspace key exposes a non-empty semantic label', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      final handle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+
+      // The backspace numpad key surfaces its `semanticLabel:` on the Icon
+      // ('Delete' — l10n.pinBackspace, en). find.bySemanticsLabel walks the
+      // semantics tree directly, so it does not depend on which ancestor
+      // Widget happens to own the merged SemanticsNode.
+      expect(
+        find.bySemanticsLabel('Delete'),
+        findsOneWidget,
+        reason:
+            'AUD-tutoring-15: the backspace numpad key must expose a '
+            'non-empty semantic label for screen readers',
+      );
+
+      handle.dispose();
+      await _teardown(tester);
+    });
+
+    testWidgets('numpad renders without RenderFlex overflow at textScale 2.0', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+          child: _buildHarness(
+            stubService: _StubTutorPinService(
+              setResult: (_, __) async => const TutorPinSuccess(),
+            ),
+            onPinSet: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        tester.takeException(),
+        isNull,
+        reason:
+            'AUD-tutoring-15: the numpad must not overflow/clip at '
+            'textScale 2.0 (fixed-height digit-key wrapper regression)',
+      );
+
+      await _teardown(tester);
+    });
+  });
+
+  group('TutorPinSetupScreen — AUD-tutoring-04: setTutorPin throws', () {
+    testWidgets('shows the generic save error and resets to step 1 instead of '
+        'silently stalling on the confirm step', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      var onPinSetCalled = false;
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) => throw Exception('keystore unavailable'),
+          ),
+          onPinSet: () => onPinSetCalled = true,
+        ),
+      );
+      await tester.pump();
+
+      // Enter matching PINs so the service is called and throws.
+      await _enterPin(tester, '4321');
+      await tester.pump(const Duration(milliseconds: 100));
+      await _enterPin(tester, '4321');
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.byType(CircularProgressIndicator),
+        findsNothing,
+        reason: 'Saving spinner must clear once the throw is handled',
+      );
+      expect(
+        find.text('Unable to save PIN. Please try again.'),
+        findsOneWidget,
+        reason:
+            'AUD-tutoring-04: an uncaught exception from setTutorPin must '
+            'surface tutorPinSetupSaveError, not a silent stall',
+      );
+      // Resets to step 1 so the user can retry.
+      expect(find.text('Create your Tutor PIN'), findsOneWidget);
+      expect(
+        onPinSetCalled,
+        isFalse,
+        reason: 'onPinSet must not fire on a thrown exception',
+      );
+      await _teardown(tester);
+    });
+  });
+
   group('TutorPinSetupScreen — skip button', () {
     testWidgets('tapping "Set up later" calls onSkip', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);

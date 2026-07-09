@@ -283,6 +283,150 @@ void main() {
     );
   });
 
+  // ── AUD-tutoring-15: icon-only controls need semantic labels, and the
+  // numpad key must not clip/overflow at large accessibility text scales.
+
+  group('TutorPinEntryGate — AUD-tutoring-15: accessibility', () {
+    testWidgets(
+      'close button and backspace key expose non-empty semantic labels',
+      (tester) async {
+        setViewSize(tester);
+        final mockService = _MockTutorPinService();
+        final handle = tester.ensureSemantics();
+
+        await tester.pumpWidget(
+          _buildHarness(
+            pinIsSet: const AsyncValue.data(true),
+            mockService: mockService,
+            onPinVerified: () {},
+            onCancel: () {},
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // The close icon button surfaces its `tooltip:` as a Semantics
+        // `tooltip` announcement ('Close' — l10n.actionClose, en); Flutter's
+        // find.byTooltip matches that field directly. The backspace numpad
+        // key surfaces its `semanticLabel:` on the Icon as a Semantics
+        // `label` ('Delete' — l10n.pinBackspace, en).
+        expect(
+          find.byTooltip('Close'),
+          findsOneWidget,
+          reason:
+              'AUD-tutoring-15: the AppBar close icon button must expose a '
+              'non-empty semantic label (tooltip) for screen readers',
+        );
+        expect(
+          find.bySemanticsLabel('Delete'),
+          findsOneWidget,
+          reason:
+              'AUD-tutoring-15: the backspace numpad key must expose a '
+              'non-empty semantic label for screen readers',
+        );
+
+        handle.dispose();
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets('numpad renders without RenderFlex overflow at textScale 2.0', (
+      tester,
+    ) async {
+      setViewSize(tester);
+      final mockService = _MockTutorPinService();
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+          child: _buildHarness(
+            pinIsSet: const AsyncValue.data(true),
+            mockService: mockService,
+            onPinVerified: () {},
+            onCancel: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // A RenderFlex overflow surfaces as a FlutterError caught by the
+      // test binding; takeException() returns it if one was recorded.
+      expect(
+        tester.takeException(),
+        isNull,
+        reason:
+            'AUD-tutoring-15: the numpad must not overflow/clip at '
+            'textScale 2.0 (fixed-height digit-key wrapper regression)',
+      );
+
+      await _teardown(tester);
+    });
+  });
+
+  // ── AUD-tutoring-04: verifyTutorPin throws → error state, not a silent
+  // stall. Before the fix, _onPinComplete had no catch clause, so a raw
+  // exception from the service (e.g. secure-storage/keystore failure) left
+  // _isVerifying reset by `finally` but _errorMessage null and _digits still
+  // at 4 filled dots — a stalled numpad with no explanation.
+
+  group('TutorPinEntryGate — AUD-tutoring-04: verifyTutorPin throws', () {
+    testWidgets(
+      'shows a generic error message and clears the stalled digits instead '
+      'of silently stalling',
+      (tester) async {
+        setViewSize(tester);
+        final mockService = _MockTutorPinService();
+        var pinVerifiedCalled = false;
+
+        when(
+          () => mockService.verifyTutorPin(
+            profileId: any(named: 'profileId'),
+            rawPin: any(named: 'rawPin'),
+          ),
+        ).thenThrow(Exception('keystore unavailable'));
+
+        await tester.pumpWidget(
+          _buildHarness(
+            pinIsSet: const AsyncValue.data(true),
+            mockService: mockService,
+            onPinVerified: () => pinVerifiedCalled = true,
+            onCancel: () {},
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        await _enterPin(tester, '1234');
+        await tester.pump(const Duration(seconds: 1));
+
+        // Spinner must not be stuck forever (finally still resets it) AND an
+        // error message must now be visible — the silent-stall symptom is
+        // that NEITHER an error nor a way to retry appears.
+        expect(
+          find.byType(CircularProgressIndicator),
+          findsNothing,
+          reason: 'Verifying spinner must clear once the throw is handled',
+        );
+        expect(
+          find.textContaining('Error:'),
+          findsAtLeastNWidgets(1),
+          reason:
+              'AUD-tutoring-04: an uncaught exception from verifyTutorPin '
+              'must surface a visible error state, not a silent stall',
+        );
+        // The stalled 4-digit entry must be cleared so the user can retype.
+        expect(
+          pinVerifiedCalled,
+          isFalse,
+          reason: 'onPinVerified must not fire on a thrown exception',
+        );
+
+        await _teardown(tester);
+      },
+    );
+  });
+
   // ── No PIN set → delegates to setup screen ─────────────────────────────────
 
   group('TutorPinEntryGate — no PIN set → shows setup screen', () {

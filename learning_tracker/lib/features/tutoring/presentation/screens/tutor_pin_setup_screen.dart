@@ -20,6 +20,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
@@ -122,27 +123,42 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
         rawPin: pin,
       );
       if (!mounted) return;
-      switch (result) {
-        case TutorPinSuccess():
-          widget.onPinSet();
-        case TutorPinValidationError(:final message):
-          setState(() {
-            _errorMessage = message;
-            _step = _TutorPinSetupStep.enterPin;
-            _firstPin = null;
-            _digits = '';
-          });
-        case TutorPinIncorrect():
-        case TutorPinLockedOut():
-          // Not expected during setup — treat as generic error.
-          setState(() {
-            _errorMessage = AppLocalizations.of(
-              context,
-            )!.tutorPinSetupSaveError;
-            _step = _TutorPinSetupStep.enterPin;
-            _firstPin = null;
-            _digits = '';
-          });
+      final errorMessage = switch (result) {
+        TutorPinSuccess() => null,
+        TutorPinValidationError(:final message) => message,
+        // Not expected during setup — treat as generic error.
+        TutorPinIncorrect() || TutorPinLockedOut() => AppLocalizations.of(
+          context,
+        )!.tutorPinSetupSaveError,
+      };
+      if (errorMessage == null) {
+        widget.onPinSet();
+      } else {
+        setState(() {
+          _errorMessage = errorMessage;
+          _step = _TutorPinSetupStep.enterPin;
+          _firstPin = null;
+          _digits = '';
+        });
+      }
+    } catch (e, st) {
+      // EH-2/EH-3: setTutorPin has no exception handling at all, so an
+      // underlying storage failure (e.g. secure-storage/keystore error)
+      // propagates raw. Without this catch the user was left staring at a
+      // stalled confirm step: _isSaving still resets via `finally`, but no
+      // error ever appears and the entered digits are never cleared.
+      AppLogger.instance.error(
+        event: 'tutor_pin_set_failed',
+        exception: e,
+        stackTrace: st,
+      );
+      if (mounted) {
+        setState(() {
+          _errorMessage = AppLocalizations.of(context)!.tutorPinSetupSaveError;
+          _step = _TutorPinSetupStep.enterPin;
+          _firstPin = null;
+          _digits = '';
+        });
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -373,6 +389,7 @@ class _TutorPinNumpad extends StatelessWidget {
                   Icons.backspace_outlined,
                   color: Theme.of(context).colorScheme.error,
                   size: 24,
+                  semanticLabel: AppLocalizations.of(context)!.pinBackspace,
                 ),
               ),
             ),
@@ -398,7 +415,14 @@ class _TutorPinKey extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        child: SizedBox(height: 52, child: Center(child: child)),
+        // AX-4: size from content instead of a fixed height so an enlarged
+        // digit glyph at high accessibility text scales is not clipped.
+        // The 14dp vertical padding keeps the tap target close to the
+        // original 52dp height at the default text scale.
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Center(child: child),
+        ),
       ),
     );
   }

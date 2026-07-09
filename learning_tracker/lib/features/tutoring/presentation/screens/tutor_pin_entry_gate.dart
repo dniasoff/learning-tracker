@@ -95,24 +95,39 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
       );
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      switch (result) {
-        case TutorPinSuccess():
-          widget.onPinVerified();
-        case TutorPinIncorrect():
-          setState(() {
-            _digits = '';
-            _errorMessage = l10n.tutorPinIncorrect;
-          });
-        case TutorPinLockedOut(:final remainingMinutes):
-          setState(() {
-            _digits = '';
-            _errorMessage = l10n.tutorPinLockedOut(remainingMinutes);
-          });
-        case TutorPinValidationError(:final message):
-          setState(() {
-            _digits = '';
-            _errorMessage = message;
-          });
+      final errorMessage = switch (result) {
+        TutorPinSuccess() => null,
+        TutorPinIncorrect() => l10n.tutorPinIncorrect,
+        TutorPinLockedOut(:final remainingMinutes) => l10n.tutorPinLockedOut(
+          remainingMinutes,
+        ),
+        TutorPinValidationError(:final message) => message,
+      };
+      if (errorMessage == null) {
+        widget.onPinVerified();
+      } else {
+        setState(() {
+          _digits = '';
+          _errorMessage = errorMessage;
+        });
+      }
+    } catch (e, st) {
+      // EH-2/EH-3: verifyTutorPin only converts PinLockoutException — an
+      // underlying storage failure (e.g. secure-storage/keystore error)
+      // propagates raw. Without this catch the user was left staring at a
+      // stalled numpad: _isVerifying still resets via `finally`, but no
+      // error ever appears and _digits stays at 4 filled dots.
+      AppLogger.instance.error(
+        event: 'tutor_pin_verify_failed',
+        exception: e,
+        stackTrace: st,
+      );
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        setState(() {
+          _digits = '';
+          _errorMessage = l10n.tutorPinErrorPrefix(l10n.errorSaveFailed);
+        });
       }
     } finally {
       if (mounted) setState(() => _isVerifying = false);
@@ -187,6 +202,7 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
+          tooltip: l10n.actionClose,
           onPressed: widget.onCancel,
         ),
         title: Text(l10n.tutorPinAppBarTitle),
@@ -404,6 +420,7 @@ class _TutorPinNumpad extends StatelessWidget {
                   Icons.backspace_outlined,
                   color: Theme.of(context).colorScheme.error,
                   size: 24,
+                  semanticLabel: AppLocalizations.of(context)!.pinBackspace,
                 ),
               ),
             ),
@@ -429,7 +446,14 @@ class _TutorPinKey extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        child: SizedBox(height: 52, child: Center(child: child)),
+        // AX-4: size from content instead of a fixed height so an enlarged
+        // digit glyph at high accessibility text scales is not clipped.
+        // The 14dp vertical padding keeps the tap target close to the
+        // original 52dp height at the default text scale.
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Center(child: child),
+        ),
       ),
     );
   }
