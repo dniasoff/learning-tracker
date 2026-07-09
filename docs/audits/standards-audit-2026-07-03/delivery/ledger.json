@@ -83,13 +83,18 @@
     {
       "id": "AUD-progress-01",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P0",
       "title": "Fix missing synthetic-container guard in items_learned_providers.dart:computeLifetimeViewSummary (composite-curriculum over-credit regression)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "0cbc1e651a6cb8784d01d6fb2851a033682ec6e3"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-progress-01 AC1 OK: new test drives computeLifetimeViewSummary; stray tanach/level1/Torah row dropped; asserts learnedLeafCount==3 not 5; green",
+        "AUD-progress-01 AC2 OK: grep _learnedLeafRefs exit1; _buildCompletionTree/_levelKey/_hebrewForLeafGroup also gone; delegates to LifetimeTreeBuilder"
+      ],
+      "notes": "Confirmed dup algorithm lacked the synthetic-container guard. Red-first test: stray tanach/level1/Torah row gave learnedLeafCount=5 (whole Torah) before fix. Fix deletes duplicate fns, delegates to LifetimeTreeBuilder, ports the P0 guard. Now green: count=3. Both ACs verified."
     },
     {
       "id": "AUD-docs-01",
