@@ -514,49 +514,40 @@ void main() {
       },
     );
 
-    testWidgets(
-      'C6. onSendAgain throws — finally block re-enables buttons; '
-      'widget should catch the error gracefully',
-      // BUG: _wrapSendAgain uses try/finally but not try/catch, so exceptions
-      // from onSendAgain propagate as unhandled async errors, crashing the
-      // caller's context.  The correct fix is to add a catch block and expose
-      // the error via a callback or snackbar.  Asserting CORRECT behaviour
-      // (no propagation, buttons re-enabled) — marked skip until fixed.
-      skip: true,
-      (tester) async {
-        _setUpUrlLauncherMock();
-        addTearDown(_clearUrlLauncherMock);
+    testWidgets('C6. onSendAgain throws — finally block re-enables buttons; '
+        'widget should catch the error gracefully', (tester) async {
+      _setUpUrlLauncherMock();
+      addTearDown(_clearUrlLauncherMock);
 
-        await tester.pumpWidget(
-          _buildPanel(
-            bodyText: 'body',
-            onSendAgain: () async => throw Exception('network'),
-            onCancel: () {},
-            onVerified: () async {},
-          ),
-        );
-        await tester.pump();
+      await tester.pumpWidget(
+        _buildPanel(
+          bodyText: 'body',
+          onSendAgain: () async => throw Exception('network'),
+          onCancel: () {},
+          onVerified: () async {},
+        ),
+      );
+      await tester.pump();
 
-        await tester.tap(find.text('Send Again'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text('Send Again'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
-        // No exception must propagate — widget should catch and discard it.
-        expect(tester.takeException(), isNull);
+      // No exception must propagate — widget should catch and discard it.
+      expect(tester.takeException(), isNull);
 
-        // Finally block ran — spinner gone, Send Again label back.
-        expect(find.text('Send Again'), findsOneWidget);
-        expect(find.byType(CircularProgressIndicator), findsNothing);
+      // Finally block ran — spinner gone, Send Again label back.
+      expect(find.text('Send Again'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
 
-        // Cancel is re-enabled.
-        final cancelBtn = tester.widget<OutlinedButton>(
-          find.byType(OutlinedButton),
-        );
-        expect(cancelBtn.onPressed, isNotNull);
+      // Cancel is re-enabled.
+      final cancelBtn = tester.widget<OutlinedButton>(
+        find.byType(OutlinedButton),
+      );
+      expect(cancelBtn.onPressed, isNotNull);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
   });
 
   // ── D. Cancel action ──────────────────────────────────────────────────────
@@ -768,48 +759,40 @@ void main() {
       },
     );
 
-    testWidgets(
-      'E5. onVerified throws — finally block re-enables buttons; '
-      'widget should catch the error gracefully',
-      // BUG: _wrapVerified uses try/finally but not try/catch, so exceptions
-      // from onVerified propagate as unhandled async errors.  The correct fix
-      // is to add a catch block and expose the error (e.g. via a snackbar or
-      // error state).  Asserting CORRECT behaviour — marked skip until fixed.
-      skip: true,
-      (tester) async {
-        _setUpUrlLauncherMock();
-        addTearDown(_clearUrlLauncherMock);
+    testWidgets('E5. onVerified throws — finally block re-enables buttons; '
+        'widget should catch the error gracefully', (tester) async {
+      _setUpUrlLauncherMock();
+      addTearDown(_clearUrlLauncherMock);
 
-        await tester.pumpWidget(
-          _buildPanel(
-            bodyText: 'body',
-            onSendAgain: () async {},
-            onCancel: () {},
-            onVerified: () async => throw Exception('auth error'),
-          ),
-        );
-        await tester.pump();
+      await tester.pumpWidget(
+        _buildPanel(
+          bodyText: 'body',
+          onSendAgain: () async {},
+          onCancel: () {},
+          onVerified: () async => throw Exception('auth error'),
+        ),
+      );
+      await tester.pump();
 
-        await tester.tap(find.text("I've verified"));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.text("I've verified"));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
-        // No exception must propagate — widget should catch it.
-        expect(tester.takeException(), isNull);
+      // No exception must propagate — widget should catch it.
+      expect(tester.takeException(), isNull);
 
-        // Verified label is back.
-        expect(find.text("I've verified"), findsOneWidget);
-        expect(find.byType(CircularProgressIndicator), findsNothing);
+      // Verified label is back.
+      expect(find.text("I've verified"), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
 
-        // Cancel re-enabled.
-        final cancelBtn = tester.widget<OutlinedButton>(
-          find.byType(OutlinedButton),
-        );
-        expect(cancelBtn.onPressed, isNotNull);
+      // Cancel re-enabled.
+      final cancelBtn = tester.widget<OutlinedButton>(
+        find.byType(OutlinedButton),
+      );
+      expect(cancelBtn.onPressed, isNotNull);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
   });
 
   // ── F. Open Email button ──────────────────────────────────────────────────
