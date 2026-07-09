@@ -15,6 +15,7 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
     show firestoreGatewayProvider;
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/core/utils/firebase_error_code.dart';
 import 'package:learning_tracker/features/account/data/services/magic_link_service.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
@@ -117,22 +118,9 @@ class SignInController extends Notifier<SignInState> {
   }
 
   String _mapAuthErrorFromException(Object e, AppLocalizations l10n) {
-    final code = _extractFirebaseCode(e);
+    final code = extractFirebaseCode(e);
     if (code != null) return _mapAuthError(code, l10n);
     return l10n.authErrSignInGeneric;
-  }
-
-  String? _extractFirebaseCode(Object e) {
-    final str = e.toString();
-    // FirebaseException.toString() renders as `[firebase_auth/wrong-password]
-    // message` — the bare error code lives AFTER the `<plugin>/` prefix and
-    // the plugin segment itself contains an underscore. The previous pattern
-    // (`\[([a-z-]+)\]`) matched neither the slash nor the underscore, so every
-    // real Firebase auth error fell through to the generic "Sign-in failed"
-    // copy (e.g. a wrong password never showed "Incorrect password"). Capture
-    // the optional plugin prefix and return only the trailing code segment.
-    final match = RegExp(r'\[(?:[a-z_]+/)?([a-z-]+)\]').firstMatch(str);
-    return match?.group(1);
   }
 
   // ── Email verification helpers ──────────────────────────────────────────────
@@ -170,7 +158,7 @@ class SignInController extends Notifier<SignInState> {
       final refreshed = await authRepo.reloadCurrentUser();
       return refreshed?.emailVerified ?? false;
     } catch (e) {
-      final code = _extractFirebaseCode(e);
+      final code = extractFirebaseCode(e);
       if (code == 'expired-action-code' || code == 'invalid-action-code') {
         await prefs.remove(kPendingVerifyEmailOobCode);
         return _refreshAndCheckVerified();
