@@ -74,18 +74,25 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
       _errorMessage = null;
     });
 
-    // AUD-tutoring-12: send and local-PIN-clear are two independent
-    // operations, each in its own try/catch, so a failure is attributed to
-    // the step that actually failed. Previously both awaits shared one
-    // catch, so a clearTutorPin failure AFTER a successful send was reported
-    // as "failed to send reset email" even though the email had genuinely
-    // sent — a real risk of the user retrying and triggering a second reset
-    // email while the true failure (local PIN not cleared) went unreported.
+    // AUD-tutoring-12 / AUD-tutoring-13: send and local-PIN-clear are two
+    // independent operations, each in its own typed try/catch, so a failure
+    // is attributed to the step that actually failed and is always logged.
+    // Previously both awaits shared one bare `catch (e)`, which (a) reported
+    // a clearTutorPin failure as "failed to send" even though the email had
+    // already sent — a real risk of the user retrying and triggering a
+    // second reset email — and (b) trapped Error subtypes (masking real
+    // programming bugs) with zero AppLogger call, making a genuine defect
+    // indistinguishable from a normal network failure.
     try {
       try {
         final authRepo = ref.read(authRepositoryProvider);
         await authRepo.sendPasswordResetEmail(email);
-      } catch (e) {
+      } on Exception catch (e, stackTrace) {
+        AppLogger.instance.error(
+          event: LogEvents.tutor.pinResetSendEmailFailed,
+          exception: e,
+          stackTrace: stackTrace,
+        );
         if (mounted) {
           setState(
             () => _errorMessage = AppLocalizations.of(
@@ -105,11 +112,12 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
       try {
         final pinService = ref.read(tutorPinServiceProvider);
         await pinService.clearTutorPin(widget.profileId);
-      } catch (e) {
+      } on Exception catch (e, stackTrace) {
         AppLogger.instance.error(
           event: LogEvents.tutor.pinResetClearLocalPinFailed,
           fields: {'profileId': widget.profileId},
           exception: e,
+          stackTrace: stackTrace,
         );
       }
 

@@ -151,6 +151,13 @@ void main() {
       when(
         () => mockAuthRepo.sendPasswordResetEmail(_kEmail),
       ).thenAnswer((_) => completer.future);
+      // clearTutorPin runs after the send completes below — stub it so the
+      // post-completion continuation resolves cleanly instead of hitting an
+      // unstubbed-mock error (this test only cares about the in-flight
+      // state, not the post-completion step).
+      when(
+        () => mockPinService.clearTutorPin(_kProfileId),
+      ).thenAnswer((_) async {});
 
       await tester.pumpWidget(buildSubject());
       await tester.pump();
@@ -289,6 +296,54 @@ void main() {
         await tearDownWidget(tester);
       },
     );
+  });
+
+  // ── AUD-tutoring-13 — type and log the catch block ────────────────────────
+  //
+  // The bare `catch (e)` in _sendResetEmail's send step had no `on X` type,
+  // so it also trapped Error subtypes (StateError, TypeError, ...) from a
+  // programmer bug and converted them into the same generic "send failed"
+  // message with zero AppLogger call — a real defect would look identical
+  // to a normal network failure, with no trace to diagnose it.
+  group('AUD-tutoring-13 — type and log the catch block', () {
+    setUp(() => AppLogger.init());
+
+    testWidgets('a failed send logs the exception and stack trace via AppLogger '
+        'before surfacing the error message', (tester) async {
+      when(
+        () => mockAuthRepo.sendPasswordResetEmail(_kEmail),
+      ).thenThrow(Exception('network error'));
+
+      await tester.pumpWidget(buildSubject());
+      await tester.pump();
+
+      await tester.tap(find.text('Send reset email'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.text('Failed to send reset email. Please try again.'),
+        findsOneWidget,
+      );
+
+      final failureEntry = AppLogger.instance.talker.history.where(
+        (e) => e.generateTextMessage().contains(
+          'tutor_pin_reset_send_email_failed',
+        ),
+      );
+      expect(
+        failureEntry,
+        isNotEmpty,
+        reason:
+            'Expected the send failure to be logged via AppLogger before '
+            'surfacing the UI error message. Talker history: '
+            '${AppLogger.instance.talker.history.map((e) => e.generateTextMessage()).toList()}',
+      );
+      expect(failureEntry.first.exception, isNotNull);
+      expect(failureEntry.first.stackTrace, isNotNull);
+
+      await tearDownWidget(tester);
+    });
   });
 
   // ── Test: no-email → shows tutorPinResetNoEmail error ───────────────────
