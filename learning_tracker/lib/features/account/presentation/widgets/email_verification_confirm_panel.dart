@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -166,6 +167,18 @@ class _EmailVerificationConfirmPanelState
     setState(() => _sendingAgain = true);
     try {
       await widget.onSendAgain();
+    } catch (e, stackTrace) {
+      // AUD-account-06: onSendAgain (e.g. resendVerificationEmail) can throw
+      // on a transient network/auth failure. Without this catch the exception
+      // propagated as an unhandled async error instead of resetting the
+      // loading flag below — matching the log-and-continue pattern already
+      // used for signOut() failures elsewhere in this feature
+      // (sign_in_controller.dart SI-VERIFY-01/SI-LOCAL-01).
+      AppLogger.instance.warning(
+        event: 'email_verification_confirm_panel_send_again_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
     } finally {
       if (mounted) setState(() => _sendingAgain = false);
     }
@@ -175,6 +188,17 @@ class _EmailVerificationConfirmPanelState
     setState(() => _checkingVerified = true);
     try {
       await widget.onVerified();
+    } catch (e, stackTrace) {
+      // AUD-account-06: onVerified ultimately calls
+      // authRepo.reloadCurrentUser() with no surrounding try/catch, so a
+      // transient network error while the user is mid email-verification is
+      // a real, reachable path to an unhandled exception here. See
+      // _wrapSendAgain above for the matching rationale.
+      AppLogger.instance.warning(
+        event: 'email_verification_confirm_panel_verified_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
     } finally {
       if (mounted) setState(() => _checkingVerified = false);
     }
