@@ -215,6 +215,33 @@ void main() {
     'created_at': past.toIso8601String(),
   };
 
+  // points_ledger — PointsBalanceDao._ledgerPayload push shape (no codec;
+  // AUD-firebase-05). Doc-id = ulid.
+  final pointsLedgerEntry = <String, dynamic>{
+    'ulid': 'ULID0003',
+    'profile_id': '5',
+    'entry_kind': 'redemption_debit',
+    'delta': -50,
+    'note': 'Redeemed: Extra screen time',
+    'redemption_ulid': 'ULID0004',
+    'created_at': past.toIso8601String(),
+  };
+
+  // reward_redemptions — PointsBalanceDao._pushRedemption push shape (no
+  // codec; AUD-firebase-05). Doc-id = ulid. Unlike the append-only
+  // collections above, this is an LWW state-machine doc — `status`
+  // transitions pending_fulfilment -> fulfilled/declined via `update`.
+  final rewardRedemptions = <String, dynamic>{
+    'ulid': 'ULID0004',
+    'profile_id': '5',
+    'reward_title': 'Extra screen time',
+    'icon_index': 2,
+    'points_cost': 50,
+    'status': 'pending_fulfilment',
+    'created_at': past.toIso8601String(),
+    'updated_at': past.toIso8601String(),
+  };
+
   // Unused: learningLedger (codec shape); use learningLedgerOut instead.
   // The local binding prevents the `unused_local_variable` analyzer warning.
   // ignore: unused_local_variable
@@ -240,6 +267,8 @@ void main() {
     'learning_ledger': learningLedgerOut,
     'import_metadata': importMetadata,
     'streak_events': streakEvents,
+    'points_ledger': pointsLedgerEntry,
+    'reward_redemptions': rewardRedemptions,
   };
 
   print(const JsonEncoder.withIndent('  ').convert(payloads));

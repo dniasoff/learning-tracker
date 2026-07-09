@@ -812,6 +812,10 @@ describe('PHASE D — permission-denied oracle: all legitimate owner writes succ
     await assertSucceeds(setDoc(doc(db, `${LP}/import_metadata/c1`), PAYLOADS.import_metadata));
     // 15. curriculum_scopes — open write + delete
     await assertSucceeds(setDoc(doc(db, `${LP}/curriculum_scopes/sc1`), { curriculum_id: 'c1' }));
+    // 16. points_ledger — no hasOnly; append-only (AUD-firebase-05)
+    await assertSucceeds(setDoc(doc(db, `${LP}/points_ledger/ULID0003`), PAYLOADS.points_ledger));
+    // 17. reward_redemptions — no hasOnly; LWW state machine (AUD-firebase-05)
+    await assertSucceeds(setDoc(doc(db, `${LP}/reward_redemptions/ULID0004`), PAYLOADS.reward_redemptions));
   });
 
   test('oracle canary: unknown key in hasOnly-guarded collection is denied (oracle is live, not trivially green)', async () => {
@@ -918,6 +922,22 @@ describe('PHASE E — cross-device replication round-trip (same uid, two Firesto
       payload: { ...PAYLOADS.learning_ledger },
       assertField: 'ulid',
       assertValue: 'ULID0001',
+    },
+    {
+      // AUD-firebase-05
+      name: 'points_ledger',
+      path: `${LP}/points_ledger/ULID0003_e`,
+      payload: { ...PAYLOADS.points_ledger },
+      assertField: 'delta',
+      assertValue: -50,
+    },
+    {
+      // AUD-firebase-05
+      name: 'reward_redemptions',
+      path: `${LP}/reward_redemptions/ULID0004_e`,
+      payload: { ...PAYLOADS.reward_redemptions },
+      assertField: 'status',
+      assertValue: 'pending_fulfilment',
     },
   ];
 
