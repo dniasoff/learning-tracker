@@ -1,12 +1,12 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
@@ -83,7 +83,8 @@ Future<CurriculumCompletionSummary?> computeItemsLearnedSummary({
   );
 
   final heLookup = await _heLabelLookupForCurriculum(repo, curriculum);
-  final tree = _buildCompletionTree(
+  const builder = LifetimeTreeBuilder();
+  final tree = builder.buildTree(
     curriculum,
     leaves,
     completedRefs,
@@ -102,8 +103,11 @@ Future<CurriculumCompletionSummary?> computeItemsLearnedSummary({
 /// Compute lifetime curriculum completion summary (all sources: track
 /// completions + sentinel rows + ledger-based bulk marks).
 ///
-/// Delegates to [_learnedLeafRefs] which mirrors the logic in
-/// [lifetimeDataProvider], giving the same result for consistency.
+/// Delegates to [LifetimeTreeBuilder.computeLearnedLeafRefs] — the SAME
+/// algorithm [lifetimeDataProvider] uses — rather than a private
+/// reimplementation, so the P0 composite-over-credit guard below (and any
+/// future fix to the shared algorithm) applies to both surfaces from one
+/// implementation.
 ///
 /// Returns `null` when the curriculum has no content or nothing learned.
 Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
@@ -123,12 +127,34 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
 
   final completions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
-  final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
+
+  // P0 (composite over-credit) READ-TIME guard — mirrors
+  // lifetimeDataProvider's guard in lifetime_knowledge_providers.dart. A
+  // COMPOSITE curriculum (Tanach) re-parents its source leaves under a
+  // SYNTHETIC level1 container (e.g. 'Torah') that exists in no real
+  // curriculum. A stray `tanach/level1/'Torah'` ledger row blanket-credits
+  // the ENTIRE Torah from a single-book mark — and the v32 migration that
+  // deletes it only runs once per account DB, so it cannot be relied on (a
+  // row that survived an earlier-upgraded DB persists). Defensively DROP any
+  // synthetic-container level1 (and its unmark_) row here so the shared
+  // learned-refs computation never credits it.
+  final rawLedger = await db.learningLedgerDao.getEntriesByCurriculum(
     profileId,
     curriculum.storageKey,
   );
+  final ledger = rawLedger.where((e) {
+    final scope = e.entryScope.startsWith('unmark_')
+        ? e.entryScope.substring('unmark_'.length)
+        : e.entryScope;
+    if (scope != 'level1') return true;
+    return !CompositeCurriculumStrategy.isSyntheticContainerLevel1(
+      curriculum.storageKey,
+      e.unitIdentifier,
+    );
+  }).toList();
 
-  final learnedRefs = _learnedLeafRefs(
+  const builder = LifetimeTreeBuilder();
+  final learnedRefs = builder.computeLearnedLeafRefs(
     leaves: leaves,
     completedRefs: completions.map((c) => c.sefariaRef).toSet(),
     ledgerEntries: ledger,
@@ -148,7 +174,7 @@ Future<CurriculumCompletionSummary?> computeLifetimeViewSummary({
   );
 
   final heLookup = await _heLabelLookupForCurriculum(repo, curriculum);
-  final tree = _buildCompletionTree(
+  final tree = builder.buildTree(
     curriculum,
     leaves,
     learnedRefs,
@@ -274,107 +300,6 @@ Future<Map<String, String>> _heLabelLookupForCurriculum(
   }
 }
 
-/// Build a leaf-ref set from both direct completions and ledger entries.
-/// Mirrors the logic in [lifetimeDataProvider] via [_learnedLeafRefs] in
-/// `lifetime_knowledge_providers.dart`.
-Set<String> _learnedLeafRefs({
-  required List<ContentItem> leaves,
-  required Set<String> completedRefs,
-  required List<LearningLedgerData> ledgerEntries,
-}) {
-  final learnedRefs = <String>{...completedRefs};
-  final refActions = <String, bool>{};
-  final level1Actions = <String, bool>{};
-  final level2Actions = <String, bool>{};
-  final level3Actions = <String, bool>{};
-  final level4Actions = <String, bool>{};
-
-  // Registry mapping every recognised entry-scope string to the action map it
-  // populates. Replaces the inline switch; adding a new scope is a 1-line edit.
-  const entryScopeLevel = <String, int>{
-    'seder': 1,
-    'sefer': 1,
-    'level1': 1,
-    'masechta': 2,
-    'siman': 2,
-    'level2': 2,
-    'perek': 3,
-    'daf': 3,
-    'halacha': 3,
-    'pasuk': 3,
-    'level3': 3,
-    'mishna': 4,
-    'amud': 4,
-    'seif': 4,
-    'seif_katan': 4,
-    'level4': 4,
-  };
-
-  for (final entry in ledgerEntries) {
-    final entryScope = entry.entryScope;
-    final unitId = entry.unitIdentifier;
-    if (unitId.isEmpty) continue;
-    final isUnmark = entryScope.startsWith('unmark_');
-    final resolvedType = isUnmark
-        ? entryScope.substring('unmark_'.length)
-        : entryScope;
-    final action = !isUnmark;
-
-    final levelActions = switch (entryScopeLevel[resolvedType]) {
-      1 => level1Actions,
-      2 => level2Actions,
-      3 => level3Actions,
-      4 => level4Actions,
-      _ => null,
-    };
-    if (levelActions != null) {
-      levelActions.putIfAbsent(unitId, () => action);
-    } else if (resolvedType.startsWith('level')) {
-      // Generic "levelN" scope not in the registry → treat as a leaf ref.
-      refActions.putIfAbsent(unitId, () => action);
-    } else if (action) {
-      learnedRefs.add(unitId);
-    }
-  }
-
-  for (final leaf in leaves) {
-    final completedDirectly =
-        learnedRefs.contains(leaf.sefariaRef) ||
-        learnedRefs.contains(leaf.level4) ||
-        learnedRefs.contains(leaf.level3) ||
-        learnedRefs.contains(leaf.level2) ||
-        learnedRefs.contains(leaf.level1);
-    final refAction = refActions[leaf.sefariaRef];
-    // level2/level3/level4 marks are stored with a QUALIFIED path id (collision
-    // fix: bare daf '2' credited every masechta; bare perek '1' credited every
-    // sefer). Match against the leaf's qualified id; only level1 (curriculum
-    // root) stays bare.
-    final level4Action = leaf.level4 != null
-        ? level4Actions[scopeUnitIdentifierForItem(leaf, 4)]
-        : null;
-    final level3Action = leaf.level3 != null
-        ? level3Actions[scopeUnitIdentifierForItem(leaf, 3)]
-        : null;
-    final level2Action = leaf.level2 != null
-        ? level2Actions[scopeUnitIdentifierForItem(leaf, 2)]
-        : null;
-    final level1Action = level1Actions[leaf.level1];
-    final scopedAction =
-        refAction ??
-        level4Action ??
-        level3Action ??
-        level2Action ??
-        level1Action;
-    if (completedDirectly || (scopedAction ?? false)) {
-      learnedRefs.add(leaf.sefariaRef);
-    } else if (scopedAction == false) {
-      learnedRefs.remove(leaf.sefariaRef);
-    }
-  }
-
-  return learnedRefs.where((r) => leaves.any((l) => l.sefariaRef == r)).toSet();
-}
-
 /// Computes per-leaf provenance for the "Track learning only" tier.
 ///
 /// Loads `prior_completion_imports` rows for the curriculum (filtered to
@@ -474,147 +399,4 @@ Future<Map<String, LifetimeLeafProvenance>> _allSourcesProvenanceForCurriculum(
     lifetimeImportedRefs: lifetimeRefs,
     ledgerLearnedRefs: ledgerOnly,
   );
-}
-
-List<LifetimeTreeNode> _buildCompletionTree(
-  CurriculumId curriculumId,
-  List<ContentItem> leaves,
-  Set<String> learnedRefs, {
-  Map<String, String> heLabelLookup = const {},
-  Map<String, LifetimeLeafProvenance> leafProvenance = const {},
-}) {
-  LifetimeNodeState stateForLeaves(List<ContentItem> bucket) {
-    if (bucket.isEmpty) return LifetimeNodeState.none;
-    final learned = bucket
-        .where((l) => learnedRefs.contains(l.sefariaRef))
-        .length;
-    if (learned == 0) return LifetimeNodeState.none;
-    if (learned == bucket.length) return LifetimeNodeState.full;
-    return LifetimeNodeState.partial;
-  }
-
-  List<LifetimeTreeNode> buildAtLevel(List<ContentItem> bucket, int level) {
-    String? levelValue(ContentItem item) {
-      switch (level) {
-        case 1:
-          return item.level1;
-        case 2:
-          return item.level2;
-        case 3:
-          return item.level3;
-        case 4:
-          return item.level4;
-        default:
-          return null;
-      }
-    }
-
-    final grouped = <String, List<ContentItem>>{};
-    for (final item in bucket) {
-      final key = levelValue(item);
-      if (key == null || key.isEmpty) continue;
-      grouped.putIfAbsent(key, () => []).add(item);
-    }
-
-    final sortedEntries = grouped.entries.toList()
-      ..sort((a, b) {
-        final aMin = a.value
-            .map((e) => e.sortOrder)
-            .reduce((x, y) => x < y ? x : y);
-        final bMin = b.value
-            .map((e) => e.sortOrder)
-            .reduce((x, y) => x < y ? x : y);
-        return aMin.compareTo(bMin);
-      });
-
-    final nodes = <LifetimeTreeNode>[];
-    for (final entry in sortedEntries) {
-      final hasDeeper =
-          entry.value.any((item) => levelValue(item) != item.sefariaRef) &&
-          level < 4 &&
-          entry.value.any((item) {
-            switch (level + 1) {
-              case 2:
-                return item.level2 != null;
-              case 3:
-                return item.level3 != null;
-              case 4:
-                return item.level4 != null;
-              default:
-                return false;
-            }
-          });
-
-      final children = hasDeeper
-          ? buildAtLevel(entry.value, level + 1)
-          : const <LifetimeTreeNode>[];
-
-      LifetimeNodeState nodeState;
-      if (children.isEmpty) {
-        nodeState = stateForLeaves(entry.value);
-      } else {
-        final allFull = children.every(
-          (c) => c.state == LifetimeNodeState.full,
-        );
-        final anyDone = children.any(
-          (c) =>
-              c.state == LifetimeNodeState.full ||
-              c.state == LifetimeNodeState.partial,
-        );
-        nodeState = allFull
-            ? LifetimeNodeState.full
-            : (anyDone ? LifetimeNodeState.partial : LifetimeNodeState.none);
-      }
-
-      final levelKey = _levelKey(entry.value.first, level);
-      final hebrewName =
-          heLabelLookup[levelKey] ??
-          (level == 4 ? _hebrewForLeafGroup(entry.value) : null);
-
-      // Attach provenance to terminal nodes that group exactly one leaf.
-      LifetimeLeafProvenance? provenance;
-      if (children.isEmpty &&
-          leafProvenance.isNotEmpty &&
-          entry.value.length == 1) {
-        provenance = leafProvenance[entry.value.first.sefariaRef];
-      }
-
-      nodes.add(
-        LifetimeTreeNode(
-          curriculumId: curriculumId,
-          level: level,
-          rawValue: entry.key,
-          parentL1Value: entry.value.first.level1,
-          hebrewName: hebrewName,
-          state: nodeState,
-          children: children,
-          provenance: provenance,
-        ),
-      );
-    }
-    return nodes;
-  }
-
-  return buildAtLevel(leaves, 1);
-}
-
-String _levelKey(ContentItem item, int level) {
-  final parts = <String>[];
-  if (item.level1.isNotEmpty) parts.add(item.level1);
-  if (level >= 2 && item.level2 != null && item.level2!.isNotEmpty) {
-    parts.add(item.level2!);
-  }
-  if (level >= 3 && item.level3 != null && item.level3!.isNotEmpty) {
-    parts.add(item.level3!);
-  }
-  if (level >= 4 && item.level4 != null && item.level4!.isNotEmpty) {
-    parts.add(item.level4!);
-  }
-  return parts.join('|');
-}
-
-String? _hebrewForLeafGroup(List<ContentItem> bucket) {
-  if (bucket.isEmpty) return null;
-  final he = bucket.first.displayNameHe;
-  return he.isEmpty ? null : he;
 }
