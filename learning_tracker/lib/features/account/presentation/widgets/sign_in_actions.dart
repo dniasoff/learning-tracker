@@ -7,7 +7,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// - Primary sign-in (email/password) button with loading state
 /// - Google sign-in button (online only)
 /// - "New here? Register" rich-text link
-class SignInActions extends StatelessWidget {
+class SignInActions extends StatefulWidget {
   const SignInActions({
     super.key,
     required this.isLoading,
@@ -25,6 +25,34 @@ class SignInActions extends StatelessWidget {
   final VoidCallback onSignIn;
   final VoidCallback onGoogleSignIn;
   final VoidCallback onRegister;
+
+  @override
+  State<SignInActions> createState() => _SignInActionsState();
+}
+
+class _SignInActionsState extends State<SignInActions> {
+  // AUD-account-21: created once here (not in build()) and disposed in
+  // dispose() below. InlineSpan/TextSpan does not manage the lifetime of its
+  // recognizer, so a StatelessWidget that allocated a new one on every
+  // build() would leak one recognizer per rebuild. The onTap closure reads
+  // `widget.isLoading` / `widget.onRegister` (not captured locals) so it
+  // always observes the current widget config across rebuilds.
+  late final TapGestureRecognizer _registerTapRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _registerTapRecognizer = TapGestureRecognizer()
+      ..onTap = () {
+        if (!widget.isLoading) widget.onRegister();
+      };
+  }
+
+  @override
+  void dispose() {
+    _registerTapRecognizer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,13 +77,13 @@ class SignInActions extends StatelessWidget {
               ],
             ),
             child: FilledButton(
-              onPressed: isLoading ? null : onSignIn,
+              onPressed: widget.isLoading ? null : widget.onSignIn,
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.transparent,
                 shadowColor: AppTheme.transparent,
                 foregroundColor: Colors.white,
               ),
-              child: isLoading
+              child: widget.isLoading
                   ? const SizedBox(
                       height: 20,
                       width: 20,
@@ -65,7 +93,7 @@ class SignInActions extends StatelessWidget {
                       ),
                     )
                   : Text(
-                      l10n.signInCta,
+                      widget.l10n.signInCta,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -74,12 +102,12 @@ class SignInActions extends StatelessWidget {
             ),
           ),
         ),
-        if (isOnline) ...[
+        if (widget.isOnline) ...[
           const SizedBox(height: 18),
           OutlinedButton.icon(
-            onPressed: isLoading ? null : onGoogleSignIn,
+            onPressed: widget.isLoading ? null : widget.onGoogleSignIn,
             icon: const Icon(Icons.g_mobiledata_rounded),
-            label: Text(l10n.signInWithGoogleCta),
+            label: Text(widget.l10n.signInWithGoogleCta),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.brandInk,
               side: const BorderSide(color: AppTheme.brandInkSoft),
@@ -95,17 +123,14 @@ class SignInActions extends StatelessWidget {
                 color: AppTheme.brandInkMuted,
               ),
               children: [
-                TextSpan(text: l10n.signInNewToQuest),
+                TextSpan(text: widget.l10n.signInNewToQuest),
                 TextSpan(
-                  text: l10n.signInRegisterHere,
+                  text: widget.l10n.signInRegisterHere,
                   style: const TextStyle(
                     color: AppTheme.brandBlue,
                     fontWeight: FontWeight.w700,
                   ),
-                  recognizer: TapGestureRecognizer()
-                    ..onTap = () {
-                      if (!isLoading) onRegister();
-                    },
+                  recognizer: _registerTapRecognizer,
                 ),
               ],
             ),
