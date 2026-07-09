@@ -870,7 +870,6 @@ Live violations of the rules above, verified in the working tree on this date. E
 | Analytics sends `sefaria_ref` and `profile_id` as event params on the 3 Story 27.14 convenience methods (`logCompletionRecorded`, `logPinLockedOut`, `logParentModeEntered`) | PV-1 | `lib/core/analytics/analytics_service.dart:86,112,117` — narrower than it was: AUD-core-analytics-01 (2026-07) closed the larger uncatalogued-`.logEvent()` bypass (see PV-5 row below); these 3 catalog-native sites are the remaining known gap |
 | Crashlytics enabled unconditionally at bootstrap | PV-3 | `lib/app/bootstrap/firebase_bootstrap.dart:45` |
 | No committed `storage.rules` | ST-1 | Storage serves `content/v1/...` on console-only rules |
-| Two `firebase.json` disagree on the Firestore emulator port (9090 vs 8080) | TQ-9 | root vs `learning_tracker/`; rules suite hardcodes 8080 |
 | `make ci` doesn't run `test-rules`; CI rules job soft-skips | TQ-9 | `learning_tracker/Makefile` `ci:` target; `ci.yml` |
 | CI soft-skips `audit` | Rule 0 | `ci.yml` — local `make audit` is the real gate meanwhile |
 | custom_lint compile crash is fixed (AUD-guardrails-03) but the CLI still can't run: it needs an analysis_options.yaml marker that breaks the `dart analyze --fatal-infos` hard gate, so it silently discovers 0 projects; ~1,840 pre-existing violations across 8/9 rules were observed in a one-time manual scratch run and are not currently re-checkable via CLI/CI | Rule 0 | see "custom_lint toolchain status" under Enforcement above |
