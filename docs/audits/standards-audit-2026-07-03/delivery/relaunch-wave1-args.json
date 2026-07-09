@@ -1,0 +1,1134 @@
+{
+ "wave": 1,
+ "maxParallel": 4,
+ "excludeOverlapFiles": [
+  "docs/coding-standards.md",
+  "Makefile",
+  "learning_tracker/Makefile",
+  "learning_tracker/lib/l10n/app_en.arb"
+ ],
+ "customLintInGates": true,
+ "finalWave": false,
+ "pushEvery": 3,
+ "chunkSize": 8,
+ "linearTeam": "DNI",
+ "preBuilt": [
+  {
+   "ids": [
+    "AUD-core-email-01"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "93f70b43ad99cec8cc55370a0c77b70c8b252211",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-6",
+    "perFinding": [
+     {
+      "id": "AUD-core-email-01",
+      "outcome": "fixed",
+      "note": "Re-verified: send() logs plaintextBody under key 'body' via debug(); 'body' missing from sensitiveKeys. Red-first: 3 new tests failed pre-fix (Expected [REDACTED], Actual raw email+name). Fix: added 'body' to sensitiveKeys, matching sibling grouping. All 45 tests pass post-fix."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/core/logging/logger_extended_test.dart (3 tests: redacts 'body' key; 'body' in sensitiveKeys; debug Payload call redacted)"
+    ],
+    "gateResults": {
+     "make audit": "PASS (25/25 clean)",
+     "flutter analyze (changed files)": "PASS (No issues found)",
+     "dart format": "PASS (applied)",
+     "flutter test (test/core/logging/)": "PASS (94/94)",
+     "make arb-parity": "PASS (n/a, no arb changes; ran anyway OK)",
+     "custom_lint": "PASS (No issues found)"
+    },
+    "notes": "Single P0 finding confirmed and fixed minimally (one sensitiveKeys entry + comment). Red-first: tests written first, confirmed failing against pre-fix logger.dart (evidence in commit body), then fixed, then green. A prior opus review of this exact tip APPROVED it (verdict in dead-run journal); re-verify independently."
+   }
+  },
+  {
+   "ids": [
+    "AUD-firebase-04"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "c13e66233611f17480b5e3b76e0371b4e776dfe7",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-11",
+    "perFinding": [
+     {
+      "id": "AUD-firebase-04",
+      "outcome": "fixed",
+      "note": "Confirmed gap stood: no CI job for functions/, make ci lacked test-functions, no test script. Added functions CI job (hard-fail), folded test-functions into make ci, added package.json test script. make test-functions 274/274 pre+post; TS error confirmed build step fails."
+     }
+    ],
+    "testsAdded": [],
+    "gateResults": {
+     "make audit": "PASS (25/25 greps clean)",
+     "flutter analyze": "PASS (No issues found!)",
+     "make test-rules (in-gate: functions/ touched)": "PASS (82/82)",
+     "make test-functions (in-gate: functions/ touched)": "PASS (274/274, pre+post refactor)",
+     "dart run custom_lint": "PASS exit0"
+    },
+    "notes": "Pre-existing unrelated env gaps fixed locally, not committed (both gitignored): firebase_options.dart and content.db.gz. A prior opus review of this exact tip APPROVED it (dead-run journal); re-verify independently."
+   }
+  },
+  {
+   "ids": [
+    "AUD-progress-01"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "a11c2e2ba4e27e9f439b519cd46ea8f14288658a",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-7",
+    "perFinding": [
+     {
+      "id": "AUD-progress-01",
+      "outcome": "fixed",
+      "note": "Confirmed dup algorithm lacked the synthetic-container guard. Red-first test: stray tanach/level1/Torah row gave learnedLeafCount=5 (whole Torah) before fix. Fix deletes duplicate fns, delegates to LifetimeTreeBuilder, ports the P0 guard. Now green: count=3. Both ACs verified."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/progress/presentation/providers/items_learned_providers_composite_test.dart"
+    ],
+    "gateResults": {
+     "make audit": "PASS - all 25 greps clean",
+     "flutter analyze": "PASS on touched files",
+     "dart format": "PASS - applied, 0 diff after",
+     "flutter test (targeted)": "PASS - 477 tests green",
+     "dart run custom_lint": "PASS - No issues found"
+    },
+    "notes": "P0, fixed with red-first test. Commit a11c2e2b touches only items_learned_providers.dart (net -34 lines) plus new test file. A prior opus review of this exact tip APPROVED it (dead-run journal); re-verify independently."
+   }
+  },
+  {
+   "ids": [
+    "AUD-profiles-01"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "3c3e35b1d58c9a3dbd45222476fbdddfb74b21d1",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-5",
+    "perFinding": [
+     {
+      "id": "AUD-profiles-01",
+      "outcome": "fixed",
+      "note": "Confirmed: deactivate() wiped config; TrackState.archived had 0 writers. Added archiveTrack/archiveByProfile/archive() (preserve config); rewired screen archive choice. Red-first: rewrote ts3 test to drive real screen, RED then GREEN. All 3 ACs verified."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/profiles/presentation/screens/ts3_parent_track_archive_test.dart (rewritten: real-path DB test + real-screen widget test)"
+    ],
+    "gateResults": {
+     "make audit": "PASS - all 25 greps clean",
+     "flutter analyze": "PASS - No issues found!",
+     "dart format": "PASS - 0 changed",
+     "flutter test (targeted 7 files)": "PASS - 82 tests, exit 0",
+     "build_runner regen diff": "PASS - only propagated doc-comment change",
+     "dart run custom_lint": "PASS - No issues found!"
+    },
+    "notes": "Follow-up candidate (out of scope, not fixed): track_detail_screen.dart, track_management_hub_screen.dart, track_management_body.dart share the identical bug (still call .deactivate()); tracks_p0_test.dart E2E-405 still encodes the old buggy expectation. A prior opus review APPROVED this tip (dead-run journal); re-verify independently."
+   }
+  },
+  {
+   "ids": [
+    "AUD-settings-03"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "c0f78e95423ca76552fcc5fd99eeb938228b2316",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-12",
+    "perFinding": [
+     {
+      "id": "AUD-settings-03",
+      "outcome": "fixed",
+      "note": "Confirmed at HEAD e385f632, no drift. Scoped all 16 importData() deletes to accountIds/profileIds in payload; trackLearningOrder scoped via curriculumTracks read pre-clear. Red-first test failed pre-fix (Bob streakEvents wiped), passes post-fix. Both ACs verified. Commit c0f78e95."
+     }
+    ],
+    "testsAdded": [
+     "test/features/settings/domain/services/data_export_import_service_import_test.dart - new profile isolation group + test",
+     "test/features/settings/domain/services/data_export_import_service_import_test.dart - 2 updated tests",
+     "test/features/settings/domain/services/data_export_roundtrip_test.dart - 1 updated test"
+    ],
+    "gateResults": {
+     "make audit": "PASS - all 25 greps clean",
+     "flutter analyze": "PASS - 0 new issues",
+     "flutter test (targeted)": "PASS - 426 tests, 0 fail",
+     "dart run custom_lint": "PASS - No issues found!"
+    },
+    "notes": "16 bare deletes in importData() contradicted its own doc comment. Fix scopes all 16 deletes to ids in payload. 2 pre-existing tests relying on old wipe-all updated to seed in-scope profile. A prior opus review APPROVED this tip (dead-run journal); re-verify independently."
+   }
+  },
+  {
+   "ids": [
+    "AUD-tutoring-04",
+    "AUD-tutoring-15",
+    "AUD-tutoring-16"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "a15042d3ad71cb3f188ba7c6b9993cc29c7844ca",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-14",
+    "perFinding": [
+     {
+      "id": "AUD-tutoring-04",
+      "outcome": "fixed",
+      "note": "Verified: no catch in _onPinComplete/_onConfirmPinEntered. Added catch(e,st) logging via AppLogger + localized generic error (reused existing l10n keys). Red-first tests failed pre-fix, pass post-fix. Commit e75da622."
+     },
+     {
+      "id": "AUD-tutoring-15",
+      "outcome": "fixed",
+      "note": "Verified: close/backspace icons had no semantic label; fixed-height SizedBox(52). Added tooltip/semanticLabel (existing l10n keys), replaced SizedBox with content-sized Padding. Semantic-label tests red pre-fix, green post-fix. Commit a15042d3."
+     },
+     {
+      "id": "AUD-tutoring-16",
+      "outcome": "fixed",
+      "note": "Verified: statement-form switches over sealed TutorPinResult. Rewrote as expr assigned to nullable errorMessage, acted on once. No default arm. analyze clean, 43 existing tests pass unchanged. Commit 9993b7aa."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/tutoring/tutor_pin_entry_gate_l1_test.dart",
+     "learning_tracker/test/features/tutoring/tutor_pin_setup_screen_l1_test.dart"
+    ],
+    "gateResults": {
+     "make audit": "PASS (25/25)",
+     "flutter analyze": "PASS (0 issues)",
+     "flutter test (targeted)": "PASS (81 passed, 2 pre-existing skips)",
+     "make arb-parity": "PASS (no ARB changes; reused existing keys)",
+     "dart run custom_lint": "PASS (0 issues)"
+    },
+    "notes": "Follow-up candidate (not fixed, out of scope): TutorPinService surfaces a hand-written English validation message instead of an EH-5-compliant error code. A prior opus review APPROVED this tip (dead-run journal); re-verify independently."
+   }
+  },
+  {
+   "ids": [
+    "AUD-core-database-03"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "7bbba32457ae19724a8062dce05415cc2622ab35",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-10",
+    "perFinding": [
+     {
+      "id": "AUD-core-database-03",
+      "outcome": "fixed",
+      "note": "Added UNIQUE(profileId,ulid) index to both tables, v33->v34 migration (dedups + repairs balance), switched to insertReturningOrNull+insertOrIgnore. Red test caught plain insert() rowid!=0 unreliable. Schema-export JSON omitted per documented DB-4 gap + v33 precedent."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/core/database/daos/points_balance_dao_test.dart (new group: PointsBalanceDao concurrent merge race)",
+     "learning_tracker/test/migration/v33_to_v34_test.dart (new file)"
+    ],
+    "gateResults": {
+     "make audit": "PASS (25/25 greps clean)",
+     "flutter analyze": "PASS (No issues found)",
+     "flutter test (targeted)": "PASS (1660 passed, 8 pre-existing skips, 0 failures)",
+     "dart run custom_lint": "PASS (No issues found)",
+     "dart run tool/schema_check.dart": "PASS (14 tables, unchanged)",
+     "build_runner": "PASS (idempotent, .g.dart committed)"
+    },
+    "notes": "Follow-ups noted, not fixed: (1) LearningLedgerDao.insertEntry has same lastInsertRowId!=0 bug; (2) upsertRemoteRedemption still SELECT-then-branch; (3) schema_check.dart whitelist still lacks these tables."
+   }
+  },
+  {
+   "ids": [
+    "AUD-core-database-01",
+    "AUD-profiles-02"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "d9173c7ae968e6c7502205b4f00d797e01fc3f83",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-3/learning_tracker",
+    "perFinding": [
+     {
+      "id": "AUD-core-database-01",
+      "outcome": "fixed",
+      "note": "Confirmed live: 6 tables lack LearnerProfiles FK. ProfileDao now explicitly clears them on mirror wipe, fixed false comments, added deny-by-default schema_check.dart FK checker. Red-first: tests failed Expected 0 Actual 1 before fix."
+     },
+     {
+      "id": "AUD-profiles-02",
+      "outcome": "fixed",
+      "note": "Confirmed live: TutorWriteException from tutor-routed push was swallowed, making editProfileFlow handler unreachable. Added rethrow + DuplicateProfileNameException catch. Red-first: tests failed pre-fix (no throw / unhandled exception)."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/sync/tutored_mirror_wipe_test.dart",
+     "learning_tracker/test/tool/schema_check_test.dart",
+     "learning_tracker/test/features/profiles/data/repositories/profile_repository_impl_test.dart",
+     "learning_tracker/test/features/profiles/presentation/widgets/profile_edit_delete_actions_test.dart"
+    ],
+    "gateResults": {
+     "flutter analyze": "PASS (0 new issues)",
+     "dart run custom_lint": "PASS - No issues found",
+     "make audit": "PASS - 25 checks + lint-rules-test (88 tests)",
+     "make arb-parity": "PASS - 1421 keys",
+     "flutter test (targeted)": "PASS - all touched-area suites green",
+     "build_runner diff": "PASS - no generated-file diff"
+    },
+    "notes": "Both findings verified live before touching code. Follow-ups noted, not fixed: deleteProfile own sync push has no try/catch; AUD-core-database-01 rule citation imprecise per its own verify.corrections but defect confirmed."
+   }
+  },
+  {
+   "ids": [
+    "AUD-account-03",
+    "AUD-account-11",
+    "AUD-account-22"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "a8bad8a388c4240df1ebc428ee790a2c6c5bdacb",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-9",
+    "perFinding": [
+     {
+      "id": "AUD-account-03",
+      "outcome": "fixed",
+      "note": "Wrapped reloadCurrentUser() in try/catch, log+fallback to cached firebaseUser. Red-first test failed pre-fix (stayed at initializing), passes post-fix. Commit 5915a5a9."
+     },
+     {
+      "id": "AUD-account-11",
+      "outcome": "fixed",
+      "note": "Outer try/catch around _init() -> log+signedOut. Red-first test also exposed a build()-timing bug (state clobbered by build() own return); fixed via Future.microtask(_init). AC3 custom_lint rule deferred (see notes). Commit 230a523f."
+     },
+     {
+      "id": "AUD-account-22",
+      "outcome": "fixed",
+      "note": "Converted AppUser/AuthState/AuthUser to @freezed, flat shape preserved (non-union). Fixed ~150 downstream call-site breaks across 49 files. 0-diff build_runner regen; new equality tests satisfy AC1. Commit a8bad8a3."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/account/presentation/providers/auth_state_notifier_offline_reload_test.dart",
+     "learning_tracker/test/features/account/presentation/providers/auth_state_notifier_init_exception_safety_test.dart",
+     "learning_tracker/test/helpers/auth_state_test_utils.dart",
+     "learning_tracker/test/features/auth/domain/models/auth_state_test.dart"
+    ],
+    "gateResults": {
+     "make audit": "PASS (25/25 clean)",
+     "flutter analyze": "PASS (0 issues)",
+     "flutter test full suite": "PASS (10377 pass, 238 skip, 0 fail)",
+     "make arb-parity": "PASS",
+     "dart run custom_lint": "PASS (0 issues)",
+     "build_runner regen diff": "PASS (0 outputs, clean)"
+    },
+    "notes": "AUD-22 AC3 (novel custom_lint rule) deferred as candidate follow-up: disproportionate risk to shared lint infra for a P2 secondary AC. NOTE: a prior opus review BOUNCED this tip solely because its own worktree lacked generated files (env gap, not a defect) - do proper env setup (pub get + build_runner) before judging."
+   }
+  },
+  {
+   "ids": [
+    "AUD-core-database-02"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "c160bdd680867f403a745b6c78a8708743004827",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_4ad40ab7-41f-12",
+    "perFinding": [
+     {
+      "id": "AUD-core-database-02",
+      "outcome": "fixed",
+      "note": "Confirmed unscoped DAO queries. Added required profileId to both DAO methods; threaded profileId through the 3 named consumers. Red-first test failed pre-fix exactly as predicted (read+delete leak), passed post-fix. Fix surfaced same masked-bug pattern in 2 more test files; fixtures corrected."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/learning_order/data/repositories/learning_order_repository_impl_test.dart (new group: cross-profile isolation, 2 tests)"
+    ],
+    "gateResults": {
+     "flutter analyze": "PASS (No issues found!)",
+     "make audit (25 greps)": "PASS (25/25 clean)",
+     "dart format (changed files)": "PASS",
+     "dart run custom_lint": "PASS (No issues found!)",
+     "flutter test (targeted, 184 tests)": "PASS (All tests passed!)",
+     "build_runner build": "PASS (zero diff; ran once to fix stale gen)"
+    },
+    "notes": "Scope strictly = acceptance_criteria (2 DAO methods + 3 consumers). Candidate follow-ups noticed, NOT fixed: BaseDao.getById and goal_dao/bookmark_dao/stage_dao bare-id delete/update methods are also profileId-unscoped."
+   }
+  },
+  {
+   "ids": [
+    "AUD-account-08",
+    "AUD-account-17",
+    "AUD-account-20"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "6f8073a3dd7aee79705029aaa222f2ac1ec69085",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_4ad40ab7-41f-14",
+    "perFinding": [
+     {
+      "id": "AUD-account-08",
+      "outcome": "fixed",
+      "note": "Confirmed byte-identical dead dup, zero importers (grep). Deleted file + account.dart export line. Commit 4c4f86e0."
+     },
+     {
+      "id": "AUD-account-17",
+      "outcome": "fixed",
+      "note": "Confirmed raw e.reason leaked untranslated; 6-vs-8 password floor drift. Added InvalidInputCode enum, AppLocalizations resolution via new switch expr, shared AppConstants.minLocalPasswordLength. Red-first test captured failing output before fix. Commit 1f9b6568."
+     },
+     {
+      "id": "AUD-account-20",
+      "outcome": "fixed",
+      "note": "Shared constant already centralized by AUD-17 fix. Added the finding named deliverable: boundary-agreement unit test. Commit 6f8073a3."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/auth/domain/services/local_auth_service_test.dart",
+     "learning_tracker/test/features/auth/domain/services/auth_exceptions_test.dart (updated)",
+     "learning_tracker/test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart (updated)"
+    ],
+    "gateResults": {
+     "make audit": "PASS - all 25 greps clean (each commit)",
+     "flutter analyze": "PASS functionally - 0 issues in touched files",
+     "flutter test targeted": "PASS - 84 tests green",
+     "flutter test broad sweep": "PASS - 579 passed, 5 skipped, 0 failed",
+     "make arb-parity": "PASS - 1421 EN keys all present in HE",
+     "dart run custom_lint": "PASS - No issues found (each commit)"
+    },
+    "notes": "Follow-ups noted, not touched: signup_screen.dart deep-imports onboarding auth_validators.dart bypassing its barrel; auth_validators.dart own error strings are hardcoded English (same EH-5 class, out of AC scope)."
+   }
+  }
+ ],
+ "manifest": [
+  {
+   "id": "AUD-core-analytics-01",
+   "severity": "P0",
+   "effort": "L",
+   "normArea": "core/analytics",
+   "files": [
+    "docs/privacy-policy.md",
+    "learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart",
+    "learning_tracker/lib/core/analytics/analytics_provider.dart",
+    "learning_tracker/lib/core/analytics/analytics_service.dart",
+    "learning_tracker/lib/core/logging/crashlytics_service.dart",
+    "learning_tracker/lib/core/logging/log_events.dart",
+    "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+    "learning_tracker/lib/core/sync/pull_pipeline.dart",
+    "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+    "learning_tracker/lib/features/learning/data/completion_writer.dart",
+    "learning_tracker/lib/features/tutoring/domain/services/tutor_audit_log_writer.dart",
+    "learning_tracker/lib/features/tutoring/domain/services/tutor_pin_service.dart",
+    "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-analytics-01.json"
+  },
+  {
+   "id": "AUD-core-database-02",
+   "severity": "P0",
+   "effort": "L",
+   "normArea": "core/database",
+   "files": [
+    "docs/coding-standards.md",
+    "learning_tracker/lib/core/database/base_dao.dart",
+    "learning_tracker/lib/core/database/daos/bookmark_dao.dart",
+    "learning_tracker/lib/core/database/daos/goal_dao.dart",
+    "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+    "learning_tracker/lib/core/database/daos/stage_dao.dart",
+    "learning_tracker/lib/features/learning/data/repositories/bookmark_repository_impl.dart",
+    "learning_tracker/lib/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart",
+    "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart",
+    "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+    "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+    "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+    "learning_tracker/test/features/learning_order/data/repositories/learning_order_repository_impl_test.dart",
+    "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-database-02.json"
+  },
+  {
+   "id": "AUD-docs-01",
+   "severity": "P0",
+   "effort": "M",
+   "normArea": "docs",
+   "files": [
+    "docs/coding-standards.md",
+    "learning_tracker/firestore.rules",
+    "learning_tracker/functions/test/firestore_rules.test.mjs"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-01.json"
+  },
+  {
+   "id": "AUD-firebase-01",
+   "severity": "P0",
+   "effort": "M",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/functions/src/index.ts"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-01.json"
+  },
+  {
+   "id": "AUD-firebase-02",
+   "severity": "P1",
+   "effort": "S",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/functions/src/index.ts",
+    "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-02.json"
+  },
+  {
+   "id": "AUD-firebase-03",
+   "severity": "P1",
+   "effort": "M",
+   "normArea": "firebase",
+   "files": [
+    "docs/firestore-collection-layout.md",
+    "learning_tracker/firestore.indexes.json",
+    "learning_tracker/firestore.rules",
+    "learning_tracker/lib/core/sync/codec/firestore_codec.dart",
+    "learning_tracker/lib/core/sync/firestore_gateway_impl.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-03.json"
+  },
+  {
+   "id": "AUD-firebase-05",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/functions/test/firestore_rules.test.mjs",
+    "learning_tracker/functions/test/fixtures/write_payloads.json"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-05.json"
+  },
+  {
+   "id": "AUD-firebase-06",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/functions/src/index.ts",
+    "learning_tracker/functions/test/cf_triggers.test.mjs"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-06.json"
+  },
+  {
+   "id": "AUD-firebase-07",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/functions/src/index.ts",
+    "learning_tracker/functions/test/_cf_helpers.mjs",
+    "learning_tracker/functions/test/cf_grant_revoke.test.mjs"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-07.json"
+  },
+  {
+   "id": "AUD-firebase-08",
+   "severity": "P2",
+   "effort": "M",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/functions/src/index.ts"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-08.json"
+  },
+  {
+   "id": "AUD-firebase-09",
+   "severity": "P2",
+   "effort": "M",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/firestore.rules"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-09.json"
+  },
+  {
+   "id": "AUD-firebase-10",
+   "severity": "P2",
+   "effort": "M",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/firestore.rules",
+    "learning_tracker/functions/src/index.ts"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-10.json"
+  },
+  {
+   "id": "AUD-firebase-11",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/functions/src/index.ts"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-11.json"
+  },
+  {
+   "id": "AUD-firebase-13",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/functions/test/firestore_rules.test.mjs",
+    "learning_tracker/functions/test/fixtures/write_payloads.json"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-13.json"
+  },
+  {
+   "id": "AUD-firebase-15",
+   "severity": "P3",
+   "effort": "L",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/functions/src/index.ts"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-15.json"
+  },
+  {
+   "id": "AUD-tutoring-06",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/domain/services/tutor_audit_log_writer.dart",
+    "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-06.json"
+  },
+  {
+   "id": "AUD-tutoring-10",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/data/repositories/firestore_audit_log_read_repository.dart",
+    "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+    "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-10.json"
+  },
+  {
+   "id": "AUD-account-01",
+   "severity": "P0",
+   "effort": "M",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+    "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+    "learning_tracker/lib/l10n/app_en.arb"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-01.json"
+  },
+  {
+   "id": "AUD-account-02",
+   "severity": "P1",
+   "effort": "M",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+    "learning_tracker/test/features/account/presentation/notifiers/sign_in_controller_test.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-02.json"
+  },
+  {
+   "id": "AUD-account-04",
+   "severity": "P1",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/data/services/magic_link_service.dart",
+    "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-04.json"
+  },
+  {
+   "id": "AUD-account-07",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-07.json"
+  },
+  {
+   "id": "AUD-account-09",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+    "learning_tracker/lib/features/account/domain/services/pending_local_signup.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-09.json"
+  },
+  {
+   "id": "AUD-account-10",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/data/services/magic_link_service.dart",
+    "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+    "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+    "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-10.json"
+  },
+  {
+   "id": "AUD-account-12",
+   "severity": "P2",
+   "effort": "M",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/data/repositories/auth_repository_impl.dart",
+    "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+    "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-12.json"
+  },
+  {
+   "id": "AUD-account-13",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+    "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
+    "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+    "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-13.json"
+  },
+  {
+   "id": "AUD-account-14",
+   "severity": "P2",
+   "effort": "L",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-14.json"
+  },
+  {
+   "id": "AUD-account-16",
+   "severity": "P2",
+   "effort": "M",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+    "learning_tracker/lib/features/account/presentation/screens/sign_in_screen.dart",
+    "learning_tracker/lib/features/onboarding/onboarding.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-16.json"
+  },
+  {
+   "id": "AUD-account-18",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-18.json"
+  },
+  {
+   "id": "AUD-account-19",
+   "severity": "P2",
+   "effort": "L",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-19.json"
+  },
+  {
+   "id": "AUD-account-23",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
+    "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-23.json"
+  },
+  {
+   "id": "AUD-account-24",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-24.json"
+  },
+  {
+   "id": "AUD-profiles-01",
+   "severity": "P0",
+   "effort": "M",
+   "normArea": "features/profiles",
+   "files": [
+    "learning_tracker/lib/core/database/daos/active_curriculum_dao.dart",
+    "learning_tracker/lib/core/database/daos/track_dao.dart",
+    "learning_tracker/lib/features/profiles/presentation/screens/parent_track_management_screen.dart",
+    "learning_tracker/lib/features/tracks/domain/services/curriculum_activation_service.dart",
+    "learning_tracker/lib/l10n/app_en.arb",
+    "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+    "learning_tracker/test/features/profiles/presentation/screens/ts3_parent_track_archive_test.dart",
+    "learning_tracker/test/features/profiles/presentation/ws4_mode_boundaries_test.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-profiles-01.json"
+  },
+  {
+   "id": "AUD-tutoring-01",
+   "severity": "P1",
+   "effort": "M",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-01.json"
+  },
+  {
+   "id": "AUD-tutoring-03",
+   "severity": "P1",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart",
+    "learning_tracker/lib/features/tutoring/presentation/providers/tutor_grant_providers.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/accept_invite_screen.dart",
+    "learning_tracker/lib/features/tutoring/tutoring.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-03.json"
+  },
+  {
+   "id": "AUD-tutoring-08",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-08.json"
+  },
+  {
+   "id": "AUD-tutoring-11",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart",
+    "learning_tracker/lib/features/tutoring/data/services/tutor_write_service.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-11.json"
+  },
+  {
+   "id": "AUD-tutoring-14",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-14.json"
+  },
+  {
+   "id": "AUD-tutoring-18",
+   "severity": "P3",
+   "effort": "M",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/presentation/screens/accept_invite_screen.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/decline_invite_screen.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/tutor_audit_log_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-18.json"
+  },
+  {
+   "id": "AUD-account-03",
+   "severity": "P1",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/domain/models/auth_state.dart",
+    "learning_tracker/lib/features/account/presentation/providers/auth_state_provider.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-03.json"
+  },
+  {
+   "id": "AUD-account-11",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/domain/models/auth_state.dart",
+    "learning_tracker/lib/features/account/presentation/providers/auth_state_provider.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-11.json"
+  },
+  {
+   "id": "AUD-account-22",
+   "severity": "P3",
+   "effort": "M",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/domain/models/app_user.dart",
+    "learning_tracker/lib/features/account/domain/models/auth_state.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-22.json"
+  },
+  {
+   "id": "AUD-account-08",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/account.dart",
+    "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart",
+    "learning_tracker/lib/features/account/presentation/providers/auth_providers.dart",
+    "learning_tracker/lib/features/onboarding/domain/validators/auth_validators.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-08.json"
+  },
+  {
+   "id": "AUD-account-17",
+   "severity": "P2",
+   "effort": "M",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/domain/services/local_auth_service.dart",
+    "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart",
+    "learning_tracker/test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-17.json"
+  },
+  {
+   "id": "AUD-account-20",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/domain/services/local_auth_service.dart",
+    "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-20.json"
+  },
+  {
+   "id": "AUD-tutoring-04",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-04.json"
+  },
+  {
+   "id": "AUD-tutoring-15",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-15.json"
+  },
+  {
+   "id": "AUD-tutoring-16",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+    "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-16.json"
+  },
+  {
+   "id": "AUD-core-database-01",
+   "severity": "P0",
+   "effort": "S",
+   "normArea": "core/database",
+   "files": [
+    "learning_tracker/lib/core/database/daos/profile_dao.dart",
+    "learning_tracker/lib/core/database/tables/curriculum_tracks.dart",
+    "learning_tracker/lib/core/database/tables/daily_plans.dart",
+    "learning_tracker/lib/core/database/tables/outbox_table.dart",
+    "learning_tracker/lib/core/database/tables/point_configs.dart",
+    "learning_tracker/lib/core/database/tables/profile_programs.dart",
+    "learning_tracker/lib/core/database/tables/study_day_configs.dart",
+    "learning_tracker/lib/core/sync/tutored_mirror_wipe_service.dart",
+    "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-database-01.json"
+  },
+  {
+   "id": "AUD-profiles-02",
+   "severity": "P0",
+   "effort": "M",
+   "normArea": "features/profiles",
+   "files": [
+    "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+    "learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
+    "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-profiles-02.json"
+  },
+  {
+   "id": "AUD-tutoring-07",
+   "severity": "P2",
+   "effort": "L",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-07.json"
+  },
+  {
+   "id": "AUD-tutoring-17",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-17.json"
+  },
+  {
+   "id": "AUD-tutoring-12",
+   "severity": "P2",
+   "effort": "M",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-12.json"
+  },
+  {
+   "id": "AUD-tutoring-13",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-13.json"
+  },
+  {
+   "id": "AUD-account-06",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+    "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-06.json"
+  },
+  {
+   "id": "AUD-account-15",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/presentation/widgets/offline_top_banner.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-15.json"
+  },
+  {
+   "id": "AUD-account-21",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "features/account",
+   "files": [
+    "learning_tracker/lib/features/account/presentation/widgets/sign_in_actions.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-21.json"
+  },
+  {
+   "id": "AUD-firebase-12",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/functions/test/cf_tutor_completions.test.mjs",
+    "learning_tracker/functions/test/cf_tutor_settings_profile.test.mjs"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-12.json"
+  },
+  {
+   "id": "AUD-firebase-14",
+   "severity": "P3",
+   "effort": "S",
+   "normArea": "firebase",
+   "files": [
+    ".firebaserc",
+    "firebase.json"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-14.json"
+  },
+  {
+   "id": "AUD-tutoring-05",
+   "severity": "P2",
+   "effort": "S",
+   "normArea": "features/tutoring",
+   "files": [
+    "learning_tracker/lib/features/tutoring/domain/models/tutor_permissions.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-05.json"
+  },
+  {
+   "id": "AUD-core-email-01",
+   "severity": "P0",
+   "effort": "S",
+   "normArea": "core/email",
+   "files": [
+    "learning_tracker/lib/core/email/transactional_email_service.dart",
+    "learning_tracker/lib/core/logging/logger.dart",
+    "learning_tracker/lib/features/settings/presentation/utils/send_logs_service.dart",
+    "learning_tracker/lib/features/tutoring/domain/services/tutor_notification_service.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-email-01.json"
+  },
+  {
+   "id": "AUD-firebase-04",
+   "severity": "P1",
+   "effort": "S",
+   "normArea": "firebase",
+   "files": [
+    "learning_tracker/Makefile",
+    "learning_tracker/functions/package.json",
+    "learning_tracker/functions/test/cf_grant_invite.test.mjs"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-04.json"
+  },
+  {
+   "id": "AUD-progress-01",
+   "severity": "P0",
+   "effort": "M",
+   "normArea": "features/progress",
+   "files": [
+    "learning_tracker/lib/features/progress/presentation/providers/items_learned_providers.dart",
+    "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+    "learning_tracker/lib/features/progress/presentation/screens/lifetime_knowledge_screen.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-progress-01.json"
+  },
+  {
+   "id": "AUD-settings-03",
+   "severity": "P1",
+   "effort": "M",
+   "normArea": "features/settings",
+   "files": [
+    "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-settings-03.json"
+  },
+  {
+   "id": "AUD-core-database-03",
+   "severity": "P1",
+   "effort": "M",
+   "normArea": "core/database",
+   "files": [
+    "learning_tracker/lib/core/database/daos/points_balance_dao.dart",
+    "learning_tracker/lib/core/database/tables/learning_ledger.dart",
+    "learning_tracker/lib/core/database/tables/points_balance.dart"
+   ],
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-database-03.json"
+  }
+ ]
+}
