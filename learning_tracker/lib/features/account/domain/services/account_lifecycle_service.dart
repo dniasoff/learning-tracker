@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:drift/native.dart';
+import 'package:learning_tracker/core/database/drift_db_file.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
@@ -162,7 +161,7 @@ class AccountLifecycleService {
     final account = await _registry.findById(accountId);
     if (account == null) return 0;
 
-    final driftFile = _resolveDbFile(account.dbFileName);
+    final driftFile = resolveDriftDbFile(_dbPath, account.dbFileName);
     if (driftFile == null) return 0;
 
     final db = UserDatabase(NativeDatabase(driftFile));
@@ -173,24 +172,9 @@ class AccountLifecycleService {
     }
   }
 
-  /// Resolves [dbFileName] to the drift_flutter on-disk file, or null if
-  /// neither the `.sqlite`-suffixed nor the bare-name file exists.
-  ///
-  /// drift_flutter 0.2.8 stores driftDatabase(name: 'foo.db') as
-  /// 'foo.db.sqlite' on the filesystem (see drift_flutter/src/native.dart
-  /// line 51: `'$name.sqlite'`). Try the .sqlite-suffixed path first; fall
-  /// back to the bare name so registry entries written before this fix are
-  /// also handled.
-  File? _resolveDbFile(String dbFileName) {
-    final driftFile = File('$_dbPath/$dbFileName.sqlite');
-    if (driftFile.existsSync()) return driftFile;
-    final bareFile = File('$_dbPath/$dbFileName');
-    if (bareFile.existsSync()) return bareFile;
-    return null;
-  }
-
-  void _deleteDbFile(String dbFileName) {
-    final file = _resolveDbFile(dbFileName);
-    file?.deleteSync();
-  }
+  // AUD-account-09: the .sqlite-suffix delete-with-fallback logic used to
+  // live here as a private method; it is now shared with
+  // PendingLocalSignupStore via core/database/drift_db_file.dart.
+  void _deleteDbFile(String dbFileName) =>
+      deleteDriftDbFile(_dbPath, dbFileName);
 }

@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/drift_db_file.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
@@ -213,22 +213,11 @@ class PendingLocalSignupStore {
     await releaseEmail(prefs, pending.email);
   }
 
-  static void _deleteDbFile(String databasesPath, String dbFileName) {
-    // drift_flutter 0.2.8 stores driftDatabase(name: 'foo.db') as 'foo.db.sqlite'
-    // on the filesystem (see drift_flutter/src/native.dart line 51:
-    // `'$name.sqlite'`).  Always try the .sqlite-suffixed path first; fall back
-    // to the bare name so existing registry entries that pre-date this fix
-    // (where the suffix may or may not be present) are still cleaned up.
-    final driftFile = File('$databasesPath/$dbFileName.sqlite');
-    if (driftFile.existsSync()) {
-      driftFile.deleteSync();
-      return;
-    }
-    final bareFile = File('$databasesPath/$dbFileName');
-    if (bareFile.existsSync()) {
-      bareFile.deleteSync();
-    }
-  }
+  // AUD-account-09: the .sqlite-suffix delete-with-fallback logic used to
+  // live here as a private static method; it is now shared with
+  // AccountLifecycleService via core/database/drift_db_file.dart.
+  static void _deleteDbFile(String databasesPath, String dbFileName) =>
+      deleteDriftDbFile(databasesPath, dbFileName);
 
   /// Removes a per-account DB file during a failed signup attempt.
   static void deleteOrphanDbFile(String databasesPath, String dbFileName) {
