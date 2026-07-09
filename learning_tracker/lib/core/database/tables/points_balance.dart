@@ -33,6 +33,18 @@ class PointsBalance extends Table {
 ///   redemption.
 /// - `parent_add` — manual addition by parent (PIN-gated, DEC-17).
 /// - `parent_deduct` — manual deduction by parent (PIN-gated, DEC-17).
+///
+/// AUD-core-database-03 (schema v34) adds a UNIQUE composite
+/// `(profileId, ulid)` index — the same "sync-able entity" companion
+/// `LearningLedger` already has — so two racing merges of the same pulled
+/// remote entry (concurrent pulls, a retried tutored pull, a future
+/// parallelised merge) collapse to one row at the DB layer instead of a
+/// SELECT-then-INSERT TOCTOU window silently double-crediting the balance.
+@TableIndex(
+  name: 'points_ledger_profile_ulid',
+  columns: {#profileId, #ulid},
+  unique: true,
+)
 class PointsLedger extends Table {
   IntColumn get id => integer().autoIncrement()();
 
@@ -80,6 +92,15 @@ class PointsLedger extends Table {
 /// - `pending_fulfilment` — child has spent points, waiting for parent action.
 /// - `fulfilled` — parent approved and marked as done.
 /// - `declined` — parent declined; points were refunded.
+///
+/// AUD-core-database-03 (schema v34) adds a UNIQUE composite
+/// `(profileId, ulid)` index mirroring [PointsLedger] / `LearningLedger` so
+/// a racing double-pull of the same remote redemption cannot land two rows.
+@TableIndex(
+  name: 'reward_redemptions_profile_ulid',
+  columns: {#profileId, #ulid},
+  unique: true,
+)
 class RewardRedemptions extends Table {
   IntColumn get id => integer().autoIncrement()();
 

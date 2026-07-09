@@ -293,9 +293,24 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
   /// Insert a pulled remote ledger row if its [PointsLedger.ulid] is not
   /// already present locally, then re-derive the balance from the full ledger.
   ///
-  /// Append-only / INSERT-OR-IGNORE semantics keyed on `ulid`. Returns `true`
-  /// when a new row was inserted (so the caller can decide whether a balance
-  /// re-derivation is needed).
+  /// Append-only / INSERT-OR-IGNORE semantics keyed on `(profileId, ulid)`,
+  /// backed by the `points_ledger_profile_ulid` UNIQUE index (AUD-core-
+  /// database-03, schema v34). Two racing calls for the same ulid (e.g. a
+  /// retried pull racing the original merge) both attempt the insert, but
+  /// the DB constraint — not a prior SELECT — decides which one wins, so no
+  /// TOCTOU window exists in which both callers could observe "absent" and
+  /// both insert a duplicate row. Returns `true` when a new row was inserted
+  /// (so the caller can decide whether a balance re-derivation is needed).
+  ///
+  /// Uses `insertReturningOrNull` rather than checking the plain `.insert()`
+  /// rowid against zero: `INSERT OR IGNORE`'s ignored-conflict case does NOT
+  /// reset `lastInsertRowId` to 0 — it leaves whatever rowid the connection's
+  /// last successful insert (on ANY table) produced, which is non-zero as
+  /// soon as any other row exists in the database. Branching on
+  /// `rowid != 0` therefore misreports an ignored insert as successful
+  /// whenever an earlier unrelated insert has already happened on the
+  /// connection (virtually always, in practice) — `RETURNING` is the only
+  /// unambiguous signal of whether a row was actually inserted.
   Future<bool> insertRemoteLedgerEntryIfAbsent({
     required int profileId,
     required String ulid,
@@ -305,13 +320,7 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
     int? redemptionId,
     required DateTime createdAt,
   }) async {
-    final existing =
-        await (select(pointsLedger)
-              ..where((t) => t.ulid.equals(ulid))
-              ..limit(1))
-            .getSingleOrNull();
-    if (existing != null) return false;
-    await into(pointsLedger).insert(
+    final inserted = await into(pointsLedger).insertReturningOrNull(
       PointsLedgerCompanion.insert(
         profileId: profileId,
         entryKind: entryKind,
@@ -324,8 +333,9 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
         // reconciliation never echoes it back to Firestore.
         syncEnqueuedAt: Value(createdAt),
       ),
+      mode: InsertMode.insertOrIgnore,
     );
-    return true;
+    return inserted != null;
   }
 
   /// Re-derive and persist the [PointsBalance] for [profileId] from the sum of

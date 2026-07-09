@@ -13260,6 +13260,14 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     'outbox_profile_kind',
     'CREATE INDEX outbox_profile_kind ON outbox (profile_id, entity_kind)',
   );
+  late final Index pointsLedgerProfileUlid = Index(
+    'points_ledger_profile_ulid',
+    'CREATE UNIQUE INDEX points_ledger_profile_ulid ON points_ledger (profile_id, ulid)',
+  );
+  late final Index rewardRedemptionsProfileUlid = Index(
+    'reward_redemptions_profile_ulid',
+    'CREATE UNIQUE INDEX reward_redemptions_profile_ulid ON reward_redemptions (profile_id, ulid)',
+  );
   late final ActiveCurriculumDao activeCurriculumDao = ActiveCurriculumDao(
     this as UserDatabase,
   );
@@ -13347,6 +13355,8 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     goalsProfileCurriculum,
     streakEventsNaturalKey,
     outboxProfileKind,
+    pointsLedgerProfileUlid,
+    rewardRedemptionsProfileUlid,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([

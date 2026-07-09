@@ -473,4 +473,54 @@ void main() {
       expect(await ledgerOutbox(db), isEmpty);
     });
   });
+
+  group('PointsBalanceDao concurrent merge race (AUD-core-database-03)', () {
+    test('two concurrent insertRemoteLedgerEntryIfAbsent calls for the same '
+        'ulid collapse to exactly one row and one balance credit', () async {
+      // Simulates two interleaved merge() calls racing to insert the same
+      // pulled remote ledger entry (e.g. a retried tutored pull racing the
+      // original, or a future parallelized merge). Before the
+      // UNIQUE(profileId, ulid) index, the DAO's SELECT-then-INSERT had a
+      // TOCTOU window: both calls could see `existing == null` and both
+      // insert, double-crediting the balance.
+      final results = await Future.wait([
+        db.pointsBalanceDao.insertRemoteLedgerEntryIfAbsent(
+          profileId: 1,
+          ulid: 'race-ulid-1',
+          entryKind: 'completion',
+          delta: 10,
+          createdAt: DateTime.utc(2026, 5, 30, 9),
+        ),
+        db.pointsBalanceDao.insertRemoteLedgerEntryIfAbsent(
+          profileId: 1,
+          ulid: 'race-ulid-1',
+          entryKind: 'completion',
+          delta: 10,
+          createdAt: DateTime.utc(2026, 5, 30, 9),
+        ),
+      ]);
+
+      // Exactly one of the two racing calls actually inserted a row.
+      expect(
+        results.where((inserted) => inserted).length,
+        1,
+        reason: 'exactly one of the two racing inserts should win',
+      );
+
+      final ledger = await db.pointsBalanceDao.getLedger(1);
+      expect(
+        ledger,
+        hasLength(1),
+        reason: 'duplicate ulid inserts must collapse to a single row',
+      );
+
+      await db.pointsBalanceDao.reDeriveBalanceFromLedger(1);
+      final balance = await db.pointsBalanceDao.getBalance(1);
+      expect(
+        balance,
+        10,
+        reason: 'balance must reflect exactly one credit, not two',
+      );
+    });
+  });
 }
