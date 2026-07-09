@@ -1974,6 +1974,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get authErrSignInGeneric => 'ההתחברות נכשלה. נסו שוב.';
 
   @override
+  String get authErrExistingPasswordAccount =>
+      'לכתובת אימייל זו כבר יש סיסמה. יש להתחבר באמצעות הסיסמה.';
+
+  @override
   String get authTierCloud => 'ענן';
 
   @override

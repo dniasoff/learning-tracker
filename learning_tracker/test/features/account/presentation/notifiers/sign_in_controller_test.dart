@@ -582,6 +582,18 @@ void main() {
       await assertCode('network-request-failed', (l) => l.authErrNetwork);
     });
 
+    // AUD-account-12 (narrowed on verify): a user who already has a
+    // password-based Firebase account under an email and taps "Sign in with
+    // Google" hits this code. Pre-fix, it fell to the generic default branch
+    // ("Sign-in failed") with zero guidance to use the existing password.
+    test('account-exists-with-different-credential maps to a specific, '
+        'actionable message (not the generic fallback)', () async {
+      await assertCode(
+        'account-exists-with-different-credential',
+        (l) => l.authErrExistingPasswordAccount,
+      );
+    });
+
     test('unknown code maps to authErrSignInGeneric', () async {
       await assertCode('some-unknown-code', (l) => l.authErrSignInGeneric);
     });

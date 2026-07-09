@@ -3549,6 +3549,12 @@ abstract class AppLocalizations {
   /// **'Sign-in failed. Please try again.'**
   String get authErrSignInGeneric;
 
+  /// No description provided for @authErrExistingPasswordAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'This email already has a password. Sign in with your password instead.'**
+  String get authErrExistingPasswordAccount;
+
   /// No description provided for @authTierCloud.
   ///
   /// In en, this message translates to:

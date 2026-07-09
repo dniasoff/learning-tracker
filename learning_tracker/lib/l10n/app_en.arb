@@ -1009,6 +1009,7 @@
   "authErrInvalidEmail": "Please enter a valid email address.",
   "authErrNetwork": "Network error. Please check your connection.",
   "authErrSignInGeneric": "Sign-in failed. Please try again.",
+  "authErrExistingPasswordAccount": "This email already has a password. Sign in with your password instead.",
   "authTierCloud": "Cloud",
   "authTierLocal": "Local",
   "authFoundOnDevice": "Found on this device ({tier})",

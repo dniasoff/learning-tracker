@@ -487,6 +487,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         return l10n.authErrInvalidEmail;
       case 'network-request-failed':
         return l10n.authErrNetwork;
+      // AUD-account-12: a user whose email already has a password-based
+      // Firebase account taps "Sign up with Google" using that same
+      // address. Without this case the generic fallback gives zero
+      // guidance to use the existing password.
+      case 'account-exists-with-different-credential':
+        return l10n.authErrExistingPasswordAccount;
       default:
         return l10n.signUpErrGeneric;
     }

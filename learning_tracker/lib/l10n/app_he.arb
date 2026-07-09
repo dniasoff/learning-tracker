@@ -904,6 +904,7 @@
   "authErrInvalidEmail": "הזינו כתובת אימייל תקינה.",
   "authErrNetwork": "שגיאת רשת. בדקו את החיבור.",
   "authErrSignInGeneric": "ההתחברות נכשלה. נסו שוב.",
+  "authErrExistingPasswordAccount": "לכתובת אימייל זו כבר יש סיסמה. יש להתחבר באמצעות הסיסמה.",
   "authTierCloud": "ענן",
   "authTierLocal": "מקומי",
   "authFoundOnDevice": "נמצא במכשיר הזה ({tier})",

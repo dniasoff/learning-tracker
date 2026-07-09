@@ -1989,6 +1989,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authErrSignInGeneric => 'Sign-in failed. Please try again.';
 
   @override
+  String get authErrExistingPasswordAccount =>
+      'This email already has a password. Sign in with your password instead.';
+
+  @override
   String get authTierCloud => 'Cloud';
 
   @override
