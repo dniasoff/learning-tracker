@@ -296,6 +296,47 @@ describe('listTutorGrants', () => {
     assert.deepEqual(res.grants, []);
   });
 
+  // AUD-firebase-01: pending_for_me discovers invites addressed to an email
+  // purely by string match on the ID token's email claim. Without also
+  // requiring email_verified, an unverified account could enumerate
+  // (discover the grantId of) invites addressed to an email it doesn't own.
+  test('AUD-firebase-01: pending_for_me with matching but UNVERIFIED token email → returns empty array', async () => {
+    await db.collection('tutor_grants').doc(GRANT).set({
+      tutor_uid: null,
+      parent_uid: PARENT,
+      child_profile_id: PROFILE,
+      state: 'pending',
+      tutor_email: 'unverified@example.com',
+    });
+    const unverifiedAuth = {
+      uid: TUTOR,
+      token: { email: 'unverified@example.com', email_verified: false },
+    };
+    const res = await call(fns.listTutorGrants, { mode: 'pending_for_me' }, unverifiedAuth);
+    assert.deepEqual(
+      res.grants,
+      [],
+      'an unverified email must not be able to discover invites addressed to it',
+    );
+  });
+
+  test('pending_for_me with matching AND verified token email → returns the grant', async () => {
+    await db.collection('tutor_grants').doc(GRANT).set({
+      tutor_uid: null,
+      parent_uid: PARENT,
+      child_profile_id: PROFILE,
+      state: 'pending',
+      tutor_email: 'verified@example.com',
+    });
+    const verifiedAuth = {
+      uid: TUTOR,
+      token: { email: 'verified@example.com', email_verified: true },
+    };
+    const res = await call(fns.listTutorGrants, { mode: 'pending_for_me' }, verifiedAuth);
+    assert.equal(res.grants.length, 1);
+    assert.equal(res.grants[0].id, GRANT);
+  });
+
   test('incoming mode excludes non-pending/non-active states', async () => {
     // seed a revoked grant — incoming only returns ['pending','active']
     await seedActiveGrant({}, { state: 'revoked_by_parent' });

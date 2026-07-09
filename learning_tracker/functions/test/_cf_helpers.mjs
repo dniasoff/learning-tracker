@@ -98,3 +98,30 @@ export async function expectHttpsError(promise, code) {
     return true;
   });
 }
+
+// ── Auth-emulator user seeding (AUD-firebase-01) ───────────────────────────────
+//
+// acceptTutorInvite / declineTutorInvite call the REAL admin.auth().getUser()
+// against the Auth emulator (make test-functions starts `--only firestore,auth`),
+// so exercising their email-match / emailVerified gates requires a real Auth
+// user to exist — fft.wrap()'s `{uid, token}` auth context only fakes the
+// CALLABLE's request.auth; it does not create an Auth-emulator user record.
+//
+// Idempotent (create-or-update) so repeated calls across tests/files sharing
+// one emulator instance never collide on `auth/uid-already-exists`.
+export async function seedAuthUser({ uid, email, emailVerified = true, displayName }) {
+  const props = {
+    email,
+    emailVerified,
+    ...(displayName !== undefined ? { displayName } : {}),
+  };
+  try {
+    await admin.auth().createUser({ uid, ...props });
+  } catch (err) {
+    if (err.code === 'auth/uid-already-exists' || err.code === 'auth/email-already-exists') {
+      await admin.auth().updateUser(uid, props);
+    } else {
+      throw err;
+    }
+  }
+}

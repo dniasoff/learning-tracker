@@ -687,15 +687,19 @@ export const acceptTutorInvite = onCall(CALL_OPTS, async (request) => {
     );
   }
 
-  // Security gate: caller's email MUST match the invited email.
-  // This prevents anyone from claiming an invite not addressed to them.
+  // Security gate: caller's email MUST match the invited email, AND that
+  // email must be VERIFIED (AUD-firebase-01). Firebase Auth lets anyone
+  // register an account with any unverified email string, so an attacker
+  // could front-run registration of the invited tutor's email address and
+  // otherwise pass the bare string-equality check below without ever
+  // proving ownership of that inbox.
   const callerRecord = await admin.auth().getUser(callerUid);
   const callerEmail = (callerRecord.email ?? "").toLowerCase().trim();
   const grantEmail = (grant.tutor_email ?? "").toLowerCase().trim();
-  if (callerEmail !== grantEmail) {
+  if (callerEmail !== grantEmail || !callerRecord.emailVerified) {
     throw new HttpsError(
       "permission-denied",
-      "Your account email does not match the invited tutor email"
+      "Your account email does not match the invited tutor email, or is not verified"
     );
   }
 
@@ -779,14 +783,17 @@ export const declineTutorInvite = onCall(CALL_OPTS, async (request) => {
   // Caller is the invited tutor either by uid (already linked) or by email
   // (invite not yet accepted). Check the uid first — it needs no Auth lookup —
   // and only fall back to the live getUser() email comparison when it doesn't
-  // match, so the common path avoids an unnecessary Auth round-trip.
+  // match, so the common path avoids an unnecessary Auth round-trip. The
+  // email branch also requires emailVerified (AUD-firebase-01) — see
+  // acceptTutorInvite's identical gate for why a bare string match isn't
+  // sufficient proof of inbox ownership.
   const isTutorByUid = grant.tutor_uid === callerUid;
   let isTutorByEmail = false;
   if (!isTutorByUid) {
     const callerRecord = await admin.auth().getUser(callerUid);
     const callerEmail = (callerRecord.email ?? "").toLowerCase().trim();
     const grantEmail = (grant.tutor_email ?? "").toLowerCase().trim();
-    isTutorByEmail = callerEmail === grantEmail;
+    isTutorByEmail = callerEmail === grantEmail && callerRecord.emailVerified === true;
   }
 
   if (!isTutorByEmail && !isTutorByUid) {
@@ -1003,9 +1010,14 @@ export const listTutorGrants = onCall(CALL_OPTS, async (request) => {
   } else if (mode === "pending_for_me") {
     // Pending invites are addressed by EMAIL (tutor_uid is null until accepted),
     // so a freshly signed-in tutor can discover invitations in-app and accept
-    // without needing the emailed deep link. Match the caller's verified email.
+    // without needing the emailed deep link. Match the caller's VERIFIED
+    // email — the ID token's `email` claim being present does NOT imply
+    // `email_verified`; those are separate claims (AUD-firebase-01). Without
+    // this gate, an unverified account could enumerate (discover the
+    // grantId of) an invite addressed to an email it doesn't own.
     const callerEmail = (request.auth?.token?.email ?? "").toLowerCase();
-    if (!callerEmail) {
+    const callerEmailVerified = request.auth?.token?.email_verified === true;
+    if (!callerEmail || !callerEmailVerified) {
       return { grants: [] };
     }
     query = db
