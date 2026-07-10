@@ -1,5 +1,4 @@
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
@@ -62,12 +61,12 @@ class MarkCompletionUseCase {
       // BulkInTrack: engagement suppressed, achievement enabled. This is NOT
       // a regression — the event name reflects that we are skipping engagement
       // credit intentionally.
-      await _analytics?.logEvent(LogEvents.track.bulkEngagementSkipped);
+      await _analytics?.logEvent(AnalyticsEvent.bulkEngagementSkipped);
     } else if (source == CompletionSource.lifetimeOnly) {
       // LifetimeOnly: both engagement and achievement suppressed. This is NOT
       // a regression — the event name reflects that we are skipping achievement
       // credit intentionally.
-      await _analytics?.logEvent(LogEvents.track.lifetimeAchievementSkipped);
+      await _analytics?.logEvent(AnalyticsEvent.lifetimeAchievementSkipped);
     }
 
     // B1 three-tier policy: pass the engagement and achievement gates

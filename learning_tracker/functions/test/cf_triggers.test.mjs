@@ -156,6 +156,56 @@ describe('onUserDeleted', () => {
     assert.equal(data.state, 'revoked_by_tutor', 'terminal grants should not be modified');
   });
 
+  // AUD-firebase-06: hasActiveTutorAccess() in firestore.rules grants read
+  // access purely by the existence of a tutor_active_access doc, so every
+  // code path that ends an active grant must also delete that doc. Step 3
+  // (tutor account deleted) already does this; Step 2 (parent account
+  // deleted) revokes the same kind of active grant but previously never
+  // deleted the corresponding tutor_active_access doc — this is the
+  // symmetric test to W6.24's below.
+  test('W6.23: tutor_active_access doc is deleted when parent grant is revoked', async () => {
+    // buildAccessId = `${tutorUid}_${parentUid}_${profileId}`
+    const accessId = `${TUTOR}_${PARENT}_${PROFILE}`;
+    await db.collection('tutor_active_access').doc(accessId).set({ ok: true });
+
+    await seedGrant('g-parent-access', {
+      parent_uid: PARENT,
+      tutor_uid: TUTOR,
+      child_profile_id: PROFILE,
+      state: 'active',
+    });
+
+    const userRecord = fft.auth.makeUserRecord({ uid: PARENT });
+    await wrappedOnUserDeleted(userRecord);
+
+    const accessSnap = await db.collection('tutor_active_access').doc(accessId).get();
+    assert.equal(
+      accessSnap.exists,
+      false,
+      'tutor_active_access doc should be deleted when the parent account is deleted, ' +
+        'matching Step 3 (tutor account deleted)',
+    );
+  });
+
+  test('W6.23: pending grant (no tutor_active_access doc yet) does not error', async () => {
+    // A pending grant's tutor_uid is null — the parent-deletion cascade must
+    // not choke trying to build/delete an access doc for a not-yet-accepted
+    // invite (delete of a non-existent doc-id is a safe no-op regardless,
+    // but this pins the guard against a null tutor_uid explicitly).
+    await seedGrant('g-parent-pending', {
+      parent_uid: PARENT,
+      tutor_uid: null,
+      child_profile_id: PROFILE,
+      state: 'pending',
+    });
+
+    const userRecord = fft.auth.makeUserRecord({ uid: PARENT });
+    await assert.doesNotReject(wrappedOnUserDeleted(userRecord));
+
+    const data = await getGrant('g-parent-pending');
+    assert.equal(data.state, 'revoked_by_parent');
+  });
+
   // ── Step 3: tutor grants resigned + access doc deleted ──────────────────
 
   test('W6.24: active grant where deleted user is tutor → revoked_by_tutor', async () => {

@@ -17,6 +17,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
@@ -232,6 +233,43 @@ void main() {
         await pipeline.pullCompletions(profileId: 7, pageSize: 1);
         expect(gateway.fetchCalls.length, 1);
         expect(dispatcher.dispatched.length, 1);
+      });
+
+      test('AUD-core-analytics-01 (PV-1): merge_router_halt analytics fires '
+          'without a profile_id', () async {
+        final gateway = _PagingGateway(
+          pages: [
+            [
+              {'id': '1'},
+            ],
+            [
+              {'id': '2'},
+            ],
+          ],
+        );
+        final dispatcher = _RecordingDispatcher()..haltAfterFirst = true;
+        final analytics = _RecordingAnalyticsService();
+        final pipeline = PullPipeline(
+          gateway: gateway,
+          dispatcher: dispatcher,
+          analytics: analytics,
+        );
+        await pipeline.pullCompletions(profileId: 7, pageSize: 1);
+
+        expect(
+          analytics.events.map((e) => e.name),
+          contains(AnalyticsEvent.syncMergeRouterHalt),
+        );
+        final params = analytics.events
+            .firstWhere((e) => e.name == AnalyticsEvent.syncMergeRouterHalt)
+            .parameters;
+        expect(
+          params?.containsKey('profile_id'),
+          isFalse,
+          reason:
+              'profile_id is a per-child identifier and must never reach '
+              'an uncatalogued analytics event',
+        );
       });
     });
   });
@@ -714,5 +752,20 @@ class _RecordingDispatcher implements MergeDispatcher {
   }) async {
     dispatched.add(_DispatchedPage(kind: kind, rows: rows));
     return haltAfterFirst ? MergeOutcome.halt : MergeOutcome.continueNext;
+  }
+}
+
+class _RecordedAnalyticsEvent {
+  const _RecordedAnalyticsEvent(this.name, this.parameters);
+  final String name;
+  final Map<String, Object?>? parameters;
+}
+
+class _RecordingAnalyticsService extends AnalyticsService {
+  final List<_RecordedAnalyticsEvent> events = [];
+
+  @override
+  Future<void> logEvent(String name, {Map<String, Object?>? parameters}) async {
+    events.add(_RecordedAnalyticsEvent(name, parameters));
   }
 }

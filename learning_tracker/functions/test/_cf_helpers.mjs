@@ -63,7 +63,13 @@ export async function seedActiveGrant(permissions = {}, overrides = {}) {
     .set({
       tutor_uid: TUTOR,
       parent_uid: PARENT,
-      child_profile_id: PROFILE,
+      // AUD-firebase-07: String(PROFILE), matching every production writer
+      // (inviteTutor requires childProfileId to be a string — see
+      // functions/src/index.ts). Storing PROFILE as a bare JS number here
+      // made listTutorGrants' outgoing-mode Firestore '==' query (which
+      // compares against a string) never match, silently returning zero
+      // results and making that test path untestable for regressions.
+      child_profile_id: String(PROFILE),
       state: 'active',
       permissions,
       tutor_name_snapshot: 'Mr Tutor',
@@ -97,4 +103,31 @@ export async function expectHttpsError(promise, code) {
     );
     return true;
   });
+}
+
+// ── Auth-emulator user seeding (AUD-firebase-01) ───────────────────────────────
+//
+// acceptTutorInvite / declineTutorInvite call the REAL admin.auth().getUser()
+// against the Auth emulator (make test-functions starts `--only firestore,auth`),
+// so exercising their email-match / emailVerified gates requires a real Auth
+// user to exist — fft.wrap()'s `{uid, token}` auth context only fakes the
+// CALLABLE's request.auth; it does not create an Auth-emulator user record.
+//
+// Idempotent (create-or-update) so repeated calls across tests/files sharing
+// one emulator instance never collide on `auth/uid-already-exists`.
+export async function seedAuthUser({ uid, email, emailVerified = true, displayName }) {
+  const props = {
+    email,
+    emailVerified,
+    ...(displayName !== undefined ? { displayName } : {}),
+  };
+  try {
+    await admin.auth().createUser({ uid, ...props });
+  } catch (err) {
+    if (err.code === 'auth/uid-already-exists' || err.code === 'auth/email-already-exists') {
+      await admin.auth().updateUser(uid, props);
+    } else {
+      throw err;
+    }
+  }
 }

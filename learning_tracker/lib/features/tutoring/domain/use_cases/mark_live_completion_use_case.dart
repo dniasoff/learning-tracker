@@ -14,7 +14,6 @@
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
-import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 
 /// Delegate signature — the actual completion write implementation
@@ -59,7 +58,7 @@ class MarkLiveCompletionUseCase<T> {
       // W7.11: fire analytics so tutor boundary violations are visible in
       // dashboards (in addition to the TutorWriteForbiddenException that
       // the UI layer catches for the friendly dialog).
-      await _analytics?.logEvent(LogEvents.tutor.liveMarkBlocked);
+      await _analytics?.logEvent(AnalyticsEvent.tutorLiveMarkBlocked);
       throw const TutorWriteForbiddenException();
     }
     return writeDelegate();

@@ -5,7 +5,6 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -46,7 +45,8 @@ class DriftMergeStore implements MergeStore {
 
   // ── W7.5 telemetry helper ───────────────────────────────────────────────────
 
-  /// Fire [LogEvents.sync.mergeRowSkipped] on the injected analytics service.
+  /// Fire [AnalyticsEvent.syncMergeRowSkipped] on the injected analytics
+  /// service.
   ///
   /// Silent skips occur when a Firestore row arrives malformed (missing
   /// required fields) or when a dependency is missing (e.g. bookmark arrives
@@ -54,7 +54,7 @@ class DriftMergeStore implements MergeStore {
   /// previously invisible in dashboards.
   void _fireSkipped({required String kind, required String reason}) {
     final future = _analytics?.logEvent(
-      LogEvents.sync.mergeRowSkipped,
+      AnalyticsEvent.syncMergeRowSkipped,
       parameters: {'entity_kind': kind, 'reason': reason},
     );
     if (future != null) unawaited(future);

@@ -21,6 +21,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -378,6 +379,7 @@ SyncOrchestratorImpl _makeOrchestrator({
   MergeRouter? mergeRouter,
   Future<void> Function()? pushAllLocalData,
   void Function()? onFirstSyncComplete,
+  AnalyticsService? analytics,
 }) {
   final gw = gateway ?? _FakeGateway();
   final mr = mergeRouter ?? _FakeMergeRouter();
@@ -387,10 +389,28 @@ SyncOrchestratorImpl _makeOrchestrator({
     resolveProfileId: () => _testProfileId,
     resolvePushAllLocalData: pushAllLocalData ?? () async {},
     onFirstSyncComplete: onFirstSyncComplete,
+    analytics: analytics,
     // Disable connectivity stream and network reset so tests run synchronously.
     connectivityStream: null,
     resetFirestoreNetworkOverride: () async {},
   );
+}
+
+// ── Fake AnalyticsService — records fired events for assertion ──────────────
+
+class _RecordedAnalyticsEvent {
+  const _RecordedAnalyticsEvent(this.name, this.parameters);
+  final String name;
+  final Map<String, Object?>? parameters;
+}
+
+class _RecordingAnalyticsService extends AnalyticsService {
+  final List<_RecordedAnalyticsEvent> events = [];
+
+  @override
+  Future<void> logEvent(String name, {Map<String, Object?>? parameters}) async {
+    events.add(_RecordedAnalyticsEvent(name, parameters));
+  }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -763,6 +783,78 @@ void main() {
         );
       },
     );
+
+    test('AUD-core-analytics-01 (PV-1): sync_pull_failed analytics never '
+        'carries a raw exception string', () async {
+      final gw = _FakeGateway()
+        ..throwWith = Exception(
+          'permission-denied: profiles/42/completions/Berakhot.2a',
+        );
+      final analytics = _RecordingAnalyticsService();
+      final orchestrator = _makeOrchestrator(gateway: gw, analytics: analytics);
+
+      await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
+
+      final pullFailedEvents = analytics.events.where(
+        (e) => e.name == AnalyticsEvent.syncPullFailed,
+      );
+      expect(pullFailedEvents, isNotEmpty);
+      final params = pullFailedEvents.first.parameters;
+      expect(
+        params?.containsKey('error'),
+        isFalse,
+        reason: 'raw error field must be gone entirely',
+      );
+      for (final value in params?.values ?? const <Object?>[]) {
+        expect(
+          value.toString(),
+          isNot(contains('profiles/42/completions')),
+          reason:
+              'no analytics parameter may leak the document resource '
+              'path embedded in the original exception',
+        );
+      }
+      expect(params?['error_kind'], 'other');
+    });
+
+    test('AUD-core-analytics-01 (PV-1): sync_listener_error analytics never '
+        'carries a raw exception string', () async {
+      // .start() attaches a WidgetsBinding lifecycle observer.
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final analytics = _RecordingAnalyticsService();
+      final gateway = _ErroringListenerGateway(
+        erroringChannel: 'completions',
+        error: Exception(
+          'permission-denied: profiles/42/completions/Berakhot.2a',
+        ),
+      );
+      final orchestrator = SyncOrchestratorImpl(
+        resolveGateway: () => gateway,
+        resolveMergeRouter: () => _FakeMergeRouter(),
+        resolveProfileId: () => _testProfileId,
+        resolvePushAllLocalData: () async {},
+        analytics: analytics,
+        connectivityStream: null,
+        resetFirestoreNetworkOverride: () async {},
+      );
+
+      orchestrator.start();
+      // Allow the supervisor's async start() + the errored stream's
+      // microtask to propagate to onError.
+      await Future<void>.delayed(Duration.zero);
+
+      final listenerErrorEvents = analytics.events.where(
+        (e) => e.name == AnalyticsEvent.syncListenerError,
+      );
+      expect(listenerErrorEvents, isNotEmpty);
+      final params = listenerErrorEvents.first.parameters;
+      expect(params?.containsKey('error'), isFalse);
+      for (final value in params?.values ?? const <Object?>[]) {
+        expect(value.toString(), isNot(contains('profiles/42/completions')));
+      }
+      expect(params?['error_kind'], 'other');
+      orchestrator.dispose();
+    });
   });
 
   // ── Pull ordering ───────────────────────────────────────────────────────────
@@ -1084,6 +1176,49 @@ class _ListenerTrackingGateway extends _FakeGateway {
   @override
   Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
       _tracked<ListenerSnapshot>();
+}
+
+/// A [FirestoreGateway] whose `listenToCollection` for [erroringChannel]
+/// emits [error] on its very first (only) event; every other channel is an
+/// empty (never-firing) stream. Used to exercise
+/// [SyncOrchestratorImpl]'s `_onListenerError` → `sync_listener_error`
+/// analytics path (AUD-core-analytics-01).
+class _ErroringListenerGateway extends _FakeGateway {
+  _ErroringListenerGateway({
+    required this.erroringChannel,
+    required this.error,
+  });
+
+  final String erroringChannel;
+  final Object error;
+
+  @override
+  Stream<ListenerSnapshot> listenToCollection({
+    required int profileId,
+    required String collection,
+    required String orderField,
+    int limit = 500,
+  }) {
+    if (collection == erroringChannel) {
+      return Stream<ListenerSnapshot>.error(error);
+    }
+    return const Stream.empty();
+  }
+
+  @override
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) => const Stream.empty();
+
+  @override
+  Stream<ListenerSnapshot> listenToTutorGrants({int limit = 500}) =>
+      const Stream.empty();
+
+  @override
+  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
+      const Stream.empty();
 }
 
 // ── Helper: a gateway that never resolves fetchPage ───────────────────────────

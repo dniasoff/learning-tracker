@@ -2,14 +2,11 @@
 // inviteTutor, acceptTutorInvite, declineTutorInvite, rescindTutorInvite.
 // See _cf_helpers.mjs for the harness.
 //
-// NOTE: acceptTutorInvite and declineTutorInvite both call admin.auth().getUser()
-// to verify the caller's email. The test-functions Makefile target starts only
-// the Firestore emulator (--only firestore), NOT the Auth emulator, so any test
-// that reaches the getUser() call will fail with an internal/network error.
-// Gates that exit BEFORE that call (unauth, invalid-argument, not-found, and
-// acceptTutorInvite's state-check which precedes getUser) are fully testable.
-// Remaining gates and happy paths for acceptTutorInvite/declineTutorInvite are
-// skipped here and documented as requiring the Auth emulator.
+// acceptTutorInvite and declineTutorInvite both call the REAL
+// admin.auth().getUser() to verify the caller's email — make test-functions
+// starts `--only firestore,auth`, so seedAuthUser() (_cf_helpers.mjs) creates
+// a real Auth-emulator user record and those gates ARE exercised here
+// (AUD-firebase-01).
 
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
@@ -25,6 +22,7 @@ import {
   fns,
   parentAuth,
   seedActiveGrant,
+  seedAuthUser,
   strangerAuth,
 } from './_cf_helpers.mjs';
 
@@ -102,19 +100,72 @@ describe('inviteTutor', () => {
     assert.equal(data.state, 'pending');
     assert.equal(data.parent_uid, PARENT);
   });
+
+  // AUD-firebase-02: grantId is deterministic ({email}__{parentUid}__{profileId}),
+  // so a second inviteTutor call for the same tutor+child pair must not
+  // silently reset an already-active grant back to 'pending' with fresh
+  // default permissions — a parent re-sending an invite (or a duplicate form
+  // submission) must not silently re-grant a permission the parent had
+  // explicitly turned off.
+  test('AUD-firebase-02: re-inviting while the grant is already active does not silently reset state/permissions', async () => {
+    const res1 = await call(fns.inviteTutor, goodArgs, parentAuth);
+    const grantId = res1.grantId;
+    const customPermissions = {
+      can_view_progress: true,
+      can_view_content: true,
+      can_bulk_prior_completion: false, // parent explicitly turned this OFF
+      can_reset_completion: false,
+      can_edit_goals: false,
+      can_edit_stages: false,
+      can_edit_rewards: false,
+      can_edit_study_days: false,
+      can_edit_points: false,
+    };
+    await db.collection('tutor_grants').doc(grantId).update({
+      state: 'active',
+      tutor_uid: TUTOR,
+      permissions: customPermissions,
+    });
+
+    await expectHttpsError(
+      call(fns.inviteTutor, goodArgs, parentAuth),
+      'failed-precondition',
+    );
+
+    const after = (await db.collection('tutor_grants').doc(grantId).get()).data();
+    assert.equal(after.state, 'active', 'state must remain active, not reset to pending');
+    assert.deepEqual(
+      after.permissions,
+      customPermissions,
+      'permissions must not be silently reset to the request-supplied defaults',
+    );
+    assert.equal(after.tutor_uid, TUTOR, 'tutor_uid must not be cleared');
+  });
 });
 
 // ── acceptTutorInvite ─────────────────────────────────────────────────────────
 // Caller is the tutor. Validates grantId, state=pending, not expired,
-// caller email === grant.tutor_email (via admin.auth().getUser — needs Auth emulator).
-// Gates that exit before getUser are testable; email-match gate and happy path
-// require the Auth emulator (not started by make test-functions).
+// caller email === grant.tutor_email AND caller emailVerified === true
+// (AUD-firebase-01 — via admin.auth().getUser(), Auth emulator).
 describe('acceptTutorInvite', () => {
   const goodArgs = { grantId: GRANT };
+  const TUTOR_EMAIL = 'tutor@example.com';
 
   beforeEach(async () => {
     await clearFirestore();
   });
+
+  async function seedPendingGrant(overrides = {}) {
+    await db.collection('tutor_grants').doc(GRANT).set({
+      tutor_uid: null,
+      parent_uid: PARENT,
+      child_profile_id: PROFILE,
+      state: 'pending',
+      tutor_email: TUTOR_EMAIL,
+      invite_token: 'test-token',
+      ...overrides,
+    });
+  }
 
   test('unauthenticated caller → unauthenticated', async () => {
     await expectHttpsError(
@@ -168,16 +219,60 @@ describe('acceptTutorInvite', () => {
       'failed-precondition',
     );
   });
+
+  // AUD-firebase-01 — core regression: an unverified email must never be
+  // trusted to claim an invite, even when it matches grant.tutor_email
+  // exactly (e.g. an attacker front-running registration of the invited
+  // tutor's email address before the real owner verifies it).
+  test('AUD-firebase-01: caller email matches but is UNVERIFIED → permission-denied', async () => {
+    await seedPendingGrant();
+    await seedAuthUser({ uid: TUTOR, email: TUTOR_EMAIL, emailVerified: false });
+
+    await expectHttpsError(
+      call(fns.acceptTutorInvite, goodArgs), // default tutorAuth uid=TUTOR
+      'permission-denied',
+    );
+
+    const after = (await db.collection('tutor_grants').doc(GRANT).get()).data();
+    assert.equal(after.state, 'pending', 'grant must NOT be accepted');
+  });
+
+  test('caller email does not match grant.tutor_email (verified) → permission-denied', async () => {
+    await seedPendingGrant();
+    await seedAuthUser({
+      uid: TUTOR,
+      email: 'someone-else@example.com',
+      emailVerified: true,
+    });
+
+    await expectHttpsError(
+      call(fns.acceptTutorInvite, goodArgs),
+      'permission-denied',
+    );
+  });
+
+  test('caller email matches AND is verified → success, grant becomes active', async () => {
+    await seedPendingGrant();
+    await seedAuthUser({ uid: TUTOR, email: TUTOR_EMAIL, emailVerified: true });
+
+    const res = await call(fns.acceptTutorInvite, goodArgs);
+
+    assert.equal(res.success, true);
+    const after = (await db.collection('tutor_grants').doc(GRANT).get()).data();
+    assert.equal(after.state, 'active');
+    assert.equal(after.tutor_uid, TUTOR);
+    assert.equal(after.invite_token, undefined, 'invite_token must be cleared (single-use)');
+  });
 });
 
 // ── declineTutorInvite ────────────────────────────────────────────────────────
-// Caller is the tutor. Validates grantId, then immediately calls
-// admin.auth().getUser() to check the caller email.
-// Only unauth, invalid-argument, and not-found gates exit before getUser.
-// Permission gate (email/uid mismatch) and state gate and happy path all
-// reach getUser() — require the Auth emulator (not started by make test-functions).
+// Caller is the tutor, either by tutor_uid (already accepted once, resigning
+// via decline is not the normal path but uid-match short-circuits regardless)
+// or — for a still-PENDING invite where tutor_uid is null — by email match
+// AND emailVerified === true (AUD-firebase-01, mirrors acceptTutorInvite).
 describe('declineTutorInvite', () => {
   const goodArgs = { grantId: GRANT };
+  const TUTOR_EMAIL = 'tutor@example.com';
 
   beforeEach(async () => {
     await clearFirestore();
@@ -249,6 +344,45 @@ describe('declineTutorInvite', () => {
       call(fns.declineTutorInvite, goodArgs),
       'failed-precondition',
     );
+  });
+
+  // AUD-firebase-01 — pending invite, tutor_uid still null (not yet
+  // accepted): the caller-is-tutor check falls back to the email match, and
+  // must also require emailVerified.
+  test('AUD-firebase-01: pending invite, tutor_uid null, caller email matches but UNVERIFIED → permission-denied', async () => {
+    await db.collection('tutor_grants').doc(GRANT).set({
+      tutor_uid: null,
+      parent_uid: PARENT,
+      child_profile_id: PROFILE,
+      state: 'pending',
+      tutor_email: TUTOR_EMAIL,
+    });
+    await seedAuthUser({ uid: TUTOR, email: TUTOR_EMAIL, emailVerified: false });
+
+    await expectHttpsError(
+      call(fns.declineTutorInvite, goodArgs),
+      'permission-denied',
+    );
+
+    const after = (await db.collection('tutor_grants').doc(GRANT).get()).data();
+    assert.equal(after.state, 'pending', 'grant must NOT be declined');
+  });
+
+  test('pending invite, tutor_uid null, caller email matches AND verified → success', async () => {
+    await db.collection('tutor_grants').doc(GRANT).set({
+      tutor_uid: null,
+      parent_uid: PARENT,
+      child_profile_id: PROFILE,
+      state: 'pending',
+      tutor_email: TUTOR_EMAIL,
+    });
+    await seedAuthUser({ uid: TUTOR, email: TUTOR_EMAIL, emailVerified: true });
+
+    const res = await call(fns.declineTutorInvite, goodArgs);
+
+    assert.equal(res.success, true);
+    const after = (await db.collection('tutor_grants').doc(GRANT).get()).data();
+    assert.equal(after.state, 'declined');
   });
 });
 

@@ -12,7 +12,6 @@
 //   3. Keeps tutoring feature isolated from the profiles feature internals.
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 
 // ── TutorPin VO ─────────────────────────────────────────────────────────────
@@ -96,10 +95,9 @@ class TutorPinService {
     }
     await _pinService.setTutorPin(profileId, pin.rawDigits);
     // W7.11: fire tutor_pin_set after successful PIN storage.
-    await _analytics?.logEvent(
-      LogEvents.tutor.pinSet,
-      parameters: {'profile_id': profileId},
-    );
+    // AUD-core-analytics-01 (PV-1): profile_id dropped — the event firing at
+    // all is the signal; no per-child identifier belongs in the payload.
+    await _analytics?.logEvent(AnalyticsEvent.tutorPinSet);
     return const TutorPinSuccess();
   }
 

@@ -1,6 +1,7 @@
 {
   "_comment": "Canonical per-collection write-payload fixtures derived from Dart codec encode() outputs and LocalDataUploadService map literals. ISO-8601 timestamp strings are converted to Firestore Timestamp objects at test runtime by convertTimestamps(). Re-generate with: dart run tool/emit_fixture_payloads.dart > functions/test/fixtures/write_payloads.json",
   "completions": {
+    "profile_id": 5,
     "curriculum_id": "c1",
     "sefaria_ref": "Berakhot.2a",
     "stage_id": 1,
@@ -46,16 +47,16 @@
     "id": "g1",
     "profile_id": "5",
     "curriculum_id": "c1",
+    "target_percent": 80,
+    "description": "Finish Berakhot",
+    "date_type": "fixed",
+    "goal_type": "completion",
     "updated_at": "2020-01-01T00:00:00.000Z",
     "created_at": "2020-01-01T00:00:00.000Z",
     "pace_value": 2,
     "pace_unit": "daily",
     "target_date": "2025-12-31T00:00:00.000Z",
-    "track_id": "1",
-    "description": "Finish Berakhot",
-    "target_percent": 80,
-    "date_type": "fixed",
-    "goal_type": "completion"
+    "track_id": "1"
   },
   "learning_order": {
     "curriculum_id": "c1",
@@ -97,5 +98,24 @@
     "event_type": "study",
     "study_date": "2020-01-01T00:00:00.000Z",
     "created_at": "2020-01-01T00:00:00.000Z"
+  },
+  "points_ledger": {
+    "ulid": "ULID0003",
+    "profile_id": "5",
+    "entry_kind": "redemption_debit",
+    "delta": -50,
+    "note": "Redeemed: Extra screen time",
+    "redemption_ulid": "ULID0004",
+    "created_at": "2020-01-01T00:00:00.000Z"
+  },
+  "reward_redemptions": {
+    "ulid": "ULID0004",
+    "profile_id": "5",
+    "reward_title": "Extra screen time",
+    "icon_index": 2,
+    "points_cost": 50,
+    "status": "pending_fulfilment",
+    "created_at": "2020-01-01T00:00:00.000Z",
+    "updated_at": "2020-01-01T00:00:00.000Z"
   }
 }

@@ -7,7 +7,6 @@
 //   ListOutgoingTutorGrantsUseCase — parent lists grants they have issued
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 
@@ -35,7 +34,7 @@ class RevokeTutorGrantUseCase {
     // W7.11: fire tutor_grant_revoked on success.
     if (result is TutorGrantSuccess) {
       await _analytics?.logEvent(
-        LogEvents.tutor.grantRevoked,
+        AnalyticsEvent.tutorGrantRevoked,
         parameters: {'grant_id': grant.grantId},
       );
     }
@@ -63,7 +62,7 @@ class ResignTutorGrantUseCase {
     // W7.11: fire tutor_resigned on success.
     if (result is TutorGrantSuccess) {
       await _analytics?.logEvent(
-        LogEvents.tutor.tutorResigned,
+        AnalyticsEvent.tutorResigned,
         parameters: {'grant_id': grant.grantId},
       );
     }

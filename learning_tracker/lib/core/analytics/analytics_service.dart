@@ -15,6 +15,13 @@ import 'package:learning_tracker/core/domain/value_objects/sefaria_ref.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 
 /// Named analytics event constants (Story 27.14, DNI-390).
+///
+/// AUD-core-analytics-01: this catalog is the ONLY source of event names
+/// accepted by [AnalyticsService.logEvent] — every `.logEvent(` call site in
+/// `lib/` must pass an `AnalyticsEvent.*` member as the event name (checked
+/// by `dart run tool/check_analytics_catalog.dart`, wired into `make audit`).
+/// [LogEvents] (core/logging/log_events.dart) remains a separate catalog for
+/// [AppLogger] structured logs and MUST NOT be passed to `logEvent` directly.
 abstract final class AnalyticsEvent {
   static const appLaunch = 'app_launch';
   static const completionRecorded = 'completion_recorded';
@@ -29,6 +36,29 @@ abstract final class AnalyticsEvent {
       'notification_suppressed_sacred_time';
   static const cloudRestoreCompleted = 'cloud_restore_completed';
   static const crashReported = 'crash_reported';
+
+  // W7.5–W7.11 events — promoted into the catalog by AUD-core-analytics-01.
+  // These were previously fired via bare `LogEvents.*` strings, bypassing
+  // this catalog and its PV-1 review entirely.
+  static const syncMergeRowSkipped = 'sync_merge_row_skipped';
+  static const syncMergeRouterHalt = 'sync_merge_router_halt';
+  static const syncOutboxDeadLettered = 'sync_outbox_dead_lettered';
+  static const syncPullStarted = 'sync_pull_started';
+  static const syncPullCompleted = 'sync_pull_completed';
+  static const syncPullFailed = 'sync_pull_failed';
+  static const syncListenerError = 'sync_listener_error';
+  static const syncPermissionDenied = 'sync_permission_denied';
+  static const tutorPinSet = 'tutor_pin_set';
+  static const tutorActionRecorded = 'tutor_action_recorded';
+  static const tutorInviteSent = 'tutor_invite_sent';
+  static const tutorInviteAccepted = 'tutor_invite_accepted';
+  static const tutorInviteDeclined = 'tutor_invite_declined';
+  static const tutorGrantRescinded = 'tutor_grant_rescinded';
+  static const tutorGrantRevoked = 'tutor_grant_revoked';
+  static const tutorResigned = 'tutor_resigned';
+  static const tutorLiveMarkBlocked = 'tutor_live_mark_blocked';
+  static const bulkEngagementSkipped = 'bulk_engagement_skipped';
+  static const lifetimeAchievementSkipped = 'lifetime_achievement_skipped';
 }
 
 /// Milestone thresholds for [AnalyticsEvent.streakMilestoneReached].

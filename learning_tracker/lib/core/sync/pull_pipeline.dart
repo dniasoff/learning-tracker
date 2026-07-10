@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
-import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
@@ -429,13 +428,11 @@ class PullPipeline {
       if (outcome == MergeOutcome.halt) {
         // W7.6: fire telemetry so the halt is visible in analytics dashboards
         // (the structured log captures it separately via AppLogger).
+        // AUD-core-analytics-01 (PV-1): profile_id dropped — a per-child
+        // identifier has no place in an uncatalogued analytics event.
         final future = _analytics?.logEvent(
-          LogEvents.sync.mergeRouterHalt,
-          parameters: {
-            'collection': collection,
-            'entity_kind': kind,
-            'profile_id': profileId,
-          },
+          AnalyticsEvent.syncMergeRouterHalt,
+          parameters: {'collection': collection, 'entity_kind': kind},
         );
         if (future != null) unawaited(future);
         return;
