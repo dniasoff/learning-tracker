@@ -34,13 +34,19 @@
     {
       "id": "AUD-core-database-01",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P0",
       "title": "Add profileId FK+CASCADE to 6 tables — tutored-mirror wipe currently orphans a mirrored child's data",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "93155211"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-database-01 AC1 OK: mirror_wipe_test seeds all 6 tables then asserts 0 rows after wipeMirrorForGrant + wipeAllMirrors (real DB); passed",
+        "AUD-core-database-01 AC2 OK: wipe_service header comment changed from 'every child table/no explicit delete needed' to 'MOST' + lists the 6 non-FK tables",
+        "AUD-core-database-01 AC3 OK: schema_check _validateForeignKeyCascade deny-by-default on-by-default; live run exits 0; test 'exemption is exactly the 6 tables' passed"
+      ],
+      "notes": "Confirmed live: 6 tables lack LearnerProfiles FK. ProfileDao now explicitly clears them on mirror wipe, fixed false comments, added deny-by-default schema_check.dart FK checker. Red-first: tests failed Expected 0 Actual 1 before fix. Merged --no-ff onto audit-fix/2026-07-03 (w1r0c5, mergeSha 1ff75991cb1957b594f0c32a94f55dae2edd811e). Post-rebase gate: make audit checks 1-24 clean, flutter analyze clean, make arb-parity clean (touchedStrings). Check 25/25 (single coding-standards.md) failed both pre- and post-merge due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes) being swept up by the check's find .. from the main checkout; this is filesystem-only (independent of git HEAD/content) and matches the pre-existing environmental pattern already documented for w1r0c2/w1r0c3/w1r0c4, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
     },
     {
       "id": "AUD-core-database-02",
@@ -56,13 +62,20 @@
     {
       "id": "AUD-profiles-02",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P0",
       "title": "Stop ProfileRepositoryImpl.updateProfile silently swallowing tutor Cloud-Function write failures",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "864e238a"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-02 AC1 OK: repo_impl 117/175/343 add 'on TutorWriteException {rethrow}'; tests update+createProfile propagate TutorWriteException passed",
+        "AUD-profiles-02 AC2 OK: edit_delete_actions:56-66 catches DuplicateProfileNameException -> profileNameTaken snackbar, mirroring picker screen",
+        "AUD-profiles-02 AC3 OK: widget test wires real ProfileRepositoryImpl to failing facade; asserts tutorPermissionDenied snackbar + no unhandled exception; passed",
+        "AUD-profiles-02 AC4 OK: widget test mocks updateProfile throwing DuplicateProfileNameException; asserts profileNameTaken snackbar + takeException null; passed"
+      ],
+      "notes": "Confirmed live: TutorWriteException from tutor-routed push was swallowed, making editProfileFlow handler unreachable. Added rethrow + DuplicateProfileNameException catch. Red-first: tests failed pre-fix (no throw / unhandled exception). Merged --no-ff onto audit-fix/2026-07-03 (w1r0c5, mergeSha 1ff75991cb1957b594f0c32a94f55dae2edd811e). Post-rebase gate: make audit checks 1-24 clean, flutter analyze clean, make arb-parity clean (touchedStrings). Check 25/25 (single coding-standards.md) failed both pre- and post-merge due to concurrent sibling worktrees under the gitignored .claude/worktrees/ being swept up by the check's find .. from the main checkout; filesystem-only (independent of git HEAD/content), matching the pre-existing environmental pattern already documented for w1r0c2/w1r0c3/w1r0c4, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint, so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
     },
     {
       "id": "AUD-core-email-01",
