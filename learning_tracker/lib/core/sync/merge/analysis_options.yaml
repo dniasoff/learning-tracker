@@ -1,0 +1,19 @@
+# AUD-core-sync-25: scoped enablement of EH-4's two Pending checkers
+# (avoid_catches_without_on_clauses, avoid_catching_errors) for the sync
+# merge layer specifically.
+#
+# These lints are not enabled at the project root (docs/coding-standards.md
+# marks them [Pending]) because ~169 pre-existing bare `catch` clauses exist
+# across the wider `lib/` tree — enabling them globally would surface a huge
+# unrelated backlog outside this finding's scope. This directory-scoped
+# override (Dart/Flutter analyzer supports nested analysis_options.yaml via
+# `include:`) is the honest middle ground: it locks in EH-4 for the two call
+# sites this finding fixes (and every merger in this directory, all of which
+# already use typed `on Exception catch` — see AUD-core-sync-15) without
+# touching the rest of the codebase's unrelated debt.
+include: ../../../../analysis_options.yaml
+
+linter:
+  rules:
+    - avoid_catches_without_on_clauses
+    - avoid_catching_errors

@@ -77,7 +77,11 @@ class LearnerProfileMerger implements EntityMerger {
             );
           }
         });
-      } catch (e, stackTrace) {
+      } on Exception catch (e, stackTrace) {
+        // AUD-core-sync-25 (EH-4): typed `on Exception` — a bare catch also
+        // traps Error subtypes (TypeError, RangeError, AssertionError),
+        // masking real programming bugs behind a quiet warning log instead
+        // of a loud dev/QA crash. Genuine Errors now propagate.
         _logger?.warning(
           event: 'sync_learner_profile_merge_row_failed',
           fields: {'profile_id': profileId},

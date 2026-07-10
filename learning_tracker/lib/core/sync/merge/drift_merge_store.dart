@@ -710,10 +710,16 @@ class DriftMergeStore implements MergeStore {
       case 'days_of_week':
         List<int> days;
         if (daysOfWeek is String) {
+          // AUD-core-sync-25 (EH-4): typed `on FormatException` — the only
+          // expected failure here is malformed JSON text from jsonDecode. A
+          // bare catch also trapped the Error thrown by `as List` on a
+          // wrong-shaped-but-valid-JSON payload (e.g. a JSON object instead
+          // of an array), silently emptying the schedule instead of
+          // crashing loudly on what is actually a real shape-assumption bug.
           try {
             final decoded = jsonDecode(daysOfWeek);
             days = (decoded as List).cast<int>();
-          } catch (_) {
+          } on FormatException {
             days = const [];
           }
         } else if (daysOfWeek is List) {
