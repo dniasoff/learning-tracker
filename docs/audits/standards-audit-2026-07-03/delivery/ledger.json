@@ -1228,13 +1228,13 @@
   {
    "id": "AUD-account-11",
    "wave": 1,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "reopened: AC gap found in 100%% wave-1 AC audit"
+   "notes": "not attempted: no-progress cap / loop end"
   },
   {
    "id": "AUD-t-story-acceptance-06",
@@ -1714,13 +1714,13 @@
   {
    "id": "AUD-account-12",
    "wave": 1,
-   "status": "todo",
+   "status": "refuted",
    "severity": "P2",
    "title": "Handle account-exists-with-different-credential and credential-already-in-use for the Google sign-in / link-provider paths",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "reopened: AC gap found in 100%% wave-1 AC audit"
+   "notes": "refuted (wave-1 engine run, 2026-07-10, terminated at no-progress cap / loop end): reconciliation pass received only the engine's summary verdict, no rationale/evidence artifact found anywhere on disk for this id (searched _work/, delivery/, relaunch-wave1-args.json preApproved=[], and all sibling worktree branches for this run - none reference AUD-account-12, unlike its 4 sibling ids in the same manifest). Independently verified against the current tree: AC1 (account-exists-with-different-credential -> authErrExistingPasswordAccount) remains implemented+tested from the original pre-reopen merge (commit 70cc86f5, still an ancestor of this branch) - not new work from this run. AC2 (credential-already-in-use) remains unimplemented; consistent with, but not confirmed to be the basis of, the finding's own verify correction that its only call site (linkGoogleProvider()) is dead code with zero UI callers. See kill-log-addendum.md for the full evidence-gap note. Action required before wave-1 certification: closing-gate reviewer (opus) must independently confirm this refutation or reopen AC2."
   },
   {
    "id": "AUD-t-cross-27",
@@ -2647,13 +2647,13 @@
   {
    "id": "AUD-account-10",
    "wave": 1,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Extract the duplicated, inconsistently-patched _extractFirebaseCode helper into one shared function",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "reopened: AC gap found in 100%% wave-1 AC audit"
+   "notes": "not attempted: no-progress cap / loop end"
   },
   {
    "id": "AUD-t-auth-01",
@@ -3887,13 +3887,13 @@
   {
    "id": "AUD-account-14",
    "wave": 1,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Migrate SignInController's hand-rolled Idle/Submitting/Error state to AsyncNotifier + AsyncValue.guard",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "reopened: AC gap found in 100%% wave-1 AC audit"
+   "notes": "not attempted: no-progress cap / loop end"
   },
   {
    "id": "AUD-settings-08",
@@ -3909,13 +3909,13 @@
   {
    "id": "AUD-tutoring-08",
    "wave": 1,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Lazy-load the tutor-grants roster in ManageGrantsScreen and Settings' embedded pending-invites section",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "reopened: AC gap found in 100%% wave-1 AC audit"
+   "notes": "not attempted: no-progress cap / loop end"
   },
   {
    "id": "AUD-t-cross-44",
