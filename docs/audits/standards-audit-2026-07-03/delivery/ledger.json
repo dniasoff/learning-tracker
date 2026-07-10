@@ -150,13 +150,19 @@
   {
    "id": "AUD-account-01",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P0",
    "title": "account_lifecycle_service.dart removeCloudFromDevice() must verify the outbox is drained before deleting the local DB file",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "70cc86f504362a7230cf032d6be0380b7e5af127"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-01 AC1 OK: outbox_guard_test seeds undrained row -> removeCloudFromDevice throwsA UndrainedOutboxException, file survives, removeAccount never called",
+    "AUD-account-01 AC2 OK: drained-outbox case deletes .sqlite and calls removeAccount once (no happy-path regression)",
+    "AUD-account-01 AC3 OK: picker_pending_outbox_guard_test drives swipe+Remove -> 'Not backed up yet' dialog, tile+DB+registry all survive"
+   ],
+   "notes": "removeCloudFromDevice() sums OutboxDao depth (new totalDepth()) and throws UndrainedOutboxException instead of deleting the DB file; UI guard added before Dismissible removes the tile, new warning dialog. Red-first confirmed."
   },
   {
    "id": "AUD-onboarding-04",
@@ -819,13 +825,18 @@
   {
    "id": "AUD-account-02",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Add ref.mounted guards and Timer disposal to SignInController's autoDispose async flows",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "70cc86f504362a7230cf032d6be0380b7e5af127"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-02 AC1 OK: sign_in_controller_test disposes container mid-await (2 cases), asserts future completes, no UnmountedRefException escapes",
+    "AUD-account-02 AC2 OK: ref.onDispose(watchdog.cancel) for both Timers at sign_in_controller.dart:715 (15s) and :915 (45s) plus finally cancel"
+   ],
+   "notes": "ref.onDispose cancels both watchdog Timers; every catch/finally state write in signInWithEmail/signInWithGoogle guarded with ref.mounted; _waitForVerified retry loop guarded too. Red-first: pre-fix threw UnmountedRefException uncaught."
   },
   {
    "id": "AUD-gamification-03",
@@ -1102,13 +1113,18 @@
   {
    "id": "AUD-account-04",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Extract the duplicated _extractFirebaseCode regex parser out of MagicLinkService and UpgradeToCloudService",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "70cc86f504362a7230cf032d6be0380b7e5af127"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-04 AC1 OK: core/utils/firebase_error_code.dart extractFirebaseCode + firebase_error_code_test (4 cases) pass",
+    "AUD-account-04 AC2 OK: magic_link_service & upgrade_to_cloud_service call extractFirebaseCode; private copies deleted; red-first real-shape test passes"
+   ],
+   "notes": "Extracted core/utils/firebase_error_code.dart with corrected [plugin/code]-aware regex; magic_link_service.dart + upgrade_to_cloud_service.dart delegate. Red-first test using the REAL Firebase exception shape (old test fixture masked the bug) failed pre-fix, passed post-fix."
   },
   {
    "id": "AUD-learning-03",
@@ -1664,13 +1680,17 @@
   {
    "id": "AUD-account-12",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Handle account-exists-with-different-credential and credential-already-in-use for the Google sign-in / link-provider paths",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "70cc86f504362a7230cf032d6be0380b7e5af127"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-12 AC1 OK: account-exists-with-different-credential maps to authErrExistingPasswordAccount in sign_in_controller:119 & signup:486; tests pass"
+   ],
+   "notes": "Re-verified before implementing: zero hits for both codes, zero UI callers of linkGoogleProvider - confirms verify corrections that the broader claim is dead code. Implemented only the narrower reachable fix: new _mapAuthError case + ARB string in both files."
   },
   {
    "id": "AUD-t-cross-27",
@@ -1697,13 +1717,19 @@
   {
    "id": "AUD-account-09",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Extract the duplicated drift .sqlite-suffix delete helper out of AccountLifecycleService and PendingLocalSignupStore",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "70cc86f504362a7230cf032d6be0380b7e5af127"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-09 AC1 OK: drift_db_file.dart resolve/deleteDriftDbFile helper + drift_db_file_test (5 cases) pass",
+    "AUD-account-09 AC2 OK: AccountLifecycleService & PendingLocalSignupStore both delegate to deleteDriftDbFile",
+    "AUD-account-09 AC3 OK: unchanged db_delete_test & pending_local_signup_file_cleanup_test still pass"
+   ],
+   "notes": "Extracted core/database/drift_db_file.dart; AccountLifecycleService + PendingLocalSignupStore both delegate. Both named existing regression tests still pass; added new unit test for the shared utility."
   },
   {
    "id": "AUD-gamification-09",
@@ -1829,13 +1855,17 @@
   {
    "id": "AUD-account-07",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Cache the account list Future instead of constructing it fresh inside AccountPickerScreen.build()",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "70cc86f504362a7230cf032d6be0380b7e5af127"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-07 AC1 OK: future_cache_test _CountingRegistry stays at 1 call after unrelated rebuild, no spinner, list retained"
+   ],
+   "notes": "Converted AccountPickerScreen to ConsumerStatefulWidget, caching the Future in initState (a @riverpod FutureProvider hit riverpod_generator InvalidTypeException on the Drift DeviceAccount type - toolchain limit, used the recommendation's alt approach). Red-first confirmed."
   },
   {
    "id": "AUD-account-15",
@@ -2587,13 +2617,18 @@
   {
    "id": "AUD-account-10",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Extract the duplicated, inconsistently-patched _extractFirebaseCode helper into one shared function",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "70cc86f504362a7230cf032d6be0380b7e5af127"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-10 AC1 OK: firebase_error_code_test asserts both '[code]' and '[plugin/code]' shapes",
+    "AUD-account-10 AC2 OK: single _extractFirebaseCode def remains (settings, out of scope); 4 in-batch copies deleted; audit AG-4 clean"
+   ],
+   "notes": "sign_in_controller.dart + signup_screen.dart now delegate to the AUD-04 helper, deleting private copies. Dual-shape unit test already satisfied by AUD-04's test. 5th copy in features/settings is out of scope, noted as follow-up."
   },
   {
    "id": "AUD-t-auth-01",
@@ -4276,13 +4311,18 @@
   {
    "id": "AUD-account-13",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Log the swallowed deleteAccountData Cloud Function failure in AccountManagementService._deleteFirestoreUserData (EH-3 log-less catch)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "70cc86f504362a7230cf032d6be0380b7e5af127"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-13 AC1 OK: catch calls AppLogger.error(event:'delete_firestore_user_data_failed', fields:{uid}, exception, stackTrace)",
+    "AUD-account-13 AC2 OK: account_management_service_test red-first asserts the log entry when the CF call throws"
+   ],
+   "notes": "Added AppLogger.instance.error(...) inside the log-less catch. Red-first: new test asserted a log entry after deleteAccount() (CF call already throws in this test env) - failed pre-fix (empty log), passed post-fix."
   },
   {
    "id": "AUD-settings-05",
