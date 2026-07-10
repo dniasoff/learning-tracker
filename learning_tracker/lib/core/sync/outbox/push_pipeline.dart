@@ -11,6 +11,19 @@ library;
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 
 abstract class PushPipeline {
+  /// Push a single completion.
+  ///
+  /// **Not called by `OutboxProcessor`'s drain path** (AUD-core-sync-36):
+  /// production completion drains always go through
+  /// [pushCompletionsBatch], per the batching warning on that method's
+  /// doc. This single-item method is a sanctioned lower-level primitive
+  /// kept for call sites that need to push (and single-flight-serialize)
+  /// exactly one completion outside the outbox drain loop — e.g. the
+  /// `OutboxPushPipeline` single-flight regression tests in
+  /// `push_pipeline_impl_test.dart` and
+  /// `epic_25_story_12_sync_decomp_part1_test.dart`. Do not add a
+  /// production call site that loops over this method — that reintroduces
+  /// the N-round-trip problem [pushCompletionsBatch] exists to eliminate.
   Future<void> pushCompletion({
     required int profileId,
     required String entityKey,
