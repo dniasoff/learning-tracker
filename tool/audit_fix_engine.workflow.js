@@ -58,10 +58,12 @@ async function ga(prompt, opts, priority) {
     if (quotaDead) { semRelease(); return null }
   }
   let r = null
-  try { r = await agent(prompt, opts) } finally { if (MAXP > 0) semRelease() }
+  try { r = await agent(prompt, opts) }
+  catch (e) { r = null; log('agent threw (treated as failure, not fatal): ' + String(e && e.message || e).slice(0, 120)) }
+  finally { if (MAXP > 0) semRelease() }
   if (r === null || r === undefined) {
     consecFail++
-    if (consecFail >= 3 && !quotaDead) { quotaDead = true; log('QUOTA GUARD tripped: 3 consecutive agent failures - no new launches; finishing bookkeeping') }
+    if (consecFail >= 5 && !quotaDead) { quotaDead = true; log('GUARD tripped: 5 consecutive agent failures - no new launches; finishing bookkeeping') }
     return null
   }
   consecFail = 0
