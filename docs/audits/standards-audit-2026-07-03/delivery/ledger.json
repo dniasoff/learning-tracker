@@ -8178,13 +8178,17 @@
     {
       "id": "AUD-account-21",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Give SignInActions' TapGestureRecognizer a disposal owner instead of rebuilding it every build()",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "f3e7126d294b3d47fb8538576b8d51beb322e356"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-account-21 AC1 OK: recognizer created once initState L45, disposed L53, build L133 uses field; red-first fails pre-fix Stateless (+0 -1), passes post-fix"
+      ],
+      "notes": "Confirmed: StatelessWidget allocated a fresh TapGestureRecognizer per build(), never disposed. Converted to StatefulWidget: recognizer created once in initState(), disposed in dispose(); onTap reads widget.* for freshness. Red-first identity test failed pre-fix, passes post-fix."
     },
     {
       "id": "AUD-t-dashboard-05",
