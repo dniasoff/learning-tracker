@@ -28,7 +28,7 @@ class OfflineTopBanner extends StatelessWidget {
               label: l10n.offlineBannerSemantics,
               child: Container(
                 width: double.infinity,
-                height: 32,
+                constraints: const BoxConstraints(minHeight: 32),
                 color: Theme.of(context).colorScheme.secondaryContainer,
                 alignment: Alignment.center,
                 child: Row(
