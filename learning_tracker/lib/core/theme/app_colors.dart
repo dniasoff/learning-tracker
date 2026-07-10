@@ -196,4 +196,71 @@ abstract final class AppColors {
 
   /// Light scrim overlay.
   static const Color scrimLight = Color(0x33FFFFFF);
+
+  // ---------------------------------------------------------------------------
+  // Tutoring feature (AUD-tutoring-18) — status badges, PIN gate icon, and
+  // the audit-log per-action categorical palette
+  // ---------------------------------------------------------------------------
+
+  /// Success-state card background (accept/rescind confirmation cards,
+  /// tutor PIN reset success card).
+  static const Color statusSuccessSoftBg = Color(0xFFEAF5EA);
+
+  /// Success-state card text/icon colour, paired with [statusSuccessSoftBg].
+  static const Color statusSuccessSoftText = Color(0xFF3A7C3A);
+
+  /// Warning-state text/icon colour, paired with the existing
+  /// [statusWarningSoft] background (decline/PIN-reset warning cards).
+  static const Color statusWarningSoftText = Color(0xFFB07A00);
+
+  /// Error-state card background (decline/accept error steps).
+  static const Color statusErrorCardBg = Color(0xFFFFEBEE);
+
+  /// Error-state card text/icon colour, paired with [statusErrorCardBg].
+  static const Color statusErrorCardText = Color(0xFFE53935);
+
+  /// "Active" status badge colour (active tutor grant / accepted invite).
+  static const Color statusActiveBadge = Color(0xFF43A047);
+
+  /// "Pending" status badge colour (pending tutor grant / invite).
+  static const Color statusPendingBadge = Color(0xFFF57C00);
+
+  /// Confirmation-snackbar success green (invite sent, etc.).
+  static const Color statusSuccessSnackbar = Color(0xFF388E3C);
+
+  /// Lavender PIN-badge circle background (Tutor PIN gate/setup/reset icon).
+  static const Color tutorPinBadgeBg = Color(0xFFE8E0FF);
+
+  /// Deep-purple icon colour, paired with [tutorPinBadgeBg].
+  static const Color tutorPinBadgeIcon = Color(0xFF6B3FA0);
+
+  /// Neutral border/fill for a disabled PIN keypad key.
+  static const Color tutorPinKeyDisabled = Color(0xFFC9D0DA);
+
+  /// Audit-log action category — config change.
+  static const Color auditActionConfig = Color(0xFF1E88E5);
+
+  /// Audit-log action category — bulk prior-completion mark.
+  static const Color auditActionBulkPrior = Color(0xFF43A047);
+
+  /// Audit-log action category — completion reset.
+  static const Color auditActionReset = Color(0xFFF57C00);
+
+  /// Audit-log action category — bookmark advanced.
+  static const Color auditActionBookmark = Color(0xFF8E24AA);
+
+  /// Audit-log action category — profile edited.
+  static const Color auditActionProfileEdited = Color(0xFF00897B);
+
+  /// Audit-log action category — goal changed.
+  static const Color auditActionGoalChanged = Color(0xFF3949AB);
+
+  /// Audit-log action category — stage changed.
+  static const Color auditActionStageChanged = Color(0xFF0097A7);
+
+  /// Audit-log action category — reward changed.
+  static const Color auditActionRewardChanged = Color(0xFFFFA000);
+
+  /// Audit-log action category — study-day changed.
+  static const Color auditActionStudyDayChanged = Color(0xFFF4511E);
 }

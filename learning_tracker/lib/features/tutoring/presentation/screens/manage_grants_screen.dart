@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -351,8 +352,8 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
     final l10n = AppLocalizations.of(context)!;
     final isActive = widget.grant.grantState is ActiveGrant;
     final statusColor = isActive
-        ? Colors.green.shade600
-        : Colors.orange.shade700;
+        ? AppColors.statusActiveBadge
+        : AppColors.statusPendingBadge;
 
     return ListTile(
       leading: CircleAvatar(

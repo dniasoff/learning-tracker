@@ -26,6 +26,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -316,11 +317,11 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 const SizedBox(height: 16),
                 const CircleAvatar(
                   radius: 36,
-                  backgroundColor: Color(0xFFE8E0FF),
+                  backgroundColor: AppColors.tutorPinBadgeBg,
                   child: Icon(
                     Icons.handshake_rounded,
                     size: 36,
-                    color: Color(0xFF6B3FA0),
+                    color: AppColors.tutorPinBadgeIcon,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -360,7 +361,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 ),
                 _PermissionRow(
                   icon: Icons.cancel_rounded,
-                  color: Colors.red.shade600,
+                  color: AppColors.statusErrorCardText,
                   text: l10n.acceptInvitePermissionNoLive,
                 ),
                 const SizedBox(height: 24),
@@ -421,11 +422,11 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 children: [
                   const CircleAvatar(
                     radius: 40,
-                    backgroundColor: Color(0xFFEAF5EA),
+                    backgroundColor: AppColors.statusSuccessSoftBg,
                     child: Icon(
                       Icons.check_circle_rounded,
                       size: 48,
-                      color: Color(0xFF3A7C3A),
+                      color: AppColors.statusSuccessSoftText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -486,13 +487,13 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 40,
-                    backgroundColor: Colors.red.shade50,
+                    backgroundColor: AppColors.statusErrorCardBg,
                     child: Icon(
                       Icons.error_rounded,
                       size: 48,
-                      color: Colors.red.shade600,
+                      color: AppColors.statusErrorCardText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -539,7 +540,7 @@ class _PermissionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final iconColor = color ?? Colors.green.shade600;
+    final iconColor = color ?? AppColors.statusActiveBadge;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(

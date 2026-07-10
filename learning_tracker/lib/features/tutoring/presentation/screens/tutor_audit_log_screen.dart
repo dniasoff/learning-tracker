@@ -12,6 +12,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
@@ -451,15 +452,15 @@ class _AuditEntryTile extends StatelessWidget {
   }
 
   Color _actionColor(TutorAuditAction action) => switch (action) {
-    TutorAuditAction.configChanged => Colors.blue.shade600,
-    TutorAuditAction.completionBulkPrior => Colors.green.shade600,
-    TutorAuditAction.completionReset => Colors.orange.shade700,
-    TutorAuditAction.bookmarkAdvanced => Colors.purple.shade600,
-    TutorAuditAction.profileEdited => Colors.teal.shade600,
-    TutorAuditAction.goalChanged => Colors.indigo.shade600,
-    TutorAuditAction.stageChanged => Colors.cyan.shade700,
-    TutorAuditAction.rewardChanged => Colors.amber.shade700,
-    TutorAuditAction.studyDayChanged => Colors.deepOrange.shade600,
+    TutorAuditAction.configChanged => AppColors.auditActionConfig,
+    TutorAuditAction.completionBulkPrior => AppColors.auditActionBulkPrior,
+    TutorAuditAction.completionReset => AppColors.auditActionReset,
+    TutorAuditAction.bookmarkAdvanced => AppColors.auditActionBookmark,
+    TutorAuditAction.profileEdited => AppColors.auditActionProfileEdited,
+    TutorAuditAction.goalChanged => AppColors.auditActionGoalChanged,
+    TutorAuditAction.stageChanged => AppColors.auditActionStageChanged,
+    TutorAuditAction.rewardChanged => AppColors.auditActionRewardChanged,
+    TutorAuditAction.studyDayChanged => AppColors.auditActionStudyDayChanged,
   };
 
   IconData _actionIcon(TutorAuditAction action) => switch (action) {
@@ -546,13 +547,15 @@ class _BeforeAfterRow extends StatelessWidget {
                 TextSpan(
                   text: l10n.auditLogAfter,
                   style: style?.copyWith(
-                    color: Colors.green.shade700,
+                    color: AppColors.statusSuccessSnackbar,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 TextSpan(
                   text: after,
-                  style: style?.copyWith(color: Colors.green.shade700),
+                  style: style?.copyWith(
+                    color: AppColors.statusSuccessSnackbar,
+                  ),
                 ),
               ],
             ),

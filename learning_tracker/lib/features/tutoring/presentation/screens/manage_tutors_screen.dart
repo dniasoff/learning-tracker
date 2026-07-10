@@ -18,6 +18,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -545,8 +546,8 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
     final grantState = widget.grant.grantState;
 
     final statusColor = grantState is ActiveGrant
-        ? Colors.green.shade600
-        : Colors.orange.shade700;
+        ? AppColors.statusActiveBadge
+        : AppColors.statusPendingBadge;
     final statusLabel = grantState is ActiveGrant
         ? l10n.statusActive
         : l10n.statusPending;

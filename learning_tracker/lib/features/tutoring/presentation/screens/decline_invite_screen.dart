@@ -217,7 +217,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                     child: Icon(
                       Icons.do_not_disturb_on_rounded,
                       size: 36,
-                      color: Color(0xFFB07A00),
+                      color: AppColors.statusWarningSoftText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -302,11 +302,11 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                 children: [
                   const CircleAvatar(
                     radius: 40,
-                    backgroundColor: Color(0xFFEAF5EA),
+                    backgroundColor: AppColors.statusSuccessSoftBg,
                     child: Icon(
                       Icons.check_circle_rounded,
                       size: 48,
-                      color: Color(0xFF3A7C3A),
+                      color: AppColors.statusSuccessSoftText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -366,13 +366,13 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 40,
-                    backgroundColor: Colors.red.shade50,
+                    backgroundColor: AppColors.statusErrorCardBg,
                     child: Icon(
                       Icons.error_rounded,
                       size: 48,
-                      color: Colors.red.shade600,
+                      color: AppColors.statusErrorCardText,
                     ),
                   ),
                   const SizedBox(height: 20),

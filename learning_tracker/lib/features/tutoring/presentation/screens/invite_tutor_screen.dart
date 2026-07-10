@@ -19,6 +19,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -141,7 +142,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
               content: Text(
                 AppLocalizations.of(context)!.inviteTutorSentSnackbar(email),
               ),
-              backgroundColor: Colors.green.shade700,
+              backgroundColor: AppColors.statusSuccessSnackbar,
             ),
           );
           await Navigator.of(context).maybePop();
@@ -206,11 +207,11 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
               const SizedBox(height: 8),
               const CircleAvatar(
                 radius: 36,
-                backgroundColor: Color(0xFFE8E0FF),
+                backgroundColor: AppColors.tutorPinBadgeBg,
                 child: Icon(
                   Icons.person_add_rounded,
                   size: 36,
-                  color: Color(0xFF6B3FA0),
+                  color: AppColors.tutorPinBadgeIcon,
                 ),
               ),
               const SizedBox(height: 20),
