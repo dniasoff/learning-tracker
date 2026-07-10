@@ -17,13 +17,19 @@
     {
       "id": "AUD-profiles-01",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P0",
       "title": "Fix ParentTrackManagementScreen 'Archive (keep history)' — it wipes stage/goal/point config via deleteTrackAndData exactly like 'Delete and wipe history', and ts3_parent_track_archive_test.dart doesn't catch it",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "3467bd4fce793a36117eb3f141dc6960bee7ad9c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-01 AC1 OK: ts3 widget test pumps real screen, taps real Archive action, asserts stages/goals/pointConfig survive; real service not mock; passes now",
+        "AUD-profiles-01 AC2 OK: grep TrackState.archived -> real DB write track_dao.dart:296 (was 0)",
+        "AUD-profiles-01 AC3 OK: _buildApp home=real ParentTrackManagementScreen (ts3:153); hand-rolled AlertDialog removed"
+      ],
+      "notes": "Confirmed: deactivate() wiped config; TrackState.archived had 0 writers. Added archiveTrack/archiveByProfile/archive() (preserve config); rewired screen archive choice. Red-first: rewrote ts3 test to drive real screen, RED then GREEN. All 3 ACs verified. Merged --no-ff onto audit-fix/2026-07-03. Post-rebase gate: make audit checks 1-24 clean, flutter analyze clean. Check 25/25 (single coding-standards.md) failed both pre- and post-merge due to ~24 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..`; identical failure reproduced on the unmodified audit-fix/2026-07-03 tip before this merge (same pattern already documented for w1r0c2), confirming it is pre-existing environmental noise from concurrent worktree-based sessions, not a regression introduced by this change. gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 only in learning_tracker/lib/core/database/user/user_database.g.dart (a doc-comment-only regen diff on the TrackState field); ran payload.testsToRun (ts3_parent_track_archive_test.dart) plus track_dao suites and user_database dataclass suites -- all green."
     },
     {
       "id": "AUD-core-database-01",
