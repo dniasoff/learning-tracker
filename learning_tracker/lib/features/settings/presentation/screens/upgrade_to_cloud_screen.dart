@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/core/utils/firebase_error_code.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/account/domain/services/upgrade_to_cloud_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -194,7 +195,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       if (mounted) setState(() => _phase = const _PhaseCollision());
     } catch (e) {
       if (mounted) {
-        final code = _extractFirebaseCode(e);
+        final code = extractFirebaseCode(e);
         // Never surface the raw exception: map network failures to the
         // localized offline message and everything else to a friendly,
         // localized fallback (mirrors the ST-4 friendly-error pattern).
@@ -264,7 +265,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       if (mounted) setState(() => _phase = const _PhaseCollision());
     } catch (e) {
       if (mounted) {
-        final code = _extractFirebaseCode(e);
+        final code = extractFirebaseCode(e);
         setState(
           () => _phase = _PhaseForm(
             error: code == 'network-request-failed'
@@ -278,13 +279,6 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
         );
       }
     }
-  }
-
-  /// Extracts the Firebase error code from an exception (if present).
-  String? _extractFirebaseCode(Object e) {
-    final str = e.toString();
-    final match = RegExp(r'\[([a-z-]+)\]').firstMatch(str);
-    return match?.group(1);
   }
 
   Future<void> _resendVerification() async {
@@ -438,7 +432,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       }
     } catch (e) {
       if (mounted) {
-        final code = _extractFirebaseCode(e);
+        final code = extractFirebaseCode(e);
         // Never surface the raw exception: map the known Firebase codes to
         // specific localized messages and everything else to a friendly,
         // localized fallback (mirrors the ST-4 friendly-error pattern).

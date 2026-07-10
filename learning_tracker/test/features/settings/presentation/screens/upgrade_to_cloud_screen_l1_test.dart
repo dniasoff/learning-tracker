@@ -98,6 +98,21 @@ const AuthState _cloudBornAuth = AuthState.signedIn(
   tier: Tier.cloudBorn,
 );
 
+// A credential-less (offline-born) account: synthetic @offline.local email
+// drives UpgradeToCloudScreen._isCredentialLess, routing submission through
+// _submitNewCredentials() instead of _submit(). That path calls
+// authRepository.createUserAccount() directly with no local password to
+// verify, so — unlike the argon2id-gated _submit() path — it is fully
+// testable at L1 without the Isolate.spawn limitation (see ARCHITECTURE NOTE).
+const AuthState _credentialLessAuth = AuthState.signedIn(
+  user: AuthUser(
+    profileId: 1,
+    email: 'offline_abc123456789@offline.local',
+    displayName: 'Tester',
+  ),
+  tier: Tier.localBorn,
+);
+
 // ── Widget factory ────────────────────────────────────────────────────────────
 
 Widget _buildApp({
@@ -581,6 +596,73 @@ void main() {
       );
 
       verifyNever(() => _authRepo.createUserAccount(any(), any()));
+
+      await _tearDown(tester);
+    });
+  });
+
+  // ── Error state — credential-less Firebase error-code mapping (AUD-account-10)
+  //
+  // UpgradeToCloudScreen carried its own private _extractFirebaseCode() copy
+  // (duplicated from the shared lib/core/utils/firebase_error_code.dart helper
+  // introduced for AUD-account-04) with the stale `RegExp(r'\[([a-z-]+)\]')`
+  // pattern that never matches Firebase's real `[plugin/code]` toString()
+  // shape (e.g. `[firebase_auth/weak-password]`) — every real Firebase error
+  // code silently fell through to the generic fallback message instead of the
+  // specific, actionable one. The credential-less path (_submitNewCredentials)
+  // calls authRepository.createUserAccount() directly with no local password
+  // to verify, so it exercises this mapping without the argon2id Isolate
+  // limitation that gates the _submit() path's error tests above.
+
+  group('UpgradeToCloudScreen — credential-less error mapping', () {
+    testWidgets('shows the specific weak-password message for a '
+        '"[firebase_auth/weak-password]"-shaped exception, not the generic '
+        'fallback', (tester) async {
+      await _seedAccountNullHash(_db);
+      when(() => _authRepo.createUserAccount(any(), any())).thenThrow(
+        Exception(
+          '[firebase_auth/weak-password] Password should be at least 6 '
+          'characters',
+        ),
+      );
+
+      await _pump(
+        tester,
+        _buildApp(
+          db: _db,
+          registry: _registry,
+          authRepo: _authRepo,
+          checker: _checker,
+          auth: _credentialLessAuth,
+        ),
+      );
+
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        'newuser@example.com',
+      );
+      await tester.enterText(find.byType(TextFormField).at(1), _password);
+      await tester.pump();
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // l10n key: signUpErrWeakPassword. Must be the SPECIFIC mapped
+      // message, not upgradeToCloudErrorGeneric — a stale/broken code
+      // extractor cannot tell weak-password apart from any other error.
+      expect(
+        find.text('Password is too weak. Use at least 6 characters.'),
+        findsOneWidget,
+        reason:
+            'A [firebase_auth/weak-password] exception must map to the '
+            'specific weak-password message via the SHARED extractFirebaseCode '
+            'helper, not fall through to the generic fallback because of a '
+            'stale duplicated regex',
+      );
+      expect(
+        find.text("We couldn't complete the upgrade. Please try again."),
+        findsNothing,
+      );
 
       await _tearDown(tester);
     });
