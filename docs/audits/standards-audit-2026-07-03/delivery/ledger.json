@@ -1595,13 +1595,18 @@
   {
    "id": "AUD-tutoring-06",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or wire up the dead TutorAuditLogWriter path (tutor_audit_log_writer.dart / audit_log_providers.dart)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "0b2453f9b623e7a5acd31c4d58eb3b8bfa2de1ce"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-06 AC1 OK: grep -rn TutorAuditLogWriter lib/ returns nothing",
+    "AUD-tutoring-06 AC2 OK: grep -n TODO audit_log_providers.dart returns nothing (stub write-repo + TODO deleted)"
+   ],
+   "notes": "Confirmed dead: writer never constructed in lib/; server-side writeAuditLog covers all 9 action types, no prod gap. Deleted writer/repo/stub/export; removed now-pointless PV-1 test group whose sole emitter was deleted. AC greps clean."
   },
   {
    "id": "AUD-tutoring-04",
@@ -3589,13 +3594,18 @@
   {
    "id": "AUD-tutoring-10",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Move TutorAuditLogReadRepository/TutorGrantRepository interfaces into domain/repositories/ to remove the data\u2192presentation import",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "0b2453f9b623e7a5acd31c4d58eb3b8bfa2de1ce"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-10 AC1 OK: grep -rn 'presentation/' lib/features/tutoring/data/ returns nothing",
+    "AUD-tutoring-10 AC2 OK: Read+GrantRepository now in domain/repositories/; write iface deleted-dead by 06 (0 emitters, server writeAuditLog x13)"
+   ],
+   "notes": "Moved TutorAuditLogReadRepository and TutorGrantRepository(+Result) to domain/repositories/, fixing real data->presentation import inversion. Old files export new locations to avoid 20-file blast radius. 3rd interface excluded (deleted by 06, ran first) - documented in commit."
   },
   {
    "id": "AUD-tutoring-09",
