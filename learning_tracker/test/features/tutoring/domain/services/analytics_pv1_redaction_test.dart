@@ -1,25 +1,30 @@
-/// AUD-core-analytics-01 (PV-1) regression coverage for two of the seven
+/// AUD-core-analytics-01 (PV-1) regression coverage for one of the seven
 /// cited leak sites that live in `features/tutoring/domain/services/`:
 ///
 ///   - [TutorPinService.setTutorPin] must fire `tutor_pin_set` WITHOUT a
 ///     `profile_id` parameter.
-///   - [TutorAuditLogWriter] must fire `tutor_action_recorded` WITHOUT a
-///     `target` parameter (its own documented shape is a resource path like
-///     "profile/42.displayName" — a per-child identifier).
 ///
-/// The other five cited sites are covered by:
+/// The other six cited sites are covered by:
 ///   - test/core/sync/outbox/outbox_processor_test.dart (entity_key)
 ///   - test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart
 ///     (merge_router_halt profile_id)
 ///   - test/core/sync/sync_orchestrator_test.dart (pull_failed / listener_error)
+///
+/// A `TutorAuditLogWriter — AUD-core-analytics-01 (PV-1)` group covering
+/// `tutor_action_recorded` redaction previously lived here. AUD-tutoring-06
+/// deleted `TutorAuditLogWriter` (and the `tutor_action_recorded` analytics
+/// call it was the sole emitter of) as confirmed-dead code: it was never
+/// constructed anywhere in `lib/` — the real tutor audit trail is written
+/// server-side by each `tutor*` Cloud Function via `writeAuditLog()`, which
+/// never touches client-side analytics. With the emitter gone, there is no
+/// production `target` leak left for this group to guard against, so it was
+/// removed rather than left asserting against deleted code.
 library;
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
-import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
-import 'package:learning_tracker/features/tutoring/domain/services/tutor_audit_log_writer.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -76,15 +81,6 @@ _MockSecureStorage _createInMemorySecureStorage() {
   return mock;
 }
 
-class _FakeAuditLogRepository implements TutorAuditLogRepository {
-  final List<TutorAuditLogEntry> entries = [];
-
-  @override
-  Future<void> appendEntry(TutorAuditLogEntry entry) async {
-    entries.add(entry);
-  }
-}
-
 void main() {
   group('TutorPinService.setTutorPin — AUD-core-analytics-01 (PV-1)', () {
     test('tutor_pin_set analytics fires without a profile_id', () async {
@@ -111,45 +107,6 @@ void main() {
             'profile_id is a per-child identifier and must never reach an '
             'uncatalogued analytics event',
       );
-    });
-  });
-
-  group('TutorAuditLogWriter — AUD-core-analytics-01 (PV-1)', () {
-    test('tutor_action_recorded analytics fires without a target', () async {
-      final analytics = _RecordingAnalyticsService();
-      final repository = _FakeAuditLogRepository();
-      final writer = TutorAuditLogWriter(
-        tutorUid: 'tutor-1',
-        tutorNameSnapshot: 'Tutor One',
-        grantId: 'grant-1',
-        repository: repository,
-        analytics: analytics,
-      );
-
-      await writer.logProfileEdited(
-        target: 'profile/42.displayName',
-        beforeValue: 'Old Name',
-        afterValue: 'New Name',
-      );
-
-      final actionEvents = analytics.events.where(
-        (e) => e.name == AnalyticsEvent.tutorActionRecorded,
-      );
-      expect(actionEvents, isNotEmpty);
-      final params = actionEvents.first.parameters;
-      expect(
-        params?.containsKey('target'),
-        isFalse,
-        reason:
-            'target is documented as a resource path like '
-            '"profile/42.displayName" — a per-child identifier attached to '
-            'a description of what was changed — and must never reach an '
-            'uncatalogued analytics event',
-      );
-      // The underlying audit log entry (a separate, access-controlled
-      // Firestore write, not an analytics event) still carries the target —
-      // only the analytics payload is redacted.
-      expect(repository.entries.single.target, 'profile/42.displayName');
     });
   });
 }

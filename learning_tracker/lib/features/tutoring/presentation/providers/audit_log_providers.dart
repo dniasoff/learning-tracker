@@ -4,12 +4,17 @@
 // `tutor_grants/{grantId}/audit_log/` sub-collection.
 //
 // The concrete repository implementation reads from Firestore.
+//
+// AUD-tutoring-06: there is no client-side write path. All tutor mutations
+// go through Cloud Functions, and every one of them writes its own audit
+// entry server-side via `writeAuditLog()` (functions/src/index.ts) inside
+// the same Admin SDK transaction. The client only ever reads this
+// sub-collection back for display.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/features/tutoring/data/repositories/firestore_audit_log_read_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
-import 'package:learning_tracker/features/tutoring/domain/services/tutor_audit_log_writer.dart';
 
 // ── Read repository interface ────────────────────────────────────────────────
 
@@ -47,21 +52,6 @@ class _UnauthenticatedAuditLogRepository
   @override
   Future<List<TutorAuditLogEntry>> fetchEntries(String grantId) async =>
       const [];
-}
-
-// The write repository provider (used by TutorAuditLogWriter) is also
-// provided here as a stub. The concrete implementation writes via Admin SDK
-// (Cloud Function) or directly to Firestore.
-final tutorAuditLogWriteRepositoryProvider = Provider<TutorAuditLogRepository>(
-  (_) => _StubAuditLogWriteRepository(),
-);
-
-class _StubAuditLogWriteRepository implements TutorAuditLogRepository {
-  @override
-  Future<void> appendEntry(TutorAuditLogEntry entry) async {
-    // No-op stub. The real implementation writes to Firestore via Admin SDK.
-    // TODO(data-layer): Replace with Firestore write. (DNI-393)
-  }
 }
 
 // ── Async data provider ──────────────────────────────────────────────────────
