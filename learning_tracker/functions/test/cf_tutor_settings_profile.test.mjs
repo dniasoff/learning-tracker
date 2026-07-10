@@ -89,6 +89,19 @@ describe('tutorUpdateGamificationSettings', () => {
     );
   });
 
+  // AUD-firebase-10: preferences/{scope} has no firestore.rules hasOnly()
+  // whitelist (intentionally open-ended even for owner writes), so no
+  // unexpected-key test applies here — but the size cap still does.
+  test('AUD-firebase-10: settingsData with an oversized string field → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.tutorUpdateGamificationSettings, {
+        ...goodArgs,
+        settingsData: { notes: 'x'.repeat(5001) },
+      }),
+      'invalid-argument',
+    );
+  });
+
   test('grant does not exist → not-found', async () => {
     await expectHttpsError(
       call(fns.tutorUpdateGamificationSettings, goodArgs),

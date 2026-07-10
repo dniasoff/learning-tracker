@@ -27,7 +27,9 @@ describe('tutorUpsertGoal', () => {
     ownerUid: PARENT,
     profileId: PROFILE,
     goalId: 'goal-1',
-    goalData: { title: 'Finish Berakhot' },
+    // AUD-firebase-10: fields must be in GOAL_ALLOWED_FIELDS (mirrors
+    // firestore.rules' goals hasOnly() whitelist).
+    goalData: { description: 'Finish Berakhot' },
   };
 
   beforeEach(async () => {
@@ -86,6 +88,29 @@ describe('tutorUpsertGoal', () => {
   test('goalData is null → invalid-argument', async () => {
     await expectHttpsError(
       call(fns.tutorUpsertGoal, { ...goodArgs, goalData: null }),
+      'invalid-argument',
+    );
+  });
+
+  // AUD-firebase-10: goalData is whitelisted server-side (mirrors
+  // firestore.rules' goals hasOnly()) because the Admin SDK bypasses rules
+  // entirely for this write path — this is the ONLY gate on field shape.
+  test('AUD-firebase-10: goalData with an unexpected key → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.tutorUpsertGoal, {
+        ...goodArgs,
+        goalData: { description: 'ok', not_a_real_field: 'sneaky' },
+      }),
+      'invalid-argument',
+    );
+  });
+
+  test('AUD-firebase-10: goalData with an oversized string field → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.tutorUpsertGoal, {
+        ...goodArgs,
+        goalData: { description: 'x'.repeat(5001) },
+      }),
       'invalid-argument',
     );
   });
@@ -258,7 +283,9 @@ describe('tutorUpsertTrack', () => {
     ownerUid: PARENT,
     profileId: PROFILE,
     trackId: 'track-1',
-    trackData: { curriculum: 'mishnayos' },
+    // AUD-firebase-10: fields must be in CURRICULUM_TRACK_ALLOWED_FIELDS
+    // (mirrors firestore.rules' curriculum_tracks hasOnly() whitelist).
+    trackData: { curriculum_id: 'mishnayos' },
   };
 
   beforeEach(async () => {
@@ -317,6 +344,18 @@ describe('tutorUpsertTrack', () => {
   test('trackData is null → invalid-argument', async () => {
     await expectHttpsError(
       call(fns.tutorUpsertTrack, { ...goodArgs, trackData: null }),
+      'invalid-argument',
+    );
+  });
+
+  // AUD-firebase-10: trackData is whitelisted server-side (mirrors
+  // firestore.rules' curriculum_tracks hasOnly()).
+  test('AUD-firebase-10: trackData with an unexpected key → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.tutorUpsertTrack, {
+        ...goodArgs,
+        trackData: { curriculum_id: 'mishnayos', not_a_real_field: 'sneaky' },
+      }),
       'invalid-argument',
     );
   });
