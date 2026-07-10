@@ -4,6 +4,8 @@
 /// the account-creation screen and unit tests.
 library;
 
+import 'package:learning_tracker/core/constants/app_constants.dart';
+
 /// Returns an error message if [value] is not a valid email, or `null` if valid.
 String? validateEmail(String? value) {
   if (value == null || value.isEmpty) {
@@ -21,8 +23,9 @@ String? validatePassword(String? value) {
   if (value == null || value.isEmpty) {
     return 'Password is required';
   }
-  if (value.length < 6) {
-    return 'Password must be at least 6 characters';
+  if (value.length < AppConstants.minLocalPasswordLength) {
+    return 'Password must be at least '
+        '${AppConstants.minLocalPasswordLength} characters';
   }
   return null;
 }

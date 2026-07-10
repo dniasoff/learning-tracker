@@ -43,20 +43,33 @@ void main() {
 
   group('InvalidInputException', () {
     test('toString contains field and reason', () {
-      const ex = InvalidInputException('email', 'invalid format');
+      const ex = InvalidInputException(
+        'email',
+        InvalidInputCode.invalidEmail,
+        'invalid format',
+      );
       expect(ex.toString(), contains('email'));
       expect(ex.toString(), contains('invalid format'));
       expect(ex.toString(), contains('InvalidInputException'));
     });
 
-    test('exposes field and reason', () {
-      const ex = InvalidInputException('password', 'too short');
+    test('exposes field, code and reason', () {
+      const ex = InvalidInputException(
+        'password',
+        InvalidInputCode.passwordTooShort,
+        'too short',
+      );
       expect(ex.field, 'password');
+      expect(ex.code, InvalidInputCode.passwordTooShort);
       expect(ex.reason, 'too short');
     });
 
     test('is an Exception', () {
-      const ex = InvalidInputException('name', 'required');
+      const ex = InvalidInputException(
+        'name',
+        InvalidInputCode.displayNameRequired,
+        'required',
+      );
       expect(ex, isA<Exception>());
     });
   });

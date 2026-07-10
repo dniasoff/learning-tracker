@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/constants/app_constants.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -34,12 +35,23 @@ class InvalidCredentialsException extends PermissionException {
   const InvalidCredentialsException() : super('Invalid email or password');
 }
 
+/// Stable, locale-independent identifiers for [InvalidInputException.code].
+///
+/// Presentation resolves these to a localized message via
+/// `AppLocalizations` (EH-5) — [InvalidInputException.reason] is a
+/// log-safe, English-only detail for developers and must never be shown
+/// to users directly.
+enum InvalidInputCode { invalidEmail, passwordTooShort, displayNameRequired }
+
 /// Thrown when sign-up receives malformed input (invalid email,
-/// password too short, etc). Caller surfaces a friendly message.
+/// password too short, etc). Callers resolve [code] to a localized
+/// message; [reason] is for logs/toString only — never surface it
+/// directly in the UI (EH-5).
 class InvalidInputException extends ValidationException {
-  const InvalidInputException(this.field, this.reason)
+  const InvalidInputException(this.field, this.code, this.reason)
     : super('$field: $reason');
   final String field;
+  final InvalidInputCode code;
   final String reason;
 }
 
@@ -55,8 +67,6 @@ class LocalAuthService {
 
   final UserProfileDao _dao;
   final PasswordHasher _hasher;
-
-  static const int _minPasswordLength = 8;
 
   /// Create a new local-born account. Throws
   /// [DuplicateEmailException] if the email already has a local-born
@@ -126,15 +136,20 @@ class LocalAuthService {
     // "can you actually deliver a message to it" which we can't do.
     final re = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     if (!re.hasMatch(email)) {
-      throw const InvalidInputException('email', 'invalid format');
+      throw const InvalidInputException(
+        'email',
+        InvalidInputCode.invalidEmail,
+        'invalid format',
+      );
     }
   }
 
   void _validatePassword(String password) {
-    if (password.length < _minPasswordLength) {
+    if (password.length < AppConstants.minLocalPasswordLength) {
       throw const InvalidInputException(
         'password',
-        'must be at least 8 characters',
+        InvalidInputCode.passwordTooShort,
+        'must be at least ${AppConstants.minLocalPasswordLength} characters',
       );
     }
   }

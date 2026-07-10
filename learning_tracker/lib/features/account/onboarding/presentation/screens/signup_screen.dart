@@ -149,7 +149,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       if (mounted)
         _showError(AppLocalizations.of(context)!.signUpEmailAlreadyExists);
     } on InvalidInputException catch (e) {
-      if (mounted) _showError(e.reason);
+      if (mounted) _showError(_mapInvalidInputCode(e.code));
     } catch (e) {
       final code = _extractFirebaseCode(e);
       if (code == 'network-request-failed' && mounted) {
@@ -283,7 +283,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     } on InvalidInputException catch (e) {
       final docs = await getApplicationDocumentsDirectory();
       await recover(docs.path);
-      if (mounted) _showError(e.reason);
+      if (mounted) _showError(_mapInvalidInputCode(e.code));
     } catch (e) {
       final docs = await getApplicationDocumentsDirectory();
       await recover(docs.path);
@@ -488,6 +488,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       default:
         return l10n.signUpErrGeneric;
     }
+  }
+
+  /// Resolves a [LocalAuthService]-thrown [InvalidInputException.code] to a
+  /// localized message (EH-5) — [InvalidInputException.reason] is
+  /// English-only and log-safe, never shown to users directly.
+  String _mapInvalidInputCode(InvalidInputCode code) {
+    final l10n = AppLocalizations.of(context)!;
+    return switch (code) {
+      InvalidInputCode.invalidEmail => l10n.authErrInvalidEmail,
+      InvalidInputCode.passwordTooShort => l10n.signUpErrWeakPassword,
+      InvalidInputCode.displayNameRequired => l10n.signUpErrGeneric,
+    };
   }
 
   void _showError(String message) {
