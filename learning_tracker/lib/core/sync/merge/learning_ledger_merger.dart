@@ -16,6 +16,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
 
 class LearningLedgerMerger implements EntityMerger {
   LearningLedgerMerger(UserDatabase db, {AppLogger? logger})
@@ -76,7 +77,7 @@ class LearningLedgerMerger implements EntityMerger {
             ulid: Value(
               remoteUlid != null && remoteUlid.isNotEmpty
                   ? remoteUlid
-                  : _makeUlid(completedAt),
+                  : newUlid(completedAt),
             ),
             curriculumId: curriculumId,
             entryScope:
@@ -122,12 +123,4 @@ class LearningLedgerMerger implements EntityMerger {
       }
     }
   }
-
-  /// Fallback ULID generation when the remote row omits `ulid`.
-  ///
-  /// Uses a simple timestamp-based string so the row can still be inserted
-  /// without violating the NOT NULL constraint. Real ULIDs from the push path
-  /// are always present for new rows; this guard handles legacy data.
-  String _makeUlid(DateTime ts) =>
-      '${ts.millisecondsSinceEpoch.toRadixString(36).padLeft(10, '0').toUpperCase()}0000000000000000';
 }
