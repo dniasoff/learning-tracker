@@ -194,21 +194,11 @@ void main() {
     });
 
     // ─── Story 20.12: LWW + merge-forward ───────────────────────────
+    // lwwMerge / mergeForwardMaxInt were deleted from merge_rules.dart as
+    // dead code (AUD-core-sync-37) — no production merger called them.
+    // remoteIsNewer stays covered: StudyDayConfigMerger still calls it
+    // (pending AUD-core-sync-03).
     group('Story 20.12 — merge rules', () {
-      test('LWW picks newer timestamp', () {
-        final result = lwwMerge<String>(
-          local: 'old-name',
-          remote: 'new-name',
-          localUpdatedAt: DateTime.utc(2026, 1, 1),
-          remoteUpdatedAt: DateTime.utc(2026, 2, 1),
-        );
-        expect(result.winner, 'new-name');
-      });
-
-      test('merge-forward never decreases progress', () {
-        expect(mergeForwardMaxInt(10, 5), 10);
-      });
-
       test('remoteIsNewer predicate matches sync engine pull semantics', () {
         expect(
           remoteIsNewer(
