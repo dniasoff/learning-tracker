@@ -863,13 +863,19 @@
     {
       "id": "AUD-settings-03",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Scope DataExportImportService.importData()'s 16 bare table deletes to the imported profile, not every profile on the device",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "63d66dfd52487438088adb7d773d5f3313a56f4a"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-settings-03 AC1 OK: isolation test seeds A+B in 16 tables, imports A-only, asserts afterB equals beforeB (row equality) w/ non-empty guards",
+        "AUD-settings-03 AC1 OK: red-first proven - fails pre-fix (Bob streakEvents Expected[row] Actual[]), passes post-fix",
+        "AUD-settings-03 AC2 OK: 16 .delete( calls all in importData, each with ..where(...isIn); 0 bare deletes"
+      ],
+      "notes": "Confirmed at HEAD e385f632, no drift. Scoped all 16 importData() deletes to accountIds/profileIds in payload; trackLearningOrder scoped via curriculumTracks read pre-clear. Red-first test failed pre-fix (Bob streakEvents wiped), passes post-fix. Both ACs verified. Commit c0f78e95."
     },
     {
       "id": "AUD-tracks-04",
