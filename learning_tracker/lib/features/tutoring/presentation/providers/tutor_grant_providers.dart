@@ -9,6 +9,10 @@ import 'package:learning_tracker/features/tutoring/data/repositories/firestore_t
 import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
+// TutorGrantRepository resolves from domain/repositories/tutor_grant_repository.dart
+// (AUD-tutoring-10) via the export in tutor_invite_use_cases.dart below — a
+// direct import here is flagged `unnecessary_import` by the analyzer since
+// InviteTutorUseCase etc. from that same import already pull it in.
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

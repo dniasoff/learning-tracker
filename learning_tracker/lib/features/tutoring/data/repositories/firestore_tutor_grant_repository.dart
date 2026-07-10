@@ -7,11 +7,16 @@
 //
 // Layering: Cloud Functions are called via `package:cloud_functions` which
 // is permitted in features/ (following the pattern of AccountManagementService).
+//
+// AUD-tutoring-10: imports [TutorGrantRepository]/[TutorGrantResult] from
+// domain/repositories/ directly rather than via domain/use_cases/ — this
+// data-layer implementation only needs the repository contract, not the
+// use-case classes.
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
-import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/domain/repositories/tutor_grant_repository.dart';
 
 /// Cloud-Functions-backed implementation of [TutorGrantRepository].
 ///

@@ -20,9 +20,11 @@ export 'package:learning_tracker/features/tutoring/data/services/tutor_write_ser
 // ── Data routers (S1 — tutored write routing keystone) ────────────────────
 export 'package:learning_tracker/features/tutoring/data/routers/tutored_write_router.dart';
 
-// ── Domain services (W4.30, W6.20-W6.22, W6.25) ──────────────────────────
+// ── Domain services (W4.30, W6.25) ────────────────────────────────────────
+// AUD-tutoring-06 removed tutor_audit_log_writer.dart (dead code — never
+// constructed in lib/; the real audit trail is written server-side by each
+// tutor* Cloud Function via writeAuditLog()).
 export 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
-export 'package:learning_tracker/features/tutoring/domain/services/tutor_audit_log_writer.dart';
 export 'package:learning_tracker/features/tutoring/domain/services/tutor_notification_service.dart';
 
 // ── Domain use cases (W4.31-W4.34) ────────────────────────────────────────
