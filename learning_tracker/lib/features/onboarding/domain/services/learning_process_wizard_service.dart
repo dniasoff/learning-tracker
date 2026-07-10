@@ -80,35 +80,66 @@ class LearningProcessWizardService {
   /// Pass [clearFirst] = false when the caller has already superseded the old
   /// stage rows (edit-track flow) and must not hard-delete them — those rows
   /// are retained so completions.stageId FKs stay valid.
+  ///
+  /// AUD-onboarding-06 (DB-2): the delete, the optional preset-association
+  /// write, and every stage insert run inside a single [StageDao.runTransaction]
+  /// call so a crash mid-sequence (process death, backgrounding) rolls back
+  /// to the pre-call state instead of leaving zero or partially-written
+  /// review stages. All the actual Drift writes happen directly in this
+  /// method's own body (not scattered across the `_build*Stages` helpers,
+  /// which are pure) so the atomic unit is easy to audit in one place.
   Future<void> applyWizardResult(
     WizardResult result, {
     required int profileId,
     required int trackId,
     bool clearFirst = true,
   }) async {
-    if (clearFirst) {
-      // Replace stages for this track only — other active tracks for the same
-      // curriculum keep their own stage rows (Story 20.2 track-scoping).
-      await _stageDao.deleteStagesForTrack(trackId);
-    }
+    await _stageDao.runTransaction(() async {
+      if (clearFirst) {
+        // Replace stages for this track only — other active tracks for the
+        // same curriculum keep their own stage rows (Story 20.2
+        // track-scoping).
+        await _stageDao.deleteStagesForTrack(trackId);
+      }
 
-    switch (result.choice) {
-      case WizardChoice.preset:
-        await _applyPreset(result, profileId: profileId, trackId: trackId);
-      case WizardChoice.custom:
-        await _applyCustom(result, profileId: profileId, trackId: trackId);
-      case WizardChoice.noReview:
-        await _applyNoReview(result, profileId: profileId, trackId: trackId);
-    }
+      final stages = switch (result.choice) {
+        WizardChoice.preset => await _buildPresetStages(
+          result,
+          profileId: profileId,
+          trackId: trackId,
+        ),
+        WizardChoice.custom => _buildCustomStages(
+          result,
+          profileId: profileId,
+          trackId: trackId,
+        ),
+        WizardChoice.noReview => _buildNoReviewStages(
+          result,
+          profileId: profileId,
+          trackId: trackId,
+        ),
+      };
+
+      for (final stage in stages) {
+        await _stageDao.insertStageDefinition(stage);
+      }
+    });
   }
 
-  Future<void> _applyPreset(
+  /// Stores the preset-program association (if [result.programId] resolves
+  /// to a real program) and returns the stage rows to insert. The
+  /// association write is performed here — not by the caller — because it
+  /// must land inside the same transaction as the stage inserts.
+  ///
+  /// Returns an empty list (writing nothing) when [result.programId] does
+  /// not resolve to a known program.
+  Future<List<db.StageDefinitionsCompanion>> _buildPresetStages(
     WizardResult result, {
     required int profileId,
     required int trackId,
   }) async {
     final program = _learningProgramRepo.getProgramById(result.programId!);
-    if (program == null) return;
+    if (program == null) return const [];
 
     // Store the preset association.
     await _profileProgramDao.setProfileProgram(
@@ -117,9 +148,10 @@ class LearningProcessWizardService {
       programId: program.id,
     );
 
-    // Parse stages_config JSON and create stage definitions.
+    // Parse stages_config JSON and build stage definitions.
     final stages = (jsonDecode(program.stagesConfig) as List)
         .cast<Map<String, dynamic>>();
+    final companions = <db.StageDefinitionsCompanion>[];
     for (var i = 0; i < stages.length; i++) {
       final stage = stages[i];
       final scheduleType = _parseScheduleType(stage);
@@ -141,7 +173,7 @@ class LearningProcessWizardService {
           'delay_days': (stage['delay_days'] as int?) ?? 0,
         }),
       };
-      await _stageDao.insertStageDefinition(
+      companions.add(
         db.StageDefinitionsCompanion.insert(
           profileId: profileId,
           curriculumId: result.curriculumId.storageKey,
@@ -153,15 +185,18 @@ class LearningProcessWizardService {
         ),
       );
     }
+    return companions;
   }
 
-  Future<void> _applyCustom(
+  /// Builds the stage rows for a custom wizard result (לימוד + N custom
+  /// chazarah rounds). Pure — no Drift writes — so the caller can insert the
+  /// result inside its own transaction.
+  List<db.StageDefinitionsCompanion> _buildCustomStages(
     WizardResult result, {
     required int profileId,
     required int trackId,
-  }) async {
-    // Always create לימוד as stage 1.
-    await _stageDao.insertStageDefinition(
+  }) {
+    final companions = <db.StageDefinitionsCompanion>[
       db.StageDefinitionsCompanion.insert(
         profileId: profileId,
         curriculumId: result.curriculumId.storageKey,
@@ -171,9 +206,9 @@ class LearningProcessWizardService {
         isDefault: const Value(false),
         schedule: const Value('{"type":"delay","delay_days":0}'),
       ),
-    );
+    ];
 
-    // Create custom chazarah rounds.
+    // Custom chazarah rounds.
     final rounds = result.customRounds ?? [];
     for (var i = 0; i < rounds.length; i++) {
       final round = rounds[i];
@@ -188,7 +223,7 @@ class LearningProcessWizardService {
         }),
         _ => jsonEncode({'type': 'delay', 'delay_days': round.delayDays ?? 0}),
       };
-      await _stageDao.insertStageDefinition(
+      companions.add(
         db.StageDefinitionsCompanion.insert(
           profileId: profileId,
           curriculumId: result.curriculumId.storageKey,
@@ -200,14 +235,17 @@ class LearningProcessWizardService {
         ),
       );
     }
+    return companions;
   }
 
-  Future<void> _applyNoReview(
+  /// Builds the single לימוד-only stage row for a no-review wizard result.
+  /// Pure — no Drift writes.
+  List<db.StageDefinitionsCompanion> _buildNoReviewStages(
     WizardResult result, {
     required int profileId,
     required int trackId,
-  }) async {
-    await _stageDao.insertStageDefinition(
+  }) {
+    return [
       db.StageDefinitionsCompanion.insert(
         profileId: profileId,
         curriculumId: result.curriculumId.storageKey,
@@ -217,7 +255,7 @@ class LearningProcessWizardService {
         isDefault: const Value(false),
         schedule: const Value('{"type":"delay","delay_days":0}'),
       ),
-    );
+    ];
   }
 
   ScheduleType _parseScheduleType(Map<String, dynamic> stage) {

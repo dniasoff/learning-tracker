@@ -329,6 +329,17 @@ class BulkPriorCompletionService {
   ///
   /// Agent F (UI layer) calls this when the user un-selects a previously
   /// bulk-marked item so the item reverts to "not started" status.
+  ///
+  /// AUD-onboarding-06 (DB-2): steps 2–4 (the tombstone UPDATE, the
+  /// import-record delete, and the outbox-propagation inserts) run inside a
+  /// single [UserDatabase.transaction] call. Pre-fix these were three
+  /// independently-awaited statements; a crash after the tombstone UPDATE
+  /// but before the outbox inserts landed would tombstone the local device
+  /// while the delete/propagation never reached Firestore or other devices —
+  /// this device shows the item unmarked while every synced device still
+  /// shows it complete. Step 1 (the read that decides whether there is
+  /// anything to expunge) stays outside the transaction — it is read-only
+  /// and its result is only used to decide whether to open one.
   Future<void> expungePriorCompletions({
     required int profileId,
     required String sefariaRef,
@@ -357,68 +368,72 @@ class BulkPriorCompletionService {
 
     final stageIds = importRows.map((r) => r.stageId).toList();
 
-    // ── 2. Tombstone the completion_events rows for the identified stages ─────
-    await (_database.update(_database.completionEvents)..where(
-          (t) =>
-              t.profileId.equals(profileId) &
-              t.sefariaRef.equals(sefariaRef) &
-              t.curriculumId.equals(curriculumKey) &
-              t.trackType.equals(trackType) &
-              t.stageId.isIn(stageIds),
-        ))
-        .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
+    await _database.transaction(() async {
+      // ── 2. Tombstone the completion_events rows for the identified stages ──
+      await (_database.update(_database.completionEvents)..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.sefariaRef.equals(sefariaRef) &
+                t.curriculumId.equals(curriculumKey) &
+                t.trackType.equals(trackType) &
+                t.stageId.isIn(stageIds),
+          ))
+          .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
 
-    // ── 3. Delete the import records ──────────────────────────────────────────
-    await _database.priorCompletionImportDao.deleteImportsForItem(
-      profileId: profileId,
-      sefariaRef: sefariaRef,
-      curriculumId: curriculumKey,
-      trackType: trackType,
-    );
-
-    // ── 4. Propagate tombstones to Firestore via outbox ───────────────────────
-    if (_outboxDao == null) {
-      // No outbox DAO injected — tombstone is local-only. Acceptable in tests.
-      return;
-    }
-
-    // Query the rows that were just tombstoned to build per-row outbox entries.
-    final tombstonedRows =
-        await (_database.select(_database.completionEvents)..where(
-              (t) =>
-                  t.profileId.equals(profileId) &
-                  t.sefariaRef.equals(sefariaRef) &
-                  t.curriculumId.equals(curriculumKey) &
-                  t.trackType.equals(trackType) &
-                  t.stageId.isIn(stageIds) &
-                  t.purgedAt.isNotNull(),
-            ))
-            .get();
-
-    for (final row in tombstonedRows) {
-      final entityKey =
-          '${row.profileId}:${row.sefariaRef}:${row.stageId}:${row.trackType}:${row.curriculumId}';
-      final payload = jsonEncode({
-        'profile_id': row.profileId,
-        'curriculum_id': row.curriculumId,
-        'sefaria_ref': row.sefariaRef,
-        'stage_id': row.stageId,
-        'track_type': row.trackType,
-        'track_id': row.trackId,
-        'completed_at': row.eventTimestamp.toUtc().toIso8601String(),
-        'points': row.points,
-        'purged_at': purgedAt.toUtc().toIso8601String(),
-      });
-      await _outboxDao.insertOutboxRow(
-        OutboxCompanion.insert(
-          profileId: profileId,
-          entityKind: OutboxEntityKind.completion,
-          entityKey: entityKey,
-          payload: payload,
-          createdAt: purgedAt,
-        ),
+      // ── 3. Delete the import records ────────────────────────────────────────
+      await _database.priorCompletionImportDao.deleteImportsForItem(
+        profileId: profileId,
+        sefariaRef: sefariaRef,
+        curriculumId: curriculumKey,
+        trackType: trackType,
       );
-    }
+
+      // ── 4. Propagate tombstones to Firestore via outbox ─────────────────────
+      if (_outboxDao == null) {
+        // No outbox DAO injected — tombstone is local-only. Acceptable in
+        // tests.
+        return;
+      }
+
+      // Query the rows just tombstoned (within this same transaction) to
+      // build per-row outbox entries.
+      final tombstonedRows =
+          await (_database.select(_database.completionEvents)..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.sefariaRef.equals(sefariaRef) &
+                    t.curriculumId.equals(curriculumKey) &
+                    t.trackType.equals(trackType) &
+                    t.stageId.isIn(stageIds) &
+                    t.purgedAt.isNotNull(),
+              ))
+              .get();
+
+      for (final row in tombstonedRows) {
+        final entityKey =
+            '${row.profileId}:${row.sefariaRef}:${row.stageId}:${row.trackType}:${row.curriculumId}';
+        final payload = jsonEncode({
+          'profile_id': row.profileId,
+          'curriculum_id': row.curriculumId,
+          'sefaria_ref': row.sefariaRef,
+          'stage_id': row.stageId,
+          'track_type': row.trackType,
+          'track_id': row.trackId,
+          'completed_at': row.eventTimestamp.toUtc().toIso8601String(),
+          'points': row.points,
+          'purged_at': purgedAt.toUtc().toIso8601String(),
+        });
+        await _outboxDao.insertOutboxRow(
+          OutboxCompanion.insert(
+            profileId: profileId,
+            entityKind: OutboxEntityKind.completion,
+            entityKey: entityKey,
+            payload: payload,
+            createdAt: purgedAt,
+          ),
+        );
+      }
+    });
   }
 
   /// Find the first uncompleted leaf item in learning order.

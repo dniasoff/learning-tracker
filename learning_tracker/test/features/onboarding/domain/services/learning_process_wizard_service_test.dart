@@ -12,6 +12,7 @@ library;
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -19,6 +20,28 @@ import 'package:learning_tracker/features/scheduler/domain/services/learning_pro
 import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 
 import '../../../../helpers/drift_memory.dart';
+
+/// A [StageDao] whose [insertStageDefinition] throws on the Nth call
+/// (1-indexed), simulating a mid-sequence crash so tests can assert
+/// [LearningProcessWizardService.applyWizardResult] rolls back atomically
+/// (AUD-onboarding-06, DB-2) instead of leaving a partial stage set.
+class _ThrowingAfterNthInsertStageDao extends StageDao {
+  _ThrowingAfterNthInsertStageDao(super.db, {required this.throwOnCallNumber});
+
+  final int throwOnCallNumber;
+  int _insertCalls = 0;
+
+  @override
+  Future<int> insertStageDefinition(StageDefinitionsCompanion entry) {
+    _insertCalls++;
+    if (_insertCalls == throwOnCallNumber) {
+      throw Exception(
+        'AUD-onboarding-06 fixture: simulated crash on insert #$_insertCalls',
+      );
+    }
+    return super.insertStageDefinition(entry);
+  }
+}
 
 void main() {
   late UserDatabase db;
@@ -299,6 +322,121 @@ void main() {
       stages.sort((a, b) => a.stageOrder.compareTo(b.stageOrder));
       expect(stages[1].schedule, contains('"type":"rolling"'));
     });
+
+    // ── AUD-onboarding-06 (DB-2) — atomicity of the stage-insert sequence ──
+
+    test('rolls back ALL stage inserts (zero stages remain) when the insert '
+        'loop throws mid-way, instead of leaving a partial set', () async {
+      // Throw on the 2nd insertStageDefinition call: לימוד (call #1)
+      // succeeds, "Round 1" (call #2) throws. Pre-fix, deleteStagesForTrack
+      // + the insert loop were 3 independently-awaited, un-transacted
+      // steps, so a crash here would leave exactly 1 orphaned לימוד row —
+      // the "zero or partial review stages" bug the finding describes.
+      final throwingDao = _ThrowingAfterNthInsertStageDao(
+        db,
+        throwOnCallNumber: 2,
+      );
+      final throwingService = LearningProcessWizardService(
+        stageDao: throwingDao,
+        learningProgramRepo: LearningProgramRepository.instance,
+        profileProgramDao: db.profileProgramDao,
+      );
+
+      const result = WizardResult(
+        curriculumId: CurriculumId.mishnayos,
+        choice: WizardChoice.custom,
+        customRounds: [
+          CustomRound(
+            label: 'Round 1',
+            scheduleType: ScheduleType.delay,
+            delayDays: 1,
+          ),
+          CustomRound(
+            label: 'Round 2',
+            scheduleType: ScheduleType.delay,
+            delayDays: 2,
+          ),
+        ],
+      );
+
+      await expectLater(
+        () => throwingService.applyWizardResult(
+          result,
+          profileId: 1,
+          trackId: trackId,
+        ),
+        throwsException,
+      );
+
+      // Read back through the real (non-throwing) DAO on the same
+      // underlying connection — the transaction must have rolled back
+      // the לימוד insert that "succeeded" before the throw too.
+      final stages = await db.stageDao.getStagesByTrack(trackId);
+      expect(
+        stages,
+        isEmpty,
+        reason:
+            'DB-2: a crash mid-sequence must roll back to zero stages, '
+            'not leave a partial set (e.g. only לימוד, missing the '
+            'chazarah rounds) — applyWizardResult must wrap the '
+            'delete+insert sequence in a single transaction()',
+      );
+    });
+
+    test(
+      'rolls back the delete when the insert loop throws — pre-existing '
+      'stages survive a failed replace instead of being left empty',
+      () async {
+        // Pre-populate one stage so we can prove clearFirst's delete is
+        // ALSO part of the same atomic unit as the inserts.
+        await db.stageDao.insertStageDefinition(
+          StageDefinitionsCompanion.insert(
+            profileId: 1,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            trackId: trackId,
+            stageOrder: 1,
+            stageName: 'Pre-existing Stage',
+            schedule: const Value('{"type":"delay","delay_days":0}'),
+          ),
+        );
+
+        final throwingDao = _ThrowingAfterNthInsertStageDao(
+          db,
+          throwOnCallNumber: 1,
+        );
+        final throwingService = LearningProcessWizardService(
+          stageDao: throwingDao,
+          learningProgramRepo: LearningProgramRepository.instance,
+          profileProgramDao: db.profileProgramDao,
+        );
+
+        const result = WizardResult(
+          curriculumId: CurriculumId.mishnayos,
+          choice: WizardChoice.noReview,
+        );
+
+        await expectLater(
+          () => throwingService.applyWizardResult(
+            result,
+            profileId: 1,
+            trackId: trackId,
+          ),
+          throwsException,
+        );
+
+        final stages = await db.stageDao.getStagesByTrack(trackId);
+        expect(
+          stages,
+          hasLength(1),
+          reason:
+              'DB-2: the delete and the insert loop are one atomic unit — '
+              'a crash in the insert half must roll back the delete too, '
+              'leaving the pre-existing stage intact rather than deleted '
+              'with nothing to replace it',
+        );
+        expect(stages.first.stageName, 'Pre-existing Stage');
+      },
+    );
   });
 
   group('LearningProcessWizardService — custom', () {

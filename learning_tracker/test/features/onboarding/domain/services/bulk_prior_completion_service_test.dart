@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart'
     show Completion;
+import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -15,6 +16,24 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/stage_defi
     as stage_model;
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:mocktail/mocktail.dart';
+
+/// An [OutboxDao] whose [insertOutboxRow] always throws, simulating a
+/// mid-sequence crash so tests can assert
+/// [BulkPriorCompletionService.expungePriorCompletions] rolls back
+/// atomically (AUD-onboarding-06, DB-2) instead of leaving a
+/// half-tombstoned state (completion_events tombstoned but
+/// prior_completion_imports already deleted, with no outbox row to
+/// propagate the tombstone to Firestore).
+class _ThrowingOutboxDao extends OutboxDao {
+  _ThrowingOutboxDao(super.db);
+
+  @override
+  Future<int> insertOutboxRow(OutboxCompanion companion) {
+    throw Exception(
+      'AUD-onboarding-06 fixture: simulated outbox insert failure',
+    );
+  }
+}
 
 class MockContentRepository extends Mock implements ContentRepository {}
 
@@ -551,6 +570,159 @@ void main() {
         verify(() => completionRepo.bulkMarkComplete(any())).called(2);
       },
     );
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // AUD-onboarding-06 (DB-2) — expungePriorCompletions atomicity
+  // ──────────────────────────────────────────────────────────────────────────
+
+  group('expungePriorCompletions — DB-2 transaction atomicity', () {
+    // completion_events.profile_id / prior_completion_imports.profile_id
+    // are FK-constrained to learner_profiles(id) — seed profile 1 (the id
+    // every test below hardcodes) before any direct table insert.
+    setUp(() async {
+      final now = DateTime.utc(2026, 1, 1);
+      final accountId = await memoryDb
+          .into(memoryDb.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'expunge@example.com',
+              tier: 'localBorn',
+              displayName: 'Expunge Test',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      await memoryDb
+          .into(memoryDb.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: accountId,
+              displayName: 'Expunge Test',
+              mode: 'adult',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+    });
+
+    /// Seeds a prior-mark row into BOTH completion_events AND
+    /// prior_completion_imports, mirroring the production write path
+    /// (CompletionWriter.commitBatch with priorMarkOnly = true) that
+    /// expungePriorCompletions expects to find.
+    Future<void> insertPriorMark({
+      required int stageId,
+      required String sefariaRef,
+    }) async {
+      await memoryDb
+          .into(memoryDb.completionEvents)
+          .insert(
+            CompletionEventsCompanion.insert(
+              profileId: 1,
+              curriculumId: curriculum.storageKey,
+              sefariaRef: sefariaRef,
+              stageId: stageId,
+              trackType: 'personal',
+              eventTimestamp: kBulkPriorSentinelDate,
+            ),
+          );
+      await memoryDb
+          .into(memoryDb.priorCompletionImports)
+          .insert(
+            PriorCompletionImportsCompanion.insert(
+              profileId: 1,
+              curriculumId: curriculum.storageKey,
+              sefariaRef: sefariaRef,
+              stageId: stageId,
+              trackType: 'personal',
+              source: 'bulkInTrack',
+            ),
+          );
+    }
+
+    test('rolls back the tombstone AND the import-row delete when the outbox '
+        'insert throws — prior_completion_imports row still exists instead '
+        'of a half-tombstoned state', () async {
+      await insertPriorMark(stageId: 1, sefariaRef: 'ref_expunge');
+
+      final throwingOutboxDao = _ThrowingOutboxDao(memoryDb);
+      final throwingService = BulkPriorCompletionService(
+        contentRepository: contentRepo,
+        completionRepository: completionRepo,
+        bookmarkRepository: bookmarkRepo,
+        database: memoryDb,
+        syncEngine: null,
+        outboxDao: throwingOutboxDao,
+      );
+
+      await expectLater(
+        () => throwingService.expungePriorCompletions(
+          profileId: 1,
+          sefariaRef: 'ref_expunge',
+          curriculumId: curriculum,
+        ),
+        throwsException,
+      );
+
+      // The import row must still exist — the delete (step 3) must have
+      // rolled back along with the tombstone UPDATE (step 2) and the
+      // failed outbox insert (step 4), all inside one transaction().
+      final importRows = await memoryDb
+          .select(memoryDb.priorCompletionImports)
+          .get();
+      expect(
+        importRows.where((r) => r.sefariaRef == 'ref_expunge'),
+        hasLength(1),
+        reason:
+            'DB-2: a crash in the outbox-propagation step must roll back '
+            'the whole tombstone sequence, not leave '
+            'prior_completion_imports deleted with completion_events '
+            'un-tombstoned/tombstoned inconsistently',
+      );
+
+      // The completion_events row must NOT be tombstoned either — same
+      // atomic unit.
+      final events = await (memoryDb.select(
+        memoryDb.completionEvents,
+      )..where((t) => t.sefariaRef.equals('ref_expunge'))).get();
+      expect(
+        events.single.purgedAt,
+        isNull,
+        reason:
+            'DB-2: the tombstone UPDATE must roll back too — a device '
+            'reading the row after the crash must still see it active, '
+            'not half-tombstoned with the import record already gone',
+      );
+    });
+
+    test('succeeds normally (no outbox DAO throwing) — tombstone and import '
+        'delete both commit together', () async {
+      await insertPriorMark(stageId: 1, sefariaRef: 'ref_normal');
+
+      final service = BulkPriorCompletionService(
+        contentRepository: contentRepo,
+        completionRepository: completionRepo,
+        bookmarkRepository: bookmarkRepo,
+        database: memoryDb,
+        syncEngine: null,
+      );
+
+      await service.expungePriorCompletions(
+        profileId: 1,
+        sefariaRef: 'ref_normal',
+        curriculumId: curriculum,
+      );
+
+      final importRows = await memoryDb
+          .select(memoryDb.priorCompletionImports)
+          .get();
+      expect(importRows.where((r) => r.sefariaRef == 'ref_normal'), isEmpty);
+
+      final events = await (memoryDb.select(
+        memoryDb.completionEvents,
+      )..where((t) => t.sefariaRef.equals('ref_normal'))).get();
+      expect(events.single.purgedAt, isNotNull);
+    });
   });
 }
 
