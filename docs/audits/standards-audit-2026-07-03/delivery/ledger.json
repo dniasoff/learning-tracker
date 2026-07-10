@@ -4980,13 +4980,18 @@
   {
    "id": "AUD-sync-06",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Six leftover migration re-export shims in features/sync/ are unused by production code and violate Rule 2's 'only providers.dart barrel' clause",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "ee94fd42cd62755f41745a4a64e28e9f100f40f1"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-sync-06 AC1 OK: grep for bare export re-directs under lib/features/sync/ = zero (exit 1); 6 shims deleted; no dangling refs in lib/ or test/",
+    "AUD-sync-06 AC2 OK: merge_rules_test.dart:2 imports core/sync/merge/merge_rules.dart; prefs test:8 imports core/preferences/...; both at AG-5-mirrored paths"
+   ],
+   "notes": "Evidence re-verified, matched exactly. Deleted all 6 shim files (3 zero importers, 3 test-only). Moved 2 unit tests to AG-5 paths w/ repointed imports; repointed 4 story-acceptance tests. AC1 grep RED(5)->GREEN(0). AC2 verified. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c23, mergeSha ee94fd42cd62755f41745a4a64e28e9f100f40f1). Post-rebase gate: make audit checks 1-24 and 26/27 clean; flutter analyze clean (no issues found, 7.6s). touchedStrings=false so make arb-parity was not run. Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~41 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout; filesystem-only (independent of git HEAD/content), matching the pre-existing environmental pattern already documented for w1r0c2 through w2r1c16 in this same ledger, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (payload touched only lib/features/sync/ plus moved test files; branch delta since merge-base touched a disjoint path set), so payload.testsToRun was not re-run in the merge lane; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-tutoring-18",
