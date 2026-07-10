@@ -3035,13 +3035,18 @@
   {
    "id": "AUD-firebase-10",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Whitelist fields on tutor CRUD Cloud Functions instead of merging caller-supplied objects verbatim",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a43b50fbaa80bb73ca7a7994df88c61ffecc0bfd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-firebase-10 AC1 OK: goals_tracks unexpected-key + oversized-string tests pass; GOAL_ALLOWED_FIELDS mirrors rules goals hasOnly() (rules:415-423)",
+    "AUD-firebase-10 whitelists OK: all 6 TS field lists match rules hasOnly() exactly; preferences+curriculum_scopes correctly size-cap-only (no rules counterpart)"
+   ],
+   "notes": "Added assertAllowedFields() mirroring rules hasOnly() whitelists for 6 collections, size-cap-only for 2 with no rules counterpart. Red: 15 tests failed vs old unrealistic fixtures, proving check is live; fixed fixtures; 9 new tests added. Commit 47c7408b."
   },
   {
    "id": "AUD-firebase-06",
@@ -3770,35 +3775,47 @@
   {
    "id": "AUD-firebase-09",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Split allow list from allow read in firestore.rules to cap request.query.limit",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a43b50fbaa80bb73ca7a7994df88c61ffecc0bfd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-firebase-09 AC1 OK: firestore_rules expectSR4ListLimitCap asserts limit(500) ok / 501 & unbounded denied on completions +3; 4 SR-4 tests pass in 93/93"
+   ],
+   "notes": "Split 'allow read' into 'allow get' (unrestricted) + 'allow list' (limit<=500) on completions/streak_events/learning_ledger/points_ledger (SR-4). 4 new rules tests. Promoted SR-4 doc status Pending->Enforced. Commit 9e33a97b."
   },
   {
    "id": "AUD-firebase-11",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Wrap tutorEditProfile's read-then-overwrite in a transaction to stop the lost-update race",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a43b50fbaa80bb73ca7a7994df88c61ffecc0bfd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-firebase-11 AC1 OK: settings_profile concurrent-write-survives test passes; read+merge+write wrapped in db.runTransaction (index.ts:2064); asserts real emulator state"
+   ],
+   "notes": "Wrapped tutorEditProfile read+merge+write in db.runTransaction, matching other CFs in file. Red test injecting a real concurrent write via monkey-patched .get() failed pre-fix (field lost), passes post-fix (txn auto-retry). Commit 8443583c."
   },
   {
    "id": "AUD-firebase-08",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Make tutor audit-log writes idempotent and failure-visible instead of best-effort auto-ID writes",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a43b50fbaa80bb73ca7a7994df88c61ffecc0bfd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-firebase-08 AC1 OK: cf_tutor_completions test 'same idempotencyKey -> one audit entry' asserts audit.size===1, passes; sha256 doc-id via .set() (index.ts:1394)"
+   ],
+   "notes": "writeAuditLog() accepts optional idempotencyKey; when present, doc-id = sha256(grantId,action,target,key) via .set() not .add(), so same-key retries coalesce. Threaded through all 13 call sites. Red test failed 2!==1 pre-fix, passes post-fix. Commit c52e9c4a."
   },
   {
    "id": "AUD-firebase-07",
