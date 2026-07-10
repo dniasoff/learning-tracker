@@ -410,7 +410,7 @@ The offline account model (credential-less local account, converted on reconnect
 
 **PF-2 — Any collection that can exceed the viewport uses a lazy builder (`ListView.builder`/slivers); heavy CPU work (bulk JSON parse, chart aggregation) runs off the main isolate.**
 **Why:** concrete-children lists build every row up front; any main-isolate computation past the frame budget freezes the UI — the docs name local-DB reads and large parses as canonical isolate cases.
-**Enforce:** [Pending] audit grep for scrollables with large concrete children; review item for >16 ms computations.
+**Enforce:** [Enforced] `no_eager_list_in_non_lazy_scroll_container` custom lint (AUD-tutoring-08) — flags a `for`/`.map()` widget expansion fed into a non-lazy `ListView(children:)` or a scrollable `Column` under `lib/features/**`, exempting provably-bounded sources (`SomeEnum.values`, `.take(n)`, literal lists). [Pending] review item for >16 ms computations (the off-main-isolate half of this rule).
 **Source:** docs.flutter.dev/perf/isolates
 
 **PF-3 — `build()` stays free of I/O, awaits, and allocation-heavy loops.**
@@ -839,11 +839,30 @@ migrating off it entirely (both out of scope here; the latter is already
 tracked above as a follow-up). CI's `custom_lint` step stays warn-only and is
 not currently a meaningful check either way.
 
+**AUD-tutoring-08 update (2026-07-10):** the same manual-marker scratch-run
+technique was used to validate the new `no_eager_list_in_non_lazy_scroll_container`
+rule (PF-2) against real `lib/` code, since the normal CLI path above cannot
+be trusted. With the marker temporarily enabled, the rule correctly found
+**zero** hits at AUD-tutoring-08's own evidence sites (all already fixed —
+`ManageGrantsScreen`, Settings' `_PendingInvitesSection`,
+`manage_tutors_screen.dart`) and **10** genuine pre-existing hits of the same
+eager-list-into-non-lazy-scroll-container pattern elsewhere in the codebase,
+outside this finding's declared scope: `account_picker_screen.dart`,
+`parent_track_management_screen.dart`, `profile_switcher_sheet.dart`,
+`curriculum_progress_screen.dart`, `grouped_daily_view.dart`,
+`track_management_hub_screen.dart`, `curriculum_picker_step.dart` (×2),
+`program_selection_step.dart`, and `track_management_body.dart`. These mirror
+the `no_feature_cross_import` / `no_color_literal_outside_theme` etc. debt
+above — real, pre-existing, not a regression from this rule's addition, and
+not remediated here (out of scope for a single-finding checker delivery);
+tracked as a follow-up once the toolchain itself is fixed and this rule can
+run live in CI.
+
 ---
 
 ## Custom Lints Reference
 
-Ten custom lint rules live in `packages/custom_lints/` (landed) and run via `dart run custom_lint`:
+Eleven custom lint rules live in `packages/custom_lints/` (landed) and run via `dart run custom_lint`:
 
 | Rule | What it catches |
 |------|-----------------|
@@ -857,6 +876,7 @@ Ten custom lint rules live in `packages/custom_lints/` (landed) and run via `dar
 | `no_e_to_string_in_ui` | Raw exception `.toString()` surfaced in UI (EH-5) |
 | `no_raw_logevent` | Analytics events bypassing the typed event layer (PV-5) |
 | `no_hand_rolled_async_state_notifier` | `Notifier<T>` whose state is a hand-rolled sealed Idle/Loading/Error union — SM-5 AsyncNotifier-migration candidate, INFO severity (AUD-account-14) |
+| `no_eager_list_in_non_lazy_scroll_container` | A `for`/`.map()` widget expansion fed into a non-lazy `ListView(children:)` or a scrollable `Column` under `lib/features/**` (PF-2, AUD-tutoring-08) |
 
 Each rule's own matching/whitelist logic has a `package:test` unit-test file under `packages/custom_lints/test/`, run via `make lint-rules-test` (`cd learning_tracker && make lint-rules-test`, or `cd packages/custom_lints && dart test` directly). This is wired into `make audit` / `make ci` and runs on every PR — independent of whether the `custom_lint` plugin itself can attach to the analyzer (AUD-guardrails-17).
 

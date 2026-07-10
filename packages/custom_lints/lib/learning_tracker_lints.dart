@@ -1,10 +1,14 @@
 /// Custom lint rules for the Learning Tracker project.
 ///
-/// Provides ten rules:
+/// Provides eleven rules:
 ///   - [NoColorLiteralOutsideTheme]: warns on direct `Color(0x…)` hex-literal
 ///     constructor calls outside `lib/core/theme/`; use AppColors/AppTheme constants.
 ///   - [NoCurriculumDisplayNameBypass]: prevents access to `.displayNameEn` /
 ///     `.displayNameHe` outside the canonical `core/labels/` whitelist.
+///   - [NoEagerListInNonLazyScrollContainer]: flags a `for`/`.map()` widget
+///     expansion fed into a non-lazy `ListView(children:)` or a scrollable
+///     `Column` under `lib/features/**`; use `ListView.builder` instead
+///     (AUD-tutoring-08, PF-2).
 ///   - [NoEToStringInUi]: warns on `e.toString()` calls inside presentation/
 ///     files; use localised messages instead.
 ///   - [NoFeatureCrossImport]: prevents direct cross-feature deep imports;
@@ -34,6 +38,7 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 import 'src/rules/no_color_literal_outside_theme.dart';
 import 'src/rules/no_curriculum_display_name_bypass.dart';
 import 'src/rules/no_e_to_string_in_ui.dart';
+import 'src/rules/no_eager_list_in_non_lazy_scroll_container.dart';
 import 'src/rules/no_feature_cross_import.dart';
 import 'src/rules/no_firebase_outside_core.dart';
 import 'src/rules/no_hand_rolled_async_state_notifier.dart';
@@ -51,6 +56,7 @@ class _LearningTrackerLintPlugin extends PluginBase {
   List<LintRule> getLintRules(CustomLintConfigs configs) => const [
         NoColorLiteralOutsideTheme(),
         NoCurriculumDisplayNameBypass(),
+        NoEagerListInNonLazyScrollContainer(),
         NoEToStringInUi(),
         NoFeatureCrossImport(),
         NoFirebaseOutsideCore(),
