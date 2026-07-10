@@ -348,6 +348,139 @@ void main() {
   });
 
   // ────────────────────────────────────────────────────────────────────────────
+  // AUD-tutoring-07: pushStageDefinitions mid-loop CF failure must surface
+  // which stages already committed server-side, not just an opaque
+  // exception (see tutored_write_router.dart header for the documented
+  // partial-failure decision).
+  // ────────────────────────────────────────────────────────────────────────────
+
+  group('AUD-tutoring-07 — pushStageDefinitions partial failure surfaces '
+      'succeeded stages', () {
+    test('CF fails on 2nd of 3 stages → TutorWriteException carries the '
+        'stage IDs that already committed before the failure', () async {
+      final delegate = _FakeDelegate();
+      var callIndex = 0;
+      final router = TutoredWriteRouter(
+        delegate: delegate,
+        writeService: TutorWriteService(
+          invoker: (fn, args) async {
+            callIndex++;
+            if (callIndex == 2) {
+              throw Exception('network drop mid-loop');
+            }
+          },
+        ),
+        selection: _tutoredSelection,
+      );
+
+      Object? caught;
+      try {
+        await router.pushStageDefinitions(
+          trackId: 7,
+          curriculumId: 'mishnayos',
+          stages: [
+            {'stage_order': 1},
+            {'stage_order': 2},
+            {'stage_order': 3},
+          ],
+          updatedAt: DateTime.utc(2026, 1, 1),
+        );
+      } catch (e) {
+        caught = e;
+      }
+
+      expect(caught, isA<TutorWriteException>());
+      final ex = caught! as TutorWriteException;
+      // Stage 7_1 already committed server-side before the 2nd call
+      // failed — the caller must be able to see that, not just an
+      // opaque "some stage failed" exception.
+      expect(ex.succeededStageIds, ['7_1']);
+      // Stage 3 was never attempted — the loop stops at the first
+      // failure instead of silently continuing.
+      expect(callIndex, 2);
+    });
+
+    test('all stages succeed → succeededStageIds is not consulted (no '
+        'exception thrown)', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _tutored(record, delegate);
+
+      await router.pushStageDefinitions(
+        trackId: 3,
+        curriculumId: 'daf_yomi',
+        stages: [
+          {'stage_order': 1},
+          {'stage_order': 2},
+        ],
+        updatedAt: DateTime.utc(2026, 1, 1),
+      );
+
+      expect(record.callCount, 2);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // AUD-tutoring-17: a malformed (non-numeric) profileId must surface the
+  // class's documented TutorWriteException contract, never a raw
+  // FormatException that callers catching TutorWriteException won't see.
+  // ────────────────────────────────────────────────────────────────────────────
+
+  group(
+    'AUD-tutoring-17 — malformed profileId guarded (not raw FormatException)',
+    () {
+      test('pushGoal with non-numeric profileId → TutorWriteException, not '
+          'FormatException', () async {
+        final record = _FakeInvokerRecord();
+        final delegate = _FakeDelegate();
+        const badSelection = TutoredProfileSelection(
+          profileId: 'not-a-number',
+          ownerUid: _ownerUid,
+          grantId: _grantId,
+          permissions: _fullPerms,
+        );
+        final router = TutoredWriteRouter(
+          delegate: delegate,
+          writeService: TutorWriteService(invoker: record.call),
+          selection: badSelection,
+        );
+
+        await expectLater(
+          () => router.pushGoal({'id': 'goal_xyz'}),
+          throwsA(isA<TutorWriteException>()),
+        );
+        // The CF must never be reached with an unparseable profileId.
+        expect(record.wasCalled, isFalse);
+      });
+
+      test(
+        'deleteCompletion with non-numeric profileId → TutorWriteException',
+        () async {
+          final record = _FakeInvokerRecord();
+          final delegate = _FakeDelegate();
+          const badSelection = TutoredProfileSelection(
+            profileId: 'nan',
+            ownerUid: _ownerUid,
+            grantId: _grantId,
+            permissions: _fullPerms,
+          );
+          final router = TutoredWriteRouter(
+            delegate: delegate,
+            writeService: TutorWriteService(invoker: record.call),
+            selection: badSelection,
+          );
+
+          await expectLater(
+            () => router.deleteCompletion('comp_1'),
+            throwsA(isA<TutorWriteException>()),
+          );
+          expect(record.wasCalled, isFalse);
+        },
+      );
+    },
+  );
+
+  // ────────────────────────────────────────────────────────────────────────────
   // AC2: non-tutored session → delegate called, CF NOT invoked
   // ────────────────────────────────────────────────────────────────────────────
 

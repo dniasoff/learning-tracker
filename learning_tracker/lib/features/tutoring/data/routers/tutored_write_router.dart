@@ -34,6 +34,22 @@
 // [TutorWriteException] so callers can surface a clear snackbar. This matches
 // the offline-first contract — the local Drift write already happened before
 // this layer is consulted.
+//
+// AUD-tutoring-07 — partial multi-stage failure (pushStageDefinitions):
+// stage upserts are sequential CF calls, not one atomic batch. If a call
+// fails partway through, the earlier stages have already committed
+// server-side and there is no local outbox to pick them back up (see
+// above — tutored writes deliberately bypass the outbox). Decision:
+// accepted as a surfaced-not-silent risk, not an automatic retry path.
+// [TutorWriteException.succeededStageIds] carries the stage IDs that
+// committed before the failing one so the caller can decide whether to
+// retry just the remaining subset instead of losing state silently.
+//
+// AUD-tutoring-17 — every method above parses [_selection.profileId] via
+// the private [TutoredWriteRouter._profileIdOrThrow] helper (not a bare
+// `int.parse`) so a malformed profileId honors the same documented
+// TutorWriteException contract instead of leaking a raw FormatException
+// that `on TutorWriteException` callers would miss.
 
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
@@ -44,9 +60,20 @@ import 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 ///
 /// Callers should catch this and surface a snackbar — never silently strand.
 class TutorWriteException implements Exception {
-  const TutorWriteException(this.message, {this.code});
+  const TutorWriteException(
+    this.message, {
+    this.code,
+    this.succeededStageIds = const [],
+  });
   final String message;
   final String? code;
+
+  /// AUD-tutoring-07 — for [TutoredWriteRouter.pushStageDefinitions], the
+  /// stage IDs (`{trackId}_{stageOrder}`) that already committed
+  /// server-side before this failure. Empty for every other (single-write)
+  /// failure. Lets the caller retry just the remaining subset instead of
+  /// losing the partial-success state silently.
+  final List<String> succeededStageIds;
 
   @override
   String toString() => 'TutorWriteException($code): $message';
@@ -81,7 +108,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     final result = await _writeService.upsertGoal(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
-      profileId: int.parse(sel.profileId),
+      profileId: _profileIdOrThrow(sel),
       goalId: goalId,
       goalData: goal,
     );
@@ -98,7 +125,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     final result = await _writeService.deleteGoal(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
-      profileId: int.parse(sel.profileId),
+      profileId: _profileIdOrThrow(sel),
       goalId: goalId,
     );
     _handleResult(result, 'tutorDeleteGoal');
@@ -113,7 +140,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     final result = await _writeService.upsertTrack(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
-      profileId: int.parse(sel.profileId),
+      profileId: _profileIdOrThrow(sel),
       trackId: trackId,
       trackData: trackData,
     );
@@ -137,7 +164,11 @@ class TutoredWriteRouter implements SyncWriteFacade {
       );
     }
 
-    final profileIdInt = int.parse(sel.profileId);
+    final profileIdInt = _profileIdOrThrow(sel);
+    // AUD-tutoring-07: track which stages already committed so a mid-loop
+    // CF failure can name them instead of throwing an opaque exception —
+    // see the class header for the accepted-risk decision.
+    final succeededStageIds = <String>[];
     for (final stage in stages) {
       final stageOrder = stage['stage_order']?.toString() ?? '';
       final stageId = '${trackId}_$stageOrder';
@@ -154,7 +185,22 @@ class TutoredWriteRouter implements SyncWriteFacade {
         stageId: stageId,
         stageData: payload,
       );
-      _handleResult(result, 'tutorUpsertStageDefinition[$stageId]');
+      if (result case TutorWriteFailure(:final message, :final code)) {
+        AppLogger.instance.error(
+          event: 'tutored_write_router_cf_failure',
+          fields: {
+            'fn': 'tutorUpsertStageDefinition[$stageId]',
+            'code': code ?? 'unknown',
+            'succeededStageIds': succeededStageIds.join(','),
+          },
+        );
+        throw TutorWriteException(
+          message,
+          code: code,
+          succeededStageIds: List.unmodifiable(succeededStageIds),
+        );
+      }
+      succeededStageIds.add(stageId);
     }
   }
 
@@ -170,7 +216,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     final result = await _writeService.upsertStudyDayConfig(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
-      profileId: int.parse(sel.profileId),
+      profileId: _profileIdOrThrow(sel),
       configId: configId,
       configData: payload,
     );
@@ -191,7 +237,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     final result = await _writeService.upsertBookmark(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
-      profileId: int.parse(sel.profileId),
+      profileId: _profileIdOrThrow(sel),
       bookmarkId: bookmarkId,
       bookmarkData: bookmark,
     );
@@ -208,7 +254,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     final result = await _writeService.setProfileProgram(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
-      profileId: int.parse(sel.profileId),
+      profileId: _profileIdOrThrow(sel),
       programId: docId,
       programData: payload,
     );
@@ -228,7 +274,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     if (builder == null) return _delegate.pushGamificationSettingsSnapshot();
 
     final settingsData = await builder();
-    final profileIdInt = int.parse(sel.profileId);
+    final profileIdInt = _profileIdOrThrow(sel);
 
     // R3-H2 fix: call CF twice — once per permission key — so a tutor with
     // only can_edit_points or only can_edit_rewards is not locked out.
@@ -295,7 +341,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     final result = await _writeService.editProfile(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
-      profileId: int.parse(sel.profileId),
+      profileId: _profileIdOrThrow(sel),
       displayName: displayName,
       avatar: avatar,
       mode: mode,
@@ -311,7 +357,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     final result = await _writeService.resetCompletion(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
-      profileId: int.parse(sel.profileId),
+      profileId: _profileIdOrThrow(sel),
       completionId: completionId,
     );
     _handleResult(result, 'tutorResetCompletion');
@@ -354,5 +400,26 @@ class TutoredWriteRouter implements SyncWriteFacade {
       );
       throw TutorWriteException(message, code: code);
     }
+  }
+
+  /// AUD-tutoring-17 — parses [sel.profileId] to an int, matching this
+  /// class's documented error contract (see header): a malformed profileId
+  /// is logged via [AppLogger] and re-thrown as a [TutorWriteException]
+  /// rather than propagating a raw [FormatException] that callers catching
+  /// `on TutorWriteException` would not see.
+  int _profileIdOrThrow(TutoredProfileSelection sel) {
+    final raw = sel.profileId;
+    final parsed = int.tryParse(raw);
+    if (parsed == null) {
+      AppLogger.instance.error(
+        event: 'tutored_write_router_invalid_profile_id',
+        fields: {'profileId': raw},
+      );
+      throw TutorWriteException(
+        'Invalid tutored profile id: "$raw"',
+        code: 'invalid-profile-id',
+      );
+    }
+    return parsed;
   }
 }
