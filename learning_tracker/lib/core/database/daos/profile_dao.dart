@@ -33,6 +33,21 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
     learnerProfiles,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// Every `learner_profiles.id` on this device, unscoped by account.
+  ///
+  /// AUD-core-sync-34: extracted from three append-only sync mergers
+  /// (LearningLedgerMerger, PointsLedgerMerger, RewardRedemptionMerger),
+  /// which each independently ran the identical full-table scan to guard a
+  /// `profileId` FK before inserting — three copies that would silently
+  /// diverge if the guard logic ever needs to change (e.g. excluding
+  /// soft-deleted profiles). Deliberately unscoped/unfiltered (matches the
+  /// three call sites' prior inline behavior) — the guard only needs to know
+  /// whether a row exists locally at all, not which account it belongs to.
+  Future<Set<int>> existingProfileIds() async {
+    final rows = await select(learnerProfiles).get();
+    return rows.map((p) => p.id).toSet();
+  }
+
   /// Count profiles for an account (own profiles only — tutored mirrors
   /// excluded).
   Future<int> countProfilesForAccount(int accountId) async {
@@ -58,6 +73,58 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   /// Delete a profile by ID.
   Future<int> deleteProfile(int id) =>
       (delete(learnerProfiles)..where((t) => t.id.equals(id))).go();
+
+  /// Upsert a profile row from a remote sync payload, keyed by [id] (the
+  /// remote-assigned `learner_profiles.id` — profile ids are shared,
+  /// server-assigned identifiers, not per-device autoincrement values).
+  ///
+  /// AUD-core-sync-22 (DB-1): extracted from DriftMergeStore, which
+  /// previously wrote `_db.into(_db.learnerProfiles)` /
+  /// `_db.update(_db.learnerProfiles)` directly instead of routing through
+  /// this DAO, despite its own class doc claiming every write goes through
+  /// one. [accountId] must already be resolved to a LOCAL `accounts.id`
+  /// before calling (DriftMergeStore's `_resolveLocalAccountId` — the
+  /// remote's `account_id` almost never matches the local autoincrement id).
+  ///
+  /// Insert: full row (matches the prior `insertOnConflictUpdate` shape —
+  /// [id] is caller-supplied, not autoincrement, since profile ids are
+  /// server-assigned). Update: partial — only the fields a remote sync
+  /// payload can legitimately change ([displayName], [mode],
+  /// [avatarIndex], [updatedAt]); [accountId]/[createdAt] are left
+  /// untouched on an existing row, matching the prior inline behavior.
+  Future<void> upsertFromSync({
+    required int id,
+    required int accountId,
+    required String displayName,
+    required String mode,
+    required int avatarIndex,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) async {
+    final existing = await getProfileById(id);
+    if (existing == null) {
+      await into(learnerProfiles).insertOnConflictUpdate(
+        LearnerProfilesCompanion.insert(
+          id: Value(id),
+          accountId: accountId,
+          displayName: displayName,
+          mode: mode,
+          avatarIndex: Value(avatarIndex),
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        ),
+      );
+    } else {
+      await (update(learnerProfiles)..where((t) => t.id.equals(id))).write(
+        LearnerProfilesCompanion(
+          displayName: Value(displayName),
+          mode: Value(mode),
+          avatarIndex: Value(avatarIndex),
+          updatedAt: Value(updatedAt),
+        ),
+      );
+    }
+  }
 
   /// Check if a profile with the given name (case-insensitive, trimmed)
   /// already exists for the account. Optionally excludes a profile by ID

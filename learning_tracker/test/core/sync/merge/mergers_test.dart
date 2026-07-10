@@ -122,6 +122,9 @@ class _FakeMergeStore implements MergeStore {
   }) async {
     inserted.add({...fields, '__kind': kind, '__profileId': profileId});
   }
+
+  @override
+  Future<T> runInTransaction<T>(Future<T> Function() body) => body();
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -456,5 +459,110 @@ void main() {
       );
       expect(store.upserted, isEmpty);
     });
+
+    // AUD-core-sync-25 (EH-4): the per-row catch was narrowed from a bare
+    // `catch (e, stackTrace)` to `on Exception catch`. A genuine Error
+    // subtype (a real programming bug, not a data problem) must now
+    // propagate loudly instead of being silently logged-and-swallowed.
+    test('a genuine Error thrown mid-row (not an Exception) propagates instead '
+        'of being silently swallowed', () async {
+      final errorStore = _ThrowingErrorStore(store);
+      final errorMerger = LearnerProfileMerger(store: errorStore);
+
+      expect(
+        () => errorMerger.merge(
+          profileId: 1,
+          rows: [profileRow(updatedAt: _dt(2026))],
+        ),
+        throwsA(isA<StateError>()),
+        reason:
+            'EH-4: a bare catch would have swallowed this Error and logged '
+            'a quiet warning instead of crashing loudly on a real bug',
+      );
+    });
   });
+}
+
+/// Decorates a [MergeStore] to throw a genuine [Error] (not an [Exception])
+/// from [upsert] — used to prove AUD-core-sync-25's typed catch lets Errors
+/// propagate rather than silently swallowing them.
+class _ThrowingErrorStore implements MergeStore {
+  _ThrowingErrorStore(this._inner);
+  final MergeStore _inner;
+
+  @override
+  Future<DateTime?> currentUpdatedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+  }) => _inner.currentUpdatedAt(
+    kind: kind,
+    profileId: profileId,
+    naturalKey: naturalKey,
+  );
+
+  @override
+  Future<DateTime?> currentSyncedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+  }) => _inner.currentSyncedAt(
+    kind: kind,
+    profileId: profileId,
+    naturalKey: naturalKey,
+  );
+
+  @override
+  Future<void> persistUpdatedAt({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+    required DateTime updatedAt,
+    DateTime? syncedAt,
+  }) => _inner.persistUpdatedAt(
+    kind: kind,
+    profileId: profileId,
+    naturalKey: naturalKey,
+    updatedAt: updatedAt,
+    syncedAt: syncedAt,
+  );
+
+  @override
+  bool remoteIsNewer({
+    required DateTime? localUpdatedAt,
+    required DateTime? remoteUpdatedAt,
+    DateTime? localSyncedAt,
+    DateTime? remoteSyncedAt,
+  }) => _inner.remoteIsNewer(
+    localUpdatedAt: localUpdatedAt,
+    remoteUpdatedAt: remoteUpdatedAt,
+    localSyncedAt: localSyncedAt,
+    remoteSyncedAt: remoteSyncedAt,
+  );
+
+  @override
+  Future<void> upsert({
+    required String kind,
+    required int profileId,
+    required Map<String, dynamic> fields,
+  }) async {
+    // A genuine programming-bug-shaped Error, not a data/Exception problem.
+    throw StateError('fault-injected: a real bug, not a data problem');
+  }
+
+  @override
+  Future<void> insertIfAbsent({
+    required String kind,
+    required int profileId,
+    required String naturalKey,
+    required Map<String, dynamic> fields,
+  }) => _inner.insertIfAbsent(
+    kind: kind,
+    profileId: profileId,
+    naturalKey: naturalKey,
+    fields: fields,
+  );
+
+  @override
+  Future<T> runInTransaction<T>(Future<T> Function() body) => body();
 }

@@ -9,13 +9,19 @@
 library;
 
 import 'package:learning_tracker/core/ids/natural_key.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/completion_event_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 class CompletionEventMerger implements EntityMerger {
-  CompletionEventMerger({required MergeStore store}) : _store = store;
+  CompletionEventMerger({required MergeStore store, AppLogger? logger})
+    : _store = store,
+      _logger = logger;
 
   final MergeStore _store;
+  // AUD-core-sync-15: optional logger so a per-row merge failure is
+  // observable instead of silently swallowed.
+  final AppLogger? _logger;
   static const _codec = CompletionEventCodec();
 
   @override
@@ -27,22 +33,32 @@ class CompletionEventMerger implements EntityMerger {
     required List<Map<String, dynamic>> rows,
   }) async {
     for (final row in rows) {
-      final decoded = _codec.decode(row);
-      if (decoded == null) continue; // Malformed row — skip.
+      // AUD-core-sync-15: isolate each row — mirrors LearnerProfileMerger.
+      try {
+        final decoded = _codec.decode(row);
+        if (decoded == null) continue; // Malformed row — skip.
 
-      final naturalKey = NaturalKey.forCompletion(
-        firestoreId: decoded.firestoreId,
-        profileId: profileId,
-        curriculumId: decoded.curriculumId,
-        sefariaRef: decoded.sefariaRef,
-        completedAt: decoded.eventTimestamp.toIso8601String(),
-      );
-      await _store.insertIfAbsent(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey.value,
-        fields: row,
-      );
+        final naturalKey = NaturalKey.forCompletion(
+          firestoreId: decoded.firestoreId,
+          profileId: profileId,
+          curriculumId: decoded.curriculumId,
+          sefariaRef: decoded.sefariaRef,
+          completedAt: decoded.eventTimestamp.toIso8601String(),
+        );
+        await _store.insertIfAbsent(
+          kind: kind,
+          profileId: profileId,
+          naturalKey: naturalKey.value,
+          fields: row,
+        );
+      } on Exception catch (e, stackTrace) {
+        _logger?.warning(
+          event: 'sync_completion_merge_row_failed',
+          fields: {'profile_id': profileId},
+          exception: e,
+          stackTrace: stackTrace,
+        );
+      }
     }
   }
 }

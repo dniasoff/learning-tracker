@@ -59,46 +59,77 @@ final mergeRouterProvider = Provider<MergeRouter>((ref) {
     rewardSettingsMergeDelegateProvider,
   );
 
+  // AUD-core-sync-15: every merger now isolates a per-row failure (log +
+  // continue) instead of letting it abort the whole page; wire the shared
+  // AppLogger through so those failures are observable in production.
+  final logger = ref.watch(appLoggerProvider);
+
   return MergeRouter(
     mergers: <String, EntityMerger>{
-      EntityKind.completion: CompletionEventMerger(store: store),
-      EntityKind.streak: StreakEventMerger(database),
+      EntityKind.completion: CompletionEventMerger(
+        store: store,
+        logger: logger,
+      ),
+      EntityKind.streak: StreakEventMerger(database, logger: logger),
       EntityKind.learnerProfile: LearnerProfileMerger(
         store: store,
-        logger: ref.watch(appLoggerProvider),
+        logger: logger,
       ),
-      EntityKind.trackConfig: TrackConfigMerger(store: store),
-      EntityKind.bookmark: BookmarkMerger(store: store),
-      EntityKind.settings: SettingsMerger(store: store),
-      EntityKind.stageDefinition: StageDefinitionMerger(store: store),
+      EntityKind.trackConfig: TrackConfigMerger(store: store, logger: logger),
+      EntityKind.bookmark: BookmarkMerger(store: store, logger: logger),
+      EntityKind.settings: SettingsMerger(store: store, logger: logger),
+      EntityKind.stageDefinition: StageDefinitionMerger(
+        store: store,
+        logger: logger,
+      ),
       // W7.5: ProfileProgramMerger also gets analytics for its skip site.
       EntityKind.profileProgram: ProfileProgramMerger(
         store: store,
         analytics: analytics,
+        logger: logger,
       ),
-      EntityKind.learningOrder: LearningOrderMerger(store: store), // W2.26
+      EntityKind.learningOrder: LearningOrderMerger(
+        store: store,
+        logger: logger,
+      ), // W2.26
       // W2.27 — closes M1
-      EntityKind.goal: GoalMerger(database, store: store),
-      EntityKind.learningLedger: LearningLedgerMerger(database),
-      EntityKind.notificationSettings: NotificationSettingsMerger(store: store),
+      EntityKind.goal: GoalMerger(database, store: store, logger: logger),
+      EntityKind.learningLedger: LearningLedgerMerger(database, logger: logger),
+      EntityKind.notificationSettings: NotificationSettingsMerger(
+        store: store,
+        logger: logger,
+      ),
       EntityKind.gamificationSettings: GamificationSettingsMerger(
         db: database,
         store: store,
         // Phase 3: reward-milestones delegate now wired from
         // features/sync/data/reward_settings_merge_delegate.dart.
         onRewardSettings: rewardSettingsMergeDelegate,
+        logger: logger,
       ),
-      EntityKind.uiPreferences: UiPreferencesMerger(store: store),
+      EntityKind.uiPreferences: UiPreferencesMerger(
+        store: store,
+        logger: logger,
+      ),
       EntityKind.tutorGrant: const TutorGrantMerger(), // W3.17 / W3.38
-      // Phase 1 — study-day config enrolment in the sync pipeline. Bypasses
-      // DriftMergeStore because StudyDayConfigs has a composite PK with a
-      // foreign-key to curriculum_tracks (no compatible store helpers yet).
-      EntityKind.studyDayConfig: StudyDayConfigMerger(database),
+      // Phase 1 — study-day config enrolment in the sync pipeline.
+      // AUD-core-sync-03: LWW ordering now goes through DriftMergeStore
+      // (±5 s clock-skew window + synced_at tie-break) like every other
+      // natural-key merger; the FK-existence guard against curriculum_tracks
+      // stays inline since no store helper covers that composite-PK check.
+      EntityKind.studyDayConfig: StudyDayConfigMerger(
+        database,
+        store: store,
+        logger: logger,
+      ),
       // WS9 Wave-B (C#2) — points spend economy. Both bypass DriftMergeStore
       // and talk to PointsBalanceDao directly (append-only ledger + LWW
       // redemption state-machine + local balance re-derivation).
-      EntityKind.pointsLedger: PointsLedgerMerger(database),
-      EntityKind.rewardRedemption: RewardRedemptionMerger(database),
+      EntityKind.pointsLedger: PointsLedgerMerger(database, logger: logger),
+      EntityKind.rewardRedemption: RewardRedemptionMerger(
+        database,
+        logger: logger,
+      ),
     },
   );
 });

@@ -713,6 +713,143 @@ void main() {
     );
   });
 
+  // ── runInTransaction (AUD-core-sync-08) ──────────────────────────────────
+  //
+  // Every natural-key LWW merger applies the remote row and persists the
+  // SyncKv shadow timestamp as two independent writes. If the process dies
+  // between the two, the entity is left holding the remote's updatedAt while
+  // SyncKv still holds the pre-merge value — a stale shadow that lets a
+  // later pull silently clobber a genuinely newer local edit. These tests
+  // target track_config, one of the 5 sites with no redundant per-DAO LWW
+  // guard to partially mask the outcome (per the audit's correction note).
+
+  group('DriftMergeStore.runInTransaction — atomicity (AUD-core-sync-08)', () {
+    late UserDatabase db;
+    late DriftMergeStore store;
+    late int profileId;
+
+    setUp(() async {
+      final built = await _buildDb();
+      db = built.db;
+      profileId = built.profileId;
+      store = DriftMergeStore(db);
+    });
+    tearDown(() => db.close());
+
+    test(
+      'rolls back the entity write when the second write is forced to fail',
+      () async {
+        // Precondition: no track_config row exists yet for 'mishnayos'.
+        Object? caught;
+        try {
+          await store.runInTransaction(() async {
+            await store.upsert(
+              kind: EntityKind.trackConfig,
+              profileId: profileId,
+              fields: {
+                'curriculum_id': 'mishnayos',
+                'state': 'active',
+                'activated_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+              },
+            );
+            // Simulate a crash/failure between upsert() and persistUpdatedAt().
+            throw Exception('simulated crash before persistUpdatedAt commits');
+          });
+        } catch (e) {
+          caught = e;
+        }
+        expect(caught, isNotNull, reason: 'the forced failure must propagate');
+
+        // Because both writes ran inside ONE transaction, the upsert() above
+        // must have been rolled back too — never left half-applied.
+        final rows = await (db.select(
+          db.curriculumTracks,
+        )..where((t) => t.curriculumId.equals('mishnayos'))).get();
+        expect(
+          rows,
+          isEmpty,
+          reason:
+              'transaction must roll back the entity write when the second '
+              'write fails — leaving nothing half-applied',
+        );
+      },
+    );
+
+    test(
+      'a fault-injected crash (upsert alone, no persistUpdatedAt) leaves the '
+      'entity ahead of its SyncKv shadow — the exact staleness this fix '
+      'prevents when applied through runInTransaction',
+      () async {
+        await _seedTrack(db, profileId: profileId, curriculumId: 'mishnayos');
+        const naturalKey = 'mishnayos';
+        final t0 = DateTime.utc(2026, 5, 1, 9);
+        final t1 = DateTime.utc(2026, 5, 1, 10);
+
+        // Baseline: a prior, fully-applied sync (both writes committed).
+        await store.upsert(
+          kind: EntityKind.trackConfig,
+          profileId: profileId,
+          fields: {
+            'curriculum_id': 'mishnayos',
+            'state': 'active',
+            'activated_at': t0.toIso8601String(),
+            'state_changed_at': t0.toIso8601String(),
+          },
+        );
+        await store.persistUpdatedAt(
+          kind: EntityKind.trackConfig,
+          profileId: profileId,
+          naturalKey: naturalKey,
+          updatedAt: t0,
+        );
+
+        // FAULT INJECTION: a new remote update (t1) arrives; call upsert()
+        // ALONE — simulating the OLD, pre-fix two-step merger code being
+        // interrupted (OS kill / force-quit) between the entity write and
+        // persistUpdatedAt. This is only reachable by bypassing the
+        // atomic wrapper the fix requires every merger to use — no merger
+        // in this codebase calls upsert()/persistUpdatedAt() unwrapped
+        // anymore (AUD-core-sync-08's fix), so this reproduces what WOULD
+        // happen without it.
+        await store.upsert(
+          kind: EntityKind.trackConfig,
+          profileId: profileId,
+          fields: {
+            'curriculum_id': 'mishnayos',
+            'state': 'retired',
+            'activated_at': t0.toIso8601String(),
+            'state_changed_at': t1.toIso8601String(),
+          },
+        );
+        // (persistUpdatedAt deliberately NOT called — the "crash".)
+
+        // Reproduces exactly the staleness described in the finding: the
+        // entity now holds t1's data but the SyncKv shadow still says t0.
+        final afterCrash = await (db.select(
+          db.curriculumTracks,
+        )..where((t) => t.curriculumId.equals('mishnayos'))).getSingle();
+        expect(
+          afterCrash.stateChangedAt.toUtc(),
+          t1,
+          reason: 'entity holds the crashed write (as upsert() applied it)',
+        );
+        final shadowAfterCrash = await store.currentUpdatedAt(
+          kind: EntityKind.trackConfig,
+          profileId: profileId,
+          naturalKey: naturalKey,
+        );
+        expect(
+          shadowAfterCrash,
+          t0,
+          reason:
+              'SyncKv shadow still holds the pre-crash value — the exact '
+              'entity-ahead-of-shadow staleness AUD-core-sync-08 fixes when '
+              'callers go through runInTransaction instead of two bare calls',
+        );
+      },
+    );
+  });
+
   // ── upsert(bookmark) ─────────────────────────────────────────────────────
 
   group('DriftMergeStore.upsert — bookmark', () {
@@ -1023,6 +1160,84 @@ void main() {
       );
       expect(stages, isEmpty);
     });
+
+    // AUD-core-sync-07: mirrors the "skip: track not yet synced" coverage
+    // already present for bookmark — a settings document whose curriculum
+    // has no local curriculum_tracks row yet must be skipped, not thrown.
+    // replaceStagesForCurriculum inserts every stage inside ONE transaction,
+    // so a single FK violation would roll back and abort the whole page —
+    // not just this one document.
+    test(
+      'skip: track not yet synced (no FK throw) — no stages inserted',
+      () async {
+        // 'tehillim' has no seeded track — only 'mishnayos' does (setUp).
+        await store.upsert(
+          kind: EntityKind.settings,
+          profileId: profileId,
+          fields: {
+            'curriculum_id': 'tehillim',
+            'track_id': 999999, // no local curriculum_tracks row with this id
+            'stages': [
+              {
+                'stage_order': 0,
+                'stage_name': 'learning',
+                'schedule': '{"type":"delay","delay_days":0}',
+                'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+              },
+            ],
+          },
+        );
+
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          'tehillim',
+        );
+        expect(stages, isEmpty);
+      },
+    );
+
+    test(
+      'idempotent recovery: a settings doc skipped for a missing track '
+      'applies once the track is seeded and the identical doc is re-merged',
+      () async {
+        final fields = {
+          'curriculum_id': 'tehillim',
+          'track_id': 999999,
+          'stages': [
+            {
+              'stage_order': 0,
+              'stage_name': 'learning',
+              'schedule': '{"type":"delay","delay_days":0}',
+              'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+            },
+          ],
+        };
+
+        // First merge: no local track for 'tehillim' yet — skipped.
+        await store.upsert(
+          kind: EntityKind.settings,
+          profileId: profileId,
+          fields: fields,
+        );
+        expect(
+          await db.stageDao.getStageDefinitionsByCurriculum('tehillim'),
+          isEmpty,
+        );
+
+        // Seed the track, then re-merge the identical document.
+        await _seedTrack(db, profileId: profileId, curriculumId: 'tehillim');
+        await store.upsert(
+          kind: EntityKind.settings,
+          profileId: profileId,
+          fields: fields,
+        );
+
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          'tehillim',
+        );
+        expect(stages, hasLength(1));
+        expect(stages.single.stageName, equals('learning'));
+      },
+    );
   });
 
   // ── upsert(stage_definition) ─────────────────────────────────────────────
@@ -1177,6 +1392,69 @@ void main() {
 
       final stages = await db.stageDao.getAllStageDefinitions();
       expect(stages, isEmpty);
+    });
+
+    // AUD-core-sync-07: mirrors the "skip: track not yet synced" coverage
+    // already present for bookmark (above) — a stage_definition row whose
+    // curriculum has no local curriculum_tracks row yet must be skipped, not
+    // thrown (FK-constraint violation would otherwise abort the whole page).
+    test(
+      'skip: track not yet synced (no FK throw) — no stage inserted',
+      () async {
+        // 'tehillim' has no seeded track — only 'mishnayos' does (setUp).
+        await store.upsert(
+          kind: EntityKind.stageDefinition,
+          profileId: profileId,
+          fields: {
+            'curriculum_id': 'tehillim',
+            'track_id': 999999, // no local curriculum_tracks row with this id
+            'stage_order': 0,
+            'stage_name': 'learning',
+            'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+          },
+        );
+
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          'tehillim',
+        );
+        expect(stages, isEmpty);
+      },
+    );
+
+    test('idempotent recovery: a row skipped for a missing track applies once '
+        'the track is seeded and the identical row is re-merged', () async {
+      final fields = {
+        'curriculum_id': 'tehillim',
+        'track_id': 999999,
+        'stage_order': 0,
+        'stage_name': 'learning',
+        'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+      };
+
+      // First merge: no local track for 'tehillim' yet — skipped.
+      await store.upsert(
+        kind: EntityKind.stageDefinition,
+        profileId: profileId,
+        fields: fields,
+      );
+      expect(
+        await db.stageDao.getStageDefinitionsByCurriculum('tehillim'),
+        isEmpty,
+      );
+
+      // Seed the track, then re-merge the identical row.
+      await _seedTrack(db, profileId: profileId, curriculumId: 'tehillim');
+      await store.upsert(
+        kind: EntityKind.stageDefinition,
+        profileId: profileId,
+        fields: fields,
+      );
+
+      final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+        'tehillim',
+      );
+      expect(stages, hasLength(1));
+      expect(stages.single.stageName, equals('learning'));
     });
 
     test(

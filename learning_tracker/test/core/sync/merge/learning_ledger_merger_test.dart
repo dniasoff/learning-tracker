@@ -163,5 +163,73 @@ void main() {
       expect(entries, hasLength(1)); // INSERT OR IGNORE collapsed the second
       await db.close();
     });
+
+    // AUD-core-sync-21: the fallback ULID generator used for legacy
+    // (no-`ulid`) rows was a deterministic, zero-entropy string keyed only
+    // on the millisecond timestamp — two distinct legacy rows completed in
+    // the same millisecond produced the IDENTICAL synthetic id, and
+    // LearningLedgerDao dedups on `ulid` via INSERT OR IGNORE, so the
+    // second row was silently and PERMANENTLY dropped (unlike every other
+    // failure in this merge layer, which self-heals on the next pull).
+    test('AUD-core-sync-21: two distinct legacy (no-ulid) rows sharing the '
+        'same completed_at millisecond are both inserted, not deduplicated '
+        'into one', () async {
+      final db = createTestDatabase();
+      await seedProfile(db);
+      final profiles = await db.select(db.learnerProfiles).get();
+      final profileId = profiles.first.id;
+
+      final merger = LearningLedgerMerger(db);
+      // Both rows share the EXACT SAME completed_at millisecond and carry
+      // no `ulid` — the fallback-generation path this finding targets.
+      final completedAt = DateTime.utc(2026, 3, 15, 8, 0, 0, 123);
+
+      await merger.merge(
+        profileId: profileId,
+        rows: [
+          {
+            // No 'ulid' key at all — forces the fallback generator.
+            'profile_id': profileId,
+            'curriculum_id': 'bavli',
+            'unit_identifier': 'Shabbat',
+            'track_type': 'personal',
+            'entry_scope': 'masechta',
+            'completed_at': completedAt.toIso8601String(),
+            'completion_number': 1,
+            'marked_by': profileId,
+          },
+          {
+            'profile_id': profileId,
+            'curriculum_id': 'bavli',
+            'unit_identifier': 'Eruvin', // distinct logical entry
+            'track_type': 'personal',
+            'entry_scope': 'masechta',
+            'completed_at': completedAt.toIso8601String(),
+            'completion_number': 1,
+            'marked_by': profileId,
+          },
+        ],
+      );
+
+      final entries = await db.learningLedgerDao.getEntriesByProfile(profileId);
+      expect(
+        entries,
+        hasLength(2),
+        reason:
+            'two distinct legacy rows sharing a completed_at millisecond '
+            'must not collide into one row via the fallback ULID',
+      );
+      expect(
+        entries.map((e) => e.unitIdentifier),
+        containsAll(['Shabbat', 'Eruvin']),
+      );
+      expect(
+        entries.map((e) => e.ulid).toSet(),
+        hasLength(2),
+        reason: 'the two fallback-generated ULIDs must be distinct',
+      );
+
+      await db.close();
+    });
   });
 }

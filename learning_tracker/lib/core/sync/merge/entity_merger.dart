@@ -158,4 +158,19 @@ abstract class MergeStore {
     required String naturalKey,
     required Map<String, dynamic> fields,
   });
+
+  /// Runs [body] inside a single database transaction.
+  ///
+  /// AUD-core-sync-08: every natural-key LWW merger applies the remote row
+  /// (via [upsert], or a direct DAO call for kinds [upsert] doesn't route)
+  /// and then separately persists the SyncKv shadow timestamp (via
+  /// [persistUpdatedAt]) as two independent writes. If the process dies
+  /// between the two, the entity row is left holding the remote's
+  /// `updatedAt` while the SyncKv shadow still holds the pre-merge value —
+  /// a stale shadow that lets a later, unrelated remote pull silently
+  /// clobber a genuinely newer local edit (DB-2: "crash mid-sequence
+  /// leaves the DB half-written" applied to the LWW bookkeeping itself).
+  /// Callers wrap the entity write and its [persistUpdatedAt] call in one
+  /// [runInTransaction] so both commit or neither does.
+  Future<T> runInTransaction<T>(Future<T> Function() body);
 }

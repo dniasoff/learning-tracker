@@ -9,13 +9,19 @@
 /// arbitrate symmetrically (local edits between pulls are no longer lost).
 library;
 
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 class BookmarkMerger implements EntityMerger {
-  BookmarkMerger({required MergeStore store}) : _store = store;
+  BookmarkMerger({required MergeStore store, AppLogger? logger})
+    : _store = store,
+      _logger = logger;
 
   final MergeStore _store;
+  // AUD-core-sync-15: optional logger so a per-row merge failure is
+  // observable instead of silently swallowed.
+  final AppLogger? _logger;
   static const _codec = BookmarkCodec();
 
   @override
@@ -27,36 +33,54 @@ class BookmarkMerger implements EntityMerger {
     required List<Map<String, dynamic>> rows,
   }) async {
     for (final row in rows) {
-      final decoded = _codec.decode(row);
-      if (decoded == null) continue; // Malformed row — skip.
+      // AUD-core-sync-15: isolate each row. A single malformed/throwing row
+      // must never abort the whole page — mirrors LearnerProfileMerger's
+      // existing guard.
+      try {
+        final decoded = _codec.decode(row);
+        if (decoded == null) continue; // Malformed row — skip.
 
-      final naturalKey = decoded.curriculumId;
-      final localUpdatedAt = await _store.currentUpdatedAt(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey,
-      );
-      final localSyncedAt = await _store.currentSyncedAt(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey,
-      );
-      if (!_store.remoteIsNewer(
-        localUpdatedAt: localUpdatedAt,
-        remoteUpdatedAt: decoded.updatedAt,
-        localSyncedAt: localSyncedAt,
-        remoteSyncedAt: decoded.syncedAt,
-      )) {
-        continue;
+        final naturalKey = decoded.curriculumId;
+        final localUpdatedAt = await _store.currentUpdatedAt(
+          kind: kind,
+          profileId: profileId,
+          naturalKey: naturalKey,
+        );
+        final localSyncedAt = await _store.currentSyncedAt(
+          kind: kind,
+          profileId: profileId,
+          naturalKey: naturalKey,
+        );
+        if (!_store.remoteIsNewer(
+          localUpdatedAt: localUpdatedAt,
+          remoteUpdatedAt: decoded.updatedAt,
+          localSyncedAt: localSyncedAt,
+          remoteSyncedAt: decoded.syncedAt,
+        )) {
+          continue;
+        }
+        // AUD-core-sync-08: apply + persist the LWW shadow atomically so a
+        // process death between the two can never leave a stale SyncKv
+        // timestamp that silently lets a later remote pull clobber a newer
+        // local edit (DB-2).
+        await _store.runInTransaction(() async {
+          await _store.upsert(kind: kind, profileId: profileId, fields: row);
+          await _store.persistUpdatedAt(
+            kind: kind,
+            profileId: profileId,
+            naturalKey: naturalKey,
+            updatedAt: decoded.updatedAt,
+            syncedAt: decoded.syncedAt,
+          );
+        });
+      } on Exception catch (e, stackTrace) {
+        _logger?.warning(
+          event: 'sync_bookmark_merge_row_failed',
+          fields: {'profile_id': profileId},
+          exception: e,
+          stackTrace: stackTrace,
+        );
       }
-      await _store.upsert(kind: kind, profileId: profileId, fields: row);
-      await _store.persistUpdatedAt(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey,
-        updatedAt: decoded.updatedAt,
-        syncedAt: decoded.syncedAt,
-      );
     }
   }
 }

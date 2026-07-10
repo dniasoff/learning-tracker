@@ -212,6 +212,13 @@ class DriftMergeStore implements MergeStore {
     // Other kinds use upsert — insertIfAbsent is only meaningful for event logs.
   }
 
+  // ── runInTransaction ────────────────────────────────────────────────────────
+
+  /// AUD-core-sync-08: see [MergeStore.runInTransaction].
+  @override
+  Future<T> runInTransaction<T>(Future<T> Function() body) =>
+      _db.transaction(body);
+
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   Future<void> _insertCompletionIfAbsent(
@@ -308,45 +315,41 @@ class DriftMergeStore implements MergeStore {
         _parseDateTime(fields['updated_at']) ?? DateTimeFactory.nowUtc();
     final createdAt = _parseDateTime(fields['created_at']) ?? updatedAt;
 
+    // Bug 1: the remote `account_id` is the cloud account row id and almost
+    // never matches the local autoincrement `accounts.id` (they are minted
+    // independently per device). Inserting the profile with the raw remote
+    // id violates the learner_profiles → accounts FK → SqliteException(787),
+    // which previously aborted the whole launch pull and bounced the user
+    // to the first-launch splash. Resolve the FK to a LOCAL account row that
+    // is guaranteed to exist before inserting.
+    //
+    // _resolveLocalAccountId can itself WRITE a placeholder accounts row
+    // (its resolution step 3) — that write must stay conditional on the
+    // insert branch, exactly as before AUD-core-sync-22, not fire on every
+    // update too. So the existing-row check that used to live inline here
+    // stays here (ProfileDao.upsertFromSync repeats an equivalent check
+    // internally to decide insert-vs-update; on the update branch it
+    // ignores [accountId] entirely, so passing the profile's own current
+    // value there is a correct, side-effect-free placeholder).
     final existing = await _db.profileDao.getProfileById(remoteId);
-    if (existing == null) {
-      // Bug 1: the remote `account_id` is the cloud account row id and almost
-      // never matches the local autoincrement `accounts.id` (they are minted
-      // independently per device). Inserting the profile with the raw remote
-      // id violates the learner_profiles → accounts FK → SqliteException(787),
-      // which previously aborted the whole launch pull and bounced the user
-      // to the first-launch splash. Resolve the FK to a LOCAL account row that
-      // is guaranteed to exist before inserting.
-      final accountId = await _resolveLocalAccountId(
-        remoteAccountId: remoteAccountId,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
-      await _db
-          .into(_db.learnerProfiles)
-          .insertOnConflictUpdate(
-            LearnerProfilesCompanion.insert(
-              id: Value(remoteId),
-              accountId: accountId,
-              displayName: displayName,
-              mode: mode,
-              avatarIndex: Value(avatarIndex),
-              createdAt: createdAt,
-              updatedAt: updatedAt,
-            ),
-          );
-    } else {
-      await (_db.update(
-        _db.learnerProfiles,
-      )..where((t) => t.id.equals(remoteId))).write(
-        LearnerProfilesCompanion(
-          displayName: Value(displayName),
-          mode: Value(mode),
-          avatarIndex: Value(avatarIndex),
-          updatedAt: Value(updatedAt),
-        ),
-      );
-    }
+    final accountId = existing == null
+        ? await _resolveLocalAccountId(
+            remoteAccountId: remoteAccountId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          )
+        : existing.accountId;
+    // AUD-core-sync-22 (DB-1): the actual SQLite write now lives in
+    // ProfileDao, not here.
+    await _db.profileDao.upsertFromSync(
+      id: remoteId,
+      accountId: accountId,
+      displayName: displayName,
+      mode: mode,
+      avatarIndex: avatarIndex,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
   }
 
   /// Resolve a LOCAL `accounts.id` that is guaranteed to exist, so the
@@ -401,29 +404,9 @@ class DriftMergeStore implements MergeStore {
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
-    return _db.into(_db.accounts).insert(seed);
-  }
-
-  /// Resolve the LOCAL `curriculum_tracks.id` for `(profileId, curriculumId)`,
-  /// falling back to [fallbackTrackId] (the remote id) when no local track has
-  /// been merged yet (Bug 3).
-  ///
-  /// Child rows (stage_definitions / goals / study_day_configs) carry the
-  /// REMOTE track id. For own-data sync that id IS the local id, so the lookup
-  /// returns the same row and nothing changes. For a tutored mirror the track
-  /// was re-inserted with a fresh local autoincrement id, so the remote id is
-  /// stale; resolving by (profile, curriculum) rebinds the child row to the
-  /// mirror's local track and lets the scheduler projection compute.
-  Future<int> _resolveLocalTrackId({
-    required int profileId,
-    required String curriculumId,
-    required int fallbackTrackId,
-  }) async {
-    final local = await _db.trackDao.getTrackByProfileAndCurriculum(
-      profileId,
-      curriculumId,
-    );
-    return local?.id ?? fallbackTrackId;
+    // AUD-core-sync-22 (DB-1): routed through UserProfileDao instead of a
+    // raw accounts-table insert.
+    return _db.userProfileDao.insertUserProfile(seed);
   }
 
   Future<void> _upsertTrack(int profileId, Map<String, dynamic> fields) async {
@@ -458,39 +441,16 @@ class DriftMergeStore implements MergeStore {
         activatedAt;
     final paceResetDate = _parseDateTime(fields['pace_reset_date']);
 
-    final existing =
-        await (_db.select(_db.curriculumTracks)..where(
-              (t) =>
-                  t.profileId.equals(profileId) &
-                  t.curriculumId.equals(curriculumId),
-            ))
-            .getSingleOrNull();
-
-    if (existing == null) {
-      await _db
-          .into(_db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profileId,
-              curriculumId: curriculumId,
-              state: Value(state),
-              stateChangedAt: stateChangedAt,
-              activatedAt: activatedAt,
-              paceResetDate: Value(paceResetDate),
-            ),
-          );
-    } else {
-      await (_db.update(
-        _db.curriculumTracks,
-      )..where((t) => t.id.equals(existing.id))).write(
-        CurriculumTracksCompanion(
-          state: Value(state),
-          stateChangedAt: Value(stateChangedAt),
-          activatedAt: Value(activatedAt),
-          paceResetDate: Value(paceResetDate),
-        ),
-      );
-    }
+    // AUD-core-sync-22 (DB-1): the actual SQLite write (insert-vs-update
+    // decided internally) now lives in TrackDao, not here.
+    await _db.trackDao.upsertFromSyncRaw(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      state: state,
+      activatedAt: activatedAt,
+      stateChangedAt: stateChangedAt,
+      paceResetDate: paceResetDate,
+    );
   }
 
   Future<void> _upsertBookmark(
@@ -570,6 +530,22 @@ class DriftMergeStore implements MergeStore {
       curriculumId,
     );
 
+    // AUD-core-sync-07: stage_definitions.trackId is a FK into
+    // curriculum_tracks. If this settings snapshot merges before its track's
+    // own snapshot (independent per-collection listeners, or a first-launch
+    // pull racing ahead), replaceStagesForCurriculum's insert would throw a
+    // FK-constraint violation (SqliteException 787) inside its transaction()
+    // — rolling back and aborting the ENTIRE settings channel merge for this
+    // page, not just this one document. Skip instead; the next pull
+    // re-merges idempotently once the track exists (mirrors the guard
+    // already applied to bookmark/gamification_settings/study_day_config).
+    final resolvedTrackId = localTrack?.id ?? defaultTrackId;
+    if (localTrack == null &&
+        await _db.trackDao.getById(resolvedTrackId) == null) {
+      _fireSkipped(kind: EntityKind.settings, reason: 'track_not_yet_synced');
+      return;
+    }
+
     final companions = stagesList.cast<Map<String, dynamic>>().map((s) {
       final trackId =
           localTrack?.id ?? (s['track_id'] as int? ?? defaultTrackId);
@@ -624,11 +600,25 @@ class DriftMergeStore implements MergeStore {
     // to the remote id leaves getStagesByTrack(localTrackId) empty and the
     // scheduler projection computes nothing. Resolving by (profile, curriculum)
     // realigns the FK and is a no-op for own-data sync.
-    final trackId = await _resolveLocalTrackId(
-      profileId: profileId,
-      curriculumId: curriculumId,
-      fallbackTrackId: remoteTrackId,
+    final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
+      profileId,
+      curriculumId,
     );
+    final trackId = localTrack?.id ?? remoteTrackId;
+
+    // AUD-core-sync-07: guard against this row's track not having synced
+    // locally yet — inserting would violate the stage_definitions →
+    // curriculum_tracks FK (SqliteException 787) and abort merging the
+    // whole page. Skip; the next pull re-merges idempotently once the
+    // track exists (mirrors the guard already applied to
+    // bookmark/gamification_settings/study_day_config).
+    if (localTrack == null && await _db.trackDao.getById(trackId) == null) {
+      _fireSkipped(
+        kind: EntityKind.stageDefinition,
+        reason: 'track_not_yet_synced',
+      );
+      return;
+    }
 
     final isDefault = fields['is_default'] as bool? ?? false;
     // W3.27: prefer pre-encoded JSON schedule; fall back to quartet fields.
@@ -660,15 +650,14 @@ class DriftMergeStore implements MergeStore {
         ),
       );
     } else {
-      await (_db.update(
-        _db.stageDefinitions,
-      )..where((t) => t.id.equals(existing.id))).write(
-        StageDefinitionsCompanion(
-          stageName: Value(stageName),
-          isDefault: Value(isDefault),
-          schedule: Value(schedule),
-          updatedAt: Value(updatedAt),
-        ),
+      // AUD-core-sync-22 (DB-1): routed through StageDao instead of a raw
+      // stage_definitions-table update.
+      await _db.stageDao.updateStageDefinitionFields(
+        id: existing.id,
+        stageName: stageName,
+        isDefault: isDefault,
+        schedule: schedule,
+        updatedAt: updatedAt,
       );
     }
   }
@@ -695,10 +684,16 @@ class DriftMergeStore implements MergeStore {
       case 'days_of_week':
         List<int> days;
         if (daysOfWeek is String) {
+          // AUD-core-sync-25 (EH-4): typed `on FormatException` — the only
+          // expected failure here is malformed JSON text from jsonDecode. A
+          // bare catch also trapped the Error thrown by `as List` on a
+          // wrong-shaped-but-valid-JSON payload (e.g. a JSON object instead
+          // of an array), silently emptying the schedule instead of
+          // crashing loudly on what is actually a real shape-assumption bug.
           try {
             final decoded = jsonDecode(daysOfWeek);
             days = (decoded as List).cast<int>();
-          } catch (_) {
+          } on FormatException {
             days = const [];
           }
         } else if (daysOfWeek is List) {

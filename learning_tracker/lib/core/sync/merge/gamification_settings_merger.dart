@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -39,13 +40,18 @@ class GamificationSettingsMerger implements EntityMerger {
     required UserDatabase db,
     required MergeStore store,
     RewardSettingsMergeDelegate? onRewardSettings,
+    AppLogger? logger,
   }) : _db = db,
        _store = store,
-       _onRewardSettings = onRewardSettings;
+       _onRewardSettings = onRewardSettings,
+       _logger = logger;
 
   final UserDatabase _db;
   final MergeStore _store;
   final RewardSettingsMergeDelegate? _onRewardSettings;
+  // AUD-core-sync-15: optional logger so a per-row merge failure is
+  // observable instead of silently swallowed.
+  final AppLogger? _logger;
 
   static String _timestampKey(int profileId) =>
       'gamification_settings_updated_at_ms_p$profileId';
@@ -101,41 +107,53 @@ class GamificationSettingsMerger implements EntityMerger {
     final remoteRows = remote['points_config'];
     if (remoteRows is List) {
       for (final raw in remoteRows) {
-        if (raw is! Map) continue;
-        final map = raw.map((k, v) => MapEntry(k.toString(), v));
-        final curriculumId = map['curriculum_id'] as String?;
-        final stageOrder = (map['stage_order'] as num?)?.toInt();
-        final points = (map['points'] as num?)?.toInt();
-        final remoteTrackId = (map['track_id'] as num?)?.toInt();
-        if (curriculumId == null ||
-            stageOrder == null ||
-            points == null ||
-            remoteTrackId == null) {
-          continue;
+        // AUD-core-sync-15: isolate each points_config sub-row — a single
+        // malformed/throwing entry must not drop the rest of the document's
+        // point configuration.
+        try {
+          if (raw is! Map) continue;
+          final map = raw.map((k, v) => MapEntry(k.toString(), v));
+          final curriculumId = map['curriculum_id'] as String?;
+          final stageOrder = (map['stage_order'] as num?)?.toInt();
+          final points = (map['points'] as num?)?.toInt();
+          final remoteTrackId = (map['track_id'] as num?)?.toInt();
+          if (curriculumId == null ||
+              stageOrder == null ||
+              points == null ||
+              remoteTrackId == null) {
+            continue;
+          }
+
+          // Bug 3: point_configs.trackId FKs into curriculum_tracks. The stored
+          // track_id is the REMOTE id; under a tutored mirror the track was
+          // re-inserted with a different local autoincrement id, so inserting the
+          // remote id throws a FK violation (this is the tutored_pull_error /
+          // tutored_listener_merge_error for gamification_settings). Resolve the
+          // LOCAL track by (profile, curriculum); skip the row when no local
+          // track exists yet (it re-merges on the next pull). No-op for own-data.
+          final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
+            profileId,
+            curriculumId,
+          );
+          if (localTrack == null) continue;
+
+          await _db.pointConfigDao.upsertConfig(
+            PointConfigsCompanion.insert(
+              profileId: profileId,
+              curriculumId: curriculumId,
+              trackId: localTrack.id,
+              stageOrder: stageOrder,
+              points: points,
+            ),
+          );
+        } on Exception catch (e, stackTrace) {
+          _logger?.warning(
+            event: 'sync_gamification_settings_merge_row_failed',
+            fields: {'profile_id': profileId},
+            exception: e,
+            stackTrace: stackTrace,
+          );
         }
-
-        // Bug 3: point_configs.trackId FKs into curriculum_tracks. The stored
-        // track_id is the REMOTE id; under a tutored mirror the track was
-        // re-inserted with a different local autoincrement id, so inserting the
-        // remote id throws a FK violation (this is the tutored_pull_error /
-        // tutored_listener_merge_error for gamification_settings). Resolve the
-        // LOCAL track by (profile, curriculum); skip the row when no local
-        // track exists yet (it re-merges on the next pull). No-op for own-data.
-        final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
-          profileId,
-          curriculumId,
-        );
-        if (localTrack == null) continue;
-
-        await _db.pointConfigDao.upsertConfig(
-          PointConfigsCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            trackId: localTrack.id,
-            stageOrder: stageOrder,
-            points: points,
-          ),
-        );
       }
     }
 

@@ -61,17 +61,27 @@ class LearnerProfileMerger implements EntityMerger {
         )) {
           continue;
         }
-        await _store.upsert(kind: kind, profileId: profileId, fields: row);
-        if (remoteUpdatedAt != null) {
-          await _store.persistUpdatedAt(
-            kind: kind,
-            profileId: profileId,
-            naturalKey: naturalKey,
-            updatedAt: remoteUpdatedAt,
-            syncedAt: decoded?.syncedAt,
-          );
-        }
-      } catch (e, stackTrace) {
+        // AUD-core-sync-08: apply + persist the LWW shadow atomically — see
+        // BookmarkMerger for the crash-mid-sequence rationale. Stays inside
+        // this row's try/catch so a rollback (or a throw from either write)
+        // is still caught and logged per-row (Bug 1), not just per-page.
+        await _store.runInTransaction(() async {
+          await _store.upsert(kind: kind, profileId: profileId, fields: row);
+          if (remoteUpdatedAt != null) {
+            await _store.persistUpdatedAt(
+              kind: kind,
+              profileId: profileId,
+              naturalKey: naturalKey,
+              updatedAt: remoteUpdatedAt,
+              syncedAt: decoded?.syncedAt,
+            );
+          }
+        });
+      } on Exception catch (e, stackTrace) {
+        // AUD-core-sync-25 (EH-4): typed `on Exception` — a bare catch also
+        // traps Error subtypes (TypeError, RangeError, AssertionError),
+        // masking real programming bugs behind a quiet warning log instead
+        // of a loud dev/QA crash. Genuine Errors now propagate.
         _logger?.warning(
           event: 'sync_learner_profile_merge_row_failed',
           fields: {'profile_id': profileId},

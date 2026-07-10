@@ -33,6 +33,31 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
   Future<bool> updateStageDefinition(StageDefinitionsCompanion entry) =>
       update(stageDefinitions).replace(entry);
 
+  /// Partial update of the sync-mutable fields on an existing stage
+  /// definition, keyed by its local [id]. Leaves profileId/curriculumId/
+  /// trackId/stageOrder untouched.
+  ///
+  /// AUD-core-sync-22 (DB-1): extracted from DriftMergeStore, which
+  /// previously wrote `_db.update(_db.stageDefinitions)` directly for a
+  /// remote sync row's update branch. [updateStageDefinition] above can't
+  /// be reused as-is — it uses `.replace()`, which requires every column
+  /// (would silently null out the FK/key columns this update must leave
+  /// alone); this mirrors the exact partial-write shape the sync path uses.
+  Future<void> updateStageDefinitionFields({
+    required int id,
+    required String stageName,
+    required bool isDefault,
+    required String schedule,
+    required DateTime updatedAt,
+  }) => (update(stageDefinitions)..where((t) => t.id.equals(id))).write(
+    StageDefinitionsCompanion(
+      stageName: Value(stageName),
+      isDefault: Value(isDefault),
+      schedule: Value(schedule),
+      updatedAt: Value(updatedAt),
+    ),
+  );
+
   Future<int> deleteStageDefinition(int id) =>
       (delete(stageDefinitions)..where((t) => t.id.equals(id))).go();
 
