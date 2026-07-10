@@ -1036,13 +1036,19 @@
   {
    "id": "AUD-core-sync-11",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Route LearningLedgerCodec.encode's completedAt through FirestoreCodec.encodeDateTime instead of raw toIso8601String()",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "6aa266098c4861be3f0a8a5706550dac0aa67eb2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-11 AC1 OK: ledger_roundtrip_test:342-404 encodes isUtc:false row, asserts wire ends 'Z' + parse(wire).toUtc()==instant",
+    "AUD-core-sync-11 AC2 OK: decode(encode).toUtc()==instant; file passes under TZ=America/New_York (5/5)",
+    "AUD-core-sync-11 fix OK: ledger_codec.dart:67 now FirestoreCodec.encodeDateTime; red-first in commit 6a505cbc"
+   ],
+   "notes": "Confirmed: line 67 used raw toIso8601String() instead of FirestoreCodec.encodeDateTime(), only such sibling in the batch. Red-first test captured failing output (missing 'Z'), fixed line, all 5 tests pass. Commit 6a505cbc. Merge-lane w2r0c1: rebase onto audit-fix/2026-07-03 was file-disjoint (gatePolicy=disjoint-skip; payload touched only lib/core/sync/codec/{learning_ledger_codec,settings_codec}.dart + 5 test files, audit-fix/2026-07-03 delta since merge-base touched only tool/acct_switch_cron.py) so payload.testsToRun was not re-run in the merge lane; the wave-closing full make ci is the integration gate. Post-rebase gate: make audit checks 1-24 and 26 clean (checks 14/15 warn-only, pre-existing); flutter analyze clean (0 issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge solely due to concurrent sibling worktrees under .claude/worktrees/wf_ef86b848-bba-* (other live engine lanes, each a full checkout with its own docs/coding-standards.md, actively locked/in-progress at merge time) being swept up by the check's `find ..` from the main checkout -- filesystem-only, independent of git HEAD/content, matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15 in this same ledger. Merged --no-ff onto audit-fix/2026-07-03 (mergeSha 6aa266098c4861be3f0a8a5706550dac0aa67eb2)."
   },
   {
    "id": "AUD-content_browsing-02",
@@ -3261,13 +3267,18 @@
   {
    "id": "AUD-core-sync-16",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Add test coverage for firestore_codec.dart, settings_codec.dart and tutor_grant_codec.dart \u2014 the only codecs with zero tests",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "6aa266098c4861be3f0a8a5706550dac0aa67eb2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-16 AC1 OK: firestore_codec_test covers 4 parseDateTime shapes + parseInt/parseBool edges; matches impl:34-85",
+    "AUD-core-sync-16 AC2 OK: settings_roundtrip (decode->merger->DB) + tutor_grant_roundtrip (encode/decode/merge) exist, pass"
+   ],
+   "notes": "Confirmed zero tests for all 3 files. Added firestore_codec_test.dart (30 tests), tutor_grant_roundtrip_test.dart (adapted to documented no-op merger), settings_roundtrip_test.dart (adapted to decode()-driven path since encode() proved dead, formalized by -38). 40/40 pass. Commit 5a323c38. Merge-lane w2r0c1: rebase onto audit-fix/2026-07-03 was file-disjoint (gatePolicy=disjoint-skip; payload touched only lib/core/sync/codec/{learning_ledger_codec,settings_codec}.dart + 5 test files, audit-fix/2026-07-03 delta since merge-base touched only tool/acct_switch_cron.py) so payload.testsToRun was not re-run in the merge lane; the wave-closing full make ci is the integration gate. Post-rebase gate: make audit checks 1-24 and 26 clean (checks 14/15 warn-only, pre-existing); flutter analyze clean (0 issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge solely due to concurrent sibling worktrees under .claude/worktrees/wf_ef86b848-bba-* (other live engine lanes, each a full checkout with its own docs/coding-standards.md, actively locked/in-progress at merge time) being swept up by the check's `find ..` from the main checkout -- filesystem-only, independent of git HEAD/content, matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15 in this same ledger. Merged --no-ff onto audit-fix/2026-07-03 (mergeSha 6aa266098c4861be3f0a8a5706550dac0aa67eb2)."
   },
   {
    "id": "AUD-core-sync-14",
@@ -8307,13 +8318,18 @@
   {
    "id": "AUD-core-sync-38",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove or wire up SettingsCodec.encode \u2014 zero callers in lib/ or test/",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "6aa266098c4861be3f0a8a5706550dac0aa67eb2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-38 AC OK: settings_codec.dart:88-95 throwing stub + decode-only doc comment; grep lib/ zero encode call sites",
+    "AUD-core-sync-38 checker OK: settings_codec_test asserts throws + greps lib/; red-first in commit 34e4d3a0"
+   ],
+   "notes": "Confirmed zero encode() call sites in lib/test/ outside its own definition. Interface forbids literal removal; converted to throwing stub + doc comment per AC's OR-branch. Red-first checker test captured failing output pre-fix, passes post-fix. Commit 34e4d3a0. Merge-lane w2r0c1: rebase onto audit-fix/2026-07-03 was file-disjoint (gatePolicy=disjoint-skip; payload touched only lib/core/sync/codec/{learning_ledger_codec,settings_codec}.dart + 5 test files, audit-fix/2026-07-03 delta since merge-base touched only tool/acct_switch_cron.py) so payload.testsToRun was not re-run in the merge lane; the wave-closing full make ci is the integration gate. Post-rebase gate: make audit checks 1-24 and 26 clean (checks 14/15 warn-only, pre-existing); flutter analyze clean (0 issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge solely due to concurrent sibling worktrees under .claude/worktrees/wf_ef86b848-bba-* (other live engine lanes, each a full checkout with its own docs/coding-standards.md, actively locked/in-progress at merge time) being swept up by the check's `find ..` from the main checkout -- filesystem-only, independent of git HEAD/content, matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15 in this same ledger. Merged --no-ff onto audit-fix/2026-07-03 (mergeSha 6aa266098c4861be3f0a8a5706550dac0aa67eb2)."
   },
   {
    "id": "AUD-t-cross-72",
