@@ -3338,13 +3338,18 @@
     {
       "id": "AUD-account-16",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Route features/account/* imports of onboarding validators/screens through the onboarding barrel, not deep paths",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "37cc79508319b156b12de6e69c4e5269d6680273"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-account-16 AC1 OK: 0 deep imports into features/onboarding/* from both files; audit W1.13 lists signup only for out-of-scope settings import, sign_in not listed.",
+        "AUD-account-16 support OK: barrel exports resolve (3 validators + kOnboardingComplete at onboarding_resume_store.dart:15); analyze+custom_lint clean."
+      ],
+      "notes": "Barrel (onboarding.dart) was an 8-line stub; populated it with real exports (auth_validators.dart + kOnboardingComplete) and repointed signup_screen.dart + sign_in_screen.dart off deep paths. make audit check 15/15 no longer lists either file for features/onboarding/. Commit 0dbe906f."
     },
     {
       "id": "AUD-onboarding-08",
@@ -8145,13 +8150,18 @@
     {
       "id": "AUD-account-24",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Stop interpolating raw exception text into the sign-up failure l10n message",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "37cc79508319b156b12de6e69c4e5269d6680273"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-account-24 AC1 OK: catch now uses signUpErrGeneric+AppLogger.warning; no signUpFailed() call left; only e.toString() is _extractFirebaseCode regex (non-UI).",
+        "AUD-account-24 AC2 OK(deferred): conditional on separate custom_lint repair; custom_lint exits 0 now; guarded by red-first regression test."
+      ],
+      "notes": "Red-first regression test forced the generic catch(e) branch (mocked registry.findByEmail throw, offline path) - captured RED (raw e.toString() shown), then swapped signUpFailed(e.toString()) for the existing signUpErrGeneric l10n fallback + AppLogger warning - captured GREEN. Commit 0423d33f."
     },
     {
       "id": "AUD-account-21",
