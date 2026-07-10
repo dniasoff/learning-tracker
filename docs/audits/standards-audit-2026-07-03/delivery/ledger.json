@@ -1840,13 +1840,18 @@
     {
       "id": "AUD-account-15",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Remove the fixed height:32 on OfflineTopBanner's Container so large text-scale doesn't clip it",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "e722479462559b213e55c0a08dd433e130211418"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-account-15 AC1 OK: test l1:611-685 pumps banner at 2.5x (>=1.6x), asserts height>=label intrinsic; red-first reproduced (fails 32<40, fix passes)",
+        "AUD-account-15 AC2 OK: offline_top_banner.dart:31 now BoxConstraints(minHeight:32); no hard-coded height:32"
+      ],
+      "notes": "Evidence matched. Clip is SILENT (no RenderFlex exception; cross-axis squeeze never trips detector). Red-first test at 2.5x scale captured red (32.0 vs 40.0 required). Fixed via minHeight:32 constraint replacing height:32. Both ACs met; existing height-32 test unweakened."
     },
     {
       "id": "AUD-learning-06",
