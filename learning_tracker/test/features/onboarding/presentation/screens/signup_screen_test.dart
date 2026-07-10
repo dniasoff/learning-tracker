@@ -15,8 +15,7 @@ import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
-    as auth_state_mod;
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -85,9 +84,7 @@ void main() {
         authRepositoryProvider.overrideWithValue(mockAuthRepo),
         userDatabaseProvider.overrideWithValue(database),
         deviceRegistryProvider.overrideWithValue(testRegistry),
-        auth_state_mod.authStateProvider.overrideWithValue(
-          const AuthState.signedOut(),
-        ),
+        authStateProvider.overrideWithValue(const AuthState.signedOut()),
         connectivityStreamProvider.overrideWith((ref) => Stream.value(online)),
       ],
       child: MaterialApp(

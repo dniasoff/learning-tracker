@@ -21,8 +21,7 @@ import 'package:learning_tracker/features/account/domain/services/local_auth_ser
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/account/domain/services/upgrade_to_cloud_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
-    as auth_state;
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/email_verification_dialog.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
@@ -258,7 +257,7 @@ class SignInController extends Notifier<SignInState> {
       final profile = await service.signIn(email: email, password: password);
       final prefs = await SharedPreferences.getInstance();
       _ref
-          .read(auth_state.authStateProvider.notifier)
+          .read(authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
       // SI-LOCAL-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
       // on emulators/devices without Google Play Services. The local account was
@@ -365,7 +364,7 @@ class SignInController extends Notifier<SignInState> {
       await session.setActiveAccount(account.accountId);
       await prefs.setBool(kOnboardingComplete, true);
       _ref
-          .read(auth_state.authStateProvider.notifier)
+          .read(authStateProvider.notifier)
           .setCloudBornSession(profile: profile);
       _ref.read(selectedProfileIdProvider.notifier).clear();
       _resetSessionContextForFreshSignIn();
@@ -462,7 +461,7 @@ class SignInController extends Notifier<SignInState> {
         _ref.invalidate(userDatabaseProvider);
       }
       await _ref
-          .read(auth_state.authStateProvider.notifier)
+          .read(authStateProvider.notifier)
           .setCloudBornSessionFromFirebaseUser(user);
       await session.setActiveAccount(existingEntry.accountId);
     } else {
@@ -477,7 +476,7 @@ class SignInController extends Notifier<SignInState> {
       _ref.invalidate(userDatabaseProvider);
 
       await _ref
-          .read(auth_state.authStateProvider.notifier)
+          .read(authStateProvider.notifier)
           .setCloudBornSessionFromFirebaseUser(user);
 
       await session.registerAccount(
@@ -762,7 +761,7 @@ class SignInController extends Notifier<SignInState> {
         }
 
         _ref
-            .read(auth_state.authStateProvider.notifier)
+            .read(authStateProvider.notifier)
             .setLocalBornSession(profile: profile);
         // SI-LOCAL-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
         // on emulators/devices without Google Play Services. The local account

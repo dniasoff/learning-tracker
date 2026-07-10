@@ -14,7 +14,17 @@ AuthRepository authRepository(Ref ref) {
   );
 }
 
+/// Raw, reactive Firebase auth-state stream (`authRepository.onAuthStateChanged()`).
+///
+/// AUD-account-19: this used to be named `authState`/`authStateProvider` —
+/// identical to the generated provider name for [AuthStateNotifier]
+/// (`auth_state_provider.dart`), the app-wide active-profile notifier. The
+/// name collision forced every file that needed both providers to `hide` or
+/// `as`-alias one of them. Renamed so `authStateProvider` resolves to exactly
+/// one declaration (the notifier) across the codebase; this raw stream is a
+/// distinct, narrower primitive — the live Firebase session, not the app's
+/// active-profile/tier/session-status state.
 @Riverpod(keepAlive: true)
-Stream<AppUser?> authState(Ref ref) {
+Stream<AppUser?> firebaseAuthState(Ref ref) {
   return ref.watch(authRepositoryProvider).onAuthStateChanged();
 }

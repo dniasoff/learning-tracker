@@ -60,8 +60,7 @@ import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
-    hide authStateProvider;
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
     show AuthStateNotifier, authStateProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';

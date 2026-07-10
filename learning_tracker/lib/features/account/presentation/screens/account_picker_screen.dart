@@ -16,8 +16,7 @@ import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
-    hide authStateProvider;
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
@@ -294,8 +293,13 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     final l10n = AppLocalizations.of(context)!;
     final isCloud = account.accountTier.isCloud;
 
-    // Cloud session status
-    final fbUser = ref.read(authRepositoryProvider).currentUser;
+    // Cloud session status — watched (not read) so this badge stays live
+    // when the Firebase session changes elsewhere while this tile is
+    // mounted (e.g. a sibling tile's re-auth flow claiming the device's
+    // single Firebase auth slot). SM-3 / AUD-account-18: a ref.read
+    // snapshot here only re-evaluates when something else forces this
+    // widget to rebuild, so it can silently go stale.
+    final fbUser = ref.watch(firebaseAuthStateProvider).value;
     final hasValidSession =
         isCloud && fbUser != null && fbUser.uid == account.firebaseUid;
 

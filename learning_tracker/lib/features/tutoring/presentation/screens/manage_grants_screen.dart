@@ -16,8 +16,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
-    hide authStateProvider;
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';

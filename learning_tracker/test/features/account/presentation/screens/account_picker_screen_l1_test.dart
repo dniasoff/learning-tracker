@@ -235,6 +235,13 @@ Future<_Fixture> _buildFixture() async {
   final router = _MockStackRouter();
 
   when(() => auth.currentUser).thenReturn(null);
+  // AUD-account-18: _AccountTile now watches the reactive auth-state stream
+  // (instead of ref.read-ing auth.currentUser) to compute hasValidSession.
+  // Mirror whatever auth.currentUser is stubbed to at subscribe time so the
+  // reactive value matches the synchronous one the rest of this suite sets.
+  when(
+    () => auth.onAuthStateChanged(),
+  ).thenAnswer((_) => Stream.value(auth.currentUser));
   when(() => router.push(any<PageRouteInfo>())).thenAnswer((_) async => null);
   when(
     () => router.replaceAll(any<List<PageRouteInfo>>()),

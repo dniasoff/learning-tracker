@@ -21,12 +21,11 @@ export 'onboarding/presentation/screens/onboarding_intent_screen.dart';
 export 'onboarding/presentation/screens/signup_screen.dart';
 export 'presentation/providers/account_management_providers.dart';
 // Presentation providers
-// Note: auth_providers.dart generates authStateProvider (stream); auth_state_provider.dart
-// generates authStateProvider (notifier). Both .g.dart files clash on that name.
-// Export auth_providers.dart but hide the clashing generated symbol from auth_state_provider.dart
-// so that callers get the canonical AuthStateNotifier-based authStateProvider.
-export 'presentation/providers/auth_providers.dart'
-    hide AuthStateProvider, authStateProvider;
+// AUD-account-19: auth_providers.dart's raw Firebase-stream provider was
+// renamed to firebaseAuthStateProvider so it no longer collides with
+// auth_state_provider.dart's AuthStateNotifier-based authStateProvider —
+// both are exported plainly below.
+export 'presentation/providers/auth_providers.dart';
 export 'presentation/providers/auth_state_provider.dart';
 export 'presentation/providers/connectivity_providers.dart';
 export 'presentation/providers/magic_link_providers.dart';
