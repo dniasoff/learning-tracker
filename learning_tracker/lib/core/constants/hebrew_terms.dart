@@ -1,5 +1,23 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
+/// Canonical DB-stored sentinel for the "Learn" stage's Hebrew name
+/// (AUD-onboarding-14).
+///
+/// [DomainTermLabels.resolveStoredStageName] matches this exact literal via
+/// [HebrewTerms.stageNameMap] to resolve the correct localized stage name at
+/// render time — it is load-bearing, not decorative. Every write site that
+/// creates the "Learn" stage row must reference this constant rather than
+/// retyping the literal, so a typo can never silently desync one write path
+/// from the lookup.
+///
+/// Exposed as a bare top-level constant (equal to [HebrewTerms.stageLearn])
+/// rather than requiring callers to write `HebrewTerms.stageLearn` directly,
+/// because audit check 13 (docs/coding-standards.md, "Hebrew Terms and
+/// domainTermLabels") forbids any `HebrewTerms.` reference inside
+/// `lib/features/` — this constant is the sanctioned way for feature-layer
+/// stage-creation code to reach the same value.
+const kLimudStageName = HebrewTerms.stageLearn;
+
 /// Central Hebrew terminology constants for domain-specific terms.
 ///
 /// **In scope:** Stage names (chazara/review), domain term constants,

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
@@ -20,7 +21,7 @@ const _maxStages = 10;
 
 /// Default stage definitions (לימוד, חזרה א׳, חזרה ב׳).
 const _defaults = [
-  (stageOrder: 1, stageName: 'לימוד', delayDays: 0),
+  (stageOrder: 1, stageName: kLimudStageName, delayDays: 0),
   (stageOrder: 2, stageName: 'חזרה א׳', delayDays: 1),
   (stageOrder: 3, stageName: 'חזרה ב׳', delayDays: 7),
 ];

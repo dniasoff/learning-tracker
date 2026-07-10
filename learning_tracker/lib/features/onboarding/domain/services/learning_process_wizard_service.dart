@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/daos/profile_program_dao.dart';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
@@ -202,7 +203,7 @@ class LearningProcessWizardService {
         curriculumId: result.curriculumId.storageKey,
         trackId: trackId,
         stageOrder: 1,
-        stageName: 'לימוד',
+        stageName: kLimudStageName,
         isDefault: const Value(false),
         schedule: const Value('{"type":"delay","delay_days":0}'),
       ),
@@ -251,7 +252,7 @@ class LearningProcessWizardService {
         curriculumId: result.curriculumId.storageKey,
         trackId: trackId,
         stageOrder: 1,
-        stageName: 'לימוד',
+        stageName: kLimudStageName,
         isDefault: const Value(false),
         schedule: const Value('{"type":"delay","delay_days":0}'),
       ),

@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
@@ -12,7 +13,7 @@ class CurriculumDefaults {
   static const List<DefaultStageDefinition> defaultStages = [
     DefaultStageDefinition(
       stageOrder: 0,
-      stageName: 'לימוד',
+      stageName: kLimudStageName,
       schedule: DelaySchedule(0),
     ),
     DefaultStageDefinition(
