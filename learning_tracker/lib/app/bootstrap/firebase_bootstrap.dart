@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/firebase_options.dart';
 
 /// Initialises Firebase and Crashlytics, returning a [CrashlyticsService].
@@ -36,8 +37,13 @@ Future<CrashlyticsService> bootstrapFirebase() async {
                 : const AppleAppAttestProvider(),
           )
           .timeout(const Duration(seconds: 10));
-    } catch (_) {
+    } catch (e, stack) {
       // App Check unavailable — continue; sync may be rejected if enforced.
+      AppLogger.instance.warning(
+        event: 'app_check_activation_failed',
+        exception: e,
+        stackTrace: stack,
+      );
     }
     // Wire Crashlytics immediately after Firebase init, before any other
     // init that can throw (Story 24.4).
@@ -47,8 +53,13 @@ Future<CrashlyticsService> bootstrapFirebase() async {
   } on FirebaseException catch (_) {
     // Already initialized (e.g. hot restart) — use existing app.
     crashlytics = FirebaseCrashlyticsService(FirebaseCrashlytics.instance);
-  } catch (_) {
+  } catch (e, stack) {
     // Firebase init failed — app continues in local-first mode.
+    AppLogger.instance.warning(
+      event: 'firebase_init_failed',
+      exception: e,
+      stackTrace: stack,
+    );
   }
   return crashlytics;
 }

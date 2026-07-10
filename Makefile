@@ -172,12 +172,9 @@ audit:
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
-	echo "[9/12] empty catch blocks catch (_) {} (NFR23)"; \
-	HITS=$$(grep -rn 'catch\s*(_)\s*{}' "$$LIB/" \
-	  --include='*.dart' \
-	  | grep -v '\.g\.dart' \
-	  | grep -v '\.freezed\.dart' || true); \
-	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
+	echo "[9/12] empty/comment-only catch blocks (NFR23, AUD-app-06)"; \
+	HITS=$$(dart run tool/check_empty_catch_blocks.dart 2>&1) || FAIL=1; \
+	echo "$$HITS"; \
 	\
 	echo ""; \
 	echo "[10/12] EdgeInsets.only(left:|right:) — RTL violation (NFR16/UX-DR5)"; \

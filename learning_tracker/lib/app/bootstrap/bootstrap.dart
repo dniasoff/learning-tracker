@@ -33,9 +33,16 @@ typedef BootstrapResult = ({
 /// [UncontrolledProviderScope] and whose [crashlytics] is suitable for the
 /// zone error handler (W7.14).
 Future<BootstrapResult> bootstrap() async {
-  var crashlytics = await bootstrapFirebase();
+  // AUD-app-06: initialise the logger BEFORE Firebase so the AppLogger.init()
+  // call below doesn't discard Talker history that bootstrapFirebase()'s own
+  // (non-fatal) catch blocks may already have logged via AppLogger.instance
+  // — AppLogger.init() replaces the singleton Talker wholesale, so logging
+  // through the lazy pre-init instance and then re-initialising would wipe
+  // that very entry from the ring buffer before "Send Diagnostic Logs" (or
+  // any other consumer) ever sees it.
   final talker = AppLogger.init();
   final log = AppLogger(talker);
+  var crashlytics = await bootstrapFirebase();
   final analytics = bootstrapAnalytics(log);
   crashlytics = bootstrapCrashlyticsHandlers(
     crashlytics: crashlytics,
