@@ -4,6 +4,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -51,7 +52,10 @@ UserDatabase userDatabase(Ref ref) {
 @Riverpod(keepAlive: true)
 Future<String> contentDbPath(Ref ref) async {
   final docsDir = await getApplicationDocumentsDirectory();
-  final seedManager = SeedManager(dbDirectory: docsDir.path);
+  final seedManager = SeedManager(
+    dbDirectory: docsDir.path,
+    logger: AppLogger.instance,
+  );
   return seedManager.ensureContentDb();
 }
 
