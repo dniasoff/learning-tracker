@@ -163,6 +163,17 @@ class _FakeFirebaseException implements Exception {
   String toString() => 'FirebaseAuthException: [$code] some message';
 }
 
+/// Mirrors the ACTUAL `firebase_auth` `FirebaseException.toString()` shape:
+/// `[<plugin>/<code>] <message>`. See AUD-account-04 / AUD-account-10.
+class _RealShapeFirebaseException implements Exception {
+  _RealShapeFirebaseException(this.plugin, this.code);
+  final String plugin;
+  final String code;
+
+  @override
+  String toString() => '[$plugin/$code] some message.';
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -428,6 +439,45 @@ void main() {
         verify(() => auth.signInAndGetUser(_email, _password)).called(1);
       },
     );
+
+    // AUD-account-04 / AUD-account-10: real FirebaseException.toString()
+    // renders as "[firebase_auth/email-already-in-use] <message>" — the
+    // plugin segment always precedes the code. The fixture above
+    // (_FakeFirebaseException → "[$code] some message") uses the bare shape
+    // and so never exercised the parser against the format Firebase
+    // actually produces. This test uses the realistic shape.
+    //
+    // BUG LOG:
+    //   - RED (pre-fix): _extractFirebaseCode's `RegExp(r'\[([a-z-]+)\]')`
+    //     does not match "[firebase_auth/email-already-in-use]" (the
+    //     character class excludes both `_` and `/`), so `code` resolved to
+    //     null, the `code == 'email-already-in-use'` branch was skipped, and
+    //     the original exception was rethrown instead of retrying the
+    //     sign-in / raising EmailCollisionException.
+    test('real "[plugin/code]" exception shape: email-already-in-use still '
+        'triggers the retry-merge path', () async {
+      final profileId = await _seedLocalBorn(db);
+      final profile = (await dao.getUserProfileById(profileId))!;
+
+      final verifiedUser = _FakeAppUser(uid: _uid, emailVerified: true);
+
+      when(() => auth.createUserAccount(_email, _password)).thenThrow(
+        _RealShapeFirebaseException('firebase_auth', 'email-already-in-use'),
+      );
+      when(
+        () => auth.signInAndGetUser(_email, _password),
+      ).thenAnswer((_) async => verifiedUser);
+      when(
+        () => auth.reloadCurrentUser(),
+      ).thenAnswer((_) async => verifiedUser);
+
+      final svc = _buildService(dao: dao, auth: auth, hasher: hasher);
+      final result = await svc.upgrade(profile: profile, password: _password);
+
+      expect(result.tier, equals(UserTier.cloudBorn.dbValue));
+      expect(result.firebaseUid, equals(_uid));
+      verify(() => auth.signInAndGetUser(_email, _password)).called(1);
+    });
 
     test('sign-in throws wrong-password → EmailCollisionException', () async {
       final profileId = await _seedLocalBorn(db);

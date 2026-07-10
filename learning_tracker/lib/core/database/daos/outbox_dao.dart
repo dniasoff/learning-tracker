@@ -94,6 +94,18 @@ class OutboxDao extends DatabaseAccessor<UserDatabase> with _$OutboxDaoMixin {
     return row.read(countExpr) ?? 0;
   }
 
+  /// Total number of pending outbox rows across EVERY profile in this DB
+  /// file, regardless of [entityKind].
+  ///
+  /// Used by [AccountLifecycleService.removeCloudFromDevice] (AUD-account-01)
+  /// to refuse deleting the local DB file while any profile under the
+  /// account still has mutations that have not reached Firestore.
+  Future<int> totalDepth() async {
+    final countExpr = outbox.id.count();
+    final row = await (selectOnly(outbox)..addColumns([countExpr])).getSingle();
+    return row.read(countExpr) ?? 0;
+  }
+
   /// Timestamp of the OLDEST pending outbox row for [profileId], or null when
   /// the outbox is empty for this profile.
   ///

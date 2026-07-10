@@ -1,6 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
@@ -127,6 +128,35 @@ void main() {
       await service.deleteAccount('test-uid');
 
       verify(() => mockAuthRepo.deleteAccount()).called(1);
+    });
+
+    // AUD-account-13 (EH-3 log-less catch): _deleteFirestoreUserData's catch
+    // block claims "Log but don't rethrow" but had no AppLogger call at all.
+    // Firebase isn't initialised in this unit-test environment, so
+    // FirebaseFunctions.instance.httpsCallable(...) always throws here —
+    // this is precisely the "Cloud Function call fails" scenario the finding
+    // describes, and it's already exercised by every other test in this
+    // group; only the logging assertion was missing.
+    test('logs an AppLogger error when the deleteAccountData Cloud Function '
+        'call throws', () async {
+      AppLogger.init();
+      final before = AppLogger.instance.talker.history.length;
+
+      await service.deleteAccount('test-uid');
+
+      final newEntries = AppLogger.instance.talker.history.skip(before);
+      final matching = newEntries.where(
+        (e) => e.generateTextMessage().contains(
+          'delete_firestore_user_data_failed',
+        ),
+      );
+      expect(
+        matching,
+        isNotEmpty,
+        reason:
+            'the swallowed Cloud Function failure must be logged, not '
+            'silently dropped',
+      );
     });
 
     test('clears local database', () async {

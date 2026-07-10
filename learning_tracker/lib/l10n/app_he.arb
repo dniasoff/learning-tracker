@@ -904,6 +904,7 @@
   "authErrInvalidEmail": "הזינו כתובת אימייל תקינה.",
   "authErrNetwork": "שגיאת רשת. בדקו את החיבור.",
   "authErrSignInGeneric": "ההתחברות נכשלה. נסו שוב.",
+  "authErrExistingPasswordAccount": "לכתובת אימייל זו כבר יש סיסמה. יש להתחבר באמצעות הסיסמה.",
   "authTierCloud": "ענן",
   "authTierLocal": "מקומי",
   "authFoundOnDevice": "נמצא במכשיר הזה ({tier})",
@@ -990,6 +991,8 @@
   "accountDeleteAccountBody": "כל נתוני הלמידה יימחקו לצמיתות. לא ניתן לבטל.",
   "accountRemove": "הסרה",
   "accountDeleteForever": "מחיקה לצמיתות",
+  "accountRemovePendingSyncTitle": "טרם גובה",
+  "accountRemovePendingSyncBody": "{count, plural, one{שינוי אחד טרם גובה בענן.} other{{count} שינויים טרם גובו בענן.}} יש להתחבר לאינטרנט, להמתין לסיום הסנכרון, ולנסות שוב.",
   "accountPickerAddAnother": "הוספת חשבון ({remaining} מקומות פנויים)",
   "@accountPickerAddAnother": {
     "placeholders": {

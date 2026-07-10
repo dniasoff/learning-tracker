@@ -908,6 +908,43 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
+  // AUD-account-12 (narrowed on verify): a user whose email already has a
+  // password-based Firebase account taps "Sign Up" using that same address
+  // — Firebase reports account-exists-with-different-credential. Pre-fix,
+  // this fell to the generic "Account creation failed" fallback with zero
+  // guidance to use the existing password. _mapAuthError is shared between
+  // the password and Google sign-up paths, so exercising it through the
+  // already-mocked signUp() call site proves the mapping directly.
+  testWidgets(
+    'cloud signup: [account-exists-with-different-credential] error maps '
+    'to an actionable message (not the generic fallback)',
+    (tester) async {
+      final auth = _MockAuthRepository();
+      when(() => auth.currentUser).thenReturn(null);
+      when(() => auth.signUp(any(), any(), any())).thenThrow(
+        Exception('[account-exists-with-different-credential] collision'),
+      );
+
+      await tester.pumpWidget(_buildApp(online: true, authRepo: auth));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await _fillValidCredentials(tester);
+
+      final button = find.widgetWithText(FilledButton, 'Sign Up');
+      await tester.ensureVisible(button);
+      await tester.pump();
+      await tester.tap(button);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.textContaining('already has a password'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
   testWidgets('cloud signup: generic error shows fallback snackbar message', (
     tester,
   ) async {

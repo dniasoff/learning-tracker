@@ -1974,6 +1974,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get authErrSignInGeneric => 'ההתחברות נכשלה. נסו שוב.';
 
   @override
+  String get authErrExistingPasswordAccount =>
+      'לכתובת אימייל זו כבר יש סיסמה. יש להתחבר באמצעות הסיסמה.';
+
+  @override
   String get authTierCloud => 'ענן';
 
   @override
@@ -2200,6 +2204,20 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get accountDeleteForever => 'מחיקה לצמיתות';
+
+  @override
+  String get accountRemovePendingSyncTitle => 'טרם גובה';
+
+  @override
+  String accountRemovePendingSyncBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count שינויים טרם גובו בענן.',
+      one: 'שינוי אחד טרם גובה בענן.',
+    );
+    return '$_temp0 יש להתחבר לאינטרנט, להמתין לסיום הסנכרון, ולנסות שוב.';
+  }
 
   @override
   String accountPickerAddAnother(int remaining) {

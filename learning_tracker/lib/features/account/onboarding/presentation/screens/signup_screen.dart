@@ -14,6 +14,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/firebase_error_code.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
@@ -152,7 +153,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     } on InvalidInputException catch (e) {
       if (mounted) _showError(_mapInvalidInputCode(e.code));
     } catch (e) {
-      final code = _extractFirebaseCode(e);
+      final code = extractFirebaseCode(e);
       if (code == 'network-request-failed' && mounted) {
         // Race condition: one-shot said online but Firebase call
         // failed. Offer graceful fallback to offline account.
@@ -462,7 +463,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         _showError(AppLocalizations.of(context)!.authGoogleSignInFailed);
       }
     } catch (e) {
-      final code = _extractFirebaseCode(e);
+      final code = extractFirebaseCode(e);
       if (mounted) {
         _showError(
           code != null
@@ -473,13 +474,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  /// Extracts a Firebase Auth error code from an exception without importing
-  /// firebase_auth. Firebase errors stringify as '[error-code] message'.
-  String? _extractFirebaseCode(Object e) {
-    final match = RegExp(r'\[([a-z/-]+)\]').firstMatch(e.toString());
-    return match?.group(1);
   }
 
   String _mapAuthError(String code) {
@@ -493,6 +487,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         return l10n.authErrInvalidEmail;
       case 'network-request-failed':
         return l10n.authErrNetwork;
+      // AUD-account-12: a user whose email already has a password-based
+      // Firebase account taps "Sign up with Google" using that same
+      // address. Without this case the generic fallback gives zero
+      // guidance to use the existing password.
+      case 'account-exists-with-different-credential':
+        return l10n.authErrExistingPasswordAccount;
       default:
         return l10n.signUpErrGeneric;
     }

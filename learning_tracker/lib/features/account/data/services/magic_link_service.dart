@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/utils/firebase_error_code.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -218,7 +219,7 @@ class MagicLinkService {
       );
       await _authRepository.reloadCurrentUser();
     } catch (e, stack) {
-      final code = _extractFirebaseCode(e);
+      final code = extractFirebaseCode(e);
       if (code == 'invalid-action-code' || code == 'expired-action-code') {
         // Code may already be consumed if another handler/browser applied it.
         await prefs.remove(kPendingVerifyEmailOobCode);
@@ -228,14 +229,5 @@ class MagicLinkService {
       }
       AppLogger.instance.handle(e, stack);
     }
-  }
-
-  /// Extracts the Firebase error code from an exception (if present).
-  String? _extractFirebaseCode(Object e) {
-    // FirebaseAuthException has a `.code` field. We avoid importing
-    // firebase_auth here so we fall back to string parsing.
-    final str = e.toString();
-    final match = RegExp(r'\[([a-z-]+)\]').firstMatch(str);
-    return match?.group(1);
   }
 }

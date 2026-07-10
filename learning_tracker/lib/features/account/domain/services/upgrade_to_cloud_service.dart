@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/core/utils/firebase_error_code.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
@@ -91,7 +92,7 @@ class UpgradeToCloudService {
       }
       return await _finalizeUpgrade(profile, uid);
     } catch (e) {
-      final code = _extractFirebaseCode(e);
+      final code = extractFirebaseCode(e);
       if (code == 'email-already-in-use') {
         // Retry path: user may already have started upgrade. If the existing
         // account can be signed in with the same password and is verified,
@@ -99,7 +100,7 @@ class UpgradeToCloudService {
         try {
           signedInUser = await _auth.signInAndGetUser(profile.email, password);
         } catch (signInError) {
-          final signInCode = _extractFirebaseCode(signInError);
+          final signInCode = extractFirebaseCode(signInError);
           if (signInCode == 'wrong-password' ||
               signInCode == 'invalid-credential' ||
               signInCode == 'user-not-found') {
@@ -150,7 +151,7 @@ class UpgradeToCloudService {
       }
       return await _finalizeUpgrade(profile, uid, email: normalized);
     } catch (e) {
-      final code = _extractFirebaseCode(e);
+      final code = extractFirebaseCode(e);
       if (code == 'email-already-in-use') {
         throw EmailCollisionException(normalized);
       }
@@ -248,7 +249,7 @@ class UpgradeToCloudService {
     try {
       await _auth.signInAndGetUser(profile.email, password);
     } catch (e) {
-      final code = _extractFirebaseCode(e);
+      final code = extractFirebaseCode(e);
       if (code == 'wrong-password' ||
           code == 'invalid-credential' ||
           code == 'user-not-found') {
@@ -366,12 +367,5 @@ class UpgradeToCloudService {
     }
 
     return (await _dao.getUserProfileById(localProfile.id))!;
-  }
-
-  /// Extracts the Firebase error code from an exception (if present).
-  String? _extractFirebaseCode(Object e) {
-    final str = e.toString();
-    final match = RegExp(r'\[([a-z-]+)\]').firstMatch(str);
-    return match?.group(1);
   }
 }

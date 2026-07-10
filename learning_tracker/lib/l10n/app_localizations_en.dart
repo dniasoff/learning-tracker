@@ -1989,6 +1989,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authErrSignInGeneric => 'Sign-in failed. Please try again.';
 
   @override
+  String get authErrExistingPasswordAccount =>
+      'This email already has a password. Sign in with your password instead.';
+
+  @override
   String get authTierCloud => 'Cloud';
 
   @override
@@ -2222,6 +2226,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountDeleteForever => 'Delete Forever';
+
+  @override
+  String get accountRemovePendingSyncTitle => 'Not backed up yet';
+
+  @override
+  String accountRemovePendingSyncBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count changes haven\'t',
+      one: '1 change hasn\'t',
+    );
+    return '$_temp0 been backed up to the cloud yet. Connect to the internet, wait for sync to finish, then try again.';
+  }
 
   @override
   String accountPickerAddAnother(int remaining) {

@@ -15,6 +15,7 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
     show firestoreGatewayProvider;
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/core/utils/firebase_error_code.dart';
 import 'package:learning_tracker/features/account/data/services/magic_link_service.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
@@ -111,28 +112,21 @@ class SignInController extends Notifier<SignInState> {
         return l10n.authErrInvalidEmail;
       case 'network-request-failed':
         return l10n.authErrNetwork;
+      // AUD-account-12: a user whose email already has a password-based
+      // Firebase account taps "Sign in with Google" using that same
+      // address. Without this case the generic fallback gives zero
+      // guidance to use the existing password.
+      case 'account-exists-with-different-credential':
+        return l10n.authErrExistingPasswordAccount;
       default:
         return l10n.authErrSignInGeneric;
     }
   }
 
   String _mapAuthErrorFromException(Object e, AppLocalizations l10n) {
-    final code = _extractFirebaseCode(e);
+    final code = extractFirebaseCode(e);
     if (code != null) return _mapAuthError(code, l10n);
     return l10n.authErrSignInGeneric;
-  }
-
-  String? _extractFirebaseCode(Object e) {
-    final str = e.toString();
-    // FirebaseException.toString() renders as `[firebase_auth/wrong-password]
-    // message` — the bare error code lives AFTER the `<plugin>/` prefix and
-    // the plugin segment itself contains an underscore. The previous pattern
-    // (`\[([a-z-]+)\]`) matched neither the slash nor the underscore, so every
-    // real Firebase auth error fell through to the generic "Sign-in failed"
-    // copy (e.g. a wrong password never showed "Incorrect password"). Capture
-    // the optional plugin prefix and return only the trailing code segment.
-    final match = RegExp(r'\[(?:[a-z_]+/)?([a-z-]+)\]').firstMatch(str);
-    return match?.group(1);
   }
 
   // ── Email verification helpers ──────────────────────────────────────────────
@@ -146,6 +140,10 @@ class SignInController extends Notifier<SignInState> {
 
   Future<bool> _waitForVerified({required int maxAttempts}) async {
     for (var i = 0; i < maxAttempts; i++) {
+      // AUD-account-02: each loop iteration re-enters _refreshAndCheckVerified,
+      // which does a fresh `_ref.read(authRepositoryProvider)` — if the
+      // notifier was disposed during the 350ms delay below, that read throws.
+      if (!ref.mounted) return false;
       final verified = await _refreshAndCheckVerified();
       if (verified) return true;
       await Future<void>.delayed(const Duration(milliseconds: 350));
@@ -166,7 +164,7 @@ class SignInController extends Notifier<SignInState> {
       final refreshed = await authRepo.reloadCurrentUser();
       return refreshed?.emailVerified ?? false;
     } catch (e) {
-      final code = _extractFirebaseCode(e);
+      final code = extractFirebaseCode(e);
       if (code == 'expired-action-code' || code == 'invalid-action-code') {
         await prefs.remove(kPendingVerifyEmailOobCode);
         return _refreshAndCheckVerified();
@@ -709,6 +707,12 @@ class SignInController extends Notifier<SignInState> {
         _showError?.call(l10n.authSignInTimeout);
       }
     });
+    // AUD-account-02: this is autoDispose. If the user backs out of the
+    // sign-in screen before the watchdog fires, the finally block's
+    // `watchdog.cancel()` never runs (the notifier is torn down mid-await,
+    // not via a normal try/finally exit) and the Timer keeps running,
+    // touching a disposed `state` up to 15s later. Cancel it on disposal too.
+    ref.onDispose(watchdog.cancel);
 
     try {
       final registry = _ref.read(deviceRegistryProvider);
@@ -867,16 +871,27 @@ class SignInController extends Notifier<SignInState> {
       }
       state = const SignInIdle();
     } on InvalidCredentialsException {
+      // AUD-account-02: any awaited call above (including deep inside
+      // _navigateAfterSignIn / _tryLocalFallbackSignIn / _tryOfflineCloudRestore)
+      // can throw UnmountedRefException if the notifier was torn down
+      // mid-flight — that exception lands here. Touching `state` on a
+      // disposed notifier throws again, so bail out before doing anything
+      // ref-related. There is nothing left to show the user; the screen
+      // that would have shown it is already gone.
+      if (!ref.mounted) return;
       final msg = l10n.authIncorrectPassword;
       _showError?.call(msg);
       state = SignInError(msg);
     } catch (e) {
+      if (!ref.mounted) return;
       final msg = _mapAuthErrorFromException(e, l10n);
       _showError?.call(msg);
       state = SignInError(msg);
     } finally {
+      // Timer.cancel() is safe to call even if already cancelled by
+      // ref.onDispose above, and never touches ref/state.
       watchdog.cancel();
-      if (state is SignInSubmitting) state = const SignInIdle();
+      if (ref.mounted && state is SignInSubmitting) state = const SignInIdle();
     }
   }
 
@@ -896,6 +911,8 @@ class SignInController extends Notifier<SignInState> {
         _showError?.call(l10n.authSignInTimeout);
       }
     });
+    // AUD-account-02: see signInWithEmail's identical comment above.
+    ref.onDispose(watchdog.cancel);
 
     try {
       final authRepo = _ref.read(authRepositoryProvider);
@@ -957,6 +974,8 @@ class SignInController extends Notifier<SignInState> {
       await _navigateAfterSignIn(router);
       state = const SignInIdle();
     } on GoogleSignInException catch (e) {
+      // AUD-account-02: see signInWithEmail's identical comment above.
+      if (!ref.mounted) return;
       if (e.code == GoogleSignInExceptionCode.canceled ||
           e.code == GoogleSignInExceptionCode.interrupted) {
         state = const SignInIdle();
@@ -966,12 +985,13 @@ class SignInController extends Notifier<SignInState> {
         state = SignInError(msg);
       }
     } catch (e) {
+      if (!ref.mounted) return;
       final msg = _mapAuthErrorFromException(e, l10n);
       _showError?.call(msg);
       state = SignInError(msg);
     } finally {
       watchdog.cancel();
-      if (state is SignInSubmitting) state = const SignInIdle();
+      if (ref.mounted && state is SignInSubmitting) state = const SignInIdle();
     }
   }
 
