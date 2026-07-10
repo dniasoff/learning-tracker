@@ -9,13 +9,19 @@
 library;
 
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 class RewardRedemptionMerger implements EntityMerger {
-  RewardRedemptionMerger(UserDatabase db) : _db = db;
+  RewardRedemptionMerger(UserDatabase db, {AppLogger? logger})
+    : _db = db,
+      _logger = logger;
 
   final UserDatabase _db;
+  // AUD-core-sync-15: optional logger so a per-row merge failure is
+  // observable instead of silently swallowed.
+  final AppLogger? _logger;
 
   @override
   String get kind => EntityKind.rewardRedemption;
@@ -30,36 +36,46 @@ class RewardRedemptionMerger implements EntityMerger {
         .toSet();
 
     for (final row in rows) {
-      final ulid = row['ulid'] as String?;
-      final rewardTitle = row['reward_title'] as String?;
-      final pointsCost = FirestoreCodec.parseInt(row['points_cost']);
-      final status = row['status'] as String?;
-      final createdAt = FirestoreCodec.parseDateTime(row['created_at']);
-      final updatedAt = FirestoreCodec.parseDateTime(row['updated_at']);
-      if (ulid == null ||
-          ulid.isEmpty ||
-          rewardTitle == null ||
-          pointsCost == null ||
-          status == null ||
-          createdAt == null ||
-          updatedAt == null) {
-        continue;
+      // AUD-core-sync-15: isolate each row — mirrors LearnerProfileMerger.
+      try {
+        final ulid = row['ulid'] as String?;
+        final rewardTitle = row['reward_title'] as String?;
+        final pointsCost = FirestoreCodec.parseInt(row['points_cost']);
+        final status = row['status'] as String?;
+        final createdAt = FirestoreCodec.parseDateTime(row['created_at']);
+        final updatedAt = FirestoreCodec.parseDateTime(row['updated_at']);
+        if (ulid == null ||
+            ulid.isEmpty ||
+            rewardTitle == null ||
+            pointsCost == null ||
+            status == null ||
+            createdAt == null ||
+            updatedAt == null) {
+          continue;
+        }
+
+        var rowProfileId = FirestoreCodec.parseInt(row['profile_id']) ?? 0;
+        if (rowProfileId == 0) rowProfileId = profileId;
+        if (!existingProfileIds.contains(rowProfileId)) continue;
+
+        await _db.pointsBalanceDao.upsertRemoteRedemption(
+          profileId: rowProfileId,
+          ulid: ulid,
+          rewardTitle: rewardTitle,
+          iconIndex: FirestoreCodec.parseInt(row['icon_index']) ?? 0,
+          pointsCost: pointsCost,
+          status: status,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        );
+      } on Exception catch (e, stackTrace) {
+        _logger?.warning(
+          event: 'sync_reward_redemption_merge_row_failed',
+          fields: {'profile_id': profileId},
+          exception: e,
+          stackTrace: stackTrace,
+        );
       }
-
-      var rowProfileId = FirestoreCodec.parseInt(row['profile_id']) ?? 0;
-      if (rowProfileId == 0) rowProfileId = profileId;
-      if (!existingProfileIds.contains(rowProfileId)) continue;
-
-      await _db.pointsBalanceDao.upsertRemoteRedemption(
-        profileId: rowProfileId,
-        ulid: ulid,
-        rewardTitle: rewardTitle,
-        iconIndex: FirestoreCodec.parseInt(row['icon_index']) ?? 0,
-        pointsCost: pointsCost,
-        status: status,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
     }
   }
 }

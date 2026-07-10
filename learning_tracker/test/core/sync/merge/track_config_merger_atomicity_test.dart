@@ -120,33 +120,35 @@ void main() {
       final crashingStore = _CrashingAfterUpsertStore(realStore);
       final merger = TrackConfigMerger(store: crashingStore);
 
-      Object? caught;
-      try {
-        await merger.merge(
-          profileId: 1,
-          rows: [
-            {
-              'curriculum_id': 'mishnayos',
-              'state': 'active',
-              'activated_at': DateTime.utc(2026, 5, 1).toIso8601String(),
-              'state_changed_at': DateTime.utc(2026, 5, 1).toIso8601String(),
-            },
-          ],
-        );
-      } catch (e) {
-        caught = e;
-      }
-      expect(
-        caught,
-        isNotNull,
-        reason: 'the simulated persistUpdatedAt failure must propagate',
+      // weaken-ok: AUD-core-sync-15 (landed after this test) makes
+      // TrackConfigMerger isolate a per-row failure (log + continue)
+      // instead of letting it propagate out of merge(), so the simulated
+      // persistUpdatedAt failure is now swallowed here rather than
+      // rethrown — the removed `expect(caught, isNotNull, ...)` assertion
+      // tested exception propagation, which AUD-core-sync-15 deliberately
+      // changed. What this test verifies (the ROLLBACK below) is
+      // orthogonal and still fully asserted: merge() completing without
+      // throwing is itself part of the AUD-core-sync-15 contract, not a
+      // sign the fault injection failed to fire.
+      await merger.merge(
+        profileId: 1,
+        rows: [
+          {
+            'curriculum_id': 'mishnayos',
+            'state': 'active',
+            'activated_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+            'state_changed_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+          },
+        ],
       );
 
       // Before AUD-core-sync-08, upsert() and persistUpdatedAt() were two
       // independent awaited calls: the entity row below would exist even
       // though persistUpdatedAt threw. With the fix, TrackConfigMerger
       // wraps both in runInTransaction, so the entity write rolls back
-      // together with the failed shadow write.
+      // together with the failed shadow write — regardless of whether the
+      // resulting exception is later swallowed by AUD-core-sync-15's
+      // per-row isolation.
       final rows = await (db.select(
         db.curriculumTracks,
       )..where((t) => t.curriculumId.equals('mishnayos'))).get();

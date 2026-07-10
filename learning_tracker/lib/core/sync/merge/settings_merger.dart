@@ -8,13 +8,19 @@
 /// `updated_at` via [MergeStore.persistUpdatedAt].
 library;
 
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/settings_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 class SettingsMerger implements EntityMerger {
-  SettingsMerger({required MergeStore store}) : _store = store;
+  SettingsMerger({required MergeStore store, AppLogger? logger})
+    : _store = store,
+      _logger = logger;
 
   final MergeStore _store;
+  // AUD-core-sync-15: optional logger so a per-row merge failure is
+  // observable instead of silently swallowed.
+  final AppLogger? _logger;
   static const _codec = SettingsCodec();
 
   @override
@@ -26,42 +32,52 @@ class SettingsMerger implements EntityMerger {
     required List<Map<String, dynamic>> rows,
   }) async {
     for (final row in rows) {
-      final decoded = _codec.decode(row);
-      if (decoded == null) continue; // Missing curriculumId — skip.
-      final remoteUpdatedAt = decoded.updatedAt;
-      if (remoteUpdatedAt == null) continue;
+      // AUD-core-sync-15: isolate each row — mirrors LearnerProfileMerger.
+      try {
+        final decoded = _codec.decode(row);
+        if (decoded == null) continue; // Missing curriculumId — skip.
+        final remoteUpdatedAt = decoded.updatedAt;
+        if (remoteUpdatedAt == null) continue;
 
-      final naturalKey = decoded.curriculumId;
-      final localUpdatedAt = await _store.currentUpdatedAt(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey,
-      );
-      final localSyncedAt = await _store.currentSyncedAt(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey,
-      );
-      if (!_store.remoteIsNewer(
-        localUpdatedAt: localUpdatedAt,
-        remoteUpdatedAt: remoteUpdatedAt,
-        localSyncedAt: localSyncedAt,
-        remoteSyncedAt: decoded.syncedAt,
-      )) {
-        continue;
-      }
-      // AUD-core-sync-08: apply + persist the LWW shadow atomically — see
-      // BookmarkMerger for the crash-mid-sequence rationale.
-      await _store.runInTransaction(() async {
-        await _store.upsert(kind: kind, profileId: profileId, fields: row);
-        await _store.persistUpdatedAt(
+        final naturalKey = decoded.curriculumId;
+        final localUpdatedAt = await _store.currentUpdatedAt(
           kind: kind,
           profileId: profileId,
           naturalKey: naturalKey,
-          updatedAt: remoteUpdatedAt,
-          syncedAt: decoded.syncedAt,
         );
-      });
+        final localSyncedAt = await _store.currentSyncedAt(
+          kind: kind,
+          profileId: profileId,
+          naturalKey: naturalKey,
+        );
+        if (!_store.remoteIsNewer(
+          localUpdatedAt: localUpdatedAt,
+          remoteUpdatedAt: remoteUpdatedAt,
+          localSyncedAt: localSyncedAt,
+          remoteSyncedAt: decoded.syncedAt,
+        )) {
+          continue;
+        }
+        // AUD-core-sync-08: apply + persist the LWW shadow atomically — see
+        // BookmarkMerger for the crash-mid-sequence rationale.
+        await _store.runInTransaction(() async {
+          await _store.upsert(kind: kind, profileId: profileId, fields: row);
+          await _store.persistUpdatedAt(
+            kind: kind,
+            profileId: profileId,
+            naturalKey: naturalKey,
+            updatedAt: remoteUpdatedAt,
+            syncedAt: decoded.syncedAt,
+          );
+        });
+      } on Exception catch (e, stackTrace) {
+        _logger?.warning(
+          event: 'sync_settings_merge_row_failed',
+          fields: {'profile_id': profileId},
+          exception: e,
+          stackTrace: stackTrace,
+        );
+      }
     }
   }
 }
