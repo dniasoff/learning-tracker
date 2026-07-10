@@ -441,18 +441,18 @@ describe('settings — owner write (open bag), tutor read, delete denied', () =>
 
 // ── Path 13: stage_definitions (with hasOnly whitelist) ──────────────────────
 describe('stage_definitions — owner write with key whitelist, tutor read, delete denied', () => {
+  // Sourced from PAYLOADS.stage_definitions (the codec-derived single source
+  // of truth — see C-EXTRA) with only the whitelist-only legacy fields the
+  // current codec no longer emits (profile_id/delay_days/days_of_week/
+  // rolling_window_size/synced_at) layered on top. Keeps this matrix literal
+  // from silently diverging from PAYLOADS the way `track_id` once did
+  // (string 't1' here vs. numeric 1 in the fixture — see AUD-firebase-13).
   const validStage = {
+    ...PAYLOADS.stage_definitions,
     profile_id: PROFILE,
-    curriculum_id: 'c1',
-    track_id: 't1',
-    stage_order: 1,
-    stage_name: 'Stage 1',
-    schedule: 'daily',
     delay_days: 0,
-    is_default: true,
     days_of_week: [1, 2, 3],
     rolling_window_size: 7,
-    updated_at: pastTs,
     synced_at: pastTs,
   };
 
@@ -678,13 +678,12 @@ describe('curriculum_scopes — owner write+delete (no whitelist), tutor read', 
 
 // ── Path 22: study_day_configs (with hasOnly whitelist; owner DELETE allowed) ─
 describe('study_day_configs — owner write+delete with key whitelist, tutor read', () => {
+  // Sourced from PAYLOADS.study_day_configs (see C-EXTRA) plus `synced_at`,
+  // the one field the fixture omits. Keeps this matrix literal from silently
+  // diverging from PAYLOADS the way `day_type` once did ('learning' here vs.
+  // 'study' in the fixture — see AUD-firebase-13).
   const validConfig = {
-    profile_id: PROFILE,
-    curriculum_id: 'c1',
-    track_id: 't1',
-    day_of_week: 1,
-    day_type: 'learning',
-    updated_at: pastTs,
+    ...PAYLOADS.study_day_configs,
     synced_at: pastTs,
   };
 
