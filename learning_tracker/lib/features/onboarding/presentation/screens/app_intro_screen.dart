@@ -429,7 +429,7 @@ class _IntroPage extends ConsumerWidget {
 
   Widget _buildSubtitleBlock({
     required AppLocalizations l10n,
-    String talmidChochomLabel = 'Talmid Chochom',
+    required String talmidChochomLabel,
   }) {
     return AnimatedBuilder(
       animation: iconAnimation,
@@ -454,7 +454,7 @@ class _IntroPage extends ConsumerWidget {
   Widget _subtitleRich({
     required AppLocalizations l10n,
     required bool isHebrewLocale,
-    String talmidChochomLabel = 'Talmid Chochom',
+    required String talmidChochomLabel,
   }) {
     const highlightStyle = TextStyle(
       color: AppTheme.brandInk,
