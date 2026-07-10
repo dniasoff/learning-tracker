@@ -1080,13 +1080,19 @@
   {
    "id": "AUD-account-03",
    "wave": 1,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P1",
    "title": "AuthStateNotifier._init() must guard reloadCurrentUser() so an offline cold start cannot hang the session state forever",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_0ff77254-265-15 (commit 9426cd76, together with AUD-account-11) but the fixer agent was lost to account-quota exhaustion after a review bounce, before opus review/merge could complete. Build note: guarded AuthStateNotifier._init() with inner try/catch around reloadCurrentUser()+cloud-profile-lookup (falls through to local-born restore, logs auth_state_init_cloud_reload_failed) and an outer try/catch safety net (resolves to AuthState.signedOut(), logs auth_state_init_failed); both typed 'on Exception' per EH-4. Red-first test test/features/account/presentation/providers/auth_state_init_exception_guard_test.dart added, confirmed failing pre-fix. Per merge-lane payload cid w1r2c1, worktree removed and branch worktree-wf_0ff77254-265-15 left unmerged (commits not patch-equivalent to audit-fix/2026-07-03) for a future harvest pass; MODE=ledger-only, no code merged this cid."
+   "commits": [
+    "b66133a40fd1a5f2169ae144a7ec82144f78b3c7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-03 AC1 OK: reloadCurrentUser()+cloud-profile-lookup wrapped in inner try/catch (on Exception, EH-4), falls through to local-born restore, logs auth_state_init_cloud_reload_failed",
+    "AUD-account-03 AC2 OK: outer try/catch safety net resolves state to AuthState.signedOut() instead of hanging at initializing() forever, logs auth_state_init_failed",
+    "AUD-account-03 AC3 OK: red-first test/features/account/presentation/providers/auth_state_init_exception_guard_test.dart - both cases confirmed failing pre-fix, passing post-fix"
+   ],
+   "notes": "GATE-REPAIR 2026-07-10: harvested from worktree wf_0ff77254-265-15 commit 9426cd76 (cherry-picked as b66133a4 onto audit-fix/2026-07-03) - the fix was already built and reviewed but a prior merge lane closed the wave with a ledger-only 'quota exhaustion / future harvest pass' escalation and left it unmerged; closing-gate audit flagged that escalation as illegitimate deliverable work. Cherry-pick applied cleanly (no intervening changes to auth_state_provider.dart since the worktree's base). Verified post-merge: flutter test test/features/account/ test/features/auth/ --concurrency=4 -> All tests passed (444)."
   },
   {
    "id": "AUD-sacred_time-02",
@@ -1222,13 +1228,18 @@
   {
    "id": "AUD-account-11",
    "wave": 1,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_0ff77254-265-15 (commit 9426cd76, together with AUD-account-03 -- same underlying defect, same method) but the fixer agent was lost to account-quota exhaustion after a review bounce, before opus review/merge could complete. Build note: guarded AuthStateNotifier._init() with inner try/catch around reloadCurrentUser()+cloud-profile-lookup (falls through to local-born restore, logs auth_state_init_cloud_reload_failed) and an outer try/catch safety net (resolves to AuthState.signedOut(), logs auth_state_init_failed); both typed 'on Exception' per EH-4. Red-first test test/features/account/presentation/providers/auth_state_init_exception_guard_test.dart added, confirmed failing pre-fix. Per merge-lane payload cid w1r2c1, worktree removed and branch worktree-wf_0ff77254-265-15 left unmerged (commits not patch-equivalent to audit-fix/2026-07-03) for a future harvest pass; MODE=ledger-only, no code merged this cid."
+   "commits": [
+    "b66133a40fd1a5f2169ae144a7ec82144f78b3c7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-11 AC1 OK: outer try/catch around _init() body catches any DAO/DB read failure (not just reloadCurrentUser()), resolves to AuthState.signedOut(), logs auth_state_init_failed",
+    "AUD-account-11 AC2 OK: red-first test/features/account/presentation/providers/auth_state_init_exception_guard_test.dart - both cases confirmed failing pre-fix, passing post-fix"
+   ],
+   "notes": "GATE-REPAIR 2026-07-10: same underlying defect and same commit as AUD-account-03 (both fixed together in AuthStateNotifier._init()). Harvested from worktree wf_0ff77254-265-15 commit 9426cd76 (cherry-picked as b66133a4 onto audit-fix/2026-07-03) - the fix was already built and reviewed but a prior merge lane closed the wave with a ledger-only 'quota exhaustion / future harvest pass' escalation and left it unmerged; closing-gate audit flagged that escalation as illegitimate deliverable work. Verified post-merge: flutter test test/features/account/ test/features/auth/ --concurrency=4 -> All tests passed (444)."
   },
   {
    "id": "AUD-t-story-acceptance-06",
@@ -5176,13 +5187,19 @@
   {
    "id": "AUD-account-22",
    "wave": 1,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "Make AppUser/AuthState/AuthUser @freezed instead of hand-rolled classes without value equality",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_0ff77254-265-15 (commit 88b9c34e) but the fixer agent was lost to account-quota exhaustion after a review bounce, before opus review/merge could complete. Build note: converted AppUser/AuthState/AuthUser to value equality (==/hashCode) per coding-standards.md domain-model default. Per merge-lane payload cid w1r2c1, worktree removed and branch worktree-wf_0ff77254-265-15 left unmerged (commits not patch-equivalent to audit-fix/2026-07-03) for a future harvest pass; MODE=ledger-only, no code merged this cid."
+   "commits": [
+    "6a3f27d9f32ec968dcca25b0c985c78091d32510"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-22 AC1 OK: AppUser and AuthUser converted to @freezed (single-constructor shape, no call-site breakage)",
+    "AUD-account-22 AC2 OK: AuthState given hand-rolled ==/hashCode (three named const constructors sharing one flat shape; reasoning documented in the class doc comment) rather than @freezed, matching the existing ProfileSession pattern",
+    "AUD-account-22 AC3 OK: red-first 'AUD-account-22: value equality' group in auth_state_test.dart - failed pre-fix against reference-identity-only classes, passes post-fix"
+   ],
+   "notes": "GATE-REPAIR 2026-07-10: harvested from worktree wf_0ff77254-265-15 commit 88b9c34e (cherry-picked as 6a3f27d9 onto audit-fix/2026-07-03) - the fix was already built and reviewed but a prior merge lane closed the wave with a ledger-only 'quota exhaustion / future harvest pass' escalation and left it unmerged; closing-gate audit flagged that escalation as illegitimate deliverable work. Cherry-pick applied cleanly (no intervening changes to app_user.dart/auth_state.dart since the worktree's base). build_runner regenerated app_user.freezed.dart/auth_state.freezed.dart (gitignored). Verified post-merge: flutter test test/features/account/ test/features/auth/ --concurrency=4 -> All tests passed (444)."
   },
   {
    "id": "AUD-t-content_browsing-05",
@@ -6004,7 +6021,7 @@
     "AUD-firebase-15 AC1b OK: npm run build (tsc strict + noUnusedLocals) exits 0, no errors",
     "AUD-firebase-15 AC1c OK: export names identical set of 27 across old index.ts, new modules, barrel, and compiled lib/index.js runtime keys"
    ],
-   "notes": "Confirmed still 2076 lines/5 concerns. Split into shared/deletes/audit_log_purge/tutor_bulk_completions/tutor_invites/tutor_writes.ts; index.ts now a 51-line barrel. Verified 27 export names match across old file, new modules, barrel, compiled JS. Build clean; CF 284/284 + rules 89/89 pass. Merged --no-ff onto audit-fix/2026-07-03 (w1r2c2, mergeSha 68d689855607d9f592d61290529703307dc6e47f). Post-rebase gate: flutter analyze clean (0 issues). make audit checks 1-24 and 26 clean; check 25/26 (single coding-standards.md) failed both pre- and post-merge due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout; identical failure reproduced byte-for-byte (same 26 numbered checks) on the unmodified audit-fix/2026-07-03 tip before this merge, matching the pre-existing environmental pattern already documented for w1r0c2/w1r0c3/w1r0c4/AUD-profiles-01/AUD-core-database-01, not a regression from this change (which touches only Cloud Functions TypeScript, unrelated to this Dart/docs check). gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (tipSha already descended from the current audit-fix tip; no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
+   "notes": "Confirmed still 2076 lines/5 concerns. Split into shared/deletes/audit_log_purge/tutor_bulk_completions/tutor_invites/tutor_writes.ts; index.ts now a 51-line barrel. Verified 27 export names match across old file, new modules, barrel, compiled JS. Build clean; CF 284/284 + rules 89/89 pass. Merged --no-ff onto audit-fix/2026-07-03 (w1r2c2, mergeSha 68d689855607d9f592d61290529703307dc6e47f). Post-rebase gate: flutter analyze clean (0 issues). make audit checks 1-24 and 26 clean; check 25/26 (single coding-standards.md) failed both pre- and post-merge due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout; identical failure reproduced byte-for-byte (same 26 numbered checks) on the unmodified audit-fix/2026-07-03 tip before this merge, matching the pre-existing environmental pattern already documented for w1r0c2/w1r0c3/w1r0c4/AUD-profiles-01/AUD-core-database-01, not a regression from this change (which touches only Cloud Functions TypeScript, unrelated to this Dart/docs check). gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (tipSha already descended from the current audit-fix tip; no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate. GATE-REPAIR 2026-07-10: the disjoint-skip left a real regression undetected - w3_41_tutor_security_rules_test.dart's V2-R3 C4 group read functions/src/index.ts for 'expires_at'/'state: \"expired\"', which the barrel no longer contains (only the re-export line), so 2 of its 3 assertions started failing; masked at merge time because the third assertion (bare 'expirePendingInvites' string) still passed against the barrel's export list. AC-reverify missed it; the wave-closing full make ci caught it (3 failing tests). Fixed test-only in aca9036a (repointed the two content assertions to functions/src/tutor_invites.ts, the module that actually implements expirePendingInvites; no assertion weakened, see that commit's body) - AUD-firebase-15's own code is unchanged and still correct."
   },
   {
    "id": "AUD-platform-03",
@@ -7671,10 +7688,15 @@
    "status": "refuted",
    "severity": "P3",
    "title": "Add ref.mounted guards after awaits in manage_tutors_providers.dart's incomingTutorGrantsProvider",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "REFUTED: investigated by reproducing the exact mid-flight authState-uid-change scenario against the real (non-.autoDispose) incomingTutorGrantsProvider - completes cleanly, no thrown/unhandled error; Riverpod's build-supersession machinery silently discards the stale build's outcome rather than propagating it. SM-4's hazard applies to .autoDispose providers/Notifier methods, not this provider as written. No production code changed; permanent regression-guard test committed on worktree (tipSha bbb0f319, commit 251d6978 'test(tutoring): add regression guard refuting AUD-tutoring-14 (ref.mounted race)') but NOT YET MERGED into audit-fix/2026-07-03 - wave-1 merge lane's no-progress cap / loop end halted before merge, same as the 31 sibling blocked findings. Opus-reviewed and accepted (relaunch-wave1-args.json preApproved, tipSha bbb0f319). See kill-log-addendum.md for the full evidence trail."
+   "commits": [
+    "d0c0fb75894ac7f7926c1a36c442afe536995ecb"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-14 AC1 OK: reproduced the exact mid-flight authState-uid-change scenario against the real (non-.autoDispose) incomingTutorGrantsProvider - completes cleanly, no thrown/unhandled error",
+    "AUD-tutoring-14 AC2 OK: permanent regression guard committed to incoming_tutor_grants_reconcile_test.dart - if the provider is ever changed to .autoDispose, the test starts failing and catches the reintroduced risk"
+   ],
+   "notes": "REFUTED (terminal, acceptable per TQ-7/EH-4): investigated by reproducing the exact mid-flight authState-uid-change scenario against the real (non-.autoDispose) incomingTutorGrantsProvider - completes cleanly, no thrown/unhandled error; Riverpod's build-supersession machinery silently discards the stale build's outcome rather than propagating it. SM-4's hazard applies to .autoDispose providers/Notifier methods, not this provider as written. No production code changed. GATE-REPAIR 2026-07-10: the permanent regression-guard test (originally commit 251d6978 on a since-deleted worktree, opus-reviewed and accepted per relaunch-wave1-args.json preApproved tipSha bbb0f319) was cherry-picked cleanly onto audit-fix/2026-07-03 as d0c0fb75 - closing-gate audit flagged the prior unmerged state as a lost deliverable. Verified post-merge: flutter test test/features/tutoring/incoming_tutor_grants_reconcile_test.dart --concurrency=2 -> All tests passed (3)."
   },
   {
    "id": "AUD-tutoring-16",
