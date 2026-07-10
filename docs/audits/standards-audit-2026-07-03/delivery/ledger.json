@@ -1228,19 +1228,15 @@
   {
    "id": "AUD-account-11",
    "wave": 1,
-   "status": "merged",
+   "status": "todo",
    "severity": "P2",
    "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
    "commits": [
     "b66133a40fd1a5f2169ae144a7ec82144f78b3c7"
    ],
-   "reviewRounds": 1,
-   "acVerified": [
-    "AUD-account-11 AC1 OK: _init() wrapped in inner try/catch (cloud-reload path, falls through to local-born restore) + outer try/catch (final safety net, resolves to AuthState.signedOut()); no path leaves state at initializing on exception, verified by reading auth_state_provider.dart post-fix.",
-    "AUD-account-11 AC2 OK: test/features/account/presentation/providers/auth_state_init_exception_guard_test.dart added red-first (confirmed failing pre-fix per commit body), 2 cases green post-fix; full account suite (298 tests) green, no regressions.",
-    "AUD-account-11 AC3 (Rule-0 checker) not required by the finding text ('none exists yet') \u2014 deferred, consistent with finding wording."
-   ],
-   "notes": "Gate-repair reconciliation (2026-07-10): ledger falsely showed blocked/commits=[] with banned wording despite this being merged to audit-fix/2026-07-03 at b66133a4 (bundled with AUD-account-03, same root cause \u2014 _init() had zero try/catch). Verified on HEAD: flutter test test/features/account/ (298 passed), flutter analyze clean, make audit 26/26 clean per commit body. Ledger corrected to merged; no code change made by this repair."
+   "reviewRounds": 0,
+   "acVerified": [],
+   "notes": "reopened: Rule-0 checker AC deferred twice, delivering with template"
   },
   {
    "id": "AUD-t-story-acceptance-06",
@@ -3930,18 +3926,15 @@
   {
    "id": "AUD-tutoring-08",
    "wave": 1,
-   "status": "merged",
+   "status": "todo",
    "severity": "P2",
    "title": "Lazy-load the tutor-grants roster in ManageGrantsScreen and Settings' embedded pending-invites section",
    "commits": [
     "caef5fafde85168c07aaf169cd3c5c4ea7f2aa5d"
    ],
-   "reviewRounds": 1,
-   "acVerified": [
-    "AUD-tutoring-08 AC1 (repo-wide PF-2 Rule-0 checker) explicitly scoped out by the fix as disproportionate to this P2/S finding, replaced with 3 site-specific red-first regression tests per the delivery doctrine's AC-named-checker allowance for hygiene findings \u2014 documented tradeoff, not a silent skip.",
-    "AUD-tutoring-08 AC2 OK: ManageGrantsScreen + manage_tutors_screen.dart converted to ListView.builder (SliverChildBuilderDelegate, off-screen rows not built); Settings _PendingInvitesSection capped to 5 with 'View all (N more)' link. 3 new widget tests (50-grant fixtures) assert deep rows never built; flutter test 62+39 passed, flutter analyze clean, make arb-parity clean, make audit 26/26 clean per commit body."
-   ],
-   "notes": "Gate-repair reconciliation (2026-07-10): ledger falsely showed blocked/commits=[] with banned wording despite this being merged to audit-fix/2026-07-03 at caef5faf (also covers manage_tutors_screen.dart, the verify pass's undercounted 3rd site). Verified on HEAD: flutter analyze clean. Ledger corrected to merged; no code change made by this repair."
+   "reviewRounds": 0,
+   "acVerified": [],
+   "notes": "reopened: Rule-0 checker AC deferred twice, delivering with template"
   },
   {
    "id": "AUD-t-cross-44",
