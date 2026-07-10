@@ -4615,13 +4615,20 @@
   {
    "id": "AUD-account-19",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Wire AuthStateNotifier to authStateChanges() instead of leaving a shadowed, unused stream-based authStateProvider",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "bc7eea8a",
+    "32edd951",
+    "6ec6909f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-19 AC1 OK: grep hide/as workarounds->0; authStateProvider declared once (auth_state_provider.g.dart); raw stream renamed firebaseAuthStateProvider",
+    "AUD-account-19 AC2 OK: auth_state_provider.dart:36 ref.listen; test emits null after signedIn->signedOut, verifyNever(signOut), passed"
+   ],
+   "notes": "Confirmed collision: two @riverpod providers both generated authStateProvider, forcing hide/as workarounds in 13 files; notifier never watched the stream. Renamed raw provider, removed workarounds, wired ref.listen for sign-out detection. AC1+AC2 verified red-first. Commit 51ed8a5f. Merge-lane w1r0c4: rebased onto audit-fix/2026-07-03 (rebasedSha 32edd951), merged --no-ff (mergeSha 6ec6909f). Post-rebase flutter analyze initially showed the exact pre-fix ambiguous_import(authStateProvider) collision this finding fixes -- root-caused to a stale gitignored auth_providers.g.dart left over in the merge-lane's shared main checkout from a prior build, not a rebase-reintroduced regression: the .dart source at HEAD only declares authRepository/firebaseAuthState, confirmed by regenerating (`dart run build_runner build`) which cleared the collision to 0 issues. make audit checks 1-24 and 26 clean; check 25/26 (single coding-standards.md) failed both pre- and post-merge solely due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (wf_59970186-b15-*, other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout -- filesystem-only, independent of git HEAD/content, matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15 in this same ledger. gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 tip in account.dart, signup_screen.dart, sign_in_controller.dart, and account_picker_screen.dart since merge-base; ran payload.testsToRun plus every suite importing the 4 overlapping files (21 suites, 163 tests) -- all green except test/tool/audit_and_arb_parity_test.dart's own assertion that `make audit` exits 0, which fails for the identical documented check-25/26 environmental reason, not a defect in this fix."
   },
   {
    "id": "AUD-core-database-07",
@@ -4648,13 +4655,19 @@
   {
    "id": "AUD-account-18",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Watch reactive auth state instead of ref.read-ing currentUser inside _AccountTileState.build()",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "bc7eea8a",
+    "32edd951",
+    "6ec6909f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-18 AC OK: account_picker_screen.dart:278 ref.watch(firebaseAuthStateProvider); reactive test flips badge via stream-only override, passed"
+   ],
+   "notes": "Confirmed: _AccountTile.build() did ref.read(authRepositoryProvider).currentUser. Fixed via ref.watch of the reactive Firebase auth-state stream. Red-first regression test failed pre-fix, passes post-fix. Updated 3 pre-existing test mocks. Commit d6e18e63. Merge-lane w1r0c4: rebased onto audit-fix/2026-07-03 (rebasedSha 32edd951), merged --no-ff (mergeSha 6ec6909f). gatePolicy=overlap-tested (rebase overlapped audit-fix/2026-07-03 tip in account.dart, signup_screen.dart, sign_in_controller.dart, account_picker_screen.dart since merge-base); ran payload.testsToRun plus every suite importing the 4 overlapping files (21 suites, 163 tests) -- all green except the known pre-existing check-25/26 environmental assertion (see AUD-account-19 note). make audit checks 1-24 and 26 clean; flutter analyze required a local `dart run build_runner build` to regenerate the stale gitignored auth_providers.g.dart in the merge-lane checkout (0 issues after); make arb-parity has no Makefile target so ran `dart run tool/arb_parity_check.dart` directly per payload.touchedStrings -- 1424 keys, exit 0. Discarded one incidental hash-only regen drift on tracked lib/features/scheduler/presentation/providers/scheduler_providers.g.dart (unrelated to this payload's source files) before finalizing the merge."
   },
   {
    "id": "AUD-t-content_browsing-03",
