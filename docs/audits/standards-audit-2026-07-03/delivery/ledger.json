@@ -693,13 +693,19 @@
   {
    "id": "AUD-tutoring-03",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Rename the duplicate top-level incomingTutorGrantsProvider defined in both tutor_grant_providers.dart and manage_tutors_providers.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "435ff7747b009a557e1a7ecca9d25e0acaf2cd03"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-03 AC1 OK: one incomingTutorGrantsProvider def (manage_tutors_providers.dart:85); codegen dup deleted, .g.dart regen clean",
+    "AUD-tutoring-03 AC2 OK: grep 'as manage_tutors' across lib/ returns nothing; accept_invite import de-aliased",
+    "AUD-tutoring-03 AC3 OK: grep def-forms under lib/features/tutoring shows exactly one definition"
+   ],
+   "notes": "Codegen incomingTutorGrants provider had zero real consumers (verified by grep); offline-first one is canonical. Deleted duplicate, removed accept_invite's alias workaround, regenerated .g.dart. New test asserts exactly one definition; red pre-fix. Commit 5ecf570c. Merge-lane w1r1c1: post-rebase flutter analyze initially showed the exact pre-fix ambiguous_import(incomingTutorGrantsProvider) collision this finding fixes -- root-caused to a stale gitignored tutor_grant_providers.g.dart left over in the merge-lane's shared main checkout from a prior build (source .dart only declares one provider, at manage_tutors_providers.dart:85), not a rebase-reintroduced regression: confirmed by regenerating (dart run build_runner build) which cleared the collision to 0 issues, matching the identical pattern documented for w1r0c4/auth_providers.g.dart. Merged --no-ff onto audit-fix/2026-07-03 (w1r1c1, mergeSha 435ff7747b009a557e1a7ecca9d25e0acaf2cd03). Post-rebase gate: make audit checks 1-24 and 26 clean; flutter analyze clean (0 issues) after regenerating the stale gitignored tutor_grant_providers.g.dart (see AUD-tutoring-03 note); make arb-parity (dart run tool/arb_parity_check.dart, touchedStrings=true) OK, 1425 keys. Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~9 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed identical hit count regardless of checked-out commit), matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15+ in this same ledger, not a regression from this change. gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 tip in firestore_tutor_grant_repository.dart and tutor_grant_providers.dart since merge-base; ran payload.testsToRun (208 tests, all green) plus the full features/tutoring/, features/profiles/, features/settings/, and features/account/presentation/notifiers/ suites (1347 tests, 10 pre-existing skips, all green) covering every known consumer of the overlapping providers file."
   },
   {
    "id": "AUD-tutoring-02",
@@ -969,13 +975,19 @@
   {
    "id": "AUD-tutoring-01",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Check TutorGrantResult before treating revoke/resign/rescind as successful in manage_tutors_screen.dart and manage_grants_screen.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "435ff7747b009a557e1a7ecca9d25e0acaf2cd03"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-01 AC1 OK: revoke->Failure test does verifyNever(notify), seeded mirror survives, fetchCount unchanged, generic error shown",
+    "AUD-tutoring-01 AC2 OK: manage_grants #13 resign->Failure: mirror survives, no invalidate, no notify, 'Could not resign' shown",
+    "AUD-tutoring-01 AC3 OK: flutter analyze clean (exit 0); 614 tutoring+settings tests pass incl Success-path"
+   ],
+   "notes": "Confirmed live: revoke/resign/rescind discarded TutorGrantResult and ran success side effects unconditionally. Now switch exhaustively; only Success runs wipe/invalidate/notify. Red-first DB-seeded test confirmed red pre-fix via git stash. Commit dae32145. Merged --no-ff onto audit-fix/2026-07-03 (w1r1c1, mergeSha 435ff7747b009a557e1a7ecca9d25e0acaf2cd03). Post-rebase gate: make audit checks 1-24 and 26 clean; flutter analyze clean (0 issues) after regenerating the stale gitignored tutor_grant_providers.g.dart (see AUD-tutoring-03 note); make arb-parity (dart run tool/arb_parity_check.dart, touchedStrings=true) OK, 1425 keys. Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~9 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed identical hit count regardless of checked-out commit), matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15+ in this same ledger, not a regression from this change. gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 tip in firestore_tutor_grant_repository.dart and tutor_grant_providers.dart since merge-base; ran payload.testsToRun (208 tests, all green) plus the full features/tutoring/, features/profiles/, features/settings/, and features/account/presentation/notifiers/ suites (1347 tests, 10 pre-existing skips, all green) covering every known consumer of the overlapping providers file."
   },
   {
    "id": "AUD-t-story-acceptance-01",
@@ -1353,13 +1365,18 @@
   {
    "id": "AUD-tutoring-11",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Stop interpolating e.toString() directly into tutoring error/snackbar text",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "435ff7747b009a557e1a7ecca9d25e0acaf2cd03"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-11 AC1 OK: grep e.toString() under tutoring/presentation returns none; data layer returns stable 'unknown-error' code",
+    "AUD-tutoring-11 AC2 OK: revoke/rescind/load show fixed string; data tests assert code=='unknown-error' + raw text absent"
+   ],
+   "notes": "All 11 sites confirmed. UI now shows fixed localized strings; data layer logs+returns stable code instead of e.toString(). Updated R-TU2/load-error/failure-snackbar tests to match; each verified red pre-fix. grep for e.toString() under presentation/ returns zero. Commit 21c6891d. Merged --no-ff onto audit-fix/2026-07-03 (w1r1c1, mergeSha 435ff7747b009a557e1a7ecca9d25e0acaf2cd03). Post-rebase gate: make audit checks 1-24 and 26 clean; flutter analyze clean (0 issues) after regenerating the stale gitignored tutor_grant_providers.g.dart (see AUD-tutoring-03 note); make arb-parity (dart run tool/arb_parity_check.dart, touchedStrings=true) OK, 1425 keys. Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~9 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed identical hit count regardless of checked-out commit), matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15+ in this same ledger, not a regression from this change. gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 tip in firestore_tutor_grant_repository.dart and tutor_grant_providers.dart since merge-base; ran payload.testsToRun (208 tests, all green) plus the full features/tutoring/, features/profiles/, features/settings/, and features/account/presentation/notifiers/ suites (1347 tests, 10 pre-existing skips, all green) covering every known consumer of the overlapping providers file."
   },
   {
    "id": "AUD-gamification-10",
@@ -3884,13 +3901,18 @@
   {
    "id": "AUD-tutoring-08",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Lazy-load the tutor-grants roster in ManageGrantsScreen and Settings' embedded pending-invites section",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "435ff7747b009a557e1a7ecca9d25e0acaf2cd03"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-08 AC2 OK: 50-grant test asserts SliverChildBuilderDelegate + Talmid 49 findsNothing; Settings caps at 5 + 'View all (45 more)'",
+    "AUD-tutoring-08 AC1 substituted: repo-wide PF-2 checker not built (PF-2 [Pending]); 3 red-first regression tests serve as checker"
+   ],
+   "notes": "All 3 sites (incl. verify-correction's 3rd) confirmed. ManageGrantsScreen -> real ListView.builder; Settings section capped w/ View-all link; per-child list converted for consistency (test honestly notes no true laziness there, Flutter shrinkWrap limitation). Red pre-fix. Commit 36099605. Merged --no-ff onto audit-fix/2026-07-03 (w1r1c1, mergeSha 435ff7747b009a557e1a7ecca9d25e0acaf2cd03). Post-rebase gate: make audit checks 1-24 and 26 clean; flutter analyze clean (0 issues) after regenerating the stale gitignored tutor_grant_providers.g.dart (see AUD-tutoring-03 note); make arb-parity (dart run tool/arb_parity_check.dart, touchedStrings=true) OK, 1425 keys. Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~9 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed identical hit count regardless of checked-out commit), matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15+ in this same ledger, not a regression from this change. gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 tip in firestore_tutor_grant_repository.dart and tutor_grant_providers.dart since merge-base; ran payload.testsToRun (208 tests, all green) plus the full features/tutoring/, features/profiles/, features/settings/, and features/account/presentation/notifiers/ suites (1347 tests, 10 pre-existing skips, all green) covering every known consumer of the overlapping providers file."
   },
   {
    "id": "AUD-t-cross-44",
@@ -4858,13 +4880,17 @@
   {
    "id": "AUD-tutoring-18",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace hardcoded Color/Colors literals with theme tokens across tutoring screens",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "435ff7747b009a557e1a7ecca9d25e0acaf2cd03"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-18 AC1 OK: zero Color(0x..)/Colors.shade under tutoring/presentation; tokens use identical hex; custom_lint clean"
+   ],
+   "notes": "Scope matches verify-correction (35 sites/9 files). Added 20 AppColors tokens using identical hex values (zero visual change); replaced all Color(0x..)/Colors.shadeN. New grep test covers both patterns (custom_lint only checks Color(0x..)). Red (35 violations) pre-fix. Commit 89f87da9. Merged --no-ff onto audit-fix/2026-07-03 (w1r1c1, mergeSha 435ff7747b009a557e1a7ecca9d25e0acaf2cd03). Post-rebase gate: make audit checks 1-24 and 26 clean; flutter analyze clean (0 issues) after regenerating the stale gitignored tutor_grant_providers.g.dart (see AUD-tutoring-03 note); make arb-parity (dart run tool/arb_parity_check.dart, touchedStrings=true) OK, 1425 keys. Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~9 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed identical hit count regardless of checked-out commit), matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15+ in this same ledger, not a regression from this change. gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 tip in firestore_tutor_grant_repository.dart and tutor_grant_providers.dart since merge-base; ran payload.testsToRun (208 tests, all green) plus the full features/tutoring/, features/profiles/, features/settings/, and features/account/presentation/notifiers/ suites (1347 tests, 10 pre-existing skips, all green) covering every known consumer of the overlapping providers file."
   },
   {
    "id": "AUD-t-story-acceptance-23",
