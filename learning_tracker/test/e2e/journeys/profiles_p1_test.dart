@@ -1,7 +1,7 @@
 /// E2E Wave 2 P1 journeys — Profiles + Child Mode area.
 ///
 /// Journeys implemented:
-///   E2E-707  Exit parent mode via _ChildViewBanner
+///   E2E-707  Exit parent mode via ChildViewBanner
 ///   E2E-708  Add second profile from profile switcher sheet
 ///   E2E-709  Rename profile via manage sheet (ManageLearnersScreen)
 ///   E2E-710  Delete profile — non-last (ManageLearnersScreen)
@@ -172,8 +172,8 @@ void main() {
 
   // ── E2E-707 ──────────────────────────────────────────────────────────────────
 
-  group('E2E-707 — Exit parent mode via _ChildViewBanner', () {
-    // The _ChildViewBanner ("Parent mode — viewing [child]") appears in
+  group('E2E-707 — Exit parent mode via ChildViewBanner', () {
+    // The ChildViewBanner ("Parent mode — viewing [child]") appears in
     // AppShell when:
     //   1. The active profile is a child (mode='child').
     //   2. parentPinAuthenticatedProfileIdProvider == activeProfileId.
@@ -210,7 +210,7 @@ void main() {
             // Silence Drift-backed stream providers to avoid timer leaks.
             _pendingRedemptionsZeroOverride(),
             _pointsBalanceZeroOverride(),
-            // No active tutored session so _ChildViewBanner shows (not
+            // No active tutored session so ChildViewBanner shows (not
             // TutorModeIndicatorBar).
             activeTutoredProfileSelectionProvider.overrideWith(
               () => _NullTutoredSelection(),

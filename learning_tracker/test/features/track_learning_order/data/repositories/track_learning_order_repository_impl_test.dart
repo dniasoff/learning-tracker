@@ -362,7 +362,7 @@ void main() {
   // ─── saveSedarimOrder / saveMasechtosOrder ─────────────────────────────────
 
   group('saveSedarimOrder', () {
-    test('persists refs so subsequent dao query returns them', () async {
+    test('persists refs via DAO in the given order', () async {
       final items = [
         _seder('Moed', sortOrder: 1),
         _seder('Zeraim', sortOrder: 0),
@@ -374,9 +374,14 @@ void main() {
         _item('Zeraim', 1),
       ]);
 
-      final stored = await db.trackLearningOrderDao.getByTrack(trackId);
-      final refs = stored.map((r) => r.sefariaRef).toSet();
-      expect(refs, containsAll(['Moed', 'Zeraim']));
+      // AUD-app-04: folded the former "(F2 variant)" duplicate's stronger,
+      // order-verifying assertion into this test (both exercised the same
+      // saveSedarimOrder(trackId, [2 items]) path; this one now checks both
+      // ref membership AND the persisted order/sortOrder, which the variant
+      // additionally checked and this one previously did not).
+      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      expect(rows.map((r) => r.sefariaRef).toList(), ['Moed', 'Zeraim']);
+      expect(rows.map((r) => r.sortOrder).toList(), [0, 1]);
     });
 
     test('upserts on second call (does not duplicate)', () async {
@@ -396,37 +401,10 @@ void main() {
       final rows = await db.trackLearningOrderDao.getByTrack(trackId);
       expect(rows, isEmpty);
     });
-
-    test('persists refs via DAO in the given order (F2 variant)', () async {
-      final repo = _makeRepo(db, [
-        _seder('Moed', sortOrder: 1),
-        _seder('Zeraim', sortOrder: 0),
-      ]);
-      final items = [
-        const LearningOrderItem(
-          sefariaRef: 'Moed',
-          displayNameHe: 'מועד',
-          displayNameEn: 'Moed',
-          userSortOrder: 0,
-        ),
-        const LearningOrderItem(
-          sefariaRef: 'Zeraim',
-          displayNameHe: 'זרעים',
-          displayNameEn: 'Zeraim',
-          userSortOrder: 1,
-        ),
-      ];
-
-      await repo.saveSedarimOrder(trackId, items);
-
-      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
-      expect(rows.map((r) => r.sefariaRef).toList(), ['Moed', 'Zeraim']);
-      expect(rows.map((r) => r.sortOrder).toList(), [0, 1]);
-    });
   });
 
   group('saveMasechtosOrder', () {
-    test('persists masechta refs via dao', () async {
+    test('persists masechta refs via DAO in the given order', () async {
       final items = [
         _seder('Zeraim', sortOrder: 0),
         _masechta('Zeraim', 'Berakhot', sortOrder: 0),
@@ -439,38 +417,13 @@ void main() {
         _item('Berakhot', 1),
       ]);
 
-      final stored = await db.trackLearningOrderDao.getByTrack(trackId);
-      expect(
-        stored.map((r) => r.sefariaRef).toSet(),
-        containsAll(['Peah', 'Berakhot']),
-      );
-    });
-
-    test('persists masechtos refs via DAO (F2 variant)', () async {
-      final repo = _makeRepo(db, [
-        _seder('Zeraim', sortOrder: 0),
-        _masechta('Zeraim', 'Berakhot', sortOrder: 1),
-        _masechta('Moed', 'Shabbat', sortOrder: 0),
-      ]);
-      final items = [
-        const LearningOrderItem(
-          sefariaRef: 'Shabbat',
-          displayNameHe: 'שבת',
-          displayNameEn: 'Shabbat',
-          userSortOrder: 0,
-        ),
-        const LearningOrderItem(
-          sefariaRef: 'Berakhot',
-          displayNameHe: 'ברכות',
-          displayNameEn: 'Berakhot',
-          userSortOrder: 1,
-        ),
-      ];
-
-      await repo.saveMasechtosOrder(trackId, items);
-
+      // AUD-app-04: folded the former "(F2 variant)" duplicate's stronger,
+      // order-verifying assertion into this test (both exercised the same
+      // saveMasechtosOrder(trackId, [2 items]) path; this one now checks the
+      // persisted order too, which the variant additionally checked and this
+      // one previously did not — via containsAll only).
       final rows = await db.trackLearningOrderDao.getByTrack(trackId);
-      expect(rows.map((r) => r.sefariaRef).toList(), ['Shabbat', 'Berakhot']);
+      expect(rows.map((r) => r.sefariaRef).toList(), ['Peah', 'Berakhot']);
     });
   });
 
@@ -523,17 +476,16 @@ void main() {
       expect(result.every((i) => !i.isCustomOrdered), isTrue);
     });
 
-    test('deletes all custom order rows for the track (F2 variant)', () async {
-      await db.trackLearningOrderDao.upsertOrder(trackId, ['Moed', 'Zeraim']);
-      expect(await db.trackLearningOrderDao.getByTrack(trackId), hasLength(2));
+    // AUD-app-04: removed the former "(F2 variant)" duplicate here — it
+    // re-verified the same clear-on-reset behavior as
+    // 'clears all stored learning order rows for the track' above (seeding
+    // rows via the DAO directly instead of via saveSedarimOrder makes no
+    // difference: resetToDefault/deleteByTrack never consult the repo's
+    // ContentRepository, as confirmed by TrackLearningOrderRepositoryImpl —
+    // resetToDefault only calls trackLearningOrderDao.deleteByTrack +
+    // trackDao.stampReorderAt, neither of which reads `items`).
 
-      final repo = _makeRepo(db, []);
-      await repo.resetToDefault(trackId);
-
-      expect(await db.trackLearningOrderDao.getByTrack(trackId), isEmpty);
-    });
-
-    test('does not affect rows for a different track (F2 variant)', () async {
+    test('does not affect rows for a different track', () async {
       final otherTrackId = await db
           .into(db.curriculumTracks)
           .insert(
@@ -632,44 +584,20 @@ void main() {
     },
   );
 
-  group('TrackLearningOrderRepositoryImpl.saveSedarimOrder (F1 extra)', () {
-    test('persists sedarim order to the database', () async {
-      final repo = _makeRepo(db, _mishnaItems());
-      final items = [_item('Seder Zeraim', 0), _item('Seder Moed', 1)];
-
-      await repo.saveSedarimOrder(trackId, items);
-
-      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
-      expect(rows, hasLength(2));
-      expect(rows[0].sefariaRef, 'Seder Zeraim');
-      expect(rows[0].sortOrder, 0);
-      expect(rows[1].sefariaRef, 'Seder Moed');
-      expect(rows[1].sortOrder, 1);
-    });
-  });
-
-  group('TrackLearningOrderRepositoryImpl.saveMasechtosOrder (F1 extra)', () {
-    test('persists masechtos order to the database', () async {
-      final repo = _makeRepo(db, _mishnaItems());
-      final items = [_item('Berakhot', 0), _item('Peah', 1)];
-
-      await repo.saveMasechtosOrder(trackId, items);
-
-      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
-      expect(rows, hasLength(2));
-      expect(rows.map((r) => r.sefariaRef).toList(), ['Berakhot', 'Peah']);
-    });
-  });
-
-  group('TrackLearningOrderRepositoryImpl.resetToDefault (F1 extra)', () {
-    test('deletes all custom order rows for the track', () async {
-      final repo = _makeRepo(db, _mishnaItems());
-      await repo.saveSedarimOrder(trackId, [_item('Seder Zeraim')]);
-      expect(await db.trackLearningOrderDao.getByTrack(trackId), hasLength(1));
-
-      await repo.resetToDefault(trackId);
-
-      expect(await db.trackLearningOrderDao.getByTrack(trackId), isEmpty);
-    });
-  });
+  // AUD-app-04: removed the former "(F1 extra)" groups here — they re-ran
+  // saveSedarimOrder / saveMasechtosOrder / resetToDefault against the
+  // _mishnaItems() fixture, but those three methods never consult
+  // ContentRepository/the content-item list at all (see
+  // TrackLearningOrderRepositoryImpl.saveSedarimOrder,
+  // .saveMasechtosOrder, .resetToDefault — each only calls
+  // trackLearningOrderDao.upsertOrder/deleteByTrack + trackDao
+  // .stampReorderAt), so persisting/resetting 1-2 refs against the
+  // _mishnaItems() fixture exercises byte-for-byte the same DAO code path
+  // already covered by the 'saveSedarimOrder' / 'saveMasechtosOrder' /
+  // 'resetToDefault' groups above using the simpler _seder()/_masechta()
+  // fixtures — a repeat, not a genuinely new path. The _mishnaItems()
+  // hierarchy IS still exercised (and remains) in the getSedarimOrder /
+  // getMasechtosOrder (mishna hierarchy) groups above, where it's
+  // genuinely load-bearing: those two methods DO walk the nested
+  // level1/level2/isLeaf hierarchy via ContentRepository.
 }

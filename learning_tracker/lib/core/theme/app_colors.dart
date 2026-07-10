@@ -263,4 +263,42 @@ abstract final class AppColors {
 
   /// Audit-log action category — study-day changed.
   static const Color auditActionStudyDayChanged = Color(0xFFF4511E);
+
+  // ---------------------------------------------------------------------------
+  // App shell / navigation (AUD-app-03) — context banners, bottom nav, and the
+  // persistent profile-switcher bar shared between app_shell.dart and
+  // persistent_switcher_scaffold.dart.
+  // ---------------------------------------------------------------------------
+
+  /// Tutor-mode context banner background (W6.15) — a warm amber that
+  /// contrasts with the app's primary blue to signal "you are in a
+  /// different access context".
+  static const Color tutorModeAccent = Color(0xFFD97706); // Amber-600
+
+  /// Child-view context banner background (WS4.banner) — a teal/emerald
+  /// green distinct from both the tutor amber and the primary blue,
+  /// signalling "you are inside a child's profile, not your own".
+  static const Color childViewAccent = Color(0xFF047857); // Emerald-700
+
+  /// Shared opaque pale-blue background for the persistent profile-switcher
+  /// bar. Referenced identically from app_shell.dart's ProfileSwitcherBar and
+  /// persistent_switcher_scaffold.dart's status-bar inset wrapper so a future
+  /// contrast fix only has one definition to update (see app_shell.dart's
+  /// "Bug 7" / "Bug 7 (re-fix)" history — AUD-app-03).
+  static const Color switcherBarBackground = Color(0xFFF1F3FA);
+
+  /// Border colour paired with [switcherBarBackground].
+  static const Color switcherBarBorder = Color(0xFFD7DEF0);
+
+  /// Bottom-nav selected item background / active tab fill.
+  static const Color navSelectedBlue = Color(0xFF0038A8);
+
+  /// Bottom-nav bar drop shadow — [navSelectedBlue] at ~8% alpha.
+  static const Color navBarShadow = Color(0x140038A8);
+
+  /// Selected nav-item drop shadow — [navSelectedBlue] at 20% alpha.
+  static const Color navItemSelectedShadow = Color(0x330038A8);
+
+  /// Unselected bottom-nav icon/label colour (slate grey).
+  static const Color navUnselectedText = Color(0xFF708090);
 }
