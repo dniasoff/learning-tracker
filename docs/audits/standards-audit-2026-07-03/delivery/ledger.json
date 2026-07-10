@@ -6,13 +6,20 @@
     {
       "id": "AUD-core-analytics-01",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P0",
       "title": "Constrain AnalyticsService.logEvent to the AnalyticsEvent catalog — LogEvents-sourced calls leak profile_id and content identifiers to Firebase Analytics",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a9fee07e2ab6b5b12690789d55770da63f5f2441"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-analytics-01 AC1 OK: check_analytics_catalog.dart wired as audit 26/26; injected LogEvents.* and bare-string calls fail with file:line, exit 1",
+        "AUD-core-analytics-01 AC2 OK: all 7 cited sites redacted - entity_key/profile_id/target dropped, error.toString()->error_kind enum at pull_failed+listener_error",
+        "AUD-core-analytics-01 AC3 OK: 6 recording-fake tests assert params lack entity_key/profile_id/target/resource-path; 95 flutter tests pass",
+        "AUD-core-analytics-01 AC4 OK: coding-standards.md PV-1 gaps row narrowed+named; PV-5 flipped [Pending]->[Enforced] citing checker 26/26"
+      ],
+      "notes": "AnalyticsEvent is now the sole catalog; added tool/check_analytics_catalog.dart as make audit 26/26. Converted ~21 call sites; stripped entity_key/profile_id/target/error.toString at the 7 cited PV-1 sites. Red-then-green tests for all 6 reachable sites. PV-5 flipped to [Enforced]."
     },
     {
       "id": "AUD-profiles-01",
@@ -91,13 +98,19 @@
     {
       "id": "AUD-firebase-01",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P0",
       "title": "Verify emailVerified (or the invite_token) before granting tutor-invite acceptance by email match",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a9fee07e2ab6b5b12690789d55770da63f5f2441"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-firebase-01 AC1 OK: test seeds unverified Auth user, asserts acceptTutorInvite -> permission-denied, grant stays pending",
+        "AUD-firebase-01 AC2 OK: index.ts accept/decline require callerRecord.emailVerified; listTutorGrants pending_for_me requires token email_verified===true",
+        "AUD-firebase-01 AC3 OK: seedAuthUser() creates real Auth users; test-functions uses --only firestore,auth; verified+unverified paths run, 284/284"
+      ],
+      "notes": "acceptTutorInvite/declineTutorInvite/listTutorGrants(pending_for_me) now also require emailVerified. Added seedAuthUser() helper + unverified/verified tests. Red 278/281, green 281/281."
     },
     {
       "id": "AUD-progress-01",
@@ -118,13 +131,19 @@
     {
       "id": "AUD-docs-01",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P0",
       "title": "Add SR-1 changed-value-denied test to firestore_rules.test.mjs for completions/streak_events/learning_ledger/points_ledger",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a9fee07e2ab6b5b12690789d55770da63f5f2441"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-01 AC1 OK: firestore_rules.test.mjs adds one assertFails changed-value update per SR-1 collection (completions/streak_events/learning_ledger/points_ledger)",
+        "AUD-docs-01 AC2 OK: rules split create/update, update requires request.resource.data==resource.data on all 4; test-rules 89/89; red-first credible",
+        "AUD-docs-01 AC3 OK: coding-standards.md SR-1 Enforce line flipped [Pending]->[Enforced]"
+      ],
+      "notes": "firestore.rules: split create/update on the 4 SR-1 collections; update now requires data==resource.data. 4 new assertFails tests: red 83/87 pre-fix, green 87/87 post-fix. SR-1 flipped to [Enforced]."
     },
     {
       "id": "AUD-account-01",
@@ -268,13 +287,18 @@
     {
       "id": "AUD-firebase-03",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Refresh docs/firestore-collection-layout.md to match the current firestore.rules and firestore.indexes.json",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a9fee07e2ab6b5b12690789d55770da63f5f2441"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-firebase-03 AC1 OK: doc says '6 composite indexes' (matches indexes.json=6), streak_events replaces streak/data, compat-blocks framed as removed",
+        "AUD-firebase-03 AC2 OK: doc documents tutor_grants, tutor_grants/audit_log, tutor_active_access with correct doc-ids and security notes"
+      ],
+      "notes": "Rewrote docs/firestore-collection-layout.md from a fresh read of rules/indexes.json: index count 0->6, added tutor_grants/tutor_active_access/audit_log, removed stale compat-blocks text, corrected doc-id claims. Docs-only."
     },
     {
       "id": "AUD-platform-01",
@@ -1103,13 +1127,17 @@
     {
       "id": "AUD-firebase-02",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Guard inviteTutor against silently resetting an already-active tutor grant",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a9fee07e2ab6b5b12690789d55770da63f5f2441"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-firebase-02 AC1 OK: re-invite while active -> failed-precondition; state stays active, permissions (bulk=false) + tutor_uid preserved"
+      ],
+      "notes": "inviteTutor now rejects re-invite while grant is 'active' instead of silently resetting state/permissions. Client already handles the new error. Red 281/282, green 282/282."
     },
     {
       "id": "AUD-core-sync-04",
@@ -2948,13 +2976,17 @@
     {
       "id": "AUD-firebase-06",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Delete tutor_active_access in onUserDeleted's parent-deletion cascade (Step 2), matching Step 3",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a9fee07e2ab6b5b12690789d55770da63f5f2441"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-firebase-06 AC1 OK: W6.23 asserts tutor_active_access deleted on parent cascade; Step 2 mirrors Step 3 w/ null-tutor_uid guard; 284/284"
+      ],
+      "notes": "onUserDeleted Step 2 now also deletes the matching tutor_active_access doc, mirroring Step 3. Symmetric W6.23 test added. Red 283/284, green 284/284."
     },
     {
       "id": "AUD-guardrails-05",
@@ -3684,13 +3716,17 @@
     {
       "id": "AUD-firebase-07",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Fix _cf_helpers.mjs's numeric child_profile_id fixture so listTutorGrants' outgoing-mode test can assert real behavior",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a9fee07e2ab6b5b12690789d55770da63f5f2441"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-firebase-07 AC1 OK: seedActiveGrant uses String(PROFILE); outgoing test asserts res.grants.length===1 + fields (weak !==undefined removed)"
+      ],
+      "notes": "seedActiveGrant now stores child_profile_id as String(PROFILE); strengthened the tautological outgoing-mode assertion. Confirmed 0!==1 against the buggy fixture, then fixed - 284/284 pass."
     },
     {
       "id": "AUD-t-cross-18",
@@ -4453,13 +4489,19 @@
     {
       "id": "AUD-firebase-05",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Add points_ledger and reward_redemptions to write_payloads.json and the PHASE D zero-denial oracle in firestore_rules.test.mjs",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a9fee07e2ab6b5b12690789d55770da63f5f2441"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-firebase-05 AC1 OK: write_payloads.json gains points_ledger+reward_redemptions; regenerated output byte-identical to committed (not hand-edited)",
+        "AUD-firebase-05 AC2 OK: PHASE D oracle adds entries 16 points_ledger + 17 reward_redemptions; PHASE E round-trip covers both",
+        "AUD-firebase-05 AC3 OK: make test-rules 89/89 pass"
+      ],
+      "notes": "Added points_ledger/reward_redemptions to emit_fixture_payloads.dart, regenerated write_payloads.json, added both to PHASE D oracle and PHASE E round-trip. make test-rules 89/89 green."
     },
     {
       "id": "AUD-guardrails-17",
