@@ -38,9 +38,13 @@ rules_version = '2';
 // `points_ledger`) deny `delete` and deny value mutation on `update` — only
 // an idempotent identical replay (`request.resource.data == resource.data`)
 // is allowed, so an outbox retry can re-push the same row without stranding
-// it, but a changed value is always rejected (SR-1). Snapshot collections
-// deny `delete` and gate writes through `.hasOnly(...)` field whitelists.
-// All ownership enforced by `isOwner(uid)` on the `users/{uid}` path segment.
+// it, but a changed value is always rejected (SR-1). Those same 4 collections
+// split `read` into `get` (unrestricted) and `list` (capped at
+// request.query.limit <= 500, matching the app's kListenerPageSize) so an
+// unbounded list can't exfiltrate a child's entire event history in one
+// query (SR-4). Snapshot collections deny `delete` and gate writes through
+// `.hasOnly(...)` field whitelists. All ownership enforced by `isOwner(uid)`
+// on the `users/{uid}` path segment.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -219,7 +223,14 @@ service cloud.firestore {
         //
         // TUTOR READ (V2-R3 C2): tutors may read completions to view progress.
         match /completions/{completionId} {
-          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          // SR-4: single-doc reads are unrestricted; `list` queries are
+          // capped at 500 (the app's kListenerPageSize) so an unbounded
+          // list can't exfiltrate a child's entire completion history in
+          // one query — get() and list() are split from a single `read`
+          // because `request.query.limit` is only meaningful on list().
+          allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
+            && request.query.limit <= 500;
           // SECURITY: isOwner(uid) ensures request.auth.uid == uid.
           // A tutor (different uid) is rejected here. This is the primary
           // defence — no tutor can write a live completion from the client.
@@ -251,7 +262,10 @@ service cloud.firestore {
         // Each streak event gets its own document keyed by a ULID.
         // Replaces the previous streak/data snapshot document.
         match /streak_events/{streakEventId} {
-          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          // SR-4: cap list() at 500; single-doc get() is unrestricted.
+          allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
+            && request.query.limit <= 500;
           // The push writes created_at as an ISO STRING (not a Firestore
           // timestamp), so a `created_at <= request.time` guard compared a
           // string to request.time and was rejected at the type level —
@@ -270,7 +284,10 @@ service cloud.firestore {
         // learning_ledger — append-only daily ledger entries.
         // Doc-id: ULID from the payload (W3.36 — idempotent retries).
         match /learning_ledger/{entryId} {
-          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          // SR-4: cap list() at 500; single-doc get() is unrestricted.
+          allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
+            && request.query.limit <= 500;
           // ULID doc-id + set(merge:true): an outbox retry of an already-
           // committed entry is an UPDATE, so `update: false` would strand it
           // (permission-denied). Append-only is enforced by the
@@ -287,7 +304,10 @@ service cloud.firestore {
         // (WS9 Wave-B / C#2). Doc-id: ULID from the payload (idempotent
         // retries); never deleted.
         match /points_ledger/{entryId} {
-          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          // SR-4: cap list() at 500; single-doc get() is unrestricted.
+          allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
+            && request.query.limit <= 500;
           allow create: if isOwner(uid);
           // SR-1 (append-only): update is allowed ONLY for the idempotent
           // merge:true re-push of the same doc on outbox retry — a

@@ -33,8 +33,12 @@ import {
 import {
   doc,
   getDoc,
+  getDocs,
   setDoc,
   deleteDoc,
+  collection,
+  query,
+  limit,
   Timestamp,
   setLogLevel,
 } from 'firebase/firestore';
@@ -344,7 +348,27 @@ describe('completions — owner write + validation + TUTOR WRITE BLOCK', () => {
       setDoc(doc(owner(), `${COMPLETIONS}/c1`), { points: 10, completed_at: pastTs }),
     );
   });
+  test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
+    await expectSR4ListLimitCap(COMPLETIONS);
+  });
 });
+
+// ── SR-4 helper: list() queries are capped at request.query.limit <= 500 ────
+// (AUD-firebase-09) get() (single-doc read) stays unrestricted (exercised
+// elsewhere by expectOwnerWriteTutorRead / the completions describe block
+// above); list() (a collection query) must specify limit(500) or fewer to
+// succeed — a larger or absent limit is denied, regardless of how many
+// documents actually exist in the collection.
+async function expectSR4ListLimitCap(collectionPath) {
+  const db_owner = owner();
+  await assertSucceeds(
+    getDocs(query(collection(db_owner, collectionPath), limit(500))),
+  );
+  await assertFails(
+    getDocs(query(collection(db_owner, collectionPath), limit(501))),
+  );
+  await assertFails(getDocs(collection(db_owner, collectionPath))); // no limit() at all
+}
 
 // ── SR-1 helper: changed-value update denied, identical replay allowed ──────
 // (AUD-docs-01) Seeds `path` with `seedDoc`, then asserts an owner update
@@ -373,6 +397,9 @@ describe('streak_events — owner write, tutor read, delete denied', () => {
       { event: 'tampered' },
     );
   });
+  test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
+    await expectSR4ListLimitCap(`${LP}/streak_events`);
+  });
 });
 
 // ── Path 9: learning_ledger ──────────────────────────────────────────────────
@@ -390,6 +417,9 @@ describe('learning_ledger — owner write, tutor read, delete denied', () => {
       { minutes: 9999 },
     );
   });
+  test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
+    await expectSR4ListLimitCap(`${LP}/learning_ledger`);
+  });
 });
 
 // ── Path 10: points_ledger ───────────────────────────────────────────────────
@@ -406,6 +436,9 @@ describe('points_ledger — owner write, tutor read, delete denied', () => {
       { points: 10 },
       { points: 500 },
     );
+  });
+  test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
+    await expectSR4ListLimitCap(`${LP}/points_ledger`);
   });
 });
 

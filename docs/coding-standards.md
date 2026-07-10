@@ -309,7 +309,7 @@ The sync engine writes ordinary collections as the owner, so for those paths `fi
 
 **SR-4 — Cap `list` queries on per-profile event collections: `allow list: if <cond> && request.query.limit <= 500`; single-doc reads stay on `allow get`.**
 **Why:** without the cap, one unbounded `list` exfiltrates (and bills) a child's entire history; the app already paginates at 500, so the cap costs nothing.
-**Enforce:** [Pending] rules test: `limit(500)` succeeds, `limit(1000)`/unbounded fails.
+**Enforce:** [Enforced] `firestore.rules` splits `read` into `get` (unrestricted) and `list` (`request.query.limit <= 500`) on `completions`, `streak_events`, `learning_ledger`, `points_ledger`; deny-tests in `functions/test/firestore_rules.test.mjs` (`make test-rules`) assert `limit(500)` succeeds and `limit(501)`/unbounded fails, for all 4 collections (AUD-firebase-09).
 **Source:** firebase.google.com/docs/firestore/security/rules-query
 
 **SR-5 — Tutor cross-user access checks state and expiry in the rule itself (`state == 'active' && expires_at > request.time` via `get()`), with ≤ 2 document-access calls per rule and same-path reads deduped.**

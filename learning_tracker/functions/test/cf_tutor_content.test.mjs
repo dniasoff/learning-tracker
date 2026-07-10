@@ -27,7 +27,9 @@ describe('tutorUpsertStageDefinition', () => {
     ownerUid: PARENT,
     profileId: PROFILE,
     stageId: 'track1_1',
-    stageData: { order: 1, label: 'Stage 1' },
+    // AUD-firebase-10: fields must be in STAGE_DEFINITION_ALLOWED_FIELDS
+    // (mirrors firestore.rules' stage_definitions hasOnly() whitelist).
+    stageData: { stage_order: 1, stage_name: 'Stage 1' },
   };
 
   beforeEach(async () => {
@@ -79,6 +81,18 @@ describe('tutorUpsertStageDefinition', () => {
   test('stageData is null → invalid-argument', async () => {
     await expectHttpsError(
       call(fns.tutorUpsertStageDefinition, { ...goodArgs, stageData: null }),
+      'invalid-argument',
+    );
+  });
+
+  // AUD-firebase-10: stageData is whitelisted server-side (mirrors
+  // firestore.rules' stage_definitions hasOnly()).
+  test('AUD-firebase-10: stageData with an unexpected key → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.tutorUpsertStageDefinition, {
+        ...goodArgs,
+        stageData: { stage_order: 1, not_a_real_field: 'sneaky' },
+      }),
       'invalid-argument',
     );
   });
@@ -144,7 +158,9 @@ describe('tutorUpsertStudyDayConfig', () => {
     ownerUid: PARENT,
     profileId: PROFILE,
     configId: 'config-1',
-    configData: { day: 'monday', enabled: true },
+    // AUD-firebase-10: fields must be in STUDY_DAY_CONFIG_ALLOWED_FIELDS
+    // (mirrors firestore.rules' study_day_configs hasOnly() whitelist).
+    configData: { day_of_week: 'monday', day_type: 'study' },
   };
 
   beforeEach(async () => {
@@ -196,6 +212,18 @@ describe('tutorUpsertStudyDayConfig', () => {
   test('configData is null → invalid-argument', async () => {
     await expectHttpsError(
       call(fns.tutorUpsertStudyDayConfig, { ...goodArgs, configData: null }),
+      'invalid-argument',
+    );
+  });
+
+  // AUD-firebase-10: configData is whitelisted server-side (mirrors
+  // firestore.rules' study_day_configs hasOnly()).
+  test('AUD-firebase-10: configData with an unexpected key → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.tutorUpsertStudyDayConfig, {
+        ...goodArgs,
+        configData: { day_of_week: 'monday', not_a_real_field: 'sneaky' },
+      }),
       'invalid-argument',
     );
   });
@@ -363,7 +391,9 @@ describe('tutorUpsertBookmark', () => {
     ownerUid: PARENT,
     profileId: PROFILE,
     bookmarkId: 'talmud_bavli_standard',
-    bookmarkData: { sefaria_ref: 'Berakhot.2a', chapter: 1 },
+    // AUD-firebase-10: fields must be in BOOKMARK_ALLOWED_FIELDS (mirrors
+    // firestore.rules' bookmarks hasOnly() whitelist).
+    bookmarkData: { sefaria_ref: 'Berakhot.2a', stage_id: 'stage-1' },
   };
 
   beforeEach(async () => {
@@ -415,6 +445,18 @@ describe('tutorUpsertBookmark', () => {
   test('bookmarkData is null → invalid-argument', async () => {
     await expectHttpsError(
       call(fns.tutorUpsertBookmark, { ...goodArgs, bookmarkData: null }),
+      'invalid-argument',
+    );
+  });
+
+  // AUD-firebase-10: bookmarkData is whitelisted server-side (mirrors
+  // firestore.rules' bookmarks hasOnly()).
+  test('AUD-firebase-10: bookmarkData with an unexpected key → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.tutorUpsertBookmark, {
+        ...goodArgs,
+        bookmarkData: { sefaria_ref: 'Berakhot.2a', not_a_real_field: 'sneaky' },
+      }),
       'invalid-argument',
     );
   });
@@ -480,7 +522,9 @@ describe('tutorSetProfileProgram', () => {
     ownerUid: PARENT,
     profileId: PROFILE,
     programId: 'talmud_bavli',
-    programData: { active: true, start_date: '2026-01-01' },
+    // AUD-firebase-10: fields must be in PROFILE_PROGRAM_ALLOWED_FIELDS
+    // (mirrors firestore.rules' profile_programs hasOnly() whitelist).
+    programData: { tracking_start_date: '2026-01-01', tracking_start_ref: 'Berakhot.2a' },
   };
 
   beforeEach(async () => {
@@ -532,6 +576,18 @@ describe('tutorSetProfileProgram', () => {
   test('programData is null → invalid-argument', async () => {
     await expectHttpsError(
       call(fns.tutorSetProfileProgram, { ...goodArgs, programData: null }),
+      'invalid-argument',
+    );
+  });
+
+  // AUD-firebase-10: programData is whitelisted server-side (mirrors
+  // firestore.rules' profile_programs hasOnly()).
+  test('AUD-firebase-10: programData with an unexpected key → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.tutorSetProfileProgram, {
+        ...goodArgs,
+        programData: { tracking_start_date: '2026-01-01', not_a_real_field: 'sneaky' },
+      }),
       'invalid-argument',
     );
   });
@@ -649,6 +705,19 @@ describe('tutorUpsertCurriculumScope', () => {
   test('scopeData is null → invalid-argument', async () => {
     await expectHttpsError(
       call(fns.tutorUpsertCurriculumScope, { ...goodArgs, scopeData: null }),
+      'invalid-argument',
+    );
+  });
+
+  // AUD-firebase-10: curriculum_scopes has no firestore.rules hasOnly()
+  // whitelist (intentionally open-ended even for owner writes), so no
+  // unexpected-key test applies here — but the size cap still does.
+  test('AUD-firebase-10: scopeData with an oversized string field → invalid-argument', async () => {
+    await expectHttpsError(
+      call(fns.tutorUpsertCurriculumScope, {
+        ...goodArgs,
+        scopeData: { notes: 'x'.repeat(5001) },
+      }),
       'invalid-argument',
     );
   });

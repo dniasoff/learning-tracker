@@ -1183,6 +1183,98 @@ export const expirePendingInvites = pubsub
 // Admin SDK bypasses Firestore Security Rules — the permission checks above are
 // the sole enforcement layer for these write paths.
 
+// ── AUD-firebase-10: field whitelists for tutor-write-path CFs ───────────────
+//
+// Admin SDK writes bypass firestore.rules entirely, so for these CFs
+// `assertAllowedFields` below is the ONLY server-side gate on WHICH fields a
+// caller may write and how large they may be — the permission checks above
+// only gate WHO may write and WHICH collection. Each list mirrors the
+// corresponding firestore.rules `request.resource.data.keys().hasOnly([...])`
+// block for the owner's own direct client writes to the same collection, so
+// an invited tutor (a distinct, deliberately lower-trust principal) can never
+// write a field the owner is rules-blocked from writing directly.
+//
+// goals, curriculum_tracks, stage_definitions, study_day_configs, bookmarks
+// and profile_programs all have a rules `.hasOnly()` counterpart. preferences
+// (gamification_settings) and curriculum_scopes do NOT — those collections
+// are intentionally open-ended even for the owner's own direct writes, so
+// only the size cap (not a key whitelist) applies there; see the `null`
+// allowedKeys call sites below.
+
+const GOAL_ALLOWED_FIELDS = [
+  "id", "goal_id", "profile_id", "track_id", "curriculum_id",
+  "curriculumId", "description", "target_percent", "targetPercent",
+  "target_date", "targetDate", "date_type", "dateType", "goal_type",
+  "goalType", "pace_value", "paceValue", "pace_unit", "pacePeriod",
+  "paceGranularity", "pace_granularity", "created_at", "createdAt",
+  "updated_at", "updatedAt", "synced_at",
+] as const;
+
+const CURRICULUM_TRACK_ALLOWED_FIELDS = [
+  "profile_id", "track_id", "curriculum_id", "state", "state_changed_at",
+  "activated_at", "pace_reset_date", "progress_schema_version",
+  "progress_computed_at", "progress_model", "program_progress",
+  "self_paced_progress", "synced_at", "purged", "purged_at",
+] as const;
+
+const STAGE_DEFINITION_ALLOWED_FIELDS = [
+  "profile_id", "curriculum_id", "track_id", "stage_order", "stage_name",
+  "schedule", "delay_days", "schedule_type", "is_default", "days_of_week",
+  "rolling_window_size", "updated_at", "synced_at",
+] as const;
+
+const STUDY_DAY_CONFIG_ALLOWED_FIELDS = [
+  "profile_id", "curriculum_id", "track_id", "day_of_week", "day_type",
+  "updated_at", "synced_at",
+] as const;
+
+const BOOKMARK_ALLOWED_FIELDS = [
+  "profile_id", "curriculum_id", "content_item_id", "sefaria_ref",
+  "stage_id", "updated_at", "synced_at",
+] as const;
+
+const PROFILE_PROGRAM_ALLOWED_FIELDS = [
+  "profile_id", "curriculum_id", "program_id", "tracking_start_date",
+  "tracking_start_ref", "synced_at", "updated_at",
+] as const;
+
+/**
+ * Throws HttpsError('invalid-argument') if `data` contains a key outside
+ * `allowedKeys`, or if any string value exceeds `maxStringLength`.
+ *
+ * @param data            the caller-supplied payload object (e.g. goalData).
+ * @param fieldParamName  its request.data field name, used in error messages.
+ * @param allowedKeys     null means the collection has no field whitelist
+ *                        (no rules `.hasOnly()` counterpart) — only the size
+ *                        cap is enforced.
+ */
+function assertAllowedFields(
+  data: Record<string, unknown>,
+  fieldParamName: string,
+  allowedKeys: readonly string[] | null,
+  maxStringLength = 5000,
+): void {
+  if (allowedKeys !== null) {
+    const allowed = new Set<string>(allowedKeys);
+    for (const key of Object.keys(data)) {
+      if (!allowed.has(key)) {
+        throw new HttpsError(
+          "invalid-argument",
+          `${fieldParamName} contains an unexpected field: ${key}`,
+        );
+      }
+    }
+  }
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === "string" && value.length > maxStringLength) {
+      throw new HttpsError(
+        "invalid-argument",
+        `${fieldParamName}.${key} exceeds the maximum allowed length (${maxStringLength})`,
+      );
+    }
+  }
+}
+
 // ── Shared grant-verification helper ─────────────────────────────────────────
 
 interface GrantVerification {
@@ -1261,7 +1353,21 @@ async function verifyTutorGrant(
   return { grant, profilePath, writtenAt: admin.firestore.Timestamp.now() };
 }
 
-/** Write an audit log entry for a tutor mutation (best-effort — errors are logged but not thrown). */
+/**
+ * Write an audit log entry for a tutor mutation (best-effort — errors are
+ * logged but not thrown, so the primary mutation still returns success even
+ * if the audit write fails).
+ *
+ * AUD-firebase-08: when the caller supplies `idempotencyKey` (request.data's
+ * optional per-call retry token), the entry is written to a doc ID derived
+ * deterministically from (grantId, action, target, idempotencyKey) via
+ * `.set()` instead of an auto-ID `.add()` — a client-side retry of the same
+ * logical mutation (e.g. after a timeout that actually succeeded
+ * server-side) reuses the same key and so coalesces into exactly one entry
+ * instead of a duplicate. Two calls with DIFFERENT idempotencyKeys (distinct
+ * real actions) still get distinct entries. Callers that omit the key keep
+ * the legacy auto-ID behavior — every call is a new entry.
+ */
 async function writeAuditLog(
   grantId: string,
   grant: FirebaseFirestore.DocumentData,
@@ -1271,21 +1377,32 @@ async function writeAuditLog(
   beforeValue: unknown,
   afterValue: unknown,
   timestamp: FirebaseFirestore.Timestamp,
+  idempotencyKey?: string,
 ): Promise<void> {
   try {
-    await db
-      .collection("tutor_grants")
-      .doc(grantId)
-      .collection("audit_log")
-      .add({
-        tutor_uid: callerUid,
-        tutor_name_snapshot: grant.tutor_name_snapshot ?? "",
-        action,
-        target,
-        before_value: beforeValue !== undefined ? JSON.stringify(beforeValue) : null,
-        after_value: afterValue !== undefined ? JSON.stringify(afterValue) : null,
-        timestamp: timestamp.toDate().toISOString(),
-      });
+    const auditCollection = db.collection("tutor_grants").doc(grantId).collection("audit_log");
+    const payload = {
+      tutor_uid: callerUid,
+      tutor_name_snapshot: grant.tutor_name_snapshot ?? "",
+      action,
+      target,
+      before_value: beforeValue !== undefined ? JSON.stringify(beforeValue) : null,
+      after_value: afterValue !== undefined ? JSON.stringify(afterValue) : null,
+      timestamp: timestamp.toDate().toISOString(),
+    };
+
+    if (typeof idempotencyKey === "string" && idempotencyKey) {
+      // Hash rather than concatenate raw parts as the doc-id: target may
+      // contain '/' (invalid inside a single path segment) and the combined
+      // length could exceed Firestore's 1500-byte doc-id limit.
+      const docId = crypto
+        .createHash("sha256")
+        .update(`${grantId}|${action}|${target}|${idempotencyKey}`)
+        .digest("hex");
+      await auditCollection.doc(docId).set(payload);
+    } else {
+      await auditCollection.add(payload);
+    }
   } catch (e) {
     logger.warn(`writeAuditLog: failed for grant=${grantId} action=${action}`, e);
   }
@@ -1337,7 +1454,7 @@ export const tutorResetCompletion = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "completion_reset",
     `profile/${profileId}/completions/${completionId}`,
-    beforeValue, null, writtenAt,
+    beforeValue, null, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1380,6 +1497,7 @@ export const tutorUpsertGoal = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "goalId must be a non-empty string");
   if (!goalData || typeof goalData !== "object" || Array.isArray(goalData))
     throw new HttpsError("invalid-argument", "goalData must be an object");
+  assertAllowedFields(goalData, "goalData", GOAL_ALLOWED_FIELDS);
 
   const { grant, profilePath, writtenAt } = await verifyTutorGrant(
     callerUid, grantId, ownerUid, profileId, "can_edit_goals",
@@ -1399,7 +1517,7 @@ export const tutorUpsertGoal = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "goal_upserted",
     `profile/${profileId}/goals/${goalId}`,
-    beforeValue, goalData, writtenAt,
+    beforeValue, goalData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1448,7 +1566,7 @@ export const tutorDeleteGoal = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "goal_deleted",
     `profile/${profileId}/goals/${goalId}`,
-    beforeValue, null, writtenAt,
+    beforeValue, null, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1488,6 +1606,7 @@ export const tutorUpsertTrack = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "trackId must be a non-empty string");
   if (!trackData || typeof trackData !== "object" || Array.isArray(trackData))
     throw new HttpsError("invalid-argument", "trackData must be an object");
+  assertAllowedFields(trackData, "trackData", CURRICULUM_TRACK_ALLOWED_FIELDS);
 
   const { grant, profilePath, writtenAt } = await verifyTutorGrant(
     callerUid, grantId, ownerUid, profileId, "can_edit_stages",
@@ -1506,7 +1625,7 @@ export const tutorUpsertTrack = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "track_upserted",
     `profile/${profileId}/curriculum_tracks/${trackId}`,
-    beforeValue, trackData, writtenAt,
+    beforeValue, trackData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1554,7 +1673,7 @@ export const tutorDeleteTrack = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "track_deleted",
     `profile/${profileId}/curriculum_tracks/${trackId}`,
-    beforeValue, null, writtenAt,
+    beforeValue, null, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1594,6 +1713,7 @@ export const tutorUpsertStageDefinition = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "stageId must be a non-empty string");
   if (!stageData || typeof stageData !== "object" || Array.isArray(stageData))
     throw new HttpsError("invalid-argument", "stageData must be an object");
+  assertAllowedFields(stageData, "stageData", STAGE_DEFINITION_ALLOWED_FIELDS);
 
   const { grant, profilePath, writtenAt } = await verifyTutorGrant(
     callerUid, grantId, ownerUid, profileId, "can_edit_stages",
@@ -1612,7 +1732,7 @@ export const tutorUpsertStageDefinition = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "stage_definition_upserted",
     `profile/${profileId}/stage_definitions/${stageId}`,
-    beforeValue, stageData, writtenAt,
+    beforeValue, stageData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1652,6 +1772,7 @@ export const tutorUpsertStudyDayConfig = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "configId must be a non-empty string");
   if (!configData || typeof configData !== "object" || Array.isArray(configData))
     throw new HttpsError("invalid-argument", "configData must be an object");
+  assertAllowedFields(configData, "configData", STUDY_DAY_CONFIG_ALLOWED_FIELDS);
 
   const { grant, profilePath, writtenAt } = await verifyTutorGrant(
     callerUid, grantId, ownerUid, profileId, "can_edit_study_days",
@@ -1670,7 +1791,7 @@ export const tutorUpsertStudyDayConfig = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "study_day_config_upserted",
     `profile/${profileId}/study_day_configs/${configId}`,
-    beforeValue, configData, writtenAt,
+    beforeValue, configData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1718,7 +1839,7 @@ export const tutorDeleteStudyDayConfig = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "study_day_config_deleted",
     `profile/${profileId}/study_day_configs/${configId}`,
-    beforeValue, null, writtenAt,
+    beforeValue, null, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1771,6 +1892,10 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
     );
   if (!settingsData || typeof settingsData !== "object" || Array.isArray(settingsData))
     throw new HttpsError("invalid-argument", "settingsData must be an object");
+  // No firestore.rules `.hasOnly()` counterpart for preferences/{scope} — it's
+  // intentionally an open-ended bag even for the owner's own direct writes,
+  // so only the size cap applies here (null = no key whitelist).
+  assertAllowedFields(settingsData, "settingsData", null);
 
   const { grant, profilePath, writtenAt } = await verifyTutorGrant(
     callerUid, grantId, ownerUid, profileId, permKey,
@@ -1789,7 +1914,7 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
     grantId, grant, callerUid,
     "gamification_settings_updated",
     `profile/${profileId}/preferences/gamification_settings`,
-    beforeValue, settingsData, writtenAt,
+    beforeValue, settingsData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1830,6 +1955,7 @@ export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "bookmarkId must be a non-empty string");
   if (!bookmarkData || typeof bookmarkData !== "object" || Array.isArray(bookmarkData))
     throw new HttpsError("invalid-argument", "bookmarkData must be an object");
+  assertAllowedFields(bookmarkData, "bookmarkData", BOOKMARK_ALLOWED_FIELDS);
 
   const { grant, profilePath, writtenAt } = await verifyTutorGrant(
     callerUid, grantId, ownerUid, profileId, "can_edit_stages",
@@ -1848,7 +1974,7 @@ export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "bookmark_upserted",
     `profile/${profileId}/bookmarks/${bookmarkId}`,
-    beforeValue, bookmarkData, writtenAt,
+    beforeValue, bookmarkData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1889,6 +2015,7 @@ export const tutorSetProfileProgram = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "programId must be a non-empty string");
   if (!programData || typeof programData !== "object" || Array.isArray(programData))
     throw new HttpsError("invalid-argument", "programData must be an object");
+  assertAllowedFields(programData, "programData", PROFILE_PROGRAM_ALLOWED_FIELDS);
 
   const { grant, profilePath, writtenAt } = await verifyTutorGrant(
     callerUid, grantId, ownerUid, profileId, "can_edit_stages",
@@ -1907,7 +2034,7 @@ export const tutorSetProfileProgram = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "profile_program_set",
     `profile/${profileId}/profile_programs/${programId}`,
-    beforeValue, programData, writtenAt,
+    beforeValue, programData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1948,6 +2075,10 @@ export const tutorUpsertCurriculumScope = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "scopeId must be a non-empty string");
   if (!scopeData || typeof scopeData !== "object" || Array.isArray(scopeData))
     throw new HttpsError("invalid-argument", "scopeData must be an object");
+  // No firestore.rules `.hasOnly()` counterpart for curriculum_scopes — it's
+  // intentionally open-ended even for the owner's own direct writes, so only
+  // the size cap applies here (null = no key whitelist).
+  assertAllowedFields(scopeData, "scopeData", null);
 
   const { grant, profilePath, writtenAt } = await verifyTutorGrant(
     callerUid, grantId, ownerUid, profileId, "can_edit_stages",
@@ -1966,7 +2097,7 @@ export const tutorUpsertCurriculumScope = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "curriculum_scope_upserted",
     `profile/${profileId}/curriculum_scopes/${scopeId}`,
-    beforeValue, scopeData, writtenAt,
+    beforeValue, scopeData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -2043,16 +2174,27 @@ export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
   // Learner profile is at users/{ownerUid}/learner_profiles/{profileId} (the profilePath doc itself).
   // H2 fix: read the full existing doc first, merge the edit fields on top, then
   // write the complete doc so LearnerProfileCodec.decode() never sees a partial doc.
-  const beforeSnap = await profilePath.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
   const updates: Record<string, unknown> = { updated_at: writtenAt };
   if (displayName !== undefined) updates["display_name"] = displayName.trim();
   if (avatar !== undefined) updates["avatar"] = avatar;
   if (mode !== undefined) updates["mode"] = mode;
 
-  const fullDoc = beforeValue ? { ...beforeValue, ...updates } : updates;
-  await profilePath.set(fullDoc, { merge: false });
+  // AUD-firebase-11: wrap the read+merge+write in a transaction, matching
+  // the runTransaction pattern already used by acceptTutorInvite /
+  // revokeTutorGrant / resignTutorGrant / expirePendingInvites elsewhere in
+  // this file. Without this, a concurrent writer (the owner's own device,
+  // or a second tutor) that changes an UNRELATED field on the same doc
+  // between the plain get() and the full-document set(merge:false) has its
+  // write silently clobbered — a lost-update race. A transaction detects
+  // that the doc changed after its read and automatically retries the
+  // callback with a fresh read, so the concurrent field survives.
+  const beforeValue = await db.runTransaction(async (txn) => {
+    const snap = await txn.get(profilePath);
+    const before = snap.exists ? snap.data()! : null;
+    const fullDoc = before ? { ...before, ...updates } : updates;
+    txn.set(profilePath, fullDoc, { merge: false });
+    return before;
+  });
 
   await writeAuditLog(
     grantId, grant, callerUid,
@@ -2063,7 +2205,7 @@ export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
       avatar: beforeValue["avatar"],
       mode: beforeValue["mode"],
     } : null,
-    updates, writtenAt,
+    updates, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
