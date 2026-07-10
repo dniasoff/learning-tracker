@@ -24,6 +24,9 @@
 ///     `analytics_service.dart`; use typed helper methods instead.
 ///   - [NoRawTalker]: prevents `package:talker/talker.dart` imports outside
 ///     `lib/core/logging/`.
+///   - [NoUnguardedAsyncNotifierInit]: flags a Riverpod Notifier's `build()`
+///     firing a private async method fire-and-forget (unawaited, unguarded)
+///     whose body has zero try/catch anywhere (AUD-account-11).
 library learning_tracker_lints;
 
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -38,6 +41,7 @@ import 'src/rules/no_hardcoded_domain_term.dart';
 import 'src/rules/no_hardcoded_text_direction.dart';
 import 'src/rules/no_raw_logevent.dart';
 import 'src/rules/no_raw_talker.dart';
+import 'src/rules/no_unguarded_async_notifier_init.dart';
 
 /// Entrypoint called by the custom_lint plugin runner.
 PluginBase createPlugin() => _LearningTrackerLintPlugin();
@@ -55,5 +59,6 @@ class _LearningTrackerLintPlugin extends PluginBase {
         NoHardcodedTextDirection(),
         NoRawLogEvent(),
         NoRawTalker(),
+        NoUnguardedAsyncNotifierInit(),
       ];
 }

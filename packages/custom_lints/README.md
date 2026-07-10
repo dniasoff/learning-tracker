@@ -260,6 +260,74 @@ class FooController extends AsyncNotifier<void> {
 
 ---
 
+## Rule 7 — `no_unguarded_async_notifier_init`
+
+### What it checks
+
+Flags a Riverpod `Notifier`/`AsyncNotifier` (any of `Notifier`, `AsyncNotifier`, `StateNotifier`, `StreamNotifier`, their `AutoDispose`/`Family` variants, or `riverpod_generator`'s `class Foo extends _$Foo` codegen shape) whose `build()` method fires a private (`_`-prefixed) async method **fire-and-forget**:
+
+- called as a bare statement (`_init();` / `this._init();`),
+- never `await`ed, and
+- never wrapped in `try`/`catch` at the call site,
+
+where that private method's own body contains **zero `try` statements anywhere**.
+
+**Severity: WARNING.** An exception anywhere in such a method is an unobserved Future rejection — `build()` already returned its placeholder state before the async work settles, and nothing ever resets `state` on failure, so the notifier can get stuck at that placeholder forever.
+
+**Not flagged:**
+
+- The call is `await`ed.
+- The call is guarded by `try`/`catch` at the call site.
+- The callee's body contains at least one `try` statement anywhere (this rule does not verify the guard is exhaustive — that's a human-triage question).
+- The callee is public, or is not declared `async`.
+
+Detection does not follow indirect call chains (`build()` calling `_setup()` which itself fires `_init()`) — only a direct fire-and-forget call from `build()` is flagged.
+
+### Why it exists
+
+AUD-account-11: `AuthStateNotifier.build()` fired `_init()` fire-and-forget with zero try/catch anywhere in `_init()`'s body, so a Firebase/DAO exception during startup silently stranded `sessionStatus` at `SessionStatus.initializing` forever — directly contradicting `auth_state.dart`'s own "Must not hang — see 19.6 startup hardening" doc comment. This rule is the Rule-0 checker for that pattern.
+
+### How to fix
+
+**Before (banned — the pre-fix AUD-account-11 shape):**
+```dart
+class AuthStateNotifier extends _$AuthStateNotifier {
+  @override
+  AuthState build() {
+    _init();
+    return const AuthState.initializing();
+  }
+
+  Future<void> _init() async {
+    final refreshed = await authRepo.reloadCurrentUser(); // can throw
+    // ... zero try/catch anywhere in this method
+  }
+}
+```
+
+**After (correct — wrap the fired method's body in try/catch and resolve `state` on every path):**
+```dart
+class AuthStateNotifier extends _$AuthStateNotifier {
+  @override
+  AuthState build() {
+    _init();
+    return const AuthState.initializing();
+  }
+
+  Future<void> _init() async {
+    try {
+      final refreshed = await authRepo.reloadCurrentUser();
+      // ... state = AuthState.signedIn(...) / AuthState.signedOut()
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(event: 'auth_state_init_failed', exception: e, stackTrace: st);
+      state = const AuthState.signedOut();
+    }
+  }
+}
+```
+
+---
+
 ## Configuration
 
 All rules are enabled automatically. To disable one (discouraged):
@@ -274,4 +342,5 @@ custom_lint:
     - no_raw_talker: false                       # discouraged
     - no_hardcoded_text_direction: false         # discouraged
     - no_hand_rolled_async_state_notifier: false # discouraged
+    - no_unguarded_async_notifier_init: false    # discouraged
 ```
