@@ -656,4 +656,42 @@ void main() {
       await db.close();
     },
   );
+
+  // ── 14. AUD-tutoring-08: lazy-build the grants roster (PF-2) ────────────────
+
+  testWidgets(
+    'AUD-tutoring-08: grants list is backed by ListView.builder (lazy), not '
+    'a fully-expanded ListView(children:)',
+    (tester) async {
+      // 50 active grants — a dedicated tutor's talmid roster has no
+      // archiving path and is not bounded small.
+      final grants = [
+        for (var i = 0; i < 50; i++)
+          _activeGrant(grantId: 'grant-$i', childName: 'Talmid $i'),
+      ];
+      await tester.pumpWidget(buildSubject(() => Future.value(grants)));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Structural proof of laziness: ListView.builder uses a
+      // SliverChildBuilderDelegate; the old ListView(children: [...]) used a
+      // SliverChildListDelegate that eagerly builds every row up front.
+      final listView = tester.widget<ListView>(find.byType(ListView));
+      expect(
+        listView.childrenDelegate,
+        isA<SliverChildBuilderDelegate>(),
+        reason:
+            'The grants list must be built via ListView.builder (lazy) so '
+            'off-screen rows are not realized on every open/rebuild.',
+      );
+
+      // Behavioural proof: the first talmid (near the top) is realized;
+      // one deep in the roster, far past the viewport + cache extent, is
+      // not — it was never built.
+      expect(find.text('Talmid 0'), findsOneWidget);
+      expect(find.text('Talmid 49'), findsNothing);
+
+      await tearDownWidget(tester);
+    },
+  );
 }

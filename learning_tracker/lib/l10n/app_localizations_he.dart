@@ -1253,6 +1253,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get profilePickerTalmidProfiles => 'פרופילי תלמידים';
 
   @override
+  String settingsTutoringViewAll(int count) {
+    return 'הצג הכל (עוד $count)';
+  }
+
+  @override
   String get profilePickerSkipToSettings => 'מעבר להגדרות';
 
   @override

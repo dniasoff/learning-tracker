@@ -2277,6 +2277,12 @@ abstract class AppLocalizations {
   /// **'TALMID PROFILES'**
   String get profilePickerTalmidProfiles;
 
+  /// No description provided for @settingsTutoringViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all ({count} more)'**
+  String settingsTutoringViewAll(int count);
+
   /// No description provided for @profilePickerSkipToSettings.
   ///
   /// In en, this message translates to:

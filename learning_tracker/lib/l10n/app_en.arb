@@ -696,6 +696,12 @@
   "profilePickerMyChildren": "MY CHILDREN",
   "profilePickerYourProfiles": "YOUR PROFILES",
   "profilePickerTalmidProfiles": "TALMID PROFILES",
+  "settingsTutoringViewAll": "View all ({count} more)",
+  "@settingsTutoringViewAll": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "profilePickerSkipToSettings": "Skip to Settings",
   "profilePickerTutoredChildren": "TUTORED CHILDREN",
   "tutoredChildrenViewInvitations": "View invitations",

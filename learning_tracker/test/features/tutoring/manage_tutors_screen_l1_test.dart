@@ -1811,4 +1811,83 @@ void main() {
       await tester.pump(Duration.zero);
     },
   );
+
+  // ── AUD-tutoring-08 (PF-2, verify-correction site): per-child tutor list ───
+
+  testWidgets(
+    'AUD-tutoring-08: per-child tutor list is backed by ListView.builder, '
+    'not a fully-expanded Column(children:)',
+    (tester) async {
+      final child = _childProfile(id: 1, displayName: 'Roster Child');
+      final now = DateTime.utc(2026, 1, 1);
+      final grants = [
+        for (var i = 0; i < 50; i++)
+          TutorGrant.fromDoc(
+            TutorGrantDoc(
+              grantId: 'grant_$i',
+              parentUid: 'parent_uid',
+              childProfileId: '1',
+              tutorEmail: 'tutor$i@example.com',
+              state: TutorGrantState.active,
+              invitedAt: now,
+              updatedAt: now,
+              acceptedAt: now,
+            ),
+            permissions: TutorPermissions.defaults(),
+          ),
+      ];
+
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          profilesState: AsyncData([child]),
+          grantsPerChild: {'1': AsyncData(grants)},
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Structural proof: every ListView in the tree (the outer per-profile
+      // list and the inner per-child tutor list) is builder-backed rather
+      // than an eagerly-expanded `for` loop feeding Column(children:).
+      //
+      // NOTE: the inner per-child list is necessarily `shrinkWrap: true` +
+      // NeverScrollableScrollPhysics (it lives inside the outer scrollable,
+      // one list item per child) — Flutter still lays out every child of a
+      // shrink-wrapped ListView.builder to compute its height, so this
+      // specific nested site does not gain true off-screen-widget savings
+      // the way the top-level ManageGrantsScreen and the capped Settings
+      // preview do. It is fixed here for consistency with the flagged
+      // for-loop-into-ListView(/Column( pattern and to make a future
+      // migration to slivers a pure delegate swap; the real roster-size
+      // mitigation for this narrower, lower-severity site is future work
+      // (see notes).
+      final listViews = tester.widgetList<ListView>(find.byType(ListView));
+      // Exactly 2: the outer per-profile ListView.builder (pre-existing) and
+      // the inner per-child tutor-rows ListView.builder (this fix). Before
+      // the fix the inner list was a plain Column — only 1 ListView existed.
+      expect(
+        listViews,
+        hasLength(2),
+        reason:
+            'The per-child tutor rows must themselves be a ListView.builder '
+            '(not a Column) so the fix actually replaces the flagged '
+            '`for` loop pattern.',
+      );
+      for (final listView in listViews) {
+        expect(
+          listView.childrenDelegate,
+          isA<SliverChildBuilderDelegate>(),
+          reason:
+              'Every grants ListView must be built via ListView.builder '
+              'rather than a `for` loop feeding Column(/ListView(children:.',
+        );
+      }
+      expect(find.text('tutor0@example.com'), findsOneWidget);
+      expect(find.text('tutor49@example.com'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
 }

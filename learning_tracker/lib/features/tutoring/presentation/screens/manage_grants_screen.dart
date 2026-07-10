@@ -80,29 +80,48 @@ class _ManageGrantsScreenState extends ConsumerState<ManageGrantsScreen> {
               return _EmptyGrantsView(theme: theme);
             }
 
-            return ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              children: [
-                if (activeGrants.isNotEmpty) ...[
-                  _SectionHeader(
-                    label: l10n.manageGrantsActiveSection(activeGrants.length),
-                    theme: theme,
-                  ),
-                  for (final grant in activeGrants)
-                    _GrantRow(grant: grant, canResign: true),
-                  const SizedBox(height: 8),
-                ],
-                if (pendingGrants.isNotEmpty) ...[
-                  _SectionHeader(
-                    label: l10n.manageGrantsPendingSection(
-                      pendingGrants.length,
-                    ),
-                    theme: theme,
-                  ),
-                  for (final grant in pendingGrants)
-                    _GrantRow(grant: grant, canResign: false),
-                ],
+            // AUD-tutoring-08 (PF-2): flatten headers + rows into a single
+            // lazily-built item list instead of eagerly expanding every row
+            // via a `for` loop inside a non-lazy ListView. A dedicated
+            // tutor (e.g. a rebbi/melamed tracking many talmidim across
+            // seasons — the tutoring feature's own stated use case)
+            // accumulates one grant per student relationship over time with
+            // no archiving path, so this roster is not bounded small.
+            final items = <_GrantListItem>[
+              if (activeGrants.isNotEmpty) ...[
+                _GrantHeaderItem(
+                  l10n.manageGrantsActiveSection(activeGrants.length),
+                ),
+                for (final grant in activeGrants)
+                  _GrantRowItem(grant: grant, canResign: true),
+                const _GrantSpacerItem(),
               ],
+              if (pendingGrants.isNotEmpty) ...[
+                _GrantHeaderItem(
+                  l10n.manageGrantsPendingSection(pendingGrants.length),
+                ),
+                for (final grant in pendingGrants)
+                  _GrantRowItem(grant: grant, canResign: false),
+              ],
+            ];
+
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return switch (item) {
+                  _GrantHeaderItem(:final label) => _SectionHeader(
+                    label: label,
+                    theme: theme,
+                  ),
+                  _GrantRowItem(:final grant, :final canResign) => _GrantRow(
+                    grant: grant,
+                    canResign: canResign,
+                  ),
+                  _GrantSpacerItem() => const SizedBox(height: 8),
+                };
+              },
             );
           },
         ),
@@ -149,6 +168,28 @@ class _EmptyGrantsView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// AUD-tutoring-08 (PF-2): a flattened row model so the grants list can be
+/// fed to a single lazy [ListView.builder] instead of eagerly expanding a
+/// `for` loop of widgets per section.
+sealed class _GrantListItem {
+  const _GrantListItem();
+}
+
+class _GrantHeaderItem extends _GrantListItem {
+  const _GrantHeaderItem(this.label);
+  final String label;
+}
+
+class _GrantRowItem extends _GrantListItem {
+  const _GrantRowItem({required this.grant, required this.canResign});
+  final TutorGrant grant;
+  final bool canResign;
+}
+
+class _GrantSpacerItem extends _GrantListItem {
+  const _GrantSpacerItem();
 }
 
 class _SectionHeader extends StatelessWidget {

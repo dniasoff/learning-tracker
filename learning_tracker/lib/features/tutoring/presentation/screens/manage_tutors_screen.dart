@@ -251,32 +251,51 @@ class _ChildGrantsSection extends ConsumerWidget {
                 .where((g) => g.grantState is PendingGrant)
                 .toList();
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (active.isNotEmpty) ...[
-                  _SectionDivider(
-                    label: l10n.manageTutorsActiveSection(active.length),
-                  ),
-                  for (final grant in active)
-                    _TutorGrantRow.active(
-                      grant: grant,
-                      childProfileId: profile.id.toString(),
-                      childName: profile.displayName,
-                    ),
-                ],
-                if (pending.isNotEmpty) ...[
-                  _SectionDivider(
-                    label: l10n.manageTutorsPendingSection(pending.length),
-                  ),
-                  for (final grant in pending)
-                    _TutorGrantRow.pending(
-                      grant: grant,
-                      childProfileId: profile.id.toString(),
-                      childName: profile.displayName,
-                    ),
-                ],
+            // AUD-tutoring-08 (PF-2, verify-correction site): flatten
+            // headers + rows and build via ListView.builder rather than
+            // eagerly expanding every tutor row with a `for` loop inside a
+            // plain Column, matching the fix applied to ManageGrantsScreen.
+            final items = <_TutorGrantListItem>[
+              if (active.isNotEmpty) ...[
+                _TutorGrantHeaderItem(
+                  l10n.manageTutorsActiveSection(active.length),
+                ),
+                for (final grant in active)
+                  _TutorGrantRowItem(grant: grant, isActive: true),
               ],
+              if (pending.isNotEmpty) ...[
+                _TutorGrantHeaderItem(
+                  l10n.manageTutorsPendingSection(pending.length),
+                ),
+                for (final grant in pending)
+                  _TutorGrantRowItem(grant: grant, isActive: false),
+              ],
+            ];
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return switch (item) {
+                  _TutorGrantHeaderItem(:final label) => _SectionDivider(
+                    label: label,
+                  ),
+                  _TutorGrantRowItem(:final grant, :final isActive) =>
+                    isActive
+                        ? _TutorGrantRow.active(
+                            grant: grant,
+                            childProfileId: profile.id.toString(),
+                            childName: profile.displayName,
+                          )
+                        : _TutorGrantRow.pending(
+                            grant: grant,
+                            childProfileId: profile.id.toString(),
+                            childName: profile.displayName,
+                          ),
+                };
+              },
             );
           },
         ),
@@ -303,6 +322,24 @@ class _ChildGrantsSection extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// AUD-tutoring-08 (PF-2): a flattened row model so a child's tutor list can
+/// be fed to a single [ListView.builder] instead of eagerly expanding a
+/// `for` loop of widgets per section.
+sealed class _TutorGrantListItem {
+  const _TutorGrantListItem();
+}
+
+class _TutorGrantHeaderItem extends _TutorGrantListItem {
+  const _TutorGrantHeaderItem(this.label);
+  final String label;
+}
+
+class _TutorGrantRowItem extends _TutorGrantListItem {
+  const _TutorGrantRowItem({required this.grant, required this.isActive});
+  final TutorGrant grant;
+  final bool isActive;
 }
 
 class _SectionDivider extends StatelessWidget {

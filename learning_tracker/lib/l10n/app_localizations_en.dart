@@ -1261,6 +1261,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePickerTalmidProfiles => 'TALMID PROFILES';
 
   @override
+  String settingsTutoringViewAll(int count) {
+    return 'View all ($count more)';
+  }
+
+  @override
   String get profilePickerSkipToSettings => 'Skip to Settings';
 
   @override

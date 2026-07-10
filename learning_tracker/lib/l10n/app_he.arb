@@ -601,6 +601,12 @@
   "profilePickerMyChildren": "הילדים שלי",
   "profilePickerYourProfiles": "הפרופילים שלך",
   "profilePickerTalmidProfiles": "פרופילי תלמידים",
+  "settingsTutoringViewAll": "הצג הכל (עוד {count})",
+  "@settingsTutoringViewAll": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "profilePickerSkipToSettings": "מעבר להגדרות",
   "profilePickerTutoredChildren": "ילדים מוּדרכים",
   "tutoredChildrenViewInvitations": "צפייה בהזמנות",

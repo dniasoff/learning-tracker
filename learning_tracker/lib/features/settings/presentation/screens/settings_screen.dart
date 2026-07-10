@@ -689,6 +689,14 @@ class _ParentalControlsSectionState
 class _PendingInvitesSection extends ConsumerWidget {
   const _PendingInvitesSection();
 
+  /// AUD-tutoring-08 (PF-2): this section is embedded (non-scrolling) inside
+  /// the outer Settings ListView, so it cannot become a lazy builder itself.
+  /// Cap the inline preview instead of rendering a dedicated tutor's entire
+  /// (unbounded, no-archiving-path) roster on every Settings open; a "View
+  /// all" row routes to the dedicated, independently-scrolling ManageGrants
+  /// hub for the rest.
+  static const _maxInlinePreview = 5;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeAsync = ref.watch(incomingTutorGrantsProvider);
@@ -709,6 +717,17 @@ class _PendingInvitesSection extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
+    // Pending invites are the more actionable item (need a tap to accept),
+    // so they get preview priority; active grants fill any remaining budget.
+    final visiblePending = pendingGrants.take(_maxInlinePreview).toList();
+    final activeBudget = _maxInlinePreview - visiblePending.length;
+    final visibleActive = activeBudget > 0
+        ? activeGrants.take(activeBudget).toList()
+        : const <TutorGrant>[];
+    final hiddenCount =
+        (pendingGrants.length - visiblePending.length) +
+        (activeGrants.length - visibleActive.length);
+
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     return Column(
@@ -726,14 +745,29 @@ class _PendingInvitesSection extends ConsumerWidget {
             ),
           ),
         ),
-        for (final grant in pendingGrants) ...[
+        for (final grant in visiblePending) ...[
           _TutorGrantTile(grant: grant, isPending: true),
           const SizedBox(height: 8),
         ],
-        for (final grant in activeGrants) ...[
+        for (final grant in visibleActive) ...[
           _TutorGrantTile(grant: grant, isPending: false),
           const SizedBox(height: 8),
         ],
+        if (hiddenCount > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: OutlinedButton(
+              onPressed: () => context.pushRoute(const ManageGrantsRoute()),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.brandBlue,
+                side: BorderSide(
+                  color: AppTheme.brandBlue.withValues(alpha: 0.5),
+                ),
+                minimumSize: const Size(double.infinity, 40),
+              ),
+              child: Text(l10n.settingsTutoringViewAll(hiddenCount)),
+            ),
+          ),
         const SizedBox(height: 8),
       ],
     );
