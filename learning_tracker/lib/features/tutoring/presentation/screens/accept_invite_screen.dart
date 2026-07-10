@@ -32,15 +32,13 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
-// The grant list the tutored-children UI (profile-picker / Settings /
-// ManageGrants) actually watches is the offline-first FutureProvider in
-// manage_tutors_providers — NOT the @riverpod `incomingTutorGrants` codegen
-// provider in tutor_grant_providers (which is a distinct provider with the
-// same name). Use the manage_tutors one so loading + invalidation here drive
-// the SAME provider those surfaces read, otherwise the accepted row never
-// flips in-session.
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    as manage_tutors;
+// AUD-tutoring-03: incomingTutorGrantsProvider is the offline-first
+// FutureProvider defined here (manage_tutors_providers.dart) — the one the
+// tutored-children UI (profile-picker / Settings / ManageGrants) actually
+// watches. It no longer collides with a same-named provider in
+// tutor_grant_providers.dart (that duplicate was deleted), so this import no
+// longer needs an alias to disambiguate.
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart';
@@ -133,9 +131,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
     // Falls back to a minimal grant object if not yet in the cached list
     // (the Cloud Function validates ownership and state server-side anyway).
     try {
-      final grants = await ref.read(
-        manage_tutors.incomingTutorGrantsProvider.future,
-      );
+      final grants = await ref.read(incomingTutorGrantsProvider.future);
       _loadedGrant = grants
           .where((g) => g.grantId == token)
           .cast<TutorGrant?>()
@@ -177,7 +173,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
           // restart. This is the single funnel all accept entry points pass
           // through (deep link, Settings, profile-picker), so invalidating here
           // fixes the stale row regardless of how acceptance was initiated.
-          ref.invalidate(manage_tutors.incomingTutorGrantsProvider);
+          ref.invalidate(incomingTutorGrantsProvider);
           ref.invalidate(pendingTutorInvitesProvider);
           // C4: check whether the tutor has provisioned a Tutor PIN yet, keyed
           // on their OWN profile id (resolved in _initialize). If not, route to
