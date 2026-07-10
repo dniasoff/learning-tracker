@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/account/data/services/magic_link_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
-    as auth_state;
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'magic_link_providers.g.dart';
@@ -18,7 +17,7 @@ MagicLinkService magicLinkService(Ref ref) {
     authRepository: ref.watch(authRepositoryProvider),
     onSignedIn: (user) async {
       await ref
-          .read(auth_state.authStateProvider.notifier)
+          .read(authStateProvider.notifier)
           .setCloudBornSessionFromFirebaseUser(user);
     },
   );

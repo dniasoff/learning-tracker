@@ -19,6 +19,31 @@ class AuthStateNotifier extends _$AuthStateNotifier {
   @override
   AuthState build() {
     _init();
+    // AUD-account-19: react to Firebase-side session invalidation (disabled
+    // account, revoked refresh token, forced sign-out elsewhere) that
+    // happens WITHOUT this app calling signOut()/any mutation itself.
+    // Without this, nothing re-derives this notifier's state from a live
+    // Firebase change — the app keeps believing a cloud-born session is
+    // valid until an unrelated explicit action happens to touch it.
+    //
+    // Scope: only detect the "session became unauthenticated" transition
+    // (stream settles to null) while we currently believe a cloud-born
+    // session is signed in. A non-null emission is intentionally ignored
+    // here — every path that authenticates to a NEW identity already
+    // drives this notifier's state directly (setCloudBornSession /
+    // setLocalBornSession), so re-deriving from the stream on every
+    // non-null event would race and duplicate that explicit transition.
+    ref.listen<AsyncValue<AppUser?>>(firebaseAuthStateProvider, (
+      previous,
+      next,
+    ) {
+      if (next is AsyncData<AppUser?> &&
+          next.value == null &&
+          state.isSignedIn &&
+          state.tier == Tier.cloudBorn) {
+        state = const AuthState.signedOut();
+      }
+    });
     return const AuthState.initializing();
   }
 

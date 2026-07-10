@@ -16,15 +16,7 @@ import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
-    hide authStateProvider;
-// AUD-account-18: the notifier-based `authStateProvider` (auth_state_provider.dart,
-// imported unprefixed below) and the raw Firebase-stream-based `authStateProvider`
-// (auth_providers.dart, hidden above) share a name — see AUD-account-19. This
-// second, aliased import reaches the raw stream so `_AccountTileState` can watch
-// the LIVE Firebase session reactively instead of ref.read-ing a snapshot.
-import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
-    as raw_auth;
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
@@ -307,7 +299,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
     // single Firebase auth slot). SM-3 / AUD-account-18: a ref.read
     // snapshot here only re-evaluates when something else forces this
     // widget to rebuild, so it can silently go stale.
-    final fbUser = ref.watch(raw_auth.authStateProvider).value;
+    final fbUser = ref.watch(firebaseAuthStateProvider).value;
     final hasValidSession =
         isCloud && fbUser != null && fbUser.uid == account.firebaseUid;
 

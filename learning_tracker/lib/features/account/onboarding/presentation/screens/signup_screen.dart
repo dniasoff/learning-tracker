@@ -20,8 +20,7 @@ import 'package:learning_tracker/features/account/domain/services/local_auth_ser
 import 'package:learning_tracker/features/account/domain/services/pending_local_signup.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
-    as auth_state;
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/onboarding.dart'
     show kOnboardingComplete;
@@ -244,7 +243,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       );
 
       ref
-          .read(auth_state.authStateProvider.notifier)
+          .read(authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
 
       // Clear any cached Firebase user so offline local sessions are never
@@ -386,7 +385,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         ref.invalidate(userDatabaseProvider);
 
         await ref
-            .read(auth_state.authStateProvider.notifier)
+            .read(authStateProvider.notifier)
             .setCloudBornSessionFromFirebaseUser(googleUser);
 
         final prefsForReg = await SharedPreferences.getInstance();
@@ -410,7 +409,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             .setFileName(existingEntry.dbFileName);
         ref.invalidate(userDatabaseProvider);
         await ref
-            .read(auth_state.authStateProvider.notifier)
+            .read(authStateProvider.notifier)
             .setCloudBornSessionFromFirebaseUser(googleUser);
         final prefsForReg = await SharedPreferences.getInstance();
         final session = SessionPersistenceService(
