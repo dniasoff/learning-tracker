@@ -56,6 +56,19 @@ final class SignInError extends SignInState {
   final String message;
 }
 
+/// AUD-account-14: internal-only marker exception carrying an already
+/// user-facing (l10n-resolved) message for the "soft" failure branches that
+/// previously assigned `state = SignInError(msg)` directly mid-method
+/// instead of throwing. Routing them through this type lets
+/// [AsyncValue.guard] be the single place that decides the terminal state
+/// (see [SignInController._resolveFailureMessage]), rather than ~20 scattered
+/// manual `state = ...` call sites.
+class _SignInFailure implements Exception {
+  const _SignInFailure(this.message);
+
+  final String message;
+}
+
 // ── Controller ─────────────────────────────────────────────────────────────────
 
 /// Holds sign-in business logic outside [SignInScreen].
@@ -126,6 +139,27 @@ class SignInController extends Notifier<SignInState> {
     final code = extractFirebaseCode(e);
     if (code != null) return _mapAuthError(code, l10n);
     return l10n.authErrSignInGeneric;
+  }
+
+  /// AUD-account-14: single point that turns whatever [AsyncValue.guard]
+  /// caught into the message shown to the user — the mirror of the old
+  /// scattered `_mapAuthErrorFromException` / literal-message call sites.
+  ///
+  ///   * [_SignInFailure] already carries a resolved l10n message (a "soft"
+  ///     failure the body detected without an exception being thrown by a
+  ///     lower layer — e.g. no local data for an offline restore).
+  ///   * [InvalidCredentialsException] maps to the incorrect-password copy
+  ///     (matches the previous `on InvalidCredentialsException` catch).
+  ///   * A non-cancel [GoogleSignInException] maps to the generic Google
+  ///     failure copy (matches the previous `on GoogleSignInException`
+  ///     catch's else-branch) — the cancel/interrupt codes are handled by the
+  ///     caller before this is reached, since they resolve to Idle, not Error.
+  ///   * Everything else falls back to the existing Firebase-code mapping.
+  String _resolveFailureMessage(Object error, AppLocalizations l10n) {
+    if (error is _SignInFailure) return error.message;
+    if (error is InvalidCredentialsException) return l10n.authIncorrectPassword;
+    if (error is GoogleSignInException) return l10n.authGoogleSignInFailed;
+    return _mapAuthErrorFromException(error, l10n);
   }
 
   // ── Email verification helpers ──────────────────────────────────────────────
@@ -689,6 +723,16 @@ class SignInController extends Notifier<SignInState> {
   // ── Public actions ──────────────────────────────────────────────────────────
 
   /// Smart credential routing: device registry → local → Firebase.
+  ///
+  /// AUD-account-14: state transitions are driven by a single
+  /// [AsyncValue.guard] around [_signInWithEmailBody] rather than ~10 manual
+  /// `state = ...` call sites scattered through the routing logic. Every exit
+  /// from the body is either a plain `return` (success → [SignInIdle]) or a
+  /// thrown exception (failure → [SignInError]) — there is no longer a code
+  /// path through the body that can leave `state` stuck at
+  /// [SignInSubmitting] after this method's future completes, because the
+  /// terminal assignment happens exactly once, unconditionally, from the
+  /// guard's result.
   Future<void> signInWithEmail({
     required String email,
     required String password,
@@ -700,6 +744,11 @@ class SignInController extends Notifier<SignInState> {
 
     state = const SignInSubmitting();
 
+    // The watchdog is a fire-and-forget Timer callback, not part of the
+    // guarded async body — it cannot itself be expressed as an awaited
+    // AsyncValue.guard branch, so it keeps its own direct `state = ...`
+    // (guarded by the `is SignInSubmitting` race check, unchanged from
+    // before this refactor).
     final watchdog = Timer(const Duration(seconds: 15), () {
       if (state is SignInSubmitting) {
         state = SignInError(l10n.authSignInTimeout);
@@ -713,187 +762,195 @@ class SignInController extends Notifier<SignInState> {
     // touching a disposed `state` up to 15s later. Cancel it on disposal too.
     ref.onDispose(watchdog.cancel);
 
-    try {
-      final registry = _ref.read(deviceRegistryProvider);
-      final account = await registry.findByEmail(email);
+    final result = await AsyncValue.guard(
+      () => _signInWithEmailBody(
+        email: email,
+        password: password,
+        router: router,
+        l10n: l10n,
+      ),
+    );
+    watchdog.cancel();
+    // AUD-account-02: any awaited call inside the guarded body (including
+    // deep inside _navigateAfterSignIn / _tryLocalFallbackSignIn /
+    // _tryOfflineCloudRestore) can throw/leave a disposed ref if the notifier
+    // was torn down mid-flight. AsyncValue.guard already caught that safely;
+    // bail out here before touching `state` — there is nothing left to show
+    // the user, the screen that would have shown it is already gone.
+    if (!ref.mounted) return;
 
-      if (account != null && account.accountTier.isLocal) {
-        _ref
-            .read(accountDbFileNameProvider.notifier)
-            .setFileName(account.dbFileName);
-        _ref.invalidate(userDatabaseProvider);
+    result.when(
+      data: (_) => state = const SignInIdle(),
+      error: (error, stackTrace) {
+        final msg = _resolveFailureMessage(error, l10n);
+        _showError?.call(msg);
+        state = SignInError(msg);
+      },
+      loading: () {}, // unreachable — guard() only ever resolves to data/error
+    );
+  }
 
-        final dao = _ref.read(userDatabaseProvider).userProfileDao;
-        final service = LocalAuthService(dao: dao);
-        final profile = await service.signIn(email: email, password: password);
+  /// Body of [signInWithEmail], run inside [AsyncValue.guard]. Every "soft"
+  /// failure (previously `state = SignInError(msg); return;`) now throws
+  /// [_SignInFailure] so the guard captures it uniformly alongside exceptions
+  /// thrown by lower layers.
+  Future<void> _signInWithEmailBody({
+    required String email,
+    required String password,
+    required StackRouter router,
+    required AppLocalizations l10n,
+  }) async {
+    final registry = _ref.read(deviceRegistryProvider);
+    final account = await registry.findByEmail(email);
 
-        final prefs = await SharedPreferences.getInstance();
-        final session = SessionPersistenceService(
-          prefs: prefs,
+    if (account != null && account.accountTier.isLocal) {
+      _ref
+          .read(accountDbFileNameProvider.notifier)
+          .setFileName(account.dbFileName);
+      _ref.invalidate(userDatabaseProvider);
+
+      final dao = _ref.read(userDatabaseProvider).userProfileDao;
+      final service = LocalAuthService(dao: dao);
+      final profile = await service.signIn(email: email, password: password);
+
+      final prefs = await SharedPreferences.getInstance();
+      final session = SessionPersistenceService(
+        prefs: prefs,
+        registry: registry,
+      );
+      await session.setActiveAccount(account.accountId);
+
+      final isOnline = await _ref
+          .read(internetConnectionCheckerProvider)
+          .hasConnection;
+      if (isOnline) {
+        final upgradeSvc = UpgradeToCloudService(
+          dao: dao,
+          authRepository: _ref.read(authRepositoryProvider),
           registry: registry,
+          accountId: account.accountId,
         );
-        await session.setActiveAccount(account.accountId);
-
-        final isOnline = await _ref
-            .read(internetConnectionCheckerProvider)
-            .hasConnection;
-        if (isOnline) {
-          final upgradeSvc = UpgradeToCloudService(
-            dao: dao,
-            authRepository: _ref.read(authRepositoryProvider),
-            registry: registry,
-            accountId: account.accountId,
-          );
-          final finalized = await upgradeSvc.tryFinalizeVerifiedCloudUpgrade(
-            localProfile: profile,
-            password: password,
-          );
-          if (finalized != null) {
-            final orchestrator = _ref.read(syncOrchestratorProvider);
-            if (orchestrator != null) {
-              await orchestrator.pushAllLocalData();
-              await orchestrator.pullOnLaunch();
-            }
-            await _navigateAfterSignIn(router);
-            state = const SignInIdle();
-            return;
-          }
-        }
-
-        _ref
-            .read(authStateProvider.notifier)
-            .setLocalBornSession(profile: profile);
-        // SI-LOCAL-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
-        // on emulators/devices without Google Play Services. The local account
-        // authenticated successfully — wrap in its own try/catch so a cleanup
-        // failure never surfaces as "Sign-in failed" to the user.
-        try {
-          await _ref.read(authRepositoryProvider).signOut();
-        } catch (e) {
-          AppLogger.instance.warning(
-            event: 'sign_in_local_sign_out_failed',
-            exception: e,
-          );
-        }
-        // SI-08: clear all per-session router state that must NOT survive a
-        // fresh sign-in. The local-account path previously only cleared
-        // selectedProfileId, leaving the tutored-selection and PIN-gate caches
-        // intact. In a multi-account scenario (cloud session interrupted, user
-        // signs in with a local account) this leaked the previous session's tutor
-        // context and restore-guard state into the new session. Mirrors the
-        // _navigateAfterSignIn and _tryLocalFallbackSignIn paths.
-        _resetSessionContextForFreshSignIn();
-        _ref.read(selectedProfileIdProvider.notifier).clear();
-        final profiles = await _ref
-            .read(userDatabaseProvider)
-            .profileDao
-            .getProfilesByAccount(_ref.read(currentAccountIdProvider));
-        final firstSignInNeedsSetup = profiles.isEmpty;
-        // R1o-H3: respect a prior onboarding-skip so a skipped local user lands
-        // on the empty-login surface instead of being trapped in onboarding.
-        final hasSkipped = prefs.getBool(kOnboardingSkipped) ?? false;
-        if (firstSignInNeedsSetup && !hasSkipped) {
-          await prefs.remove(kOnboardingComplete);
-        } else {
-          await prefs.setBool(kOnboardingComplete, true);
-        }
-        if (firstSignInNeedsSetup) {
-          unawaited(
-            router.replaceAll([
-              if (hasSkipped)
-                const EmptyLoginRoute()
-              else
-                const OnboardingRoute(),
-            ]),
-          );
-        } else {
-          unawaited(router.replaceAll([const ProfilePickerRoute()]));
-        }
-      } else if (account != null && account.accountTier.isCloud) {
-        final isOnline = await _ref
-            .read(internetConnectionCheckerProvider)
-            .hasConnection;
-        if (isOnline) {
-          final authRepo = _ref.read(authRepositoryProvider);
-          await authRepo
-              .signInWithEmail(email, password)
-              .timeout(
-                const Duration(seconds: 10),
-                onTimeout: () => throw TimeoutException('Sign-in timed out'),
-              );
-          final verified = await _ensureCloudEmailVerified(email, l10n);
-          if (verified) {
-            await _navigateAfterSignIn(router);
-          }
-        } else {
-          final restored = await _tryOfflineCloudRestore(account, router);
-          if (!restored) {
-            final msg = l10n.authLocalDataMissing;
-            _showError?.call(msg);
-            state = SignInError(msg);
-            return;
-          }
-        }
-      } else {
-        final signedInLocally = await _tryLocalFallbackSignIn(
-          email: email,
+        final finalized = await upgradeSvc.tryFinalizeVerifiedCloudUpgrade(
+          localProfile: profile,
           password: password,
-          router: router,
-          l10n: l10n,
         );
-        if (signedInLocally) {
-          state = const SignInIdle();
-          return;
-        }
-
-        final isOnline = await _ref
-            .read(internetConnectionCheckerProvider)
-            .hasConnection;
-        if (isOnline) {
-          final authRepo = _ref.read(authRepositoryProvider);
-          await authRepo
-              .signInWithEmail(email, password)
-              .timeout(
-                const Duration(seconds: 10),
-                onTimeout: () => throw TimeoutException('Sign-in timed out'),
-              );
-          final verified = await _ensureCloudEmailVerified(email, l10n);
-          if (verified) {
-            await _navigateAfterSignIn(router);
+        if (finalized != null) {
+          final orchestrator = _ref.read(syncOrchestratorProvider);
+          if (orchestrator != null) {
+            await orchestrator.pushAllLocalData();
+            await orchestrator.pullOnLaunch();
           }
-        } else {
-          final msg = l10n.authEmailOfflineUnreachable;
-          _showError?.call(msg);
-          state = SignInError(msg);
+          await _navigateAfterSignIn(router);
           return;
         }
       }
-      state = const SignInIdle();
-    } on InvalidCredentialsException {
-      // AUD-account-02: any awaited call above (including deep inside
-      // _navigateAfterSignIn / _tryLocalFallbackSignIn / _tryOfflineCloudRestore)
-      // can throw UnmountedRefException if the notifier was torn down
-      // mid-flight — that exception lands here. Touching `state` on a
-      // disposed notifier throws again, so bail out before doing anything
-      // ref-related. There is nothing left to show the user; the screen
-      // that would have shown it is already gone.
-      if (!ref.mounted) return;
-      final msg = l10n.authIncorrectPassword;
-      _showError?.call(msg);
-      state = SignInError(msg);
-    } catch (e) {
-      if (!ref.mounted) return;
-      final msg = _mapAuthErrorFromException(e, l10n);
-      _showError?.call(msg);
-      state = SignInError(msg);
-    } finally {
-      // Timer.cancel() is safe to call even if already cancelled by
-      // ref.onDispose above, and never touches ref/state.
-      watchdog.cancel();
-      if (ref.mounted && state is SignInSubmitting) state = const SignInIdle();
+
+      _ref
+          .read(authStateProvider.notifier)
+          .setLocalBornSession(profile: profile);
+      // SI-LOCAL-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
+      // on emulators/devices without Google Play Services. The local account
+      // authenticated successfully — wrap in its own try/catch so a cleanup
+      // failure never surfaces as "Sign-in failed" to the user.
+      try {
+        await _ref.read(authRepositoryProvider).signOut();
+      } catch (e) {
+        AppLogger.instance.warning(
+          event: 'sign_in_local_sign_out_failed',
+          exception: e,
+        );
+      }
+      // SI-08: clear all per-session router state that must NOT survive a
+      // fresh sign-in. The local-account path previously only cleared
+      // selectedProfileId, leaving the tutored-selection and PIN-gate caches
+      // intact. In a multi-account scenario (cloud session interrupted, user
+      // signs in with a local account) this leaked the previous session's tutor
+      // context and restore-guard state into the new session. Mirrors the
+      // _navigateAfterSignIn and _tryLocalFallbackSignIn paths.
+      _resetSessionContextForFreshSignIn();
+      _ref.read(selectedProfileIdProvider.notifier).clear();
+      final profiles = await _ref
+          .read(userDatabaseProvider)
+          .profileDao
+          .getProfilesByAccount(_ref.read(currentAccountIdProvider));
+      final firstSignInNeedsSetup = profiles.isEmpty;
+      // R1o-H3: respect a prior onboarding-skip so a skipped local user lands
+      // on the empty-login surface instead of being trapped in onboarding.
+      final hasSkipped = prefs.getBool(kOnboardingSkipped) ?? false;
+      if (firstSignInNeedsSetup && !hasSkipped) {
+        await prefs.remove(kOnboardingComplete);
+      } else {
+        await prefs.setBool(kOnboardingComplete, true);
+      }
+      if (firstSignInNeedsSetup) {
+        unawaited(
+          router.replaceAll([
+            if (hasSkipped)
+              const EmptyLoginRoute()
+            else
+              const OnboardingRoute(),
+          ]),
+        );
+      } else {
+        unawaited(router.replaceAll([const ProfilePickerRoute()]));
+      }
+    } else if (account != null && account.accountTier.isCloud) {
+      final isOnline = await _ref
+          .read(internetConnectionCheckerProvider)
+          .hasConnection;
+      if (isOnline) {
+        final authRepo = _ref.read(authRepositoryProvider);
+        await authRepo
+            .signInWithEmail(email, password)
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () => throw TimeoutException('Sign-in timed out'),
+            );
+        final verified = await _ensureCloudEmailVerified(email, l10n);
+        if (verified) {
+          await _navigateAfterSignIn(router);
+        }
+      } else {
+        final restored = await _tryOfflineCloudRestore(account, router);
+        if (!restored) {
+          throw _SignInFailure(l10n.authLocalDataMissing);
+        }
+      }
+    } else {
+      final signedInLocally = await _tryLocalFallbackSignIn(
+        email: email,
+        password: password,
+        router: router,
+        l10n: l10n,
+      );
+      if (signedInLocally) {
+        return;
+      }
+
+      final isOnline = await _ref
+          .read(internetConnectionCheckerProvider)
+          .hasConnection;
+      if (isOnline) {
+        final authRepo = _ref.read(authRepositoryProvider);
+        await authRepo
+            .signInWithEmail(email, password)
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () => throw TimeoutException('Sign-in timed out'),
+            );
+        final verified = await _ensureCloudEmailVerified(email, l10n);
+        if (verified) {
+          await _navigateAfterSignIn(router);
+        }
+      } else {
+        throw _SignInFailure(l10n.authEmailOfflineUnreachable);
+      }
     }
   }
 
+  /// AUD-account-14: see [signInWithEmail]'s doc comment — the same
+  /// single-guard structure replaces the ~9 manual `state = ...` call sites
+  /// this method previously had spread across its try/catch/finally.
   Future<void> signInWithGoogle({
     required StackRouter router,
     required AppLocalizations l10n,
@@ -904,6 +961,9 @@ class SignInController extends Notifier<SignInState> {
     // take 20–30 s on a slow network. 15 s was too short and caused the
     // watchdog to fire mid-auth, surfacing a spurious "Sign-in failed" toast
     // even though Firebase auth succeeded.
+    //
+    // The watchdog is a fire-and-forget Timer callback, not part of the
+    // guarded async body — see signInWithEmail's identical comment above.
     final watchdog = Timer(const Duration(seconds: 45), () {
       if (state is SignInSubmitting) {
         state = SignInError(l10n.authSignInTimeout);
@@ -913,85 +973,92 @@ class SignInController extends Notifier<SignInState> {
     // AUD-account-02: see signInWithEmail's identical comment above.
     ref.onDispose(watchdog.cancel);
 
-    try {
-      final authRepo = _ref.read(authRepositoryProvider);
-      await authRepo.signInWithGoogle();
+    final result = await AsyncValue.guard(
+      () => _signInWithGoogleBody(router: router, l10n: l10n),
+    );
+    watchdog.cancel();
+    // AUD-account-02: see signInWithEmail's identical comment above.
+    if (!ref.mounted) return;
 
-      final googleUser = _ref.read(authRepositoryProvider).currentUser;
-      if (googleUser == null) {
-        // DG-GAUTH-01: signInWithGoogle() returned without throwing (no
-        // user-cancel / interrupt) but left currentUser null — a silent JWT
-        // exchange failure or GMS returning without a live Firebase session.
-        // Previously we returned SignInIdle with zero feedback; show an error
-        // so the user knows to retry rather than staring at a blank screen.
-        final msg = l10n.authGoogleSignInFailed;
-        _showError?.call(msg);
-        state = SignInError(msg);
-        return;
-      }
-
-      final registry = _ref.read(deviceRegistryProvider);
-      final existingEntry = await registry.findByFirebaseUid(googleUser.uid);
-      if (existingEntry == null) {
-        final accounts = await registry.getAllAccounts();
-        if (accounts.length >= kMaxDeviceAccounts) {
-          final msg = l10n.authMaxDeviceAccounts(kMaxDeviceAccounts);
-          _showError?.call(msg);
-          // SI-GOOGLE-01: signOut() can throw PlatformException on devices
-          // where CredentialManager is partially initialised. The error has
-          // already been shown — wrap so cleanup never masks the real error.
-          try {
-            await _ref.read(authRepositoryProvider).signOut();
-          } catch (e) {
-            AppLogger.instance.warning(
-              event: 'sign_in_google_max_accounts_sign_out_failed',
-              exception: e,
-            );
-          }
-          state = SignInError(msg);
+    result.when(
+      data: (_) => state = const SignInIdle(),
+      error: (error, stackTrace) {
+        // A user-initiated cancel/interrupt is not a failure — it returns to
+        // Idle with no error shown, same as the pre-refactor
+        // `on GoogleSignInException catch` branch.
+        if (error is GoogleSignInException &&
+            (error.code == GoogleSignInExceptionCode.canceled ||
+                error.code == GoogleSignInExceptionCode.interrupted)) {
+          state = const SignInIdle();
           return;
         }
-      }
-
-      final localMatch = await registry.findByEmail(googleUser.email ?? '');
-      if (localMatch != null && localMatch.accountTier.isLocal) {
-        final msg = l10n.authOfflineUseUpgrade;
+        final msg = _resolveFailureMessage(error, l10n);
         _showError?.call(msg);
-        // SI-GOOGLE-01: same defensive wrap as above.
+        state = SignInError(msg);
+      },
+      loading: () {}, // unreachable — guard() only ever resolves to data/error
+    );
+  }
+
+  /// Body of [signInWithGoogle], run inside [AsyncValue.guard]. Every "soft"
+  /// failure (previously `state = SignInError(msg); return;`) now throws
+  /// [_SignInFailure] so the guard captures it uniformly alongside exceptions
+  /// thrown by lower layers (including [GoogleSignInException] itself, which
+  /// [signInWithGoogle]'s result handler special-cases for cancel/interrupt).
+  Future<void> _signInWithGoogleBody({
+    required StackRouter router,
+    required AppLocalizations l10n,
+  }) async {
+    final authRepo = _ref.read(authRepositoryProvider);
+    await authRepo.signInWithGoogle();
+
+    final googleUser = _ref.read(authRepositoryProvider).currentUser;
+    if (googleUser == null) {
+      // DG-GAUTH-01: signInWithGoogle() returned without throwing (no
+      // user-cancel / interrupt) but left currentUser null — a silent JWT
+      // exchange failure or GMS returning without a live Firebase session.
+      // Previously we returned SignInIdle with zero feedback; throwing here
+      // routes through the guard so this always surfaces as SignInError,
+      // never a silent Idle.
+      throw _SignInFailure(l10n.authGoogleSignInFailed);
+    }
+
+    final registry = _ref.read(deviceRegistryProvider);
+    final existingEntry = await registry.findByFirebaseUid(googleUser.uid);
+    if (existingEntry == null) {
+      final accounts = await registry.getAllAccounts();
+      if (accounts.length >= kMaxDeviceAccounts) {
+        // SI-GOOGLE-01: signOut() can throw PlatformException on devices
+        // where CredentialManager is partially initialised. The error is
+        // about to be shown via the thrown failure below — wrap so cleanup
+        // never masks the real error.
         try {
           await _ref.read(authRepositoryProvider).signOut();
         } catch (e) {
           AppLogger.instance.warning(
-            event: 'sign_in_google_local_conflict_sign_out_failed',
+            event: 'sign_in_google_max_accounts_sign_out_failed',
             exception: e,
           );
         }
-        state = SignInError(msg);
-        return;
+        throw _SignInFailure(l10n.authMaxDeviceAccounts(kMaxDeviceAccounts));
       }
-
-      await _navigateAfterSignIn(router);
-      state = const SignInIdle();
-    } on GoogleSignInException catch (e) {
-      // AUD-account-02: see signInWithEmail's identical comment above.
-      if (!ref.mounted) return;
-      if (e.code == GoogleSignInExceptionCode.canceled ||
-          e.code == GoogleSignInExceptionCode.interrupted) {
-        state = const SignInIdle();
-      } else {
-        final msg = l10n.authGoogleSignInFailed;
-        _showError?.call(msg);
-        state = SignInError(msg);
-      }
-    } catch (e) {
-      if (!ref.mounted) return;
-      final msg = _mapAuthErrorFromException(e, l10n);
-      _showError?.call(msg);
-      state = SignInError(msg);
-    } finally {
-      watchdog.cancel();
-      if (ref.mounted && state is SignInSubmitting) state = const SignInIdle();
     }
+
+    final localMatch = await registry.findByEmail(googleUser.email ?? '');
+    if (localMatch != null && localMatch.accountTier.isLocal) {
+      // SI-GOOGLE-01: same defensive wrap as above.
+      try {
+        await _ref.read(authRepositoryProvider).signOut();
+      } catch (e) {
+        AppLogger.instance.warning(
+          event: 'sign_in_google_local_conflict_sign_out_failed',
+          exception: e,
+        );
+      }
+      throw _SignInFailure(l10n.authOfflineUseUpgrade);
+    }
+
+    await _navigateAfterSignIn(router);
   }
 
   /// Re-sends the email-verification message, swallowing failures into a

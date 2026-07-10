@@ -22,6 +22,12 @@ import 'package:mocktail/mocktail.dart';
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
+/// AUD-account-14: used by the guard-structural-guarantee regression test
+/// below to inject an unexpected failure at a call site with no dedicated
+/// try/catch of its own.
+class _MockDeviceRegistryDatabase extends Mock
+    implements DeviceRegistryDatabase {}
+
 // ── Hand-rolled fakes ─────────────────────────────────────────────────────────
 
 /// Fake auth repo that throws on sendEmailVerification — used by the
@@ -899,4 +905,89 @@ void main() {
       });
     },
   );
+
+  // ── AUD-account-14: AsyncValue.guard structural guarantee ─────────────────
+  //
+  // Extends the ensureCloudEmailVerifiedForTest-style regression coverage:
+  // signInWithEmail/signInWithGoogle now drive their terminal state from a
+  // single `AsyncValue.guard(() => _bodyFn(...))` call rather than ~20
+  // scattered `state = ...` assignments. This proves the structural
+  // guarantee directly: an exception thrown by an awaited call that has NO
+  // dedicated try/catch of its own (registry.findByEmail, deep inside
+  // _signInWithGoogleBody, well past the earlier findByFirebaseUid /
+  // getAllAccounts calls) is still funneled into SignInError by the guard —
+  // not left stuck at SignInSubmitting, and not silently swallowed back to
+  // SignInIdle. Before the migration, this safety depended on every new
+  // branch being written inside the shared try/catch by hand; after the
+  // migration it is guaranteed by AsyncValue.guard wrapping the entire body.
+
+  group('SignInController — AUD-account-14: guard structurally catches every '
+      'thrown failure', () {
+    test('an unexpected exception from a call with no dedicated try/catch '
+        '(registry.findByEmail) still resolves to SignInError — never left '
+        'at SignInSubmitting or silently reset to SignInIdle', () async {
+      final mockAuth = _MockAuthRepository();
+      when(() => mockAuth.signInWithGoogle()).thenAnswer((_) async {});
+      const googleUser = AppUser(
+        uid: 'fb-uid-guard-test',
+        email: 'guard-test@example.com',
+        displayName: 'Guard Test',
+        emailVerified: true,
+        providers: ['google.com'],
+      );
+      when(() => mockAuth.currentUser).thenReturn(googleUser);
+
+      final mockRegistry = _MockDeviceRegistryDatabase();
+      when(
+        () => mockRegistry.findByFirebaseUid(any()),
+      ).thenAnswer((_) async => null);
+      when(
+        () => mockRegistry.getAllAccounts(),
+      ).thenAnswer((_) async => const []);
+      when(() => mockRegistry.findByEmail(any())).thenThrow(
+        const _StubDatabaseFailure(
+          'unexpected registry lookup failure — no local try/catch '
+          'guards this specific call site',
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(mockAuth),
+          deviceRegistryProvider.overrideWithValue(mockRegistry),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      String? capturedError;
+      final states = <SignInState>[];
+      container.listen(signInControllerProvider, (_, next) => states.add(next));
+      final controller = container.read(signInControllerProvider.notifier);
+      controller.setCallbacks(
+        showVerificationDialog: (_, __) async => false,
+        showError: (msg) => capturedError = msg,
+      );
+
+      final l10n = await _stubL10n();
+      await controller.signInWithGoogle(router: _StubRouter(), l10n: l10n);
+
+      final state = container.read(signInControllerProvider);
+      expect(
+        state,
+        isA<SignInError>(),
+        reason:
+            'AsyncValue.guard must convert ANY thrown failure from the '
+            'guarded body — including one from a call site with no '
+            'dedicated try/catch — into SignInError. States observed: '
+            '$states. Final state: $state',
+      );
+      expect(
+        capturedError,
+        isNotNull,
+        reason: '_showError must be invoked for the resolved failure',
+      );
+      // Never silently regresses to Idle without the terminal Error.
+      expect(states.last, isA<SignInError>());
+    });
+  });
 }
