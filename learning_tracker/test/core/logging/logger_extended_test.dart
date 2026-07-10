@@ -309,5 +309,39 @@ void main() {
         expect(logLine, contains('[REDACTED]'));
       },
     );
+
+    // ─── AUD-core-email-01 regression: transactional email body field ────────
+    test("redacts 'body' key", () {
+      final result = PiiRedactor.redactFields({
+        'body': 'contains tutor@example.com and a child name',
+      });
+      expect(result['body'], '[REDACTED]');
+    });
+
+    test("'body' key is in PiiRedactor.sensitiveKeys set", () {
+      expect(PiiRedactor.sensitiveKeys.contains('body'), isTrue);
+    });
+
+    test('LoggingTransactionalEmailService debug Payload call does not leak '
+        'plaintextBody (tutor email + child name) to log', () {
+      final talker = Talker();
+      final logger = AppLogger(talker);
+      // Simulate the exact call made by LoggingTransactionalEmailService.send()
+      // for the debug "Payload" line, using a body shaped like
+      // TutorDeclinedEmail.plaintextBody (tutor email + child name).
+      logger.debug(
+        event: '[TransactionalEmail] Payload',
+        fields: {
+          'body':
+              'tutor@example.com has declined your invitation to tutor '
+              'Rivka.\n\nYou can send a new invitation from the Manage '
+              'Tutors screen.',
+        },
+      );
+      final logLine = talker.history.last.generateTextMessage();
+      expect(logLine, isNot(contains('tutor@example.com')));
+      expect(logLine, isNot(contains('Rivka')));
+      expect(logLine, contains('[REDACTED]'));
+    });
   });
 }
