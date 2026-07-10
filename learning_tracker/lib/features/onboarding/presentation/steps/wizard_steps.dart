@@ -760,8 +760,8 @@ class _RoundTimingCard extends ConsumerWidget {
                     child: Slider(
                       value: state.delayDays.toDouble(),
                       min: 1,
-                      max: 60,
-                      divisions: 59,
+                      max: 90,
+                      divisions: 89,
                       label: '${state.delayDays}',
                       onChanged: (v) {
                         state.delayDays = v.round();

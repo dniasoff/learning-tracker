@@ -863,6 +863,36 @@ void main() {
       expect(find.text('Set delay for each round'), findsOneWidget);
       await _tearDown(tester);
     });
+
+    // Regression test for AUD-onboarding-02: CustomRoundState.withDefault(4)
+    // seeds the 5th round's delayDays at 90, which is outside the delay
+    // Slider's [1,60] range and trips Slider's `value >= min && value <= max`
+    // assertion. WizardCustomStep1 allows up to 5 rounds, so Step2 must be
+    // able to render all 5 without crashing.
+    testWidgets(
+      'renders all 5 rounds (round 5 defaults delayDays=90) without throwing',
+      (tester) async {
+        // Tall viewport so ListView.builder's cache extent covers all 5
+        // timing cards on the first frame instead of only the ones that
+        // fit a phone-sized viewport.
+        tester.view.physicalSize = const Size(800, 3000);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final d = WizardStepData()
+          ..chazarahRounds = 5
+          ..rounds = [
+            for (var i = 0; i < 5; i++) CustomRoundState.withDefault(i),
+          ];
+        await tester.pumpWidget(buildDirect(data: d));
+        await _settle(tester);
+
+        expect(find.byType(SegmentedButton<bool>), findsNWidgets(5));
+        expect(tester.takeException(), isNull);
+        await _tearDown(tester);
+      },
+    );
   });
 
   // ── WizardCustomStep3 ───────────────────────────────────────────────────────
