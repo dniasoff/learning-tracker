@@ -1214,13 +1214,15 @@ void main() {
         await tester.pumpWidget(barUnderDarkAmbient());
         await tester.pump();
 
-        // The background Container is the outer wrapper (parent of the InkWell)
-        // so it is no longer a *descendant* of the keyed InkWell; look it up by
-        // its own key instead.
-        final container = tester.widget<Container>(
+        // The background box is the outer wrapper (parent of the InkWell) so
+        // it is no longer a *descendant* of the keyed InkWell; look it up by
+        // its own key instead. AUD-app-01 changed it from Container to
+        // DecoratedBox (use_decorated_box — it now carries only a decoration,
+        // no more literal `height:`), so this looks up a DecoratedBox.
+        final box = tester.widget<DecoratedBox>(
           find.byKey(const Key('appShellProfileSwitcherBarBackground')),
         );
-        final decoration = container.decoration! as BoxDecoration;
+        final decoration = box.decoration as BoxDecoration;
         // Fully opaque (alpha 255) — nothing behind it can bleed through.
         expect(decoration.color!.a, 1.0);
         expect(decoration.color, const Color(0xFFF1F3FA));

@@ -413,7 +413,7 @@ void main() {
   // ── E2E-211 ──────────────────────────────────────────────────────────────────
 
   group('E2E-211 — Parent views child dashboard — child-view banner visible', () {
-    // The _ChildViewBanner in AppShell.appBarBuilder shows when:
+    // The ChildViewBanner in AppShell.appBarBuilder shows when:
     //   parentPinAuthenticatedProfileIdProvider == activeProfileId
     //   AND activeProfile?.profileMode == ProfileMode.child  (from profileListStreamProvider)
     //   AND no tutor bar is active (no active TutoredProfileSelection).

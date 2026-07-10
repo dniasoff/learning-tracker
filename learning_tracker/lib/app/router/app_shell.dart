@@ -29,6 +29,32 @@ const _tutorAccentColor = Color(0xFFD97706); // Amber-600
 // child's profile, not your own".
 const _childViewAccentColor = Color(0xFF047857); // Emerald-700
 
+/// Computes the rendered height of a context banner / the persistent
+/// switcher bar at the given [textScaler].
+///
+/// AUD-app-01: [ChildViewBanner], [TutorModeIndicatorBar], and
+/// [ProfileSwitcherBar] no longer hardcode a literal `height:` — each sizes
+/// to content, floored at [kMinInteractiveDimension] (48dp) so its Exit/tap
+/// affordance always meets the Material minimum touch-target size, and grown
+/// further when [textScaler] would otherwise make the label taller than
+/// 48dp (large accessibility text scales). The [PreferredSize] reserved by
+/// [AppShellScreen]'s `appBarBuilder` uses this SAME formula so the space it
+/// reserves always matches the actual rendered height — never clipping text.
+double _contextBarHeight(TextScaler textScaler, {required double fontSizeSp}) {
+  // 1.3x is a conservative line-height multiplier that comfortably covers
+  // ascenders/descenders/diacritics across scripts, including Hebrew nikkud.
+  final textDrivenHeight = textScaler.scale(fontSizeSp) * 1.3;
+  final floor = textDrivenHeight > kMinInteractiveDimension
+      ? textDrivenHeight
+      : kMinInteractiveDimension;
+  // +1dp safety margin: the real font's measured line-box (GoogleFonts +
+  // platform text layout) can land a sub-pixel above this formula's estimate
+  // even when it comfortably fits the ConstrainedBox floor inside the bar
+  // itself — this guards the PreferredSize reservation against that rounding
+  // slop so it never reserves exactly the boundary and clips by a pixel.
+  return floor + 1.0;
+}
+
 @RoutePage()
 class AppShellScreen extends ConsumerStatefulWidget {
   const AppShellScreen({super.key});
@@ -214,10 +240,17 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
             });
           }
           final topInset = MediaQuery.of(innerContext).padding.top;
+          final textScaler = MediaQuery.textScalerOf(innerContext);
           final bannerHeight = offlineBannerVisible ? 32.0 : 0.0;
-          final tutorHeight = hasActiveTutoredProfiles ? 24.0 : 0.0;
+          // AUD-app-01: content-driven, textScaler-aware height (see
+          // _contextBarHeight) — no longer a literal magic-number `height:`.
+          final tutorHeight = hasActiveTutoredProfiles
+              ? _contextBarHeight(textScaler, fontSizeSp: 11)
+              : 0.0;
           // WS4.banner: child-view bar height — only when no tutor bar.
-          final childViewHeight = isViewingChildProfile ? 28.0 : 0.0;
+          final childViewHeight = isViewingChildProfile
+              ? _contextBarHeight(textScaler, fontSizeSp: 11)
+              : 0.0;
           // §5 persistent switcher (feedback_profile_switcher_top): the
           // profile/role switcher must be present at the TOP of EVERY context.
           // The tutor and parent-child contexts have their own tappable bars
@@ -226,7 +259,9 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
           // This slim, always-present identity bar is that switcher entry.
           final showSwitcherBar =
               !hasActiveTutoredProfiles && !isViewingChildProfile;
-          final switcherHeight = showSwitcherBar ? 44.0 : 0.0;
+          final switcherHeight = showSwitcherBar
+              ? _contextBarHeight(textScaler, fontSizeSp: 14)
+              : 0.0;
           return PreferredSize(
             preferredSize: Size.fromHeight(
               topInset +
@@ -261,7 +296,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
                     // the always-present profile/role switcher bar.
                     if (showSwitcherBar) const ProfileSwitcherBar(),
                     if (isViewingChildProfile && viewingChildName != null)
-                      _ChildViewBanner(
+                      ChildViewBanner(
                         childName: viewingChildName,
                         profiles: profiles,
                         onExit: () {
@@ -405,7 +440,7 @@ class _ShellNavItem extends StatelessWidget {
 // Product rule: a tappable role label must sit at the TOP of EVERY context
 // (Dashboard / Learn / Progress / Settings — AND every pushed sub-route),
 // opening the profile + mode switcher. The tutor and parent-child contexts have
-// their own tappable bars (TutorModeIndicatorBar / _ChildViewBanner, both →
+// their own tappable bars (TutorModeIndicatorBar / ChildViewBanner, both →
 // showProfileSwitcherSheet); this bar covers the default own-profile context,
 // which previously had no switcher entry at all. Shows the active profile name +
 // role badge + an unfold affordance, and opens the canonical switcher sheet on
@@ -528,12 +563,17 @@ class ProfileSwitcherBar extends ConsumerWidget {
     // this inset is enough to clear the back arrow on any standard sub-route.
     return Material(
       type: MaterialType.transparency,
-      // The background Container renders full-width so the bar still fills the
-      // header visually. Only the InkWell (and therefore the tap-target) is
-      // inset from the start edge.
-      child: Container(
+      // The background renders full-width so the bar still fills the header
+      // visually. Only the InkWell (and therefore the tap-target) is inset
+      // from the start edge.
+      //
+      // AUD-app-01: no literal `height:` on this box — the chip below is
+      // floored at kMinInteractiveDimension via ConstrainedBox, so this box
+      // (which carries only a decoration, hence DecoratedBox not Container —
+      // use_decorated_box) sizes to that content instead of a fixed 44dp that
+      // could clip scaled text.
+      child: DecoratedBox(
         key: const Key('appShellProfileSwitcherBarBackground'),
-        height: 44,
         decoration: const BoxDecoration(
           color: barBackground,
           border: Border(bottom: BorderSide(color: barBorder)),
@@ -568,69 +608,79 @@ class ProfileSwitcherBar extends ConsumerWidget {
                 onTap: () => showProfileSwitcherSheet(
                   navigatorKey.currentContext ?? context,
                 ),
-                child: Padding(
-                  // 14 dp right padding matches the original symmetric(14)
-                  // inset; no extra left padding needed here since the dead-
-                  // zone SizedBox already clears the leading area.
-                  padding: const EdgeInsetsDirectional.only(end: 14),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: barForeground.withValues(alpha: 0.14),
-                        ),
-                        child: Text(
-                          initial,
-                          style: const TextStyle(
-                            color: barForeground,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                // AUD-app-01: floors the whole chip's tappable height at
+                // kMinInteractiveDimension (48dp) — independent of a fixed
+                // bar `height:` — so the switcher's tap target always meets
+                // the Material minimum, and grows further at large
+                // accessibility text scales instead of clipping the name.
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: kMinInteractiveDimension,
+                  ),
+                  child: Padding(
+                    // 14 dp right padding matches the original symmetric(14)
+                    // inset; no extra left padding needed here since the dead-
+                    // zone SizedBox already clears the leading area.
+                    padding: const EdgeInsetsDirectional.only(end: 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: barForeground.withValues(alpha: 0.14),
+                          ),
+                          child: Text(
+                            initial,
+                            style: const TextStyle(
+                              color: barForeground,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          displayName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: barInk,
-                            fontWeight: FontWeight.w700,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            displayName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: barInk,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          roleBadge,
-                          style: const TextStyle(
-                            color: barForeground,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            roleBadge,
+                            style: const TextStyle(
+                              color: barForeground,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(
-                        Icons.unfold_more_rounded,
-                        size: 20,
-                        color: barForeground,
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.unfold_more_rounded,
+                          size: 20,
+                          color: barForeground,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -655,11 +705,16 @@ class ProfileSwitcherBar extends ConsumerWidget {
 // The exit callback switches the selected profile to the first adult profile
 // in [profiles] (or the first profile in the list when no adult exists) and
 // replaces the route stack with the AppShell, exactly as the switcher does.
-class _ChildViewBanner extends ConsumerWidget {
-  const _ChildViewBanner({
+//
+// AUD-app-01: public (was `_ChildViewBanner`) so it can be exercised directly
+// by widget tests — the same reason [TutorModeIndicatorBar] and
+// [ProfileSwitcherBar] are already public.
+class ChildViewBanner extends ConsumerWidget {
+  const ChildViewBanner({
     required this.childName,
     required this.profiles,
     required this.onExit,
+    super.key,
   });
 
   final String childName;
@@ -670,7 +725,10 @@ class _ChildViewBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      height: 28,
+      // AUD-app-01: no literal `height:` — the Exit control below is floored
+      // at kMinInteractiveDimension via ConstrainedBox, so this Container
+      // (no explicit height) sizes to that content instead of a fixed 28dp
+      // that could clip scaled text or undersize the Exit tap target.
       color: _childViewAccentColor,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
@@ -698,33 +756,50 @@ class _ChildViewBanner extends ConsumerWidget {
           Material(
             type: MaterialType.transparency,
             child: InkWell(
+              key: const Key('childViewBannerExit'),
               onTap: onExit,
               borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
+              // AUD-app-01: floors the Exit control's tappable area at
+              // kMinInteractiveDimension (48dp), independent of the compact
+              // visual chip inside it — geometrically guarantees the tap
+              // target a stressed/motor-impaired user needs, regardless of
+              // text scale.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: kMinInteractiveDimension,
+                  minHeight: kMinInteractiveDimension,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.logout_rounded,
-                      size: 12,
-                      color: Colors.white,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      l10n.viewingChildBannerExit,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
-                      ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.logout_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          l10n.viewingChildBannerExit,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -767,7 +842,10 @@ class TutorModeIndicatorBar extends ConsumerWidget {
         ? l10n.tutorModeIndicatorNamed(talmidName)
         : l10n.tutorModeIndicator;
     return Container(
-      height: 24,
+      // AUD-app-01: no literal `height:` — the Exit control below is floored
+      // at kMinInteractiveDimension via ConstrainedBox, so this Container
+      // (no explicit height) sizes to that content instead of a fixed 24dp
+      // that could clip scaled text or undersize the Exit tap target.
       color: _tutorAccentColor,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
@@ -793,36 +871,53 @@ class TutorModeIndicatorBar extends ConsumerWidget {
           Material(
             type: MaterialType.transparency,
             child: InkWell(
+              key: const Key('tutorModeIndicatorBarExit'),
               onTap: () {
                 ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
                 context.router.replaceAll([const AppShellRoute()]);
               },
               borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
+              // AUD-app-01: floors the Exit control's tappable area at
+              // kMinInteractiveDimension (48dp), independent of the compact
+              // visual chip inside it — geometrically guarantees the tap
+              // target a stressed/motor-impaired user needs, regardless of
+              // text scale.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: kMinInteractiveDimension,
+                  minHeight: kMinInteractiveDimension,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.logout_rounded,
-                      size: 12,
-                      color: Colors.white,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      l10n.tutorModeExit,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
-                      ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.logout_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          l10n.tutorModeExit,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
