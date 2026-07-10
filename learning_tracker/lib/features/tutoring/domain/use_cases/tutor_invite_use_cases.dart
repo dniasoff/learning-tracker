@@ -11,91 +11,17 @@
 //   2. Dispatch a request to the tutor grant repository.
 //   3. Return a sealed result.
 //
-// The repository interface is defined in this file to avoid a separate file
-// per tiny interface. The concrete implementation (data layer) calls Firebase
-// Cloud Functions.
+// AUD-tutoring-10: the [TutorGrantRepository] interface and [TutorGrantResult]
+// result type moved to domain/repositories/tutor_grant_repository.dart
+// (placement guide). Re-exported here so existing importers of this file
+// keep resolving both without churn.
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/domain/repositories/tutor_grant_repository.dart';
 
-// ── Repository interface ────────────────────────────────────────────────────
-
-/// Repository for tutor grant lifecycle operations.
-///
-/// All writes delegate to Cloud Functions (Admin SDK). The repository
-/// implementation handles the HTTP/callable layer.
-abstract interface class TutorGrantRepository {
-  /// Send a tutor invite to [tutorEmail] for [childProfileId].
-  ///
-  /// [childName]/[parentName] are snapshotted onto the grant so the tutor sees
-  /// human-readable names rather than a raw profile id / generic label.
-  Future<TutorGrantResult> inviteTutor({
-    required String tutorEmail,
-    required String childProfileId,
-    required TutorPermissions permissions,
-    String? childName,
-    String? parentName,
-  });
-
-  /// Accept the invite for [grantId].
-  Future<TutorGrantResult> acceptInvite({required String grantId});
-
-  /// Decline the invite for [grantId].
-  Future<TutorGrantResult> declineInvite({required String grantId});
-
-  /// Rescind the invite for [grantId] (parent cancels before acceptance).
-  Future<TutorGrantResult> rescindInvite({required String grantId});
-
-  /// Revoke an active grant (parent revokes).
-  Future<TutorGrantResult> revokeGrant({required String grantId});
-
-  /// Resign from an active grant (tutor resigns).
-  Future<TutorGrantResult> resignGrant({required String grantId});
-
-  /// List active/pending grants where caller is the tutor.
-  Future<List<TutorGrant>> listIncomingGrants();
-
-  /// Like [listIncomingGrants] but reports whether the underlying Cloud
-  /// Function call genuinely SUCCEEDED (online, authoritative) versus failed
-  /// (offline / transient / permission-denied — `grants` empty, `ok` false).
-  ///
-  /// D18: callers need this distinction to safely reconcile locally-mirrored
-  /// talmidim. On a confirmed success an empty/absent grant is authoritative
-  /// (the grant was revoked) and the mirror must be wiped; on a failure the
-  /// mirror must be retained so a cached talmid is not hidden offline.
-  Future<({List<TutorGrant> grants, bool ok})> listIncomingGrantsWithStatus();
-
-  /// List all grants issued by the caller (as parent) for [childProfileId].
-  Future<List<TutorGrant>> listOutgoingGrants({required String childProfileId});
-
-  /// List PENDING invites addressed to the caller's email (tutor_uid is still
-  /// null until acceptance). Lets a freshly signed-in tutor discover and
-  /// accept invitations in-app without the emailed deep link.
-  Future<List<TutorGrant>> listPendingInvitesForMe();
-}
-
-// ── Result type ─────────────────────────────────────────────────────────────
-
-sealed class TutorGrantResult {
-  const TutorGrantResult();
-}
-
-final class TutorGrantSuccess extends TutorGrantResult {
-  const TutorGrantSuccess({this.grantId});
-  final String? grantId;
-}
-
-final class TutorGrantFailure extends TutorGrantResult {
-  const TutorGrantFailure({required this.message, this.code});
-  final String message;
-  final String? code;
-}
-
-final class TutorGrantPreconditionError extends TutorGrantResult {
-  const TutorGrantPreconditionError({required this.message});
-  final String message;
-}
+export 'package:learning_tracker/features/tutoring/domain/repositories/tutor_grant_repository.dart';
 
 // ── Use cases ───────────────────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
-import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/domain/repositories/tutor_grant_repository.dart';
 
 /// Parent revokes an active tutor grant immediately.
 ///

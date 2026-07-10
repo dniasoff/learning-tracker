@@ -11,10 +11,15 @@
 // Delegates Firestore I/O to [FirestoreGateway.fetchAuditLogEntries] so this
 // file does not import `cloud_firestore` directly (layering rule — only
 // `core/sync/firestore_gateway_impl.dart` may import that package).
+//
+// AUD-tutoring-10: imports the repository interface from its domain-layer
+// home rather than from a UI-layer providers file — a data-layer file must
+// not depend on the UI layer (the inverse of the documented data-flow
+// direction).
 
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
-import 'package:learning_tracker/features/tutoring/presentation/providers/audit_log_providers.dart';
+import 'package:learning_tracker/features/tutoring/domain/repositories/tutor_audit_log_repository.dart';
 
 /// Real Firestore-backed implementation of [TutorAuditLogReadRepository].
 ///

@@ -10,22 +10,19 @@
 // entry server-side via `writeAuditLog()` (functions/src/index.ts) inside
 // the same Admin SDK transaction. The client only ever reads this
 // sub-collection back for display.
+//
+// AUD-tutoring-10: the [TutorAuditLogReadRepository] interface itself now
+// lives in domain/repositories/tutor_audit_log_repository.dart (placement
+// guide). It is re-exported here so existing importers of this providers
+// file keep resolving the type without churn.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/features/tutoring/data/repositories/firestore_audit_log_read_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
+import 'package:learning_tracker/features/tutoring/domain/repositories/tutor_audit_log_repository.dart';
 
-// ── Read repository interface ────────────────────────────────────────────────
-
-/// Read-only repository for querying audit log entries.
-///
-/// The production implementation reads from
-/// `tutor_grants/{grantId}/audit_log/` ordered by timestamp DESC.
-abstract interface class TutorAuditLogReadRepository {
-  /// Fetch all entries for [grantId], newest first.
-  Future<List<TutorAuditLogEntry>> fetchEntries(String grantId);
-}
+export 'package:learning_tracker/features/tutoring/domain/repositories/tutor_audit_log_repository.dart';
 
 // ── Repository provider ──────────────────────────────────────────────────────
 
