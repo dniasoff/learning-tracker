@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
@@ -48,59 +49,90 @@ class AuthStateNotifier extends _$AuthStateNotifier {
   }
 
   Future<void> _init() async {
-    // Cloud-born accounts require a valid Firebase session. If Firebase
-    // has no current user (reinstall, signed out, etc.), we are signed
-    // out — never resurrect a cloudBorn profile row from SQLite without
-    // Firebase confirming the session.
-    final authRepo = ref.read(authRepositoryProvider);
-    final firebaseUser = authRepo.currentUser;
-    if (firebaseUser != null) {
-      final refreshed = await authRepo.reloadCurrentUser();
-      final isPasswordAccount =
-          refreshed?.providers.contains('password') ?? false;
-      if (refreshed != null &&
-          !(isPasswordAccount && !refreshed.emailVerified)) {
-        final dao = ref.read(userDatabaseProvider).userProfileDao;
-        var profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
-        if (profile == null) {
-          // Profile tier may be stale (was created locally before cloud sign-in
-          // or the upgrade flow didn't flip the tier). Upgrade it now so sync
-          // activates on this and every subsequent launch.
-          final any = await dao.getUserProfileByFirebaseUid(refreshed.uid);
-          if (any != null) {
-            await dao.upgradeLocalToCloud(
-              profileId: any.id,
-              firebaseUid: refreshed.uid,
-              updatedAt: DateTimeFactory.nowUtc(),
-            );
-            profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
+    // AUD-account-03 / AUD-account-11: this whole body must never leave
+    // `state` stuck at AuthState.initializing() — build() kicks this off
+    // fire-and-forget, so an unhandled exception here is an unobserved
+    // Future rejection that silently strands `sessionStatus` forever,
+    // contradicting the domain model's own "must not hang" doc comment.
+    try {
+      // Cloud-born accounts require a valid Firebase session. If Firebase
+      // has no current user (reinstall, signed out, etc.), we are signed
+      // out — never resurrect a cloudBorn profile row from SQLite without
+      // Firebase confirming the session.
+      final authRepo = ref.read(authRepositoryProvider);
+      final firebaseUser = authRepo.currentUser;
+      if (firebaseUser != null) {
+        try {
+          final refreshed = await authRepo.reloadCurrentUser();
+          final isPasswordAccount =
+              refreshed?.providers.contains('password') ?? false;
+          if (refreshed != null &&
+              !(isPasswordAccount && !refreshed.emailVerified)) {
+            final dao = ref.read(userDatabaseProvider).userProfileDao;
+            var profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
+            if (profile == null) {
+              // Profile tier may be stale (was created locally before cloud
+              // sign-in or the upgrade flow didn't flip the tier). Upgrade it
+              // now so sync activates on this and every subsequent launch.
+              final any = await dao.getUserProfileByFirebaseUid(refreshed.uid);
+              if (any != null) {
+                await dao.upgradeLocalToCloud(
+                  profileId: any.id,
+                  firebaseUid: refreshed.uid,
+                  updatedAt: DateTimeFactory.nowUtc(),
+                );
+                profile = await dao.findCloudBornByFirebaseUid(refreshed.uid);
+              }
+            }
+            if (profile != null) {
+              state = AuthState.signedIn(
+                user: AuthUser.fromProfile(profile),
+                tier: Tier.cloudBorn,
+              );
+              return;
+            }
+          } else {
+            await authRepo.signOut();
           }
-        }
-        if (profile != null) {
-          state = AuthState.signedIn(
-            user: AuthUser.fromProfile(profile),
-            tier: Tier.cloudBorn,
+        } on Exception catch (e, st) {
+          // AUD-account-03: reloadCurrentUser() (User.reload()) is a network
+          // round-trip that throws (e.g. FirebaseAuthException with code
+          // network-request-failed) on an entirely ordinary offline cold
+          // start. Log and fall through to the local-born restore path below
+          // instead of leaving the session unresolved — mirrors the
+          // defensive try/catch pattern in sign_in_controller.dart.
+          AppLogger.instance.warning(
+            event: 'auth_state_init_cloud_reload_failed',
+            exception: e,
+            stackTrace: st,
           );
-          return;
         }
-      } else {
-        await authRepo.signOut();
       }
-    }
 
-    // Local-born accounts don't need Firebase auth — they store data
-    // locally only. Restore the first local-born row if present.
-    final dao = ref.read(userDatabaseProvider).userProfileDao;
-    final locals = await dao.findByTier(UserTier.localBorn);
-    if (locals.isNotEmpty) {
-      state = AuthState.signedIn(
-        user: AuthUser.fromProfile(locals.first),
-        tier: Tier.localBorn,
+      // Local-born accounts don't need Firebase auth — they store data
+      // locally only. Restore the first local-born row if present.
+      final dao = ref.read(userDatabaseProvider).userProfileDao;
+      final locals = await dao.findByTier(UserTier.localBorn);
+      if (locals.isNotEmpty) {
+        state = AuthState.signedIn(
+          user: AuthUser.fromProfile(locals.first),
+          tier: Tier.localBorn,
+        );
+        return;
+      }
+
+      state = const AuthState.signedOut();
+    } on Exception catch (e, st) {
+      // AUD-account-11: final safety net — any other exception in this
+      // method (e.g. a DAO/DB read failure) must still resolve `state` to a
+      // terminal status rather than leaving it at `initializing` forever.
+      AppLogger.instance.error(
+        event: 'auth_state_init_failed',
+        exception: e,
+        stackTrace: st,
       );
-      return;
+      state = const AuthState.signedOut();
     }
-
-    state = const AuthState.signedOut();
   }
 
   /// Promote the current session to signed-in (cloud-born).
