@@ -372,12 +372,16 @@ void main() {
   // ── 6. V2-R3 C4 — expirePendingInvites exists in Cloud Functions ────────
 
   group('V2-R3 C4 — expirePendingInvites structured guard', () {
-    // NOTE: The Cloud Function implementation is in functions/src/index.ts.
-    // This test reads the TypeScript source as a structural assertion.
-    test('expirePendingInvites function is defined in index.ts', () {
-      final indexTs = _readFunctionsIndex();
+    // NOTE (AUD-firebase-15): the Cloud Functions god-file was split into
+    // focused modules; functions/src/index.ts is now a re-export barrel
+    // only (see its own header comment). expirePendingInvites is actually
+    // implemented in functions/src/tutor_invites.ts, so the structural
+    // assertions below read that module — the barrel is checked separately
+    // for the re-export itself.
+    test('expirePendingInvites function is defined in tutor_invites.ts', () {
+      final tutorInvitesTs = _readFunctionsTutorInvites();
       expect(
-        indexTs,
+        tutorInvitesTs,
         contains('expirePendingInvites'),
         reason:
             'expirePendingInvites scheduled function MUST be defined '
@@ -385,10 +389,22 @@ void main() {
       );
     });
 
-    test('expirePendingInvites queries on expires_at field', () {
+    test('expirePendingInvites is re-exported from the index.ts barrel', () {
       final indexTs = _readFunctionsIndex();
       expect(
         indexTs,
+        contains('expirePendingInvites'),
+        reason:
+            'expirePendingInvites MUST be re-exported from index.ts so the '
+            'deployed Cloud Function name is unaffected by the '
+            'AUD-firebase-15 module split.',
+      );
+    });
+
+    test('expirePendingInvites queries on expires_at field', () {
+      final tutorInvitesTs = _readFunctionsTutorInvites();
+      expect(
+        tutorInvitesTs,
         contains('expires_at'),
         reason:
             'expirePendingInvites MUST query the expires_at field to find '
@@ -397,9 +413,9 @@ void main() {
     });
 
     test('expirePendingInvites transitions state to expired', () {
-      final indexTs = _readFunctionsIndex();
+      final tutorInvitesTs = _readFunctionsTutorInvites();
       expect(
-        indexTs,
+        tutorInvitesTs,
         contains('state: "expired"'),
         reason:
             'expirePendingInvites MUST set state to expired on matching grants.',
@@ -423,7 +439,7 @@ String _readProjectRules() {
   );
 }
 
-/// Reads the Cloud Functions `index.ts` source.
+/// Reads the Cloud Functions `index.ts` barrel source.
 String _readFunctionsIndex() {
   for (final path in const [
     'functions/src/index.ts',
@@ -435,6 +451,23 @@ String _readFunctionsIndex() {
   throw StateError(
     'functions/src/index.ts not found; run tests from learning_tracker/ '
     'or the repo root.',
+  );
+}
+
+/// Reads the Cloud Functions `tutor_invites.ts` source — the module that
+/// implements `expirePendingInvites` post AUD-firebase-15 (index.ts is now
+/// only a re-export barrel; see its header comment).
+String _readFunctionsTutorInvites() {
+  for (final path in const [
+    'functions/src/tutor_invites.ts',
+    '../functions/src/tutor_invites.ts',
+  ]) {
+    final file = File(path);
+    if (file.existsSync()) return file.readAsStringSync();
+  }
+  throw StateError(
+    'functions/src/tutor_invites.ts not found; run tests from '
+    'learning_tracker/ or the repo root.',
   );
 }
 
