@@ -206,13 +206,18 @@
   {
    "id": "AUD-core-sync-08",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Make MergeStore.upsert + persistUpdatedAt atomic to stop a stale LWW shadow-timestamp surviving a mid-merge crash",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d540ce6bf04788247d64545a0d973c50cc69a30c"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-08 AC2 OK: drift_merge_store_test rollback-on-forced-fail + track_config_merger_atomicity_test; both red-first",
+    "AUD-core-sync-08 AC1 OK(substance): runInTransaction in all 8 sites; track_config atomicity test is red-first proof; literal upsert-alone test non-discriminating"
+   ],
+   "notes": "Added runInTransaction; 8 callers now atomic. AC2 (rollback) verified red-first. AC1 literal wording is unsatisfiable as written (shadow-only LWW); implemented closest faithful proxy instead - flagging for reviewer judgment."
   },
   {
    "id": "AUD-core-sync-13",
@@ -771,24 +776,35 @@
   {
    "id": "AUD-core-sync-07",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Guard stage_definition/settings/goal merges against missing local track before FK-constrained insert",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "ad6ef4403c3e80e7e277b98da0d835f80ae99bcf"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-07 AC1 OK: goal fk-race + drift_merge_store stage/settings 'skip: track not yet synced' assert no throw, row skipped",
+    "AUD-core-sync-07 AC2 OK: 'idempotent recovery' tests seed track then re-merge identical row -> row applies (goal/stage/settings)",
+    "AUD-core-sync-07 AC3 OK: new goal_merger_fk_race_test.dart + drift_merge_store_test additions under test/core/sync/merge/"
+   ],
+   "notes": "Added trackExists guard (skip not throw) to 3 sites, mirroring StudyDayConfigMerger. New tests under test/core/sync/merge/; all 3 ACs verified red-first (SqliteException 787 reproduced pre-fix)."
   },
   {
    "id": "AUD-core-sync-03",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Fix StudyDayConfigMerger to use DriftMergeStore.remoteIsNewer instead of the pre-Phase-3 merge_rules.remoteIsNewer",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "22949c5fcfb27b076caabe68385bf3e68d384c94"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-03 AC1 OK: D15 group in lww_symmetric_test resolves fast-clock remote via server-timestamp tie-break not raw isAfter; passes",
+    "AUD-core-sync-03 AC2 OK: grep merge_rules in study_day_config_merger.dart -> no hits; merger now uses MergeStore.remoteIsNewer"
+   ],
+   "notes": "Uses MergeStore.remoteIsNewer (clock-skew+synced_at); dropped merge_rules import. Red-first D15 test added; failed pre-fix, passes post-fix. Both ACs met."
   },
   {
    "id": "AUD-core-sync-09",
@@ -1975,13 +1991,17 @@
   {
    "id": "AUD-core-sync-15",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Add per-row exception isolation to every EntityMerger except LearnerProfileMerger",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "7914339ccab122e97e3725759d89990244ef3464"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-15 AC1 OK: per_row_isolation_test 9 fault-injection tests assert valid row applies + bad row logged; all 16 mergers use on Exception catch"
+   ],
+   "notes": "Generalized try/catch to 16 mergers. Fault-injection covered 9/16 (MergeStore-based) red-first; other 4 use insertOrIgnore DAOs with no reachable exception - documented 'where practical' per AC wording."
   },
   {
    "id": "AUD-t-cross-48",
@@ -2646,13 +2666,18 @@
   {
    "id": "AUD-core-sync-22",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Move DriftMergeStore's raw learner_profiles/curriculum_tracks/accounts/stage_definitions writes into DAOs under core/database",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "e13db8622d992a0739c55230b6777b9ff2c13f50"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-22 AC1 OK: grep '.into(|.update(' in lib/core/sync/merge/ -> zero hits",
+    "AUD-core-sync-22 AC2 OK: 4 new DAO methods route writes; drift_merge_store_test (138) pass unchanged; partial-update preserves accountId"
+   ],
+   "notes": "Added 4 DAO methods; moved all raw writes in lib/core/sync/merge/ into them, incl. study_day_config_merger.dart caught by AC grep. Avoided a side-effect bug (kept existing-row check). grep clean; 72 pre-existing tests pass unchanged."
   },
   {
    "id": "AUD-account-10",
@@ -4020,13 +4045,18 @@
   {
    "id": "AUD-core-sync-25",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Type the bare catch clauses in the merge layer so they stop swallowing Error subtypes",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "1212327ab274fea45284d9d56129c073122206ae"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-25 AC1 OK: both catches typed; scoped analysis_options enables 2 EH-4 lints and I confirmed both FIRE on a probe file",
+    "AUD-core-sync-25 AC2 OK: mergers_test (incl new StateError-propagates red-first) + learning_ledger_merger_test pass"
+   ],
+   "notes": "Narrowed both catches. Added scoped nested analysis_options.yaml for EH-4's 2 pending lints, this dir only (root-wide hits ~169 unrelated violations). Fired on fixtures then clean; red-first proves Error now propagates."
   },
   {
    "id": "AUD-core-sync-17",
@@ -4730,13 +4760,17 @@
   {
    "id": "AUD-core-sync-21",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Fix LearningLedgerMerger's fallback ULID generator to avoid a permanent same-millisecond collision loss",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "3e5a00235696704431360b84ec06e0b98c307414"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-21 AC1 OK: learning_ledger_merger_test two no-ulid same-ms rows -> hasLength(2), 2 distinct ULIDs; fallback now newUlid(completedAt)"
+   ],
+   "notes": "Replaced zero-entropy fallback ULID with existing newUlid(). Red-first test (same-ms rows) failed pre-fix, passes post-fix."
   },
   {
    "id": "AUD-account-18",
@@ -6156,13 +6190,17 @@
   {
    "id": "AUD-core-sync-34",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Extract the duplicated learnerProfiles FK-guard full-table-scan shared by three append-only mergers",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "26e2f6511c89f5da9a701a1c665264729fd7946f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-34 AC1 OK: ProfileDao.existingProfileIds() behavior-preserving + 3 new unit tests; 3 mergers call it; suites pass"
+   ],
+   "notes": "Extracted ProfileDao.existingProfileIds(); switched all 3 sites. New DAO unit tests; named suites pass unchanged."
   },
   {
    "id": "AUD-core-sync-30",
