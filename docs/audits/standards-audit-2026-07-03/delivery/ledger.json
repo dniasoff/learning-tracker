@@ -7880,13 +7880,17 @@
   {
    "id": "AUD-firebase-14",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove or repair the dead root firebase.json/.firebaserc pointing at missing files",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "01e4d5a0a4b4c770b406c6111478e845749663cf"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-firebase-14 AC1 OK: root firebase.json+.firebaserc removed (ls fails); nothing reads root config (ci.yml jobs use working-directory: learning_tracker)"
+   ],
+   "notes": "Re-verified root firebase.json referenced files only under learning_tracker/; nothing (Makefile/CI/scripts) reads root config. Deleted root firebase.json + .firebaserc (AC met). Fixed deployment-guide.md + coding-standards.md prose referencing deleted files. Merge-lane w1r0c10: rebased onto audit-fix/2026-07-03 (rebasedSha 05473793e5f57878eaae99fefa6987742190d0ff), merged --no-ff (mergeSha 01e4d5a0a4b4c770b406c6111478e845749663cf). gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 tip only in docs/coding-standards.md (this payload removed one dead TQ-9 table row about the two firebase.json emulator-port disagreement; branch tip had independently rewritten adjacent PV-1/PV-5/SR-1 rows and the enforcement-check table -- rebase applied cleanly, no textual conflict). Ran test/tool/audit_and_arb_parity_test.dart (the suite covering the overlapping doc + its own make-audit assertions): 13/14 passed; the 1 failure is the check 25/26 (single coding-standards.md) assertion, which fails for the same pre-existing environmental reason documented across w1r0c2 through w1r0c15+ in this ledger (concurrent sibling worktrees under the gitignored .claude/worktrees/, each a full checkout with its own docs/coding-standards.md, swept up by the check's `find ..` from the main checkout) -- reproduced identically on the unmodified audit-fix/2026-07-03 tip before this merge, confirming it is filesystem-only noise, not a regression from this change. Post-rebase gate: make audit checks 1-24 and 26 clean; flutter analyze clean (0 issues). payload.touchedStrings=false so arb-parity was not run."
   },
   {
    "id": "AUD-repo-05",
