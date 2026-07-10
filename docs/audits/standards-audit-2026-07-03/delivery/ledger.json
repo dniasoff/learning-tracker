@@ -7864,13 +7864,18 @@
     {
       "id": "AUD-firebase-13",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "De-duplicate hand-typed matrix literals from write_payloads.json PAYLOADS in firestore_rules.test.mjs (stage_definitions.track_id, study_day_configs.day_type)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "d0f8a61f7c02e9f15127f9c8653c75e8b1dd6332"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-firebase-13 AC1 OK: validStage(:405)/validConfig(:640) spread PAYLOADS.stage_definitions/study_day_configs; already used by PHASE D/E, so 1 fixture edit updates all",
+        "AUD-firebase-13 AC1 OK: key sets valid hasOnly subsets - stage 12/13 (rules:315-320), configs 7/7 incl synced_at (rules:438-441)"
+      ],
+      "notes": "Confirmed live: track_id 't1' vs PAYLOADS 1; day_type 'learning' vs PAYLOADS 'study'. Fixed by spreading PAYLOADS.* + overriding only fields it lacks. Verified vs Dart codecs PAYLOADS is the true encode() shape. make test-rules: 82/82 pass."
     },
     {
       "id": "AUD-guardrails-19",
