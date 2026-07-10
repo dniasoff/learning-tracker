@@ -6955,13 +6955,18 @@
   {
    "id": "AUD-core-sync-41",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Update BookmarkCodec's dual-key comment \u2014 it describes the pre-Phase-B bug as still live",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "926f6ab3e0a119577d02cefddabf8920e9e6b9d4"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-41 AC1 OK: bookmark_codec.dart:39-43 comment reworded to past tense; decode line 44-45 and encode() byte-identical, comment-only diff, no behavior change",
+    "AUD-core-sync-41 truthful OK: toFirestore + LocalDataUploadService route via BookmarkCodec.encode (sefaria_ref only); content_item_id only in 3 read fallbacks, no writer"
+   ],
+   "notes": "Re-verified via grep: no live writer persists content_item_id anymore (all route through BookmarkCodec.encode -> sefaria_ref). Finding confirmed. Reworded bookmark_codec.dart:39-42 to past-tense per recommendation; decode()/encode() logic unchanged."
   },
   {
    "id": "AUD-core-sync-33",
