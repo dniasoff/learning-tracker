@@ -7826,13 +7826,16 @@
     {
       "id": "AUD-firebase-12",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Correct cf_tutor_completions.test.mjs's header comment to stop claiming tutorBulkPriorCompletions coverage",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": ["3a4439c3c2befd3d685de98d7bae4a07209152ae"],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-firebase-12 AC1 OK: completions header now points to settings_profile file; grep shows 0 tutorBulkPriorCompletions describes there (only tutorResetCompletion @L23)",
+        "AUD-firebase-12 AC1 OK: settings_profile header (L2) lists tutorBulkPriorCompletions; real describe @L321 - correctly left unchanged"
+      ],
+      "notes": "Verified: cf_tutor_completions.test.mjs header claimed tutorBulkPriorCompletions coverage but only tutorResetCompletion is there; real suite is in cf_tutor_settings_profile.test.mjs, header already correct there. Fixed stale header only. Verified via emulator test run (52/52 pass). Merged --no-ff onto audit-fix/2026-07-03 (w1r0c14, mergeSha 3a4439c3c2befd3d685de98d7bae4a07209152ae). Post-rebase gate: make audit checks 1-24 clean, flutter analyze clean, make arb-parity clean (touchedStrings). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content), matching the pre-existing environmental pattern already documented for w1r0c2/w1r0c3/w1r0c4, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (only learning_tracker/functions/test/cf_tutor_completions.test.mjs touched since merge-base, no overlap with branch-side changes), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
     },
     {
       "id": "AUD-firebase-13",
