@@ -8178,13 +8178,17 @@
   {
    "id": "AUD-account-23",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Reconcile AccountManagementService.signOut()'s documented 'soft sign-out' with its always-hard-sign-out callers",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "ad41773fd49eea674b81061a68b233f176cd447e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-23 AC1 OK: signOut() comment matches tested paths; body only prefs.remove (L55-61); hard-sign-out caller tested account_actions_test.dart:392-393"
+   ],
+   "notes": "Re-verified, no drift since baseline. Both real callers do a hard sign-out right after; real fast-resume bypasses this method via direct picker nav. Rewrote doc comment to match actual behavior/call sites; no behavior change. Merged --no-ff onto audit-fix/2026-07-03 (w1r2c3, mergeSha ad41773fd49eea674b81061a68b233f176cd447e). Post-rebase gate: make audit checks 1-24 and 26 clean, flutter analyze clean (no issues found), make arb-parity clean (touchedStrings). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed identical failure on the unmodified audit-fix/2026-07-03 tip before this merge, and the diff does not touch coding-standards.md), matching the pre-existing environmental pattern already documented for prior cids in this wave, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (tipSha touched only account_management_service.dart, no overlap with audit-fix/2026-07-03's diff since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-t-cross-57",
