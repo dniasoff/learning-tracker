@@ -304,4 +304,89 @@ void main() {
       expect(local.isCloudBorn, isFalse);
     });
   });
+
+  // ── AUD-account-22: value equality ────────────────────────────────────────
+  //
+  // AppUser/AuthState/AuthUser previously had no ==/hashCode override, so two
+  // instances with identical field values compared unequal by reference
+  // identity — a landmine for any ref.watch(authStateProvider) call site that
+  // forgot a .select(). AuthUser/AppUser are now @freezed (generated value
+  // equality); AuthState gets hand-rolled value equality (see the class doc
+  // comment for why @freezed isn't a safe fit for AuthState specifically).
+  group('AUD-account-22: value equality', () {
+    // userA()/userB() are built via two independent construction paths (a
+    // direct const constructor call vs. the `.fromProfile` factory, which
+    // always allocates fresh — freezed factories with a body are never
+    // const-canonicalized) so `identical(a, b)` below is genuinely false:
+    // this exercises real runtime value equality, not Dart's compile-time
+    // `const` canonicalization.
+    AuthUser userA() => const AuthUser(
+      profileId: 7,
+      email: 'a@b.com',
+      displayName: 'A',
+      firebaseUid: 'uid-7',
+    );
+    AuthUser userB() => AuthUser.fromProfile(
+      UserProfile(
+        id: 7,
+        email: 'a@b.com',
+        displayName: 'A',
+        tier: 'cloudBorn',
+        firebaseUid: 'uid-7',
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
+
+    test('AuthUser(...) == AuthUser(...) is true for equal field values', () {
+      final a = userA();
+      final b = userB();
+      expect(identical(a, b), isFalse);
+      expect(a, equals(b));
+      expect(a.hashCode, equals(b.hashCode));
+    });
+
+    test('AuthUser(...) != AuthUser(...) when a field differs (sanity check '
+        'equality is not vacuously true)', () {
+      const different = AuthUser(
+        profileId: 8,
+        email: 'a@b.com',
+        displayName: 'A',
+        firebaseUid: 'uid-7',
+      );
+      expect(userA(), isNot(equals(different)));
+    });
+
+    test('AuthState.signedIn(...) == AuthState.signedIn(...) is true for equal '
+        'field values, even though currentUser/tier are constructed '
+        'separately', () {
+      final stateA = AuthState.signedIn(
+        user: userA(),
+        tier: UserTier.cloudBorn,
+      );
+      final stateB = AuthState.signedIn(
+        user: userB(),
+        tier: UserTier.cloudBorn,
+      );
+      expect(identical(stateA, stateB), isFalse);
+      expect(stateA, equals(stateB));
+      expect(stateA.hashCode, equals(stateB.hashCode));
+    });
+
+    test('AuthState.initializing() == AuthState.initializing() (both null '
+        'user/tier)', () {
+      expect(
+        const AuthState.initializing(),
+        equals(const AuthState.initializing()),
+      );
+    });
+
+    test('AuthState instances with different sessionStatus are not equal even '
+        'when currentUser/tier are both null', () {
+      expect(
+        const AuthState.initializing(),
+        isNot(equals(const AuthState.signedOut())),
+      );
+    });
+  });
 }

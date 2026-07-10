@@ -1,4 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
+
+part 'auth_state.freezed.dart';
 
 /// Hard-tier classification — set at signup, immutable except via the
 /// one-way local → cloud upgrade flow (Epic 20 story 20.9).
@@ -23,13 +26,20 @@ enum SessionStatus {
 /// WS9.flows: [userMode] field removed — mode belongs to [LearnerProfiles],
 /// not to an [Account]. Use [dashboardUserModeProvider] (which reads
 /// [learner_profiles.mode]) to gate child-only UI.
-class AuthUser {
-  const AuthUser({
-    required this.profileId,
-    required this.email,
-    required this.displayName,
-    this.firebaseUid,
-  });
+///
+/// AUD-account-22: @freezed for generated value equality (single
+/// constructor shape — mirrors the `ProfileModel.fromDriftRow` pattern, no
+/// call-site breakage).
+@freezed
+abstract class AuthUser with _$AuthUser {
+  const factory AuthUser({
+    required int profileId,
+    required String email,
+    required String displayName,
+    String? firebaseUid,
+  }) = _AuthUser;
+
+  const AuthUser._();
 
   factory AuthUser.fromProfile(UserProfile profile) => AuthUser(
     profileId: profile.id,
@@ -37,15 +47,28 @@ class AuthUser {
     displayName: profile.displayName,
     firebaseUid: profile.firebaseUid,
   );
-
-  final int profileId;
-  final String email;
-  final String displayName;
-  final String? firebaseUid;
 }
 
 /// Unified auth state — one notifier holds identity, tier, and session
 /// status. Replaces the sealed `AppAuthState` hierarchy from v1.
+///
+/// AUD-account-22: hand-rolled value `==`/`hashCode` rather than `@freezed`.
+/// Unlike [AuthUser]/`AppUser` (same finding, converted to `@freezed`
+/// cleanly), this class exposes three *named `const` constructors sharing
+/// one flat field shape* (`initializing()`/`signedOut()`/`signedIn(...)`)
+/// used with the `const` keyword at 60+ call sites across features well
+/// beyond `features/account` (profiles, settings, tutoring, onboarding).
+/// `@freezed`'s multi-constructor support models genuine sum-type *unions*
+/// (each variant gets its own field set and generated subclass) — bending
+/// it to reproduce three fixed-value presets of ONE shape would either
+/// drop `const`-constructibility everywhere (real, cross-feature call-site
+/// breakage — the AC this fix must not cause) or require a full sealed-type
+/// redesign (new getter model, `copyWith` semantics change) well beyond
+/// this finding's low-risk recommendation. The finding's own recommendation
+/// explicitly sanctions "at minimum implement value ==/hashCode" as the
+/// low-risk alternative; that is what this class does. (This mirrors the
+/// existing, unflagged `ProfileSession` pattern in
+/// `features/profiles/domain/models/profile_session.dart`.)
 class AuthState {
   const AuthState({
     required this.currentUser,
@@ -97,4 +120,25 @@ class AuthState {
       sessionStatus: sessionStatus ?? this.sessionStatus,
     );
   }
+
+  // AUD-account-22: value equality — see the class doc comment for why this
+  // is hand-rolled rather than @freezed-generated. [currentUser] now carries
+  // real value equality itself ([AuthUser] is @freezed), so two AuthState
+  // instances describing the same signed-in identity compare equal here too.
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AuthState &&
+          runtimeType == other.runtimeType &&
+          currentUser == other.currentUser &&
+          tier == other.tier &&
+          sessionStatus == other.sessionStatus;
+
+  @override
+  int get hashCode => Object.hash(currentUser, tier, sessionStatus);
+
+  @override
+  String toString() =>
+      'AuthState(currentUser: $currentUser, tier: $tier, '
+      'sessionStatus: $sessionStatus)';
 }

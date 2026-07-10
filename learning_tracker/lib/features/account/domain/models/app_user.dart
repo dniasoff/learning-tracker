@@ -1,32 +1,38 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'app_user.freezed.dart';
+
 /// Lightweight representation of the currently authenticated Firebase user.
 ///
 /// Exposed by [AuthRepository.currentUser] and streamed by
 /// [AuthRepository.onAuthStateChanged] so the rest of the app can
 /// consume identity information without importing firebase_auth.
-class AppUser {
-  const AppUser({
-    required this.uid,
-    required this.email,
-    required this.displayName,
-    required this.emailVerified,
-    required this.providers,
-  });
+///
+/// AUD-account-22: @freezed for generated value equality — this is the type
+/// streamed by `firebaseAuthStateProvider` (`AsyncValue<AppUser?>`), so
+/// `ref.watch`/`ref.listen` equality checks previously compared by reference
+/// identity only.
+@freezed
+abstract class AppUser with _$AppUser {
+  const factory AppUser({
+    /// Firebase UID.
+    required String uid,
 
-  /// Firebase UID.
-  final String uid;
+    /// Primary email address, or null if unset (e.g. anonymous / phone-only).
+    required String? email,
 
-  /// Primary email address, or null if unset (e.g. anonymous / phone-only).
-  final String? email;
+    /// Display name, or null if not set.
+    required String? displayName,
 
-  /// Display name, or null if not set.
-  final String? displayName;
+    /// Whether the email address has been verified.
+    required bool emailVerified,
 
-  /// Whether the email address has been verified.
-  final bool emailVerified;
+    /// List of provider IDs linked to this account
+    /// (e.g. 'password', 'google.com').
+    required List<String> providers,
+  }) = _AppUser;
 
-  /// List of provider IDs linked to this account
-  /// (e.g. 'password', 'google.com').
-  final List<String> providers;
+  const AppUser._();
 
   @override
   String toString() =>
