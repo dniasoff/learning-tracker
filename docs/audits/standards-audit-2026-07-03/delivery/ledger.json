@@ -5992,13 +5992,19 @@
   {
    "id": "AUD-firebase-15",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Split functions/src/index.ts's five unrelated concerns into focused modules",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "68d689855607d9f592d61290529703307dc6e47f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-firebase-15 AC1a OK: index.ts barrel = 51 lines (wc -l), under stated <300 budget in its header comment",
+    "AUD-firebase-15 AC1b OK: npm run build (tsc strict + noUnusedLocals) exits 0, no errors",
+    "AUD-firebase-15 AC1c OK: export names identical set of 27 across old index.ts, new modules, barrel, and compiled lib/index.js runtime keys"
+   ],
+   "notes": "Confirmed still 2076 lines/5 concerns. Split into shared/deletes/audit_log_purge/tutor_bulk_completions/tutor_invites/tutor_writes.ts; index.ts now a 51-line barrel. Verified 27 export names match across old file, new modules, barrel, compiled JS. Build clean; CF 284/284 + rules 89/89 pass. Merged --no-ff onto audit-fix/2026-07-03 (w1r2c2, mergeSha 68d689855607d9f592d61290529703307dc6e47f). Post-rebase gate: flutter analyze clean (0 issues). make audit checks 1-24 and 26 clean; check 25/26 (single coding-standards.md) failed both pre- and post-merge due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout; identical failure reproduced byte-for-byte (same 26 numbered checks) on the unmodified audit-fix/2026-07-03 tip before this merge, matching the pre-existing environmental pattern already documented for w1r0c2/w1r0c3/w1r0c4/AUD-profiles-01/AUD-core-database-01, not a regression from this change (which touches only Cloud Functions TypeScript, unrelated to this Dart/docs check). gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (tipSha already descended from the current audit-fix tip; no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-platform-03",
