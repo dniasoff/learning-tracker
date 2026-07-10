@@ -6944,13 +6944,17 @@
   {
    "id": "AUD-core-sync-35",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Log the malformed-days_of_week fallback in StageDefinitionCodec.decode instead of silently defaulting to []",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "3aa0ad875c16a2afc7b0cb8f0036e6ddaf309b14"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-35 AC1 OK: test feeds malformed days_of_week to decode(), asserts [] fallback + AppLogger fires with raw value; RED confirmed by reverting source"
+   ],
+   "notes": "Confirmed still present (bare catch(_) defaulted days=[] with no log). Red test added asserting AppLogger fires with raw value; RED confirmed pre-fix, fixed via AppLogger.instance.warning(event: 'sync_stage_definition_malformed_days_of_week', fields:{...}) before [] fallback. GREEN confirmed."
   },
   {
    "id": "AUD-core-sync-41",
