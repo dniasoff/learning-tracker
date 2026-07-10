@@ -64,7 +64,7 @@ class LearningLedgerCodec extends EntityCodec<LearningLedgerRow> {
     'unit_display_name_en': model.unitDisplayNameEn,
     'track_type': model.trackType,
     'track_id': model.trackId,
-    'completed_at': model.completedAt.toIso8601String(),
+    'completed_at': FirestoreCodec.encodeDateTime(model.completedAt),
     'completion_number': model.completionNumber,
     'marked_by': model.markedBy,
     'is_manual': model.isManual,

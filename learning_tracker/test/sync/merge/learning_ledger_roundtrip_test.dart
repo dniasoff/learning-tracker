@@ -232,6 +232,77 @@ void main() {
       expect(decodedUtc.day, _completedAt.day);
     });
 
+    test('completed_at survives encode() when completedAt is non-UTC-flagged '
+        '(AUD-core-sync-11: simulates the Drift round-trip, where '
+        'dateTime() columns decode via DateTime.fromMillisecondsSinceEpoch '
+        'with no isUtc:true, producing a local-flagged DateTime that still '
+        'represents the correct instant)', () {
+      // The real UTC instant the entry was completed at.
+      final utcInstant = DateTime.utc(2026, 6, 18, 10, 0, 0);
+
+      // Simulate what Drift's dateTime() column getter hands back: the
+      // same instant, but flagged as local (isUtc: false) rather than
+      // UTC — exactly what
+      // DateTime.fromMillisecondsSinceEpoch(ms) (no isUtc:true) produces.
+      final driftDecodedCompletedAt = DateTime.fromMillisecondsSinceEpoch(
+        utcInstant.millisecondsSinceEpoch,
+      );
+      expect(
+        driftDecodedCompletedAt.isUtc,
+        isFalse,
+        reason:
+            'test setup must simulate the non-UTC-flagged value Drift '
+            'actually returns; if this ever becomes true the simulation '
+            'no longer matches the bug this test guards against.',
+      );
+
+      final row = LearningLedgerRow(
+        ulid: _ulid,
+        profileId: _profileId,
+        curriculumId: _curriculumId,
+        entryScope: _entryScope,
+        unitIdentifier: _unitIdentifier,
+        unitDisplayNameHe: _unitDisplayNameHe,
+        unitDisplayNameEn: _unitDisplayNameEn,
+        trackType: _trackType,
+        trackId: _trackId,
+        completedAt: driftDecodedCompletedAt,
+        completionNumber: _completionNumber,
+        markedBy: _markedBy,
+        isManual: _isManual,
+      );
+
+      final payload = _codec.encode(row);
+      final wireValue = payload['completed_at'] as String;
+
+      expect(
+        wireValue,
+        endsWith('Z'),
+        reason:
+            'completed_at must always be pushed via '
+            'FirestoreCodec.encodeDateTime (which forces .toUtc() before '
+            'serializing) like every sibling DateTime field in this '
+            'codec and every other codec in the batch. A raw '
+            '.toIso8601String() on a non-UTC-flagged DateTime omits the '
+            "'Z'/offset entirely, so a reading device on a different "
+            'timezone reinterprets the naive string using its OWN local '
+            'offset — silently shifting completedAt onto the wrong '
+            'calendar day.',
+      );
+
+      // The wire value must decode back to the exact same instant,
+      // independent of whichever local offset this test machine runs
+      // under.
+      expect(DateTime.parse(wireValue).toUtc(), utcInstant);
+
+      // decode(encode(x)) round-trips to the correct UTC instant too —
+      // this is the timezone-independence guarantee for the full codec
+      // pipeline, not just the raw wire string.
+      final decoded = _codec.decode(payload);
+      expect(decoded, isNotNull);
+      expect(decoded!.completedAt.toUtc(), utcInstant);
+    });
+
     test('null-guard: missing curriculum_id causes decode to return null', () {
       final payload = _codec.encode(
         LearningLedgerRow(
