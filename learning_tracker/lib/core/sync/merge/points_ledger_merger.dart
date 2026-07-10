@@ -33,9 +33,8 @@ class PointsLedgerMerger implements EntityMerger {
   }) async {
     // FK guard: points_ledger.profileId references learner_profiles. Skip rows
     // whose profileId has no local counterpart to avoid a FK constraint failure.
-    final existingProfileIds = (await _db.select(_db.learnerProfiles).get())
-        .map((p) => p.id)
-        .toSet();
+    // AUD-core-sync-34: shared helper — see ProfileDao.existingProfileIds.
+    final existingProfileIds = await _db.profileDao.existingProfileIds();
 
     final touchedProfiles = <int>{};
 

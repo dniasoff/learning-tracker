@@ -31,9 +31,9 @@ class RewardRedemptionMerger implements EntityMerger {
     required int profileId,
     required List<Map<String, dynamic>> rows,
   }) async {
-    final existingProfileIds = (await _db.select(_db.learnerProfiles).get())
-        .map((p) => p.id)
-        .toSet();
+    // FK guard: reward_redemptions.profileId references learner_profiles.
+    // AUD-core-sync-34: shared helper — see ProfileDao.existingProfileIds.
+    final existingProfileIds = await _db.profileDao.existingProfileIds();
 
     for (final row in rows) {
       // AUD-core-sync-15: isolate each row — mirrors LearnerProfileMerger.

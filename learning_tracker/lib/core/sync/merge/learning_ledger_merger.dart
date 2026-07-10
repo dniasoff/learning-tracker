@@ -39,9 +39,8 @@ class LearningLedgerMerger implements EntityMerger {
     // FK guard: learning_ledger.profileId references learner_profiles.
     // Skip rows whose profileId has no local counterpart to avoid
     // SqliteException 787 (FOREIGN KEY constraint failed).
-    final existingProfileIds = (await _db.select(_db.learnerProfiles).get())
-        .map((p) => p.id)
-        .toSet();
+    // AUD-core-sync-34: shared helper — see ProfileDao.existingProfileIds.
+    final existingProfileIds = await _db.profileDao.existingProfileIds();
 
     for (final row in rows) {
       // AUD-core-sync-15: isolate each row — mirrors LearnerProfileMerger.

@@ -33,6 +33,21 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
     learnerProfiles,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// Every `learner_profiles.id` on this device, unscoped by account.
+  ///
+  /// AUD-core-sync-34: extracted from three append-only sync mergers
+  /// (LearningLedgerMerger, PointsLedgerMerger, RewardRedemptionMerger),
+  /// which each independently ran the identical full-table scan to guard a
+  /// `profileId` FK before inserting — three copies that would silently
+  /// diverge if the guard logic ever needs to change (e.g. excluding
+  /// soft-deleted profiles). Deliberately unscoped/unfiltered (matches the
+  /// three call sites' prior inline behavior) — the guard only needs to know
+  /// whether a row exists locally at all, not which account it belongs to.
+  Future<Set<int>> existingProfileIds() async {
+    final rows = await select(learnerProfiles).get();
+    return rows.map((p) => p.id).toSet();
+  }
+
   /// Count profiles for an account (own profiles only — tutored mirrors
   /// excluded).
   Future<int> countProfilesForAccount(int accountId) async {

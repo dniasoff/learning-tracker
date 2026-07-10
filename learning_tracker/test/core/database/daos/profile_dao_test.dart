@@ -217,5 +217,40 @@ void main() {
         isFalse,
       );
     });
+
+    // ── existingProfileIds (AUD-core-sync-34) ────────────────────────────────
+    //
+    // Extracted from the identical inline full-table-scan copy-pasted across
+    // LearningLedgerMerger, PointsLedgerMerger, RewardRedemptionMerger.
+
+    test(
+      'existingProfileIds returns an empty set when no profiles exist',
+      () async {
+        expect(await database.profileDao.existingProfileIds(), isEmpty);
+      },
+    );
+
+    test(
+      'existingProfileIds returns every profile id, unscoped by account',
+      () async {
+        final id1 = await database.profileDao.insertProfile(
+          makeProfile(accountId: 1, displayName: 'A'),
+        );
+        final id2 = await database.profileDao.insertProfile(
+          makeProfile(accountId: 2, displayName: 'B'), // different account
+        );
+
+        final ids = await database.profileDao.existingProfileIds();
+        expect(ids, {id1, id2});
+      },
+    );
+
+    test('existingProfileIds excludes ids after deletion', () async {
+      final id = await database.profileDao.insertProfile(makeProfile());
+      expect(await database.profileDao.existingProfileIds(), {id});
+
+      await database.profileDao.deleteProfile(id);
+      expect(await database.profileDao.existingProfileIds(), isEmpty);
+    });
   });
 }
