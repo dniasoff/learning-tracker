@@ -89,13 +89,13 @@
     {
       "id": "AUD-core-email-01",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P0",
       "title": "Redact TransactionalEmail.plaintextBody before logging in LoggingTransactionalEmailService.send()",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha 93f70b43; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Re-verified: send() logs plaintextBody under key 'body' via debug(); 'body' missing from sensitiveKeys. Red-first: 3 new tests failed pre-fix (Expected [REDACTED], Actual raw email+name). Fix: added 'body' to sensitiveKeys, matching sibling grouping. All 45 tests pass post-fix."
     },
     {
       "id": "AUD-firebase-01",
@@ -150,13 +150,13 @@
     {
       "id": "AUD-account-01",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P0",
       "title": "account_lifecycle_service.dart removeCloudFromDevice() must verify the outbox is drained before deleting the local DB file",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a5ae7aa7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: removeCloudFromDevice() sums OutboxDao depth (new totalDepth()) and throws UndrainedOutboxException instead of deleting the DB file; UI guard added before Dismissible removes the tile, new warning dialog. Red-first confirmed."
     },
     {
       "id": "AUD-onboarding-04",
@@ -681,13 +681,13 @@
     {
       "id": "AUD-tutoring-03",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Rename the duplicate top-level incomingTutorGrantsProvider defined in both tutor_grant_providers.dart and manage_tutors_providers.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha bbb0f319; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Renamed unused codegen incomingTutorGrantsProvider to networkOnlyIncomingTutorGrantsProvider (verified every real consumer already used the offline-first one). Barrel now selectively re-exports the right symbol. Removed alias workaround. Commit 5388ff8d."
     },
     {
       "id": "AUD-tutoring-02",
@@ -819,13 +819,13 @@
     {
       "id": "AUD-account-02",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Add ref.mounted guards and Timer disposal to SignInController's autoDispose async flows",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a5ae7aa7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: ref.onDispose cancels both watchdog Timers; every catch/finally state write in signInWithEmail/signInWithGoogle guarded with ref.mounted; _waitForVerified retry loop guarded too. Red-first: pre-fix threw UnmountedRefException uncaught."
     },
     {
       "id": "AUD-gamification-03",
@@ -952,13 +952,13 @@
     {
       "id": "AUD-tutoring-01",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Check TutorGrantResult before treating revoke/resign/rescind as successful in manage_tutors_screen.dart and manage_grants_screen.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha bbb0f319; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Screens discarded TutorGrantResult, ran success side-effects unconditionally. Red-first test confirmed bug (notify fired despite Failure). Fixed with exhaustive switch on Success/Failure/PreconditionError. Commit 2b0b2b46."
     },
     {
       "id": "AUD-t-story-acceptance-01",
@@ -1051,13 +1051,13 @@
     {
       "id": "AUD-account-03",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "AuthStateNotifier._init() must guard reloadCurrentUser() so an offline cold start cannot hang the session state forever",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a8bad8a3; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Wrapped reloadCurrentUser() in try/catch, log+fallback to cached firebaseUser. Red-first test failed pre-fix ('stayed at initializing'), passes post-fix. Commit 5915a5a9."
     },
     {
       "id": "AUD-sacred_time-02",
@@ -1102,13 +1102,13 @@
     {
       "id": "AUD-account-04",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Extract the duplicated _extractFirebaseCode regex parser out of MagicLinkService and UpgradeToCloudService",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a5ae7aa7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Extracted core/utils/firebase_error_code.dart with corrected [plugin/code]-aware regex; magic_link_service.dart + upgrade_to_cloud_service.dart delegate. Red-first test using the REAL Firebase exception shape (old test fixture masked the bug) failed pre-fix, passed post-fix."
     },
     {
       "id": "AUD-learning-03",
@@ -1188,13 +1188,13 @@
     {
       "id": "AUD-account-11",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a8bad8a3; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Outer try/catch around _init() -> log+signedOut. Red-first test also exposed a build()-timing bug (state clobbered by build()'s own return); fixed via Future.microtask(_init). AC3 custom_lint rule deferred (see notes). Commit 230a523f."
     },
     {
       "id": "AUD-t-story-acceptance-06",
@@ -1331,13 +1331,13 @@
     {
       "id": "AUD-tutoring-11",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Stop interpolating e.toString() directly into tutoring error/snackbar text",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha bbb0f319; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: 4 UI + 7 data-layer sites interpolated raw e.toString(). UI now shows fixed localized fallbacks; data layer logs via AppLogger, returns stable 'unknown_error' code. Verified via grep AC + updated tests. Commit 0ef2456b."
     },
     {
       "id": "AUD-gamification-10",
@@ -1573,13 +1573,13 @@
     {
       "id": "AUD-tutoring-06",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Delete or wire up the dead TutorAuditLogWriter path (tutor_audit_log_writer.dart / audit_log_providers.dart)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha f65cc282; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Confirmed writer/write-repo never constructed; CF writeAuditLog is sole live writer. Deleted tutor_audit_log_writer.dart, barrel export, stub write provider. AC1/AC2 grep-clean. Commit 1c95f3f8."
     },
     {
       "id": "AUD-tutoring-04",
@@ -1664,13 +1664,13 @@
     {
       "id": "AUD-account-12",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Handle account-exists-with-different-credential and credential-already-in-use for the Google sign-in / link-provider paths",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a5ae7aa7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Re-verified before implementing: zero hits for both codes, zero UI callers of linkGoogleProvider - confirms verify corrections that the broader claim is dead code. Implemented only the narrower reachable fix: new _mapAuthError case + ARB string in both files."
     },
     {
       "id": "AUD-t-cross-27",
@@ -1697,13 +1697,13 @@
     {
       "id": "AUD-account-09",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Extract the duplicated drift .sqlite-suffix delete helper out of AccountLifecycleService and PendingLocalSignupStore",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a5ae7aa7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Extracted core/database/drift_db_file.dart; AccountLifecycleService + PendingLocalSignupStore both delegate. Both named existing regression tests still pass; added new unit test for the shared utility."
     },
     {
       "id": "AUD-gamification-09",
@@ -1829,13 +1829,13 @@
     {
       "id": "AUD-account-07",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Cache the account list Future instead of constructing it fresh inside AccountPickerScreen.build()",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a5ae7aa7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Converted AccountPickerScreen to ConsumerStatefulWidget, caching the Future in initState (a @riverpod FutureProvider hit riverpod_generator InvalidTypeException on the Drift DeviceAccount type - toolchain limit, used the recommendation's alt approach). Red-first confirmed."
     },
     {
       "id": "AUD-account-15",
@@ -2587,13 +2587,13 @@
     {
       "id": "AUD-account-10",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Extract the duplicated, inconsistently-patched _extractFirebaseCode helper into one shared function",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a5ae7aa7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: sign_in_controller.dart + signup_screen.dart now delegate to the AUD-04 helper, deleting private copies. Dual-shape unit test already satisfied by AUD-04's test. 5th copy in features/settings is out of scope, noted as follow-up."
     },
     {
       "id": "AUD-t-auth-01",
@@ -2972,13 +2972,13 @@
     {
       "id": "AUD-firebase-10",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Whitelist fields on tutor CRUD Cloud Functions instead of merging caller-supplied objects verbatim",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha e85b8be7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: assertFieldsWhitelisted() mirrors each collection's firestore.rules hasOnly() list (6/8 sites per correction) + 10k-char string cap. Fixed 6 test fixtures using non-whitelisted fields. Red-first: disabled check, test fell through to not-found; restored, green 127/127. Commit c060beb0."
     },
     {
       "id": "AUD-firebase-06",
@@ -3548,13 +3548,13 @@
     {
       "id": "AUD-tutoring-10",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Move TutorAuditLogReadRepository/TutorGrantRepository interfaces into domain/repositories/ to remove the data\u2192presentation import",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha f65cc282; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Confirmed data->presentation import + misplacement. Moved 2 interfaces to domain/repositories/, updated 28 importers. AC1 clean. 3rd AC interface already deleted as dead code by AUD-06 (ran first); remaining 2 fully relocated. Commit f65cc282."
     },
     {
       "id": "AUD-tutoring-09",
@@ -3702,35 +3702,35 @@
     {
       "id": "AUD-firebase-09",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Split allow list from allow read in firestore.rules to cap request.query.limit",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha e85b8be7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Split allow read into allow get (unbounded) + allow list (limit<=500) on completions/streak_events/learning_ledger/points_ledger, per verify-stage's scope correction. Red-first: reverted, limit(501) unexpectedly succeeded; restored, rules suite green 83/83. Commit b0901478."
     },
     {
       "id": "AUD-firebase-11",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Wrap tutorEditProfile's read-then-overwrite in a transaction to stop the lost-update race",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha e85b8be7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: tutorEditProfile switched read-then-set(fullDoc,merge:false) to set(updates,{merge:true}) - matches FB-6, removes lost-update race, no transaction needed. Red-first: reverted, new race test failed 3!==99; restored, green 45/45. Commit ee6fd8ad."
     },
     {
       "id": "AUD-firebase-08",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Make tutor audit-log writes idempotent and failure-visible instead of best-effort auto-ID writes",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha e85b8be7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: writeAuditLog now derives a deterministic sha256 doc ID from (grantId,action,target,idempotencyKey) instead of .add() auto-ID; no longer swallows failures. idempotencyKey threaded through all 13 tutor CFs (optional). Red-first: reverted, test failed 2!==1; restored, green 50/50. Commit 6c683c69."
     },
     {
       "id": "AUD-firebase-07",
@@ -3805,13 +3805,13 @@
     {
       "id": "AUD-account-14",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Migrate SignInController's hand-rolled Idle/Submitting/Error state to AsyncNotifier + AsyncValue.guard",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha 9f3a2154; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Verified live pre-fix (lines 704-974). Migrated via AsyncValue.guard: impl methods never touch state; guard's result.when() is sole mapping site. state= sites ~15->6. Public API/tests unchanged, all pass. Added Branch H regression test. AC3 lint rule deferred as follow-up."
     },
     {
       "id": "AUD-settings-08",
@@ -3827,13 +3827,13 @@
     {
       "id": "AUD-tutoring-08",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Lazy-load the tutor-grants roster in ManageGrantsScreen and Settings' embedded pending-invites section",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha bbb0f319; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: manage_grants_screen.dart -> ListView.builder over flattened items (delegate-type test, red before fix). Settings roster capped at 5 + PIN-gated View All link. Added scoped make audit check 26. Commit 3870417e."
     },
     {
       "id": "AUD-t-cross-44",
@@ -4276,13 +4276,13 @@
     {
       "id": "AUD-account-13",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Log the swallowed deleteAccountData Cloud Function failure in AccountManagementService._deleteFirestoreUserData (EH-3 log-less catch)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a5ae7aa7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Added AppLogger.instance.error(...) inside the log-less catch. Red-first: new test asserted a log entry after deleteAccount() (CF call already throws in this test env) - failed pre-fix (empty log), passed post-fix."
     },
     {
       "id": "AUD-settings-05",
@@ -4369,13 +4369,13 @@
     {
       "id": "AUD-tutoring-07",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Handle mid-loop failure in TutoredWriteRouter.pushStageDefinitions (tutored_write_router.dart)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha 7b0648a6; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Confirmed opaque exception on mid-loop failure. Added succeededStageIds to TutorWriteException; pushStageDefinitions accumulates and throws with it populated. Header documents accepted-risk decision. Red-first test failed to compile pre-fix, passes post-fix (['7_1'])."
     },
     {
       "id": "AUD-t-tutoring-04",
@@ -4575,13 +4575,13 @@
     {
       "id": "AUD-account-19",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Wire AuthStateNotifier to authStateChanges() instead of leaving a shadowed, unused stream-based authStateProvider",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha 51ed8a5f; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Confirmed collision: two @riverpod providers both generated authStateProvider, forcing hide/as workarounds in 13 files; notifier never watched the stream. Renamed raw provider, removed workarounds, wired ref.listen for sign-out detection. AC1+AC2 verified red-first. Commit 51ed8a5f."
     },
     {
       "id": "AUD-core-database-07",
@@ -4608,13 +4608,13 @@
     {
       "id": "AUD-account-18",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Watch reactive auth state instead of ref.read-ing currentUser inside _AccountTileState.build()",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha 51ed8a5f; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Confirmed: _AccountTile.build() did ref.read(authRepositoryProvider).currentUser. Fixed via ref.watch of the reactive Firebase auth-state stream. Red-first regression test failed pre-fix, passes post-fix. Updated 3 pre-existing test mocks. Commit d6e18e63."
     },
     {
       "id": "AUD-t-content_browsing-03",
@@ -4778,13 +4778,13 @@
     {
       "id": "AUD-tutoring-18",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Replace hardcoded Color/Colors literals with theme tokens across tutoring screens",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha bbb0f319; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: ~40 raw Color/Colors.*.shadeN sites across 9 screens. Added AppColors tokens (exact-value + consolidated onto existing status* tokens + 9-color audit-action palette). Added make audit check 27 (custom_lint CLI confirmed non-functional). Commit bbb0f319."
     },
     {
       "id": "AUD-t-story-acceptance-23",
@@ -5053,13 +5053,13 @@
     {
       "id": "AUD-account-22",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Make AppUser/AuthState/AuthUser @freezed instead of hand-rolled classes without value equality",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a8bad8a3; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Converted AppUser/AuthState/AuthUser to @freezed, flat shape preserved (non-union). Fixed ~150 downstream call-site breaks across 49 files. 0-diff build_runner regen; new equality tests satisfy AC1. Commit a8bad8a3."
     },
     {
       "id": "AUD-t-content_browsing-05",
@@ -5869,13 +5869,13 @@
     {
       "id": "AUD-firebase-15",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Split functions/src/index.ts's five unrelated concerns into focused modules",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha e85b8be7; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Split 2140-line index.ts into firebase/shared/triggers/deletes/tutor_bulk_completions/tutor_invites/tutor_writes.ts; index.ts is a 20-line barrel (AC<300). Verified: tsc clean, export-name diff byte-identical (27/27), CF suite 284/284, rules suite 83/83. Commit e85b8be7."
     },
     {
       "id": "AUD-platform-03",
@@ -7523,24 +7523,24 @@
     {
       "id": "AUD-tutoring-17",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Guard int.parse(sel.profileId) in tutored_write_router.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha 7b0648a6; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Confirmed all 10 int.parse(sel.profileId) sites unguarded. Added _profileIdOrThrow helper (AppLogger + typed TutorWriteException code=invalid-profile-id); replaced all 10 sites. Red-first tests failed pre-fix (got FormatException), pass post-fix."
     },
     {
       "id": "AUD-tutoring-14",
       "wave": 1,
-      "status": "todo",
+      "status": "refuted",
       "severity": "P3",
       "title": "Add ref.mounted guards after awaits in manage_tutors_providers.dart's incomingTutorGrantsProvider",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "REFUTED: investigated by reproducing the exact mid-flight authState-uid-change scenario against the real (non-.autoDispose) incomingTutorGrantsProvider - completes cleanly, no thrown/unhandled error; Riverpod's build-supersession machinery silently discards the stale build's outcome rather than propagating it. SM-4's hazard applies to .autoDispose providers/Notifier methods, not this provider as written. No production code changed; permanent regression-guard test committed on worktree (tipSha bbb0f319, commit 251d6978 'test(tutoring): add regression guard refuting AUD-tutoring-14 (ref.mounted race)') but NOT YET MERGED into audit-fix/2026-07-03 - wave-1 merge lane's no-progress cap / loop end halted before merge, same as the 31 sibling blocked findings. Opus-reviewed and accepted (relaunch-wave1-args.json preApproved, tipSha bbb0f319). See kill-log-addendum.md for the full evidence trail."
     },
     {
       "id": "AUD-tutoring-16",
@@ -7811,13 +7811,13 @@
     {
       "id": "AUD-firebase-14",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Remove or repair the dead root firebase.json/.firebaserc pointing at missing files",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha b183957c; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Re-verified root firebase.json referenced files only under learning_tracker/; nothing (Makefile/CI/scripts) reads root config. Deleted root firebase.json + .firebaserc (AC met). Fixed deployment-guide.md + coding-standards.md prose referencing deleted files."
     },
     {
       "id": "AUD-repo-05",
@@ -8046,13 +8046,13 @@
     {
       "id": "AUD-account-23",
       "wave": 1,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Reconcile AccountManagementService.signOut()'s documented 'soft sign-out' with its always-hard-sign-out callers",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged): fix built and opus-reviewed on a worktree (tipSha a9ca4cf1; see relaunch-wave1-args.json preBuilt/preApproved) but the wave-1 merge lane's no-progress cap / loop end halted the run before this finding could be merged into audit-fix/2026-07-03. Build note: Confirmed: signOut() only clears prefs, never touches Firebase. Both callers hard-sign-out right after it, and the fast-resume tile-tap path never calls signOut() at all. Rewrote the dartdoc to describe actual always-hard call paths, per recommendation."
     },
     {
       "id": "AUD-t-cross-57",
