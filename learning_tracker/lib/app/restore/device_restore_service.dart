@@ -6,9 +6,11 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -168,11 +170,14 @@ class DeviceRestoreService {
       );
       await _syncOrchestrator.pullOnLaunch();
 
-      // Check if pullOnLaunch failed (it catches errors internally)
-      if (_syncOrchestrator.currentStatus case SyncStatusError(
-        :final message,
-      )) {
-        throw Exception('Data pull failed: $message');
+      // Check if pullOnLaunch failed (it catches errors internally).
+      // AUD-sync-01 (EH-5): propagate the orchestrator's own stable code
+      // directly instead of formatting it into an Exception's text and
+      // re-classifying it in the catch block below — that round trip is
+      // exactly the "pre-formatted human message" EH-5 forbids.
+      if (_syncOrchestrator.currentStatus case SyncStatusError(:final code)) {
+        _updateStatus(RestoreStatus.error(code: code));
+        return false;
       }
 
       // Step 2: Derive active curricula from the just-pulled local DB.
@@ -249,7 +254,18 @@ class DeviceRestoreService {
         stackTrace: stackTrace,
       );
       // Leave the in-progress marker in place so the next launch retries.
-      _updateStatus(RestoreStatus.error(message: e.toString()));
+      // AUD-sync-01 (EH-5): classify into a stable code — never a
+      // pre-formatted human message. `pullOnLaunch` rethrows its original
+      // (typed) exception, so this catch may see the same types the
+      // orchestrator itself classifies; any other failure (e.g. content
+      // re-import) falls back to `unknown`. `debugDetail` is retained for
+      // logs/diagnostics only — it must never be rendered to the user.
+      final code = switch (e) {
+        TimeoutException() => SyncErrorCode.timeout,
+        FirestorePermissionDeniedException() => SyncErrorCode.permissionDenied,
+        _ => SyncErrorCode.unknown,
+      };
+      _updateStatus(RestoreStatus.error(code: code, debugDetail: e.toString()));
       return false;
     }
   }

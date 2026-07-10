@@ -28,6 +28,7 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -755,34 +756,31 @@ void main() {
       expect(orchestrator.currentStatus, isA<SyncStatusError>());
     });
 
-    test(
-      'error status message is a friendly generic string for non-timeout, '
-      'non-permission-denied errors (SY-3 fix: no raw exception toString)',
-      () async {
-        final gw = _FakeGateway()
-          ..throwWith = Exception('custom error message');
-        final orchestrator = _makeOrchestrator(gateway: gw);
+    test('error status code is SyncErrorCode.unknown for non-timeout, '
+        'non-permission-denied errors (AUD-sync-01/EH-5, was SY-3)', () async {
+      final gw = _FakeGateway()..throwWith = Exception('custom error message');
+      final orchestrator = _makeOrchestrator(gateway: gw);
 
-        await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
-        final status = orchestrator.currentStatus as SyncStatusError;
-        // SY-3: the orchestrator must NOT pass raw exception.toString() into
-        // the error status message (which would expose internal class names and
-        // error details to users via the Backup & Sync card).  Instead it maps
-        // unknown exceptions to a generic friendly message.
-        expect(
-          status.message,
-          isNot(contains('custom error message')),
-          reason:
-              'Raw exception.toString() must not leak into the user-facing '
-              'SyncStatus.error.message',
-        );
-        expect(
-          status.message,
-          isNotEmpty,
-          reason: 'Error message must be a non-empty friendly string',
-        );
-      },
-    );
+      await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
+      final status = orchestrator.currentStatus as SyncStatusError;
+      // AUD-sync-01 (EH-5): the orchestrator classifies into a stable code
+      // — never a pre-formatted message. `code` is a closed enum value, so
+      // it structurally cannot expose internal class names or error
+      // details to users via the Backup & Sync card, unlike the free-text
+      // message this replaced.
+      expect(
+        status.code,
+        equals(SyncErrorCode.unknown),
+        reason: 'An unclassified exception must map to SyncErrorCode.unknown',
+      );
+      // debugDetail is diagnostics-only (never rendered) — it legitimately
+      // retains the raw exception text for logs.
+      expect(
+        status.debugDetail,
+        contains('custom error message'),
+        reason: 'debugDetail retains diagnostic detail for logs only',
+      );
+    });
 
     test('AUD-core-analytics-01 (PV-1): sync_pull_failed analytics never '
         'carries a raw exception string', () async {

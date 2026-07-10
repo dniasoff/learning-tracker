@@ -134,7 +134,7 @@ return degraded(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  localOnly,TResult Function( DateTime startedAt)?  syncing,TResult Function( DateTime lastSyncedAt)?  synced,TResult Function( int pendingChanges)?  pending,TResult Function( int pendingChanges)?  offline,TResult Function( String message,  DateTime failedAt)?  error,TResult Function( int pendingChanges,  String reason)?  degraded,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  localOnly,TResult Function( DateTime startedAt)?  syncing,TResult Function( DateTime lastSyncedAt)?  synced,TResult Function( int pendingChanges)?  pending,TResult Function( int pendingChanges)?  offline,TResult Function( SyncErrorCode code,  DateTime failedAt,  String? debugDetail)?  error,TResult Function( int pendingChanges,  String reason)?  degraded,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SyncStatusLocalOnly() when localOnly != null:
 return localOnly();case SyncStatusSyncing() when syncing != null:
@@ -142,7 +142,7 @@ return syncing(_that.startedAt);case SyncStatusSynced() when synced != null:
 return synced(_that.lastSyncedAt);case SyncStatusPending() when pending != null:
 return pending(_that.pendingChanges);case SyncStatusOffline() when offline != null:
 return offline(_that.pendingChanges);case SyncStatusError() when error != null:
-return error(_that.message,_that.failedAt);case SyncStatusDegraded() when degraded != null:
+return error(_that.code,_that.failedAt,_that.debugDetail);case SyncStatusDegraded() when degraded != null:
 return degraded(_that.pendingChanges,_that.reason);case _:
   return orElse();
 
@@ -161,7 +161,7 @@ return degraded(_that.pendingChanges,_that.reason);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  localOnly,required TResult Function( DateTime startedAt)  syncing,required TResult Function( DateTime lastSyncedAt)  synced,required TResult Function( int pendingChanges)  pending,required TResult Function( int pendingChanges)  offline,required TResult Function( String message,  DateTime failedAt)  error,required TResult Function( int pendingChanges,  String reason)  degraded,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  localOnly,required TResult Function( DateTime startedAt)  syncing,required TResult Function( DateTime lastSyncedAt)  synced,required TResult Function( int pendingChanges)  pending,required TResult Function( int pendingChanges)  offline,required TResult Function( SyncErrorCode code,  DateTime failedAt,  String? debugDetail)  error,required TResult Function( int pendingChanges,  String reason)  degraded,}) {final _that = this;
 switch (_that) {
 case SyncStatusLocalOnly():
 return localOnly();case SyncStatusSyncing():
@@ -169,7 +169,7 @@ return syncing(_that.startedAt);case SyncStatusSynced():
 return synced(_that.lastSyncedAt);case SyncStatusPending():
 return pending(_that.pendingChanges);case SyncStatusOffline():
 return offline(_that.pendingChanges);case SyncStatusError():
-return error(_that.message,_that.failedAt);case SyncStatusDegraded():
+return error(_that.code,_that.failedAt,_that.debugDetail);case SyncStatusDegraded():
 return degraded(_that.pendingChanges,_that.reason);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -184,7 +184,7 @@ return degraded(_that.pendingChanges,_that.reason);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  localOnly,TResult? Function( DateTime startedAt)?  syncing,TResult? Function( DateTime lastSyncedAt)?  synced,TResult? Function( int pendingChanges)?  pending,TResult? Function( int pendingChanges)?  offline,TResult? Function( String message,  DateTime failedAt)?  error,TResult? Function( int pendingChanges,  String reason)?  degraded,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  localOnly,TResult? Function( DateTime startedAt)?  syncing,TResult? Function( DateTime lastSyncedAt)?  synced,TResult? Function( int pendingChanges)?  pending,TResult? Function( int pendingChanges)?  offline,TResult? Function( SyncErrorCode code,  DateTime failedAt,  String? debugDetail)?  error,TResult? Function( int pendingChanges,  String reason)?  degraded,}) {final _that = this;
 switch (_that) {
 case SyncStatusLocalOnly() when localOnly != null:
 return localOnly();case SyncStatusSyncing() when syncing != null:
@@ -192,7 +192,7 @@ return syncing(_that.startedAt);case SyncStatusSynced() when synced != null:
 return synced(_that.lastSyncedAt);case SyncStatusPending() when pending != null:
 return pending(_that.pendingChanges);case SyncStatusOffline() when offline != null:
 return offline(_that.pendingChanges);case SyncStatusError() when error != null:
-return error(_that.message,_that.failedAt);case SyncStatusDegraded() when degraded != null:
+return error(_that.code,_that.failedAt,_that.debugDetail);case SyncStatusDegraded() when degraded != null:
 return degraded(_that.pendingChanges,_that.reason);case _:
   return null;
 
@@ -501,11 +501,12 @@ as int,
 
 
 class SyncStatusError implements SyncStatus {
-  const SyncStatusError({required this.message, required this.failedAt});
+  const SyncStatusError({required this.code, required this.failedAt, this.debugDetail});
   
 
- final  String message;
+ final  SyncErrorCode code;
  final  DateTime failedAt;
+ final  String? debugDetail;
 
 /// Create a copy of SyncStatus
 /// with the given fields replaced by the non-null parameter values.
@@ -517,16 +518,16 @@ $SyncStatusErrorCopyWith<SyncStatusError> get copyWith => _$SyncStatusErrorCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SyncStatusError&&(identical(other.message, message) || other.message == message)&&(identical(other.failedAt, failedAt) || other.failedAt == failedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SyncStatusError&&(identical(other.code, code) || other.code == code)&&(identical(other.failedAt, failedAt) || other.failedAt == failedAt)&&(identical(other.debugDetail, debugDetail) || other.debugDetail == debugDetail));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,message,failedAt);
+int get hashCode => Object.hash(runtimeType,code,failedAt,debugDetail);
 
 @override
 String toString() {
-  return 'SyncStatus.error(message: $message, failedAt: $failedAt)';
+  return 'SyncStatus.error(code: $code, failedAt: $failedAt, debugDetail: $debugDetail)';
 }
 
 
@@ -537,7 +538,7 @@ abstract mixin class $SyncStatusErrorCopyWith<$Res> implements $SyncStatusCopyWi
   factory $SyncStatusErrorCopyWith(SyncStatusError value, $Res Function(SyncStatusError) _then) = _$SyncStatusErrorCopyWithImpl;
 @useResult
 $Res call({
- String message, DateTime failedAt
+ SyncErrorCode code, DateTime failedAt, String? debugDetail
 });
 
 
@@ -554,11 +555,12 @@ class _$SyncStatusErrorCopyWithImpl<$Res>
 
 /// Create a copy of SyncStatus
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? message = null,Object? failedAt = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? code = null,Object? failedAt = null,Object? debugDetail = freezed,}) {
   return _then(SyncStatusError(
-message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
-as String,failedAt: null == failedAt ? _self.failedAt : failedAt // ignore: cast_nullable_to_non_nullable
-as DateTime,
+code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as SyncErrorCode,failedAt: null == failedAt ? _self.failedAt : failedAt // ignore: cast_nullable_to_non_nullable
+as DateTime,debugDetail: freezed == debugDetail ? _self.debugDetail : debugDetail // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

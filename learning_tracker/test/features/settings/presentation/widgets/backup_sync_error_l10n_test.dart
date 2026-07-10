@@ -43,6 +43,7 @@ import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -109,6 +110,8 @@ void main() {
   testWidgets(
     'L1. Error state: raw Dart exception class name is not rendered in the UI',
     (tester) async {
+      // AUD-sync-01 (EH-5): the raw exception text now lives only in the
+      // non-user-facing debugDetail field — it must never reach the UI.
       const rawMessage =
           'FirestorePermissionDeniedException: FirebaseFirestore/'
           'completions read [cloud_firestore/permission-denied]';
@@ -117,8 +120,9 @@ void main() {
         tester,
         _buildHarness(
           syncStatus: SyncStatus.error(
-            message: rawMessage,
+            code: SyncErrorCode.permissionDenied,
             failedAt: DateTime.now().toUtc(),
+            debugDetail: rawMessage,
           ),
         ),
       );
@@ -151,10 +155,11 @@ void main() {
         tester,
         _buildHarness(
           syncStatus: SyncStatus.error(
-            message:
+            code: SyncErrorCode.permissionDenied,
+            failedAt: DateTime.now().toUtc(),
+            debugDetail:
                 'FirestorePermissionDeniedException: FirebaseFirestore/'
                 'completions read [cloud_firestore/permission-denied]',
-            failedAt: DateTime.now().toUtc(),
           ),
         ),
       );

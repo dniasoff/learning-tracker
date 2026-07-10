@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 
 /// Provider for DeviceRestoreService.
 ///
@@ -60,7 +61,12 @@ final restoreStatusProvider = Provider<RestoreStatus>((ref) {
   return asyncStatus.when(
     data: (status) => status,
     loading: () => const RestoreStatus.idle(),
-    error: (error, _) => RestoreStatus.error(message: error.toString()),
+    // AUD-sync-01 (EH-5): the stream itself errored — code is unknown;
+    // error.toString() is retained only as non-user-facing debugDetail.
+    error: (error, _) => RestoreStatus.error(
+      code: SyncErrorCode.unknown,
+      debugDetail: error.toString(),
+    ),
   );
 });
 

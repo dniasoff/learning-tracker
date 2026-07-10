@@ -193,7 +193,7 @@ The only permitted call sites for `useHebrewTermsProvider` are `lib/core/labels/
 
 **EH-5 — Domain/data errors carry a stable error code or enum, never a pre-formatted human message. Presentation resolves the code through `AppLocalizations`/ARB.**
 **Why:** the app ships EN + Hebrew — an English `exception.message` surfaced raw renders untranslated (and un-RTL-shaped) to Hebrew users. This is the recurring "raw sync exception string" defect class (ST-4, SY-3 fixes).
-**Enforce:** [Enforced] `no_e_to_string_in_ui` custom lint. [Pending] audit grep for human-sentence literals in `throw`/exception constructors under `features/**/{data,domain}`.
+**Enforce:** [Enforced] `no_e_to_string_in_ui` custom lint + `make audit` check 33/33 (AUD-sync-01) — greps for a `required String message` field on any `@freezed sealed class` status/result type, and for raw `error.toString()`/`e.toString()` flowing into a `message:` argument anywhere in `lib/`. `SyncStatus.error`/`RestoreStatus.error` (`lib/features/sync/domain/models/`) carry `SyncErrorCode` + optional non-user-facing `debugDetail` as the reference fix.
 **Source:** docs.flutter.dev — internationalization
 
 **EH-6 — Model every closed set of variants (result kinds, UI union states, domain modes) as a `sealed` hierarchy and switch over it with switch *expressions*; never add a `default:`/`_` arm to such a switch.**
@@ -714,20 +714,20 @@ Already enabled and load-bearing (do not remove): `unawaited_futures`, `use_buil
 
 ## Enforcement — `make audit` and CI
 
-> ⚠️ **Two Makefiles currently exist with divergent audit sets.** The **authoritative** target is `learning_tracker/Makefile`'s `audit` (27 checks, below). The repo-root `Makefile` carries an older 12-grep variant whose RTL check (`EdgeInsets.only(left:/right:)`) was never ported to the inner set. **Consolidation is required** (tracked in [Compliance Gaps](#current-compliance-gaps-2026-07-02)): union the check sets into one target, renumber sequentially, and have the other Makefile delegate.
+> ⚠️ **Two Makefiles currently exist with divergent audit sets.** The **authoritative** target is `learning_tracker/Makefile`'s `audit` (33 checks, below). The repo-root `Makefile` carries an older 12-grep variant whose RTL check (`EdgeInsets.only(left:/right:)`) was never ported to the inner set. **Consolidation is required** (tracked in [Compliance Gaps](#current-compliance-gaps-2026-07-02)): union the check sets into one target, renumber sequentially, and have the other Makefile delegate.
 
 Run before pushing:
 
 ```bash
-cd learning_tracker && make audit   # 27 enforcement checks + packages/custom_lints unit tests
+cd learning_tracker && make audit   # 33 enforcement checks + packages/custom_lints unit tests
 dart run custom_lint                # currently non-functional — see "custom_lint toolchain status" below; do not rely on its exit code
 ```
 
 `make audit` (and `make ci`) depend on `lint-rules-test`, which runs `dart test` inside `packages/custom_lints/` — the unit-test suite that exercises each of the 10 custom lint rules' own matching/whitelist logic (independent of whether the `custom_lint` plugin itself can attach to the analyzer — see the warn-only note below). This is a hard gate: it never soft-skips (AUD-guardrails-17).
 
-### The 27 enforcement checks (`learning_tracker/Makefile`)
+### The 33 enforcement checks (`learning_tracker/Makefile`)
 
-Each check must return zero matching lines (except the two marked warn-only). The odd numbering (`1/15 … 27/27`) is accretion from fix waves — renumber on consolidation.
+Each check must return zero matching lines (except the two marked warn-only). The odd numbering (`1/15 … 33/33`) is accretion from fix waves — renumber on consolidation.
 
 | # | What it checks |
 |---|----------------|
@@ -758,6 +758,7 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 25 | Only one file named `coding-standards.md` exists outside `docs/_archive/` (AG-8, AUD-docs-04) |
 | 26 | Every `.logEvent()` call site in `lib/` passes an `AnalyticsEvent.*` catalog member as the event name — `tool/check_analytics_catalog.dart` (PV-5, AUD-core-analytics-01) |
 | 27 | Every `SeedManager(` construction site in `lib/` passes a `logger:` argument (EH-3, AUD-app-07) |
+| 33 | EH-5: no `@freezed sealed class` status/result type has a `required String message` field, and no raw `error.toString()`/`e.toString()` flows into a `message:` argument (AUD-sync-01) |
 
 Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|right:)`** (RTL violation — AX-1).
 

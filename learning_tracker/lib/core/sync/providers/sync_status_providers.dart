@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
 // W2.33: sync_status_providers now reads from syncOrchestratorProvider instead
@@ -47,9 +48,13 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
     // "Syncing…" forever. The orchestrator's [currentStatus] is the
     // authoritative snapshot between events.
     loading: () => orchestrator.currentStatus,
+    // AUD-sync-01 (EH-5): the stream itself errored (not a classified
+    // domain exception) — code is unknown; error.toString() is retained
+    // only as non-user-facing debugDetail.
     error: (error, _) => SyncStatus.error(
-      message: error.toString(),
+      code: SyncErrorCode.unknown,
       failedAt: DateTimeFactory.nowLocal(),
+      debugDetail: error.toString(),
     ),
   );
 });

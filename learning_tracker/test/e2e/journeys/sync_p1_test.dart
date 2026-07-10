@@ -83,6 +83,8 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_co
     show CompletionCommand;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
     show currentSacredWindowProvider;
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart'
+    show SyncErrorCode;
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
     show SyncStatus;
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
@@ -497,8 +499,9 @@ void main() {
           ..._syncSilences(h),
           syncStatusProvider.overrideWithValue(
             SyncStatus.error(
-              message: 'Firestore unavailable',
+              code: SyncErrorCode.unknown,
               failedAt: DateTimeFactory.nowUtc(),
+              debugDetail: 'Firestore unavailable',
             ),
           ),
         ],

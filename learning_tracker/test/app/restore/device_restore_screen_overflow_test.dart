@@ -49,6 +49,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/overflow_harness.dart';
@@ -148,9 +149,13 @@ void main() {
     await expectNoOverflowAcrossDevices(
       tester,
       _screen,
+      // AUD-sync-01 (EH-5): the screen now renders a fixed localized string
+      // per code (never debugDetail) — this still exercises the real
+      // rendered subtitle's overflow behaviour across the device matrix.
       overrides: _statusOverride(
         const RestoreStatus.error(
-          message:
+          code: SyncErrorCode.unknown,
+          debugDetail:
               'We could not reach the cloud to restore your data. Check your '
               'connection and try again, or skip and continue with a fresh '
               'local copy — your cloud data will sync once you are back online.',

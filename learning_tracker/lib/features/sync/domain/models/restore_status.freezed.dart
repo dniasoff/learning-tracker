@@ -128,14 +128,14 @@ return error(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  idle,TResult Function()?  checking,TResult Function( String phase,  int completedSteps,  int totalSteps)?  restoring,TResult Function( int collectionsRestored)?  complete,TResult Function( String message)?  error,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  idle,TResult Function()?  checking,TResult Function( String phase,  int completedSteps,  int totalSteps)?  restoring,TResult Function( int collectionsRestored)?  complete,TResult Function( SyncErrorCode code,  String? debugDetail)?  error,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case RestoreStatusIdle() when idle != null:
 return idle();case RestoreStatusChecking() when checking != null:
 return checking();case RestoreStatusRestoring() when restoring != null:
 return restoring(_that.phase,_that.completedSteps,_that.totalSteps);case RestoreStatusComplete() when complete != null:
 return complete(_that.collectionsRestored);case RestoreStatusError() when error != null:
-return error(_that.message);case _:
+return error(_that.code,_that.debugDetail);case _:
   return orElse();
 
 }
@@ -153,14 +153,14 @@ return error(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  idle,required TResult Function()  checking,required TResult Function( String phase,  int completedSteps,  int totalSteps)  restoring,required TResult Function( int collectionsRestored)  complete,required TResult Function( String message)  error,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  idle,required TResult Function()  checking,required TResult Function( String phase,  int completedSteps,  int totalSteps)  restoring,required TResult Function( int collectionsRestored)  complete,required TResult Function( SyncErrorCode code,  String? debugDetail)  error,}) {final _that = this;
 switch (_that) {
 case RestoreStatusIdle():
 return idle();case RestoreStatusChecking():
 return checking();case RestoreStatusRestoring():
 return restoring(_that.phase,_that.completedSteps,_that.totalSteps);case RestoreStatusComplete():
 return complete(_that.collectionsRestored);case RestoreStatusError():
-return error(_that.message);}
+return error(_that.code,_that.debugDetail);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -174,14 +174,14 @@ return error(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  idle,TResult? Function()?  checking,TResult? Function( String phase,  int completedSteps,  int totalSteps)?  restoring,TResult? Function( int collectionsRestored)?  complete,TResult? Function( String message)?  error,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  idle,TResult? Function()?  checking,TResult? Function( String phase,  int completedSteps,  int totalSteps)?  restoring,TResult? Function( int collectionsRestored)?  complete,TResult? Function( SyncErrorCode code,  String? debugDetail)?  error,}) {final _that = this;
 switch (_that) {
 case RestoreStatusIdle() when idle != null:
 return idle();case RestoreStatusChecking() when checking != null:
 return checking();case RestoreStatusRestoring() when restoring != null:
 return restoring(_that.phase,_that.completedSteps,_that.totalSteps);case RestoreStatusComplete() when complete != null:
 return complete(_that.collectionsRestored);case RestoreStatusError() when error != null:
-return error(_that.message);case _:
+return error(_that.code,_that.debugDetail);case _:
   return null;
 
 }
@@ -393,10 +393,11 @@ as int,
 
 
 class RestoreStatusError implements RestoreStatus {
-  const RestoreStatusError({required this.message});
+  const RestoreStatusError({required this.code, this.debugDetail});
   
 
- final  String message;
+ final  SyncErrorCode code;
+ final  String? debugDetail;
 
 /// Create a copy of RestoreStatus
 /// with the given fields replaced by the non-null parameter values.
@@ -408,16 +409,16 @@ $RestoreStatusErrorCopyWith<RestoreStatusError> get copyWith => _$RestoreStatusE
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RestoreStatusError&&(identical(other.message, message) || other.message == message));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RestoreStatusError&&(identical(other.code, code) || other.code == code)&&(identical(other.debugDetail, debugDetail) || other.debugDetail == debugDetail));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,message);
+int get hashCode => Object.hash(runtimeType,code,debugDetail);
 
 @override
 String toString() {
-  return 'RestoreStatus.error(message: $message)';
+  return 'RestoreStatus.error(code: $code, debugDetail: $debugDetail)';
 }
 
 
@@ -428,7 +429,7 @@ abstract mixin class $RestoreStatusErrorCopyWith<$Res> implements $RestoreStatus
   factory $RestoreStatusErrorCopyWith(RestoreStatusError value, $Res Function(RestoreStatusError) _then) = _$RestoreStatusErrorCopyWithImpl;
 @useResult
 $Res call({
- String message
+ SyncErrorCode code, String? debugDetail
 });
 
 
@@ -445,10 +446,11 @@ class _$RestoreStatusErrorCopyWithImpl<$Res>
 
 /// Create a copy of RestoreStatus
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? message = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? code = null,Object? debugDetail = freezed,}) {
   return _then(RestoreStatusError(
-message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
-as String,
+code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as SyncErrorCode,debugDetail: freezed == debugDetail ? _self.debugDetail : debugDetail // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

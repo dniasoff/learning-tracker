@@ -3117,6 +3117,24 @@ abstract class AppLocalizations {
   /// **'Importing content...'**
   String get deviceRestorePhaseImportingContent;
 
+  /// AUD-sync-01 (EH-5): shown when RestoreStatus.error carries SyncErrorCode.timeout — never the raw exception text.
+  ///
+  /// In en, this message translates to:
+  /// **'The restore timed out. Check your connection and try again.'**
+  String get deviceRestoreErrorTimeout;
+
+  /// AUD-sync-01 (EH-5): shown when RestoreStatus.error carries SyncErrorCode.permissionDenied — never the raw exception text.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t access your cloud backup. Please sign in again and retry.'**
+  String get deviceRestoreErrorPermissionDenied;
+
+  /// AUD-sync-01 (EH-5): shown when RestoreStatus.error carries SyncErrorCode.unknown — never the raw exception text.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong while restoring your data. Tap Retry to try again.'**
+  String get deviceRestoreErrorGeneric;
+
   /// No description provided for @skipAndContinue.
   ///
   /// In en, this message translates to:

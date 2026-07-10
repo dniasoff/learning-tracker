@@ -89,6 +89,8 @@ import 'package:learning_tracker/features/sacred_time/presentation/providers/sac
     show currentSacredWindowProvider;
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart'
     show RestoreStatus;
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart'
+    show SyncErrorCode;
 import 'package:shared_preferences/shared_preferences.dart'
     show SharedPreferences;
 
@@ -442,8 +444,11 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
+        // AUD-sync-01 (EH-5): RestoreStatus.error carries a stable code —
+        // debugDetail below is technical-only and must never render.
         const errorStatus = RestoreStatus.error(
-          message: 'Network timeout. Please check your connection.',
+          code: SyncErrorCode.timeout,
+          debugDetail: 'Network timeout. Please check your connection.',
         );
 
         await h.pumpApp(
@@ -464,8 +469,11 @@ void main() {
         // l10n.deviceRestoreFailed = 'Restore failed'
         h.expectOnScreen('Restore failed', routeName: 'DeviceRestoreScreen');
 
-        // Error message body.
-        h.expectOnScreen('Network timeout. Please check your connection.');
+        // Error message body: the LOCALIZED subtitle for SyncErrorCode.timeout
+        // (l10n.deviceRestoreErrorTimeout), never the raw debugDetail text.
+        h.expectOnScreen(
+          'The restore timed out. Check your connection and try again.',
+        );
 
         // Retry button (l10n.retry = 'Retry').
         h.expectOnScreen('Retry');

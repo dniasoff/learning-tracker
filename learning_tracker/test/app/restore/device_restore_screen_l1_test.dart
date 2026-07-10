@@ -6,7 +6,8 @@
 //   restoring  → spinner + phase label + LinearProgressIndicator
 //   complete   → check_circle icon + l10n.deviceRestoreComplete
 //   error      → error_outline icon + l10n.deviceRestoreFailed
-//               + message text + Retry button + "Skip & continue" button
+//               + a code-localized subtitle (AUD-sync-01/EH-5 — never the
+//               raw debugDetail text) + Retry button + "Skip & continue"
 //
 // Behaviour tests:
 //   • Retry button calls service.retry(); on success → router.replaceAll called
@@ -44,6 +45,7 @@ import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -440,7 +442,10 @@ void main() {
 
         await tester.pumpWidget(
           _buildHarness(
-            fixedStatus: const RestoreStatus.error(message: 'Network timeout'),
+            fixedStatus: const RestoreStatus.error(
+              code: SyncErrorCode.timeout,
+              debugDetail: 'Network timeout',
+            ),
             mockRouter: mockRouter,
             stubAppRouter: _makeAppRouter(),
             db: db,
@@ -450,7 +455,23 @@ void main() {
 
         expect(find.byIcon(Icons.error_outline), findsOneWidget);
         expect(find.text('Restore failed'), findsOneWidget);
-        expect(find.text('Network timeout'), findsOneWidget);
+        // AUD-sync-01 (EH-5): the raw RestoreStatus.error debugDetail must
+        // NEVER render verbatim — it is unlocalized, potentially technical
+        // text (exception class names, Firestore paths). The stable code
+        // resolves to a localized string instead.
+        expect(
+          find.text('Network timeout'),
+          findsNothing,
+          reason: 'raw exception text must never reach the UI verbatim (EH-5)',
+        );
+        expect(
+          find.text(
+            'The restore timed out. Check your connection and try again.',
+          ),
+          findsOneWidget,
+          reason:
+              'SyncErrorCode.timeout must resolve to l10n.deviceRestoreErrorTimeout',
+        );
         // Retry elevated button
         expect(find.widgetWithText(ElevatedButton, 'Retry'), findsOneWidget);
         // Skip & continue text button
@@ -520,14 +541,18 @@ void main() {
         final stubService = _StubRestoreService(
           retryResult: false,
           restoreStatusAfterCall: const RestoreStatus.error(
-            message: 'prior failure',
+            code: SyncErrorCode.unknown,
+            debugDetail: 'prior failure',
           ),
         );
         addTearDown(stubService.dispose);
 
         await tester.pumpWidget(
           _buildHarness(
-            fixedStatus: const RestoreStatus.error(message: 'Timed out'),
+            fixedStatus: const RestoreStatus.error(
+              code: SyncErrorCode.timeout,
+              debugDetail: 'Timed out',
+            ),
             mockRouter: mockRouter,
             stubAppRouter: _makeAppRouter(),
             db: db,
@@ -564,7 +589,10 @@ void main() {
 
         await tester.pumpWidget(
           _buildHarness(
-            fixedStatus: const RestoreStatus.error(message: 'Timed out'),
+            fixedStatus: const RestoreStatus.error(
+              code: SyncErrorCode.timeout,
+              debugDetail: 'Timed out',
+            ),
             mockRouter: mockRouter,
             stubAppRouter: appRouter,
             db: db,
@@ -607,7 +635,10 @@ void main() {
 
         await tester.pumpWidget(
           _buildHarness(
-            fixedStatus: const RestoreStatus.error(message: 'Offline'),
+            fixedStatus: const RestoreStatus.error(
+              code: SyncErrorCode.unknown,
+              debugDetail: 'Offline',
+            ),
             mockRouter: mockRouter,
             stubAppRouter: appRouter,
             db: db,
@@ -757,7 +788,7 @@ void main() {
 
         await tester.pumpWidget(
           _buildHarness(
-            fixedStatus: const RestoreStatus.error(message: 'שגיאה'),
+            fixedStatus: const RestoreStatus.error(code: SyncErrorCode.unknown),
             mockRouter: mockRouter,
             stubAppRouter: _makeAppRouter(),
             db: db,

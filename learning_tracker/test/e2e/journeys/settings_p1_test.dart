@@ -51,6 +51,8 @@ import 'package:learning_tracker/features/sacred_time/presentation/providers/sac
     show currentSacredWindowProvider;
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart'
     show studyDayConfigsProvider;
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart'
+    show SyncErrorCode;
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
     show SyncStatus;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
@@ -454,8 +456,9 @@ void main() {
       addTearDown(h.dispose);
 
       final errorStatus = SyncStatus.error(
-        message: 'Firestore unavailable',
+        code: SyncErrorCode.unknown,
         failedAt: DateTimeFactory.nowUtc(),
+        debugDetail: 'Firestore unavailable',
       );
 
       // The harness already overrides syncOrchestratorProvider → null, so we

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
 void main() {
@@ -98,17 +99,37 @@ void main() {
     });
 
     group('error', () {
-      test('creates error status with message and failedAt', () {
+      test('creates error status with code, failedAt and debugDetail', () {
         final now = DateTime.now();
         final status = SyncStatus.error(
-          message: 'Network error',
+          code: SyncErrorCode.unknown,
           failedAt: now,
+          debugDetail: 'Network error',
         );
 
         final result = status.maybeWhen(
-          error: (message, failedAt) {
-            expect(message, equals('Network error'));
+          error: (code, failedAt, debugDetail) {
+            expect(code, equals(SyncErrorCode.unknown));
             expect(failedAt, equals(now));
+            expect(debugDetail, equals('Network error'));
+            return true;
+          },
+          orElse: () => false,
+        );
+
+        expect(result, isTrue);
+      });
+
+      test('debugDetail is optional', () {
+        final status = SyncStatus.error(
+          code: SyncErrorCode.timeout,
+          failedAt: DateTime.now(),
+        );
+
+        final result = status.maybeWhen(
+          error: (code, _, debugDetail) {
+            expect(code, equals(SyncErrorCode.timeout));
+            expect(debugDetail, isNull);
             return true;
           },
           orElse: () => false,
@@ -162,7 +183,7 @@ void main() {
           synced: (_) => 'synced',
           pending: (_) => 'pending',
           offline: (_) => 'offline',
-          error: (_, __) => 'error',
+          error: (_, __, ___) => 'error',
           degraded: (_, __) => 'degraded',
         );
 
@@ -189,7 +210,7 @@ void main() {
           synced: (_) => 'synced',
           pending: (count) => 'pending:$count',
           offline: (_) => 'offline',
-          error: (_, __) => 'error',
+          error: (_, __, ___) => 'error',
           degraded: (_, __) => 'degraded',
         );
 

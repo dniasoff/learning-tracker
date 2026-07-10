@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
@@ -56,9 +57,13 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
     // orchestrator's authoritative snapshot rather than a synthetic
     // SyncStatus.syncing so the UI never shows a spurious "Syncing…" flash.
     loading: () => orchestrator.currentStatus,
+    // AUD-sync-01 (EH-5): the stream itself errored (not a classified
+    // domain exception) — code is unknown; error.toString() is retained
+    // only as non-user-facing debugDetail.
     error: (error, _) => SyncStatus.error(
-      message: error.toString(),
+      code: SyncErrorCode.unknown,
       failedAt: DateTimeFactory.nowLocal(),
+      debugDetail: error.toString(),
     ),
   );
 });

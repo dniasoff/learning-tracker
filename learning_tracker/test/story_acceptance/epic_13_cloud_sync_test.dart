@@ -21,6 +21,7 @@ import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -160,7 +161,7 @@ void main() {
         totalSteps: 3,
       );
       const complete = RestoreStatus.complete(collectionsRestored: 3);
-      const error = RestoreStatus.error(message: 'network error');
+      const error = RestoreStatus.error(code: SyncErrorCode.unknown);
 
       expect(idle, isA<RestoreStatusIdle>());
       expect(checking, isA<RestoreStatusChecking>());
@@ -311,8 +312,9 @@ void main() {
 
         final orchestrator = _StubSyncOrchestrator(
           status: SyncStatus.error(
-            message: 'Firestore unreachable',
+            code: SyncErrorCode.permissionDenied,
             failedAt: DateTime.utc(2026, 5, 20),
+            debugDetail: 'Firestore unreachable',
           ),
         );
 
@@ -325,6 +327,12 @@ void main() {
         // so restore detects the failure and returns false.
         expect(result, isFalse);
         expect(svc.currentStatus, isA<RestoreStatusError>());
+        // AUD-sync-01 (EH-5): the orchestrator's code propagates directly
+        // into RestoreStatus.error — no lossy string round trip.
+        expect(
+          (svc.currentStatus as RestoreStatusError).code,
+          equals(SyncErrorCode.permissionDenied),
+        );
       },
     );
 

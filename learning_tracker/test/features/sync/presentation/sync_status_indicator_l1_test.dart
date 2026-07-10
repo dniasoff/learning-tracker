@@ -24,6 +24,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/sync/presentation/widgets/sync_status_indicator.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -192,7 +193,7 @@ void main() {
       'error — warning_amber icon, red colour, tooltip "Sync error"',
       (tester) async {
         final status = SyncStatus.error(
-          message: 'permission-denied',
+          code: SyncErrorCode.permissionDenied,
           failedAt: DateTime(2025),
         );
         await _pump(tester, _buildApp(status));
@@ -319,7 +320,7 @@ void main() {
 
     testWidgets('error — text "Sync error" visible in red', (tester) async {
       final status = SyncStatus.error(
-        message: 'failed',
+        code: SyncErrorCode.unknown,
         failedAt: DateTime(2025),
       );
       await _pump(tester, _buildApp(status, showLabel: true));

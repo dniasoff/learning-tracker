@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 
 part 'restore_status.freezed.dart';
 
@@ -23,6 +24,13 @@ sealed class RestoreStatus with _$RestoreStatus {
       RestoreStatusComplete;
 
   /// Restore failed with an error.
-  const factory RestoreStatus.error({required String message}) =
-      RestoreStatusError;
+  ///
+  /// EH-5: [code] is a stable, localizable category — never a pre-formatted
+  /// human message. Presentation resolves the user-facing string for [code]
+  /// through `AppLocalizations`. [debugDetail], when present, is technical
+  /// and must NEVER be rendered directly to the user — logs/diagnostics only.
+  const factory RestoreStatus.error({
+    required SyncErrorCode code,
+    String? debugDetail,
+  }) = RestoreStatusError;
 }

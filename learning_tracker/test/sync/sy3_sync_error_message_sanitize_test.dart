@@ -1,30 +1,32 @@
-// SY-3 regression test — Raw FirestorePermissionDeniedException must not
-// leak verbatim into the SyncStatus.error message.
+// SY-3 / AUD-sync-01 (EH-5) regression test — a Firestore permission-denied
+// failure must never leak verbatim into a user-facing string.
 //
-// Root cause (plan §ROOT sync ¶ SY-3):
-//   sync_orchestrator.dart catches any non-Timeout exception and sets
+// Root cause (plan §ROOT sync ¶ SY-3, superseded by AUD-sync-01):
+//   sync_orchestrator.dart used to catch any non-Timeout exception and set
 //   `message = e.toString()`, which for FirestorePermissionDeniedException
-//   produces the class name + internal collection + op + Firestore error code:
+//   produced the class name + internal collection + op + Firestore error code:
 //     "FirestorePermissionDeniedException: ... (collection: completions),
 //      op: read caused by: [cloud_firestore/permission-denied]"
-//   That raw string is fed into the `backupSyncError(message)` ARB template
-//   and rendered verbatim in the Backup & Sync card — exposing internal
-//   collection names, class names, and Firestore error codes to end users.
+//   That raw string was fed into an ARB template and rendered verbatim in the
+//   Backup & Sync card — exposing internal collection names, class names, and
+//   Firestore error codes to end users.
 //
-// Fix: map FirestorePermissionDeniedException to a friendly message in
-// sync_orchestrator.dart instead of calling e.toString().
+// AUD-sync-01 fix (EH-5): SyncStatus.error no longer has a `message` field at
+// all — it carries a stable [SyncErrorCode] enum. It is now structurally
+// impossible for an exception's raw text to reach the code field; the only
+// place e.toString() is retained is the non-user-facing `debugDetail` field.
 //
 // Test strategy:
 //   Build a SyncOrchestratorImpl whose gateway's fetchPage() throws
 //   FirestorePermissionDeniedException.  Call pullOnLaunch().  Assert:
-//     1. The resulting SyncStatus.error.message does NOT contain the raw
-//        exception class name ("FirestorePermissionDeniedException").
-//     2. The message does NOT contain "collection:" or "op:" (internal labels).
-//     3. The message does NOT contain "[cloud_firestore/permission-denied]".
-//     4. The message is a non-empty, user-facing string.
+//     1. The resulting SyncStatus.error.code is SyncErrorCode.permissionDenied
+//        (a closed enum value — it cannot possibly contain a class name,
+//        collection path, or SDK error code).
+//     2. debugDetail (diagnostics-only) is non-empty but is a DIFFERENT
+//        field from the one presentation is allowed to render.
 //
-// TimeoutException messages are also verified to remain friendly (pre-existing
-// correct behavior).
+// TimeoutException is also verified to classify as SyncErrorCode.timeout
+// (pre-existing correct behavior).
 
 @Tags(['unit', 'sync', 'sy3', 'vision-fix'])
 library;
@@ -37,6 +39,7 @@ import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
 // ── Fakes ─────────────────────────────────────────────────────────────────────
@@ -167,8 +170,8 @@ Future<List<SyncStatusError>> _collectErrors(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('SY-3 — FirestorePermissionDeniedException sanitized in error status', () {
-    test('pullOnLaunch emits SyncStatus.error with a friendly message, '
+  group('SY-3 / AUD-sync-01 — permission-denied classified, never leaked', () {
+    test('pullOnLaunch emits SyncStatus.error with code permissionDenied, '
         'not the raw FirestorePermissionDeniedException.toString()', () async {
       final orchestrator = _buildOrchestrator(_PermissionDeniedGateway());
       addTearDown(orchestrator.dispose);
@@ -185,50 +188,32 @@ void main() {
             'FirestorePermissionDeniedException',
       );
 
-      final errorMessage = errors.last.message;
+      final last = errors.last;
 
-      // SY-3 assertion 1: class name must not leak.
+      // AUD-sync-01 assertion 1: the code is the closed enum value — by
+      // construction it cannot contain a class name, collection path, or
+      // SDK error code (unlike a free-text message ever could).
       expect(
-        errorMessage.contains('FirestorePermissionDeniedException'),
-        isFalse,
+        last.code,
+        equals(SyncErrorCode.permissionDenied),
         reason:
-            'SyncStatus.error.message must not expose the raw exception class name '
-            '— users must see a friendly message, not "FirestorePermissionDeniedException: ..."',
+            'SyncStatus.error.code must classify a Firestore permission-'
+            'denied failure as SyncErrorCode.permissionDenied',
       );
 
-      // SY-3 assertion 2: internal "collection:" label must not leak.
+      // AUD-sync-01 assertion 2: debugDetail is a SEPARATE, non-user-facing
+      // field — presentation must never read it. It retains the raw text
+      // for logs/diagnostics only.
       expect(
-        errorMessage.contains('collection:'),
-        isFalse,
+        last.debugDetail,
+        contains('FirestorePermissionDeniedException'),
         reason:
-            'SyncStatus.error.message must not expose internal Firestore '
-            'collection path labels',
-      );
-
-      // SY-3 assertion 3: raw Firestore error code must not leak.
-      expect(
-        errorMessage.contains('[cloud_firestore/permission-denied]'),
-        isFalse,
-        reason:
-            'SyncStatus.error.message must not expose raw Firestore SDK '
-            'error codes visible only to developers',
-      );
-
-      // SY-3 assertion 4: message must be non-empty and user-facing.
-      expect(
-        errorMessage,
-        isNotEmpty,
-        reason: 'SyncStatus.error.message must be non-empty',
-      );
-      expect(
-        errorMessage.length,
-        greaterThan(10),
-        reason:
-            'A friendly user-facing error message must have meaningful content',
+            'debugDetail retains full diagnostic detail for logs — it is a '
+            'different field from the presentation-facing code',
       );
     });
 
-    test('TimeoutException still maps to friendly "timed out" message '
+    test('TimeoutException classifies as SyncErrorCode.timeout '
         '(regression guard for pre-existing correct behavior)', () async {
       final orchestrator = _buildOrchestrator(_TimeoutGateway());
       addTearDown(orchestrator.dispose);
@@ -244,20 +229,10 @@ void main() {
             'TimeoutException',
       );
 
-      final msg = errors.last.message;
-
-      // The Timeout message must remain friendly (pre-existing behavior).
       expect(
-        msg,
-        contains('timed out'),
-        reason:
-            'TimeoutException must still produce a "Sync timed out" message',
-      );
-      expect(
-        msg.contains('TimeoutException'),
-        isFalse,
-        reason:
-            'TimeoutException class name must not appear in the user-facing message',
+        errors.last.code,
+        equals(SyncErrorCode.timeout),
+        reason: 'TimeoutException must classify as SyncErrorCode.timeout',
       );
     });
   });

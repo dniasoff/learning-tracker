@@ -909,6 +909,18 @@
   "deviceRestorePhaseRestoring": "Restoring your data...",
   "deviceRestorePhaseLoadingCurricula": "Loading curricula...",
   "deviceRestorePhaseImportingContent": "Importing content...",
+  "deviceRestoreErrorTimeout": "The restore timed out. Check your connection and try again.",
+  "@deviceRestoreErrorTimeout": {
+    "description": "AUD-sync-01 (EH-5): shown when RestoreStatus.error carries SyncErrorCode.timeout — never the raw exception text."
+  },
+  "deviceRestoreErrorPermissionDenied": "We couldn't access your cloud backup. Please sign in again and retry.",
+  "@deviceRestoreErrorPermissionDenied": {
+    "description": "AUD-sync-01 (EH-5): shown when RestoreStatus.error carries SyncErrorCode.permissionDenied — never the raw exception text."
+  },
+  "deviceRestoreErrorGeneric": "Something went wrong while restoring your data. Tap Retry to try again.",
+  "@deviceRestoreErrorGeneric": {
+    "description": "AUD-sync-01 (EH-5): shown when RestoreStatus.error carries SyncErrorCode.unknown — never the raw exception text."
+  },
   "skipAndContinue": "Skip & continue",
   "noActiveProfile": "No active profile",
   "incorrectPin": "Incorrect PIN",

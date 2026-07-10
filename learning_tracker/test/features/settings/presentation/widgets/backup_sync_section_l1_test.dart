@@ -42,6 +42,7 @@ import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -359,8 +360,10 @@ void main() {
         tester,
         _buildHarness(
           syncStatus: SyncStatus.error(
-            message: 'FirestorePermissionDeniedException: raw internal error',
+            code: SyncErrorCode.permissionDenied,
             failedAt: DateTime.now(),
+            debugDetail:
+                'FirestorePermissionDeniedException: raw internal error',
           ),
           authState: _kCloudUser,
         ),
@@ -390,8 +393,9 @@ void main() {
         tester,
         _buildHarness(
           syncStatus: SyncStatus.error(
-            message: 'network',
+            code: SyncErrorCode.unknown,
             failedAt: DateTime.now(),
+            debugDetail: 'network',
           ),
           authState: _kCloudUser,
           orchestrator: mockOrch,

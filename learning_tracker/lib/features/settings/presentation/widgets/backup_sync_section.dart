@@ -112,9 +112,12 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
             ? l10n.backupPendingChanges(pendingChanges)
             : l10n.backupOffline,
       ),
-      // ST-4 fix: never pass a raw exception string into the user-facing
-      // subtitle.  Map all error messages to a friendly localized string so
-      // exception class names, collection paths, and error codes never render.
+      // ST-4 / AUD-sync-01 (EH-5): SyncStatusError now carries a stable code
+      // (never a pre-formatted message) — there is no raw text on the type
+      // to short-circuit around any more. Same friendly message regardless
+      // of code today (the retry action is identical either way); the
+      // `code` field is available here if a future card wants to
+      // differentiate.
       SyncStatusError() => _buildCloudStatusCard(
         theme,
         icon: Icons.warning_amber_rounded,

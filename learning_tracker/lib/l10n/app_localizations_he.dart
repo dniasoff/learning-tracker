@@ -1735,6 +1735,18 @@ class AppLocalizationsHe extends AppLocalizations {
   String get deviceRestorePhaseImportingContent => 'מייבא תוכן...';
 
   @override
+  String get deviceRestoreErrorTimeout =>
+      'השחזור נמשך זמן רב מדי. בדקו את החיבור ונסו שוב.';
+
+  @override
+  String get deviceRestoreErrorPermissionDenied =>
+      'לא הצלחנו לגשת לגיבוי בענן. התחברו שוב ונסו לשחזר.';
+
+  @override
+  String get deviceRestoreErrorGeneric =>
+      'משהו השתבש בשחזור הנתונים. הקישו על \"נסה שוב\" כדי לנסות שוב.';
+
+  @override
   String get skipAndContinue => 'דלגו והמשיכו';
 
   @override

@@ -20,6 +20,7 @@ import 'package:learning_tracker/core/sync/providers/firestore_instance_provider
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -1012,23 +1013,21 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
           'error_kind': _analyticsErrorKind(e),
         },
       );
-      // SY-3: map known exception types to friendly, user-facing messages.
-      // Never pass e.toString() for exceptions whose toString() exposes
-      // internal class names, collection paths, or SDK error codes.
-      final message = switch (e) {
-        // Timeout: existing friendly message — keep as-is.
-        TimeoutException() => 'Sync timed out — tap to retry',
-        // PERMISSION_DENIED: friendly message instead of leaking the
-        // class name, collection path, and [cloud_firestore/permission-denied].
-        FirestorePermissionDeniedException() =>
-          'Cloud backup is temporarily unavailable. Tap to retry.',
-        // All other exceptions: fall back to a generic message rather than
-        // surfacing the raw exception toString(), which may contain internal
-        // class names or SDK internals that are meaningless to the user.
-        _ => 'Sync failed — tap to retry',
+      // SY-3 / EH-5 (AUD-sync-01): classify into a stable code — never a
+      // pre-formatted human message. Presentation resolves the user-facing
+      // string for each code via AppLocalizations. [debugDetail] retains
+      // e.toString() for logs/diagnostics only; it must never be rendered.
+      final code = switch (e) {
+        TimeoutException() => SyncErrorCode.timeout,
+        FirestorePermissionDeniedException() => SyncErrorCode.permissionDenied,
+        _ => SyncErrorCode.unknown,
       };
       _safeEmitStatus(
-        SyncStatus.error(message: message, failedAt: DateTimeFactory.nowUtc()),
+        SyncStatus.error(
+          code: code,
+          failedAt: DateTimeFactory.nowUtc(),
+          debugDetail: e.toString(),
+        ),
       );
       rethrow;
     }

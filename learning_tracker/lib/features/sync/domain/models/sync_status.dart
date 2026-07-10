@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 
 part 'sync_status.freezed.dart';
 
@@ -37,9 +38,16 @@ sealed class SyncStatus with _$SyncStatus {
       SyncStatusOffline;
 
   /// Sync operation failed with an error.
+  ///
+  /// EH-5: [code] is a stable, localizable category — never a pre-formatted
+  /// human message. Presentation resolves the user-facing string for [code]
+  /// through `AppLocalizations`. [debugDetail], when present, is technical
+  /// (may contain exception class names, Firestore paths, SDK codes) and
+  /// must NEVER be rendered directly to the user — logs/diagnostics only.
   const factory SyncStatus.error({
-    required String message,
+    required SyncErrorCode code,
     required DateTime failedAt,
+    String? debugDetail,
   }) = SyncStatusError;
 
   /// Pushes are silently queueing because Firestore keeps refusing them

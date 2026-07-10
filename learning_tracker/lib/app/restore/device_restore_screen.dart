@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -144,6 +145,21 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     };
   }
 
+  /// Resolves a [SyncErrorCode] to a localized, user-facing subtitle.
+  ///
+  /// AUD-sync-01 (EH-5): [RestoreStatus.error] carries a stable code, never
+  /// a pre-formatted message — this exhaustive switch is the single place
+  /// that maps each code to user-facing text. The exception's raw text
+  /// (exposed only via [RestoreStatus.error.debugDetail] for logs) must
+  /// never reach this switch or be rendered.
+  String _errorSubtitle(SyncErrorCode code, AppLocalizations l10n) {
+    return switch (code) {
+      SyncErrorCode.timeout => l10n.deviceRestoreErrorTimeout,
+      SyncErrorCode.permissionDenied => l10n.deviceRestoreErrorPermissionDenied,
+      SyncErrorCode.unknown => l10n.deviceRestoreErrorGeneric,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(restoreStatusProvider);
@@ -202,7 +218,7 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
                 ),
               ],
             ),
-            error: (message) => Column(
+            error: (code, debugDetail) => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
@@ -217,7 +233,10 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  message,
+                  // AUD-sync-01 (EH-5): resolve the stable code to a
+                  // localized string — [debugDetail] is diagnostics-only
+                  // and must never be rendered to the user.
+                  _errorSubtitle(code, l10n),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),

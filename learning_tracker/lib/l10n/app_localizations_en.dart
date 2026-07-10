@@ -1747,6 +1747,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deviceRestorePhaseImportingContent => 'Importing content...';
 
   @override
+  String get deviceRestoreErrorTimeout =>
+      'The restore timed out. Check your connection and try again.';
+
+  @override
+  String get deviceRestoreErrorPermissionDenied =>
+      'We couldn\'t access your cloud backup. Please sign in again and retry.';
+
+  @override
+  String get deviceRestoreErrorGeneric =>
+      'Something went wrong while restoring your data. Tap Retry to try again.';
+
+  @override
   String get skipAndContinue => 'Skip & continue';
 
   @override
