@@ -4112,13 +4112,19 @@
   {
    "id": "AUD-core-sync-28",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Wire the tested D18 tutored-mirror-wipe fix (resolveOwnerAccountIdForWipe / wipeRevokedMirrors) into the real incoming-grants reconcile path, or delete it",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "5f59ba4d5bf4e303eb9f96dbc807ab40d5778fb4"
+   ],
+   "reviewRounds": 2,
+   "acVerified": [
+    "AUD-core-sync-28 AC1 OK: resolveOwnerAccountIdForWipe + wipeRevokedMirrors both deleted with docstrings (diff -166 lines)",
+    "AUD-core-sync-28 AC2 OK: grep for symbols outside test/ empty; absent from lib/ (2 historical-comment refs only)",
+    "AUD-core-sync-28 AC3 OK: test rewritten, 5/5 pass; proves currentAccountIdProvider pinned to accounts.id + exercises real wipeMirrorForGrant reconcile"
+   ],
+   "notes": "currentAccountIdProvider derives only from authStateProvider, not tutored-session providers - D18 hazard unreachable. Deleted dead resolveOwnerAccountIdForWipe + wipeRevokedMirrors (zero prod callers), fixed docstrings, rewrote wipe test to prove stability + exercise real path. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c10, mergeSha e39faa03618288d9caeb2074cd3aa88d00446ead). Post-rebase gate: make audit checks 1-24 and 26-27 clean, flutter analyze clean (0 issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~39 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout; identical failure reproduced on the unmodified audit-fix/2026-07-03 tip before this merge, confirming it is pre-existing environmental noise, not a regression introduced by this change, consistent with the pattern already documented for w1r0c2 through w2r1c14 in this same ledger. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-account-08",
@@ -5901,13 +5907,18 @@
   {
    "id": "AUD-core-sync-31",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Deduplicate the Ref/WidgetRef builder pairs in tutored_pull_providers.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "187b1991ecbfdf51d9d0f69e0eb2fce78f4b7f10",
+    "96bb1147ba34e6cf259f27007f37e92accc2ef91"
+   ],
+   "reviewRounds": 2,
+   "acVerified": [
+    "AUD-core-sync-31 AC OK: pull pair -> _build(); wipe pair -> _buildMirrorWipeService(); residual ref.read irreducible (no common supertype), rec allows it"
+   ],
+   "notes": "buildTutoredMirrorWipeService/FromWidget had identical bodies. Extracted shared _buildMirrorWipeService() helper mirroring the file's existing _build() pattern; both entry points now delegate to one impl. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c10, mergeSha e39faa03618288d9caeb2074cd3aa88d00446ead). Post-rebase gate: make audit checks 1-24 and 26-27 clean, flutter analyze clean (0 issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~39 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout; identical failure reproduced on the unmodified audit-fix/2026-07-03 tip before this merge, confirming it is pre-existing environmental noise, not a regression introduced by this change, consistent with the pattern already documented for w1r0c2 through w2r1c14 in this same ledger. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-core-widgets-02",
@@ -7010,13 +7021,13 @@
   {
    "id": "AUD-core-sync-29",
    "wave": 2,
-   "status": "todo",
+   "status": "skipped-refuted",
    "severity": "P3",
    "title": "Add a ref.mounted check after the await in resolveOwnerAccountIdForWipe (tutored_pull_providers.dart)",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "Moot: resolveOwnerAccountIdForWipe deleted in finding 28's fix (fe1bc6b8, rebased as 5f59ba4d5bf4e303eb9f96dbc807ab40d5778fb4), per this finding's own note that it resolves alongside finding 4. No post-await ref access remains to guard. grep confirms symbol gone. Recorded in kill-log-addendum.md (merge-lane w2r1c10, 2026-07-10)."
   },
   {
    "id": "AUD-core-sync-39",
