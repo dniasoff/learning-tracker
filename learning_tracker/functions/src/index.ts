@@ -1261,7 +1261,21 @@ async function verifyTutorGrant(
   return { grant, profilePath, writtenAt: admin.firestore.Timestamp.now() };
 }
 
-/** Write an audit log entry for a tutor mutation (best-effort — errors are logged but not thrown). */
+/**
+ * Write an audit log entry for a tutor mutation (best-effort — errors are
+ * logged but not thrown, so the primary mutation still returns success even
+ * if the audit write fails).
+ *
+ * AUD-firebase-08: when the caller supplies `idempotencyKey` (request.data's
+ * optional per-call retry token), the entry is written to a doc ID derived
+ * deterministically from (grantId, action, target, idempotencyKey) via
+ * `.set()` instead of an auto-ID `.add()` — a client-side retry of the same
+ * logical mutation (e.g. after a timeout that actually succeeded
+ * server-side) reuses the same key and so coalesces into exactly one entry
+ * instead of a duplicate. Two calls with DIFFERENT idempotencyKeys (distinct
+ * real actions) still get distinct entries. Callers that omit the key keep
+ * the legacy auto-ID behavior — every call is a new entry.
+ */
 async function writeAuditLog(
   grantId: string,
   grant: FirebaseFirestore.DocumentData,
@@ -1271,21 +1285,32 @@ async function writeAuditLog(
   beforeValue: unknown,
   afterValue: unknown,
   timestamp: FirebaseFirestore.Timestamp,
+  idempotencyKey?: string,
 ): Promise<void> {
   try {
-    await db
-      .collection("tutor_grants")
-      .doc(grantId)
-      .collection("audit_log")
-      .add({
-        tutor_uid: callerUid,
-        tutor_name_snapshot: grant.tutor_name_snapshot ?? "",
-        action,
-        target,
-        before_value: beforeValue !== undefined ? JSON.stringify(beforeValue) : null,
-        after_value: afterValue !== undefined ? JSON.stringify(afterValue) : null,
-        timestamp: timestamp.toDate().toISOString(),
-      });
+    const auditCollection = db.collection("tutor_grants").doc(grantId).collection("audit_log");
+    const payload = {
+      tutor_uid: callerUid,
+      tutor_name_snapshot: grant.tutor_name_snapshot ?? "",
+      action,
+      target,
+      before_value: beforeValue !== undefined ? JSON.stringify(beforeValue) : null,
+      after_value: afterValue !== undefined ? JSON.stringify(afterValue) : null,
+      timestamp: timestamp.toDate().toISOString(),
+    };
+
+    if (typeof idempotencyKey === "string" && idempotencyKey) {
+      // Hash rather than concatenate raw parts as the doc-id: target may
+      // contain '/' (invalid inside a single path segment) and the combined
+      // length could exceed Firestore's 1500-byte doc-id limit.
+      const docId = crypto
+        .createHash("sha256")
+        .update(`${grantId}|${action}|${target}|${idempotencyKey}`)
+        .digest("hex");
+      await auditCollection.doc(docId).set(payload);
+    } else {
+      await auditCollection.add(payload);
+    }
   } catch (e) {
     logger.warn(`writeAuditLog: failed for grant=${grantId} action=${action}`, e);
   }
@@ -1337,7 +1362,7 @@ export const tutorResetCompletion = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "completion_reset",
     `profile/${profileId}/completions/${completionId}`,
-    beforeValue, null, writtenAt,
+    beforeValue, null, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1399,7 +1424,7 @@ export const tutorUpsertGoal = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "goal_upserted",
     `profile/${profileId}/goals/${goalId}`,
-    beforeValue, goalData, writtenAt,
+    beforeValue, goalData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1448,7 +1473,7 @@ export const tutorDeleteGoal = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "goal_deleted",
     `profile/${profileId}/goals/${goalId}`,
-    beforeValue, null, writtenAt,
+    beforeValue, null, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1506,7 +1531,7 @@ export const tutorUpsertTrack = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "track_upserted",
     `profile/${profileId}/curriculum_tracks/${trackId}`,
-    beforeValue, trackData, writtenAt,
+    beforeValue, trackData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1554,7 +1579,7 @@ export const tutorDeleteTrack = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "track_deleted",
     `profile/${profileId}/curriculum_tracks/${trackId}`,
-    beforeValue, null, writtenAt,
+    beforeValue, null, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1612,7 +1637,7 @@ export const tutorUpsertStageDefinition = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "stage_definition_upserted",
     `profile/${profileId}/stage_definitions/${stageId}`,
-    beforeValue, stageData, writtenAt,
+    beforeValue, stageData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1670,7 +1695,7 @@ export const tutorUpsertStudyDayConfig = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "study_day_config_upserted",
     `profile/${profileId}/study_day_configs/${configId}`,
-    beforeValue, configData, writtenAt,
+    beforeValue, configData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1718,7 +1743,7 @@ export const tutorDeleteStudyDayConfig = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "study_day_config_deleted",
     `profile/${profileId}/study_day_configs/${configId}`,
-    beforeValue, null, writtenAt,
+    beforeValue, null, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1789,7 +1814,7 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
     grantId, grant, callerUid,
     "gamification_settings_updated",
     `profile/${profileId}/preferences/gamification_settings`,
-    beforeValue, settingsData, writtenAt,
+    beforeValue, settingsData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1848,7 +1873,7 @@ export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "bookmark_upserted",
     `profile/${profileId}/bookmarks/${bookmarkId}`,
-    beforeValue, bookmarkData, writtenAt,
+    beforeValue, bookmarkData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1907,7 +1932,7 @@ export const tutorSetProfileProgram = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "profile_program_set",
     `profile/${profileId}/profile_programs/${programId}`,
-    beforeValue, programData, writtenAt,
+    beforeValue, programData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -1966,7 +1991,7 @@ export const tutorUpsertCurriculumScope = onCall(CALL_OPTS, async (request) => {
     grantId, grant, callerUid,
     "curriculum_scope_upserted",
     `profile/${profileId}/curriculum_scopes/${scopeId}`,
-    beforeValue, scopeData, writtenAt,
+    beforeValue, scopeData, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
@@ -2063,7 +2088,7 @@ export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
       avatar: beforeValue["avatar"],
       mode: beforeValue["mode"],
     } : null,
-    updates, writtenAt,
+    updates, writtenAt, request.data?.idempotencyKey,
   );
 
   logger.info(
