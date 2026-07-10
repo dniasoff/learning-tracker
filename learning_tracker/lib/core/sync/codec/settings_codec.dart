@@ -70,13 +70,27 @@ class SettingsCodec extends EntityCodec<SettingsRow> {
     );
   }
 
+  /// **Decode-only (AUD-core-sync-38).** `SettingsCodec.encode()` has zero
+  /// production call sites: nothing in `lib/` builds a settings push
+  /// payload — `SyncWriteFacade.pushSettings` itself has no live caller
+  /// (goals and stage definitions were split onto their own dedicated push
+  /// routes; see the doc comments on `sync_write_facade.dart`). `decode()`
+  /// is the genuinely live half of this codec — [SettingsMerger] calls it
+  /// on every pulled `settings` doc.
+  ///
+  /// [EntityCodec]'s interface contract requires an `encode` override, so
+  /// this can't be deleted outright; it throws instead of silently
+  /// returning a payload nobody validates or pushes, so a future caller
+  /// discovers the decode-only status immediately rather than shipping
+  /// dead code that looks load-bearing. If settings ever gain a real write
+  /// path, replace this with a working serializer (mirroring the sibling
+  /// codecs) and wire it into that path in the same change.
   @override
-  Map<String, dynamic> encode(SettingsRow model) => {
-    'curriculum_id': model.curriculumId,
-    if (model.trackId != null) 'track_id': model.trackId,
-    if (model.updatedAt != null)
-      'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
-    if (model.stages.isNotEmpty)
-      'stages': model.stages.map(const StageDefinitionCodec().encode).toList(),
-  };
+  Map<String, dynamic> encode(SettingsRow model) {
+    throw UnsupportedError(
+      'SettingsCodec.encode() is decode-only (AUD-core-sync-38) — settings '
+      'currently have no production push path. See the doc comment on this '
+      'method before wiring a caller to it.',
+    );
+  }
 }
