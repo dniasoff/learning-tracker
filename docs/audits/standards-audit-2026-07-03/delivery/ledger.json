@@ -3215,13 +3215,20 @@
   {
    "id": "AUD-app-07",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Thread AppLogger into database_provider.dart's SeedManager construction \u2014 bootstrapSeedDb's logger wiring is dead code and SeedManager's diagnostics are silent in production",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "72562c2e7c403e6b80fd2924d007f7f0abc884a2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-app-07 AC1 OK: database_provider.dart:55-58 builds SeedManager(..., logger: AppLogger.instance) \u2014 non-null singleton",
+    "AUD-app-07 AC2 OK: test forces ensureContentDb() throw, asserts seed_manager_extract_failed in AppLogger history; red-first (fails when logger reverted)",
+    "AUD-app-07 AC3 OK: Makefile check 27 greps lib/ SeedManager( for logger:; injected violation fires (audit exit 2), clean on tree",
+    "AUD-app-07 AC4 OK: seed_bootstrap.dart deleted, no code refs remain (only doc-comment in test)"
+   ],
+   "notes": "Verified: bootstrapSeedDb had zero callers; SeedManager built w/o logger. Fixed w/ logger: AppLogger.instance; deleted dead seed_bootstrap.dart. Red-first test added (red: history==[]; green: event logged). Rule-0 audit check 27/27 added, verified fires on broken fixture. All 4 ACs met."
   },
   {
    "id": "AUD-core-analytics-02",
