@@ -60,6 +60,16 @@ class GoalMerger implements EntityMerger {
       );
       final trackId = localTrack?.id ?? remoteTrackId;
 
+      // AUD-core-sync-07: guard against this goal referencing a
+      // curriculum_tracks row that hasn't synced locally yet — inserting
+      // would violate the goals → curriculum_tracks FK (SqliteException 787)
+      // and abort merging the whole page. Skip; the next pull re-merges
+      // idempotently once the track exists (mirrors the guard already
+      // applied to bookmark/gamification_settings/study_day_config).
+      if (localTrack == null && await _db.trackDao.getById(trackId) == null) {
+        continue;
+      }
+
       // Keep the LWW natural key tied to the remote track id so the per-row
       // timestamp arbitration stays stable across pulls regardless of how the
       // local id was minted.

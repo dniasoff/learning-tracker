@@ -404,28 +404,6 @@ class DriftMergeStore implements MergeStore {
     return _db.into(_db.accounts).insert(seed);
   }
 
-  /// Resolve the LOCAL `curriculum_tracks.id` for `(profileId, curriculumId)`,
-  /// falling back to [fallbackTrackId] (the remote id) when no local track has
-  /// been merged yet (Bug 3).
-  ///
-  /// Child rows (stage_definitions / goals / study_day_configs) carry the
-  /// REMOTE track id. For own-data sync that id IS the local id, so the lookup
-  /// returns the same row and nothing changes. For a tutored mirror the track
-  /// was re-inserted with a fresh local autoincrement id, so the remote id is
-  /// stale; resolving by (profile, curriculum) rebinds the child row to the
-  /// mirror's local track and lets the scheduler projection compute.
-  Future<int> _resolveLocalTrackId({
-    required int profileId,
-    required String curriculumId,
-    required int fallbackTrackId,
-  }) async {
-    final local = await _db.trackDao.getTrackByProfileAndCurriculum(
-      profileId,
-      curriculumId,
-    );
-    return local?.id ?? fallbackTrackId;
-  }
-
   Future<void> _upsertTrack(int profileId, Map<String, dynamic> fields) async {
     final curriculumId = fields['curriculum_id'] as String?;
     if (curriculumId == null) {
@@ -570,6 +548,22 @@ class DriftMergeStore implements MergeStore {
       curriculumId,
     );
 
+    // AUD-core-sync-07: stage_definitions.trackId is a FK into
+    // curriculum_tracks. If this settings snapshot merges before its track's
+    // own snapshot (independent per-collection listeners, or a first-launch
+    // pull racing ahead), replaceStagesForCurriculum's insert would throw a
+    // FK-constraint violation (SqliteException 787) inside its transaction()
+    // — rolling back and aborting the ENTIRE settings channel merge for this
+    // page, not just this one document. Skip instead; the next pull
+    // re-merges idempotently once the track exists (mirrors the guard
+    // already applied to bookmark/gamification_settings/study_day_config).
+    final resolvedTrackId = localTrack?.id ?? defaultTrackId;
+    if (localTrack == null &&
+        await _db.trackDao.getById(resolvedTrackId) == null) {
+      _fireSkipped(kind: EntityKind.settings, reason: 'track_not_yet_synced');
+      return;
+    }
+
     final companions = stagesList.cast<Map<String, dynamic>>().map((s) {
       final trackId =
           localTrack?.id ?? (s['track_id'] as int? ?? defaultTrackId);
@@ -624,11 +618,25 @@ class DriftMergeStore implements MergeStore {
     // to the remote id leaves getStagesByTrack(localTrackId) empty and the
     // scheduler projection computes nothing. Resolving by (profile, curriculum)
     // realigns the FK and is a no-op for own-data sync.
-    final trackId = await _resolveLocalTrackId(
-      profileId: profileId,
-      curriculumId: curriculumId,
-      fallbackTrackId: remoteTrackId,
+    final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
+      profileId,
+      curriculumId,
     );
+    final trackId = localTrack?.id ?? remoteTrackId;
+
+    // AUD-core-sync-07: guard against this row's track not having synced
+    // locally yet — inserting would violate the stage_definitions →
+    // curriculum_tracks FK (SqliteException 787) and abort merging the
+    // whole page. Skip; the next pull re-merges idempotently once the
+    // track exists (mirrors the guard already applied to
+    // bookmark/gamification_settings/study_day_config).
+    if (localTrack == null && await _db.trackDao.getById(trackId) == null) {
+      _fireSkipped(
+        kind: EntityKind.stageDefinition,
+        reason: 'track_not_yet_synced',
+      );
+      return;
+    }
 
     final isDefault = fields['is_default'] as bool? ?? false;
     // W3.27: prefer pre-encoded JSON schedule; fall back to quartet fields.

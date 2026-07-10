@@ -1023,6 +1023,84 @@ void main() {
       );
       expect(stages, isEmpty);
     });
+
+    // AUD-core-sync-07: mirrors the "skip: track not yet synced" coverage
+    // already present for bookmark — a settings document whose curriculum
+    // has no local curriculum_tracks row yet must be skipped, not thrown.
+    // replaceStagesForCurriculum inserts every stage inside ONE transaction,
+    // so a single FK violation would roll back and abort the whole page —
+    // not just this one document.
+    test(
+      'skip: track not yet synced (no FK throw) — no stages inserted',
+      () async {
+        // 'tehillim' has no seeded track — only 'mishnayos' does (setUp).
+        await store.upsert(
+          kind: EntityKind.settings,
+          profileId: profileId,
+          fields: {
+            'curriculum_id': 'tehillim',
+            'track_id': 999999, // no local curriculum_tracks row with this id
+            'stages': [
+              {
+                'stage_order': 0,
+                'stage_name': 'learning',
+                'schedule': '{"type":"delay","delay_days":0}',
+                'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+              },
+            ],
+          },
+        );
+
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          'tehillim',
+        );
+        expect(stages, isEmpty);
+      },
+    );
+
+    test(
+      'idempotent recovery: a settings doc skipped for a missing track '
+      'applies once the track is seeded and the identical doc is re-merged',
+      () async {
+        final fields = {
+          'curriculum_id': 'tehillim',
+          'track_id': 999999,
+          'stages': [
+            {
+              'stage_order': 0,
+              'stage_name': 'learning',
+              'schedule': '{"type":"delay","delay_days":0}',
+              'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+            },
+          ],
+        };
+
+        // First merge: no local track for 'tehillim' yet — skipped.
+        await store.upsert(
+          kind: EntityKind.settings,
+          profileId: profileId,
+          fields: fields,
+        );
+        expect(
+          await db.stageDao.getStageDefinitionsByCurriculum('tehillim'),
+          isEmpty,
+        );
+
+        // Seed the track, then re-merge the identical document.
+        await _seedTrack(db, profileId: profileId, curriculumId: 'tehillim');
+        await store.upsert(
+          kind: EntityKind.settings,
+          profileId: profileId,
+          fields: fields,
+        );
+
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          'tehillim',
+        );
+        expect(stages, hasLength(1));
+        expect(stages.single.stageName, equals('learning'));
+      },
+    );
   });
 
   // ── upsert(stage_definition) ─────────────────────────────────────────────
@@ -1177,6 +1255,69 @@ void main() {
 
       final stages = await db.stageDao.getAllStageDefinitions();
       expect(stages, isEmpty);
+    });
+
+    // AUD-core-sync-07: mirrors the "skip: track not yet synced" coverage
+    // already present for bookmark (above) — a stage_definition row whose
+    // curriculum has no local curriculum_tracks row yet must be skipped, not
+    // thrown (FK-constraint violation would otherwise abort the whole page).
+    test(
+      'skip: track not yet synced (no FK throw) — no stage inserted',
+      () async {
+        // 'tehillim' has no seeded track — only 'mishnayos' does (setUp).
+        await store.upsert(
+          kind: EntityKind.stageDefinition,
+          profileId: profileId,
+          fields: {
+            'curriculum_id': 'tehillim',
+            'track_id': 999999, // no local curriculum_tracks row with this id
+            'stage_order': 0,
+            'stage_name': 'learning',
+            'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+          },
+        );
+
+        final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+          'tehillim',
+        );
+        expect(stages, isEmpty);
+      },
+    );
+
+    test('idempotent recovery: a row skipped for a missing track applies once '
+        'the track is seeded and the identical row is re-merged', () async {
+      final fields = {
+        'curriculum_id': 'tehillim',
+        'track_id': 999999,
+        'stage_order': 0,
+        'stage_name': 'learning',
+        'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+      };
+
+      // First merge: no local track for 'tehillim' yet — skipped.
+      await store.upsert(
+        kind: EntityKind.stageDefinition,
+        profileId: profileId,
+        fields: fields,
+      );
+      expect(
+        await db.stageDao.getStageDefinitionsByCurriculum('tehillim'),
+        isEmpty,
+      );
+
+      // Seed the track, then re-merge the identical row.
+      await _seedTrack(db, profileId: profileId, curriculumId: 'tehillim');
+      await store.upsert(
+        kind: EntityKind.stageDefinition,
+        profileId: profileId,
+        fields: fields,
+      );
+
+      final stages = await db.stageDao.getStageDefinitionsByCurriculum(
+        'tehillim',
+      );
+      expect(stages, hasLength(1));
+      expect(stages.single.stageName, equals('learning'));
     });
 
     test(
