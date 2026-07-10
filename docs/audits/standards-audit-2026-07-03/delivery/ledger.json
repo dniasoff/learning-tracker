@@ -3928,15 +3928,17 @@
   {
    "id": "AUD-tutoring-08",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Lazy-load the tutor-grants roster in ManageGrantsScreen and Settings' embedded pending-invites section",
    "commits": [
-    "caef5fafde85168c07aaf169cd3c5c4ea7f2aa5d"
+    "23b0da11014b65934def764471d3f37b05588df9"
    ],
    "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "reopened: Rule-0 checker AC deferred twice, delivering with template"
+   "acVerified": [
+    "AUD-tutoring-08 AC1 OK: no_eager_list_in_non_lazy_scroll_container checker added (packages/custom_lints/lib/src/rules/no_eager_list_in_non_lazy_scroll_container.dart), registered in learning_tracker_lints.dart (11th rule); flags a for-loop element or .map()/.map().toList() spread feeding children: of a plain ListView(...) (non-.builder) or a SingleChildScrollView-wrapped Column(...) under lib/features/**, exempting provably-bounded sources (SomeEnum.values incl. C-style length-bounded loops, .take(n)-capped iterables, list/set literals) - the ManageGrantsScreen/_PendingInvitesSection pre-fix shape. Fire-verified: packages/custom_lints test suite 113/113 green (11 new cases: fires on for-loop/.map()/.map().toList()/scrollable-Column/unbounded-counter shapes, stays clean on ListView.builder/enum.values/.take(n)/non-scrolling Column/files outside lib/features/); make lint-rules-test 105/105; manual scratch run (plugin marker temporarily enabled, analysis_options.yaml reverted before commit - dart run custom_lint's CLI workspace-discovery is a documented no-op per AUD-guardrails-03) found 0 hits at this finding's own evidence sites and 10 genuine pre-existing hits elsewhere, now tracked in docs/coding-standards.md as follow-up debt; make audit 26/26 and flutter analyze clean post-merge."
+   ],
+   "notes": "Rule-0 checker delivered + fire-verified"
   },
   {
    "id": "AUD-t-cross-44",
