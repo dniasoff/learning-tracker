@@ -669,13 +669,19 @@
     {
       "id": "AUD-firebase-04",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Wire functions/test/cf_*.test.mjs and a functions build step into CI",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "b21a961adb50dc485cb5f439146311022132a3af"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-firebase-04 AC1 OK: ci.yml functions job (PR, hard-fail) runs make test-functions = tsc build + node --test cf_*.test.mjs; fails PR on TS error or test failure",
+        "AUD-firebase-04 AC2 OK: Makefile:214 `ci: analyze validate-calendar lint-rules-test test test-functions` — test-functions is a direct prereq of ci",
+        "AUD-firebase-04 AC3 OK: functions/package.json:10 test script `node --test --test-concurrency=1 test/cf_*.test.mjs`; Makefile invokes it, 274 tests run"
+      ],
+      "notes": "Confirmed gap stood: no CI job for functions/, make ci lacked test-functions, no test script. Added functions CI job (hard-fail), folded test-functions into make ci, added package.json test script. make test-functions 274/274 pre+post; TS error confirmed build step fails. Merged --no-ff onto audit-fix/2026-07-03 (file-disjoint rebase vs branch tip -- only ci.yml, learning_tracker/Makefile, learning_tracker/functions/package.json touched, no overlap with branch-side changes since common ancestor -- gatePolicy=disjoint-skip, wave-closing make ci is the integration gate). Post-rebase gate: make audit checks 1-24 clean, flutter analyze clean. Check 25/25 (single coding-standards.md) failed both pre- and post-merge due to ~21 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..`; identical failure reproduced on the unmodified audit-fix/2026-07-03 tip before this merge, confirming it is pre-existing environmental noise from concurrent worktree-based sessions, not a regression introduced by this change."
     },
     {
       "id": "AUD-core-database-04",
