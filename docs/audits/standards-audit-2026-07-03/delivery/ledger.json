@@ -6982,13 +6982,17 @@
   {
    "id": "AUD-core-sync-36",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove or justify PushPipeline.pushCompletion \u2014 OutboxProcessor never calls it",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "42d81b13d180843ae983dbbd5f81c8eb72fb9b08"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-36 AC1 OK: doc comment on pushCompletion (push_pipeline.dart:14-26) names callers; grep = only 2 test files call it; _dispatch has no completion case"
+   ],
+   "notes": "Confirmed OutboxProcessor._dispatch has no completion case; only tests call pushCompletion directly. Chose doc-comment over deletion (deleting would gut single-flight test suites using it as vehicle - disproportionate for P3/S). Added comment naming real callers. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c16, mergeSha 42d81b13d180843ae983dbbd5f81c8eb72fb9b08). Post-rebase gate: make audit checks 1-24, 26, 27 clean (all custom_lint checker tests passed); flutter analyze clean (0 issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~43 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout; filesystem-only (independent of git HEAD/content), matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15 in this same ledger, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (only learning_tracker/lib/core/sync/outbox/push_pipeline.dart and push_pipeline_impl.dart touched since merge-base, no overlap with branch changes), so payload.testsToRun (empty) was not re-run; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-core-sync-29",
@@ -7004,13 +7008,17 @@
   {
    "id": "AUD-core-sync-39",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove the dead no-op catchError in OutboxPushPipeline._runValue",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "42d81b13d180843ae983dbbd5f81c8eb72fb9b08"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-39 AC1 OK: catchError removed; push_pipeline_impl.dart:279 = unawaited(_inFlight.remove(kind))+comment; ourSlot(l283) onError so cannot error"
+   ],
+   "notes": "Confirmed onError handler swallows all errors so trailing catchError was dead; removed it. Bare remove() tripped unawaited_futures, so wrapped in unawaited() (discards Future only, not error-catching) plus comment. analyze: 0 issues. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c16, mergeSha 42d81b13d180843ae983dbbd5f81c8eb72fb9b08). Post-rebase gate: make audit checks 1-24, 26, 27 clean (all custom_lint checker tests passed); flutter analyze clean (0 issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~43 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout; filesystem-only (independent of git HEAD/content), matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15 in this same ledger, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (only learning_tracker/lib/core/sync/outbox/push_pipeline.dart and push_pipeline_impl.dart touched since merge-base, no overlap with branch changes), so payload.testsToRun (empty) was not re-run; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-t-cross-99",
