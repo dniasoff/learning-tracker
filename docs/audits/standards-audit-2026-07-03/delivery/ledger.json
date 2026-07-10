@@ -3856,13 +3856,19 @@
   {
    "id": "AUD-account-14",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Migrate SignInController's hand-rolled Idle/Submitting/Error state to AsyncNotifier + AsyncValue.guard",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "86cd7e5f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-14 AC1 OK: 9 state= sites; terminal state set once from guard (L782,L983), gated by !ref.mounted; no helper sets state",
+    "AUD-account-14 AC2 OK: test L909 drives real signInWithGoogle w/ mock throwing at findByEmail, asserts real state isA<SignInError>; +1 green",
+    "AUD-account-14 AC3 OK: rule added+registered, exempts AsyncNotifier, 6 tests pass in 94/94 lint-rules-test; documented in README+coding-standards"
+   ],
+   "notes": "Confirmed (20 state= sites). Kept public Idle/Submitting/Error union; routed both actions thru 1 AsyncValue.guard/method; soft failures now throw, resolved centrally. Sites 20->9. AC1 by construction. AC2 test added (also green pre-refactor, noted). AC3 new INFO custom_lint rule added+tested. [w1r1c5] gatePolicy=disjoint-skip (file-disjoint rebase vs audit-fix/2026-07-03; make audit pre-existing failure at check 25/26 identical to baseline, caused by unrelated concurrent worktree pollution, not this change; flutter analyze clean)."
   },
   {
    "id": "AUD-settings-08",
