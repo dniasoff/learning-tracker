@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 
 /// The single canonical provider for [FirebaseFirestore].
 ///
@@ -27,8 +30,35 @@ final firebaseFirestoreProvider = Provider<FirebaseFirestore>((ref) {
 /// This helper lives alongside [firebaseFirestoreProvider] so the
 /// cloud_firestore import quarantine (DNI-333 AC) stays confined to
 /// `core/sync/`.
-Future<void> resetFirestoreNetwork() async {
-  final fs = FirebaseFirestore.instance;
-  await fs.disableNetwork();
-  await fs.enableNetwork();
+///
+/// A failure from either [FirebaseFirestore.disableNetwork] or
+/// [FirebaseFirestore.enableNetwork] (AUD-core-sync-14 — most dangerously
+/// `enableNetwork()` throwing AFTER `disableNetwork()` already succeeded,
+/// e.g. a plugin-channel error or a terminated instance) is caught and
+/// logged here rather than left to propagate unhandled. Centralising the
+/// guard in the function itself means every caller gets the protection for
+/// free — a caller does not need its own try/catch to keep a reset failure
+/// from aborting whatever sequence it awaited the reset from (in
+/// particular the lifecycle-resume chain: timezone redetect → sacred-cache
+/// invalidation → resume pull). This is deliberately fire-and-forget: the
+/// next connectivity change or lifecycle resume will attempt the reset
+/// again, so no bounded retry is needed here.
+///
+/// [firestore] and [logger] are test-only seams — production callers always
+/// get [FirebaseFirestore.instance] and [AppLogger.instance].
+Future<void> resetFirestoreNetwork({
+  @visibleForTesting FirebaseFirestore? firestore,
+  @visibleForTesting AppLogger? logger,
+}) async {
+  final fs = firestore ?? FirebaseFirestore.instance;
+  try {
+    await fs.disableNetwork();
+    await fs.enableNetwork();
+  } catch (e, st) {
+    (logger ?? AppLogger.instance).warning(
+      event: LogEvents.sync.firestoreNetworkResetFailed,
+      exception: e,
+      stackTrace: st,
+    );
+  }
 }

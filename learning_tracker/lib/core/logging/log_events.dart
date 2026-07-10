@@ -86,6 +86,13 @@ final class _SyncEvents {
   // Conflict / permission
   String get permissionDenied => 'sync_permission_denied';
   String get conflictResolved => 'sync_conflict_resolved';
+
+  // AUD-core-sync-14 — resetFirestoreNetwork()'s internal disable/enable
+  // guard. Fired when either call throws (most dangerously `enableNetwork()`
+  // failing after `disableNetwork()` already succeeded); the failure is
+  // caught and logged rather than propagating unhandled.
+  String get firestoreNetworkResetFailed =>
+      'sync_firestore_network_reset_failed';
 }
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
