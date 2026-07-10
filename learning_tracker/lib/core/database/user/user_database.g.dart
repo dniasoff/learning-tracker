@@ -1481,8 +1481,11 @@ class CurriculumTrack extends DataClass implements Insertable<CurriculumTrack> {
   ///
   /// active  — track is in use; displayed in the UI.
   /// retired — track was deactivated by the user; hidden but not purged.
-  /// archived — track reached a natural completion milestone.
-  /// deleted — track was soft-deleted (deleteTrackAndData); awaits purge.
+  /// archived — user chose "Archive (keep history)" over deleting the track
+  ///   (TrackDao.archiveTrack); config data (goals/stages/point config/etc.)
+  ///   is preserved for possible reactivation, unlike 'deleted'.
+  /// deleted — track was soft-deleted (deleteTrackAndData); config data was
+  ///   hard-deleted and the row awaits purge.
   final String state;
 
   /// When [state] was last changed (UTC). Acts as the LWW timestamp for sync.

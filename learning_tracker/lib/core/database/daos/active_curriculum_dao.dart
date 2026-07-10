@@ -125,6 +125,33 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
     }
   }
 
+  /// Archive a curriculum for a specific profile — like [deactivateByProfile]
+  /// but preserves the track's configuration data (goals/stages/point
+  /// config/etc.) via [TrackDao.archiveTrack] instead of hard-deleting it
+  /// via [TrackDao.deleteTrackAndData] (AUD-profiles-01).
+  ///
+  /// Throws [StateError] if this is the last active curriculum.
+  Future<void> archiveByProfile(CurriculumId curriculum, int profileId) async {
+    final activeForProfile = await getActiveCurriculaByProfile(profileId);
+    if (activeForProfile.length <= 1) {
+      throw StateError(
+        'Cannot deactivate the last active curriculum for this profile',
+      );
+    }
+
+    final tracks =
+        await (select(curriculumTracks)..where(
+              (t) =>
+                  t.profileId.equals(profileId) &
+                  t.curriculumId.equals(curriculum.storageKey),
+            ))
+            .get();
+
+    for (final track in tracks) {
+      await attachedDatabase.trackDao.archiveTrack(track.id);
+    }
+  }
+
   /// Remove a curriculum from active for a profile without the last-curriculum
   /// guard. No-op — [deleteTrackAndData] already updates the track state; no
   /// separate active_curricula row exists to clean up.

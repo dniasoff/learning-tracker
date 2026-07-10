@@ -129,6 +129,28 @@ class CurriculumActivationService {
     await _syncToFirestore();
   }
 
+  /// Archive a curriculum for the active profile — deactivates it while
+  /// preserving its track configuration (goals/stages/point config/etc.)
+  /// for possible reactivation later, via
+  /// [ActiveCurriculumDao.archiveByProfile]. Use this for the "Archive
+  /// (keep history)" UI action; use [deactivate] only where hard-deleting
+  /// the config on deactivation is actually intended (AUD-profiles-01).
+  ///
+  /// Throws [LastActiveCurriculumException] when the profile has exactly one
+  /// active curriculum (minimum-1 invariant).
+  Future<void> archive(CurriculumId curriculum) async {
+    final active = await _database.activeCurriculumDao
+        .getActiveCurriculaByProfile(_profileId);
+    if (active.length <= 1) {
+      throw const LastActiveCurriculumException();
+    }
+    await _database.activeCurriculumDao.archiveByProfile(
+      curriculum,
+      _profileId,
+    );
+    await _syncToFirestore();
+  }
+
   /// Toggle a curriculum on or off for the active profile.
   Future<void> toggle(CurriculumId curriculum) async {
     await _database.transaction(() async {
