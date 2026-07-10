@@ -27,6 +27,8 @@ const CHUNK = cfg.chunkSize || 8
 const LINEAR_TEAM = cfg.linearTeam || 'DNI'
 const MAXP = cfg.maxParallel || 0
 const PREBUILT = Array.isArray(cfg.preBuilt) ? cfg.preBuilt : []
+const PREAPPROVED = {}
+for (const pa of (Array.isArray(cfg.preApproved) ? cfg.preApproved : [])) { if (pa && pa.tipSha) PREAPPROVED[pa.tipSha] = pa }
 
 const REPO = '/home/daniel/repos/learning-tracker'
 const BRANCH = 'audit-fix/2026-07-03'
@@ -49,10 +51,10 @@ const outcomes = { merged: [], refuted: [], blocked: [] }
 let semActive = 0
 const semWait = []
 function semRelease() { const w = semWait.shift(); if (w) { w() } else { semActive-- } }
-async function ga(prompt, opts) {
+async function ga(prompt, opts, priority) {
   if (quotaDead) return null
   if (MAXP > 0) {
-    if (semActive >= MAXP) { await new Promise(function (res) { semWait.push(res) }) } else { semActive++ }
+    if (semActive >= MAXP) { await new Promise(function (res) { if (priority) { semWait.unshift(res) } else { semWait.push(res) } }) } else { semActive++ }
     if (quotaDead) { semRelease(); return null }
   }
   let r = null
@@ -122,7 +124,7 @@ const GATES = [
   '- If your findings touch firestore.rules or learning_tracker/functions/: the firestore rules test suite (learning_tracker/functions/test/firestore_rules.test.mjs, runner per functions/package.json, needs the firebase emulator) is part of YOUR gate set. If the emulator cannot start, outcome=blocked with the exact command + error - never a silent skip.',
   (CUSTOM_LINT ? '- cd learning_tracker && dart run custom_lint   (repaired in Wave 0 - now a required gate)' : '- custom_lint is known-broken this wave (AUD-guardrails-03) and NOT in the gate set.'),
   'Memory discipline (HARD RULE): this machine has only 15GB RAM shared by several concurrent agents. Run gate commands strictly SEQUENTIALLY (never two flutter/dart processes at once), always pass --concurrency=2 to flutter test, and never run the full test suite when targeted paths suffice.',
-  'Worktree environment note: fresh worktrees LACK gitignored local artifacts. Before judging any gate, set up: (1) copy learning_tracker/lib/firebase_options.dart from the main checkout at ' + REPO + '; (2) if tests need assets/db/content.db.gz, regenerate via dart run tool/prepare_asset.dart; (3) flutter pub get + dart run build_runner build --delete-conflicting-outputs for generated .g.dart/.freezed.dart files. These env gaps are NEVER defects, findings, or bounce reasons.',
+  'Worktree environment note: fresh worktrees LACK gitignored local artifacts. Before judging any gate, set up: (1) copy learning_tracker/lib/firebase_options.dart from the main checkout at ' + REPO + '; (2) FAST PATH for generated code: copy every *.g.dart and *.freezed.dart under learning_tracker/lib and learning_tracker/test from the main checkout (same base commit, so they are current), then flutter pub get; run full build_runner ONLY if flutter analyze still reports missing generated symbols; (3) if tests need assets/db/content.db.gz, copy it from the main checkout or regenerate via dart run tool/prepare_asset.dart. These env gaps are NEVER defects, findings, or bounce reasons.',
 ].join('\n')
 
 function builderPrompt(comp, cid, dispatchIds) {
@@ -207,7 +209,7 @@ function mergePrompt(mode, payloadJson) {
     (mode === 'merge' ? [
       'MODE merge - steps:',
       '1. git checkout --detach <payload.tipSha>; git rebase ' + BRANCH + '. On conflict: git rebase --abort; git checkout ' + BRANCH + '; return status=conflict-bounce with mergeBase (git merge-base <tipSha> ' + BRANCH + ') and the conflicting files.',
-      '2. rebasedSha = git rev-parse HEAD. Cheap post-rebase gates: cd learning_tracker && make audit && flutter analyze; then flutter test on payload.testsToRun (if non-empty); root make arb-parity if payload.touchedStrings. Any red: git checkout ' + BRANCH + '; return status=failed with the failing tail.',
+      '2. rebasedSha = git rev-parse HEAD. Post-rebase gate policy: ALWAYS run cd learning_tracker && make audit && flutter analyze. Then compute overlap: MB=$(git merge-base <payload.tipSha> ' + BRANCH + '); intersect the path sets of (git diff --name-only $MB <payload.tipSha>) and (git diff --name-only $MB ' + BRANCH + '). If the intersection is EMPTY (file-disjoint rebase: the adversarial reviewer already ran the tests on an equivalent tree, and the wave-closing full make ci is the integration gate), SKIP the test run and record gatePolicy=disjoint-skip in notes. If NON-EMPTY, also run flutter test --concurrency=2 on payload.testsToRun plus suites covering the overlapping files, and record gatePolicy=overlap-tested. Root make arb-parity if payload.touchedStrings. Any red: git checkout ' + BRANCH + '; return status=failed with the failing tail.',
       '3. git checkout ' + BRANCH + '; git merge --no-ff <rebasedSha> -m "fix(audit): <payload.cid> - <N> finding(s): <ids>" with trailer line Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>',
       '4. Ledger update (use jq or python3 on ' + LEDGER + '): for each payload.findingsMerged row set status=merged, commits=[the merged commit SHAs], reviewRounds, acVerified (from payload), notes. For each payload.findingsRefuted: status=skipped-refuted, notes=evidence, and append a dated entry to ' + KILLLOG + ' (create the file with a header if absent). For each payload.findingsBlocked: status=blocked, notes=reason. Validate the ledger still parses (jq) and row count is unchanged. Commit: "ledger(<cid>): <counts>" with the sonnet trailer.',
       '5. Worktree cleanup: for each path in payload.worktreesToRemove run git worktree remove --force <path> (tolerate already-gone). Then delete orphaned auto-created worktree branches: git worktree prune; for each branch matching git branch --list "worktree-*" NOT checked out in any remaining worktree (cross-check git worktree list --porcelain), verify patch-equivalence with git cherry ' + BRANCH + ' <branch> - if EVERY line starts with "-" (all patches already in ' + BRANCH + ') or the branch tip is an ancestor (git merge-base --is-ancestor), delete it with git branch -D <branch> and note it; if any "+" line remains, LEAVE the branch and report it in notes (unmerged work is never force-deleted).',
@@ -298,7 +300,13 @@ async function runComponent(comp, roundNum, compIdx, preB) {
   let acVerified = []
   let approved = false
 
-  if (fixedIds.length > 0) {
+  if (fixedIds.length > 0 && PREAPPROVED[tip]) {
+    const pa = PREAPPROVED[tip]
+    approved = true
+    acVerified = Array.isArray(pa.acVerified) ? pa.acVerified : []
+    reviewRounds = 1
+    log(cid + ': review HARVESTED from prior run for tip ' + tip.slice(0, 10) + ' (' + (pa.reviewedBy || 'opus') + ', approve) - straight to merge')
+  } else if (fixedIds.length > 0) {
     while (true) {
       const rev = await ga(reviewerPrompt(cid, tip, dispatchIds, JSON.stringify({ status: b.status, perFinding: b.perFinding, testsAdded: b.testsAdded, gateResults: b.gateResults })), { label: 'review:' + cid + '-r' + (reviewRounds + 1), phase: 'Review', model: 'opus', isolation: 'worktree', schema: REVIEW_SCHEMA })
       if (!rev) { blocked = blocked.concat(fixedIds.filter(function (id) { return !refuted.some(function (r) { return r.id === id }) }).map(function (id) { return { id: id, note: 'review agent lost (quota)' } })); break }
@@ -339,13 +347,13 @@ async function runComponent(comp, roundNum, compIdx, preB) {
       // nothing terminal this pass (all deferred / quota) - still remove worktrees
       payload.findingsMerged = []; payload.findingsRefuted = []; payload.findingsBlocked = []
     }
-    let mg = await ga(mergePrompt(mode, JSON.stringify(payload)), { label: 'merge:' + cid, phase: 'Merge', model: 'sonnet', schema: MERGE_SCHEMA })
+    let mg = await ga(mergePrompt(mode, JSON.stringify(payload)), { label: 'merge:' + cid, phase: 'Merge', model: 'sonnet', schema: MERGE_SCHEMA }, true)
     if (mg && mg.status === 'conflict-bounce' && mode === 'merge') {
-      const cf = await ga(conflictFixerPrompt(cid, tip, mg.mergeBase, mg.conflictFiles), { label: 'conflict-fix:' + cid, phase: 'Fix', model: 'sonnet', isolation: 'worktree', schema: FIX_SCHEMA })
+      const cf = await ga(conflictFixerPrompt(cid, tip, mg.mergeBase, mg.conflictFiles), { label: 'conflict-fix:' + cid, phase: 'Fix', model: 'sonnet', isolation: 'worktree', schema: FIX_SCHEMA }, true)
       if (cf) {
         payload.tipSha = cf.tipSha
         if (cf.worktreePath) payload.worktreesToRemove = payload.worktreesToRemove.concat([cf.worktreePath])
-        mg = await ga(mergePrompt('merge', JSON.stringify(payload)), { label: 'merge:' + cid + '-retry', phase: 'Merge', model: 'sonnet', schema: MERGE_SCHEMA })
+        mg = await ga(mergePrompt('merge', JSON.stringify(payload)), { label: 'merge:' + cid + '-retry', phase: 'Merge', model: 'sonnet', schema: MERGE_SCHEMA }, true)
       }
     }
     if (mg && (mg.status === 'merged' || mg.status === 'ledger-only')) {
@@ -417,7 +425,7 @@ const recon = await ga([
   'Engine outcome (in-memory truth): merged=' + JSON.stringify(outcomes.merged) + ' refuted=' + JSON.stringify(outcomes.refuted) + ' blocked=' + JSON.stringify(outcomes.blocked) + ' unprocessed=' + JSON.stringify(residue) + ' (unprocessed reason: ' + residueReason + ').',
   'Steps: 1) Read ' + LEDGER + '; every wave-' + WAVE + ' row must be in a terminal state matching the engine outcome. Rows the merge lane already updated should agree - flag any mismatch. 2) Unprocessed ids: set status=blocked, notes="not attempted: ' + residueReason + '". 3) Verify kill-log addendum entries exist for every skipped-refuted row (add missing ones). 4) jq-validate, commit "ledger(wave-' + WAVE + '): reconcile - <counts>" with trailer Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>, and report the final counts for wave-' + WAVE + ' rows.',
   'Return: status (green if ledger consistent), merged, refuted, blocked (final wave-' + WAVE + ' counts from the LEDGER, not from memory), notes.',
-].join('\n'), { label: 'reconcile:wave-' + WAVE, phase: 'Reconcile', model: 'sonnet', schema: RECON_SCHEMA })
+].join('\n'), { label: 'reconcile:wave-' + WAVE, phase: 'Reconcile', model: 'sonnet', schema: RECON_SCHEMA }, true)
 
 if (quotaDead) {
   return { wave: WAVE, quotaDead: true, rounds: roundNum, outcomes: outcomes, unprocessed: residue, recon: recon, gate: null, boundary: null, note: 'Quota guard tripped - relaunch a FRESH engine over the remainder (never resumeFromRunId).' }
@@ -447,7 +455,7 @@ function gatePrompt(attempt) {
     'Return: verdict certify|fail, reasons (empty on certify; precise and actionable on fail), gateResults (per-gate PASS/FAIL strings), sampledIds, notes.',
   ].join('\n')
 }
-let gate = await ga(gatePrompt(1), { label: 'gate:wave-' + WAVE, phase: 'Gate', model: 'opus', effort: 'high', schema: GATE_SCHEMA })
+let gate = await ga(gatePrompt(1), { label: 'gate:wave-' + WAVE, phase: 'Gate', model: 'opus', effort: 'high', schema: GATE_SCHEMA }, true)
 if (gate && gate.verdict === 'fail') {
   log('Wave ' + WAVE + ' gate FAILED: ' + gate.reasons.join(' | ').slice(0, 300) + ' - dispatching one repair cycle')
   const repair = await ga([
@@ -455,9 +463,9 @@ if (gate && gate.verdict === 'fail') {
     gate.reasons.map(function (r) { return '- ' + r }).join('\n'),
     'Fix exactly these problems. TQ-7 is law: NEVER weaken or delete a test to clear a gate - if a reason can only be cleared by weakening a test, do not do it; explain in notes instead. Mechanical fixes (ledger corrections, formatting, missed regeneration, stray worktree/branch cleanup) are yours; behavioral regressions get a proper fix with a regression test. Run the relevant gates after each fix; commit green with evidence in the body and trailer Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>.',
     'Return: status green/red, merged=0 refuted=0 blocked=0 (unused), notes describing what you fixed or could not fix.',
-  ].join('\n'), { label: 'gate-repair:wave-' + WAVE, phase: 'Gate', model: 'sonnet', schema: RECON_SCHEMA })
+  ].join('\n'), { label: 'gate-repair:wave-' + WAVE, phase: 'Gate', model: 'sonnet', schema: RECON_SCHEMA }, true)
   if (repair) {
-    gate = await ga(gatePrompt(2), { label: 'gate:wave-' + WAVE + '-recheck', phase: 'Gate', model: 'opus', effort: 'high', schema: GATE_SCHEMA })
+    gate = await ga(gatePrompt(2), { label: 'gate:wave-' + WAVE + '-recheck', phase: 'Gate', model: 'opus', effort: 'high', schema: GATE_SCHEMA }, true)
   }
 }
 if (!gate || gate.verdict !== 'certify') {
@@ -492,6 +500,6 @@ const boundary = await ga([
   '5. diffstat: last line of git diff --stat ' + BASE + '..' + (FINAL_WAVE ? 'dev' : BRANCH) + '.',
   'Linear mirror (PO-enabled; NEVER let it block - on any Linear failure, note it and continue): use ToolSearch to load mcp__linear__list_teams and mcp__linear__save_issue. Find team ' + LINEAR_TEAM + '. Create ONE summary issue titled "Standards-audit delivery - Wave ' + WAVE + ' complete (2026-07-03)" with: merged=' + outcomes.merged.length + ' refuted=' + outcomes.refuted.length + ' blocked=' + outcomes.blocked.length + ', the gate verdict, the diffstat, and the merged finding ids. Then one issue per blocked finding (title "AUD blocked: <id>", description = reason) from this list: ' + JSON.stringify(blockedDetail) + '.',
   'Return: status, devSha (dev HEAD after ff), pushedDev, branchDeleted (' + (FINAL_WAVE ? 'true expected' : 'false expected') + '), worktrees (one-line state), linear (what you created or why it failed), diffstat, notes.',
-].join('\n'), { label: 'boundary:wave-' + WAVE, phase: 'Boundary', model: 'sonnet', schema: BOUND_SCHEMA })
+].join('\n'), { label: 'boundary:wave-' + WAVE, phase: 'Boundary', model: 'sonnet', schema: BOUND_SCHEMA }, true)
 
 return { wave: WAVE, quotaDead: false, rounds: roundNum, outcomes: outcomes, unprocessed: residue, recon: recon, gate: gate, boundary: boundary }

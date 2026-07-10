@@ -1,6 +1,6 @@
 {
  "wave": 1,
- "maxParallel": 2,
+ "maxParallel": 5,
  "excludeOverlapFiles": [
   "docs/coding-standards.md",
   "Makefile",
@@ -1432,6 +1432,213 @@
     "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart"
    ],
    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-settings-03.json"
+  }
+ ],
+ "preApproved": [
+  {
+   "tipSha": "93f70b43ad99cec8cc55370a0c77b70c8b252211",
+   "acVerified": [
+    "AUD-core-email-01 AC1 OK: logger.dart:253 adds 'body' to sensitiveKeys; redactFields blanks it; test 'redacts body key' passed (my 94/94 run)",
+    "AUD-core-email-01 AC2 OK: 3 tests at logger_extended_test.dart:313-344 red-first by construction (pre-fix 'body' absent=>fail), pass post-fix; commit shows red run",
+    "AUD-core-email-01 AC3 OK: my full flutter analyze=No issues (exit 0); make audit 25/25; grep=no test relies on non-redacted 'body' so make ci not regressed"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "Env: copied firebase_options.dart, pub get, build_runner, prepare_asset (worktree had .xz). Single commit, 2 files: +1 sensitiveKeys entry, +3 tests. Add-only, no TQ-7. Test 3 drives real debug->redac"
+  },
+  {
+   "tipSha": "c0f78e95423ca76552fcc5fd99eeb938228b2316",
+   "acVerified": [
+    "AUD-settings-03 AC1 OK: isolation test seeds A+B in 16 tables, imports A-only, asserts afterB equals beforeB (row equality) w/ non-empty guards",
+    "AUD-settings-03 AC1 OK: red-first proven - fails pre-fix (Bob streakEvents Expected[row] Actual[]), passes post-fix",
+    "AUD-settings-03 AC2 OK: 16 .delete( calls all in importData, each with ..where(...isIn); 0 bare deletes"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "Env: copied firebase_options.dart+content.db.gz, ran pub get+build_runner. Fix scopes all 16 deletes by profileId/id; trackLearningOrder via trackIds read before curriculumTracks cleared. Empty-isIn e"
+  },
+  {
+   "tipSha": "3c3e35b1d58c9a3dbd45222476fbdddfb74b21d1",
+   "acVerified": [
+    "AUD-profiles-01 AC1 OK: ts3 widget test pumps real screen, taps real Archive action, asserts stages/goals/pointConfig survive; real service not mock; passes now",
+    "AUD-profiles-01 AC2 OK: grep TrackState.archived -> real DB write track_dao.dart:296 (was 0)",
+    "AUD-profiles-01 AC3 OK: _buildApp home=real ParentTrackManagementScreen (ts3:153); hand-rolled AlertDialog removed"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "Fix sound and scoped. archiveTrack sets state=archived preserving config; active_curricula derived from state so no dangling row. Outbox track_archive symmetric with track_delete, no config deletion. "
+  },
+  {
+   "tipSha": "d9173c7ae968e6c7502205b4f00d797e01fc3f83",
+   "acVerified": [
+    "AUD-core-database-01 AC1 OK: mirror_wipe_test seeds all 6 tables then asserts 0 rows after wipeMirrorForGrant + wipeAllMirrors (real DB); passed",
+    "AUD-core-database-01 AC2 OK: wipe_service header comment changed from 'every child table/no explicit delete needed' to 'MOST' + lists the 6 non-FK tables",
+    "AUD-core-database-01 AC3 OK: schema_check _validateForeignKeyCascade deny-by-default on-by-default; live run exits 0; test 'exemption is exactly the 6 tables' passed",
+    "AUD-profiles-02 AC1 OK: repo_impl 117/175/343 add 'on TutorWriteException {rethrow}'; tests update+createProfile propagate TutorWriteException passed",
+    "AUD-profiles-02 AC2 OK: edit_delete_actions:56-66 catches DuplicateProfileNameException -> profileNameTaken snackbar, mirroring picker screen",
+    "AUD-profiles-02 AC3 OK: widget test wires real ProfileRepositoryImpl to failing facade; asserts tutorPermissionDenied snackbar + no unhandled exception; passed",
+    "AUD-profiles-02 AC4 OK: widget test mocks updateProfile throwing DuplicateProfileNameException; asserts profileNameTaken snackbar + takeException null; passed"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "Env set up first. Red-first documented in both commits; tests use real DB/real repo, not mock-asserting; no weakened assertions; 9 files, no scope creep; barrel-only Rule 2 import clean; wipe FK order"
+  },
+  {
+   "tipSha": "c13e66233611f17480b5e3b76e0371b4e776dfe7",
+   "acVerified": [
+    "AUD-firebase-04 AC1 OK: ci.yml functions job (PR, hard-fail) runs make test-functions = tsc build + node --test cf_*.test.mjs; fails PR on TS error or test failure",
+    "AUD-firebase-04 AC2 OK: Makefile:214 `ci: analyze validate-calendar lint-rules-test test test-functions` \u2014 test-functions is a direct prereq of ci",
+    "AUD-firebase-04 AC3 OK: functions/package.json:10 test script `node --test --test-concurrency=1 test/cf_*.test.mjs`; Makefile invokes it, 274 tests run"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "CI/config finding; 3-file diff. TQ-7 clean: test-functions refactor (inline -> npm --prefix functions test) keeps same 8 cf_*.test.mjs + concurrency=1, no assertions weakened, 274 still run. No fake-d"
+  },
+  {
+   "tipSha": "6f8073a3dd7aee79705029aaa222f2ac1ec69085",
+   "acVerified": [
+    "AUD-account-08 AC1 OK: dead account/onboarding auth_validators.dart deleted (only onboarding copy remains); account.dart export removed; flutter analyze 0 issues",
+    "AUD-account-08 AC2 OK: grep '^String? validate*' lib/ = single def set; zero importers of deleted path; make audit 12 greps + custom_lint clean",
+    "AUD-account-17 AC1 OK: local_auth_service.dart:44 enum InvalidInputCode added; InvalidInputException now carries typed `code` alongside reason",
+    "AUD-account-17 AC2 OK: signup_screen.dart _mapInvalidInputCode() switch over AppLocalizations; both handlers call it instead of raw e.reason",
+    "AUD-account-17 AC3 OK: local_auth_service.dart:150 and onboarding auth_validators.dart:26 both use AppConstants.minLocalPasswordLength; old _minPasswordLength=8 gone",
+    "AUD-account-17 AC4 OK: test 'accepts a 6-7 character password' passes on real LocalAuthService; genuine red-first (pre-fix floor=8 would throw)",
+    "AUD-account-20 AC1 OK: single AppConstants.minLocalPasswordLength=6 referenced by UI validator and domain LocalAuthService",
+    "AUD-account-20 AC2 OK: boundary test 'UI validator and LocalAuthService agree' passes on real service; belowFloor rejected/atFloor accepted by both"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "Verified after full env setup. Tests use real LocalAuthService+in-memory db, not mocks. Test diffs strengthen assertions (now asserts raw 'invalid format' absent) - no TQ-7, no scope creep, layering c"
+  },
+  {
+   "tipSha": "7b0648a6de63dbbc79b14c4bb8c3f1e890bcca92",
+   "acVerified": [
+    "AUD-tutoring-07 AC1 OK: test fails call #2 of 3, asserts ex.succeededStageIds==['7_1'] and callIndex==2; real accumulation, passes (41/41)",
+    "AUD-tutoring-07 AC2 OK: accepted-risk decision documented in header lines 38-46 (surfaced-not-silent, no auto-retry)",
+    "AUD-tutoring-17 AC1 OK: tests use profileId 'not-a-number'/'nan', assert throwsA TutorWriteException + CF never reached; code logs at line 414",
+    "AUD-tutoring-17 extra OK: all 10 int.parse(sel.profileId) replaced by _profileIdOrThrow; grep for bare int.parse returns none, 10 sites confirmed"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "Env setup done (firebase_options, pub get, build_runner, content.db.gz). Both fixes real with genuine red-first tests (AUD-17 pre-fix FormatException; AUD-07 field absent=compile-red). Test diff purel"
+  },
+  {
+   "tipSha": "a5ae7aa782c60c22b53f1d8f0a7bc1433b0667ac",
+   "acVerified": [
+    "AUD-account-01 AC1 OK: guard test seeds real outbox row; removeCloudFromDevice throwsA UndrainedOutboxException; .sqlite file survives; removeAccount not called",
+    "AUD-account-01 AC2 OK: drained-outbox test deletes file + calls removeAccount (no happy-path regression)",
+    "AUD-account-01 AC3 OK: picker test \u2014 swipe+Remove shows 'Not backed up yet'+count, tile+file survive; _confirmDismiss checks pendingOutboxDepth pre-Dismissible",
+    "AUD-account-02 AC1 OK: sign_in_controller_test disposes container mid-await on signInWithGoogle (value+error paths); futures complete, no UnmountedRefException escapes",
+    "AUD-account-02 AC2 OK: ref.onDispose(watchdog.cancel) added after both watchdog Timers (sign_in_controller.dart ~L711, ~L913) alongside finally-cancel",
+    "AUD-account-04 AC1 OK: core/utils/firebase_error_code.dart extractFirebaseCode + firebase_error_code_test (4 cases) exists and passes",
+    "AUD-account-04 AC2 OK: magic_link_service.dart:222 and upgrade_to_cloud_service.dart (4 sites) delegate to extractFirebaseCode; private copies deleted",
+    "AUD-account-07 AC1 OK: future_cache_test \u2014 unrelated rebuild keeps getAllAccountsCallCount==1, no CircularProgressIndicator; Future cached in initState",
+    "AUD-account-09 AC1 OK: drift_db_file.dart resolveDriftDbFile/deleteDriftDbFile implements .sqlite-suffix-with-fallback; drift_db_file_test passes",
+    "AUD-account-09 AC2 OK: AccountLifecycleService._deleteDbFile and PendingLocalSignupStore._deleteDbFile both delegate to deleteDriftDbFile",
+    "AUD-account-09 AC3 OK: pre-existing account_lifecycle_db_delete_test + pending_local_signup_file_cleanup_test still pass (5 tests green)",
+    "AUD-account-10 AC1 OK: firebase_error_code_test asserts both '[code]' and '[plugin/code]' shapes extract correctly",
+    "AUD-account-10 AC2 OK: only one _extractFirebaseCode definition remains (out-of-scope settings copy); AG-4 grep in make audit passes clean",
+    "AUD-account-12 AC1 OK: account-exists-with-different-credential maps to authErrExistingPasswordAccount in sign_in_controller + signup_screen; both regression tests pass",
+    "AUD-account-12 AC2 MOOT: credential-already-in-use/linkGoogleProvider confirmed dead code (zero UI callers) per verify corrections; correctly not implemented",
+    "AUD-account-13 AC1 OK: catch calls AppLogger.instance.error(event:'delete_firestore_user_data_failed', fields:{uid}, exception, stackTrace)",
+    "AUD-account-13 AC2 OK: account_management_service_test asserts log entry after deleteAccount() when CF throws (red-first: pre-fix empty log)"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "All 8 ACs verified with behavioral (non-mock) tests; gates green by exit code. No TQ-7, fake-done, scope-creep, or new standards violations. AUD-12 AC2 (linkGoogleProvider) independently confirmed unr"
+  },
+  {
+   "tipSha": "28d605f6166a66a79a9bf3780044df191390c354",
+   "acVerified": [
+    "AUD-account-15 AC1 OK: test:609-685 pumps at TextScaler.linear(2.5), asserts banner.height>=label intrinsic h; green(20/20) + empirically RED when I reverted fix.",
+    "AUD-account-15 AC2 OK: offline_top_banner.dart:31 now constraints: BoxConstraints(minHeight:32); no height: on Container (grep-confirmed)."
+   ],
+   "reviewedBy": "opus adversarial review, run wf_1fb98597-91f",
+   "notes": "Clean 2-file fix. Red-first verified empirically (reverting fix failed new test; restored clean). Test is behavioral (RenderParagraph intrinsic h vs rendered size), not a mock. No TQ-7 weakening; pre-"
+  },
+  {
+   "tipSha": "1a380b97310c0769bd59ef1ff3a8bfc2cdb44108",
+   "acVerified": [
+    "AUD-account-21 AC1 OK: recognizer built once in initState, disposed in dispose(); build() uses field. Identity test fails pre-fix (line 121), passes post-fix."
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "Correct idiomatic fix: StatefulWidget, recognizer once in initState, disposed in dispose(); onTap reads widget.* (no stale-closure bug). Scope clean: only lib file modified + new regression test; zero"
+  },
+  {
+   "tipSha": "b183957cf8cff48efe111c6c605f752bbf96e648",
+   "acVerified": [
+    "AUD-firebase-14 AC1 OK: root firebase.json+.firebaserc removed (ls fails); nothing reads root config (ci.yml jobs use working-directory: learning_tracker)"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_1fb98597-91f",
+   "notes": "AC met; make audit green by my run (25/25). Clean dead-config removal + in-scope prose cleanup; no dangling refs (source-tree tree is the learning_tracker/ dir; firestore-collection-layout.md document"
+  },
+  {
+   "tipSha": "9cad098c8129bc507c9d41a999f6caa2445dd512",
+   "acVerified": [
+    "AUD-firebase-12 AC1 OK: completions header now points to settings_profile file; grep shows 0 tutorBulkPriorCompletions describes there (only tutorResetCompletion @L23)",
+    "AUD-firebase-12 AC1 OK: settings_profile header (L2) lists tutorBulkPriorCompletions; real describe @L321 - correctly left unchanged"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_1fb98597-91f",
+   "notes": "Provably 3-line comment-only change to one file. Fixed my-worktree env gaps (npm ci + tsc build) before running the meaningful gate. No scope creep (clean status, single file), no TQ-7 (no assertion t"
+  },
+  {
+   "tipSha": "bbb0f3196b484dbb2994a82377f8160a6551d7c9",
+   "acVerified": [
+    "AUD-tutoring-01 AC1 OK: revoke+rescind Failure tests assert verifyNever notify, buildCount unchanged, mirror isNotNull, SnackBar shown",
+    "AUD-tutoring-01 AC2 OK: manage_grants resign Failure test asserts no notify, no invalidate, mirror survives, SnackBar",
+    "AUD-tutoring-01 AC3 OK: analyze clean; 557 tutoring pass; commit 2b0b2b46 shows red-first (Unexpected notify call pre-fix)",
+    "AUD-tutoring-03 AC1 OK: only manage_tutors_providers.dart:85 defines incomingTutorGrantsProvider; codegen renamed to networkOnly...",
+    "AUD-tutoring-03 AC2 OK: accept_invite_screen 'as manage_tutors' alias removed, calls provider directly; analyze clean",
+    "AUD-tutoring-03 AC3 OK: grep shows exactly one FutureProvider definition under lib/features/tutoring/",
+    "AUD-tutoring-08 AC1 OK: make audit check 26 (for-loop+ListView) added; verified fires on injected probe",
+    "AUD-tutoring-08 AC2 OK: 50-grant test asserts delegate isA<SliverChildBuilderDelegate>; settings cap tested via View-All link",
+    "AUD-tutoring-11 AC1 OK: grep e.toString() in lib/features/tutoring/presentation/ returns no hits",
+    "AUD-tutoring-11 AC2 OK: load/revoke/rescind tests assert fixed 'Could not...' text + raw exception findsNothing",
+    "AUD-tutoring-14 AC1 OK: reconcile test reproduces mid-flight uid change, future completes, no UnmountedRefException; refutation sound",
+    "AUD-tutoring-18 AC1 OK: audit check 27 + my independent grep = zero raw Color/Colors.*.shadeN in all lib/features/tutoring"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "All 5 fixes verified; AUD-14 refutation sound (test-only; non-autoDispose element stays mounted). Test edits strengthened not weakened (TQ-7 clean); AUD-01 tests assert real DB/behavior. Minor non-blo"
+  },
+  {
+   "tipSha": "17133ecdf54dbf47631dfc63c99779dc61d786b3",
+   "acVerified": [
+    "AUD-core-analytics-01 AC1 OK: check_analytics_catalog.dart wired as audit 26/26; injected LogEvents.* and bare-string calls fail with file:line, exit 1",
+    "AUD-core-analytics-01 AC2 OK: all 7 cited sites redacted - entity_key/profile_id/target dropped, error.toString()->error_kind enum at pull_failed+listener_error",
+    "AUD-core-analytics-01 AC3 OK: 6 recording-fake tests assert params lack entity_key/profile_id/target/resource-path; 95 flutter tests pass",
+    "AUD-core-analytics-01 AC4 OK: coding-standards.md PV-1 gaps row narrowed+named; PV-5 flipped [Pending]->[Enforced] citing checker 26/26",
+    "AUD-docs-01 AC1 OK: firestore_rules.test.mjs adds one assertFails changed-value update per SR-1 collection (completions/streak_events/learning_ledger/points_ledger)",
+    "AUD-docs-01 AC2 OK: rules split create/update, update requires request.resource.data==resource.data on all 4; test-rules 89/89; red-first credible",
+    "AUD-docs-01 AC3 OK: coding-standards.md SR-1 Enforce line flipped [Pending]->[Enforced]",
+    "AUD-firebase-01 AC1 OK: test seeds unverified Auth user, asserts acceptTutorInvite -> permission-denied, grant stays pending",
+    "AUD-firebase-01 AC2 OK: index.ts accept/decline require callerRecord.emailVerified; listTutorGrants pending_for_me requires token email_verified===true",
+    "AUD-firebase-01 AC3 OK: seedAuthUser() creates real Auth users; test-functions uses --only firestore,auth; verified+unverified paths run, 284/284",
+    "AUD-firebase-02 AC1 OK: re-invite while active -> failed-precondition; state stays active, permissions (bulk=false) + tutor_uid preserved",
+    "AUD-firebase-03 AC1 OK: doc says '6 composite indexes' (matches indexes.json=6), streak_events replaces streak/data, compat-blocks framed as removed",
+    "AUD-firebase-03 AC2 OK: doc documents tutor_grants, tutor_grants/audit_log, tutor_active_access with correct doc-ids and security notes",
+    "AUD-firebase-05 AC1 OK: write_payloads.json gains points_ledger+reward_redemptions; regenerated output byte-identical to committed (not hand-edited)",
+    "AUD-firebase-05 AC2 OK: PHASE D oracle adds entries 16 points_ledger + 17 reward_redemptions; PHASE E round-trip covers both",
+    "AUD-firebase-05 AC3 OK: make test-rules 89/89 pass",
+    "AUD-firebase-06 AC1 OK: W6.23 asserts tutor_active_access deleted on parent cascade; Step 2 mirrors Step 3 w/ null-tutor_uid guard; 284/284",
+    "AUD-firebase-07 AC1 OK: seedActiveGrant uses String(PROFILE); outgoing test asserts res.grants.length===1 + fields (weak !==undefined removed)"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "All 8 fixed; every AC verified, all gates green by my runs. Env setup (not defects): firebase_options, pub get, build_runner, content.db.gz, npm install. No TQ-7/fake-done/scope issues; removed assert"
+  },
+  {
+   "tipSha": "f65cc282b96f9480d7c9ea9f37dff9f7c1e57f86",
+   "acVerified": [
+    "AUD-tutoring-06 AC1 OK: grep -rn 'TutorAuditLogWriter' lib/ -> exit 1, no output; only leftover refs are comments",
+    "AUD-tutoring-06 AC2 OK: grep TODO in audit_log_providers.dart -> exit 1 none; whole stub+TODO(DNI-393) block deleted",
+    "AUD-tutoring-10 AC1 OK: grep -rn 'presentation/' lib/features/tutoring/data/ -> exit 1, no output",
+    "AUD-tutoring-10 AC2 OK: TutorAuditLogReadRepository + TutorGrantRepository each defined once in domain/repositories/, no dupes (AG-4)",
+    "AUD-tutoring-10 AC2 3rd-iface OK: write iface TutorAuditLogRepository deleted as dead code by AUD-06; no live refs remain"
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "Pure interface relocation + dead-code deletion; no behavioral change, no red-first test required. Test edits are import churn + one comment; no assertions removed (TQ-7 clean). No orphan code, no scop"
+  },
+  {
+   "tipSha": "0423d33f663a0701fa242567fe1daa70f879dbba",
+   "acVerified": [
+    "AUD-account-16 AC1 OK: 0 deep imports into features/onboarding/* from both files; audit W1.13 lists signup only for out-of-scope settings import, sign_in not listed.",
+    "AUD-account-16 support OK: barrel exports resolve (3 validators + kOnboardingComplete at onboarding_resume_store.dart:15); analyze+custom_lint clean.",
+    "AUD-account-24 AC1 OK: catch now uses signUpErrGeneric+AppLogger.warning; no signUpFailed() call left; only e.toString() is _extractFirebaseCode regex (non-UI).",
+    "AUD-account-24 AC2 OK(deferred): conditional on separate custom_lint repair; custom_lint exits 0 now; guarded by red-first regression test."
+   ],
+   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
+   "notes": "Env: copied firebase_options, pub get, build_runner, regenerated content.db.gz (sole pre-regen analyze warning). Diff=4 files, no scope creep, no existing test modified (no TQ-7). Red-first airtight: "
   }
  ]
 }
