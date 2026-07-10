@@ -58,13 +58,15 @@
     {
       "id": "AUD-core-database-02",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P0",
       "title": "Filter LearningOrderDao.getLearningOrderByCurriculum/deleteAllForCurriculum by profileId to stop cross-sibling data leak and silent deletion",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "c6180705a8cbfc47b7fcc94d27572d9a42435307"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Confirmed unscoped DAO queries (getLearningOrderByCurriculum/deleteAllForCurriculum lacked profileId filter -> cross-sibling-profile read+delete leak). Added required profileId param to both LearningOrderDao methods; threaded profileId through the 3 named consumers (bookmark_repository_impl.dart, scheduler_learning_order_repository_impl.dart via scheduler_providers.dart, learning_order_repository_impl.dart). Red-first test failed pre-fix exactly as predicted (read+delete leak across profiles), passed post-fix. Fix surfaced the same masked-bug pattern in 2 more test files; fixtures corrected. New test group added: cross-profile isolation (2 tests) in learning_order_repository_impl_test.dart. Merged --no-ff onto audit-fix/2026-07-03 (w1r0c14, mergeSha 27aaff5ce69b8cd62359994c72f2c9a1592dec21). Post-rebase gate: make audit checks 1-24 and 26 clean, flutter analyze clean (no issues found). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~12 concurrent sibling worktrees under the gitignored .claude/worktrees/ (wf_b5adcc79-ad7-*, other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout; this is filesystem-only (independent of git HEAD/content -- confirmed the diff does not touch coding-standards.md and the check is invariant to which commit is on this branch), matching the pre-existing environmental pattern already documented for w1r0c2/w1r0c3/w1r0c4/w1r0c5, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
     },
     {
       "id": "AUD-profiles-02",
