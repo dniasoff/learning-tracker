@@ -36,10 +36,11 @@ class BookmarkCodec extends EntityCodec<BookmarkRow> {
   @override
   BookmarkRow? decode(Map<String, dynamic> raw) {
     final curriculumId = raw['curriculum_id'] as String?;
-    // Dual-key: live writers (BookmarkEntity.toFirestore et al.) persist the ref
-    // under `content_item_id`; codec/legacy docs use `sefaria_ref`. Accept both —
-    // reading only one drops every live-written bookmark from sync. (DriftMergeStore
-    // ._upsertBookmark has the matching fallback.)
+    // Dual-key read: pre-Phase-B documents may still carry the ref under
+    // `content_item_id`; current writers persist `sefaria_ref` via this codec
+    // (see BookmarkEntity.toFirestore). Accept both so those legacy documents
+    // keep round-tripping. (DriftMergeStore._upsertBookmark has the matching
+    // fallback.)
     final sefariaRef =
         (raw['sefaria_ref'] ?? raw['content_item_id']) as String?;
     final updatedAt = FirestoreCodec.parseDateTime(raw['updated_at']);
