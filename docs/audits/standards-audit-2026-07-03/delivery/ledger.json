@@ -925,13 +925,18 @@
   {
    "id": "AUD-onboarding-02",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Fix WizardCustomStep2 Slider crash when a 5th custom review round defaults delayDays to 90 (slider max is 60)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "570b4f18c0ae091b8869e83d83092dea2be68313"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-onboarding-02 AC1 OK: Slider min:1/max:90 (wizard_steps.dart:762-764); withDefault(0..4)=[1,7,30,60,90] all in [1,90]; Step1 caps rounds at max:5",
+    "AUD-onboarding-02 AC2 OK: test :872-895 renders Step2 w/5 rounds, asserts SegmentedButton findsNWidgets(5)+takeException isNull; 65/65 pass; red-first in commit body"
+   ],
+   "notes": "Re-verified, no drift since 4018a91c. withDefault(4)=90 vs Slider max:60. Red-first test added; captured pre-fix failure: 'Value 90.0 is not between minimum 1.0 and maximum 60.0' at wizard_steps.dart:760. Fix: max 60->90, divisions 59->89. Test now passes; full file 65/65 green. Both ACs satisfied."
   },
   {
    "id": "AUD-sacred_time-01",
