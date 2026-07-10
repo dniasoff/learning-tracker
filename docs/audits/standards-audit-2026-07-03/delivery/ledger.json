@@ -1228,15 +1228,17 @@
   {
    "id": "AUD-account-11",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
    "commits": [
-    "b66133a40fd1a5f2169ae144a7ec82144f78b3c7"
+    "c93d80a1bc8533a949bb0919f8cfcb4f09e037ab"
    ],
    "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "reopened: Rule-0 checker AC deferred twice, delivering with template"
+   "acVerified": [
+    "AUD-account-11 AC3 OK: no_unguarded_async_notifier_init checker added (packages/custom_lints/lib/src/rules/no_unguarded_async_notifier_init.dart), registered in learning_tracker_lints.dart; flags a Notifier/AsyncNotifier build() firing a private async method fire-and-forget whose body has zero try statements - the pre-fix AuthStateNotifier._init() shape. Fire-verified: 8 dart test cases green (2 violation fixtures assert isNotEmpty for the pre-fix _$-codegen and plain Notifier<T> shapes, 6 clean fixtures assert isEmpty including the actual post-fix try/catch-wrapped _init()); make audit 26/26 and flutter analyze clean post-merge."
+   ],
+   "notes": "Rule-0 checker delivered + fire-verified"
   },
   {
    "id": "AUD-t-story-acceptance-06",
