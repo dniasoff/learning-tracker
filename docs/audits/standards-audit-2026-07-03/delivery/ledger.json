@@ -4353,13 +4353,18 @@
     {
       "id": "AUD-tutoring-05",
       "wave": 1,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Convert TutorPermissions to @freezed instead of hand-writing ==/hashCode",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "d499c75f073b97580d44a1c67e34ad37476447ce"
+      ],
+      "reviewRounds": 2,
+      "acVerified": [
+        "AUD-tutoring-05 AC1 OK: @freezed+part directive; generated freezed.dart has field-based operator==/hashCode; grep hand-written ==/hashCode in source = NONE",
+        "AUD-tutoring-05 AC2 OK: no test files in diff; ws3_3d equality/defaults/copyWith + firestore round-trip pass in 256-test targeted run"
+      ],
+      "notes": "Re-verified: hand-written ==/hashCode still present. Converted to @freezed const factory; canMarkLiveCompletion kept as a getter, excluded from generated ==/hashCode. toFirestore/fromFirestore kept as methods. No hand-written ==/hashCode remain. 199 existing tests pass unmodified. Merge-lane w1r0c15: rebase clean (file-disjoint vs audit-fix/2026-07-03, gatePolicy=disjoint-skip); make audit clean except pre-existing check 25/26 noise (sibling in-flight worktrees under .claude/worktrees/ each hold their own docs/coding-standards.md, unrelated to this payload); flutter analyze required a local `dart run build_runner build` to regenerate the missing gitignored tutor_permissions.freezed.dart in the merge-lane checkout (0 issues after), no source changes."
     },
     {
       "id": "AUD-tutoring-07",
