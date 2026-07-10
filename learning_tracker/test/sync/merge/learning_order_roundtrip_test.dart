@@ -76,6 +76,7 @@ void main() {
         // Assert: the row materialised in the DB — not skipped.
         final results = await db.learningOrderDao.getLearningOrderByCurriculum(
           _curriculumId,
+          profileId: _profileId,
         );
         final result = results
             .where((r) => r.sefariaRef == 'Berakhot')
@@ -142,6 +143,7 @@ void main() {
 
         final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
           _curriculumId,
+          profileId: _profileId,
         );
         expect(
           rows.length,
@@ -176,6 +178,7 @@ void main() {
 
         final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
           _curriculumId,
+          profileId: _profileId,
         );
         final result = rows
             .where((r) => r.sefariaRef == 'Berakhot')

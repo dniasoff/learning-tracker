@@ -139,6 +139,7 @@ SchedulerEngine schedulerEngine(Ref ref) {
     stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
     learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
       learningOrderDao: db.learningOrderDao,
+      profileId: profileId,
     ),
   );
 }

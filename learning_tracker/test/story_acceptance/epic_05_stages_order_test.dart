@@ -224,7 +224,7 @@ void main() {
         await repo.saveOrder(CurriculumId.mishnayos, items);
 
         final rows = await database.learningOrderDao
-            .getLearningOrderByCurriculum('mishnayos');
+            .getLearningOrderByCurriculum('mishnayos', profileId: 0);
         expect(rows, hasLength(2));
         expect(rows[0].sefariaRef, 'Shabbat');
         expect(rows[0].userSortOrder, 0);
@@ -245,9 +245,13 @@ void main() {
           ],
         );
 
+        // `repo` defaults to profileId 0 — fixtures must be seeded under the
+        // same profile the repository-under-test reads from
+        // (AUD-core-database-02: these rows used to be seeded under
+        // profileId 1 and only "worked" because the DAO ignored profileId).
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
-            profileId: 1,
+            profileId: 0,
             curriculumId: 'mishnayos',
             sefariaRef: 'Shabbat',
             userSortOrder: 0,
@@ -255,7 +259,7 @@ void main() {
         );
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
-            profileId: 1,
+            profileId: 0,
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot',
             userSortOrder: 1,
@@ -284,9 +288,10 @@ void main() {
           ],
         );
 
+        // `repo` defaults to profileId 0 — see note above.
         await database.learningOrderDao.upsertLearningOrder(
           LearningOrderCompanion.insert(
-            profileId: 1,
+            profileId: 0,
             curriculumId: 'mishnayos',
             sefariaRef: 'Shabbat',
             userSortOrder: 0,
@@ -296,7 +301,7 @@ void main() {
         await repo.resetToDefault(CurriculumId.mishnayos);
 
         final rows = await database.learningOrderDao
-            .getLearningOrderByCurriculum('mishnayos');
+            .getLearningOrderByCurriculum('mishnayos', profileId: 0);
         expect(rows, isEmpty);
 
         final order = await repo.getOrder(CurriculumId.mishnayos);
@@ -371,7 +376,7 @@ void main() {
         );
 
         final rows = await database.learningOrderDao
-            .getLearningOrderByCurriculum('mishnayos');
+            .getLearningOrderByCurriculum('mishnayos', profileId: 1);
         expect(rows, hasLength(2));
         expect(rows[0].sefariaRef, 'Shabbat');
         expect(rows[1].sefariaRef, 'Berakhot');

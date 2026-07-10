@@ -1586,6 +1586,7 @@ void main() {
         stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
         learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
           learningOrderDao: db.learningOrderDao,
+          profileId: 1,
         ),
       );
     }

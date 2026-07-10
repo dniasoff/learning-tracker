@@ -138,6 +138,7 @@ void main() {
 
       final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
         'bavli',
+        profileId: 1,
       );
       expect(rows, hasLength(1));
       expect(rows.first.userSortOrder, 5);
@@ -170,6 +171,7 @@ void main() {
 
       final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
         'bavli',
+        profileId: 1,
       );
       expect(rows.first.userSortOrder, 10);
     });
@@ -200,6 +202,7 @@ void main() {
 
       final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
         'bavli',
+        profileId: 1,
       );
       expect(rows.first.userSortOrder, 7); // unchanged
     });
@@ -235,6 +238,7 @@ void main() {
 
         final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
           'bavli',
+          profileId: 1,
         );
         expect(rows.first.userSortOrder, 3); // still the newer value
       },

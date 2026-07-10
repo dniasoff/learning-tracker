@@ -591,6 +591,7 @@ void main() {
       // Assert: the saved row carries version 7
       final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
         'mishnayos',
+        profileId: 1,
       );
       expect(rows, hasLength(1));
       expect(rows.first.learningOrderVersion, equals(7));

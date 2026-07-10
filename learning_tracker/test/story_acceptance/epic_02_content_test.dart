@@ -844,6 +844,7 @@ void main() {
 
       final orders = await db.learningOrderDao.getLearningOrderByCurriculum(
         CurriculumId.mishnayos.storageKey,
+        profileId: 1,
       );
       expect(orders, hasLength(1));
       expect(orders.first.sefariaRef, equals('Mishnah Berakhot 1.1'));

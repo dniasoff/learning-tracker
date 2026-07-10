@@ -56,6 +56,7 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
   Future<List<LearningOrderItem>> getOrder(CurriculumId curriculumId) async {
     final rows = await _database.learningOrderDao.getLearningOrderByCurriculum(
       curriculumId.storageKey,
+      profileId: _profileId,
     );
     final index = await _buildRefIndex(curriculumId);
 
@@ -162,6 +163,7 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
     final now = DateTimeFactory.nowUtc();
     await _database.learningOrderDao.deleteAllForCurriculum(
       curriculumId.storageKey,
+      profileId: _profileId,
     );
 
     // Reorder-amnesty: a reset-to-default is a content-order change.

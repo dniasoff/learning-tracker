@@ -1379,6 +1379,7 @@ void main() {
 
       final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
         'mishnayos',
+        profileId: profileId,
       );
       expect(rows, hasLength(1));
       expect(rows.single.sefariaRef, equals('Mishnah Berakhot 1'));
@@ -1410,6 +1411,7 @@ void main() {
 
       final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
         'mishnayos',
+        profileId: profileId,
       );
       expect(rows, hasLength(1));
       expect(rows.single.userSortOrder, equals(99));
@@ -1442,6 +1444,7 @@ void main() {
 
       final rows = await db.learningOrderDao.getLearningOrderByCurriculum(
         'mishnayos',
+        profileId: profileId,
       );
       expect(rows, hasLength(1));
       expect(rows.single.userSortOrder, equals(50));

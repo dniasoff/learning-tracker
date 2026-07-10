@@ -237,7 +237,7 @@ void main() {
           await repo.saveOrder(CurriculumId.mishnayos, items);
 
           final rows = await database.learningOrderDao
-              .getLearningOrderByCurriculum('mishnayos');
+              .getLearningOrderByCurriculum('mishnayos', profileId: 0);
           expect(rows, hasLength(3));
           expect(
             rows.map((r) => r.sefariaRef).toList(),
@@ -314,7 +314,7 @@ void main() {
         }
 
         final rows = await database.learningOrderDao
-            .getLearningOrderByCurriculum('mishnayos');
+            .getLearningOrderByCurriculum('mishnayos', profileId: 0);
         expect(
           rows,
           isEmpty,
@@ -341,7 +341,7 @@ void main() {
           );
 
           final rows = await database.learningOrderDao
-              .getLearningOrderByCurriculum('mishnayos');
+              .getLearningOrderByCurriculum('mishnayos', profileId: 0);
           expect(rows, hasLength(1));
         },
       );
