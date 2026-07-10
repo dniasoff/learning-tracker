@@ -150,7 +150,7 @@ The only permitted call sites for `useHebrewTermsProvider` are `lib/core/labels/
 
 **SM-5 — Async mutations follow `state = const AsyncLoading(); state = await AsyncValue.guard(() => …)`. Let `build` throw; never hand-manage loading/error with a try/catch that assigns `state`.**
 **Why:** `guard` funnels failures into `AsyncError` with the stack so the error branch always renders; manual try/catch routinely drops the stack or leaves the spinner stuck. The split is deliberate: a failed *load* errors the screen, a failed *mutation* errors the action.
-**Enforce:** [Pending] audit grep for `try` blocks assigning `state =` inside `@riverpod` Notifier methods.
+**Enforce:** `no_hand_rolled_async_state_notifier` custom_lint rule (INFO — migration-candidate nudge, see [Custom Lints Reference](#custom-lints-reference)); `SignInController` (`lib/features/account/presentation/notifiers/sign_in_controller.dart`) is the reference fix (AUD-account-14) — every `signInWith*` action now derives its terminal state from one `AsyncValue.guard(() => _bodyFn(...))` call instead of scattered `state = ...` assignments.
 **Source:** pub.dev/documentation/riverpod — AsyncValue.guard
 
 **SM-6 — Keep parameterized providers autoDispose; every `keepAlive: true` carries an inline `// keepAlive:` justification. Family arguments must be value-equal (primitives, records, freezed) — never a freshly built `List`/`Map`.**
@@ -723,7 +723,7 @@ cd learning_tracker && make audit   # 26 enforcement checks + packages/custom_li
 dart run custom_lint                # currently non-functional — see "custom_lint toolchain status" below; do not rely on its exit code
 ```
 
-`make audit` (and `make ci`) depend on `lint-rules-test`, which runs `dart test` inside `packages/custom_lints/` — the unit-test suite that exercises each of the 9 custom lint rules' own matching/whitelist logic (independent of whether the `custom_lint` plugin itself can attach to the analyzer — see the warn-only note below). This is a hard gate: it never soft-skips (AUD-guardrails-17).
+`make audit` (and `make ci`) depend on `lint-rules-test`, which runs `dart test` inside `packages/custom_lints/` — the unit-test suite that exercises each of the 10 custom lint rules' own matching/whitelist logic (independent of whether the `custom_lint` plugin itself can attach to the analyzer — see the warn-only note below). This is a hard gate: it never soft-skips (AUD-guardrails-17).
 
 ### The 26 enforcement checks (`learning_tracker/Makefile`)
 
@@ -843,7 +843,7 @@ not currently a meaningful check either way.
 
 ## Custom Lints Reference
 
-Nine custom lint rules live in `packages/custom_lints/` (landed) and run via `dart run custom_lint`:
+Ten custom lint rules live in `packages/custom_lints/` (landed) and run via `dart run custom_lint`:
 
 | Rule | What it catches |
 |------|-----------------|
@@ -856,6 +856,7 @@ Nine custom lint rules live in `packages/custom_lints/` (landed) and run via `da
 | `no_color_literal_outside_theme` | Color literals bypassing `core/theme/` tokens |
 | `no_e_to_string_in_ui` | Raw exception `.toString()` surfaced in UI (EH-5) |
 | `no_raw_logevent` | Analytics events bypassing the typed event layer (PV-5) |
+| `no_hand_rolled_async_state_notifier` | `Notifier<T>` whose state is a hand-rolled sealed Idle/Loading/Error union — SM-5 AsyncNotifier-migration candidate, INFO severity (AUD-account-14) |
 
 Each rule's own matching/whitelist logic has a `package:test` unit-test file under `packages/custom_lints/test/`, run via `make lint-rules-test` (`cd learning_tracker && make lint-rules-test`, or `cd packages/custom_lints && dart test` directly). This is wired into `make audit` / `make ci` and runs on every PR — independent of whether the `custom_lint` plugin itself can attach to the analyzer (AUD-guardrails-17).
 

@@ -205,6 +205,61 @@ Padding(
 
 ---
 
+## Rule 6 — `no_hand_rolled_async_state_notifier`
+
+### What it checks
+
+Flags a `class X extends Notifier<T>` where `T` is a hand-rolled sealed union whose subclass names cover all three of:
+
+- an Idle/Initial-shaped variant,
+- a Loading/Submitting/Pending-shaped variant, and
+- an Error/Failure-shaped variant.
+
+`AsyncNotifier<T>` / `StreamNotifier<T>` subclasses are never flagged — they are the migration target this rule nudges towards, not a violation.
+
+**Severity: INFO** — this is a migration-candidate nudge, not a hard error. Detection is purely syntactic (subclass name matching), so it cannot tell "~20 scattered `state = ...` assignments" (the actual SM-5 defect) apart from a notifier that deliberately keeps this public sealed-state shape while driving every transition through a single internal `AsyncValue.guard(...)` call — SM-5's own documented lighter-weight alternative. `SignInController` (fixed under AUD-account-14) is exactly that case and is *expected* to still trip this rule; it is flagged for human triage, not as a defect to silence.
+
+### Why it exists
+
+SM-5 (`docs/coding-standards.md`) requires async mutations to go through `AsyncValue.guard` rather than hand-managed try/catch `state = ...` assignments — a hand-rolled Idle/Loading/Error union on a plain `Notifier<T>` is the shape that pattern tends to produce (see AUD-account-14).
+
+### How to fix
+
+**Flagged (candidate for review — may already be an accepted guard-derived case):**
+```dart
+sealed class FooState {}
+final class FooIdle extends FooState {}
+final class FooSubmitting extends FooState {}
+final class FooError extends FooState {
+  FooError(this.message);
+  final String message;
+}
+
+class FooController extends Notifier<FooState> {
+  @override
+  FooState build() => const FooIdle();
+  // ... several `state = FooError(...)` / `state = FooIdle()` assignments
+  // scattered across try/catch blocks.
+}
+```
+
+**After (preferred — full migration):**
+```dart
+class FooController extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {}
+
+  Future<void> doThing() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => _doThingBody());
+  }
+}
+```
+
+**Also acceptable (lighter-weight — keep the public shape, derive it via a single guard):** see `SignInController` in `lib/features/account/presentation/notifiers/sign_in_controller.dart` — the public `SignInIdle`/`SignInSubmitting`/`SignInError` union is retained, but every transition is derived from one `AsyncValue.guard(() => _bodyFn(...))` call per action rather than manual assignments spread across the method.
+
+---
+
 ## Configuration
 
 All rules are enabled automatically. To disable one (discouraged):
@@ -218,4 +273,5 @@ custom_lint:
     - no_firebase_outside_core: false            # discouraged
     - no_raw_talker: false                       # discouraged
     - no_hardcoded_text_direction: false         # discouraged
+    - no_hand_rolled_async_state_notifier: false # discouraged
 ```

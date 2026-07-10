@@ -1,6 +1,6 @@
 /// Custom lint rules for the Learning Tracker project.
 ///
-/// Provides eight rules:
+/// Provides ten rules:
 ///   - [NoColorLiteralOutsideTheme]: warns on direct `Color(0x…)` hex-literal
 ///     constructor calls outside `lib/core/theme/`; use AppColors/AppTheme constants.
 ///   - [NoCurriculumDisplayNameBypass]: prevents access to `.displayNameEn` /
@@ -11,6 +11,9 @@
 ///     features must communicate only through their barrel `X/X.dart` surface.
 ///   - [NoFirebaseOutsideCore]: prevents Firebase SDK imports outside
 ///     `lib/core/auth/` and `lib/core/sync/`.
+///   - [NoHandRolledAsyncStateNotifier]: flags a `Notifier<T>` whose state
+///     type is a hand-rolled sealed Idle/Loading/Error-shaped union as an
+///     SM-5 AsyncNotifier-migration candidate (AUD-account-14).
 ///   - [NoHardcodedDomainTerm]: warns on hardcoded Torah domain-term English
 ///     literals in user-facing strings in presentation code; render via
 ///     domainTermLabels / CurriculumLabels / l10n instead.
@@ -30,6 +33,7 @@ import 'src/rules/no_curriculum_display_name_bypass.dart';
 import 'src/rules/no_e_to_string_in_ui.dart';
 import 'src/rules/no_feature_cross_import.dart';
 import 'src/rules/no_firebase_outside_core.dart';
+import 'src/rules/no_hand_rolled_async_state_notifier.dart';
 import 'src/rules/no_hardcoded_domain_term.dart';
 import 'src/rules/no_hardcoded_text_direction.dart';
 import 'src/rules/no_raw_logevent.dart';
@@ -46,6 +50,7 @@ class _LearningTrackerLintPlugin extends PluginBase {
         NoEToStringInUi(),
         NoFeatureCrossImport(),
         NoFirebaseOutsideCore(),
+        NoHandRolledAsyncStateNotifier(),
         NoHardcodedDomainTerm(),
         NoHardcodedTextDirection(),
         NoRawLogEvent(),
