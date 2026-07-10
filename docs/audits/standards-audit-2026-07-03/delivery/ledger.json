@@ -505,13 +505,19 @@
   {
    "id": "AUD-app-01",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Fix app_shell.dart's fixed-height context banners \u2014 they truncate text under accessibility scaling and undersize the exit-button tap targets",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "8f69bf15080c7d77e2cdf9638362b36e18c27f94"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-app-01 AC1 OK: diff removes height:28/24/44 on the 3 banners; switcher Container->DecoratedBox; no literal height on text wrappers",
+    "AUD-app-01 AC2 OK: a11y test pumps 3 banners at TextScaler 1.3 + Locale('he'), asserts takeException==null + didExceedMaxLines==false; passed",
+    "AUD-app-01 AC3 OK: Exit/tap InkWells wrapped in ConstrainedBox(48); getSize asserts >=48dp on all three; test passed"
+   ],
+   "notes": "3 banners no longer hardcode height:; Exit/tap InkWells floored at 48dp via ConstrainedBox; PreferredSize is textScaler-aware. Red-first: test compiled red pre-fix (banner was private); w/ that case removed, other 2 failed for real (28/24 actual vs 48 required); all pass post-fix. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c5, mergeSha 8f69bf15080c7d77e2cdf9638362b36e18c27f94). Post-rebase gate: make audit checks 1-24 and 26 clean, flutter analyze clean (no issues found), make arb-parity clean (touchedStrings). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~31 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed byte-identical check output between the unmodified audit-fix/2026-07-03 tip and the rebased candidate), matching the pre-existing environmental pattern already documented for w1r0c2/w1r0c3/w1r0c4/w1r0c5/w1r0c11/w1r0c14, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-core-database-05",
@@ -1353,13 +1359,19 @@
   {
    "id": "AUD-app-03",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Centralize app_shell.dart / persistent_switcher_scaffold.dart color literals into AppTheme instead of scattering/duplicating hex values",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "8f69bf15080c7d77e2cdf9638362b36e18c27f94"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-app-03 AC1 OK: grep 'Color(0x' in both files = ZERO; all 9 sites now AppColors constants",
+    "AUD-app-03 AC2 OK(conditional): coding-standards.md:770 documents custom_lint CLI non-functional (env); zero-literal met + rule unit test passes",
+    "AUD-app-03 AC3 OK: grep 0xFFF1F3FA = 1 def (app_colors.dart:288 switcherBarBackground), used by app_shell.dart:463 + scaffold:161"
+   ],
+   "notes": "All 9 Color(0x...) literals moved to 8 new AppColors constants; 0xFFF1F3FA now 1 definition shared by both files. custom_lint CLI has a known pre-existing env limitation (0 projects discovered - confirmed red-first via revert, same vacuous output). grep=0 literals + lint-rules-test passed. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c5, mergeSha 8f69bf15080c7d77e2cdf9638362b36e18c27f94). Post-rebase gate: make audit checks 1-24 and 26 clean, flutter analyze clean (no issues found), make arb-parity clean (touchedStrings). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~31 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed byte-identical check output between the unmodified audit-fix/2026-07-03 tip and the rebased candidate), matching the pre-existing environmental pattern already documented for w1r0c2/w1r0c3/w1r0c4/w1r0c5/w1r0c11/w1r0c14, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-content_browsing-04",
@@ -2050,13 +2062,18 @@
   {
    "id": "AUD-app-04",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Land the AG-3 file-length checker and ratchet down the 327 files over 400 lines",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "8f69bf15080c7d77e2cdf9638362b36e18c27f94"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-app-04 AC1 OK: 'F1 extra'/'F2 variant' appear only in comments; all group() names clean",
+    "AUD-app-04 AC2 OK: 603L but distinct-not-repeat; impl confirms save*/reset never read ContentRepository so removed tests were dup DAO paths; 21 pass (was 27)"
+   ],
+   "notes": "Register title describes an 80-item/327-file mega-finding but literal ACs name only this ONE file. Scoped to literal ACs; documented as a register data-quality issue in commit. Removed 6 verified-redundant tests, strengthened 2 kept assertions, renamed 1 mislabeled non-duplicate test. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c5, mergeSha 8f69bf15080c7d77e2cdf9638362b36e18c27f94). Post-rebase gate: make audit checks 1-24 and 26 clean, flutter analyze clean (no issues found), make arb-parity clean (touchedStrings). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~31 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed byte-identical check output between the unmodified audit-fix/2026-07-03 tip and the rebased candidate), matching the pre-existing environmental pattern already documented for w1r0c2/w1r0c3/w1r0c4/w1r0c5/w1r0c11/w1r0c14, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-t-cross-16",
