@@ -6239,13 +6239,18 @@
   {
    "id": "AUD-core-sync-37",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove or reconcile the dead LWW/merge-forward helpers in merge_rules.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "ea28f1df8e0842fd43c85a8ebef413d6a5bf12aa"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-37 AC1 dead code gone: lwwMerge/mergeForwardMaxInt/MaxDate/Union/MergeResult deleted; grep over lib+test = zero code refs, only comments.",
+    "AUD-core-sync-37 AC1 doc-comment branch: file kept (study_day_config_merger.dart:78 calls free-fn remoteIsNewer); merge_rules.dart:1-18 marked superseded/legacy."
+   ],
+   "notes": "Verified 5 helpers (lwwMerge/MergeResult/mergeForwardMaxInt/MaxDate/Union) had zero prod callers; deleted + orphaned tests. Kept remoteIsNewer: study_day_config_merger.dart:13,78 still calls it (migration=separate finding AUD-core-sync-03, out of scope). Rewrote doc comment per AC's alt branch."
   },
   {
    "id": "AUD-core-sync-34",
