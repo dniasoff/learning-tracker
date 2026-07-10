@@ -90,10 +90,12 @@ final mergeRouterProvider = Provider<MergeRouter>((ref) {
       ),
       EntityKind.uiPreferences: UiPreferencesMerger(store: store),
       EntityKind.tutorGrant: const TutorGrantMerger(), // W3.17 / W3.38
-      // Phase 1 — study-day config enrolment in the sync pipeline. Bypasses
-      // DriftMergeStore because StudyDayConfigs has a composite PK with a
-      // foreign-key to curriculum_tracks (no compatible store helpers yet).
-      EntityKind.studyDayConfig: StudyDayConfigMerger(database),
+      // Phase 1 — study-day config enrolment in the sync pipeline.
+      // AUD-core-sync-03: LWW ordering now goes through DriftMergeStore
+      // (±5 s clock-skew window + synced_at tie-break) like every other
+      // natural-key merger; the FK-existence guard against curriculum_tracks
+      // stays inline since no store helper covers that composite-PK check.
+      EntityKind.studyDayConfig: StudyDayConfigMerger(database, store: store),
       // WS9 Wave-B (C#2) — points spend economy. Both bypass DriftMergeStore
       // and talk to PointsBalanceDao directly (append-only ledger + LWW
       // redemption state-machine + local balance re-derivation).

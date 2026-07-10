@@ -18,6 +18,7 @@ class StudyDayConfigRow {
     required this.dayOfWeek,
     required this.dayType,
     required this.updatedAt,
+    this.syncedAt,
   });
 
   final int profileId;
@@ -26,6 +27,11 @@ class StudyDayConfigRow {
   final int dayOfWeek;
   final String dayType;
   final DateTime updatedAt;
+
+  /// Firestore server timestamp set by `FieldValue.serverTimestamp()` at
+  /// push time. Used as the ±5 s clock-skew tie-breaker by
+  /// [MergeStore.remoteIsNewer].
+  final DateTime? syncedAt;
 }
 
 /// Codec for the `study_day_configs` Firestore collection.
@@ -64,6 +70,7 @@ class StudyDayConfigCodec extends EntityCodec<StudyDayConfigRow> {
       dayOfWeek: dayOfWeek,
       dayType: dayType,
       updatedAt: updatedAt,
+      syncedAt: FirestoreCodec.parseDateTime(raw['synced_at']),
     );
   }
 

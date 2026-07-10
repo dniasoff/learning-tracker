@@ -16,6 +16,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/codec/study_day_config_codec.dart';
+import 'package:learning_tracker/core/sync/merge/drift_merge_store.dart';
 import 'package:learning_tracker/core/sync/merge/study_day_config_merger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,7 +44,7 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       db = UserDatabase(NativeDatabase.memory());
-      merger = StudyDayConfigMerger(db);
+      merger = StudyDayConfigMerger(db, store: DriftMergeStore(db));
 
       // Seed the account + profile so FK constraints on learner_profiles are met.
       await seedProfile(db);

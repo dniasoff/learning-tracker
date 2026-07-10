@@ -2,20 +2,30 @@
 ///
 /// Natural key: `(curriculumId, dayOfWeek, trackId)` — the Drift PK minus
 /// `profileId` (which is implicit in the per-profile Firestore subcollection
-/// scope). Remote wins iff its `updated_at` is strictly newer than local;
-/// ties go to local to avoid flapping.
+/// scope). `trackId` here is the REMOTE id (from the decoded row), not the
+/// locally-resolved one, so the natural key stays stable across pulls even
+/// when a tutored mirror rebinds the row to a different local track (Bug 3).
+///
+/// Phase 3: like every other LWW merger, the ordering decision goes through
+/// [MergeStore.remoteIsNewer] (±5 s clock-skew window, Firestore
+/// `synced_at` tie-break — see AUD-core-sync-03) instead of the plain
+/// `remote.isAfter(local)` comparison, and a successful apply persists the
+/// remote `updated_at`/`synced_at` via [MergeStore.persistUpdatedAt] so
+/// subsequent pulls arbitrate symmetrically.
 library;
 
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/codec/study_day_config_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 
 class StudyDayConfigMerger implements EntityMerger {
-  StudyDayConfigMerger(UserDatabase db) : _db = db;
+  StudyDayConfigMerger(UserDatabase db, {required MergeStore store})
+    : _db = db,
+      _store = store;
 
   final UserDatabase _db;
+  final MergeStore _store;
   static const _codec = StudyDayConfigCodec();
 
   @override
@@ -65,19 +75,28 @@ class StudyDayConfigMerger implements EntityMerger {
           )..where((t) => t.id.equals(trackId))).getSingleOrNull();
       if (trackExists == null) continue;
 
-      final localRow =
-          await (_db.select(_db.studyDayConfigs)..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(decoded.curriculumId) &
-                    t.dayOfWeek.equals(decoded.dayOfWeek) &
-                    t.trackId.equals(trackId),
-              ))
-              .getSingleOrNull();
+      // Natural key is scoped by the REMOTE track id (decoded.trackId), not
+      // the locally-resolved [trackId] above — matches the codec's own
+      // doc-id derivation and keeps the SyncKv shadow key stable regardless
+      // of how the local track was remapped (mirrors GoalMerger's pattern).
+      final naturalKey =
+          '${decoded.curriculumId}|${decoded.dayOfWeek}|${decoded.trackId}';
+      final localUpdatedAt = await _store.currentUpdatedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+      );
+      final localSyncedAt = await _store.currentSyncedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+      );
 
-      if (!remoteIsNewer(
-        localUpdatedAt: localRow?.updatedAt,
+      if (!_store.remoteIsNewer(
+        localUpdatedAt: localUpdatedAt,
         remoteUpdatedAt: decoded.updatedAt,
+        localSyncedAt: localSyncedAt,
+        remoteSyncedAt: decoded.syncedAt,
       )) {
         continue;
       }
@@ -94,6 +113,14 @@ class StudyDayConfigMerger implements EntityMerger {
               updatedAt: decoded.updatedAt,
             ),
           );
+
+      await _store.persistUpdatedAt(
+        kind: kind,
+        profileId: profileId,
+        naturalKey: naturalKey,
+        updatedAt: decoded.updatedAt,
+        syncedAt: decoded.syncedAt,
+      );
     }
   }
 }

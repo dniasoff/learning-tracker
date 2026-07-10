@@ -160,7 +160,7 @@ void main() {
     () async {
       final localTrackId = await mergeMirrorTrack();
 
-      final sdcMerger = StudyDayConfigMerger(db);
+      final sdcMerger = StudyDayConfigMerger(db, store: store);
       await sdcMerger.merge(
         profileId: mirrorProfileId,
         rows: [

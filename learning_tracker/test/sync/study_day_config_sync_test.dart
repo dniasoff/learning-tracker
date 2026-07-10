@@ -14,6 +14,8 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/core/sync/merge/drift_merge_store.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/study_day_config_merger.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
@@ -39,11 +41,13 @@ class _RecordingGateway implements FirestoreGateway {
 
 void main() {
   late UserDatabase db;
+  late DriftMergeStore store;
   late int profileId;
   late int trackId;
 
   setUp(() async {
     db = inMemoryDb();
+    store = DriftMergeStore(db);
     await seedProfile(db);
     final profile = (await db.select(db.learnerProfiles).get()).first;
     profileId = profile.id;
@@ -138,9 +142,20 @@ void main() {
               updatedAt: Value(DateTime.utc(2026, 5, 21, 10)),
             ),
           );
+      // Phase 3 (AUD-core-sync-03): the merger arbitrates LWW against the
+      // SyncKv shadow persisted by DriftMergeStore, not the raw Drift row —
+      // seed it to match the forced local updated_at above so this test
+      // exercises the real "remote beats a known local" branch rather than
+      // the "no local shadow yet" (first-sync) branch.
+      await store.persistUpdatedAt(
+        kind: EntityKind.studyDayConfig,
+        profileId: profileId,
+        naturalKey: 'mishnayos|6|$trackId',
+        updatedAt: DateTime.utc(2026, 5, 21, 10),
+      );
 
       // Remote row: updated_at = 11:00 with a different day_type.
-      final merger = StudyDayConfigMerger(db);
+      final merger = StudyDayConfigMerger(db, store: store);
       await merger.merge(
         profileId: profileId,
         rows: [
@@ -192,9 +207,17 @@ void main() {
               updatedAt: Value(DateTime.utc(2026, 5, 21, 12)),
             ),
           );
+      // Phase 3 (AUD-core-sync-03): seed the SyncKv shadow the merger now
+      // arbitrates against (see the sibling test above).
+      await store.persistUpdatedAt(
+        kind: EntityKind.studyDayConfig,
+        profileId: profileId,
+        naturalKey: 'mishnayos|6|$trackId',
+        updatedAt: DateTime.utc(2026, 5, 21, 12),
+      );
 
       // Remote row: older than local.
-      final merger = StudyDayConfigMerger(db);
+      final merger = StudyDayConfigMerger(db, store: store);
       await merger.merge(
         profileId: profileId,
         rows: [
@@ -227,7 +250,7 @@ void main() {
 
     test('remote row without a local counterpart is inserted', () async {
       // No local row for dayOfWeek=4. Merger should insert it.
-      final merger = StudyDayConfigMerger(db);
+      final merger = StudyDayConfigMerger(db, store: store);
       await merger.merge(
         profileId: profileId,
         rows: [
@@ -261,7 +284,7 @@ void main() {
         // trackId 999999 does not exist in curriculum_tracks. Inserting it
         // would throw a FK-constraint violation that fails the whole channel
         // merge; the merger must skip it instead.
-        final merger = StudyDayConfigMerger(db);
+        final merger = StudyDayConfigMerger(db, store: store);
         await merger.merge(
           profileId: profileId,
           rows: [
@@ -286,7 +309,7 @@ void main() {
     test(
       'a valid row still merges when batched with a missing-track row',
       () async {
-        final merger = StudyDayConfigMerger(db);
+        final merger = StudyDayConfigMerger(db, store: store);
         await merger.merge(
           profileId: profileId,
           rows: [
@@ -333,7 +356,7 @@ void main() {
         const staleRemoteTrackId = 555555;
         expect(staleRemoteTrackId, isNot(equals(trackId)));
 
-        final merger = StudyDayConfigMerger(db);
+        final merger = StudyDayConfigMerger(db, store: store);
         await merger.merge(
           profileId: profileId,
           rows: [
@@ -364,7 +387,7 @@ void main() {
       () async {
         // A curriculum the mirror has no track for → cannot resolve a local
         // track → must skip rather than violate the FK.
-        final merger = StudyDayConfigMerger(db);
+        final merger = StudyDayConfigMerger(db, store: store);
         await merger.merge(
           profileId: profileId,
           rows: [
@@ -387,7 +410,7 @@ void main() {
     );
 
     test('malformed remote row is silently skipped', () async {
-      final merger = StudyDayConfigMerger(db);
+      final merger = StudyDayConfigMerger(db, store: store);
       await merger.merge(
         profileId: profileId,
         rows: [
