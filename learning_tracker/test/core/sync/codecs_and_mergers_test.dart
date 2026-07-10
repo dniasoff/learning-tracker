@@ -8,6 +8,7 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/core/sync/codec/stage_definition_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -387,6 +388,48 @@ void main() {
         final sched = jsonDecode(decoded.schedule) as Map<String, dynamic>;
         expect(sched['type'], 'days_of_week');
         expect(sched['days'], isEmpty);
+      },
+    );
+
+    test(
+      // AUD-core-sync-35 (EH-3): the malformed-days_of_week catch previously
+      // swallowed the jsonDecode/cast failure with no AppLogger trail, so a
+      // family's days_of_week schedule could silently collapse to [] with no
+      // way to diagnose why. Fresh Talker per test so log history assertions
+      // never see a prior test's entries (mirrors
+      // completion_repository_siyum_detection_failure_test.dart).
+      'legacy days_of_week with malformed JSON string logs the raw value '
+      'via AppLogger before falling back to empty days',
+      () {
+        AppLogger.init();
+
+        final raw = {
+          'curriculum_id': 'bavli',
+          'track_id': 1,
+          'stage_order': 0,
+          'schedule_type': 'days_of_week',
+          'days_of_week': '{{bad json',
+        };
+        final decoded = _codec.decode(raw)!;
+        final sched = jsonDecode(decoded.schedule) as Map<String, dynamic>;
+        expect(sched['type'], 'days_of_week');
+        expect(sched['days'], isEmpty);
+
+        final history = AppLogger.instance.talker.history
+            .map((e) => e.generateTextMessage())
+            .toList();
+        expect(
+          history.any(
+            (m) =>
+                m.contains('sync_stage_definition_malformed_days_of_week') &&
+                m.contains('{{bad json'),
+          ),
+          isTrue,
+          reason:
+              'Expected the malformed days_of_week fallback to be logged '
+              'via AppLogger (including the raw malformed value) instead of '
+              'silently defaulting to []. Talker history: $history',
+        );
       },
     );
 

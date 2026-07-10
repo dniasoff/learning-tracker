@@ -7,6 +7,7 @@ library;
 
 import 'dart:convert';
 
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/entity_codec.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -82,7 +83,23 @@ class StageDefinitionCodec extends EntityCodec<StageDefinitionRow> {
           if (daysOfWeek is String) {
             try {
               days = (jsonDecode(daysOfWeek) as List).cast<int>();
-            } catch (_) {
+            } catch (e) {
+              // AUD-core-sync-35 (EH-3): this legacy-quartet fallback
+              // (pre-`schedule`-column documents) previously swallowed the
+              // jsonDecode/cast failure and silently substituted an empty
+              // day list, changing a family's stage-due schedule with no
+              // trail to diagnose it by. Log the raw malformed value before
+              // falling back.
+              AppLogger.instance.warning(
+                event: 'sync_stage_definition_malformed_days_of_week',
+                fields: {
+                  'curriculum_id': curriculumId,
+                  'track_id': trackId,
+                  'stage_order': stageOrder,
+                  'raw_days_of_week': daysOfWeek,
+                  'error': e.toString(),
+                },
+              );
               days = const [];
             }
           } else if (daysOfWeek is List) {
