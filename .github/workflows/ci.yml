@@ -398,6 +398,56 @@ jobs:
             --project demo-rules \
             "node --test functions/test/firestore_rules.test.mjs"
 
+  # ── 8. functions ───────────────────────────────────────────────────────────
+  # Builds functions/src (tsc) and runs the Cloud Functions handler suite
+  # (learning_tracker/functions/test/cf_*.test.mjs, 3,236 lines / ~274 tests)
+  # against the Firestore + Auth emulators. functions/src/index.ts is the
+  # highest-privilege, rules-bypassing code in the repo (Admin SDK) and
+  # previously had NO CI path — neither a build/type-check nor a test run —
+  # so a Cloud Function regression or a plain TS compile error got a green
+  # check (AUD-firebase-04). Routes through `make test-functions` (AG-1: no
+  # ad-hoc command duplication) and, unlike the firestore-rules job above,
+  # does NOT soft-skip — the suite and Makefile target are permanent parts of
+  # the tree, so a missing file/target is itself a failure worth surfacing.
+  functions:
+    name: functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Java (required by Firebase emulator)
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: learning_tracker/functions/package-lock.json
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Cache Firebase emulator
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/firebase/emulators
+          key: ${{ runner.os }}-firebase-emulator-functions-v1.21.0
+
+      - name: Install functions dependencies
+        working-directory: learning_tracker/functions
+        run: npm ci
+
+      - name: Build and test Cloud Functions (make test-functions)
+        working-directory: learning_tracker
+        run: make test-functions
+
   # ── 9. arb-parity ──────────────────────────────────────────────────────────
   arb-parity:
     name: arb-parity

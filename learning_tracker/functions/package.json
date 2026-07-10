@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "serve": "npm run build && firebase emulators:start --only functions",
-    "deploy": "firebase deploy --only functions"
+    "deploy": "firebase deploy --only functions",
+    "test": "node --test --test-concurrency=1 test/cf_*.test.mjs"
   },
   "engines": {
     "node": "22"
