@@ -22,10 +22,11 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
     as auth_state;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
-import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
-    as validators;
-import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
+import 'package:learning_tracker/features/onboarding/onboarding.dart'
     show kOnboardingComplete;
+import 'package:learning_tracker/features/onboarding/onboarding.dart'
+    as validators
+    show validateDisplayName, validateEmail, validatePassword;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
@@ -287,8 +288,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     } catch (e) {
       final docs = await getApplicationDocumentsDirectory();
       await recover(docs.path);
-      if (mounted)
-        _showError(AppLocalizations.of(context)!.signUpFailed(e.toString()));
+      // AUD-account-24: do not interpolate the raw exception into the
+      // user-facing message (untranslated + leaks implementation detail).
+      // Log it for diagnostics and show the existing localized generic
+      // fallback instead — mirrors the cloud-signup path's own fallback for
+      // an unmapped Firebase error code (see _mapAuthError's default arm).
+      AppLogger.instance.warning(event: 'sign_up_local_failed', exception: e);
+      if (mounted) {
+        _showError(AppLocalizations.of(context)!.signUpErrGeneric);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

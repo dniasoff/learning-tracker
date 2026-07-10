@@ -15,8 +15,9 @@ import 'package:learning_tracker/features/account/presentation/providers/connect
 import 'package:learning_tracker/features/account/presentation/widgets/sign_in_actions.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/sign_in_form.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/sign_in_mode_card.dart';
-import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
-    as validators;
+import 'package:learning_tracker/features/onboarding/onboarding.dart'
+    as validators
+    show validateEmail;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 export 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart'
