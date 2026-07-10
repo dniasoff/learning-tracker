@@ -3165,6 +3165,12 @@ abstract class AppLocalizations {
   /// **'PINs do not match'**
   String get pinsDoNotMatch;
 
+  /// No description provided for @pinInvalidFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a 4-digit numeric PIN'**
+  String get pinInvalidFormat;
+
   /// No description provided for @pinFailedToSave.
   ///
   /// In en, this message translates to:

@@ -136,13 +136,15 @@ void main() {
     });
 
     test('setProfilePin rejects non-4-digit PINs', () async {
+      // AUD-onboarding-16: PinService now throws a typed
+      // InvalidPinFormatException (EH-2/EH-5) instead of ArgumentError.
       expect(
         () => pinService.setProfilePin(profileId, '123'),
-        throwsArgumentError,
+        throwsA(isA<InvalidPinFormatException>()),
       );
       expect(
         () => pinService.setProfilePin(profileId, 'abcd'),
-        throwsArgumentError,
+        throwsA(isA<InvalidPinFormatException>()),
       );
     });
 
@@ -244,9 +246,11 @@ void main() {
     });
 
     test('setTutorPin rejects non-4-digit PINs', () async {
+      // AUD-onboarding-16: PinService now throws a typed
+      // InvalidPinFormatException (EH-2/EH-5) instead of ArgumentError.
       expect(
         () => pinService.setTutorPin(profileId, '12'),
-        throwsArgumentError,
+        throwsA(isA<InvalidPinFormatException>()),
       );
     });
 

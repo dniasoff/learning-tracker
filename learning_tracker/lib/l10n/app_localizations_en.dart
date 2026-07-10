@@ -1772,6 +1772,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pinsDoNotMatch => 'PINs do not match';
 
   @override
+  String get pinInvalidFormat => 'Enter a 4-digit numeric PIN';
+
+  @override
   String get pinFailedToSave => 'Failed to save PIN';
 
   @override

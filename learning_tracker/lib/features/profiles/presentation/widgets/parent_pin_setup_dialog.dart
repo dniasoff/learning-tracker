@@ -116,10 +116,16 @@ class _ParentPinSetupDialogState extends ConsumerState<_ParentPinSetupDialog> {
     try {
       await ref.read(pinServiceProvider).setProfilePin(widget.profileId, pin);
       if (mounted) Navigator.of(context).pop(true);
-    } on ArgumentError catch (e) {
+    } on InvalidPinFormatException catch (e) {
+      // AUD-onboarding-16: PinService now throws a typed
+      // InvalidPinFormatException instead of ArgumentError (whose
+      // Object?-typed .message required an unsafe cast here). This dialog's
+      // own l10n resolution of PIN-service errors is tracked separately
+      // (AUD-profiles-20) — kept behavior-neutral (same message text)
+      // pending that fix.
       if (!mounted) return;
       setState(() {
-        _errorMessage = e.message as String?;
+        _errorMessage = e.message;
         _isConfirmStep = false;
         _firstPin = null;
         _digits = '';

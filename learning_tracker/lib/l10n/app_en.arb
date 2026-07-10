@@ -917,6 +917,7 @@
   "enterNewPin": "Enter New PIN",
   "confirmNewPin": "Confirm New PIN",
   "pinsDoNotMatch": "PINs do not match",
+  "pinInvalidFormat": "Enter a 4-digit numeric PIN",
   "pinFailedToSave": "Failed to save PIN",
   "pinNoActiveProfile": "No active profile",
   "tabBarDashboard": "DASHBOARD",

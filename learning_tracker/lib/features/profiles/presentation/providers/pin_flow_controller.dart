@@ -253,10 +253,16 @@ class PinFlowController extends _$PinFlowController {
         step: PinFlowStep.done,
         digits: '',
       );
-    } on ArgumentError catch (e) {
+    } on InvalidPinFormatException catch (e) {
+      // AUD-onboarding-16: PinService now throws a typed
+      // InvalidPinFormatException instead of ArgumentError (whose
+      // Object?-typed .message required an unsafe cast here). This call
+      // site's own l10n resolution of PIN-service errors is tracked
+      // separately (AUD-profiles-09/AUD-profiles-20) — kept behavior-neutral
+      // (same message text) pending that fix.
       state = state.copyWith(
         busy: false,
-        errorMessage: e.message as String?,
+        errorMessage: e.message,
         step: PinFlowStep.enterNew,
         firstPin: null,
         digits: '',

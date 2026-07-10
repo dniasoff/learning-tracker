@@ -1760,6 +1760,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get pinsDoNotMatch => 'הקודים אינם תואמים';
 
   @override
+  String get pinInvalidFormat => 'יש להזין קוד בן 4 ספרות';
+
+  @override
   String get pinFailedToSave => 'שמירת הקוד נכשלה';
 
   @override

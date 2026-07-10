@@ -63,9 +63,20 @@ void main() {
     });
 
     test('rejects non-4-digit PINs', () async {
-      expect(() => pinService.setParentPin('123'), throwsArgumentError);
-      expect(() => pinService.setParentPin('12345'), throwsArgumentError);
-      expect(() => pinService.setParentPin('abcd'), throwsArgumentError);
+      // AUD-onboarding-16: PinService now throws a typed
+      // InvalidPinFormatException (EH-2/EH-5) instead of ArgumentError.
+      expect(
+        () => pinService.setParentPin('123'),
+        throwsA(isA<InvalidPinFormatException>()),
+      );
+      expect(
+        () => pinService.setParentPin('12345'),
+        throwsA(isA<InvalidPinFormatException>()),
+      );
+      expect(
+        () => pinService.setParentPin('abcd'),
+        throwsA(isA<InvalidPinFormatException>()),
+      );
     });
   });
 

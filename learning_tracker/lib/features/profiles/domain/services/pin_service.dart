@@ -62,7 +62,7 @@ class PinService {
   /// Resets any existing lockout state when a new PIN is set.
   Future<void> setParentPin(String pin) async {
     if (pin.length != 4 || !_isNumeric(pin)) {
-      throw ArgumentError('PIN must be exactly 4 numeric digits');
+      throw const InvalidPinFormatException();
     }
 
     final hash = BCrypt.hashpw(pin, BCrypt.gensalt());
@@ -132,7 +132,7 @@ class PinService {
   /// state for the profile. Plaintext is never persisted.
   Future<void> setProfilePin(int profileId, String pin) async {
     if (pin.length != 4 || !_isNumeric(pin)) {
-      throw ArgumentError('PIN must be exactly 4 numeric digits');
+      throw const InvalidPinFormatException();
     }
     final hash = BCrypt.hashpw(pin, BCrypt.gensalt());
     await _secureStorage.write(key: _profilePinKey(profileId), value: hash);
@@ -196,7 +196,7 @@ class PinService {
   /// parent access does not grant tutor access (and vice versa).
   Future<void> setTutorPin(int profileId, String pin) async {
     if (pin.length != 4 || !_isNumeric(pin)) {
-      throw ArgumentError('PIN must be exactly 4 numeric digits');
+      throw const InvalidPinFormatException();
     }
     final hash = BCrypt.hashpw(pin, BCrypt.gensalt());
     await _secureStorage.write(key: _tutorPinKey(profileId), value: hash);
@@ -328,6 +328,22 @@ class PinLockoutException extends PermissionException {
       );
 
   final int remainingMinutes;
+}
+
+/// Thrown when a PIN fails the 4-digit numeric format validation
+/// ([setParentPin], [setProfilePin], [setTutorPin]).
+///
+/// AUD-onboarding-16 (EH-2/EH-5): this replaces a bare `ArgumentError` whose
+/// `.message` (typed `Object?`) used to be cast straight into UI error text
+/// by callers — an unlocalized English literal reaching Hebrew-locale users,
+/// and a brittle cast that would have become an unhandled `TypeError` the
+/// moment any throw site stopped passing a `String`. [message] is a stable,
+/// English, developer-facing description for logs/`toString()` only —
+/// presentation code MUST catch this type and resolve the user-facing string
+/// via `AppLocalizations`, never read [message] directly.
+class InvalidPinFormatException extends ValidationException {
+  const InvalidPinFormatException()
+    : super('PIN must be exactly 4 numeric digits');
 }
 
 /// Provider for FlutterSecureStorage instance.
