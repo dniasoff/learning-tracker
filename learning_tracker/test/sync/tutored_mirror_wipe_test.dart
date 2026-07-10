@@ -101,6 +101,171 @@ Future<int> _countCompletionEvents(UserDatabase db, int profileId) async {
 }
 
 // ---------------------------------------------------------------------------
+// AUD-core-database-01 — the 6 tables with no FK `ON DELETE CASCADE` on
+// `profileId` (curriculum_tracks, daily_plans, outbox, point_configs,
+// profile_programs, study_day_configs). Seeds one row per table for
+// [profileId] so wipe regression tests can assert they are actually purged
+// instead of silently surviving a mirror wipe.
+// ---------------------------------------------------------------------------
+
+/// Seeds one row in each of the 6 non-cascading tables for [profileId].
+/// Returns the `curriculum_tracks.id` created, since point_configs and
+/// study_day_configs hold a non-nullable FK to it.
+Future<int> _seedNonCascadingRows(UserDatabase db, int profileId) async {
+  final now = DateTimeFactory.nowUtc();
+  final trackId = await db
+      .into(db.curriculumTracks)
+      .insert(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'test-curriculum',
+          stateChangedAt: now,
+          activatedAt: now,
+        ),
+      );
+  await db
+      .into(db.dailyPlans)
+      .insert(
+        DailyPlansCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'test-curriculum',
+          planDate: now,
+          sefariaRef: 'Berakhot.1.1',
+          stageOrder: 1,
+          stageDefinitionId: 1,
+          trackId: trackId,
+          priority: 'overdueChazara',
+          createdAt: now,
+        ),
+      );
+  await db
+      .into(db.outbox)
+      .insert(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: 'completion',
+          entityKey: 'test-entity-key',
+          payload: '{}',
+          createdAt: now,
+        ),
+      );
+  await db
+      .into(db.pointConfigs)
+      .insert(
+        PointConfigsCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'test-curriculum',
+          trackId: trackId,
+          stageOrder: 1,
+          points: 1,
+        ),
+      );
+  await db
+      .into(db.profilePrograms)
+      .insert(
+        ProfileProgramsCompanion.insert(
+          profileId: profileId,
+          curriculumType: 'test-curriculum',
+          programId: 1,
+        ),
+      );
+  await db
+      .into(db.studyDayConfigs)
+      .insert(
+        StudyDayConfigsCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'test-curriculum',
+          trackId: trackId,
+          dayOfWeek: 1,
+          updatedAt: now,
+        ),
+      );
+  return trackId;
+}
+
+Future<int> _countCurriculumTracks(UserDatabase db, int profileId) async {
+  final count = db.curriculumTracks.id.count();
+  final query = db.selectOnly(db.curriculumTracks)
+    ..addColumns([count])
+    ..where(db.curriculumTracks.profileId.equals(profileId));
+  return (await query.getSingle()).read(count) ?? 0;
+}
+
+Future<int> _countDailyPlans(UserDatabase db, int profileId) async {
+  final count = db.dailyPlans.id.count();
+  final query = db.selectOnly(db.dailyPlans)
+    ..addColumns([count])
+    ..where(db.dailyPlans.profileId.equals(profileId));
+  return (await query.getSingle()).read(count) ?? 0;
+}
+
+Future<int> _countOutbox(UserDatabase db, int profileId) async {
+  final count = db.outbox.id.count();
+  final query = db.selectOnly(db.outbox)
+    ..addColumns([count])
+    ..where(db.outbox.profileId.equals(profileId));
+  return (await query.getSingle()).read(count) ?? 0;
+}
+
+Future<int> _countPointConfigs(UserDatabase db, int profileId) async {
+  final count = db.pointConfigs.id.count();
+  final query = db.selectOnly(db.pointConfigs)
+    ..addColumns([count])
+    ..where(db.pointConfigs.profileId.equals(profileId));
+  return (await query.getSingle()).read(count) ?? 0;
+}
+
+Future<int> _countProfilePrograms(UserDatabase db, int profileId) async {
+  final count = db.profilePrograms.id.count();
+  final query = db.selectOnly(db.profilePrograms)
+    ..addColumns([count])
+    ..where(db.profilePrograms.profileId.equals(profileId));
+  return (await query.getSingle()).read(count) ?? 0;
+}
+
+Future<int> _countStudyDayConfigs(UserDatabase db, int profileId) async {
+  final count = db.studyDayConfigs.profileId.count();
+  final query = db.selectOnly(db.studyDayConfigs)
+    ..addColumns([count])
+    ..where(db.studyDayConfigs.profileId.equals(profileId));
+  return (await query.getSingle()).read(count) ?? 0;
+}
+
+/// Asserts all 6 non-cascading tables have zero rows for [profileId].
+Future<void> _expectNonCascadingRowsGone(UserDatabase db, int profileId) async {
+  expect(
+    await _countCurriculumTracks(db, profileId),
+    0,
+    reason: 'curriculum_tracks rows must be purged on mirror wipe',
+  );
+  expect(
+    await _countDailyPlans(db, profileId),
+    0,
+    reason: 'daily_plans rows must be purged on mirror wipe',
+  );
+  expect(
+    await _countOutbox(db, profileId),
+    0,
+    reason: 'outbox rows must be purged on mirror wipe',
+  );
+  expect(
+    await _countPointConfigs(db, profileId),
+    0,
+    reason: 'point_configs rows must be purged on mirror wipe',
+  );
+  expect(
+    await _countProfilePrograms(db, profileId),
+    0,
+    reason: 'profile_programs rows must be purged on mirror wipe',
+  );
+  expect(
+    await _countStudyDayConfigs(db, profileId),
+    0,
+    reason: 'study_day_configs rows must be purged on mirror wipe',
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Fakes
 // ---------------------------------------------------------------------------
 
@@ -430,6 +595,40 @@ void main() {
         expect(own, isNotNull);
         expect(own!.isTutored, isFalse);
       });
+
+      // AUD-core-database-01 — curriculum_tracks, daily_plans, outbox,
+      // point_configs, profile_programs, study_day_configs carry NO FK
+      // `ON DELETE CASCADE` on profileId, unlike completion_events/bookmarks/
+      // etc. above. Without an explicit compensating delete, a revoked
+      // tutoring grant leaves the child's mirrored curriculum/schedule data
+      // on the tutor's device forever.
+      test(
+        'purges the 6 non-cascading tables (curriculum_tracks, daily_plans, '
+        'outbox, point_configs, profile_programs, study_day_configs)',
+        () async {
+          final accountId = await _seedAccount(db);
+          await _seedOwnProfile(db, accountId);
+          final mirrorId = await _seedTutoredMirror(
+            db,
+            accountId: accountId,
+            grantId: 'grant-noncascade',
+          );
+          await _seedNonCascadingRows(db, mirrorId);
+
+          // Sanity: rows exist before wipe.
+          expect(await _countCurriculumTracks(db, mirrorId), 1);
+          expect(await _countDailyPlans(db, mirrorId), 1);
+          expect(await _countOutbox(db, mirrorId), 1);
+          expect(await _countPointConfigs(db, mirrorId), 1);
+          expect(await _countProfilePrograms(db, mirrorId), 1);
+          expect(await _countStudyDayConfigs(db, mirrorId), 1);
+
+          final svc = TutoredMirrorWipeService(profileDao: db.profileDao);
+          await svc.wipeMirrorForGrant('grant-noncascade');
+
+          await _expectNonCascadingRowsGone(db, mirrorId);
+        },
+      );
     });
 
     // ── (S) Sign-out trigger ───────────────────────────────────────────────
@@ -507,6 +706,40 @@ void main() {
         // Account 2 mirror intact.
         expect(await db.profileDao.getProfileById(mirror2), isNotNull);
       });
+
+      // AUD-core-database-01 — same non-cascading-table coverage as the
+      // wipeMirrorForGrant case above, but exercised through the bulk
+      // sign-out path (deleteAllTutoredMirrors), which has its own delete
+      // statement and must not skip the compensating cleanup.
+      test(
+        'purges the 6 non-cascading tables for every wiped mirror',
+        () async {
+          final accountId = await _seedAccount(db);
+          await _seedOwnProfile(db, accountId);
+          final mirror1 = await _seedTutoredMirror(
+            db,
+            accountId: accountId,
+            grantId: 'grant-F',
+            parentUid: 'parent-1',
+            remoteProfileId: 'child-1',
+          );
+          final mirror2 = await _seedTutoredMirror(
+            db,
+            accountId: accountId,
+            grantId: 'grant-G',
+            parentUid: 'parent-2',
+            remoteProfileId: 'child-2',
+          );
+          await _seedNonCascadingRows(db, mirror1);
+          await _seedNonCascadingRows(db, mirror2);
+
+          final svc = TutoredMirrorWipeService(profileDao: db.profileDao);
+          await svc.wipeAllMirrors(accountId);
+
+          await _expectNonCascadingRowsGone(db, mirror1);
+          await _expectNonCascadingRowsGone(db, mirror2);
+        },
+      );
 
       test('fires onWipe for each deleted mirror grant', () async {
         final accountId = await _seedAccount(db);

@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -49,6 +50,17 @@ Future<void> editProfileFlow(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.tutorPermissionDenied),
         ),
+      );
+    }
+    return;
+  } on DuplicateProfileNameException {
+    // AUD-profiles-02: mirrors profile_picker_screen.dart's _showRenameDialog
+    // — a same-account name collision on the Edit dialog must surface
+    // feedback, not throw unhandled out of the button handler.
+    if (context.mounted) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.profileNameTaken(result.name))),
       );
     }
     return;

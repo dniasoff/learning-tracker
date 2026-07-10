@@ -2,11 +2,15 @@
 //   R3-10: offline-first profile deletion.
 //   R-PR4: child→adult mode change must clear stale per-profile PIN from
 //          FlutterSecureStorage.
+//   AUD-profiles-02: editProfileFlow must surface (not swallow) a
+//          TutorWriteException from a tutor-routed pushLearnerProfile, and
+//          must catch DuplicateProfileNameException the same way
+//          profile_picker_screen.dart's rename dialog does.
 //
 // Deleting a cloud-account profile while offline must succeed — the local Drift
 // delete happens immediately and the cloud delete is queued to the outbox.
 // The previous code blocked deletion with an error snackbar when !isOnline.
-@Tags(['l1', 'profiles', 'offline_first', 'r3_10', 'r_pr4'])
+@Tags(['l1', 'profiles', 'offline_first', 'r3_10', 'r_pr4', 'aud_profiles_02'])
 library;
 
 import 'package:flutter/material.dart';
@@ -16,13 +20,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -69,6 +76,56 @@ _MockFlutterSecureStorage _createMockStorage() {
 }
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+/// [SyncWriteFacade] whose [pushLearnerProfile] fails the way a tutor-routed
+/// [TutoredWriteRouter] does on a Cloud Function error (AUD-profiles-02). All
+/// other operations are no-ops.
+class _TutorRoutedFailingFacade implements SyncWriteFacade {
+  @override
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {
+    throw const TutorWriteException(
+      'permission denied',
+      code: 'permission-denied',
+    );
+  }
+
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushGamificationSettingsSnapshot() async {}
+  @override
+  Future<void> pushUiPreferencesSnapshot() async {}
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {}
+  @override
+  Future<void> pushSettings(Map<String, dynamic> settings) async {}
+  @override
+  Future<void> pushGoal(Map<String, dynamic> goal) async {}
+  @override
+  Future<void> deleteGoal(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {}
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> items,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStageDefinitions({
+    required int trackId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> stages,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStudyDayConfig(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
+}
 
 /// A fixed [SelectedProfileId] notifier that starts at [_initial].
 class _FixedSelectedProfileId extends SelectedProfileId {
@@ -860,4 +917,203 @@ void main() {
       await tester.pump(Duration.zero);
     });
   });
+
+  // ── AUD-profiles-02: tutor-routed pushLearnerProfile failures must reach
+  // editProfileFlow's existing `on TutorWriteException` handler ─────────────
+  //
+  // ROOT CAUSE: ProfileRepositoryImpl wrapped every pushLearnerProfile call in
+  // a blanket `catch (_) {}` on the premise that the push is a durable,
+  // retryable offline-first outbox write. When a tutor session is active,
+  // the sync facade is a TutoredWriteRouter instead — a one-shot, non-
+  // retryable Cloud Function RPC. Swallowing that failure the same way left
+  // editProfileFlow's `on TutorWriteException` handler (below) permanently
+  // unreachable: repo.updateProfile could only ever let StateError or
+  // DuplicateProfileNameException escape.
+  //
+  // FIX: ProfileRepositoryImpl now rethrows TutorWriteException instead of
+  // swallowing it. This test exercises the REAL ProfileRepositoryImpl (not a
+  // mock) wired to a facade that fails the way TutoredWriteRouter does, so it
+  // proves the exception actually propagates end-to-end into editProfileFlow.
+
+  group('AUD-profiles-02 — editProfileFlow surfaces tutor-routed push '
+      'failures', () {
+    testWidgets(
+      'a failed tutor-routed pushLearnerProfile shows the tutorPermissionDenied '
+      'snackbar instead of being silently swallowed',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2340);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        const profileId = 10;
+        const accountId = 1;
+        final db = createTestDatabase();
+        await seedProfileWithIds(
+          db,
+          profileId: profileId,
+          accountId: accountId,
+        );
+        addTearDown(() => db.close());
+
+        // Real repository wired to a facade that fails pushLearnerProfile the
+        // way TutoredWriteRouter does on a CF error — exercises the actual
+        // propagation path end-to-end, not a mocked shortcut.
+        final repo = ProfileRepositoryImpl(
+          db,
+          syncEngine: _TutorRoutedFailingFacade(),
+        );
+
+        final profile = ProfileModel(
+          id: profileId,
+          accountId: accountId,
+          displayName: 'Talmid',
+          mode: 'child',
+          avatarIndex: 0,
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [profileRepositoryProvider.overrideWithValue(repo)],
+            child: MaterialApp(
+              locale: const Locale('en'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Consumer(
+                builder: (ctx, ref, _) => Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      key: const Key('trigger_edit'),
+                      onPressed: () => editProfileFlow(ctx, ref, profile),
+                      child: const Text('Edit'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.tap(find.byKey(const Key('trigger_edit')));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Save without changing any field — any Save triggers
+        // repo.updateProfile → pushLearnerProfile → TutorWriteException.
+        final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+        await tester.tap(find.text(l10n.actionSave));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(
+          tester.takeException(),
+          isNull,
+          reason:
+              'the TutorWriteException must be caught by editProfileFlow, '
+              'not thrown unhandled out of the button handler',
+        );
+        expect(
+          find.text(l10n.tutorPermissionDenied),
+          findsOneWidget,
+          reason:
+              'AUD-profiles-02: a failed tutor-routed pushLearnerProfile '
+              'must surface a user-visible error from editProfileFlow — '
+              'previously this catch clause was unreachable because '
+              'ProfileRepositoryImpl swallowed every push failure',
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+  });
+
+  // ── AUD-profiles-02: editProfileFlow must catch DuplicateProfileNameException
+  // the same way profile_picker_screen.dart's rename dialog does ────────────
+
+  group(
+    'AUD-profiles-02 — editProfileFlow catches DuplicateProfileNameException',
+    () {
+      testWidgets(
+        'a same-account name collision on Edit shows profileNameTaken '
+        'instead of throwing unhandled',
+        (tester) async {
+          tester.view.physicalSize = const Size(1080, 2340);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+
+          final repo = _MockProfileRepository();
+          when(
+            () => repo.updateProfile(
+              id: any(named: 'id'),
+              displayName: any(named: 'displayName'),
+              mode: any(named: 'mode'),
+              avatarIndex: any(named: 'avatarIndex'),
+            ),
+          ).thenThrow(const DuplicateProfileNameException('Original'));
+
+          final profile = _cloudProfile(id: 11, name: 'Original');
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [profileRepositoryProvider.overrideWithValue(repo)],
+              child: MaterialApp(
+                locale: const Locale('en'),
+                localizationsDelegates: const [
+                  AppLocalizations.delegate,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Consumer(
+                  builder: (ctx, ref, _) => Scaffold(
+                    body: Center(
+                      child: ElevatedButton(
+                        key: const Key('trigger_edit'),
+                        onPressed: () => editProfileFlow(ctx, ref, profile),
+                        child: const Text('Edit'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 100));
+
+          await tester.tap(find.byKey(const Key('trigger_edit')));
+          await tester.pump(const Duration(milliseconds: 300));
+
+          final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+          await tester.tap(find.text(l10n.actionSave));
+          await tester.pump(const Duration(milliseconds: 300));
+
+          expect(
+            tester.takeException(),
+            isNull,
+            reason:
+                'AUD-profiles-02: DuplicateProfileNameException must be '
+                'caught by editProfileFlow, not thrown unhandled out of the '
+                'button handler',
+          );
+          expect(
+            find.text(l10n.profileNameTaken('Original')),
+            findsOneWidget,
+            reason:
+                'editProfileFlow must show the same profileNameTaken '
+                'feedback as profile_picker_screen.dart\'s rename dialog',
+          );
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(Duration.zero);
+        },
+      );
+    },
+  );
 }

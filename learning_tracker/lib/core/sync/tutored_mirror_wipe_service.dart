@@ -8,10 +8,15 @@
 //   (2) Sign-out — wipe every tutored mirror for the current account so no
 //       child data persists for the next user of the device.
 //
-// The FK `ON DELETE CASCADE` on every per-profile child table means deleting
-// the learner_profiles row cascades to all mirrored rows in completions,
-// streak_events, learning_ledger, bookmarks, goals, curriculum_tracks, etc.
-// No explicit child-row deletion is needed.
+// The FK `ON DELETE CASCADE` on MOST per-profile child tables means deleting
+// the learner_profiles row cascades to most mirrored rows (completions,
+// streak_events, learning_ledger, bookmarks, goals, etc.). AUD-core-database-01
+// correction: 6 tables carry NO such FK (curriculum_tracks, daily_plans,
+// outbox, point_configs, profile_programs, study_day_configs) — ProfileDao's
+// deleteTutoredMirrorByGrantId / deleteAllTutoredMirrors explicitly clear
+// those 6 first, in the same transaction as the profile-row delete, so this
+// service still needs no extra step of its own — but the purge is NOT purely
+// FK-cascade. See ProfileDao for the compensating deletes.
 //
 // Intentionally thin — no Riverpod import; callers inject the provider-clear
 // callback so this service stays in core/ without a features/ dependency.
