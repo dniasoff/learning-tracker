@@ -4,12 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart'
     hide StreakEvent;
+import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
-import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
 
 import '../helpers/drift_memory.dart' show seedProfile;
 

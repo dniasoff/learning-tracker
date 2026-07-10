@@ -12,6 +12,7 @@
 library;
 
 import 'package:drift/drift.dart' show Value, Variable;
+import 'package:learning_tracker/app/restore/device_restore_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -19,7 +20,6 @@ import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
-import 'package:learning_tracker/features/sync/domain/services/device_restore_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talker/talker.dart';
