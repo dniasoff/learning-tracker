@@ -5309,13 +5309,17 @@
   {
    "id": "AUD-onboarding-15",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove unreachable English-only default parameter values in AppIntroScreen's _IntroPage",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "9f2f967da4cec572e723990db21a7c1f604bc98c"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-onboarding-15 AC1 OK: params :432/:457 now `required String talmidChochomLabel`; flutter analyze 'No issues found!' exit 0 proves no caller used the default"
+   ],
+   "notes": "Verified both call sites always pass talmidChochomLabel explicitly; defaults at lines 432/457 were dead. Made both params required. flutter analyze: 'No issues found!' confirms no caller relied on default (sole AC). Merge-lane w2r1c20: rebased onto audit-fix/2026-07-03 (rebasedSha 41f66bbf4927d2dbd232036a23e92e76e2753411, file-disjoint vs branch delta since merge-base -- gatePolicy=disjoint-skip, wave-closing make ci is the integration gate). make audit checks 1-24, 26, 27 clean; flutter analyze clean (0 issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge solely due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's find .. from the main checkout -- filesystem-only, independent of git HEAD/content, matching the pre-existing environmental pattern already documented elsewhere in this ledger. payload.touchedStrings=false so make arb-parity skipped. Merged --no-ff onto audit-fix/2026-07-03 (mergeSha 9f2f967da4cec572e723990db21a7c1f604bc98c)."
   },
   {
    "id": "AUD-onboarding-12",
