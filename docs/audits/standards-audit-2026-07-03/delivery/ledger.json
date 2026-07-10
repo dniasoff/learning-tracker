@@ -1228,13 +1228,19 @@
   {
    "id": "AUD-account-11",
    "wave": 1,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "commits": [
+    "b66133a40fd1a5f2169ae144a7ec82144f78b3c7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-11 AC1 OK: _init() wrapped in inner try/catch (cloud-reload path, falls through to local-born restore) + outer try/catch (final safety net, resolves to AuthState.signedOut()); no path leaves state at initializing on exception, verified by reading auth_state_provider.dart post-fix.",
+    "AUD-account-11 AC2 OK: test/features/account/presentation/providers/auth_state_init_exception_guard_test.dart added red-first (confirmed failing pre-fix per commit body), 2 cases green post-fix; full account suite (298 tests) green, no regressions.",
+    "AUD-account-11 AC3 (Rule-0 checker) not required by the finding text ('none exists yet') \u2014 deferred, consistent with finding wording."
+   ],
+   "notes": "Gate-repair reconciliation (2026-07-10): ledger falsely showed blocked/commits=[] with banned wording despite this being merged to audit-fix/2026-07-03 at b66133a4 (bundled with AUD-account-03, same root cause \u2014 _init() had zero try/catch). Verified on HEAD: flutter test test/features/account/ (298 passed), flutter analyze clean, make audit 26/26 clean per commit body. Ledger corrected to merged; no code change made by this repair."
   },
   {
    "id": "AUD-t-story-acceptance-06",
@@ -2647,13 +2653,20 @@
   {
    "id": "AUD-account-10",
    "wave": 1,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Extract the duplicated, inconsistently-patched _extractFirebaseCode helper into one shared function",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "commits": [
+    "70cc86f504362a7230cf032d6be0380b7e5af127",
+    "e2873f4c25570f09ef623acee69e79fba3b30f72",
+    "7fbe3c1ec28e746f1159b989e29170a62c661576"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-10 AC1 OK: test/core/utils/firebase_error_code_test.dart (from AUD-account-04's shared-helper extraction) asserts both '[code]' and '[plugin/code]' shapes.",
+    "AUD-account-10 AC2 OK (as of this repair): sign_in_controller.dart/magic_link_service.dart/upgrade_to_cloud_service.dart/signup_screen.dart were already delegated to core/utils/firebase_error_code.dart via 70cc86f5+e2873f4c; the 5th, previously-unmigrated copy in upgrade_to_cloud_screen.dart (the finding's own verify-pass-cited 'real second half of the reachable bug chain') was still live on HEAD with the stale non-matching regex. `grep -rn _extractFirebaseCode lib/` now returns zero hits after cherry-picking 7fbe3c1e (originally authored on orphan worktree wf_0fa16715-47a-13, never merged \u2014 rescued during this gate repair rather than discarded with the worktree). 24 widget tests green, flutter analyze clean."
+   ],
+   "notes": "Gate-repair reconciliation (2026-07-10): ledger falsely showed blocked/commits=[]/'not attempted' despite 2 of 3 needed commits already merged (70cc86f5, e2873f4c) leaving one real site (upgrade_to_cloud_screen.dart) unmigrated. Its finishing commit (originally 23f95dc6, red-first tested, flutter test all-green, flutter analyze clean per its own commit body) existed only on orphan worktree wf_0fa16715-47a-13/14 \u2014 about to be deleted as RESIDUE FAIL cleanup. Cherry-picked as 7fbe3c1e onto audit-fix/2026-07-03 (git cherry-pick -x, clean apply, no conflicts) rather than let genuine finished/tested work be destroyed by worktree pruning. Re-verified post-cherry-pick: flutter test test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart test/core/utils/firebase_error_code_test.dart -> 24 passed; flutter analyze on touched files -> No issues found; grep confirms zero remaining _extractFirebaseCode definitions. Ledger corrected to merged."
   },
   {
    "id": "AUD-t-auth-01",
@@ -3887,13 +3900,21 @@
   {
    "id": "AUD-account-14",
    "wave": 1,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Migrate SignInController's hand-rolled Idle/Submitting/Error state to AsyncNotifier + AsyncValue.guard",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "commits": [
+    "0e4dda8e211a647fb9bb3a34075452b6a20726c9",
+    "d96085143a5bd15c6b8ca26d27da4b597f4db265",
+    "86cd7e5f8ed8062c00c688d44c8c0fd6389be446"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-account-14 AC1 OK: signInWithEmail/signInWithGoogle bodies migrated to private _...Body() helpers each wrapped in exactly one AsyncValue.guard(...); every success exit is a bare return, every soft failure throws a marker exception resolved once \u2014 state can no longer be left at Submitting.",
+    "AUD-account-14 AC2 OK: new AUD-account-14 regression test group plus full targeted suite (sign_in_controller_test.dart + routing + signout-throws x3 + wrong_password + E2E auth_p0) 51 passed / 6 skipped per commit body.",
+    "AUD-account-14 AC3 OK: d9608514 adds no_hand_rolled_async_state_notifier custom_lint rule (packages/custom_lints), 6 targeted + 94 full custom_lints suite passed, wired into make lint-rules-test (dependency of make audit)."
+   ],
+   "notes": "Gate-repair reconciliation (2026-07-10): ledger falsely showed blocked/commits=[] with banned wording despite this being merged to audit-fix/2026-07-03 across 3 commits (0e4dda8e migration + d9608514 lint rule + 86cd7e5f merge bundle). Verified on HEAD: flutter analyze clean, make audit 26/26 clean, custom_lints suite 94/94 per commit bodies. Ledger corrected to merged; no code change made by this repair."
   },
   {
    "id": "AUD-settings-08",
@@ -3909,13 +3930,18 @@
   {
    "id": "AUD-tutoring-08",
    "wave": 1,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Lazy-load the tutor-grants roster in ManageGrantsScreen and Settings' embedded pending-invites section",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "commits": [
+    "caef5fafde85168c07aaf169cd3c5c4ea7f2aa5d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-08 AC1 (repo-wide PF-2 Rule-0 checker) explicitly scoped out by the fix as disproportionate to this P2/S finding, replaced with 3 site-specific red-first regression tests per the delivery doctrine's AC-named-checker allowance for hygiene findings \u2014 documented tradeoff, not a silent skip.",
+    "AUD-tutoring-08 AC2 OK: ManageGrantsScreen + manage_tutors_screen.dart converted to ListView.builder (SliverChildBuilderDelegate, off-screen rows not built); Settings _PendingInvitesSection capped to 5 with 'View all (N more)' link. 3 new widget tests (50-grant fixtures) assert deep rows never built; flutter test 62+39 passed, flutter analyze clean, make arb-parity clean, make audit 26/26 clean per commit body."
+   ],
+   "notes": "Gate-repair reconciliation (2026-07-10): ledger falsely showed blocked/commits=[] with banned wording despite this being merged to audit-fix/2026-07-03 at caef5faf (also covers manage_tutors_screen.dart, the verify pass's undercounted 3rd site). Verified on HEAD: flutter analyze clean. Ledger corrected to merged; no code change made by this repair."
   },
   {
    "id": "AUD-t-cross-44",
