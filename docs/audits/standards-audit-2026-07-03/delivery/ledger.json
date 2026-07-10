@@ -3337,13 +3337,18 @@
   {
    "id": "AUD-core-sync-14",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Add error handling and logging to resetFirestoreNetwork's disable/enable sequence in firestore_instance_provider.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "4c2865873b803ce71679b1466596617f669b72ae"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-14 AC1 OK: provider.dart:54-63 try/catch inside fn wraps disable/enableNetwork, logs AppLogger.warning, swallows; 2 error-path tests pass",
+    "AUD-core-sync-14 AC2 OK: test 99-137 stubs enableNetwork throw after disable ok, real LifecycleObserver resume asserts calls==[tz,cache,pull]+log; passes"
+   ],
+   "notes": "Re-verified: resetFirestoreNetwork() had no try/catch/log, confirmed at HEAD. Prod caller already outer-catches, but AC-1 requires guard INSIDE the function. Added internal try/catch+AppLogger log + @visibleForTesting seams. Red-first test written first, confirmed red, then green. Both ACs verified. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c14, mergeSha 4c2865873b803ce71679b1466596617f669b72ae). Post-rebase gate: make audit checks 1-24 and 26/27-27/27 clean; flutter analyze clean (no issues found); make arb-parity clean (touchedStrings, 1425 English keys all present in Hebrew). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~48 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed identical hit count regardless of checked-out commit), matching the pre-existing environmental pattern already documented for w1r0c2 through w2r1c12 in this same ledger, not a regression from this change. gatePolicy=disjoint-skip: rebase vs audit-fix/2026-07-03 tip was file-disjoint (payload touched only learning_tracker/lib/core/logging/log_events.dart, learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart, and learning_tracker/test/core/sync/firestore_instance_provider_test.dart; no overlap with the audit-fix/2026-07-03 delta since merge-base), so payload.testsToRun was not re-run in the merge lane; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-account-17",
