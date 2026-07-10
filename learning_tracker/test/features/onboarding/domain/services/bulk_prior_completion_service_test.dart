@@ -298,6 +298,86 @@ void main() {
       ).called(1);
     });
 
+    // ── AUD-onboarding-08 (SM-7) — profileId branch uses the injected seam ──
+
+    test('execute(profileId: X) routes the bookmark write through the '
+        'injected bookmarkRepositoryFactory(X), not the session bookmarkRepo '
+        'and not a bare BookmarkRepositoryImpl construction', () async {
+      const targetProfileId = 42;
+      final factoryRepo = MockBookmarkRepository();
+      when(
+        () => factoryRepo.setBookmark(
+          curriculumId: any(named: 'curriculumId'),
+          sefariaRef: any(named: 'sefariaRef'),
+        ),
+      ).thenAnswer((_) async => _fakeBookmarkEntity());
+
+      final factoryCalledWith = <int>[];
+      BookmarkRepository factory(int pid) {
+        factoryCalledWith.add(pid);
+        return factoryRepo;
+      }
+
+      final profiledService = BulkPriorCompletionService(
+        contentRepository: contentRepo,
+        completionRepository: completionRepo,
+        // The session-scoped repo must NOT receive this call — asserted
+        // below via verifyNever.
+        bookmarkRepository: bookmarkRepo,
+        bookmarkRepositoryFactory: factory,
+        database: memoryDb,
+        syncEngine: null,
+      );
+
+      when(() => completionRepo.bulkMarkComplete(any())).thenAnswer(
+        (_) async => [_fakeCompletion('ref_0'), _fakeCompletion('ref_1')],
+      );
+      when(
+        () => completionRepo.getCompletionsByCurriculum(
+          any(),
+          profileId: any(named: 'profileId'),
+        ),
+      ).thenAnswer((_) async => []);
+      when(() => contentRepo.getContentForCurriculum(curriculum)).thenAnswer(
+        (_) async => [
+          ...items,
+          _leaf(ref: 'ref_2', sortOrder: 2),
+          _leaf(ref: 'ref_3', sortOrder: 3),
+        ],
+      );
+
+      final result = await profiledService.execute(
+        curriculumId: curriculum,
+        resolvedItems: items,
+        stageIds: [1],
+        profileId: targetProfileId,
+      );
+
+      expect(result.bookmarkSefariaRef, 'ref_2');
+      expect(
+        factoryCalledWith,
+        [targetProfileId],
+        reason:
+            'the factory must be invoked with exactly the caller-'
+            'supplied profileId, not the session profile',
+      );
+      // The "read" proving the write landed under profile X: the
+      // factory-scoped repository (the one execute() builds specifically
+      // for profile X) recorded the setBookmark call.
+      verify(
+        () => factoryRepo.setBookmark(
+          curriculumId: curriculum,
+          sefariaRef: 'ref_2',
+        ),
+      ).called(1);
+      verifyNever(
+        () => bookmarkRepo.setBookmark(
+          curriculumId: any(named: 'curriculumId'),
+          sefariaRef: any(named: 'sefariaRef'),
+        ),
+      );
+    });
+
     test('returns null bookmark when all items completed', () async {
       when(() => completionRepo.bulkMarkComplete(any())).thenAnswer(
         (_) async => [_fakeCompletion('ref_0'), _fakeCompletion('ref_1')],

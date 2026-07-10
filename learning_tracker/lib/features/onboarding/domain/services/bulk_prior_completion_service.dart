@@ -13,7 +13,6 @@ import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
@@ -86,7 +85,6 @@ class BulkPriorCompletionService {
   final CompletionRepository _completionRepository;
   final BookmarkRepository _bookmarkRepository;
   final UserDatabase _database;
-  final SyncWriteFacade? _syncEngine;
   final AnalyticsService _analytics;
   final StageDefinitionRepository? _stageRepository;
 
@@ -94,6 +92,20 @@ class BulkPriorCompletionService {
   /// [expungePriorCompletions]. When `null`, tombstones are written locally
   /// but NOT propagated to Firestore (a warning is logged).
   final OutboxDao? _outboxDao;
+
+  /// Factory for a [BookmarkRepository] scoped to an arbitrary profile
+  /// (AUD-onboarding-08, SM-7). [execute]'s `profileId` parameter can name a
+  /// profile other than the session's — the live path is a parent adding a
+  /// track for a specific child — and that write must go through an
+  /// injectable seam, not a bare `new` construction, so tests can intercept
+  /// it. Mirrors `bookmarkRepositoryFactoryProvider`
+  /// (`lib/features/learning/presentation/providers/bookmark_providers.dart`),
+  /// the same seam `CompletionRepositoryImpl._advanceBookmark` already uses
+  /// for the identical delegated-profile scenario. When `null` (a test
+  /// constructing this service directly without the provider), [execute]
+  /// falls back to the injected [_bookmarkRepository] regardless of
+  /// `profileId` rather than constructing a `BookmarkRepositoryImpl` itself.
+  final BookmarkRepository Function(int profileId)? _bookmarkRepositoryFactory;
 
   /// Cached content items from the last [resolveSelections] call.
   List<ContentItem>? _cachedAllItems;
@@ -104,18 +116,29 @@ class BulkPriorCompletionService {
     required CompletionRepository completionRepository,
     required BookmarkRepository bookmarkRepository,
     required UserDatabase database,
+    // Retained for call-site/API compatibility but intentionally unused:
+    // AUD-onboarding-08 removed the last consumer (an ad-hoc
+    // `BookmarkRepositoryImpl(syncEngine: _syncEngine, ...)` construction in
+    // execute()'s profileId branch). That branch now routes through
+    // [bookmarkRepositoryFactory], whose own provider
+    // (`bookmarkRepositoryFactoryProvider`) sources its own sync engine —
+    // this service no longer needs one directly. Dropping the parameter
+    // would require updating ~40 existing call sites for zero behavioural
+    // change; kept as a no-op instead.
+    // ignore: avoid_unused_constructor_parameters
     SyncWriteFacade? syncEngine,
     AnalyticsService? analytics,
     StageDefinitionRepository? stageRepository,
     OutboxDao? outboxDao,
+    BookmarkRepository Function(int profileId)? bookmarkRepositoryFactory,
   }) : _contentRepository = contentRepository,
        _completionRepository = completionRepository,
        _bookmarkRepository = bookmarkRepository,
        _database = database,
-       _syncEngine = syncEngine,
        _analytics = analytics ?? const NullAnalyticsService(),
        _stageRepository = stageRepository,
-       _outboxDao = outboxDao;
+       _outboxDao = outboxDao,
+       _bookmarkRepositoryFactory = bookmarkRepositoryFactory;
 
   /// Resolve hierarchy selections into leaf-level sefariaRefs.
   ///
@@ -278,13 +301,13 @@ class BulkPriorCompletionService {
     );
 
     if (bookmarkRef != null) {
-      final bookmarkRepo = profileId != null
-          ? BookmarkRepositoryImpl(
-              database: _database,
-              syncEngine: _syncEngine,
-              contentRepository: _contentRepository,
-              profileId: profileId,
-            )
+      // AUD-onboarding-08 (SM-7): route the delegated-profile write through
+      // the injected factory seam instead of `new`-ing a BookmarkRepositoryImpl
+      // here. See the [_bookmarkRepositoryFactory] doc comment for the
+      // fallback rationale.
+      final factory = _bookmarkRepositoryFactory;
+      final bookmarkRepo = (profileId != null && factory != null)
+          ? factory(profileId)
           : _bookmarkRepository;
       await bookmarkRepo.setBookmark(
         curriculumId: curriculumId,
