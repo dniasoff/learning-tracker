@@ -190,25 +190,35 @@ void main() {
       await expectLater(service.importData(json), completes);
     });
 
-    test('clears existing data before importing', () async {
-      // Pre-populate a track.
-      await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+    test(
+      'clears existing data for the imported profile before importing',
+      () async {
+        // Pre-populate a track for profile 1 (seedProfile in setUp created
+        // account id=1 / learner profile id=1).
+        await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: 1,
+                curriculumId: 'bavli',
+                stateChangedAt: DateTime.utc(2026, 1, 1),
+                activatedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
 
-      // Import with empty curriculumTracks — should wipe the existing row.
-      await service.importData(jsonEncode(minimalPayload()));
+        // AUD-settings-03: clears are scoped to the profiles/accounts present
+        // in the payload — include profile 1 so it's in scope, then import
+        // with an empty curriculumTracks section. The pre-existing row for
+        // profile 1 should still be wiped.
+        final payload = minimalPayload()
+          ..['userProfiles'] = [userProfileMap(id: 1)]
+          ..['learnerProfiles'] = [learnerProfileMap(id: 1, accountId: 1)];
+        await service.importData(jsonEncode(payload));
 
-      final tracks = await db.select(db.curriculumTracks).get();
-      expect(tracks, isEmpty);
-    });
+        final tracks = await db.select(db.curriculumTracks).get();
+        expect(tracks, isEmpty);
+      },
+    );
   });
 
   // =========================================================================
@@ -233,8 +243,14 @@ void main() {
 
       await service.importData(jsonEncode(payload));
 
-      final accounts = await db.select(db.accounts).get();
-      expect(accounts.first.email, contains('42'));
+      // AUD-settings-03: import is scoped to account id 42 only, so the
+      // seedProfile-created account (id 1) also survives untouched —
+      // look up the imported account explicitly rather than assuming it's
+      // the only (or first) row.
+      final imported = await (db.select(
+        db.accounts,
+      )..where((t) => t.id.equals(42))).getSingle();
+      expect(imported.email, contains('42'));
     });
 
     test('imports multiple accounts', () async {
@@ -998,6 +1014,363 @@ void main() {
       expect(events, hasLength(1));
       expect(events.first['eventType'], 'grace');
       expect(events.first['clientDeviceId'], 'dev-xyz');
+    });
+  });
+
+  // =========================================================================
+  // importData — profile isolation (AUD-settings-03)
+  //
+  // The method's own doc comment promises a per-profile import that "does
+  // not hard-delete accounts not present in the export". Before this fix,
+  // every clear-step in importData() was a bare `delete(table).go()` with
+  // no `.where()` — an unconditional wipe of every profile on the device,
+  // not just the one(s) present in the import payload.
+  // =========================================================================
+
+  group('DataExportImportService.importData — profile isolation', () {
+    test('importing a payload scoped to profile A leaves profile B rows in '
+        'all 16 user-data tables byte-for-byte unchanged', () async {
+      // ── Seed two independent profiles (siblings on one device) ──────
+      final acctAId = await db
+          .into(db.accounts)
+          .insertReturning(
+            AccountsCompanion.insert(
+              email: 'alice@placeholder.local',
+              tier: 'localBorn',
+              displayName: 'Alice',
+              createdAt: DateTime.utc(2026, 1, 1),
+              updatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          )
+          .then((r) => r.id);
+      final lpAId = await db
+          .into(db.learnerProfiles)
+          .insertReturning(
+            LearnerProfilesCompanion.insert(
+              accountId: acctAId,
+              displayName: 'Alice (Learner)',
+              mode: 'adult',
+              createdAt: DateTime.utc(2026, 1, 1),
+              updatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          )
+          .then((r) => r.id);
+
+      final acctBId = await db
+          .into(db.accounts)
+          .insertReturning(
+            AccountsCompanion.insert(
+              email: 'bob@placeholder.local',
+              tier: 'localBorn',
+              displayName: 'Bob',
+              createdAt: DateTime.utc(2026, 2, 1),
+              updatedAt: DateTime.utc(2026, 2, 1),
+            ),
+          )
+          .then((r) => r.id);
+      final lpBId = await db
+          .into(db.learnerProfiles)
+          .insertReturning(
+            LearnerProfilesCompanion.insert(
+              accountId: acctBId,
+              displayName: 'Bob (Learner)',
+              mode: 'child',
+              createdAt: DateTime.utc(2026, 2, 1),
+              updatedAt: DateTime.utc(2026, 2, 1),
+            ),
+          )
+          .then((r) => r.id);
+
+      Future<int> seedTrackFor(int profileId, String curriculumId) => db
+          .into(db.curriculumTracks)
+          .insertReturning(
+            CurriculumTracksCompanion.insert(
+              profileId: profileId,
+              curriculumId: curriculumId,
+              stateChangedAt: DateTime.utc(2026, 1, 5),
+              activatedAt: DateTime.utc(2026, 1, 5),
+            ),
+          )
+          .then((r) => r.id);
+
+      final trackA = await seedTrackFor(lpAId, 'mishnayos');
+      final trackB = await seedTrackFor(lpBId, 'bavli');
+
+      // Seed one representative row per profile-scoped table for each
+      // profile (14 of the 16 delete sites — accounts/learnerProfiles
+      // already seeded above).
+      Future<void> seedRowsFor(
+        int profileId,
+        int trackId,
+        String curriculumId,
+        String refPrefix,
+      ) async {
+        await db
+            .into(db.curriculumScopes)
+            .insert(
+              CurriculumScopesCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                trackId: trackId,
+                scopeLevel: 1,
+                scopeValue: '$refPrefix-scope',
+                createdAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+        await db
+            .into(db.profilePrograms)
+            .insert(
+              ProfileProgramsCompanion.insert(
+                profileId: profileId,
+                curriculumType: curriculumId,
+                programId: 1,
+              ),
+            );
+        await db
+            .into(db.stageDefinitions)
+            .insert(
+              StageDefinitionsCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                trackId: trackId,
+                stageOrder: 1,
+                stageName: '$refPrefix-stage',
+              ),
+            );
+        await db
+            .into(db.pointConfigs)
+            .insert(
+              PointConfigsCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                trackId: trackId,
+                stageOrder: 1,
+                points: 10,
+              ),
+            );
+        await db
+            .into(db.studyDayConfigs)
+            .insert(
+              StudyDayConfigsCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                trackId: trackId,
+                dayOfWeek: 2,
+                updatedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+        await seedCompletion(
+          db,
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            sefariaRef: '$refPrefix.1.1',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(trackId),
+            eventTimestamp: DateTime.utc(2026, 1, 10),
+          ),
+        );
+        await db
+            .into(db.dailyPlans)
+            .insert(
+              DailyPlansCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                planDate: DateTime.utc(2026, 1, 11),
+                sefariaRef: '$refPrefix.1.1',
+                stageOrder: 1,
+                stageDefinitionId: 1,
+                trackId: trackId,
+                priority: 'normal',
+                createdAt: DateTime.utc(2026, 1, 11),
+              ),
+            );
+        await db
+            .into(db.learningLedger)
+            .insert(
+              LearningLedgerCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                entryScope: 'daf',
+                unitIdentifier: '$refPrefix.1.1',
+                unitDisplayNameHe: refPrefix,
+                unitDisplayNameEn: refPrefix,
+                trackType: 'personal',
+                completedAt: DateTime.utc(2026, 1, 10),
+                completionNumber: 1,
+                markedBy: profileId,
+              ),
+            );
+        await db
+            .into(db.bookmarks)
+            .insert(
+              BookmarksCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                trackId: trackId,
+                sefariaRef: '$refPrefix.1.1',
+                updatedAt: DateTime.utc(2026, 1, 10),
+              ),
+            );
+        await db
+            .into(db.learningOrder)
+            .insert(
+              LearningOrderCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                sefariaRef: '$refPrefix.1.1',
+                userSortOrder: 1,
+              ),
+            );
+        await db
+            .into(db.trackLearningOrder)
+            .insert(
+              TrackLearningOrderCompanion.insert(
+                trackId: trackId,
+                sefariaRef: '$refPrefix.1.1',
+                sortOrder: 1,
+              ),
+            );
+        await db
+            .into(db.goals)
+            .insert(
+              GoalsCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculumId,
+                trackId: trackId,
+                createdAt: DateTime.utc(2026, 1, 1),
+                updatedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+        await db
+            .into(db.streakEvents)
+            .insert(
+              StreakEventsCompanion.insert(
+                profileId: profileId,
+                eventType: 'completion',
+                dayUtc: DateTime.utc(2026, 1, 10),
+                eventTimestamp: DateTime.utc(2026, 1, 10, 18),
+              ),
+            );
+      }
+
+      await seedRowsFor(lpAId, trackA, 'mishnayos', 'Alice');
+      await seedRowsFor(lpBId, trackB, 'bavli', 'Bob');
+
+      // ── Snapshot Bob's rows across all 16 tables before import ──────
+      Future<Map<String, List<Object?>>> snapshotB() async => {
+        'streakEvents': await (db.select(
+          db.streakEvents,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'completionEvents': await (db.select(
+          db.completionEvents,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'learningLedger': await (db.select(
+          db.learningLedger,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'dailyPlans': await (db.select(
+          db.dailyPlans,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'trackLearningOrder': await (db.select(
+          db.trackLearningOrder,
+        )..where((t) => t.trackId.equals(trackB))).get(),
+        'learningOrder': await (db.select(
+          db.learningOrder,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'bookmarks': await (db.select(
+          db.bookmarks,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'goals': await (db.select(
+          db.goals,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'studyDayConfigs': await (db.select(
+          db.studyDayConfigs,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'pointConfigs': await (db.select(
+          db.pointConfigs,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'stageDefinitions': await (db.select(
+          db.stageDefinitions,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'profilePrograms': await (db.select(
+          db.profilePrograms,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'curriculumScopes': await (db.select(
+          db.curriculumScopes,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'curriculumTracks': await (db.select(
+          db.curriculumTracks,
+        )..where((t) => t.profileId.equals(lpBId))).get(),
+        'learnerProfiles': await (db.select(
+          db.learnerProfiles,
+        )..where((t) => t.id.equals(lpBId))).get(),
+        'accounts': await (db.select(
+          db.accounts,
+        )..where((t) => t.id.equals(acctBId))).get(),
+      };
+
+      final beforeB = await snapshotB();
+      // Sanity: every section must actually hold a row for B, otherwise
+      // the isolation assertion below would be vacuously true.
+      for (final entry in beforeB.entries) {
+        expect(
+          entry.value,
+          isNotEmpty,
+          reason: '${entry.key} fixture must seed a row for profile B',
+        );
+      }
+
+      // ── Build a payload scoped to profile A only ─────────────────────
+      // exportData() itself dumps the whole device (out of this fix's
+      // scope — see AUD-settings-03); filtering its output down to A's
+      // rows here simulates what a future per-profile export would
+      // produce, and exercises importData()'s isolation contract.
+      final fullExport =
+          jsonDecode(await service.exportData()) as Map<String, dynamic>;
+      final aOnly = Map<String, dynamic>.from(fullExport);
+      bool matchesA(Map<String, dynamic> row, String key) {
+        if (key == 'userProfiles') return row['id'] == acctAId;
+        if (key == 'learnerProfiles') return row['id'] == lpAId;
+        if (key == 'trackLearningOrder') return row['trackId'] == trackA;
+        return row['profileId'] == lpAId;
+      }
+
+      for (final key in [
+        'userProfiles',
+        'learnerProfiles',
+        'curriculumTracks',
+        'curriculumScopes',
+        'profilePrograms',
+        'stageDefinitions',
+        'pointConfigs',
+        'studyDayConfigs',
+        'completionEvents',
+        'dailyPlans',
+        'learningLedger',
+        'bookmarks',
+        'learningOrder',
+        'trackLearningOrder',
+        'goals',
+        'streakEvents',
+      ]) {
+        final rows = (fullExport[key] as List).cast<Map<String, dynamic>>();
+        aOnly[key] = rows.where((r) => matchesA(r, key)).toList();
+      }
+
+      await service.importData(jsonEncode(aOnly));
+
+      // ── Profile B must be completely untouched ───────────────────────
+      final afterB = await snapshotB();
+      for (final key in beforeB.keys) {
+        expect(
+          afterB[key],
+          equals(beforeB[key]),
+          reason:
+              'profile B rows in $key must survive importing profile '
+              'A only',
+        );
+      }
     });
   });
 }

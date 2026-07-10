@@ -219,7 +219,33 @@ void main() {
             ),
           );
 
-      await service.importData(buildImportJson());
+      // AUD-settings-03: clears are scoped to the profiles/accounts present
+      // in the payload — include profile 1 (seeded via seedProfile in
+      // setUp) so it's in scope, with otherwise-empty data sections.
+      await service.importData(
+        buildImportJson(
+          userProfiles: [
+            {
+              'id': 1,
+              'displayName': 'Test User',
+              'tier': 'localBorn',
+              'createdAt': '2026-01-01T00:00:00.000Z',
+              'updatedAt': '2026-01-01T00:00:00.000Z',
+            },
+          ],
+          learnerProfiles: [
+            {
+              'id': 1,
+              'accountId': 1,
+              'displayName': 'Test User',
+              'mode': 'adult',
+              'avatarIndex': 0,
+              'createdAt': '2026-01-01T00:00:00.000Z',
+              'updatedAt': '2026-01-01T00:00:00.000Z',
+            },
+          ],
+        ),
+      );
 
       final tracks = await db.trackDao.getAllForProfile(1);
       expect(tracks, isEmpty);
