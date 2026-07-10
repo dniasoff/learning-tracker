@@ -1228,18 +1228,13 @@
   {
    "id": "AUD-account-11",
    "wave": 1,
-   "status": "merged",
+   "status": "todo",
    "severity": "P2",
    "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
-   "commits": [
-    "b66133a40fd1a5f2169ae144a7ec82144f78b3c7"
-   ],
-   "reviewRounds": 1,
-   "acVerified": [
-    "AUD-account-11 AC1 OK: outer try/catch around _init() body catches any DAO/DB read failure (not just reloadCurrentUser()), resolves to AuthState.signedOut(), logs auth_state_init_failed",
-    "AUD-account-11 AC2 OK: red-first test/features/account/presentation/providers/auth_state_init_exception_guard_test.dart - both cases confirmed failing pre-fix, passing post-fix"
-   ],
-   "notes": "GATE-REPAIR 2026-07-10: same underlying defect and same commit as AUD-account-03 (both fixed together in AuthStateNotifier._init()). Harvested from worktree wf_0ff77254-265-15 commit 9426cd76 (cherry-picked as b66133a4 onto audit-fix/2026-07-03) - the fix was already built and reviewed but a prior merge lane closed the wave with a ledger-only 'quota exhaustion / future harvest pass' escalation and left it unmerged; closing-gate audit flagged that escalation as illegitimate deliverable work. Verified post-merge: flutter test test/features/account/ test/features/auth/ --concurrency=4 -> All tests passed (444)."
+   "commits": [],
+   "reviewRounds": 0,
+   "acVerified": [],
+   "notes": "reopened: AC gap found in 100%% wave-1 AC audit"
   },
   {
    "id": "AUD-t-story-acceptance-06",
@@ -1719,17 +1714,13 @@
   {
    "id": "AUD-account-12",
    "wave": 1,
-   "status": "merged",
+   "status": "todo",
    "severity": "P2",
    "title": "Handle account-exists-with-different-credential and credential-already-in-use for the Google sign-in / link-provider paths",
-   "commits": [
-    "70cc86f504362a7230cf032d6be0380b7e5af127"
-   ],
-   "reviewRounds": 1,
-   "acVerified": [
-    "AUD-account-12 AC1 OK: account-exists-with-different-credential maps to authErrExistingPasswordAccount in sign_in_controller:119 & signup:486; tests pass"
-   ],
-   "notes": "Re-verified before implementing: zero hits for both codes, zero UI callers of linkGoogleProvider - confirms verify corrections that the broader claim is dead code. Implemented only the narrower reachable fix: new _mapAuthError case + ARB string in both files."
+   "commits": [],
+   "reviewRounds": 0,
+   "acVerified": [],
+   "notes": "reopened: AC gap found in 100%% wave-1 AC audit"
   },
   {
    "id": "AUD-t-cross-27",
@@ -2656,18 +2647,13 @@
   {
    "id": "AUD-account-10",
    "wave": 1,
-   "status": "merged",
+   "status": "todo",
    "severity": "P2",
    "title": "Extract the duplicated, inconsistently-patched _extractFirebaseCode helper into one shared function",
-   "commits": [
-    "70cc86f504362a7230cf032d6be0380b7e5af127"
-   ],
-   "reviewRounds": 1,
-   "acVerified": [
-    "AUD-account-10 AC1 OK: firebase_error_code_test asserts both '[code]' and '[plugin/code]' shapes",
-    "AUD-account-10 AC2 OK: single _extractFirebaseCode def remains (settings, out of scope); 4 in-batch copies deleted; audit AG-4 clean"
-   ],
-   "notes": "sign_in_controller.dart + signup_screen.dart now delegate to the AUD-04 helper, deleting private copies. Dual-shape unit test already satisfied by AUD-04's test. 5th copy in features/settings is out of scope, noted as follow-up."
+   "commits": [],
+   "reviewRounds": 0,
+   "acVerified": [],
+   "notes": "reopened: AC gap found in 100%% wave-1 AC audit"
   },
   {
    "id": "AUD-t-auth-01",
@@ -3901,19 +3887,13 @@
   {
    "id": "AUD-account-14",
    "wave": 1,
-   "status": "merged",
+   "status": "todo",
    "severity": "P2",
    "title": "Migrate SignInController's hand-rolled Idle/Submitting/Error state to AsyncNotifier + AsyncValue.guard",
-   "commits": [
-    "86cd7e5f"
-   ],
-   "reviewRounds": 1,
-   "acVerified": [
-    "AUD-account-14 AC1 OK: 9 state= sites; terminal state set once from guard (L782,L983), gated by !ref.mounted; no helper sets state",
-    "AUD-account-14 AC2 OK: test L909 drives real signInWithGoogle w/ mock throwing at findByEmail, asserts real state isA<SignInError>; +1 green",
-    "AUD-account-14 AC3 OK: rule added+registered, exempts AsyncNotifier, 6 tests pass in 94/94 lint-rules-test; documented in README+coding-standards"
-   ],
-   "notes": "Confirmed (20 state= sites). Kept public Idle/Submitting/Error union; routed both actions thru 1 AsyncValue.guard/method; soft failures now throw, resolved centrally. Sites 20->9. AC1 by construction. AC2 test added (also green pre-refactor, noted). AC3 new INFO custom_lint rule added+tested. [w1r1c5] gatePolicy=disjoint-skip (file-disjoint rebase vs audit-fix/2026-07-03; make audit pre-existing failure at check 25/26 identical to baseline, caused by unrelated concurrent worktree pollution, not this change; flutter analyze clean)."
+   "commits": [],
+   "reviewRounds": 0,
+   "acVerified": [],
+   "notes": "reopened: AC gap found in 100%% wave-1 AC audit"
   },
   {
    "id": "AUD-settings-08",
@@ -3929,18 +3909,13 @@
   {
    "id": "AUD-tutoring-08",
    "wave": 1,
-   "status": "merged",
+   "status": "todo",
    "severity": "P2",
    "title": "Lazy-load the tutor-grants roster in ManageGrantsScreen and Settings' embedded pending-invites section",
-   "commits": [
-    "435ff7747b009a557e1a7ecca9d25e0acaf2cd03"
-   ],
-   "reviewRounds": 1,
-   "acVerified": [
-    "AUD-tutoring-08 AC2 OK: 50-grant test asserts SliverChildBuilderDelegate + Talmid 49 findsNothing; Settings caps at 5 + 'View all (45 more)'",
-    "AUD-tutoring-08 AC1 substituted: repo-wide PF-2 checker not built (PF-2 [Pending]); 3 red-first regression tests serve as checker"
-   ],
-   "notes": "All 3 sites (incl. verify-correction's 3rd) confirmed. ManageGrantsScreen -> real ListView.builder; Settings section capped w/ View-all link; per-child list converted for consistency (test honestly notes no true laziness there, Flutter shrinkWrap limitation). Red pre-fix. Commit 36099605. Merged --no-ff onto audit-fix/2026-07-03 (w1r1c1, mergeSha 435ff7747b009a557e1a7ecca9d25e0acaf2cd03). Post-rebase gate: make audit checks 1-24 and 26 clean; flutter analyze clean (0 issues) after regenerating the stale gitignored tutor_grant_providers.g.dart (see AUD-tutoring-03 note); make arb-parity (dart run tool/arb_parity_check.dart, touchedStrings=true) OK, 1425 keys. Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to ~9 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout; filesystem-only (independent of git HEAD/content -- confirmed identical hit count regardless of checked-out commit), matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15+ in this same ledger, not a regression from this change. gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 tip in firestore_tutor_grant_repository.dart and tutor_grant_providers.dart since merge-base; ran payload.testsToRun (208 tests, all green) plus the full features/tutoring/, features/profiles/, features/settings/, and features/account/presentation/notifiers/ suites (1347 tests, 10 pre-existing skips, all green) covering every known consumer of the overlapping providers file."
+   "commits": [],
+   "reviewRounds": 0,
+   "acVerified": [],
+   "notes": "reopened: AC gap found in 100%% wave-1 AC audit"
   },
   {
    "id": "AUD-t-cross-44",

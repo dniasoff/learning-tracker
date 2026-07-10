@@ -1,6 +1,6 @@
 {
  "wave": 1,
- "maxParallel": 6,
+ "maxParallel": 4,
  "excludeOverlapFiles": [
   "docs/coding-standards.md",
   "Makefile",
@@ -9,85 +9,36 @@
  ],
  "customLintInGates": true,
  "finalWave": false,
- "pushEvery": 3,
+ "pushEvery": 2,
  "chunkSize": 8,
  "linearTeam": "DNI",
  "preBuilt": [],
  "preApproved": [],
  "manifest": [
   {
-   "id": "AUD-firebase-08",
-   "severity": "P2",
-   "effort": "M",
-   "normArea": "firebase",
-   "files": [
-    "learning_tracker/functions/src/index.ts"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-08.json"
-  },
-  {
-   "id": "AUD-firebase-09",
-   "severity": "P2",
-   "effort": "M",
-   "normArea": "firebase",
-   "files": [
-    "learning_tracker/firestore.rules"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-09.json"
-  },
-  {
-   "id": "AUD-firebase-10",
-   "severity": "P2",
-   "effort": "M",
-   "normArea": "firebase",
-   "files": [
-    "learning_tracker/firestore.rules",
-    "learning_tracker/functions/src/index.ts"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-10.json"
-  },
-  {
-   "id": "AUD-firebase-11",
+   "id": "AUD-account-10",
    "severity": "P2",
    "effort": "S",
-   "normArea": "firebase",
+   "normArea": "features/account",
    "files": [
-    "learning_tracker/functions/src/index.ts"
+    "learning_tracker/lib/features/account/data/services/magic_link_service.dart",
+    "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+    "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+    "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart"
    ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-11.json"
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-10.json"
   },
   {
-   "id": "AUD-firebase-15",
-   "severity": "P3",
-   "effort": "L",
-   "normArea": "firebase",
-   "files": [
-    "learning_tracker/functions/src/index.ts"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-15.json"
-  },
-  {
-   "id": "AUD-tutoring-06",
+   "id": "AUD-account-12",
    "severity": "P2",
-   "effort": "S",
-   "normArea": "features/tutoring",
+   "effort": "M",
+   "normArea": "features/account",
    "files": [
-    "learning_tracker/lib/features/tutoring/domain/services/tutor_audit_log_writer.dart",
-    "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart"
+    "learning_tracker/lib/features/account/data/repositories/auth_repository_impl.dart",
+    "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+    "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart"
    ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-06.json"
-  },
-  {
-   "id": "AUD-tutoring-10",
-   "severity": "P2",
-   "effort": "S",
-   "normArea": "features/tutoring",
-   "files": [
-    "learning_tracker/lib/features/tutoring/data/repositories/firestore_audit_log_read_repository.dart",
-    "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
-    "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-10.json"
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-12.json"
   },
   {
    "id": "AUD-account-14",
@@ -98,41 +49,6 @@
     "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart"
    ],
    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-14.json"
-  },
-  {
-   "id": "AUD-account-23",
-   "severity": "P3",
-   "effort": "S",
-   "normArea": "features/account",
-   "files": [
-    "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
-    "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-23.json"
-  },
-  {
-   "id": "AUD-tutoring-01",
-   "severity": "P1",
-   "effort": "M",
-   "normArea": "features/tutoring",
-   "files": [
-    "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
-    "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-01.json"
-  },
-  {
-   "id": "AUD-tutoring-03",
-   "severity": "P1",
-   "effort": "S",
-   "normArea": "features/tutoring",
-   "files": [
-    "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart",
-    "learning_tracker/lib/features/tutoring/presentation/providers/tutor_grant_providers.dart",
-    "learning_tracker/lib/features/tutoring/presentation/screens/accept_invite_screen.dart",
-    "learning_tracker/lib/features/tutoring/tutoring.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-03.json"
   },
   {
    "id": "AUD-tutoring-08",
@@ -146,43 +62,6 @@
    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-08.json"
   },
   {
-   "id": "AUD-tutoring-11",
-   "severity": "P2",
-   "effort": "S",
-   "normArea": "features/tutoring",
-   "files": [
-    "learning_tracker/lib/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart",
-    "learning_tracker/lib/features/tutoring/data/services/tutor_write_service.dart",
-    "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
-    "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-11.json"
-  },
-  {
-   "id": "AUD-tutoring-18",
-   "severity": "P3",
-   "effort": "M",
-   "normArea": "features/tutoring",
-   "files": [
-    "learning_tracker/lib/features/tutoring/presentation/screens/accept_invite_screen.dart",
-    "learning_tracker/lib/features/tutoring/presentation/screens/decline_invite_screen.dart",
-    "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
-    "learning_tracker/lib/features/tutoring/presentation/screens/tutor_audit_log_screen.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-18.json"
-  },
-  {
-   "id": "AUD-account-03",
-   "severity": "P1",
-   "effort": "S",
-   "normArea": "features/account",
-   "files": [
-    "learning_tracker/lib/features/account/domain/models/auth_state.dart",
-    "learning_tracker/lib/features/account/presentation/providers/auth_state_provider.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-03.json"
-  },
-  {
    "id": "AUD-account-11",
    "severity": "P2",
    "effort": "S",
@@ -192,17 +71,6 @@
     "learning_tracker/lib/features/account/presentation/providers/auth_state_provider.dart"
    ],
    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-11.json"
-  },
-  {
-   "id": "AUD-account-22",
-   "severity": "P3",
-   "effort": "M",
-   "normArea": "features/account",
-   "files": [
-    "learning_tracker/lib/features/account/domain/models/app_user.dart",
-    "learning_tracker/lib/features/account/domain/models/auth_state.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-22.json"
   }
  ]
 }
