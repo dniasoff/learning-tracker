@@ -779,7 +779,13 @@ Future<List<DailyTask>> _buildProjectionTasks({
     if ((paceValue == null || pacePeriod == null) &&
         goal.goalType == 'deadline' &&
         goal.targetDate != null) {
-      final startLocal = DateUtils.extractLocalDate(DateTimeFactory.nowLocal());
+      // Use the injected clock (todayDate), not the wall clock: this
+      // function's "today" must track clockProvider so it stays hermetic
+      // under test (TQ-6) — reading DateTimeFactory.nowLocal() directly
+      // silently drifted from the test-overridden clock and made deadline
+      // derivation skip (and the track go silently unscheduled) once real
+      // wall-clock time advanced past a test's fixed target date.
+      final startLocal = todayDate;
       final endLocal = DateUtils.extractLocalDate(goal.targetDate!.toLocal());
       if (!endLocal.isBefore(startLocal)) {
         final studyDaysInWindow = await db.studyDayConfigDao

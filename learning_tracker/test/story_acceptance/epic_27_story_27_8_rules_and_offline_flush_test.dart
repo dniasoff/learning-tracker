@@ -77,12 +77,18 @@ void main() {
 
         test('completions/{completionId} denies non-owner update and delete', () {
           final block = _extractRuleBlock(rules, 'completions/{completionId}');
-          // Update must be owner-only (either explicit deny or combined with create).
+          // Update must be owner-only (either explicit deny, combined with
+          // create, or split out with the SR-1 idempotent-replay guard —
+          // AUD-docs-01 — which is owner-only PLUS value-unchanged, strictly
+          // stronger than plain owner-only).
           expect(
             block,
             anyOf(
               contains('allow update: if false'),
               contains('allow create, update: if isOwner'),
+              contains(
+                'allow update: if isOwner(uid) && request.resource.data == resource.data',
+              ),
             ),
             reason:
                 'completions update must be owner-only or explicitly denied',
@@ -100,12 +106,18 @@ void main() {
               'learning_ledger/{entryId}',
             ]) {
               final block = _extractRuleBlock(rules, c);
-              // Update must be owner-only (either explicit deny or combined with create).
+              // Update must be owner-only (either explicit deny, combined
+              // with create, or split out with the SR-1 idempotent-replay
+              // guard — AUD-docs-01 — which is owner-only PLUS
+              // value-unchanged, strictly stronger than plain owner-only).
               expect(
                 block,
                 anyOf(
                   contains('allow update: if false'),
                   contains('allow create, update: if isOwner'),
+                  contains(
+                    'allow update: if isOwner(uid) && request.resource.data == resource.data',
+                  ),
                 ),
                 reason: '$c update must be owner-only or explicitly denied',
               );
@@ -261,12 +273,18 @@ void main() {
 
       test('completions block denies non-owner update and delete', () {
         final block = _extractRuleBlock(rules, 'completions/{completionId}');
-        // Update must be owner-only (either explicit deny or combined with create).
+        // Update must be owner-only (either explicit deny, combined with
+        // create, or split out with the SR-1 idempotent-replay guard —
+        // AUD-docs-01 — which is owner-only PLUS value-unchanged, strictly
+        // stronger than plain owner-only).
         expect(
           block,
           anyOf(
             contains('allow update: if false'),
             contains('allow create, update: if isOwner'),
+            contains(
+              'allow update: if isOwner(uid) && request.resource.data == resource.data',
+            ),
           ),
           reason: 'completions update must be owner-only or explicitly denied',
         );

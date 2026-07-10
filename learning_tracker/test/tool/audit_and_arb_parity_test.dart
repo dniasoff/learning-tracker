@@ -115,7 +115,7 @@ void main() {
           're-enable once make audit is fully clean (DNI-389 tracks this)',
     );
 
-    test('check 25/25 asserts exactly one coding-standards.md outside '
+    test('check 25/26 asserts exactly one coding-standards.md outside '
         'docs/_archive/ (AUD-docs-04)', () async {
       final result = await Process.run('make', [
         'audit',
@@ -123,14 +123,16 @@ void main() {
       final stdout = result.stdout.toString();
       expect(
         stdout,
-        contains('25/25'),
+        contains('25/26'),
         reason:
             'make audit must run the coding-standards.md uniqueness '
             'check (AUD-docs-04). Renumbered from 23/23 to 25/25 during '
-            'wave-0 gate-repair merge: this check collided with two other '
-            'wave-0 additions to the same target (AUD-guardrails-03\'s '
+            'wave-0 gate-repair merge (this check collided with two other '
+            'wave-0 additions to the same target: AUD-guardrails-03\'s '
             'custom_lint-marker check and AUD-repo-01\'s AG-4 '
-            'duplicate-type-name check), both also originally 23/23.\n'
+            'duplicate-type-name check, both also originally 23/23), then '
+            'to 25/26 when AUD-core-analytics-01 (wave-1) appended a 26th '
+            'check (the AnalyticsEvent catalog enforcement).\n'
             'stdout=$stdout\nstderr=${result.stderr}',
       );
       expect(

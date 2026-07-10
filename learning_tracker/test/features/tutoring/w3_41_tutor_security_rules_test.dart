@@ -109,13 +109,19 @@ void main() {
       () {
         final block = _extractRuleBlock(rules, 'completions/{completionId}');
         // Update must be gated by isOwner(uid) — either as a combined
-        // "create, update" or a separate rule. A tutor (uid ≠ profileId owner)
-        // always fails isOwner(uid), so no tutor can update a completion.
+        // "create, update" or a separate rule (including the SR-1
+        // idempotent-replay guard — AUD-docs-01 — which is owner-only PLUS
+        // value-unchanged, strictly stronger than plain owner-only). A tutor
+        // (uid ≠ profileId owner) always fails isOwner(uid), so no tutor can
+        // update a completion.
         expect(
           block,
           anyOf(
             contains('allow update: if false'),
             contains('allow create, update: if isOwner'),
+            contains(
+              'allow update: if isOwner(uid) && request.resource.data == resource.data',
+            ),
           ),
           reason: 'completions update MUST be owner-only or explicitly denied.',
         );

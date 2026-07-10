@@ -37,6 +37,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
@@ -312,6 +313,10 @@ void main() {
 
   tearDown(() async {
     await db.close();
+    // Belt-and-braces: any test that installs a fake LocalDayClock must
+    // reset it itself, but reset again here so a forgotten reset can never
+    // leak a fake wall-clock into a later, unrelated test file.
+    resetLocalDayClock();
   });
 
   // ── RA1: REORDER-AMNESTY — lastReorderAt == today wipes pre-today overdue ──
@@ -524,6 +529,64 @@ void main() {
           'DL1: tasks from a today-anchored track must be newLearning, not overdue',
     );
   });
+
+  // ── DL1b (regression, TQ-6 hermeticity): deadline derivation must use the
+  //     injected clock, never the real wall clock ───────────────────────────
+  //
+  // Bug: the deadline-fallback branch computed "today" via
+  // DateTimeFactory.nowLocal() (the real wall clock) instead of the
+  // provider's own `now`/`todayDate` (sourced from clockProvider, which this
+  // test suite overrides to a fixed date). That made DL1 pass or fail purely
+  // as a function of when the suite happened to be *run* — it silently broke
+  // once real wall-clock time advanced past a test's hardcoded deadline,
+  // with no code change required to flip it red. Reproduce that class of bug
+  // deterministically (independent of whatever day this suite actually runs
+  // on) by installing a fake LocalDayClock far away from BOTH the real date
+  // and this test's clockProvider-overridden date: if the deadline-fallback
+  // path ever again reads the wall clock instead of `now`, the derived
+  // "today" would land in the far future relative to the 30-day-out
+  // deadline, `endLocal.isBefore(startLocal)` would trip, pace derivation
+  // would be skipped, and this test would go red exactly like DL1 did.
+  test(
+    'DL1b: deadline-pace derivation is immune to the real wall clock '
+    '(TQ-6 — must use the injected clockProvider, not DateTimeFactory)',
+    () async {
+      final today = DateTime.utc(2026, 6, 4);
+      final deadline = today.add(const Duration(days: 30));
+
+      await _seedDeadlineTrack(
+        db,
+        curriculum: CurriculumId.mishnayos,
+        activatedAt: today,
+        targetDate: deadline,
+        studyDaysType: 'study',
+      );
+
+      // Install a fake wall clock decades away from both the real date and
+      // `today` above. A correct implementation never consults this — it is
+      // wired only through the overridden clockProvider (below).
+      useLocalDayClock(FakeLocalDayClock(DateTime.utc(2099, 1, 1)));
+      addTearDown(resetLocalDayClock);
+
+      final c = _container(db, clock: today, contentCount: 30);
+      addTearDown(c.dispose);
+
+      c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      final tasks = await c.read(allDailyTasksProvider.future);
+
+      expect(
+        tasks,
+        isNotEmpty,
+        reason:
+            'DL1b: deadline-pace derivation must key off the injected '
+            'clockProvider date, not the real (or fake-global) wall clock — '
+            'a wall-clock read here silently ghosts the track once real '
+            'time drifts past the test-fixed deadline',
+      );
+    },
+  );
 
   // ── DL2: studyDaysInWindow==0 early-exit + fallback pace ─────────────────
   //
