@@ -89,13 +89,19 @@
   {
    "id": "AUD-core-email-01",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P0",
    "title": "Redact TransactionalEmail.plaintextBody before logging in LoggingTransactionalEmailService.send()",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "8060651b2a62fcc8eeeb454570510f9024c04ac0"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-email-01 AC1 OK: 'body' in sensitiveKeys (logger.dart:253); redactFields({'body':...})['body']=='[REDACTED]' via logic at logger.dart:260-267, test passes",
+    "AUD-core-email-01 AC2 OK: 3 new tests FAIL pre-fix (reverted -> +42 -3, leak shown) and PASS post-fix (94/94)",
+    "AUD-core-email-01 AC3 OK: project-wide analyze No issues exit0; make audit exit0; dart format 0 changed; logging 94/94"
+   ],
+   "notes": "Re-verified: send() logs plaintextBody under key 'body' via debug(); 'body' missing from sensitiveKeys. Red-first: 3 new tests failed pre-fix (Expected [REDACTED], Actual raw email+name). Fix: added 'body' to sensitiveKeys, matching sibling grouping. All 45 tests pass post-fix. Merge-lane w1r0c7: rebase onto audit-fix/2026-07-03 was file-disjoint (gatePolicy=disjoint-skip) so payload.testsToRun was not re-run in the merge lane; the wave-closing full make ci is the integration gate. Post-rebase gate: make audit checks 1-24 and 26 clean; flutter analyze clean (0 issues); make arb-parity (no Makefile target -- ran `dart run tool/arb_parity_check.dart` directly per payload.touchedStrings) OK, 1424 keys, exit 0. Check 25/26 (single coding-standards.md) failed both pre- and post-merge solely due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout -- filesystem-only, independent of git HEAD/content, matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15 in this same ledger. Merged --no-ff onto audit-fix/2026-07-03 (mergeSha 8060651b2a62fcc8eeeb454570510f9024c04ac0)."
   },
   {
    "id": "AUD-firebase-01",
