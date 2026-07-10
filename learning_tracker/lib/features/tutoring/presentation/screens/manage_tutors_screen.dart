@@ -24,6 +24,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -364,33 +365,56 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
 
     setState(() => _acting = true);
     try {
-      await ref.read(revokeTutorGrantUseCaseProvider).call(grant: widget.grant);
-      if (mounted) {
-        // R4-M3: wipe the mirror and exit the tutored session so listeners
-        // detach immediately rather than waiting for the next entry attempt.
-        final grantId = widget.grant.grantId;
-        unawaited(
-          buildTutoredMirrorWipeServiceFromWidget(
-            ref: ref,
-            onWipe: (_) =>
-                ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),
-          ).wipeMirrorForGrant(grantId),
-        );
-        ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
-        // WS3.3g: fire-and-forget notification — tutor is notified of revocation.
-        // Parent name from current auth user; falls back to 'Parent' if unavailable.
-        final parentName =
-            ref.read(authRepositoryProvider).currentUser?.displayName ??
-            l10n.tutorFallbackParent;
-        unawaited(
-          ref
-              .read(tutorNotificationGatewayProvider)
-              .notifyTutorOfRevocation(
-                tutorEmail: widget.grant.tutorEmail,
-                parentName: parentName,
-                childName: widget.childName,
-              ),
-        );
+      final result = await ref
+          .read(revokeTutorGrantUseCaseProvider)
+          .call(grant: widget.grant);
+      if (!mounted) return;
+      // AUD-tutoring-01: the CF result must be checked before treating the
+      // action as successful — a genuine server rejection (permission-denied,
+      // already-revoked race, offline) must not wipe the local mirror or tell
+      // the tutor their access was cut off while it is still active
+      // server-side.
+      switch (result) {
+        case TutorGrantSuccess():
+          // R4-M3: wipe the mirror and exit the tutored session so listeners
+          // detach immediately rather than waiting for the next entry attempt.
+          final grantId = widget.grant.grantId;
+          unawaited(
+            buildTutoredMirrorWipeServiceFromWidget(
+              ref: ref,
+              onWipe: (_) => ref
+                  .read(activeTutoredProfileSelectionProvider.notifier)
+                  .exit(),
+            ).wipeMirrorForGrant(grantId),
+          );
+          ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
+          // WS3.3g: fire-and-forget notification — tutor is notified of
+          // revocation. Parent name from current auth user; falls back to
+          // 'Parent' if unavailable.
+          final parentName =
+              ref.read(authRepositoryProvider).currentUser?.displayName ??
+              l10n.tutorFallbackParent;
+          unawaited(
+            ref
+                .read(tutorNotificationGatewayProvider)
+                .notifyTutorOfRevocation(
+                  tutorEmail: widget.grant.tutorEmail,
+                  parentName: parentName,
+                  childName: widget.childName,
+                ),
+          );
+        case TutorGrantFailure(:final code):
+          AppLogger.instance.error(
+            event: 'Tutor grant revoke rejected by server',
+            fields: {'code': code ?? 'unknown'},
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageTutorsRevokeErrorGeneric)),
+          );
+        case TutorGrantPreconditionError():
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageTutorsRevokeErrorGeneric)),
+          );
       }
     } catch (e, st) {
       AppLogger.instance.error(
@@ -422,11 +446,27 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
 
     setState(() => _acting = true);
     try {
-      await ref
+      final result = await ref
           .read(rescindTutorInviteUseCaseProvider)
           .call(grant: widget.grant);
-      if (mounted) {
-        ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
+      if (!mounted) return;
+      // AUD-tutoring-01: check the CF result before invalidating the grants
+      // list as if the rescind succeeded.
+      switch (result) {
+        case TutorGrantSuccess():
+          ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
+        case TutorGrantFailure(:final code):
+          AppLogger.instance.error(
+            event: 'Tutor invite rescind rejected by server',
+            fields: {'code': code ?? 'unknown'},
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageTutorsRescindErrorGeneric)),
+          );
+        case TutorGrantPreconditionError():
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageTutorsRescindErrorGeneric)),
+          );
       }
     } catch (e, st) {
       AppLogger.instance.error(

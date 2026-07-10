@@ -2476,6 +2476,7 @@
       "error": { "type": "String" }
     }
   },
+  "manageGrantsResignErrorGeneric": "לא ניתן להתפטר. נסו שוב.",
   "tutorFallbackName": "המדריך שלכם",
 
   "manageTutorsEmptyHeading": "אין עדיין פרופילי ילדים",
@@ -2514,6 +2515,7 @@
       "error": { "type": "String" }
     }
   },
+  "manageTutorsRevokeErrorGeneric": "לא ניתן לבטל את הגישה. נסו שוב.",
   "manageTutorsRescindTitle": "לבטל את ההזמנה?",
   "manageTutorsRescindBody": "ההזמנה הממתינה אל {email} תבוטל.",
   "@manageTutorsRescindBody": {
@@ -2528,6 +2530,7 @@
       "error": { "type": "String" }
     }
   },
+  "manageTutorsRescindErrorGeneric": "לא ניתן לבטל את ההזמנה. נסו שוב.",
   "manageTutorsViewAuditLog": "צפייה ביומן הפעולות",
   "tutorFallbackParent": "הורה",
 

@@ -4566,6 +4566,9 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get manageGrantsResignErrorGeneric => 'לא ניתן להתפטר. נסו שוב.';
+
+  @override
   String get tutorFallbackName => 'המדריך שלכם';
 
   @override
@@ -4613,6 +4616,10 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get manageTutorsRevokeErrorGeneric =>
+      'לא ניתן לבטל את הגישה. נסו שוב.';
+
+  @override
   String get manageTutorsRescindTitle => 'לבטל את ההזמנה?';
 
   @override
@@ -4627,6 +4634,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String manageTutorsRescindError(String error) {
     return 'לא ניתן לבטל את ההזמנה: $error';
   }
+
+  @override
+  String get manageTutorsRescindErrorGeneric =>
+      'לא ניתן לבטל את ההזמנה. נסו שוב.';
 
   @override
   String get manageTutorsViewAuditLog => 'צפייה ביומן הפעולות';

@@ -30,6 +30,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -45,6 +47,8 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/manage
 import 'package:learning_tracker/features/tutoring/presentation/screens/manage_tutors_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../helpers/drift_memory.dart';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -1197,6 +1201,197 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
   });
+
+  // ── AUD-tutoring-01: TutorGrantFailure must NOT be treated as success ──────
+  //
+  // Regression for the P1 finding: revoke/rescind previously discarded the
+  // awaited TutorGrantResult and ran the success side effects (mirror wipe,
+  // provider invalidate, tutor notification) unconditionally. A genuine
+  // server rejection must not wipe the local mirror, must not invalidate the
+  // grants list, must not notify the tutor, and must show an error.
+
+  testWidgets(
+    'AUD-tutoring-01: Revoke TutorGrantFailure does not wipe the mirror, '
+    'notify, or invalidate — and shows an error',
+    (tester) async {
+      final child = _childProfile(id: 1, displayName: 'FailureChild');
+      final grant = _activeGrant(tutorEmail: 'fail@revoke.com');
+      final mockRevoke = _MockRevoke();
+      final notifGw = _MockNotificationGateway();
+      when(() => mockRevoke.call(grant: any(named: 'grant'))).thenAnswer(
+        (_) async =>
+            const TutorGrantFailure(message: 'nope', code: 'permission-denied'),
+      );
+
+      final auth = _MockAuthRepository();
+      when(() => auth.currentUser).thenReturn(null);
+
+      // Count how many times the per-child grants provider is (re)built —
+      // an `ref.invalidate` on failure would force a second build.
+      var fetchCount = 0;
+
+      // Seed a tutored-mirror profile row keyed to this grantId so a real
+      // `wipeMirrorForGrant` call would delete it — proving (by its
+      // survival) that the wipe was never invoked on the failure path.
+      final db = inMemoryDb();
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'parent@example.com',
+              tier: 'localBorn',
+              displayName: 'Test Parent',
+              createdAt: DateTime.utc(2026, 1, 1),
+              updatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
+      await db.profileDao.upsertTutoredProfile(
+        accountId: accountId,
+        parentUid: grant.parentUid,
+        remoteChildProfileId: grant.childProfileId,
+        grantId: grant.grantId,
+        displayName: 'Mirrored Child',
+        mode: 'child',
+        now: DateTime.utc(2026, 1, 1),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            profileListProvider.overrideWith((ref) => Future.value([child])),
+            outgoingTutorGrantsProvider('1').overrideWith((ref) {
+              fetchCount++;
+              return Future.value([grant]);
+            }),
+            authRepositoryProvider.overrideWithValue(auth),
+            revokeTutorGrantUseCaseProvider.overrideWithValue(mockRevoke),
+            rescindTutorInviteUseCaseProvider.overrideWithValue(_MockRescind()),
+            tutorNotificationGatewayProvider.overrideWithValue(notifGw),
+            userDatabaseProvider.overrideWithValue(db),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: const Scaffold(body: ManageTutorsScreen()),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      final fetchCountAfterMount = fetchCount;
+
+      await tester.tap(find.text('Revoke'));
+      await tester.pump();
+      await tester.tap(find.text('Revoke').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // 1. An error is shown — the fixed generic string, never the raw
+      //    failure message/code.
+      expect(find.text('Could not revoke. Please try again.'), findsOneWidget);
+      expect(find.textContaining('permission-denied'), findsNothing);
+
+      // 2. No re-fetch was triggered — ref.invalidate(...) was NOT called.
+      expect(fetchCount, fetchCountAfterMount);
+
+      // 3. The notification gateway was never invoked.
+      verifyNever(
+        () => notifGw.notifyTutorOfRevocation(
+          tutorEmail: any(named: 'tutorEmail'),
+          parentName: any(named: 'parentName'),
+          childName: any(named: 'childName'),
+        ),
+      );
+
+      // 4. The seeded tutored mirror was NOT deleted — proves
+      //    wipeMirrorForGrant was never invoked.
+      final survivors = await db.profileDao.getTutoredMirrorsForAccount(
+        accountId,
+      );
+      expect(survivors, hasLength(1));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+      await db.close();
+    },
+  );
+
+  testWidgets(
+    'AUD-tutoring-01: Rescind TutorGrantFailure does not invalidate — and '
+    'shows an error',
+    (tester) async {
+      final child = _childProfile(id: 1, displayName: 'RescindFailChild');
+      final grant = _pendingGrant(tutorEmail: 'fail@rescind.com');
+      final mockRescind = _MockRescind();
+      when(() => mockRescind.call(grant: any(named: 'grant'))).thenAnswer(
+        (_) async => const TutorGrantFailure(
+          message: 'nope',
+          code: 'failed-precondition',
+        ),
+      );
+
+      var fetchCount = 0;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            profileListProvider.overrideWith((ref) => Future.value([child])),
+            outgoingTutorGrantsProvider('1').overrideWith((ref) {
+              fetchCount++;
+              return Future.value([grant]);
+            }),
+            authRepositoryProvider.overrideWithValue(_MockAuthRepository()),
+            revokeTutorGrantUseCaseProvider.overrideWithValue(_MockRevoke()),
+            rescindTutorInviteUseCaseProvider.overrideWithValue(mockRescind),
+            tutorNotificationGatewayProvider.overrideWithValue(
+              _MockNotificationGateway(),
+            ),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: const Scaffold(body: ManageTutorsScreen()),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      final fetchCountAfterMount = fetchCount;
+
+      await tester.tap(find.text('Rescind'));
+      await tester.pump();
+      await tester.tap(find.text('Rescind').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Could not rescind. Please try again.'), findsOneWidget);
+      expect(find.textContaining('failed-precondition'), findsNothing);
+      expect(fetchCount, fetchCountAfterMount);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
 
   // ── In-flight guard ─────────────────────────────────────────────────────────
 

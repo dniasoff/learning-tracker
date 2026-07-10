@@ -7698,6 +7698,12 @@ abstract class AppLocalizations {
   /// **'Could not resign: {error}'**
   String manageGrantsResignError(String error);
 
+  /// No description provided for @manageGrantsResignErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not resign. Please try again.'**
+  String get manageGrantsResignErrorGeneric;
+
   /// No description provided for @tutorFallbackName.
   ///
   /// In en, this message translates to:
@@ -7770,6 +7776,12 @@ abstract class AppLocalizations {
   /// **'Could not revoke: {error}'**
   String manageTutorsRevokeError(String error);
 
+  /// No description provided for @manageTutorsRevokeErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not revoke. Please try again.'**
+  String get manageTutorsRevokeErrorGeneric;
+
   /// No description provided for @manageTutorsRescindTitle.
   ///
   /// In en, this message translates to:
@@ -7793,6 +7805,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not rescind: {error}'**
   String manageTutorsRescindError(String error);
+
+  /// No description provided for @manageTutorsRescindErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not rescind. Please try again.'**
+  String get manageTutorsRescindErrorGeneric;
 
   /// No description provided for @manageTutorsViewAuditLog.
   ///

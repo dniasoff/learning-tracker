@@ -18,6 +18,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -224,41 +225,65 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
 
     setState(() => _acting = true);
     try {
-      await ref.read(resignTutorGrantUseCaseProvider).call(grant: widget.grant);
-      if (mounted) {
-        // R4-M3: wipe the mirror and exit the tutored session so listeners
-        // detach immediately rather than waiting for the next entry attempt.
-        final grantId = widget.grant.grantId;
-        unawaited(
-          buildTutoredMirrorWipeServiceFromWidget(
-            ref: ref,
-            onWipe: (_) =>
-                ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),
-          ).wipeMirrorForGrant(grantId),
-        );
-        ref.invalidate(incomingTutorGrantsProvider);
-        // WS3.3g / M1: fire-and-forget notification — parent is notified of the
-        // resignation. The parent email is not readable from the grant doc (UID
-        // only), so we route by parentUid; the gateway falls back to a
-        // uid-addressed recipient so the notification is not dropped.
-        final currentUser = ref.read(authRepositoryProvider).currentUser;
-        final tutorName =
-            currentUser?.displayName ??
-            currentUser?.email ??
-            l10n.tutorFallbackName;
-        unawaited(
-          ref
-              .read(tutorNotificationGatewayProvider)
-              .notifyParentOfResignation(
-                parentEmail: '',
-                parentUid: widget.grant.parentUid,
-                tutorName: tutorName,
-                // GA-5: use the human-readable display label, not the raw
-                // Firestore profile id (childProfileId was a string like
-                // "raw_firestore_profile_id_123" — not a child name).
-                childName: widget.grant.childDisplayLabel,
-              ),
-        );
+      final result = await ref
+          .read(resignTutorGrantUseCaseProvider)
+          .call(grant: widget.grant);
+      if (!mounted) return;
+      // AUD-tutoring-01: the CF result must be checked before treating the
+      // action as successful — the sibling invite/accept/decline screens
+      // already switch exhaustively on TutorGrantResult; this row previously
+      // discarded the result and ran the success side effects unconditionally,
+      // so a genuine server rejection (permission-denied, already-resigned
+      // race, offline) still wiped the local mirror and told the parent the
+      // resignation succeeded.
+      switch (result) {
+        case TutorGrantSuccess():
+          // R4-M3: wipe the mirror and exit the tutored session so listeners
+          // detach immediately rather than waiting for the next entry attempt.
+          final grantId = widget.grant.grantId;
+          unawaited(
+            buildTutoredMirrorWipeServiceFromWidget(
+              ref: ref,
+              onWipe: (_) => ref
+                  .read(activeTutoredProfileSelectionProvider.notifier)
+                  .exit(),
+            ).wipeMirrorForGrant(grantId),
+          );
+          ref.invalidate(incomingTutorGrantsProvider);
+          // WS3.3g / M1: fire-and-forget notification — parent is notified of
+          // the resignation. The parent email is not readable from the grant
+          // doc (UID only), so we route by parentUid; the gateway falls back
+          // to a uid-addressed recipient so the notification is not dropped.
+          final currentUser = ref.read(authRepositoryProvider).currentUser;
+          final tutorName =
+              currentUser?.displayName ??
+              currentUser?.email ??
+              l10n.tutorFallbackName;
+          unawaited(
+            ref
+                .read(tutorNotificationGatewayProvider)
+                .notifyParentOfResignation(
+                  parentEmail: '',
+                  parentUid: widget.grant.parentUid,
+                  tutorName: tutorName,
+                  // GA-5: use the human-readable display label, not the raw
+                  // Firestore profile id (childProfileId was a string like
+                  // "raw_firestore_profile_id_123" — not a child name).
+                  childName: widget.grant.childDisplayLabel,
+                ),
+          );
+        case TutorGrantFailure(:final code):
+          AppLogger.instance.error(
+            event: 'Tutor grant resign rejected by server',
+            fields: {'code': code ?? 'unknown'},
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageGrantsResignErrorGeneric)),
+          );
+        case TutorGrantPreconditionError():
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageGrantsResignErrorGeneric)),
+          );
       }
     } catch (e, st) {
       AppLogger.instance.error(

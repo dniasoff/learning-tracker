@@ -4604,6 +4604,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get manageGrantsResignErrorGeneric =>
+      'Could not resign. Please try again.';
+
+  @override
   String get tutorFallbackName => 'Your tutor';
 
   @override
@@ -4651,6 +4655,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get manageTutorsRevokeErrorGeneric =>
+      'Could not revoke. Please try again.';
+
+  @override
   String get manageTutorsRescindTitle => 'Rescind invitation?';
 
   @override
@@ -4665,6 +4673,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String manageTutorsRescindError(String error) {
     return 'Could not rescind: $error';
   }
+
+  @override
+  String get manageTutorsRescindErrorGeneric =>
+      'Could not rescind. Please try again.';
 
   @override
   String get manageTutorsViewAuditLog => 'View audit log';

@@ -2680,6 +2680,7 @@
       "error": { "type": "String" }
     }
   },
+  "manageGrantsResignErrorGeneric": "Could not resign. Please try again.",
   "tutorFallbackName": "Your tutor",
 
   "manageTutorsEmptyHeading": "No children profiles yet",
@@ -2718,6 +2719,7 @@
       "error": { "type": "String" }
     }
   },
+  "manageTutorsRevokeErrorGeneric": "Could not revoke. Please try again.",
   "manageTutorsRescindTitle": "Rescind invitation?",
   "manageTutorsRescindBody": "The pending invite to {email} will be cancelled.",
   "@manageTutorsRescindBody": {
@@ -2732,6 +2734,7 @@
       "error": { "type": "String" }
     }
   },
+  "manageTutorsRescindErrorGeneric": "Could not rescind. Please try again.",
   "manageTutorsViewAuditLog": "View audit log",
   "tutorFallbackParent": "Parent",
 
