@@ -693,13 +693,13 @@
   {
    "id": "AUD-tutoring-03",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P1",
    "title": "Rename the duplicate top-level incomingTutorGrantsProvider defined in both tutor_grant_providers.dart and manage_tutors_providers.dart",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-tutoring-02",
@@ -969,13 +969,13 @@
   {
    "id": "AUD-tutoring-01",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P1",
    "title": "Check TutorGrantResult before treating revoke/resign/rescind as successful in manage_tutors_screen.dart and manage_grants_screen.dart",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-t-story-acceptance-01",
@@ -1068,13 +1068,13 @@
   {
    "id": "AUD-account-03",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P1",
    "title": "AuthStateNotifier._init() must guard reloadCurrentUser() so an offline cold start cannot hang the session state forever",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-sacred_time-02",
@@ -1210,13 +1210,13 @@
   {
    "id": "AUD-account-11",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P2",
    "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-t-story-acceptance-06",
@@ -1353,13 +1353,13 @@
   {
    "id": "AUD-tutoring-11",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P2",
    "title": "Stop interpolating e.toString() directly into tutoring error/snackbar text",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-gamification-10",
@@ -1595,13 +1595,13 @@
   {
    "id": "AUD-tutoring-06",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P2",
    "title": "Delete or wire up the dead TutorAuditLogWriter path (tutor_audit_log_writer.dart / audit_log_providers.dart)",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-tutoring-04",
@@ -3013,13 +3013,13 @@
   {
    "id": "AUD-firebase-10",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P2",
    "title": "Whitelist fields on tutor CRUD Cloud Functions instead of merging caller-supplied objects verbatim",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-firebase-06",
@@ -3589,13 +3589,13 @@
   {
    "id": "AUD-tutoring-10",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P2",
    "title": "Move TutorAuditLogReadRepository/TutorGrantRepository interfaces into domain/repositories/ to remove the data\u2192presentation import",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-tutoring-09",
@@ -3743,35 +3743,35 @@
   {
    "id": "AUD-firebase-09",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P2",
    "title": "Split allow list from allow read in firestore.rules to cap request.query.limit",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-firebase-11",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P2",
    "title": "Wrap tutorEditProfile's read-then-overwrite in a transaction to stop the lost-update race",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-firebase-08",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P2",
    "title": "Make tutor audit-log writes idempotent and failure-visible instead of best-effort auto-ID writes",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-firebase-07",
@@ -3846,13 +3846,13 @@
   {
    "id": "AUD-account-14",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P2",
    "title": "Migrate SignInController's hand-rolled Idle/Submitting/Error state to AsyncNotifier + AsyncValue.guard",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-settings-08",
@@ -3868,13 +3868,13 @@
   {
    "id": "AUD-tutoring-08",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P2",
    "title": "Lazy-load the tutor-grants roster in ManageGrantsScreen and Settings' embedded pending-invites section",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-t-cross-44",
@@ -4842,13 +4842,13 @@
   {
    "id": "AUD-tutoring-18",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P3",
    "title": "Replace hardcoded Color/Colors literals with theme tokens across tutoring screens",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-t-story-acceptance-23",
@@ -5117,13 +5117,13 @@
   {
    "id": "AUD-account-22",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P3",
    "title": "Make AppUser/AuthState/AuthUser @freezed instead of hand-rolled classes without value equality",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-t-content_browsing-05",
@@ -5933,13 +5933,13 @@
   {
    "id": "AUD-firebase-15",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P3",
    "title": "Split functions/src/index.ts's five unrelated concerns into focused modules",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-platform-03",
@@ -8119,13 +8119,13 @@
   {
    "id": "AUD-account-23",
    "wave": 1,
-   "status": "blocked",
+   "status": "todo",
    "severity": "P3",
    "title": "Reconcile AccountManagementService.signOut()'s documented 'soft sign-out' with its always-hard-sign-out callers",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "notes": ""
   },
   {
    "id": "AUD-t-cross-57",
