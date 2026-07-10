@@ -110,4 +110,25 @@ abstract class TutorPermissions with _$TutorPermissions {
         canEditStudyDays: data['can_edit_study_days'] as bool? ?? true,
         canEditPoints: data['can_edit_points'] as bool? ?? true,
       );
+
+  /// Overrides the freezed-generated `toString()` to keep the explicit
+  /// `markLive=false[invariant]` marker: [canMarkLiveCompletion] is a
+  /// computed getter (not a constructor field), so freezed's generated
+  /// `toString()` omits it entirely. Callers/tests rely on the marker being
+  /// visibly present whenever a TutorPermissions is logged or printed, as a
+  /// belt-and-braces reminder that the invariant is hard-coded and cannot be
+  /// toggled — the Cloud Function enforces it independently either way.
+  @override
+  String toString() =>
+      'TutorPermissions('
+      'viewProgress=$canViewProgress, '
+      'viewContent=$canViewContent, '
+      'bulkPrior=$canBulkPriorCompletion, '
+      'resetCompletion=$canResetCompletion, '
+      'editGoals=$canEditGoals, '
+      'editStages=$canEditStages, '
+      'editRewards=$canEditRewards, '
+      'editStudyDays=$canEditStudyDays, '
+      'editPoints=$canEditPoints, '
+      'markLive=false[invariant])';
 }
