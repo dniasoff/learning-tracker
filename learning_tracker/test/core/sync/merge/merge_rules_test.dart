@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/sync/domain/merge_rules.dart';
+import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 
 void main() {
   group('lwwMerge', () {

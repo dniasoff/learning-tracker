@@ -5,7 +5,7 @@ library;
 // Tests for ProfileScopedPreferenceKeys — exercises all read* methods,
 // covering both the scoped-key path and the legacy-key fallback path.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
