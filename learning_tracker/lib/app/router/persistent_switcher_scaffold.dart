@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_shell.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -154,7 +155,10 @@ class _PersistentSwitcherScaffoldState
             // Opaque background (Bug 7 re-fix) so the dark route/system surface
             // never bleeds through the status-bar inset band above the bar.
             child: Container(
-              color: const Color(0xFFF1F3FA),
+              // AUD-app-03: same named constant app_shell.dart's
+              // ProfileSwitcherBar uses for its background, so a future
+              // contrast fix only has one definition to update.
+              color: AppColors.switcherBarBackground,
               padding: EdgeInsets.only(top: topInset),
               child: Column(
                 mainAxisSize: MainAxisSize.min,

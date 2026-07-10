@@ -5,6 +5,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
@@ -19,15 +20,6 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
     show incomingTutorGrantsProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
-
-// W6.15: Tutor mode colour accent — a warm amber that contrasts with the
-// app's primary blue to signal "you are in a different access context".
-const _tutorAccentColor = Color(0xFFD97706); // Amber-600
-
-// WS4.banner: Child-view banner colour — a teal/emerald green that is distinct
-// from both the tutor amber and the primary blue, signalling "you are inside a
-// child's profile, not your own".
-const _childViewAccentColor = Color(0xFF047857); // Emerald-700
 
 /// Computes the rendered height of a context banner / the persistent
 /// switcher bar at the given [textScaler].
@@ -341,7 +333,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0x140038A8),
+                  color: AppColors.navBarShadow,
                   blurRadius: 18,
                   offset: Offset(0, -4),
                 ),
@@ -388,7 +380,7 @@ class _ShellNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = selected ? Colors.white : const Color(0xFF708090);
+    final foreground = selected ? Colors.white : AppColors.navUnselectedText;
     final fontWeight = selected ? FontWeight.w700 : FontWeight.w600;
     return InkWell(
       onTap: onTap,
@@ -399,12 +391,12 @@ class _ShellNavItem extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF0038A8) : Colors.transparent,
+          color: selected ? AppColors.navSelectedBlue : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
           boxShadow: selected
               ? const [
                   BoxShadow(
-                    color: Color(0x330038A8),
+                    color: AppColors.navItemSelectedShadow,
                     blurRadius: 10,
                     offset: Offset(0, 5),
                   ),
@@ -468,8 +460,8 @@ class ProfileSwitcherBar extends ConsumerWidget {
     // route, independent of whatever renders behind it.
     //   bg  = primary @6% composited over white  → opaque pale blue
     //   fg  = brandBlueDeep (0xFF002A80) on pale blue ≈ 11:1 (AA/AAA)
-    const barBackground = Color(0xFFF1F3FA); // opaque pale blue
-    const barBorder = Color(0xFFD7DEF0);
+    const barBackground = AppColors.switcherBarBackground; // opaque pale blue
+    const barBorder = AppColors.switcherBarBorder;
     const barForeground = AppTheme.brandBlueDeep;
     const barInk = AppTheme.brandInk;
 
@@ -729,7 +721,7 @@ class ChildViewBanner extends ConsumerWidget {
       // at kMinInteractiveDimension via ConstrainedBox, so this Container
       // (no explicit height) sizes to that content instead of a fixed 28dp
       // that could clip scaled text or undersize the Exit tap target.
-      color: _childViewAccentColor,
+      color: AppColors.childViewAccent,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
@@ -846,7 +838,7 @@ class TutorModeIndicatorBar extends ConsumerWidget {
       // at kMinInteractiveDimension via ConstrainedBox, so this Container
       // (no explicit height) sizes to that content instead of a fixed 24dp
       // that could clip scaled text or undersize the Exit tap target.
-      color: _tutorAccentColor,
+      color: AppColors.tutorModeAccent,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
