@@ -3,7 +3,7 @@
 > Part of the Learning Tracker project documentation. Start at [index.md](./index.md).
 > Generated 2026-05-19 by an exhaustive codebase scan (BMAD `document-project` workflow).
 
-The shipping path is **Android → Google Play**. iOS is not deployment-ready. Firebase project: **`torah-study-tracker`** (`.firebaserc`).
+The shipping path is **Android → Google Play**. iOS is not deployment-ready. Firebase project: **`torah-study-tracker`** (`learning_tracker/firebase.json`'s `flutter.platforms` block; deploy commands pass `--project torah-study-tracker` explicitly — no committed `.firebaserc`).
 
 ## 1. Platform status
 
@@ -26,7 +26,7 @@ The shipping path is **Android → Google Play**. iOS is not deployment-ready. F
 
 ## 3. Firebase
 
-`learning_tracker/firebase.json` declares `functions` (`nodejs20`), `firestore` (rules + indexes), and the `flutter` platforms block (**android + dart only — no iOS**). The repo-root `firebase.json` additionally declares the Firestore emulator (`localhost:9090`).
+`learning_tracker/firebase.json` declares `functions` (`nodejs20`), `firestore` (rules + indexes), the Firestore/Auth/Functions emulators, and the `flutter` platforms block (**android + dart only — no iOS**). It is the repo's only `firebase.json`; a duplicate repo-root `firebase.json`/`.firebaserc` pair pointing at nonexistent root-level `firestore.rules`/`firestore.indexes.json` was removed as dead config (AUD-firebase-14).
 
 | Component | Deploy command | Source |
 |---|---|---|
