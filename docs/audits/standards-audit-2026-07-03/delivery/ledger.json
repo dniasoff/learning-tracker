@@ -4409,13 +4409,18 @@
   {
    "id": "AUD-tutoring-07",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Handle mid-loop failure in TutoredWriteRouter.pushStageDefinitions (tutored_write_router.dart)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "c576ddec116c3bd480e097361e1a1f54177e34f7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-07 AC1 OK: test fails 2nd of 3 upserts (throwing invoker), asserts succeededStageIds==['7_1'] + loop stops at callIndex==2; real behavior, passes.",
+    "AUD-tutoring-07 AC2 OK: header lines 37-46 document partial-failure as accepted surfaced-not-silent risk (not retry path), naming succeededStageIds."
+   ],
+   "notes": "Confirmed opaque exception on mid-loop failure. Added succeededStageIds to TutorWriteException; pushStageDefinitions accumulates and throws with it populated. Header documents accepted-risk decision. Red-first test failed to compile pre-fix, passes post-fix (['7_1']). Merge-lane w1r0c6: rebase onto audit-fix/2026-07-03 was file-disjoint (gatePolicy=disjoint-skip) so payload.testsToRun was not re-run in the merge lane; the wave-closing full make ci is the integration gate. Post-rebase gate: make audit checks 1-24 and 26 clean; flutter analyze clean (0 issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge solely due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (wf_59970186-b15-*, other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout -- filesystem-only, independent of git HEAD/content, matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15 in this same ledger."
   },
   {
    "id": "AUD-t-tutoring-04",
@@ -7576,13 +7581,18 @@
   {
    "id": "AUD-tutoring-17",
    "wave": 1,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Guard int.parse(sel.profileId) in tutored_write_router.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "c576ddec116c3bd480e097361e1a1f54177e34f7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-17 AC1 OK: 2 tests with non-numeric profileId assert TutorWriteException + CF never reached; _profileIdOrThrow logs via AppLogger.error before throwing.",
+    "AUD-tutoring-17 sites OK: all 10 int.parse(sel.profileId) replaced by _profileIdOrThrow; grep confirms zero bare sites remain (only a comment)."
+   ],
+   "notes": "Confirmed all 10 int.parse(sel.profileId) sites unguarded. Added _profileIdOrThrow helper (AppLogger + typed TutorWriteException code=invalid-profile-id); replaced all 10 sites. Red-first tests failed pre-fix (got FormatException), pass post-fix. Merge-lane w1r0c6: rebase onto audit-fix/2026-07-03 was file-disjoint (gatePolicy=disjoint-skip) so payload.testsToRun was not re-run in the merge lane; the wave-closing full make ci is the integration gate. Post-rebase gate: make audit checks 1-24 and 26 clean; flutter analyze clean (0 issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge solely due to concurrent sibling worktrees under the gitignored .claude/worktrees/ (wf_59970186-b15-*, other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..` from the main checkout -- filesystem-only, independent of git HEAD/content, matching the pre-existing environmental pattern already documented for w1r0c2 through w1r0c15 in this same ledger."
   },
   {
    "id": "AUD-tutoring-14",
