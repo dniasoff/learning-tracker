@@ -107,19 +107,24 @@ TutoredPullService _build({
 TutoredMirrorWipeService buildTutoredMirrorWipeService({
   required Ref ref,
   void Function(String grantId)? onWipe,
-}) {
-  final db = ref.read(userDatabaseProvider);
-  return TutoredMirrorWipeService(profileDao: db.profileDao, onWipe: onWipe);
-}
+}) => _buildMirrorWipeService(
+  database: ref.read(userDatabaseProvider),
+  onWipe: onWipe,
+);
 
 /// Variant that accepts a [WidgetRef].
 TutoredMirrorWipeService buildTutoredMirrorWipeServiceFromWidget({
   required WidgetRef ref,
   void Function(String grantId)? onWipe,
-}) {
-  final db = ref.read(userDatabaseProvider);
-  return TutoredMirrorWipeService(profileDao: db.profileDao, onWipe: onWipe);
-}
+}) => _buildMirrorWipeService(
+  database: ref.read(userDatabaseProvider),
+  onWipe: onWipe,
+);
+
+TutoredMirrorWipeService _buildMirrorWipeService({
+  required UserDatabase database,
+  void Function(String grantId)? onWipe,
+}) => TutoredMirrorWipeService(profileDao: database.profileDao, onWipe: onWipe);
 
 // ── D3/D5 — tutored listener supervisor ──────────────────────────────────────
 
