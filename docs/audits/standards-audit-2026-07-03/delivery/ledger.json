@@ -1080,13 +1080,13 @@
   {
    "id": "AUD-account-03",
    "wave": 1,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P1",
    "title": "AuthStateNotifier._init() must guard reloadCurrentUser() so an offline cold start cannot hang the session state forever",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_0ff77254-265-15 (commit 9426cd76, together with AUD-account-11) but the fixer agent was lost to account-quota exhaustion after a review bounce, before opus review/merge could complete. Build note: guarded AuthStateNotifier._init() with inner try/catch around reloadCurrentUser()+cloud-profile-lookup (falls through to local-born restore, logs auth_state_init_cloud_reload_failed) and an outer try/catch safety net (resolves to AuthState.signedOut(), logs auth_state_init_failed); both typed 'on Exception' per EH-4. Red-first test test/features/account/presentation/providers/auth_state_init_exception_guard_test.dart added, confirmed failing pre-fix. Per merge-lane payload cid w1r2c1, worktree removed and branch worktree-wf_0ff77254-265-15 left unmerged (commits not patch-equivalent to audit-fix/2026-07-03) for a future harvest pass; MODE=ledger-only, no code merged this cid."
   },
   {
    "id": "AUD-sacred_time-02",
@@ -1222,13 +1222,13 @@
   {
    "id": "AUD-account-11",
    "wave": 1,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_0ff77254-265-15 (commit 9426cd76, together with AUD-account-03 -- same underlying defect, same method) but the fixer agent was lost to account-quota exhaustion after a review bounce, before opus review/merge could complete. Build note: guarded AuthStateNotifier._init() with inner try/catch around reloadCurrentUser()+cloud-profile-lookup (falls through to local-born restore, logs auth_state_init_cloud_reload_failed) and an outer try/catch safety net (resolves to AuthState.signedOut(), logs auth_state_init_failed); both typed 'on Exception' per EH-4. Red-first test test/features/account/presentation/providers/auth_state_init_exception_guard_test.dart added, confirmed failing pre-fix. Per merge-lane payload cid w1r2c1, worktree removed and branch worktree-wf_0ff77254-265-15 left unmerged (commits not patch-equivalent to audit-fix/2026-07-03) for a future harvest pass; MODE=ledger-only, no code merged this cid."
   },
   {
    "id": "AUD-t-story-acceptance-06",
@@ -5176,13 +5176,13 @@
   {
    "id": "AUD-account-22",
    "wave": 1,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Make AppUser/AuthState/AuthUser @freezed instead of hand-rolled classes without value equality",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_0ff77254-265-15 (commit 88b9c34e) but the fixer agent was lost to account-quota exhaustion after a review bounce, before opus review/merge could complete. Build note: converted AppUser/AuthState/AuthUser to value equality (==/hashCode) per coding-standards.md domain-model default. Per merge-lane payload cid w1r2c1, worktree removed and branch worktree-wf_0ff77254-265-15 left unmerged (commits not patch-equivalent to audit-fix/2026-07-03) for a future harvest pass; MODE=ledger-only, no code merged this cid."
   },
   {
    "id": "AUD-t-content_browsing-05",
