@@ -63,6 +63,33 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
   );
 });
 
+/// Drains the outbox for [profileId] then records the attempt on the sync
+/// orchestrator so the sync-status badge updates immediately to reflect push
+/// success or failure. Without the `recordDrainAttempt` call the badge stays
+/// at its old value (e.g. a stale "Synced") until the next periodic drain
+/// fires (~60 s later) — a false-Synced when the push failed
+/// (permission-denied or offline). Shared by both outbox-backed facade
+/// providers below (`onEnqueueDrain`).
+///
+/// SM-4 (AUD-sync-04): [ref] can be torn down between the two awaits — both
+/// providers below watch `activeProfileIdProvider`/`authStateProvider`,
+/// which change on every profile switch or sign-out, realistic during the
+/// network round trip a drain takes. `ref.mounted` is checked after the
+/// first await so a stale [ref] is never touched for the second; a torn-down
+/// ref simply skips `recordDrainAttempt` for this attempt (the provider's
+/// own rebuild already re-established status tracking under the new
+/// profile/auth state).
+///
+/// Not `_`-prefixed so it can be unit-tested directly against a
+/// [ProviderContainer] without driving the full outbox-write path — see
+/// `test/features/sync/presentation/providers/sync_providers_test.dart`.
+Future<void> outboxDrainAndRecordAttempt(Ref ref, int profileId) async {
+  await (ref.read(outboxProcessorProvider)?.drain(profileId) ??
+      Future<int>.value(0));
+  if (!ref.mounted) return;
+  await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();
+}
+
 // W2.31 — outbox-backed SyncWriteFacade provider ────────────────────────────
 
 /// Outbox-backed [SyncWriteFacade] provider.
@@ -99,18 +126,10 @@ final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
     // Phase 1 — write-tee: kick the outbox processor after every enqueue
     // so writes reach Firestore in the same network round as the local
     // commit. Resolved lazily so the processor's rebuild lifetime is
-    // independent of the facade.
-    //
-    // After the drain, call recordDrainAttempt() on the orchestrator so the
-    // sync-status badge is updated immediately to reflect push success or
-    // failure. Without this call the badge stays at its old value (e.g. a
-    // stale "Synced") until the next periodic drain fires (~60 s later) —
-    // a false-Synced when the push failed (permission-denied or offline).
-    onEnqueueDrain: () async {
-      await (ref.read(outboxProcessorProvider)?.drain(profileId) ??
-          Future<int>.value(0));
-      await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();
-    },
+    // independent of the facade. See [outboxDrainAndRecordAttempt]'s doc
+    // comment for the recordDrainAttempt rationale and the SM-4 ref.mounted
+    // guard (AUD-sync-04).
+    onEnqueueDrain: () => outboxDrainAndRecordAttempt(ref, profileId),
   );
 
   final tutoredSelection = ref.watch(activeTutoredProfileSelectionProvider);
@@ -165,12 +184,10 @@ final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
     resolveProfileId: () => profileId,
     clock: clock,
     // Same write-tee + recordDrainAttempt pattern as [syncWriteFacadeProvider]
-    // so points/redemption writes also update the badge immediately.
-    onEnqueueDrain: () async {
-      await (ref.read(outboxProcessorProvider)?.drain(profileId) ??
-          Future<int>.value(0));
-      await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();
-    },
+    // so points/redemption writes also update the badge immediately. See
+    // [outboxDrainAndRecordAttempt]'s doc comment for the SM-4 ref.mounted
+    // guard (AUD-sync-04).
+    onEnqueueDrain: () => outboxDrainAndRecordAttempt(ref, profileId),
   );
   // WS9 Wave-B (C#2): register this facade as the points-sync sink so every
   // ledger insert + redemption mutation made via PointsBalanceDao is pushed

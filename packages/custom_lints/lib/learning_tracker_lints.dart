@@ -1,6 +1,6 @@
 /// Custom lint rules for the Learning Tracker project.
 ///
-/// Provides eleven rules:
+/// Provides twelve rules:
 ///   - [NoColorLiteralOutsideTheme]: warns on direct `Color(0x…)` hex-literal
 ///     constructor calls outside `lib/core/theme/`; use AppColors/AppTheme constants.
 ///   - [NoCurriculumDisplayNameBypass]: prevents access to `.displayNameEn` /
@@ -28,6 +28,10 @@
 ///     `analytics_service.dart`; use typed helper methods instead.
 ///   - [NoRawTalker]: prevents `package:talker/talker.dart` imports outside
 ///     `lib/core/logging/`.
+///   - [NoRefAfterAwaitWithoutMountedCheck]: flags `ref.read`/`ref.watch`/
+///     `state = ...` after an earlier `await` in the same async
+///     method/closure with no `if (!ref.mounted) return;` guard in between
+///     (SM-4, AUD-sync-04).
 ///   - [NoUnguardedAsyncNotifierInit]: flags a Riverpod Notifier's `build()`
 ///     firing a private async method fire-and-forget (unawaited, unguarded)
 ///     whose body has zero try/catch anywhere (AUD-account-11).
@@ -52,6 +56,7 @@ import 'src/rules/no_hardcoded_text_direction.dart';
 import 'src/rules/no_log_less_catch.dart';
 import 'src/rules/no_raw_logevent.dart';
 import 'src/rules/no_raw_talker.dart';
+import 'src/rules/no_ref_after_await_without_mounted_check.dart';
 import 'src/rules/no_unguarded_async_notifier_init.dart';
 import 'src/rules/no_unguarded_state_touch_after_await.dart';
 
@@ -73,6 +78,7 @@ class _LearningTrackerLintPlugin extends PluginBase {
         NoLogLessCatch(),
         NoRawLogEvent(),
         NoRawTalker(),
+        NoRefAfterAwaitWithoutMountedCheck(),
         NoUnguardedAsyncNotifierInit(),
         NoUnguardedStateTouchAfterAwait(),
       ];

@@ -145,7 +145,7 @@ The only permitted call sites for `useHebrewTermsProvider` are `lib/core/labels/
 
 **SM-4 — After any `await` in a Notifier method or async callback, check `ref.mounted` before touching `ref` or `state`.**
 **Why:** Riverpod 3 throws `UnmountedRefException` when a disposed Ref is touched — an autoDispose provider can be torn down mid-`await` and crash the app. (The `BuildContext` analog is covered by the enabled `use_build_context_synchronously` lint.)
-**Enforce:** [Enforced] `no_unguarded_state_touch_after_await` custom_lint rule (AUD-onboarding-01) flags `state =`/`setState(...)` after an `await` in a Notifier/State method with no intervening `mounted`/`ref.mounted` guard (scoped to the method body's own statement sequence, including `try`/`catch`).
+**Enforce:** [Enforced] two complementary custom_lint rules: `no_unguarded_state_touch_after_await` (AUD-onboarding-01) flags `state =`/`setState(...)` after an `await` in a Notifier/State method with no intervening `mounted`/`ref.mounted` guard (scoped to the method body's own statement sequence, including `try`/`catch`); `no_ref_after_await_without_mounted_check` (AUD-sync-04) flags `ref.read`/`ref.watch`/`ref.invalidate`/`ref.refresh`/`ref.listen`/`state = ...` after an earlier `await` in the same async method/closure with no `ref.mounted` guard in between (`outboxDrainAndRecordAttempt` in `features/sync/presentation/providers/sync_providers.dart` is the reference fix).
 **Source:** riverpod.dev/docs/whats_new
 
 **SM-5 — Async mutations follow `state = const AsyncLoading(); state = await AsyncValue.guard(() => …)`. Let `build` throw; never hand-manage loading/error with a try/catch that assigns `state`.**
@@ -880,7 +880,7 @@ section of `AppColors`. With the marker temporarily enabled, the rule found
 
 ## Custom Lints Reference
 
-Eleven custom lint rules live in `packages/custom_lints/` (landed) and run via `dart run custom_lint`:
+Twelve+ custom lint rules live in `packages/custom_lints/` (landed) and run via `dart run custom_lint`:
 
 | Rule | What it catches |
 |------|-----------------|
@@ -897,6 +897,9 @@ Eleven custom lint rules live in `packages/custom_lints/` (landed) and run via `
 | `no_eager_list_in_non_lazy_scroll_container` | A `for`/`.map()` widget expansion fed into a non-lazy `ListView(children:)` or a scrollable `Column` under `lib/features/**` (PF-2, AUD-tutoring-08) |
 | `no_unguarded_state_touch_after_await` | `state =`/`setState(...)` after an `await` in a Notifier/State method with no intervening `mounted`/`ref.mounted` guard (SM-4, AUD-onboarding-01) |
 | `no_log_less_catch` | A `catch` under `lib/` with no `AppLogger` call and no `rethrow` — the log-less half of EH-3, including the comment-only shape `empty_catches` misses (AUD-onboarding-11) |
+| `no_ref_after_await_without_mounted_check` | `ref.read`/`ref.watch`/`ref.invalidate`/`ref.refresh`/`ref.listen`/`state = ...` after an earlier `await` in the same async method/closure with no `ref.mounted` guard in between (SM-4, AUD-sync-04) |
+
+(This table is not exhaustive of every registered rule — see `packages/custom_lints/lib/learning_tracker_lints.dart` for the authoritative list.)
 
 Each rule's own matching/whitelist logic has a `package:test` unit-test file under `packages/custom_lints/test/`, run via `make lint-rules-test` (`cd learning_tracker && make lint-rules-test`, or `cd packages/custom_lints && dart test` directly). This is wired into `make audit` / `make ci` and runs on every PR — independent of whether the `custom_lint` plugin itself can attach to the analyzer (AUD-guardrails-17).
 
