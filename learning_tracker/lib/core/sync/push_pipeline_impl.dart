@@ -267,9 +267,16 @@ class OutboxPushPipeline implements PushPipeline {
         return await action();
       } finally {
         // Clear the slot only if no later call replaced it.
+        //
+        // `unawaited` here only discards the `Future<void>?` that
+        // `Map.remove` returns (satisfying `unawaited_futures`) — it is
+        // NOT a catchError guard. The removed future (== [ourSlot]) is
+        // built via `.then<void>((_) {}, onError: (Object _) {})` below,
+        // which already converts any failure into a normal completion, so
+        // it can never complete with an error and there is nothing to
+        // catch (AUD-core-sync-39).
         if (identical(_inFlight[kind], ourSlot)) {
-          final removed = _inFlight.remove(kind);
-          if (removed != null) unawaited(removed.catchError((_) {}));
+          unawaited(_inFlight.remove(kind));
         }
       }
     }();
