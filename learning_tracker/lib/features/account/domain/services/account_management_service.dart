@@ -27,12 +27,26 @@ class AccountManagementService {
   /// (otherwise an old tutor PIN keeps verifying after a fresh sign-up).
   final FlutterSecureStorage _secureStorage;
 
-  /// Soft sign-out — clears the in-app session so the user sees the
-  /// account picker on next launch, but leaves Firebase's cached
-  /// refresh token in place. That's what lets Epic 21.9 AC2 (tap the
-  /// tile → dashboard in < 200ms) actually work: without a cached
-  /// session the picker would always fall through to the sign-in
-  /// page instead of resuming.
+  /// Clears the app-level session/onboarding flags in SharedPreferences
+  /// (onboarding-complete plus resumable onboarding/add-track state) so the
+  /// account picker shows on next launch. This method itself never touches
+  /// Firebase — it leaves whatever Firebase session is currently live
+  /// exactly as it found it.
+  ///
+  /// AUD-account-23: that Firebase-preserving property is NOT what powers
+  /// the instant "tap a tile → dashboard in < 200ms" account-switch
+  /// experience. Both current callers immediately follow this call with a
+  /// genuinely hard sign-out — `showSignOutConfirmation` with
+  /// `authRepositoryProvider.signOut()`, and `showDeleteLocalAccountFlow`
+  /// with `authStateProvider.notifier.signOut()` (a no-op on the Firebase
+  /// session for local-born accounts, which never hold one) — so no call
+  /// site relies on a cached token surviving this method today. The fast
+  /// tile-tap resume is real, but it comes from navigating straight to the
+  /// account picker WITHOUT calling `signOut()` at all — see the
+  /// "Switch Account" entry points in
+  /// `features/profiles/presentation/widgets/profile_switcher_sheet.dart`
+  /// and `features/settings/presentation/widgets/account_actions_sheet.dart`,
+  /// which push [AccountPickerRoute] while leaving the live session intact.
   ///
   /// The hard sign-out (clearing the Firebase token) happens when the
   /// account is removed or deleted — see
