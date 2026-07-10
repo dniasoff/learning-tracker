@@ -315,45 +315,41 @@ class DriftMergeStore implements MergeStore {
         _parseDateTime(fields['updated_at']) ?? DateTimeFactory.nowUtc();
     final createdAt = _parseDateTime(fields['created_at']) ?? updatedAt;
 
+    // Bug 1: the remote `account_id` is the cloud account row id and almost
+    // never matches the local autoincrement `accounts.id` (they are minted
+    // independently per device). Inserting the profile with the raw remote
+    // id violates the learner_profiles → accounts FK → SqliteException(787),
+    // which previously aborted the whole launch pull and bounced the user
+    // to the first-launch splash. Resolve the FK to a LOCAL account row that
+    // is guaranteed to exist before inserting.
+    //
+    // _resolveLocalAccountId can itself WRITE a placeholder accounts row
+    // (its resolution step 3) — that write must stay conditional on the
+    // insert branch, exactly as before AUD-core-sync-22, not fire on every
+    // update too. So the existing-row check that used to live inline here
+    // stays here (ProfileDao.upsertFromSync repeats an equivalent check
+    // internally to decide insert-vs-update; on the update branch it
+    // ignores [accountId] entirely, so passing the profile's own current
+    // value there is a correct, side-effect-free placeholder).
     final existing = await _db.profileDao.getProfileById(remoteId);
-    if (existing == null) {
-      // Bug 1: the remote `account_id` is the cloud account row id and almost
-      // never matches the local autoincrement `accounts.id` (they are minted
-      // independently per device). Inserting the profile with the raw remote
-      // id violates the learner_profiles → accounts FK → SqliteException(787),
-      // which previously aborted the whole launch pull and bounced the user
-      // to the first-launch splash. Resolve the FK to a LOCAL account row that
-      // is guaranteed to exist before inserting.
-      final accountId = await _resolveLocalAccountId(
-        remoteAccountId: remoteAccountId,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
-      await _db
-          .into(_db.learnerProfiles)
-          .insertOnConflictUpdate(
-            LearnerProfilesCompanion.insert(
-              id: Value(remoteId),
-              accountId: accountId,
-              displayName: displayName,
-              mode: mode,
-              avatarIndex: Value(avatarIndex),
-              createdAt: createdAt,
-              updatedAt: updatedAt,
-            ),
-          );
-    } else {
-      await (_db.update(
-        _db.learnerProfiles,
-      )..where((t) => t.id.equals(remoteId))).write(
-        LearnerProfilesCompanion(
-          displayName: Value(displayName),
-          mode: Value(mode),
-          avatarIndex: Value(avatarIndex),
-          updatedAt: Value(updatedAt),
-        ),
-      );
-    }
+    final accountId = existing == null
+        ? await _resolveLocalAccountId(
+            remoteAccountId: remoteAccountId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          )
+        : existing.accountId;
+    // AUD-core-sync-22 (DB-1): the actual SQLite write now lives in
+    // ProfileDao, not here.
+    await _db.profileDao.upsertFromSync(
+      id: remoteId,
+      accountId: accountId,
+      displayName: displayName,
+      mode: mode,
+      avatarIndex: avatarIndex,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
   }
 
   /// Resolve a LOCAL `accounts.id` that is guaranteed to exist, so the
@@ -408,7 +404,9 @@ class DriftMergeStore implements MergeStore {
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
-    return _db.into(_db.accounts).insert(seed);
+    // AUD-core-sync-22 (DB-1): routed through UserProfileDao instead of a
+    // raw accounts-table insert.
+    return _db.userProfileDao.insertUserProfile(seed);
   }
 
   Future<void> _upsertTrack(int profileId, Map<String, dynamic> fields) async {
@@ -443,39 +441,16 @@ class DriftMergeStore implements MergeStore {
         activatedAt;
     final paceResetDate = _parseDateTime(fields['pace_reset_date']);
 
-    final existing =
-        await (_db.select(_db.curriculumTracks)..where(
-              (t) =>
-                  t.profileId.equals(profileId) &
-                  t.curriculumId.equals(curriculumId),
-            ))
-            .getSingleOrNull();
-
-    if (existing == null) {
-      await _db
-          .into(_db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profileId,
-              curriculumId: curriculumId,
-              state: Value(state),
-              stateChangedAt: stateChangedAt,
-              activatedAt: activatedAt,
-              paceResetDate: Value(paceResetDate),
-            ),
-          );
-    } else {
-      await (_db.update(
-        _db.curriculumTracks,
-      )..where((t) => t.id.equals(existing.id))).write(
-        CurriculumTracksCompanion(
-          state: Value(state),
-          stateChangedAt: Value(stateChangedAt),
-          activatedAt: Value(activatedAt),
-          paceResetDate: Value(paceResetDate),
-        ),
-      );
-    }
+    // AUD-core-sync-22 (DB-1): the actual SQLite write (insert-vs-update
+    // decided internally) now lives in TrackDao, not here.
+    await _db.trackDao.upsertFromSyncRaw(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      state: state,
+      activatedAt: activatedAt,
+      stateChangedAt: stateChangedAt,
+      paceResetDate: paceResetDate,
+    );
   }
 
   Future<void> _upsertBookmark(
@@ -675,15 +650,14 @@ class DriftMergeStore implements MergeStore {
         ),
       );
     } else {
-      await (_db.update(
-        _db.stageDefinitions,
-      )..where((t) => t.id.equals(existing.id))).write(
-        StageDefinitionsCompanion(
-          stageName: Value(stageName),
-          isDefault: Value(isDefault),
-          schedule: Value(schedule),
-          updatedAt: Value(updatedAt),
-        ),
+      // AUD-core-sync-22 (DB-1): routed through StageDao instead of a raw
+      // stage_definitions-table update.
+      await _db.stageDao.updateStageDefinitionFields(
+        id: existing.id,
+        stageName: stageName,
+        isDefault: isDefault,
+        schedule: schedule,
+        updatedAt: updatedAt,
       );
     }
   }

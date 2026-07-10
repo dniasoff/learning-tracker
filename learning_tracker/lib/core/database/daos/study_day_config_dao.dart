@@ -59,6 +59,34 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
     );
   }
 
+  /// Upsert a single day config carrying an explicit [updatedAt] — used by
+  /// the sync merge path, where the LWW timestamp is the REMOTE row's
+  /// `updated_at`, not "now" ([upsertDayConfig] above always stamps `now`,
+  /// which is correct for local edits but wrong for applying a pulled
+  /// remote value).
+  ///
+  /// AUD-core-sync-22 (DB-1): extracted from StudyDayConfigMerger, which
+  /// previously wrote `_db.into(_db.studyDayConfigs)` directly.
+  Future<void> upsertDayConfigFromSync({
+    required int profileId,
+    required String curriculumId,
+    required int trackId,
+    required int dayOfWeek,
+    required String dayType,
+    required DateTime updatedAt,
+  }) async {
+    await into(studyDayConfigs).insertOnConflictUpdate(
+      StudyDayConfigsCompanion.insert(
+        profileId: profileId,
+        curriculumId: curriculumId,
+        trackId: trackId,
+        dayOfWeek: dayOfWeek,
+        dayType: Value(dayType),
+        updatedAt: updatedAt,
+      ),
+    );
+  }
+
   /// Seed default configs (all 7 days as 'study') for a curriculum/profile.
   Future<void> seedDefaults({
     required int profileId,

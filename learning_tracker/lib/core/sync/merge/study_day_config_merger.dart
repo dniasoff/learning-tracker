@@ -14,7 +14,6 @@
 /// subsequent pulls arbitrate symmetrically.
 library;
 
-import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/study_day_config_codec.dart';
@@ -112,18 +111,16 @@ class StudyDayConfigMerger implements EntityMerger {
           continue;
         }
 
-        await _db
-            .into(_db.studyDayConfigs)
-            .insertOnConflictUpdate(
-              StudyDayConfigsCompanion.insert(
-                profileId: profileId,
-                curriculumId: decoded.curriculumId,
-                trackId: trackId,
-                dayOfWeek: decoded.dayOfWeek,
-                dayType: drift.Value(decoded.dayType),
-                updatedAt: decoded.updatedAt,
-              ),
-            );
+        // AUD-core-sync-22 (DB-1): the actual SQLite write now lives in
+        // StudyDayConfigDao, not here.
+        await _db.studyDayConfigDao.upsertDayConfigFromSync(
+          profileId: profileId,
+          curriculumId: decoded.curriculumId,
+          trackId: trackId,
+          dayOfWeek: decoded.dayOfWeek,
+          dayType: decoded.dayType,
+          updatedAt: decoded.updatedAt,
+        );
 
         await _store.persistUpdatedAt(
           kind: kind,

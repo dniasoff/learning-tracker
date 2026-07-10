@@ -370,6 +370,57 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
     }
   }
 
+  /// Upsert a track row from a remote sync payload keyed by
+  /// (profileId, curriculumId), identical to [upsertFromSync] but taking
+  /// the raw storage-key String rather than a typed [CurriculumId].
+  ///
+  /// AUD-core-sync-22 (DB-1): extracted from DriftMergeStore, which
+  /// previously wrote `_db.into(_db.curriculumTracks)` /
+  /// `_db.update(_db.curriculumTracks)` directly. [upsertFromSync]'s typed
+  /// `CurriculumId` enum can't be reused as-is here: the raw sync payload's
+  /// `curriculum_id` string is stored opaquely (the `curriculum_id` column
+  /// has no CHECK constraint), tolerant of values the local
+  /// [CurriculumId] enum doesn't (yet) recognise — narrowing it to the enum
+  /// would reject/crash on exactly the forward-compat and malformed-legacy
+  /// cases the sync layer must otherwise treat as ordinary strings.
+  Future<void> upsertFromSyncRaw({
+    required int profileId,
+    required String curriculumId,
+    required String state,
+    required DateTime activatedAt,
+    required DateTime stateChangedAt,
+    DateTime? paceResetDate,
+  }) async {
+    final existing = await getTrackByProfileAndCurriculum(
+      profileId,
+      curriculumId,
+    );
+
+    if (existing == null) {
+      await into(curriculumTracks).insert(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          state: Value(state),
+          stateChangedAt: stateChangedAt,
+          activatedAt: activatedAt,
+          paceResetDate: Value(paceResetDate),
+        ),
+      );
+    } else {
+      await (update(
+        curriculumTracks,
+      )..where((t) => t.id.equals(existing.id))).write(
+        CurriculumTracksCompanion(
+          state: Value(state),
+          stateChangedAt: Value(stateChangedAt),
+          activatedAt: Value(activatedAt),
+          paceResetDate: Value(paceResetDate),
+        ),
+      );
+    }
+  }
+
   /// Count active tracks for a profile.
   Future<int> countActiveTracksForProfile(int profileId) async {
     final tracks =
