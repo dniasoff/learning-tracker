@@ -1,6 +1,6 @@
 {
  "wave": 1,
- "maxParallel": 5,
+ "maxParallel": 9,
  "excludeOverlapFiles": [
   "docs/coding-standards.md",
   "Makefile",
@@ -13,312 +13,6 @@
  "chunkSize": 8,
  "linearTeam": "DNI",
  "preBuilt": [
-  {
-   "ids": [
-    "AUD-core-email-01"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "93f70b43ad99cec8cc55370a0c77b70c8b252211",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-6",
-    "perFinding": [
-     {
-      "id": "AUD-core-email-01",
-      "outcome": "fixed",
-      "note": "Re-verified: send() logs plaintextBody under key 'body' via debug(); 'body' missing from sensitiveKeys. Red-first: 3 new tests failed pre-fix (Expected [REDACTED], Actual raw email+name). Fix: added 'body' to sensitiveKeys, matching sibling grouping. All 45 tests pass post-fix."
-     }
-    ],
-    "testsAdded": [
-     "learning_tracker/test/core/logging/logger_extended_test.dart (3 tests: redacts 'body' key; 'body' in sensitiveKeys; debug Payload call redacted)"
-    ],
-    "gateResults": {
-     "make audit": "PASS (25/25 clean)",
-     "flutter analyze (changed files)": "PASS (No issues found)",
-     "dart format": "PASS (applied)",
-     "flutter test (test/core/logging/)": "PASS (94/94)",
-     "make arb-parity": "PASS (n/a, no arb changes; ran anyway OK)",
-     "custom_lint": "PASS (No issues found)"
-    },
-    "notes": "Single P0 finding confirmed and fixed minimally (one sensitiveKeys entry + comment). Red-first: tests written first, confirmed failing against pre-fix logger.dart (evidence in commit body), then fixed, then green. A prior opus review of this exact tip APPROVED it (verdict in dead-run journal); re-verify independently."
-   }
-  },
-  {
-   "ids": [
-    "AUD-firebase-04"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "c13e66233611f17480b5e3b76e0371b4e776dfe7",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-11",
-    "perFinding": [
-     {
-      "id": "AUD-firebase-04",
-      "outcome": "fixed",
-      "note": "Confirmed gap stood: no CI job for functions/, make ci lacked test-functions, no test script. Added functions CI job (hard-fail), folded test-functions into make ci, added package.json test script. make test-functions 274/274 pre+post; TS error confirmed build step fails."
-     }
-    ],
-    "testsAdded": [],
-    "gateResults": {
-     "make audit": "PASS (25/25 greps clean)",
-     "flutter analyze": "PASS (No issues found!)",
-     "make test-rules (in-gate: functions/ touched)": "PASS (82/82)",
-     "make test-functions (in-gate: functions/ touched)": "PASS (274/274, pre+post refactor)",
-     "dart run custom_lint": "PASS exit0"
-    },
-    "notes": "Pre-existing unrelated env gaps fixed locally, not committed (both gitignored): firebase_options.dart and content.db.gz. A prior opus review of this exact tip APPROVED it (dead-run journal); re-verify independently."
-   }
-  },
-  {
-   "ids": [
-    "AUD-profiles-01"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "3c3e35b1d58c9a3dbd45222476fbdddfb74b21d1",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-5",
-    "perFinding": [
-     {
-      "id": "AUD-profiles-01",
-      "outcome": "fixed",
-      "note": "Confirmed: deactivate() wiped config; TrackState.archived had 0 writers. Added archiveTrack/archiveByProfile/archive() (preserve config); rewired screen archive choice. Red-first: rewrote ts3 test to drive real screen, RED then GREEN. All 3 ACs verified."
-     }
-    ],
-    "testsAdded": [
-     "learning_tracker/test/features/profiles/presentation/screens/ts3_parent_track_archive_test.dart (rewritten: real-path DB test + real-screen widget test)"
-    ],
-    "gateResults": {
-     "make audit": "PASS - all 25 greps clean",
-     "flutter analyze": "PASS - No issues found!",
-     "dart format": "PASS - 0 changed",
-     "flutter test (targeted 7 files)": "PASS - 82 tests, exit 0",
-     "build_runner regen diff": "PASS - only propagated doc-comment change",
-     "dart run custom_lint": "PASS - No issues found!"
-    },
-    "notes": "Follow-up candidate (out of scope, not fixed): track_detail_screen.dart, track_management_hub_screen.dart, track_management_body.dart share the identical bug (still call .deactivate()); tracks_p0_test.dart E2E-405 still encodes the old buggy expectation. A prior opus review APPROVED this tip (dead-run journal); re-verify independently."
-   }
-  },
-  {
-   "ids": [
-    "AUD-settings-03"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "c0f78e95423ca76552fcc5fd99eeb938228b2316",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-12",
-    "perFinding": [
-     {
-      "id": "AUD-settings-03",
-      "outcome": "fixed",
-      "note": "Confirmed at HEAD e385f632, no drift. Scoped all 16 importData() deletes to accountIds/profileIds in payload; trackLearningOrder scoped via curriculumTracks read pre-clear. Red-first test failed pre-fix (Bob streakEvents wiped), passes post-fix. Both ACs verified. Commit c0f78e95."
-     }
-    ],
-    "testsAdded": [
-     "test/features/settings/domain/services/data_export_import_service_import_test.dart - new profile isolation group + test",
-     "test/features/settings/domain/services/data_export_import_service_import_test.dart - 2 updated tests",
-     "test/features/settings/domain/services/data_export_roundtrip_test.dart - 1 updated test"
-    ],
-    "gateResults": {
-     "make audit": "PASS - all 25 greps clean",
-     "flutter analyze": "PASS - 0 new issues",
-     "flutter test (targeted)": "PASS - 426 tests, 0 fail",
-     "dart run custom_lint": "PASS - No issues found!"
-    },
-    "notes": "16 bare deletes in importData() contradicted its own doc comment. Fix scopes all 16 deletes to ids in payload. 2 pre-existing tests relying on old wipe-all updated to seed in-scope profile. A prior opus review APPROVED this tip (dead-run journal); re-verify independently."
-   }
-  },
-  {
-   "ids": [
-    "AUD-core-database-01",
-    "AUD-profiles-02"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "d9173c7ae968e6c7502205b4f00d797e01fc3f83",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-3/learning_tracker",
-    "perFinding": [
-     {
-      "id": "AUD-core-database-01",
-      "outcome": "fixed",
-      "note": "Confirmed live: 6 tables lack LearnerProfiles FK. ProfileDao now explicitly clears them on mirror wipe, fixed false comments, added deny-by-default schema_check.dart FK checker. Red-first: tests failed Expected 0 Actual 1 before fix."
-     },
-     {
-      "id": "AUD-profiles-02",
-      "outcome": "fixed",
-      "note": "Confirmed live: TutorWriteException from tutor-routed push was swallowed, making editProfileFlow handler unreachable. Added rethrow + DuplicateProfileNameException catch. Red-first: tests failed pre-fix (no throw / unhandled exception)."
-     }
-    ],
-    "testsAdded": [
-     "learning_tracker/test/sync/tutored_mirror_wipe_test.dart",
-     "learning_tracker/test/tool/schema_check_test.dart",
-     "learning_tracker/test/features/profiles/data/repositories/profile_repository_impl_test.dart",
-     "learning_tracker/test/features/profiles/presentation/widgets/profile_edit_delete_actions_test.dart"
-    ],
-    "gateResults": {
-     "flutter analyze": "PASS (0 new issues)",
-     "dart run custom_lint": "PASS - No issues found",
-     "make audit": "PASS - 25 checks + lint-rules-test (88 tests)",
-     "make arb-parity": "PASS - 1421 keys",
-     "flutter test (targeted)": "PASS - all touched-area suites green",
-     "build_runner diff": "PASS - no generated-file diff"
-    },
-    "notes": "Both findings verified live before touching code. Follow-ups noted, not fixed: deleteProfile own sync push has no try/catch; AUD-core-database-01 rule citation imprecise per its own verify.corrections but defect confirmed."
-   }
-  },
-  {
-   "ids": [
-    "AUD-account-03",
-    "AUD-account-11",
-    "AUD-account-22"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "a8bad8a388c4240df1ebc428ee790a2c6c5bdacb",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-9",
-    "perFinding": [
-     {
-      "id": "AUD-account-03",
-      "outcome": "fixed",
-      "note": "Wrapped reloadCurrentUser() in try/catch, log+fallback to cached firebaseUser. Red-first test failed pre-fix (stayed at initializing), passes post-fix. Commit 5915a5a9."
-     },
-     {
-      "id": "AUD-account-11",
-      "outcome": "fixed",
-      "note": "Outer try/catch around _init() -> log+signedOut. Red-first test also exposed a build()-timing bug (state clobbered by build() own return); fixed via Future.microtask(_init). AC3 custom_lint rule deferred (see notes). Commit 230a523f."
-     },
-     {
-      "id": "AUD-account-22",
-      "outcome": "fixed",
-      "note": "Converted AppUser/AuthState/AuthUser to @freezed, flat shape preserved (non-union). Fixed ~150 downstream call-site breaks across 49 files. 0-diff build_runner regen; new equality tests satisfy AC1. Commit a8bad8a3."
-     }
-    ],
-    "testsAdded": [
-     "learning_tracker/test/features/account/presentation/providers/auth_state_notifier_offline_reload_test.dart",
-     "learning_tracker/test/features/account/presentation/providers/auth_state_notifier_init_exception_safety_test.dart",
-     "learning_tracker/test/helpers/auth_state_test_utils.dart",
-     "learning_tracker/test/features/auth/domain/models/auth_state_test.dart"
-    ],
-    "gateResults": {
-     "make audit": "PASS (25/25 clean)",
-     "flutter analyze": "PASS (0 issues)",
-     "flutter test full suite": "PASS (10377 pass, 238 skip, 0 fail)",
-     "make arb-parity": "PASS",
-     "dart run custom_lint": "PASS (0 issues)",
-     "build_runner regen diff": "PASS (0 outputs, clean)"
-    },
-    "notes": "AUD-22 AC3 (novel custom_lint rule) deferred as candidate follow-up: disproportionate risk to shared lint infra for a P2 secondary AC. NOTE: a prior opus review BOUNCED this tip solely because its own worktree lacked generated files (env gap, not a defect) - do proper env setup (pub get + build_runner) before judging."
-   }
-  },
-  {
-   "ids": [
-    "AUD-core-database-02"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "c160bdd680867f403a745b6c78a8708743004827",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_4ad40ab7-41f-12",
-    "perFinding": [
-     {
-      "id": "AUD-core-database-02",
-      "outcome": "fixed",
-      "note": "Confirmed unscoped DAO queries. Added required profileId to both DAO methods; threaded profileId through the 3 named consumers. Red-first test failed pre-fix exactly as predicted (read+delete leak), passed post-fix. Fix surfaced same masked-bug pattern in 2 more test files; fixtures corrected."
-     }
-    ],
-    "testsAdded": [
-     "learning_tracker/test/features/learning_order/data/repositories/learning_order_repository_impl_test.dart (new group: cross-profile isolation, 2 tests)"
-    ],
-    "gateResults": {
-     "flutter analyze": "PASS (No issues found!)",
-     "make audit (25 greps)": "PASS (25/25 clean)",
-     "dart format (changed files)": "PASS",
-     "dart run custom_lint": "PASS (No issues found!)",
-     "flutter test (targeted, 184 tests)": "PASS (All tests passed!)",
-     "build_runner build": "PASS (zero diff; ran once to fix stale gen)"
-    },
-    "notes": "Scope strictly = acceptance_criteria (2 DAO methods + 3 consumers). Candidate follow-ups noticed, NOT fixed: BaseDao.getById and goal_dao/bookmark_dao/stage_dao bare-id delete/update methods are also profileId-unscoped."
-   }
-  },
-  {
-   "ids": [
-    "AUD-account-08",
-    "AUD-account-17",
-    "AUD-account-20"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "6f8073a3dd7aee79705029aaa222f2ac1ec69085",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_4ad40ab7-41f-14",
-    "perFinding": [
-     {
-      "id": "AUD-account-08",
-      "outcome": "fixed",
-      "note": "Confirmed byte-identical dead dup, zero importers (grep). Deleted file + account.dart export line. Commit 4c4f86e0."
-     },
-     {
-      "id": "AUD-account-17",
-      "outcome": "fixed",
-      "note": "Confirmed raw e.reason leaked untranslated; 6-vs-8 password floor drift. Added InvalidInputCode enum, AppLocalizations resolution via new switch expr, shared AppConstants.minLocalPasswordLength. Red-first test captured failing output before fix. Commit 1f9b6568."
-     },
-     {
-      "id": "AUD-account-20",
-      "outcome": "fixed",
-      "note": "Shared constant already centralized by AUD-17 fix. Added the finding named deliverable: boundary-agreement unit test. Commit 6f8073a3."
-     }
-    ],
-    "testsAdded": [
-     "learning_tracker/test/features/auth/domain/services/local_auth_service_test.dart",
-     "learning_tracker/test/features/auth/domain/services/auth_exceptions_test.dart (updated)",
-     "learning_tracker/test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart (updated)"
-    ],
-    "gateResults": {
-     "make audit": "PASS - all 25 greps clean (each commit)",
-     "flutter analyze": "PASS functionally - 0 issues in touched files",
-     "flutter test targeted": "PASS - 84 tests green",
-     "flutter test broad sweep": "PASS - 579 passed, 5 skipped, 0 failed",
-     "make arb-parity": "PASS - 1421 EN keys all present in HE",
-     "dart run custom_lint": "PASS - No issues found (each commit)"
-    },
-    "notes": "Follow-ups noted, not touched: signup_screen.dart deep-imports onboarding auth_validators.dart bypassing its barrel; auth_validators.dart own error strings are hardcoded English (same EH-5 class, out of AC scope)."
-   }
-  },
-  {
-   "ids": [
-    "AUD-tutoring-07",
-    "AUD-tutoring-17"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "7b0648a6de63dbbc79b14c4bb8c3f1e890bcca92",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-16",
-    "perFinding": [
-     {
-      "id": "AUD-tutoring-07",
-      "outcome": "fixed",
-      "note": "Confirmed opaque exception on mid-loop failure. Added succeededStageIds to TutorWriteException; pushStageDefinitions accumulates and throws with it populated. Header documents accepted-risk decision. Red-first test failed to compile pre-fix, passes post-fix (['7_1'])."
-     },
-     {
-      "id": "AUD-tutoring-17",
-      "outcome": "fixed",
-      "note": "Confirmed all 10 int.parse(sel.profileId) sites unguarded. Added _profileIdOrThrow helper (AppLogger + typed TutorWriteException code=invalid-profile-id); replaced all 10 sites. Red-first tests failed pre-fix (got FormatException), pass post-fix."
-     }
-    ],
-    "testsAdded": [
-     "learning_tracker/test/features/tutoring/s1_tutored_write_router_test.dart (group 'AUD-tutoring-07 \u2014 pushStageDefinitions partial failure surfaces succeeded stages', 2 tests)",
-     "learning_tracker/test/features/tutoring/s1_tutored_write_router_test.dart (group 'AUD-tutoring-17 \u2014 malformed profileId guarded (not raw FormatException)', 2 tests)"
-    ],
-    "gateResults": {
-     "make audit": "PASS (25/25 greps clean)",
-     "flutter analyze": "PASS (No issues found)",
-     "dart format": "PASS (no diffs on changed files)",
-     "flutter test (targeted: s1_tutored_write_router_test.dart)": "PASS (41/41)",
-     "flutter test (caller-side suites)": "PASS (36/36 + 41/41)",
-     "make arb-parity": "n/a (no .arb/user-facing string changes)",
-     "build_runner diff": "n/a (no codegen files touched; zero diff)",
-     "firestore rules suite": "n/a (no rules/functions changes)",
-     "dart run custom_lint": "PASS (No issues found)"
-    },
-    "notes": "Env setup: copied firebase_options.dart, regenerated content.db.gz, ran pub get + build_runner (all gitignored, zero git diff). Split combined edit into 2 commits by reconstructing intermediate state, gate-verifying each independently before committing. Follow-up candidate (out of scope): callers don't yet use succeededStageIds for retry UI."
-   }
-  },
   {
    "ids": [
     "AUD-account-01",
@@ -402,236 +96,6 @@
   },
   {
    "ids": [
-    "AUD-core-analytics-01",
-    "AUD-docs-01",
-    "AUD-firebase-01",
-    "AUD-firebase-02",
-    "AUD-firebase-03",
-    "AUD-firebase-05",
-    "AUD-firebase-06",
-    "AUD-firebase-07"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "17133ecdf54dbf47631dfc63c99779dc61d786b3",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-13",
-    "perFinding": [
-     {
-      "id": "AUD-core-analytics-01",
-      "outcome": "fixed",
-      "note": "AnalyticsEvent is now the sole catalog; added tool/check_analytics_catalog.dart as make audit 26/26. Converted ~21 call sites; stripped entity_key/profile_id/target/error.toString at the 7 cited PV-1 sites. Red-then-green tests for all 6 reachable sites. PV-5 flipped to [Enforced]."
-     },
-     {
-      "id": "AUD-docs-01",
-      "outcome": "fixed",
-      "note": "firestore.rules: split create/update on the 4 SR-1 collections; update now requires data==resource.data. 4 new assertFails tests: red 83/87 pre-fix, green 87/87 post-fix. SR-1 flipped to [Enforced]."
-     },
-     {
-      "id": "AUD-firebase-01",
-      "outcome": "fixed",
-      "note": "acceptTutorInvite/declineTutorInvite/listTutorGrants(pending_for_me) now also require emailVerified. Added seedAuthUser() helper + unverified/verified tests. Red 278/281, green 281/281."
-     },
-     {
-      "id": "AUD-firebase-02",
-      "outcome": "fixed",
-      "note": "inviteTutor now rejects re-invite while grant is 'active' instead of silently resetting state/permissions. Client already handles the new error. Red 281/282, green 282/282."
-     },
-     {
-      "id": "AUD-firebase-03",
-      "outcome": "fixed",
-      "note": "Rewrote docs/firestore-collection-layout.md from a fresh read of rules/indexes.json: index count 0->6, added tutor_grants/tutor_active_access/audit_log, removed stale compat-blocks text, corrected doc-id claims. Docs-only."
-     },
-     {
-      "id": "AUD-firebase-05",
-      "outcome": "fixed",
-      "note": "Added points_ledger/reward_redemptions to emit_fixture_payloads.dart, regenerated write_payloads.json, added both to PHASE D oracle and PHASE E round-trip. make test-rules 89/89 green."
-     },
-     {
-      "id": "AUD-firebase-06",
-      "outcome": "fixed",
-      "note": "onUserDeleted Step 2 now also deletes the matching tutor_active_access doc, mirroring Step 3. Symmetric W6.23 test added. Red 283/284, green 284/284."
-     },
-     {
-      "id": "AUD-firebase-07",
-      "outcome": "fixed",
-      "note": "seedActiveGrant now stores child_profile_id as String(PROFILE); strengthened the tautological outgoing-mode assertion. Confirmed 0!==1 against the buggy fixture, then fixed - 284/284 pass."
-     }
-    ],
-    "testsAdded": [
-     "learning_tracker/test/core/sync/outbox/outbox_processor_test.dart",
-     "learning_tracker/test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart",
-     "learning_tracker/test/core/sync/sync_orchestrator_test.dart",
-     "learning_tracker/test/features/tutoring/domain/services/analytics_pv1_redaction_test.dart",
-     "learning_tracker/functions/test/firestore_rules.test.mjs",
-     "learning_tracker/functions/test/cf_grant_invite.test.mjs",
-     "learning_tracker/functions/test/cf_grant_revoke.test.mjs",
-     "learning_tracker/functions/test/cf_triggers.test.mjs"
-    ],
-    "gateResults": {
-     "make audit": "PASS (26/26 checks, includes new AUD-core-analytics-01 checker)",
-     "flutter analyze": "PASS - No issues found!",
-     "dart format (changed files)": "PASS - 0 changed",
-     "flutter test (targeted, 199 tests)": "PASS - all pass",
-     "make test-rules (firestore emulator)": "PASS - 89/89",
-     "make test-functions (firestore+auth emulator)": "PASS - 284/284",
-     "dart run custom_lint": "PASS - No issues found!",
-     "arb-parity": "n/a - no .arb/user-facing string changes",
-     "build_runner": "n/a - no @riverpod/@freezed/@JsonSerializable files touched"
-    },
-    "notes": "All 8 findings fixed with red-first evidence, one commit per finding (tip 17133ec). Env gaps handled (not defects): firebase_options.dart copied, pub get + build_runner run, content.db.gz regenerated, npm install in functions/. Scope: AUD-core-analytics-01's grant_id/child_profile_id params left untouched (not in cited 7 sites) - noted as follow-up. AUD-firebase-02's manage_tutors_screen.dart UX noted as follow-up."
-   }
-  },
-  {
-   "ids": [
-    "AUD-tutoring-05"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "e38480e973521d74e2af8058d723e5b3444401e3",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-20",
-    "perFinding": [
-     {
-      "id": "AUD-tutoring-05",
-      "outcome": "fixed",
-      "note": "Re-verified: hand-written ==/hashCode still present. Converted to @freezed const factory; canMarkLiveCompletion kept as a getter, excluded from generated ==/hashCode. toFirestore/fromFirestore kept as methods. No hand-written ==/hashCode remain. 199 existing tests pass unmodified."
-     }
-    ],
-    "testsAdded": [],
-    "gateResults": {
-     "make audit": "PASS (25/25 greps clean)",
-     "flutter analyze": "PASS (No issues found!)",
-     "dart run custom_lint": "PASS (No issues found!)",
-     "dart format (changed file)": "PASS (0 changed, already formatted)",
-     "flutter test (targeted)": "PASS (199 tests across 8 files, --concurrency=2)",
-     "build_runner": "PASS (clean rebuild, freezed file generated correctly)",
-     "make arb-parity": "n/a (no .arb/user-facing strings changed)",
-     "firestore rules suite": "n/a (finding untouched firestore.rules/functions)"
-    },
-    "notes": "Single finding, P2 hygiene, fixed cleanly. tutor_permissions.freezed.dart intentionally not committed: *.freezed.dart is gitignored repo-wide; new generated file, matching 5 other untracked freezed.dart files in lib/. CI regenerates via build_runner per AG-7. Copied firebase_options.dart + regenerated content.db.gz for worktree env (gitignored, not committed). Follow-up candidate (not actioned): coding-standards.md maps freezed VOs to a _model.dart suffix; a rename sweep is a separate concern."
-   }
-  },
-  {
-   "ids": [
-    "AUD-account-15"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "28d605f6166a66a79a9bf3780044df191390c354",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-19",
-    "perFinding": [
-     {
-      "id": "AUD-account-15",
-      "outcome": "fixed",
-      "note": "Evidence matched. Clip is SILENT (no RenderFlex exception; cross-axis squeeze never trips detector). Red-first test at 2.5x scale captured red (32.0 vs 40.0 required). Fixed via minHeight:32 constraint replacing height:32. Both ACs met; existing height-32 test unweakened."
-     }
-    ],
-    "testsAdded": [
-     "learning_tracker/test/.../offline_top_banner_l1_test.dart: new AX-4 large-text-scale regression test"
-    ],
-    "gateResults": {
-     "flutter analyze": "PASS (No issues found!)",
-     "dart format (changed files)": "PASS (1 file reformatted: offline_top_banner_l1_test.dart; widget file already formatted)",
-     "flutter test targeted": "PASS (32/32: offline_top_banner_l1_test.dart + epic_25_story_21_multi_account_threading_test.dart, --concurrency=2)",
-     "make audit": "PASS (25/25 greps clean, exit 0)",
-     "dart run custom_lint": "PASS (No issues found!, exit 0)",
-     "make arb-parity": "n/a (no .arb or user-facing string changes)",
-     "build_runner": "n/a (not codegen-adjacent; ran once for env setup, zero generated-file diffs)",
-     "firestore rules suite": "n/a (finding doesn't touch firestore.rules or functions/)"
-    },
-    "notes": "Env setup: copied firebase_options.dart from main checkout, flutter pub get, prepare_asset.dart, build_runner (all gitignored artifacts, nothing committed). Adjacent out-of-scope defect noted: app_shell.dart:217 hardcodes bannerHeight=32.0 for AppBar PreferredSize; now that the banner can grow past 32px, this fixed reservation may cause overlap at large text scale \u2014 candidate follow-up finding, not touched."
-   }
-  },
-  {
-   "ids": [
-    "AUD-firebase-12"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "9cad098c8129bc507c9d41a999f6caa2445dd512",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-22",
-    "perFinding": [
-     {
-      "id": "AUD-firebase-12",
-      "outcome": "fixed",
-      "note": "Verified: cf_tutor_completions.test.mjs header claimed tutorBulkPriorCompletions coverage but only tutorResetCompletion is there; real suite is in cf_tutor_settings_profile.test.mjs, header already correct there. Fixed stale header only. Verified via emulator test run (52/52 pass)."
-     }
-    ],
-    "testsAdded": [],
-    "gateResults": {
-     "make audit": "PASS (25/25 checks clean)",
-     "flutter analyze": "PASS (0 issues)",
-     "dart format": "n/a - no .dart files changed",
-     "flutter test targeted": "n/a - change is JS-only",
-     "make arb-parity": "PASS (n/a, ran anyway)",
-     "build_runner": "n/a - ran for env setup only, no generated-file diffs",
-     "functions test suite": "PASS - emulator node --test on both files, 52/52 pass",
-     "dart run custom_lint": "PASS (no issues found)"
-    },
-    "notes": "Single P3 hygiene finding, fully fixed with a one-line-scope comment correction and no behavioral change. Env setup performed per instructions (copied firebase_options.dart, flutter pub get, build_runner, regenerated assets/db/content.db.gz via tool/prepare_asset.dart) - documented worktree gaps, not defects. No adjacent defects noticed worth flagging as follow-ups."
-   }
-  },
-  {
-   "ids": [
-    "AUD-account-21"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "1a380b97310c0769bd59ef1ff3a8bfc2cdb44108",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-21",
-    "perFinding": [
-     {
-      "id": "AUD-account-21",
-      "outcome": "fixed",
-      "note": "Confirmed: StatelessWidget allocated a fresh TapGestureRecognizer per build(), never disposed. Converted to StatefulWidget: recognizer created once in initState(), disposed in dispose(); onTap reads widget.* for freshness. Red-first identity test failed pre-fix, passes post-fix."
-     }
-    ],
-    "testsAdded": [
-     "learning_tracker/test/features/account/presentation/widgets/sign_in_actions_aud_account_21_test.dart"
-    ],
-    "gateResults": {
-     "make audit": "PASS - all 25 greps clean",
-     "flutter analyze": "PASS - No issues found",
-     "dart format": "PASS - 0 changes needed",
-     "flutter test (targeted)": "PASS - all targeted suites green, 0 failed",
-     "arb-parity": "n/a - no .arb/string changes",
-     "build_runner diff check": "PASS - no generated-file drift",
-     "custom_lint": "PASS - No issues found",
-     "firestore rules suite": "n/a - not touched"
-    },
-    "notes": "Single-finding item, fix kept narrow per scope discipline: same recreate-every-build recognizer pattern also exists in signup_screen.dart:825 per the finding's own note, left as a candidate follow-up (out of AUD-account-21's evidence scope). Worktree needed one-time env repairs (firebase_options.dart copy, prepare_asset.dart, build_runner for a missing riverpod .g.dart causing unrelated analyze noise) - all gitignored artifacts, confirmed via git status no tracked files were affected."
-   }
-  },
-  {
-   "ids": [
-    "AUD-firebase-14"
-   ],
-   "build": {
-    "status": "fixed",
-    "tipSha": "b183957cf8cff48efe111c6c605f752bbf96e648",
-    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-23",
-    "perFinding": [
-     {
-      "id": "AUD-firebase-14",
-      "outcome": "fixed",
-      "note": "Re-verified root firebase.json referenced files only under learning_tracker/; nothing (Makefile/CI/scripts) reads root config. Deleted root firebase.json + .firebaserc (AC met). Fixed deployment-guide.md + coding-standards.md prose referencing deleted files."
-     }
-    ],
-    "testsAdded": [],
-    "gateResults": {
-     "make audit": "PASS (25/25 greps clean)",
-     "flutter analyze": "PASS (No issues found!)",
-     "dart format <changed files>": "n/a (no .dart files changed - docs/config-deletion only)",
-     "flutter test <targeted paths>": "n/a (no Dart code or tests touched by this hygiene fix)",
-     "make arb-parity": "n/a (no .arb files or user-facing strings changed)",
-     "build_runner + generated-file diff": "n/a (no codegen-adjacent files touched); ran build_runner anyway during env setup, git diff --exit-code clean afterward",
-     "firestore rules test suite": "n/a (finding touches firebase.json/.firebaserc, not firestore.rules or learning_tracker/functions/)",
-     "dart run custom_lint": "PASS (No issues found!)"
-    },
-    "notes": "P3 hygiene/dead-config finding, not behavioral; ls/grep confirming files gone and unreferenced plays the AC-checker role. Env setup: copied firebase_options.dart, flutter pub get, build_runner build, prepare_asset.dart before judging analyze. One commit, tree clean. Follow-up NOT touched: coding-standards.md's separate still-live TQ-9 row ('make ci doesn't run test-rules')."
-   }
-  },
-  {
-   "ids": [
     "AUD-tutoring-01",
     "AUD-tutoring-03",
     "AUD-tutoring-08",
@@ -696,6 +160,194 @@
      "firestore rules suite": "n/a - no rules/functions changes"
     },
     "notes": "6 findings terminal (5 fixed, 1 refuted). Register not drifted at dispatch.\n\nFollow-ups NOT fixed: (1) revoke/resignTutorGrantUseCaseProvider duplicated in 2 files (AG-4). (2) manage_tutors_screen.dart per-child list is a 3rd PF-2 site, outside AUD-08 scope.\n\ncustom_lint CLI discovers 0 projects (doc-confirmed) - built audit checks 26/27 as substitutes.\n\nMakefile: a comment before check 27 made audit drop its final echo (exit 0 still); worked around; verified via exit code + injected violation."
+   }
+  },
+  {
+   "ids": [
+    "AUD-firebase-08",
+    "AUD-firebase-09",
+    "AUD-firebase-10",
+    "AUD-firebase-11",
+    "AUD-firebase-15"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "e85b8be76504091106726b42ea910ce66dedc0cd",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_97ebb163-51d-5",
+    "perFinding": [
+     {
+      "id": "AUD-firebase-08",
+      "outcome": "fixed",
+      "note": "writeAuditLog now derives a deterministic sha256 doc ID from (grantId,action,target,idempotencyKey) instead of .add() auto-ID; no longer swallows failures. idempotencyKey threaded through all 13 tutor CFs (optional). Red-first: reverted, test failed 2!==1; restored, green 50/50. Commit 6c683c69."
+     },
+     {
+      "id": "AUD-firebase-09",
+      "outcome": "fixed",
+      "note": "Split allow read into allow get (unbounded) + allow list (limit<=500) on completions/streak_events/learning_ledger/points_ledger, per verify-stage's scope correction. Red-first: reverted, limit(501) unexpectedly succeeded; restored, rules suite green 83/83. Commit b0901478."
+     },
+     {
+      "id": "AUD-firebase-10",
+      "outcome": "fixed",
+      "note": "assertFieldsWhitelisted() mirrors each collection's firestore.rules hasOnly() list (6/8 sites per correction) + 10k-char string cap. Fixed 6 test fixtures using non-whitelisted fields. Red-first: disabled check, test fell through to not-found; restored, green 127/127. Commit c060beb0."
+     },
+     {
+      "id": "AUD-firebase-11",
+      "outcome": "fixed",
+      "note": "tutorEditProfile switched read-then-set(fullDoc,merge:false) to set(updates,{merge:true}) - matches FB-6, removes lost-update race, no transaction needed. Red-first: reverted, new race test failed 3!==99; restored, green 45/45. Commit ee6fd8ad."
+     },
+     {
+      "id": "AUD-firebase-15",
+      "outcome": "fixed",
+      "note": "Split 2140-line index.ts into firebase/shared/triggers/deletes/tutor_bulk_completions/tutor_invites/tutor_writes.ts; index.ts is a 20-line barrel (AC<300). Verified: tsc clean, export-name diff byte-identical (27/27), CF suite 284/284, rules suite 83/83. Commit e85b8be7."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/functions/test/cf_tutor_goals_tracks.test.mjs (AUD-08 idempotency x2, AUD-10 whitelist for goalData x2 + trackData x1)",
+     "learning_tracker/functions/test/cf_tutor_content.test.mjs (AUD-10 whitelist for stageData, configData, bookmarkData, programData)",
+     "learning_tracker/functions/test/cf_tutor_settings_profile.test.mjs (AUD-11 lost-update-race concurrency test)",
+     "learning_tracker/functions/test/firestore_rules.test.mjs (AUD-09 list-query limit cap: 500 succeeds, 501/unbounded fail)"
+    ],
+    "gateResults": {
+     "npm run build (tsc)": "PASS - zero errors, both before and after AUD-15 split",
+     "functions CF suite (firebase emulators:exec cf_*.test.mjs, --test-concurrency=1)": "PASS 284/284 at final HEAD",
+     "firestore rules suite (firestore_rules.test.mjs)": "PASS 83/83 at final HEAD",
+     "make audit / flutter analyze / dart format / flutter test": "n/a - zero Dart/lib files touched; all changes confined to learning_tracker/functions/**.ts and firestore.rules",
+     "make arb-parity": "n/a - no .arb files or user-facing strings changed",
+     "build_runner": "n/a - no @riverpod/@freezed/@JsonSerializable files touched"
+    },
+    "notes": "All 5 findings fixed, 5 separate commits, clean working tree at HEAD, base was e385f632 (matches wave). Follow-ups noted, not done (scope discipline): (1) AUD-08's idempotencyKey needs Dart-client wiring in tutor_write_service.dart to actually retry-coalesce; (2) no make-audit TS line-cap checker added (Makefile is an AG-11 guardrail file needing human review). Machine had heavy multi-agent contention; all quoted gate runs are from clean, uncontended executions."
+   }
+  },
+  {
+   "ids": [
+    "AUD-account-03",
+    "AUD-account-11",
+    "AUD-account-22"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "a8bad8a388c4240df1ebc428ee790a2c6c5bdacb",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-9",
+    "perFinding": [
+     {
+      "id": "AUD-account-03",
+      "outcome": "fixed",
+      "note": "Wrapped reloadCurrentUser() in try/catch, log+fallback to cached firebaseUser. Red-first test failed pre-fix ('stayed at initializing'), passes post-fix. Commit 5915a5a9."
+     },
+     {
+      "id": "AUD-account-11",
+      "outcome": "fixed",
+      "note": "Outer try/catch around _init() -> log+signedOut. Red-first test also exposed a build()-timing bug (state clobbered by build()'s own return); fixed via Future.microtask(_init). AC3 custom_lint rule deferred (see notes). Commit 230a523f."
+     },
+     {
+      "id": "AUD-account-22",
+      "outcome": "fixed",
+      "note": "Converted AppUser/AuthState/AuthUser to @freezed, flat shape preserved (non-union). Fixed ~150 downstream call-site breaks across 49 files. 0-diff build_runner regen; new equality tests satisfy AC1. Commit a8bad8a3."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/account/presentation/providers/auth_state_notifier_offline_reload_test.dart",
+     "learning_tracker/test/features/account/presentation/providers/auth_state_notifier_init_exception_safety_test.dart",
+     "learning_tracker/test/helpers/auth_state_test_utils.dart",
+     "learning_tracker/test/features/auth/domain/models/auth_state_test.dart (new equality group + updated copyWith tests)"
+    ],
+    "gateResults": {
+     "make audit": "PASS (25/25 clean)",
+     "flutter analyze": "PASS (0 issues)",
+     "dart analyze --fatal-infos": "PASS (0 issues)",
+     "dart format": "PASS (applied)",
+     "flutter test targeted": "PASS (all 3 findings' tests green)",
+     "flutter test full suite": "PASS (10377 pass, 238 skip, 0 fail)",
+     "make arb-parity": "PASS",
+     "dart run custom_lint": "PASS (0 issues)",
+     "build_runner regen diff": "PASS (0 outputs, clean)",
+     "firestore rules suite": "n/a"
+    },
+    "notes": "Worktree needed 2 gitignored local-only files copied from main checkout to unblock testing (content.db.gz, firebase_options.dart) -- not committed. AUD-03/AUD-11 share one method, delivered as 2 separate red-tested commits per dispatch order. AUD-22 AC3 (novel custom_lint rule) deferred as candidate follow-up: disproportionate risk to shared lint infra for a P2's secondary AC; primary fix+tests complete. No drive-by fixes made."
+   }
+  },
+  {
+   "ids": [
+    "AUD-account-08",
+    "AUD-account-17",
+    "AUD-account-20"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "6f8073a3dd7aee79705029aaa222f2ac1ec69085",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_4ad40ab7-41f-14",
+    "perFinding": [
+     {
+      "id": "AUD-account-08",
+      "outcome": "fixed",
+      "note": "Confirmed byte-identical dead dup, zero importers (grep). Deleted file + account.dart export line. Commit 4c4f86e0."
+     },
+     {
+      "id": "AUD-account-17",
+      "outcome": "fixed",
+      "note": "Confirmed raw e.reason leaked untranslated; 6-vs-8 password floor drift. Added InvalidInputCode enum, AppLocalizations resolution via new switch expr, shared AppConstants.minLocalPasswordLength. Red-first test captured failing 'must be at least 8 characters' output before fix. Commit 1f9b6568."
+     },
+     {
+      "id": "AUD-account-20",
+      "outcome": "fixed",
+      "note": "Shared constant already centralized by AUD-17 fix. Added the finding's named deliverable: boundary-agreement unit test. Commit 6f8073a3."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/auth/domain/services/local_auth_service_test.dart",
+     "learning_tracker/test/features/auth/domain/services/auth_exceptions_test.dart (updated)",
+     "learning_tracker/test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart (updated)"
+    ],
+    "gateResults": {
+     "make audit": "PASS - all 25 greps clean (each commit)",
+     "flutter analyze": "PASS functionally - 2 pre-existing unrelated issues only (missing gitignored firebase_options.dart), 0 in touched files",
+     "dart format": "PASS - ran on all changed files each commit",
+     "flutter test targeted": "PASS - 84 tests green (5 target files)",
+     "flutter test broad sweep": "PASS - 579 passed, 5 skipped, 0 failed (test/features/account + onboarding)",
+     "make arb-parity": "PASS - 1421 EN keys all present in HE",
+     "dart run custom_lint": "PASS - No issues found (each commit)",
+     "build_runner": "n/a for diff - no codegen files touched; ran once as env bootstrap only",
+     "firestore rules suite": "n/a - no firestore.rules or functions/ changes"
+    },
+    "notes": "Worktree never ran build_runner/prepare_asset - gates were unusably red (3097 issues) for reasons unrelated to my findings (confirmed via git-stash A/B, identical before/after). Ran both as one-time env bootstrap (gitignored outputs, nothing committed). Follow-ups noted, not touched: signup_screen.dart deep-imports onboarding's auth_validators.dart bypassing its barrel; auth_validators.dart's own error strings are hardcoded English (same EH-5 class, but for the validator, out of AC scope)."
+   }
+  },
+  {
+   "ids": [
+    "AUD-account-18",
+    "AUD-account-19"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "51ed8a5fea1308ef871470eb5beeba31f193424a",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_97ebb163-51d-6",
+    "perFinding": [
+     {
+      "id": "AUD-account-18",
+      "outcome": "fixed",
+      "note": "Confirmed: _AccountTile.build() did ref.read(authRepositoryProvider).currentUser. Fixed via ref.watch of the reactive Firebase auth-state stream. Red-first regression test failed pre-fix, passes post-fix. Updated 3 pre-existing test mocks. Commit d6e18e63."
+     },
+     {
+      "id": "AUD-account-19",
+      "outcome": "fixed",
+      "note": "Confirmed collision: two @riverpod providers both generated authStateProvider, forcing hide/as workarounds in 13 files; notifier never watched the stream. Renamed raw provider, removed workarounds, wired ref.listen for sign-out detection. AC1+AC2 verified red-first. Commit 51ed8a5f."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/account/presentation/screens/account_picker_reactive_session_test.dart",
+     "learning_tracker/test/features/account/presentation/providers/auth_state_provider_test.dart"
+    ],
+    "gateResults": {
+     "flutter_analyze": "PASS - No issues found (both commits)",
+     "custom_lint": "PASS - No issues found",
+     "dart_format": "PASS - applied to all changed files",
+     "flutter_test_targeted": "PASS - 326 tests passed (2 pre-existing unrelated skips), 0 failed",
+     "make_audit": "PASS - audit PASSED, all 25 greps clean",
+     "make_arb_parity": "PASS - n/a, ran as sanity check, no strings changed",
+     "build_runner": "PASS - ran after @riverpod changes; .g.dart gitignored, not committed",
+     "firestore_rules_suite": "n/a - not touched"
+    },
+    "notes": "Fixed in dependency order: AUD-18 first (temp alias for the raw stream while collision existed), then AUD-19 (renamed provider, simplified AUD-18's alias to a plain import). Follow-up candidate noted, not fixed: settings_screen.dart:44 has a similar ref.watch(authRepositoryProvider).currentUser pattern worth a consistency pass. Also noted: main checkout's user_database.g.dart has newer unrelated indices, briefly picked up by generated-file copy, reverted before committing."
    }
   },
   {
@@ -769,31 +421,503 @@
     },
     "notes": "Both fixed, committed separately, tree clean. Doc-drift note (AUD-16): standards doc still names barrel providers.dart though real convention is Y.dart; followed convention. custom_lint exits 0 even on a planted violation (repo-wide detection issue, out of scope) - AUD-24 AC verified via grep instead. Follow-ups only, not fixed: duplicate auth_validators.dart copy; one unrelated deep import remains. Env setup: firebase_options.dart, pub get, prepare_asset.dart, build_runner."
    }
+  },
+  {
+   "ids": [
+    "AUD-tutoring-07",
+    "AUD-tutoring-17"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "7b0648a6de63dbbc79b14c4bb8c3f1e890bcca92",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-16",
+    "perFinding": [
+     {
+      "id": "AUD-tutoring-07",
+      "outcome": "fixed",
+      "note": "Confirmed opaque exception on mid-loop failure. Added succeededStageIds to TutorWriteException; pushStageDefinitions accumulates and throws with it populated. Header documents accepted-risk decision. Red-first test failed to compile pre-fix, passes post-fix (['7_1'])."
+     },
+     {
+      "id": "AUD-tutoring-17",
+      "outcome": "fixed",
+      "note": "Confirmed all 10 int.parse(sel.profileId) sites unguarded. Added _profileIdOrThrow helper (AppLogger + typed TutorWriteException code=invalid-profile-id); replaced all 10 sites. Red-first tests failed pre-fix (got FormatException), pass post-fix."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/tutoring/s1_tutored_write_router_test.dart (group 'AUD-tutoring-07 \u2014 pushStageDefinitions partial failure surfaces succeeded stages', 2 tests)",
+     "learning_tracker/test/features/tutoring/s1_tutored_write_router_test.dart (group 'AUD-tutoring-17 \u2014 malformed profileId guarded (not raw FormatException)', 2 tests)"
+    ],
+    "gateResults": {
+     "make audit": "PASS (25/25 greps clean)",
+     "flutter analyze": "PASS (No issues found)",
+     "dart format": "PASS (no diffs on changed files)",
+     "flutter test (targeted: s1_tutored_write_router_test.dart)": "PASS (41/41)",
+     "flutter test (caller-side suites)": "PASS (36/36 + 41/41)",
+     "make arb-parity": "n/a (no .arb/user-facing string changes)",
+     "build_runner diff": "n/a (no codegen files touched; zero diff)",
+     "firestore rules suite": "n/a (no rules/functions changes)",
+     "dart run custom_lint": "PASS (No issues found)"
+    },
+    "notes": "Env setup: copied firebase_options.dart, regenerated content.db.gz, ran pub get + build_runner (all gitignored, zero git diff). Split combined edit into 2 commits by reconstructing intermediate state, gate-verifying each independently before committing. Follow-up candidate (out of scope): callers don't yet use succeededStageIds for retry UI."
+   }
+  },
+  {
+   "ids": [
+    "AUD-core-email-01"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "93f70b43ad99cec8cc55370a0c77b70c8b252211",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_f3edb19b-c78-6",
+    "perFinding": [
+     {
+      "id": "AUD-core-email-01",
+      "outcome": "fixed",
+      "note": "Re-verified: send() logs plaintextBody under key 'body' via debug(); 'body' missing from sensitiveKeys. Red-first: 3 new tests failed pre-fix (Expected [REDACTED], Actual raw email+name). Fix: added 'body' to sensitiveKeys, matching sibling grouping. All 45 tests pass post-fix."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/core/logging/logger_extended_test.dart (3 tests: redacts 'body' key; 'body' in sensitiveKeys; debug Payload call redacted)"
+    ],
+    "gateResults": {
+     "make audit": "PASS (25/25 clean)",
+     "flutter analyze (changed files)": "PASS (No issues found)",
+     "flutter analyze (full project)": "FAIL pre-existing baseline (same 3096 issues on base HEAD via git stash), unrelated stale-codegen",
+     "dart format": "PASS (applied)",
+     "flutter test (test/core/logging/)": "PASS (94/94)",
+     "make arb-parity": "PASS (n/a, no arb changes; ran anyway OK)",
+     "build_runner": "n/a - no codegen files touched",
+     "firestore rules suite": "n/a - no rules/functions changes",
+     "custom_lint": "PASS (No issues found)"
+    },
+    "notes": "Single P0 finding confirmed and fixed minimally (one sensitiveKeys entry + comment, matching V2-R5 C2 pattern). Red-first: tests written first, confirmed failing against pre-fix logger.dart (evidence in commit body), then fixed, then green. No assertions weakened, no tests deleted. HEAD advanced e385f632 -> 93f70b43. Only project-wide flutter analyze is red, pre-existing baseline (identical via git stash A/B), unrelated stale-codegen drift, left untouched per scope discipline."
+   }
+  },
+  {
+   "ids": [
+    "AUD-account-23"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "a9ca4cf1ab528d452e25f2329e7094e65af25cae",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_97ebb163-51d-10",
+    "perFinding": [
+     {
+      "id": "AUD-account-23",
+      "outcome": "fixed",
+      "note": "Confirmed: signOut() only clears prefs, never touches Firebase. Both callers hard-sign-out right after it, and the fast-resume tile-tap path never calls signOut() at all. Rewrote the dartdoc to describe actual always-hard call paths, per recommendation."
+     }
+    ],
+    "testsAdded": [],
+    "gateResults": {
+     "make audit": "PASS - 25 greps clean",
+     "flutter analyze": "PASS - No issues found!",
+     "dart format": "PASS - 0 changed",
+     "flutter test (targeted)": "PASS - 41/41 (account_management_service_test + account_actions_test)",
+     "dart run custom_lint": "PASS - No issues found!",
+     "arb-parity": "n/a - no arb/string changes",
+     "build_runner check": "n/a - no codegen files touched",
+     "firestore rules suite": "n/a - not touched"
+    },
+    "notes": "Doc-comment-only fix, no behavioral change, so no red-first test needed; verified by direct code inspection of both call sites plus the account_picker fast-resume path. Env-setup note: a copied generated file (user_database.g.dart) pulled drift-ahead index defs from main not backed by this worktree's source; reverted it before committing so only the intended finding is in the commit."
+   }
+  },
+  {
+   "ids": [
+    "AUD-firebase-13"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "f163bc29b3e232883518e65f58dc4cd4d2f63b47",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_97ebb163-51d-9",
+    "perFinding": [
+     {
+      "id": "AUD-firebase-13",
+      "outcome": "fixed",
+      "note": "Confirmed live: track_id 't1' vs PAYLOADS 1; day_type 'learning' vs PAYLOADS 'study'. Fixed by spreading PAYLOADS.* + overriding only fields it lacks. Verified vs Dart codecs PAYLOADS is the true encode() shape. make test-rules: 82/82 pass."
+     }
+    ],
+    "testsAdded": [],
+    "gateResults": {
+     "test-rules (emulator)": "PASS 82/82 (1 transient SIGTERM under RAM contention, retried clean)",
+     "flutter analyze": "PASS - No issues found!",
+     "dart run custom_lint": "PASS - No issues found!",
+     "make audit": "PASS - 25/25 clean",
+     "dart format": "n/a - .mjs only",
+     "make arb-parity": "n/a - no .arb changes",
+     "build_runner diff": "n/a - no codegen files touched",
+     "flutter test targeted": "n/a - JS-only change"
+    },
+    "notes": "P3 hygiene finding, no behavior change - test-rules suite served as AC checker. Env setup: copied firebase_options.dart, *.g.dart/*.freezed.dart, content.db.gz; npm install in functions/. Gaps (not defects): also needed *.gr.dart (auto_route) copy for flutter analyze to be clean. Reverted user_database.g.dart after copy - main checkout HEAD is ahead of worktree base with unrelated newer migrations; restored worktree's own version, re-verified all gates."
+   }
+  },
+  {
+   "ids": [
+    "AUD-account-14"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "9f3a2154f7f0885df134aee49623706723112f62",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_97ebb163-51d-8",
+    "perFinding": [
+     {
+      "id": "AUD-account-14",
+      "outcome": "fixed",
+      "note": "Verified live pre-fix (lines 704-974). Migrated via AsyncValue.guard: impl methods never touch state; guard's result.when() is sole mapping site. state= sites ~15->6. Public API/tests unchanged, all pass. Added Branch H regression test. AC3 lint rule deferred as follow-up."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/account/presentation/notifiers/sign_in_controller_routing_test.dart (Branch H)"
+    ],
+    "gateResults": {
+     "flutter analyze": "PASS",
+     "custom_lint": "PASS",
+     "make audit": "PASS 25/25",
+     "dart format": "PASS clean",
+     "sign_in tests (6 files)": "PASS 40, 2 pre-existing skips",
+     "e2e auth_p0_test": "PASS 8, 4 skips",
+     "e2e auth_sync_infra_p2_test": "PASS 6, 4 skips",
+     "arb-parity": "n/a",
+     "build_runner": "n/a",
+     "firestore rules": "n/a"
+    },
+    "notes": "Env setup only, uncommitted: copied firebase_options.dart, generated files, content.db.gz from main checkout. Reverted one stale generated-file copy (unrelated schema) before committing. Chose guard-with-preserved-shape over full AsyncNotifier type change to avoid touching screen + 2577 lines of tests, per recommendation's authorized 2nd option. AC3 lint rule deferred as follow-up."
+   }
+  },
+  {
+   "ids": [
+    "AUD-core-database-02"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "c160bdd680867f403a745b6c78a8708743004827",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_4ad40ab7-41f-12",
+    "perFinding": [
+     {
+      "id": "AUD-core-database-02",
+      "outcome": "fixed",
+      "note": "Confirmed unscoped DAO queries. Added required profileId to both DAO methods; threaded profileId through the 3 named consumers. Red-first test failed pre-fix exactly as predicted (read+delete leak), passed post-fix. Fix surfaced same masked-bug pattern in 2 more test files; fixtures corrected."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/learning_order/data/repositories/learning_order_repository_impl_test.dart (new group: cross-profile isolation, 2 tests)"
+    ],
+    "gateResults": {
+     "flutter analyze": "PASS (No issues found!)",
+     "make audit (25 greps)": "PASS (25/25 clean)",
+     "dart format (changed files)": "PASS",
+     "dart run custom_lint": "PASS (No issues found!)",
+     "flutter test (targeted, 184 tests)": "PASS (All tests passed!)",
+     "flutter test (full suite, extra)": "n/a - still running at wrap, no failures thru ~10.3k",
+     "make arb-parity": "n/a (no .arb/string changes)",
+     "build_runner build": "PASS (zero diff; ran once to fix stale gen)",
+     "firestore rules suite": "n/a (finding untouched firestore.rules/functions)"
+    },
+    "notes": "Scope strictly = acceptance_criteria (2 DAO methods + 3 consumers). Candidate follow-ups noticed, NOT fixed (scope discipline, from this finding's mergedFrom list): BaseDao.getById and goal_dao/bookmark_dao/stage_dao bare-id delete/update methods are also profileId-unscoped. Worktree was missing gitignored lib/firebase_options.dart (copied from main checkout to unblock analyze/test gates, not committed)."
+   }
+  },
+  {
+   "ids": [
+    "AUD-tutoring-05"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "e38480e973521d74e2af8058d723e5b3444401e3",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-20",
+    "perFinding": [
+     {
+      "id": "AUD-tutoring-05",
+      "outcome": "fixed",
+      "note": "Re-verified: hand-written ==/hashCode still present. Converted to @freezed const factory; canMarkLiveCompletion kept as a getter, excluded from generated ==/hashCode. toFirestore/fromFirestore kept as methods. No hand-written ==/hashCode remain. 199 existing tests pass unmodified."
+     }
+    ],
+    "testsAdded": [],
+    "gateResults": {
+     "make audit": "PASS (25/25 greps clean)",
+     "flutter analyze": "PASS (No issues found!)",
+     "dart run custom_lint": "PASS (No issues found!)",
+     "dart format (changed file)": "PASS (0 changed, already formatted)",
+     "flutter test (targeted)": "PASS (199 tests across 8 files, --concurrency=2)",
+     "build_runner": "PASS (clean rebuild, freezed file generated correctly)",
+     "make arb-parity": "n/a (no .arb/user-facing strings changed)",
+     "firestore rules suite": "n/a (finding untouched firestore.rules/functions)"
+    },
+    "notes": "Single finding, P2 hygiene, fixed cleanly. tutor_permissions.freezed.dart intentionally not committed: *.freezed.dart is gitignored repo-wide; new generated file, matching 5 other untracked freezed.dart files in lib/. CI regenerates via build_runner per AG-7. Copied firebase_options.dart + regenerated content.db.gz for worktree env (gitignored, not committed). Follow-up candidate (not actioned): coding-standards.md maps freezed VOs to a _model.dart suffix; a rename sweep is a separate concern."
+   }
+  },
+  {
+   "ids": [
+    "AUD-account-15"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "28d605f6166a66a79a9bf3780044df191390c354",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-19",
+    "perFinding": [
+     {
+      "id": "AUD-account-15",
+      "outcome": "fixed",
+      "note": "Evidence matched. Clip is SILENT (no RenderFlex exception; cross-axis squeeze never trips detector). Red-first test at 2.5x scale captured red (32.0 vs 40.0 required). Fixed via minHeight:32 constraint replacing height:32. Both ACs met; existing height-32 test unweakened."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/.../offline_top_banner_l1_test.dart: new AX-4 large-text-scale regression test"
+    ],
+    "gateResults": {
+     "flutter analyze": "PASS (No issues found!)",
+     "dart format (changed files)": "PASS (1 file reformatted: offline_top_banner_l1_test.dart; widget file already formatted)",
+     "flutter test targeted": "PASS (32/32: offline_top_banner_l1_test.dart + epic_25_story_21_multi_account_threading_test.dart, --concurrency=2)",
+     "make audit": "PASS (25/25 greps clean, exit 0)",
+     "dart run custom_lint": "PASS (No issues found!, exit 0)",
+     "make arb-parity": "n/a (no .arb or user-facing string changes)",
+     "build_runner": "n/a (not codegen-adjacent; ran once for env setup, zero generated-file diffs)",
+     "firestore rules suite": "n/a (finding doesn't touch firestore.rules or functions/)"
+    },
+    "notes": "Env setup: copied firebase_options.dart from main checkout, flutter pub get, prepare_asset.dart, build_runner (all gitignored artifacts, nothing committed). Adjacent out-of-scope defect noted: app_shell.dart:217 hardcodes bannerHeight=32.0 for AppBar PreferredSize; now that the banner can grow past 32px, this fixed reservation may cause overlap at large text scale \u2014 candidate follow-up finding, not touched."
+   }
+  },
+  {
+   "ids": [
+    "AUD-account-21"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "1a380b97310c0769bd59ef1ff3a8bfc2cdb44108",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-21",
+    "perFinding": [
+     {
+      "id": "AUD-account-21",
+      "outcome": "fixed",
+      "note": "Confirmed: StatelessWidget allocated a fresh TapGestureRecognizer per build(), never disposed. Converted to StatefulWidget: recognizer created once in initState(), disposed in dispose(); onTap reads widget.* for freshness. Red-first identity test failed pre-fix, passes post-fix."
+     }
+    ],
+    "testsAdded": [
+     "learning_tracker/test/features/account/presentation/widgets/sign_in_actions_aud_account_21_test.dart"
+    ],
+    "gateResults": {
+     "make audit": "PASS - all 25 greps clean",
+     "flutter analyze": "PASS - No issues found",
+     "dart format": "PASS - 0 changes needed",
+     "flutter test (targeted)": "PASS - all targeted suites green, 0 failed",
+     "arb-parity": "n/a - no .arb/string changes",
+     "build_runner diff check": "PASS - no generated-file drift",
+     "custom_lint": "PASS - No issues found",
+     "firestore rules suite": "n/a - not touched"
+    },
+    "notes": "Single-finding item, fix kept narrow per scope discipline: same recreate-every-build recognizer pattern also exists in signup_screen.dart:825 per the finding's own note, left as a candidate follow-up (out of AUD-account-21's evidence scope). Worktree needed one-time env repairs (firebase_options.dart copy, prepare_asset.dart, build_runner for a missing riverpod .g.dart causing unrelated analyze noise) - all gitignored artifacts, confirmed via git status no tracked files were affected."
+   }
+  },
+  {
+   "ids": [
+    "AUD-firebase-14"
+   ],
+   "build": {
+    "status": "fixed",
+    "tipSha": "b183957cf8cff48efe111c6c605f752bbf96e648",
+    "worktreePath": "/home/daniel/repos/learning-tracker/.claude/worktrees/wf_911a9826-c9a-23",
+    "perFinding": [
+     {
+      "id": "AUD-firebase-14",
+      "outcome": "fixed",
+      "note": "Re-verified root firebase.json referenced files only under learning_tracker/; nothing (Makefile/CI/scripts) reads root config. Deleted root firebase.json + .firebaserc (AC met). Fixed deployment-guide.md + coding-standards.md prose referencing deleted files."
+     }
+    ],
+    "testsAdded": [],
+    "gateResults": {
+     "make audit": "PASS (25/25 greps clean)",
+     "flutter analyze": "PASS (No issues found!)",
+     "dart format <changed files>": "n/a (no .dart files changed - docs/config-deletion only)",
+     "flutter test <targeted paths>": "n/a (no Dart code or tests touched by this hygiene fix)",
+     "make arb-parity": "n/a (no .arb files or user-facing strings changed)",
+     "build_runner + generated-file diff": "n/a (no codegen-adjacent files touched); ran build_runner anyway during env setup, git diff --exit-code clean afterward",
+     "firestore rules test suite": "n/a (finding touches firebase.json/.firebaserc, not firestore.rules or learning_tracker/functions/)",
+     "dart run custom_lint": "PASS (No issues found!)"
+    },
+    "notes": "P3 hygiene/dead-config finding, not behavioral; ls/grep confirming files gone and unreferenced plays the AC-checker role. Env setup: copied firebase_options.dart, flutter pub get, build_runner build, prepare_asset.dart before judging analyze. One commit, tree clean. Follow-up NOT touched: coding-standards.md's separate still-live TQ-9 row ('make ci doesn't run test-rules')."
+   }
+  }
+ ],
+ "preApproved": [
+  {
+   "tipSha": "93f70b43ad99cec8cc55370a0c77b70c8b252211",
+   "acVerified": [
+    "AUD-core-email-01 AC1 OK: 'body' in sensitiveKeys (logger.dart:253); redactFields({'body':...})['body']=='[REDACTED]' via logic at logger.dart:260-267, test passes",
+    "AUD-core-email-01 AC2 OK: 3 new tests FAIL pre-fix (reverted -> +42 -3, leak shown) and PASS post-fix (94/94)",
+    "AUD-core-email-01 AC3 OK: project-wide analyze No issues exit0; make audit exit0; dart format 0 changed; logging 94/94"
+   ],
+   "reviewedBy": "opus, wf_911a9826-c9a",
+   "notes": "Diff is 2 files, +37 lines: logger.dart (+3) and logger_extended_test.dart (+34, 3 additive tests). Red-first genuinely reproduces the P0 leak (child "
+  },
+  {
+   "tipSha": "c160bdd680867f403a745b6c78a8708743004827",
+   "acVerified": [
+    "AC1 OK: learning_order_dao.dart:33-46 & :120-131 both take {required int profileId} and AND t.profileId.equals(profileId) into WHERE",
+    "AC2 OK: LearningOrderRepo(57,164), BookmarkRepo(235,286), SchedulerRepo(22) pass profileId; provider wires activeProfileId; analyze clean=no missed site",
+    "AC3 OK: new 2-test isolation group seeds profile 0+1, real DB via repo, asserts getOrder(0) excludes+resetToDefault(0) preserves profile-1 row; red-first in commit body",
+    "AC4 OK: repo_impl_test 'custom order' & 'resetToDefault' fixtures changed profileId 1->0 to match repo default profile 0"
+   ],
+   "reviewedBy": "opus, wf_97ebb163-51d",
+   "notes": "Complete, correct fix. All call sites threaded (builder also fixed _getFirstItemId beyond evidence). Regression tests are real-DB behavioral, not mock"
+  },
+  {
+   "tipSha": "a9ca4cf1ab528d452e25f2329e7094e65af25cae",
+   "acVerified": [
+    "AUD-account-23 AC1 OK: signOut() (svc.dart:49-60) touches only SharedPrefs, not Firebase/secure storage; tests :83,:96 confirm.",
+    "AUD-account-23 AC1 OK: both callers hard-sign-out after signOut() (account_actions.dart:187-191,:559-561); tested account_actions_test:392-393.",
+    "AUD-account-23 AC1 OK: fast-resume path calls no AccountManagementService.signOut() (grep in picker screen: none); stale token text removed."
+   ],
+   "reviewedBy": "opus, wf_97ebb163-51d",
+   "notes": "Pure P3 doc-drift fix; one dartdoc block (1 file, 19+/10-). No scope creep, no behavioral change so no regression test needed. No tests weakened/delet"
+  },
+  {
+   "tipSha": "f163bc29b3e232883518e65f58dc4cd4d2f63b47",
+   "acVerified": [
+    "AUD-firebase-13 AC1 OK: validStage(:405)/validConfig(:640) spread PAYLOADS.stage_definitions/study_day_configs; already used by PHASE D/E, so 1 fixture edit updates all",
+    "AUD-firebase-13 AC1 OK: key sets valid hasOnly subsets - stage 12/13 (rules:315-320), configs 7/7 incl synced_at (rules:438-441)"
+   ],
+   "reviewedBy": "opus, wf_97ebb163-51d",
+   "notes": "P3 duplication fix confirmed. Spreads PAYLOADS.* into Path-13/22 literals, layering only codec-omitted fields, comments cross-link AUD-firebase-13. Re"
+  },
+  {
+   "tipSha": "51ed8a5fea1308ef871470eb5beeba31f193424a",
+   "acVerified": [
+    "AUD-account-18 AC OK: account_picker_screen.dart:278 ref.watch(firebaseAuthStateProvider); reactive test flips badge via stream-only override, passed",
+    "AUD-account-19 AC1 OK: grep hide/as workarounds->0; authStateProvider declared once (auth_state_provider.g.dart); raw stream renamed firebaseAuthStateProvider",
+    "AUD-account-19 AC2 OK: auth_state_provider.dart:36 ref.listen; test emits null after signedIn->signedOut, verifyNever(signOut), passed"
+   ],
+   "reviewedBy": "opus, wf_97ebb163-51d",
+   "notes": "Both fixes genuine/behavioral. AUD-18: ref.read snapshot -> ref.watch reactive stream. AUD-19: collision resolved, all 10 prod hide/as + 3 test aliase"
+  },
+  {
+   "tipSha": "e85b8be76504091106726b42ea910ce66dedc0cd",
+   "acVerified": [
+    "AUD-08 AC OK: test 'same key twice -> one audit entry' passes; writeAuditLog uses sha256(grantId|action|target|key).set() tutor_writes.ts:136-147; no-key->2 confirmed",
+    "AUD-09 AC OK: rules split get/list limit<=500 on completions+3; test limit(500) ok, 501/unbounded fail (owner+tutor); rules suite 83/83 my run",
+    "AUD-10 AC OK: goalData extra-field+oversized tests ->invalid-argument pass; 6 ALLOWED_* sets byte-match rules hasOnly(); 2 ungated cols have no hasOnly (6/8)",
+    "AUD-11 AC OK: race test 'concurrent field survives' passes (log:204); fix set(updates,{merge:true}) tutor_writes.ts:1010; injects avatar_index=99 between get/set",
+    "AUD-15 AC OK: barrel=20 lines(<300); tsc exit0; 27 export names identical pre/post; all 7 modules pure move (0 non-verbatim lines); initializeApp once"
+   ],
+   "reviewedBy": "opus, wf_97ebb163-51d",
+   "notes": "All 5 findings genuinely fixed. Fixes 08/09/10/11 landed pre-split; AUD-15 relocated them verbatim (0 non-verbatim lines). Tests behavioral; AUD-11 ra"
+  },
+  {
+   "tipSha": "6f8073a3dd7aee79705029aaa222f2ac1ec69085",
+   "acVerified": [
+    "AUD-account-08 AC1 OK: account/onboarding copy deleted + account.dart export removed (diff); analyze 0 issues; tests green",
+    "AUD-account-08 AC2 OK: grep 'String? validatePassword' lib/ = single file; make audit AG-4 24/25 clean",
+    "AUD-account-17 AC1 OK: local_auth_service.dart:51 ctor now (field, code, reason) + new InvalidInputCode enum",
+    "AUD-account-17 AC2 OK: signup_screen.dart _mapInvalidInputCode (l495) via AppLocalizations; both catch handlers l152/l286 call it",
+    "AUD-account-17 AC3 OK: LocalAuthService._validatePassword and onboarding validatePassword both use AppConstants.minLocalPasswordLength",
+    "AUD-account-17 AC4 OK: local_auth_service_test '6-7 char password' passes; commit shows pre-fix red 'must be at least 8 characters'",
+    "AUD-account-20 AC1 OK: AppConstants.minLocalPasswordLength(=6) referenced by UI validator + LocalAuthService",
+    "AUD-account-20 AC2 OK: 'password-length invariant (AUD-account-20) agree at boundary' test passes (below rejected both, at accepted both)"
+   ],
+   "reviewedBy": "opus, wf_911a9826-c9a",
+   "notes": "3 findings fixed; gates green by my runs; every AC verified. No TQ-7 (signup test flip is fix-correct: localized msg + findsNothing on raw reason); re"
+  },
+  {
+   "tipSha": "7b0648a6de63dbbc79b14c4bb8c3f1e890bcca92",
+   "acVerified": [
+    "AUD-tutoring-07 AC1 OK: test fails 2nd of 3 upserts (throwing invoker), asserts succeededStageIds==['7_1'] + loop stops at callIndex==2; real behavior, passes.",
+    "AUD-tutoring-07 AC2 OK: header lines 37-46 document partial-failure as accepted surfaced-not-silent risk (not retry path), naming succeededStageIds.",
+    "AUD-tutoring-17 AC1 OK: 2 tests with non-numeric profileId assert TutorWriteException + CF never reached; _profileIdOrThrow logs via AppLogger.error before throwing.",
+    "AUD-tutoring-17 sites OK: all 10 int.parse(sel.profileId) replaced by _profileIdOrThrow; grep confirms zero bare sites remain (only a comment)."
+   ],
+   "reviewedBy": "opus, wf_911a9826-c9a",
+   "notes": "Env set up first (firebase_options, content.db.gz, pub get, build_runner). Fixes confirmed on-disk via git; Read tool served stale content so relied o"
+  },
+  {
+   "tipSha": "a5ae7aa782c60c22b53f1d8f0a7bc1433b0667ac",
+   "acVerified": [
+    "AUD-account-01 AC1 OK: outbox_guard_test seeds undrained row -> removeCloudFromDevice throwsA UndrainedOutboxException, file survives, removeAccount never called",
+    "AUD-account-01 AC2 OK: drained-outbox case deletes .sqlite and calls removeAccount once (no happy-path regression)",
+    "AUD-account-01 AC3 OK: picker_pending_outbox_guard_test drives swipe+Remove -> 'Not backed up yet' dialog, tile+DB+registry all survive",
+    "AUD-account-02 AC1 OK: sign_in_controller_test disposes container mid-await (2 cases), asserts future completes, no UnmountedRefException escapes",
+    "AUD-account-02 AC2 OK: ref.onDispose(watchdog.cancel) for both Timers at sign_in_controller.dart:715 (15s) and :915 (45s) plus finally cancel",
+    "AUD-account-04 AC1 OK: core/utils/firebase_error_code.dart extractFirebaseCode + firebase_error_code_test (4 cases) pass",
+    "AUD-account-04 AC2 OK: magic_link_service & upgrade_to_cloud_service call extractFirebaseCode; private copies deleted; red-first real-shape test passes",
+    "AUD-account-07 AC1 OK: future_cache_test _CountingRegistry stays at 1 call after unrelated rebuild, no spinner, list retained",
+    "AUD-account-09 AC1 OK: drift_db_file.dart resolve/deleteDriftDbFile helper + drift_db_file_test (5 cases) pass",
+    "AUD-account-09 AC2 OK: AccountLifecycleService & PendingLocalSignupStore both delegate to deleteDriftDbFile",
+    "AUD-account-09 AC3 OK: unchanged db_delete_test & pending_local_signup_file_cleanup_test still pass",
+    "AUD-account-10 AC1 OK: firebase_error_code_test asserts both '[code]' and '[plugin/code]' shapes",
+    "AUD-account-10 AC2 OK: single _extractFirebaseCode def remains (settings, out of scope); 4 in-batch copies deleted; audit AG-4 clean",
+    "AUD-account-12 AC1 OK: account-exists-with-different-credential maps to authErrExistingPasswordAccount in sign_in_controller:119 & signup:486; tests pass",
+    "AUD-account-13 AC1 OK: catch calls AppLogger.error(event:'delete_firestore_user_data_failed', fields:{uid}, exception, stackTrace)",
+    "AUD-account-13 AC2 OK: account_management_service_test red-first asserts the log entry when the CF call throws"
+   ],
+   "reviewedBy": "opus, wf_911a9826-c9a",
+   "notes": "All 8 fixed correctly. Tests behavioral + red-first in commits; diffs 952 add / 0 del -> no TQ-7. No scope creep; Rule 3 respected. AUD-12 AC2 (linkGo"
+  },
+  {
+   "tipSha": "28d605f6166a66a79a9bf3780044df191390c354",
+   "acVerified": [
+    "AUD-account-15 AC1 OK: test l1:611-685 pumps banner at 2.5x (>=1.6x), asserts height>=label intrinsic; red-first reproduced (fails 32<40, fix passes)",
+    "AUD-account-15 AC2 OK: offline_top_banner.dart:31 now BoxConstraints(minHeight:32); no hard-coded height:32"
+   ],
+   "reviewedBy": "opus, wf_911a9826-c9a",
+   "notes": "Diff is 2 files (widget 1-line fix + 75-line AX-4 test). No scope creep. TQ-7 clean: pre-existing height-32 test untouched, still passes (minHeight ke"
+  },
+  {
+   "tipSha": "1a380b97310c0769bd59ef1ff3a8bfc2cdb44108",
+   "acVerified": [
+    "AUD-account-21 AC1 OK: recognizer created once initState L45, disposed L53, build L133 uses field; red-first fails pre-fix Stateless (+0 -1), passes post-fix"
+   ],
+   "reviewedBy": "opus, wf_911a9826-c9a",
+   "notes": "Env set up before judging. Diff = exactly 2 files (fix + test); no scope creep. AC scoped to SignInActions; leaving signup_screen.dart:825 is correct."
+  },
+  {
+   "tipSha": "b183957cf8cff48efe111c6c605f752bbf96e648",
+   "acVerified": [
+    "AUD-firebase-14 AC1 OK: root firebase.json+.firebaserc removed (ls fails); nothing reads root config (ci.yml jobs use working-directory: learning_tracker)"
+   ],
+   "reviewedBy": "opus, wf_1fb98597-91f",
+   "notes": "AC met; make audit green by my run (25/25). Clean dead-config removal + in-scope prose cleanup; no dangling refs (source-tree tree is the learning_tra"
+  },
+  {
+   "tipSha": "bbb0f3196b484dbb2994a82377f8160a6551d7c9",
+   "acVerified": [
+    "AUD-tutoring-01 AC1 OK: manage_tutors test revoke/rescind->Failure asserts verifyNever(notify), no invalidate, mirror survives, SnackBar shown",
+    "AUD-tutoring-01 AC2 OK: manage_grants resign->Failure asserts no notifyParentOfResignation, no invalidate, mirror survives, error shown",
+    "AUD-tutoring-01 AC3 OK: analyze clean; 557 tutoring tests pass; exhaustive switch on sealed TutorGrantResult (Success/Failure/PreconditionError)",
+    "AUD-tutoring-03 AC1 OK: one def at manage_tutors_providers.dart:85; codegen renamed to networkOnlyIncomingTutorGrants; AG-4 audit passes",
+    "AUD-tutoring-03 AC2 OK: 'as manage_tutors' alias removed (only in a comment); ref uses bare incomingTutorGrantsProvider",
+    "AUD-tutoring-03 AC3 OK: grep incomingTutorGrantsProvider lib/features/tutoring/ = exactly one definition",
+    "AUD-tutoring-08 AC1 OK: make audit check 26 Rule-0 ListView(+for checker present/green, fires on pre-fix; scoped to tutoring w/ rationale",
+    "AUD-tutoring-08 AC2 OK: 50-grant seed asserts childrenDelegate isA SliverChildBuilderDelegate; settings test asserts cap=5 + View All link (pass)",
+    "AUD-tutoring-11 AC1 OK: grep 'e.toString()' lib/features/tutoring/presentation/ returns nothing",
+    "AUD-tutoring-11 AC2 OK: widget tests assert exact localized fallback shown and raw text (CF error/PERMISSION_DENIED) findsNothing; repo code=='unknown_error'",
+    "AUD-tutoring-18 AC OK: custom_lint exit0; make audit 27 green; independent grep = zero color literals in tutoring/presentation; tokens applied 9 screens",
+    "AUD-tutoring-14 AC OK: reconcile test holds provider mid-await, swaps uid, completes stale CF call, expectLater(future,completes) passes - no exception"
+   ],
+   "reviewedBy": "opus, wf_911a9826-c9a",
+   "notes": "5 fixes verified via grep/test evidence; AUD-14 refutation sound (non-autoDispose provider, deps resolved pre-await; guard reproduces uid-swap race, p"
+  },
+  {
+   "tipSha": "f65cc282b96f9480d7c9ea9f37dff9f7c1e57f86",
+   "acVerified": [
+    "AUD-tutoring-06 AC1 OK: grep -rn 'TutorAuditLogWriter' lib/ -> exit 1, no output; only leftover refs are comments",
+    "AUD-tutoring-06 AC2 OK: grep TODO in audit_log_providers.dart -> exit 1 none; whole stub+TODO(DNI-393) block deleted",
+    "AUD-tutoring-10 AC1 OK: grep -rn 'presentation/' lib/features/tutoring/data/ -> exit 1, no output",
+    "AUD-tutoring-10 AC2 OK: TutorAuditLogReadRepository + TutorGrantRepository each defined once in domain/repositories/, no dupes (AG-4)",
+    "AUD-tutoring-10 AC2 3rd-iface OK: write iface TutorAuditLogRepository deleted as dead code by AUD-06; no live refs remain"
+   ],
+   "reviewedBy": "opus, wf_ea1c22b1-b57",
+   "notes": "Pure interface relocation + dead-code deletion; no behavioral change, no red-first test required. Test edits are import churn + one comment; no assert"
+  },
+  {
+   "tipSha": "0423d33f663a0701fa242567fe1daa70f879dbba",
+   "acVerified": [
+    "AUD-account-16 AC1 OK: 0 deep imports into features/onboarding/* from both files; audit W1.13 lists signup only for out-of-scope settings import, sign_in not listed.",
+    "AUD-account-16 support OK: barrel exports resolve (3 validators + kOnboardingComplete at onboarding_resume_store.dart:15); analyze+custom_lint clean.",
+    "AUD-account-24 AC1 OK: catch now uses signUpErrGeneric+AppLogger.warning; no signUpFailed() call left; only e.toString() is _extractFirebaseCode regex (non-UI).",
+    "AUD-account-24 AC2 OK(deferred): conditional on separate custom_lint repair; custom_lint exits 0 now; guarded by red-first regression test."
+   ],
+   "reviewedBy": "opus, wf_ea1c22b1-b57",
+   "notes": "Env: copied firebase_options, pub get, build_runner, regenerated content.db.gz (sole pre-regen analyze warning). Diff=4 files, no scope creep, no exis"
   }
  ],
  "manifest": [
-  {
-   "id": "AUD-core-analytics-01",
-   "severity": "P0",
-   "effort": "L",
-   "normArea": "core/analytics",
-   "files": [
-    "docs/privacy-policy.md",
-    "learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart",
-    "learning_tracker/lib/core/analytics/analytics_provider.dart",
-    "learning_tracker/lib/core/analytics/analytics_service.dart",
-    "learning_tracker/lib/core/logging/crashlytics_service.dart",
-    "learning_tracker/lib/core/logging/log_events.dart",
-    "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
-    "learning_tracker/lib/core/sync/pull_pipeline.dart",
-    "learning_tracker/lib/core/sync/sync_orchestrator.dart",
-    "learning_tracker/lib/features/learning/data/completion_writer.dart",
-    "learning_tracker/lib/features/tutoring/domain/services/tutor_audit_log_writer.dart",
-    "learning_tracker/lib/features/tutoring/domain/services/tutor_pin_service.dart",
-    "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-analytics-01.json"
-  },
   {
    "id": "AUD-core-database-02",
    "severity": "P0",
@@ -816,87 +940,6 @@
     "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart"
    ],
    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-database-02.json"
-  },
-  {
-   "id": "AUD-docs-01",
-   "severity": "P0",
-   "effort": "M",
-   "normArea": "docs",
-   "files": [
-    "docs/coding-standards.md",
-    "learning_tracker/firestore.rules",
-    "learning_tracker/functions/test/firestore_rules.test.mjs"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-01.json"
-  },
-  {
-   "id": "AUD-firebase-01",
-   "severity": "P0",
-   "effort": "M",
-   "normArea": "firebase",
-   "files": [
-    "learning_tracker/functions/src/index.ts"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-01.json"
-  },
-  {
-   "id": "AUD-firebase-02",
-   "severity": "P1",
-   "effort": "S",
-   "normArea": "firebase",
-   "files": [
-    "learning_tracker/functions/src/index.ts",
-    "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-02.json"
-  },
-  {
-   "id": "AUD-firebase-03",
-   "severity": "P1",
-   "effort": "M",
-   "normArea": "firebase",
-   "files": [
-    "docs/firestore-collection-layout.md",
-    "learning_tracker/firestore.indexes.json",
-    "learning_tracker/firestore.rules",
-    "learning_tracker/lib/core/sync/codec/firestore_codec.dart",
-    "learning_tracker/lib/core/sync/firestore_gateway_impl.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-03.json"
-  },
-  {
-   "id": "AUD-firebase-05",
-   "severity": "P2",
-   "effort": "S",
-   "normArea": "firebase",
-   "files": [
-    "learning_tracker/functions/test/firestore_rules.test.mjs",
-    "learning_tracker/functions/test/fixtures/write_payloads.json"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-05.json"
-  },
-  {
-   "id": "AUD-firebase-06",
-   "severity": "P2",
-   "effort": "S",
-   "normArea": "firebase",
-   "files": [
-    "learning_tracker/functions/src/index.ts",
-    "learning_tracker/functions/test/cf_triggers.test.mjs"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-06.json"
-  },
-  {
-   "id": "AUD-firebase-07",
-   "severity": "P2",
-   "effort": "S",
-   "normArea": "firebase",
-   "files": [
-    "learning_tracker/functions/src/index.ts",
-    "learning_tracker/functions/test/_cf_helpers.mjs",
-    "learning_tracker/functions/test/cf_grant_revoke.test.mjs"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-07.json"
   },
   {
    "id": "AUD-firebase-08",
@@ -1140,23 +1183,6 @@
    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-24.json"
   },
   {
-   "id": "AUD-profiles-01",
-   "severity": "P0",
-   "effort": "M",
-   "normArea": "features/profiles",
-   "files": [
-    "learning_tracker/lib/core/database/daos/active_curriculum_dao.dart",
-    "learning_tracker/lib/core/database/daos/track_dao.dart",
-    "learning_tracker/lib/features/profiles/presentation/screens/parent_track_management_screen.dart",
-    "learning_tracker/lib/features/tracks/domain/services/curriculum_activation_service.dart",
-    "learning_tracker/lib/l10n/app_en.arb",
-    "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
-    "learning_tracker/test/features/profiles/presentation/screens/ts3_parent_track_archive_test.dart",
-    "learning_tracker/test/features/profiles/presentation/ws4_mode_boundaries_test.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-profiles-01.json"
-  },
-  {
    "id": "AUD-tutoring-01",
    "severity": "P1",
    "effort": "M",
@@ -1297,36 +1323,6 @@
    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-20.json"
   },
   {
-   "id": "AUD-core-database-01",
-   "severity": "P0",
-   "effort": "S",
-   "normArea": "core/database",
-   "files": [
-    "learning_tracker/lib/core/database/daos/profile_dao.dart",
-    "learning_tracker/lib/core/database/tables/curriculum_tracks.dart",
-    "learning_tracker/lib/core/database/tables/daily_plans.dart",
-    "learning_tracker/lib/core/database/tables/outbox_table.dart",
-    "learning_tracker/lib/core/database/tables/point_configs.dart",
-    "learning_tracker/lib/core/database/tables/profile_programs.dart",
-    "learning_tracker/lib/core/database/tables/study_day_configs.dart",
-    "learning_tracker/lib/core/sync/tutored_mirror_wipe_service.dart",
-    "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-database-01.json"
-  },
-  {
-   "id": "AUD-profiles-02",
-   "severity": "P0",
-   "effort": "M",
-   "normArea": "features/profiles",
-   "files": [
-    "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
-    "learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
-    "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-profiles-02.json"
-  },
-  {
    "id": "AUD-tutoring-07",
    "severity": "P2",
    "effort": "L",
@@ -1367,15 +1363,17 @@
    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-account-21.json"
   },
   {
-   "id": "AUD-firebase-12",
-   "severity": "P3",
+   "id": "AUD-core-email-01",
+   "severity": "P0",
    "effort": "S",
-   "normArea": "firebase",
+   "normArea": "core/email",
    "files": [
-    "learning_tracker/functions/test/cf_tutor_completions.test.mjs",
-    "learning_tracker/functions/test/cf_tutor_settings_profile.test.mjs"
+    "learning_tracker/lib/core/email/transactional_email_service.dart",
+    "learning_tracker/lib/core/logging/logger.dart",
+    "learning_tracker/lib/features/settings/presentation/utils/send_logs_service.dart",
+    "learning_tracker/lib/features/tutoring/domain/services/tutor_notification_service.dart"
    ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-12.json"
+   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-email-01.json"
   },
   {
    "id": "AUD-firebase-14",
@@ -1397,248 +1395,6 @@
     "learning_tracker/lib/features/tutoring/domain/models/tutor_permissions.dart"
    ],
    "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-tutoring-05.json"
-  },
-  {
-   "id": "AUD-core-email-01",
-   "severity": "P0",
-   "effort": "S",
-   "normArea": "core/email",
-   "files": [
-    "learning_tracker/lib/core/email/transactional_email_service.dart",
-    "learning_tracker/lib/core/logging/logger.dart",
-    "learning_tracker/lib/features/settings/presentation/utils/send_logs_service.dart",
-    "learning_tracker/lib/features/tutoring/domain/services/tutor_notification_service.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-core-email-01.json"
-  },
-  {
-   "id": "AUD-firebase-04",
-   "severity": "P1",
-   "effort": "S",
-   "normArea": "firebase",
-   "files": [
-    "learning_tracker/Makefile",
-    "learning_tracker/functions/package.json",
-    "learning_tracker/functions/test/cf_grant_invite.test.mjs"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-firebase-04.json"
-  },
-  {
-   "id": "AUD-settings-03",
-   "severity": "P1",
-   "effort": "M",
-   "normArea": "features/settings",
-   "files": [
-    "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart"
-   ],
-   "jsonPath": "docs/audits/standards-audit-2026-07-03/delivery/findings/AUD-settings-03.json"
-  }
- ],
- "preApproved": [
-  {
-   "tipSha": "93f70b43ad99cec8cc55370a0c77b70c8b252211",
-   "acVerified": [
-    "AUD-core-email-01 AC1 OK: logger.dart:253 adds 'body' to sensitiveKeys; redactFields blanks it; test 'redacts body key' passed (my 94/94 run)",
-    "AUD-core-email-01 AC2 OK: 3 tests at logger_extended_test.dart:313-344 red-first by construction (pre-fix 'body' absent=>fail), pass post-fix; commit shows red run",
-    "AUD-core-email-01 AC3 OK: my full flutter analyze=No issues (exit 0); make audit 25/25; grep=no test relies on non-redacted 'body' so make ci not regressed"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "Env: copied firebase_options.dart, pub get, build_runner, prepare_asset (worktree had .xz). Single commit, 2 files: +1 sensitiveKeys entry, +3 tests. Add-only, no TQ-7. Test 3 drives real debug->redac"
-  },
-  {
-   "tipSha": "c0f78e95423ca76552fcc5fd99eeb938228b2316",
-   "acVerified": [
-    "AUD-settings-03 AC1 OK: isolation test seeds A+B in 16 tables, imports A-only, asserts afterB equals beforeB (row equality) w/ non-empty guards",
-    "AUD-settings-03 AC1 OK: red-first proven - fails pre-fix (Bob streakEvents Expected[row] Actual[]), passes post-fix",
-    "AUD-settings-03 AC2 OK: 16 .delete( calls all in importData, each with ..where(...isIn); 0 bare deletes"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "Env: copied firebase_options.dart+content.db.gz, ran pub get+build_runner. Fix scopes all 16 deletes by profileId/id; trackLearningOrder via trackIds read before curriculumTracks cleared. Empty-isIn e"
-  },
-  {
-   "tipSha": "3c3e35b1d58c9a3dbd45222476fbdddfb74b21d1",
-   "acVerified": [
-    "AUD-profiles-01 AC1 OK: ts3 widget test pumps real screen, taps real Archive action, asserts stages/goals/pointConfig survive; real service not mock; passes now",
-    "AUD-profiles-01 AC2 OK: grep TrackState.archived -> real DB write track_dao.dart:296 (was 0)",
-    "AUD-profiles-01 AC3 OK: _buildApp home=real ParentTrackManagementScreen (ts3:153); hand-rolled AlertDialog removed"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "Fix sound and scoped. archiveTrack sets state=archived preserving config; active_curricula derived from state so no dangling row. Outbox track_archive symmetric with track_delete, no config deletion. "
-  },
-  {
-   "tipSha": "d9173c7ae968e6c7502205b4f00d797e01fc3f83",
-   "acVerified": [
-    "AUD-core-database-01 AC1 OK: mirror_wipe_test seeds all 6 tables then asserts 0 rows after wipeMirrorForGrant + wipeAllMirrors (real DB); passed",
-    "AUD-core-database-01 AC2 OK: wipe_service header comment changed from 'every child table/no explicit delete needed' to 'MOST' + lists the 6 non-FK tables",
-    "AUD-core-database-01 AC3 OK: schema_check _validateForeignKeyCascade deny-by-default on-by-default; live run exits 0; test 'exemption is exactly the 6 tables' passed",
-    "AUD-profiles-02 AC1 OK: repo_impl 117/175/343 add 'on TutorWriteException {rethrow}'; tests update+createProfile propagate TutorWriteException passed",
-    "AUD-profiles-02 AC2 OK: edit_delete_actions:56-66 catches DuplicateProfileNameException -> profileNameTaken snackbar, mirroring picker screen",
-    "AUD-profiles-02 AC3 OK: widget test wires real ProfileRepositoryImpl to failing facade; asserts tutorPermissionDenied snackbar + no unhandled exception; passed",
-    "AUD-profiles-02 AC4 OK: widget test mocks updateProfile throwing DuplicateProfileNameException; asserts profileNameTaken snackbar + takeException null; passed"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "Env set up first. Red-first documented in both commits; tests use real DB/real repo, not mock-asserting; no weakened assertions; 9 files, no scope creep; barrel-only Rule 2 import clean; wipe FK order"
-  },
-  {
-   "tipSha": "c13e66233611f17480b5e3b76e0371b4e776dfe7",
-   "acVerified": [
-    "AUD-firebase-04 AC1 OK: ci.yml functions job (PR, hard-fail) runs make test-functions = tsc build + node --test cf_*.test.mjs; fails PR on TS error or test failure",
-    "AUD-firebase-04 AC2 OK: Makefile:214 `ci: analyze validate-calendar lint-rules-test test test-functions` \u2014 test-functions is a direct prereq of ci",
-    "AUD-firebase-04 AC3 OK: functions/package.json:10 test script `node --test --test-concurrency=1 test/cf_*.test.mjs`; Makefile invokes it, 274 tests run"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "CI/config finding; 3-file diff. TQ-7 clean: test-functions refactor (inline -> npm --prefix functions test) keeps same 8 cf_*.test.mjs + concurrency=1, no assertions weakened, 274 still run. No fake-d"
-  },
-  {
-   "tipSha": "6f8073a3dd7aee79705029aaa222f2ac1ec69085",
-   "acVerified": [
-    "AUD-account-08 AC1 OK: dead account/onboarding auth_validators.dart deleted (only onboarding copy remains); account.dart export removed; flutter analyze 0 issues",
-    "AUD-account-08 AC2 OK: grep '^String? validate*' lib/ = single def set; zero importers of deleted path; make audit 12 greps + custom_lint clean",
-    "AUD-account-17 AC1 OK: local_auth_service.dart:44 enum InvalidInputCode added; InvalidInputException now carries typed `code` alongside reason",
-    "AUD-account-17 AC2 OK: signup_screen.dart _mapInvalidInputCode() switch over AppLocalizations; both handlers call it instead of raw e.reason",
-    "AUD-account-17 AC3 OK: local_auth_service.dart:150 and onboarding auth_validators.dart:26 both use AppConstants.minLocalPasswordLength; old _minPasswordLength=8 gone",
-    "AUD-account-17 AC4 OK: test 'accepts a 6-7 character password' passes on real LocalAuthService; genuine red-first (pre-fix floor=8 would throw)",
-    "AUD-account-20 AC1 OK: single AppConstants.minLocalPasswordLength=6 referenced by UI validator and domain LocalAuthService",
-    "AUD-account-20 AC2 OK: boundary test 'UI validator and LocalAuthService agree' passes on real service; belowFloor rejected/atFloor accepted by both"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "Verified after full env setup. Tests use real LocalAuthService+in-memory db, not mocks. Test diffs strengthen assertions (now asserts raw 'invalid format' absent) - no TQ-7, no scope creep, layering c"
-  },
-  {
-   "tipSha": "7b0648a6de63dbbc79b14c4bb8c3f1e890bcca92",
-   "acVerified": [
-    "AUD-tutoring-07 AC1 OK: test fails call #2 of 3, asserts ex.succeededStageIds==['7_1'] and callIndex==2; real accumulation, passes (41/41)",
-    "AUD-tutoring-07 AC2 OK: accepted-risk decision documented in header lines 38-46 (surfaced-not-silent, no auto-retry)",
-    "AUD-tutoring-17 AC1 OK: tests use profileId 'not-a-number'/'nan', assert throwsA TutorWriteException + CF never reached; code logs at line 414",
-    "AUD-tutoring-17 extra OK: all 10 int.parse(sel.profileId) replaced by _profileIdOrThrow; grep for bare int.parse returns none, 10 sites confirmed"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "Env setup done (firebase_options, pub get, build_runner, content.db.gz). Both fixes real with genuine red-first tests (AUD-17 pre-fix FormatException; AUD-07 field absent=compile-red). Test diff purel"
-  },
-  {
-   "tipSha": "a5ae7aa782c60c22b53f1d8f0a7bc1433b0667ac",
-   "acVerified": [
-    "AUD-account-01 AC1 OK: guard test seeds real outbox row; removeCloudFromDevice throwsA UndrainedOutboxException; .sqlite file survives; removeAccount not called",
-    "AUD-account-01 AC2 OK: drained-outbox test deletes file + calls removeAccount (no happy-path regression)",
-    "AUD-account-01 AC3 OK: picker test \u2014 swipe+Remove shows 'Not backed up yet'+count, tile+file survive; _confirmDismiss checks pendingOutboxDepth pre-Dismissible",
-    "AUD-account-02 AC1 OK: sign_in_controller_test disposes container mid-await on signInWithGoogle (value+error paths); futures complete, no UnmountedRefException escapes",
-    "AUD-account-02 AC2 OK: ref.onDispose(watchdog.cancel) added after both watchdog Timers (sign_in_controller.dart ~L711, ~L913) alongside finally-cancel",
-    "AUD-account-04 AC1 OK: core/utils/firebase_error_code.dart extractFirebaseCode + firebase_error_code_test (4 cases) exists and passes",
-    "AUD-account-04 AC2 OK: magic_link_service.dart:222 and upgrade_to_cloud_service.dart (4 sites) delegate to extractFirebaseCode; private copies deleted",
-    "AUD-account-07 AC1 OK: future_cache_test \u2014 unrelated rebuild keeps getAllAccountsCallCount==1, no CircularProgressIndicator; Future cached in initState",
-    "AUD-account-09 AC1 OK: drift_db_file.dart resolveDriftDbFile/deleteDriftDbFile implements .sqlite-suffix-with-fallback; drift_db_file_test passes",
-    "AUD-account-09 AC2 OK: AccountLifecycleService._deleteDbFile and PendingLocalSignupStore._deleteDbFile both delegate to deleteDriftDbFile",
-    "AUD-account-09 AC3 OK: pre-existing account_lifecycle_db_delete_test + pending_local_signup_file_cleanup_test still pass (5 tests green)",
-    "AUD-account-10 AC1 OK: firebase_error_code_test asserts both '[code]' and '[plugin/code]' shapes extract correctly",
-    "AUD-account-10 AC2 OK: only one _extractFirebaseCode definition remains (out-of-scope settings copy); AG-4 grep in make audit passes clean",
-    "AUD-account-12 AC1 OK: account-exists-with-different-credential maps to authErrExistingPasswordAccount in sign_in_controller + signup_screen; both regression tests pass",
-    "AUD-account-12 AC2 MOOT: credential-already-in-use/linkGoogleProvider confirmed dead code (zero UI callers) per verify corrections; correctly not implemented",
-    "AUD-account-13 AC1 OK: catch calls AppLogger.instance.error(event:'delete_firestore_user_data_failed', fields:{uid}, exception, stackTrace)",
-    "AUD-account-13 AC2 OK: account_management_service_test asserts log entry after deleteAccount() when CF throws (red-first: pre-fix empty log)"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "All 8 ACs verified with behavioral (non-mock) tests; gates green by exit code. No TQ-7, fake-done, scope-creep, or new standards violations. AUD-12 AC2 (linkGoogleProvider) independently confirmed unr"
-  },
-  {
-   "tipSha": "28d605f6166a66a79a9bf3780044df191390c354",
-   "acVerified": [
-    "AUD-account-15 AC1 OK: test:609-685 pumps at TextScaler.linear(2.5), asserts banner.height>=label intrinsic h; green(20/20) + empirically RED when I reverted fix.",
-    "AUD-account-15 AC2 OK: offline_top_banner.dart:31 now constraints: BoxConstraints(minHeight:32); no height: on Container (grep-confirmed)."
-   ],
-   "reviewedBy": "opus adversarial review, run wf_1fb98597-91f",
-   "notes": "Clean 2-file fix. Red-first verified empirically (reverting fix failed new test; restored clean). Test is behavioral (RenderParagraph intrinsic h vs rendered size), not a mock. No TQ-7 weakening; pre-"
-  },
-  {
-   "tipSha": "1a380b97310c0769bd59ef1ff3a8bfc2cdb44108",
-   "acVerified": [
-    "AUD-account-21 AC1 OK: recognizer built once in initState, disposed in dispose(); build() uses field. Identity test fails pre-fix (line 121), passes post-fix."
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "Correct idiomatic fix: StatefulWidget, recognizer once in initState, disposed in dispose(); onTap reads widget.* (no stale-closure bug). Scope clean: only lib file modified + new regression test; zero"
-  },
-  {
-   "tipSha": "b183957cf8cff48efe111c6c605f752bbf96e648",
-   "acVerified": [
-    "AUD-firebase-14 AC1 OK: root firebase.json+.firebaserc removed (ls fails); nothing reads root config (ci.yml jobs use working-directory: learning_tracker)"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_1fb98597-91f",
-   "notes": "AC met; make audit green by my run (25/25). Clean dead-config removal + in-scope prose cleanup; no dangling refs (source-tree tree is the learning_tracker/ dir; firestore-collection-layout.md document"
-  },
-  {
-   "tipSha": "9cad098c8129bc507c9d41a999f6caa2445dd512",
-   "acVerified": [
-    "AUD-firebase-12 AC1 OK: completions header now points to settings_profile file; grep shows 0 tutorBulkPriorCompletions describes there (only tutorResetCompletion @L23)",
-    "AUD-firebase-12 AC1 OK: settings_profile header (L2) lists tutorBulkPriorCompletions; real describe @L321 - correctly left unchanged"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_1fb98597-91f",
-   "notes": "Provably 3-line comment-only change to one file. Fixed my-worktree env gaps (npm ci + tsc build) before running the meaningful gate. No scope creep (clean status, single file), no TQ-7 (no assertion t"
-  },
-  {
-   "tipSha": "bbb0f3196b484dbb2994a82377f8160a6551d7c9",
-   "acVerified": [
-    "AUD-tutoring-01 AC1 OK: revoke+rescind Failure tests assert verifyNever notify, buildCount unchanged, mirror isNotNull, SnackBar shown",
-    "AUD-tutoring-01 AC2 OK: manage_grants resign Failure test asserts no notify, no invalidate, mirror survives, SnackBar",
-    "AUD-tutoring-01 AC3 OK: analyze clean; 557 tutoring pass; commit 2b0b2b46 shows red-first (Unexpected notify call pre-fix)",
-    "AUD-tutoring-03 AC1 OK: only manage_tutors_providers.dart:85 defines incomingTutorGrantsProvider; codegen renamed to networkOnly...",
-    "AUD-tutoring-03 AC2 OK: accept_invite_screen 'as manage_tutors' alias removed, calls provider directly; analyze clean",
-    "AUD-tutoring-03 AC3 OK: grep shows exactly one FutureProvider definition under lib/features/tutoring/",
-    "AUD-tutoring-08 AC1 OK: make audit check 26 (for-loop+ListView) added; verified fires on injected probe",
-    "AUD-tutoring-08 AC2 OK: 50-grant test asserts delegate isA<SliverChildBuilderDelegate>; settings cap tested via View-All link",
-    "AUD-tutoring-11 AC1 OK: grep e.toString() in lib/features/tutoring/presentation/ returns no hits",
-    "AUD-tutoring-11 AC2 OK: load/revoke/rescind tests assert fixed 'Could not...' text + raw exception findsNothing",
-    "AUD-tutoring-14 AC1 OK: reconcile test reproduces mid-flight uid change, future completes, no UnmountedRefException; refutation sound",
-    "AUD-tutoring-18 AC1 OK: audit check 27 + my independent grep = zero raw Color/Colors.*.shadeN in all lib/features/tutoring"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "All 5 fixes verified; AUD-14 refutation sound (test-only; non-autoDispose element stays mounted). Test edits strengthened not weakened (TQ-7 clean); AUD-01 tests assert real DB/behavior. Minor non-blo"
-  },
-  {
-   "tipSha": "17133ecdf54dbf47631dfc63c99779dc61d786b3",
-   "acVerified": [
-    "AUD-core-analytics-01 AC1 OK: check_analytics_catalog.dart wired as audit 26/26; injected LogEvents.* and bare-string calls fail with file:line, exit 1",
-    "AUD-core-analytics-01 AC2 OK: all 7 cited sites redacted - entity_key/profile_id/target dropped, error.toString()->error_kind enum at pull_failed+listener_error",
-    "AUD-core-analytics-01 AC3 OK: 6 recording-fake tests assert params lack entity_key/profile_id/target/resource-path; 95 flutter tests pass",
-    "AUD-core-analytics-01 AC4 OK: coding-standards.md PV-1 gaps row narrowed+named; PV-5 flipped [Pending]->[Enforced] citing checker 26/26",
-    "AUD-docs-01 AC1 OK: firestore_rules.test.mjs adds one assertFails changed-value update per SR-1 collection (completions/streak_events/learning_ledger/points_ledger)",
-    "AUD-docs-01 AC2 OK: rules split create/update, update requires request.resource.data==resource.data on all 4; test-rules 89/89; red-first credible",
-    "AUD-docs-01 AC3 OK: coding-standards.md SR-1 Enforce line flipped [Pending]->[Enforced]",
-    "AUD-firebase-01 AC1 OK: test seeds unverified Auth user, asserts acceptTutorInvite -> permission-denied, grant stays pending",
-    "AUD-firebase-01 AC2 OK: index.ts accept/decline require callerRecord.emailVerified; listTutorGrants pending_for_me requires token email_verified===true",
-    "AUD-firebase-01 AC3 OK: seedAuthUser() creates real Auth users; test-functions uses --only firestore,auth; verified+unverified paths run, 284/284",
-    "AUD-firebase-02 AC1 OK: re-invite while active -> failed-precondition; state stays active, permissions (bulk=false) + tutor_uid preserved",
-    "AUD-firebase-03 AC1 OK: doc says '6 composite indexes' (matches indexes.json=6), streak_events replaces streak/data, compat-blocks framed as removed",
-    "AUD-firebase-03 AC2 OK: doc documents tutor_grants, tutor_grants/audit_log, tutor_active_access with correct doc-ids and security notes",
-    "AUD-firebase-05 AC1 OK: write_payloads.json gains points_ledger+reward_redemptions; regenerated output byte-identical to committed (not hand-edited)",
-    "AUD-firebase-05 AC2 OK: PHASE D oracle adds entries 16 points_ledger + 17 reward_redemptions; PHASE E round-trip covers both",
-    "AUD-firebase-05 AC3 OK: make test-rules 89/89 pass",
-    "AUD-firebase-06 AC1 OK: W6.23 asserts tutor_active_access deleted on parent cascade; Step 2 mirrors Step 3 w/ null-tutor_uid guard; 284/284",
-    "AUD-firebase-07 AC1 OK: seedActiveGrant uses String(PROFILE); outgoing test asserts res.grants.length===1 + fields (weak !==undefined removed)"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "All 8 fixed; every AC verified, all gates green by my runs. Env setup (not defects): firebase_options, pub get, build_runner, content.db.gz, npm install. No TQ-7/fake-done/scope issues; removed assert"
-  },
-  {
-   "tipSha": "f65cc282b96f9480d7c9ea9f37dff9f7c1e57f86",
-   "acVerified": [
-    "AUD-tutoring-06 AC1 OK: grep -rn 'TutorAuditLogWriter' lib/ -> exit 1, no output; only leftover refs are comments",
-    "AUD-tutoring-06 AC2 OK: grep TODO in audit_log_providers.dart -> exit 1 none; whole stub+TODO(DNI-393) block deleted",
-    "AUD-tutoring-10 AC1 OK: grep -rn 'presentation/' lib/features/tutoring/data/ -> exit 1, no output",
-    "AUD-tutoring-10 AC2 OK: TutorAuditLogReadRepository + TutorGrantRepository each defined once in domain/repositories/, no dupes (AG-4)",
-    "AUD-tutoring-10 AC2 3rd-iface OK: write iface TutorAuditLogRepository deleted as dead code by AUD-06; no live refs remain"
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "Pure interface relocation + dead-code deletion; no behavioral change, no red-first test required. Test edits are import churn + one comment; no assertions removed (TQ-7 clean). No orphan code, no scop"
-  },
-  {
-   "tipSha": "0423d33f663a0701fa242567fe1daa70f879dbba",
-   "acVerified": [
-    "AUD-account-16 AC1 OK: 0 deep imports into features/onboarding/* from both files; audit W1.13 lists signup only for out-of-scope settings import, sign_in not listed.",
-    "AUD-account-16 support OK: barrel exports resolve (3 validators + kOnboardingComplete at onboarding_resume_store.dart:15); analyze+custom_lint clean.",
-    "AUD-account-24 AC1 OK: catch now uses signUpErrGeneric+AppLogger.warning; no signUpFailed() call left; only e.toString() is _extractFirebaseCode regex (non-UI).",
-    "AUD-account-24 AC2 OK(deferred): conditional on separate custom_lint repair; custom_lint exits 0 now; guarded by red-first regression test."
-   ],
-   "reviewedBy": "opus adversarial review, run wf_ea1c22b1-b57",
-   "notes": "Env: copied firebase_options, pub get, build_runner, regenerated content.db.gz (sole pre-regen analyze warning). Diff=4 files, no scope creep, no existing test modified (no TQ-7). Red-first airtight: "
   }
  ]
 }
