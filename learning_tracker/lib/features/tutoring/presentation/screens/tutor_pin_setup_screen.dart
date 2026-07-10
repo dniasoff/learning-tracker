@@ -21,6 +21,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
@@ -188,11 +189,11 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
               // Header icon
               const CircleAvatar(
                 radius: 36,
-                backgroundColor: Color(0xFFE8E0FF),
+                backgroundColor: AppColors.tutorPinBadgeBg,
                 child: Icon(
                   Icons.lock_person_rounded,
                   size: 36,
-                  color: Color(0xFF6B3FA0),
+                  color: AppColors.tutorPinBadgeIcon,
                 ),
               ),
               const SizedBox(height: 20),
@@ -306,7 +307,7 @@ class _TutorPinDotsRow extends StatelessWidget {
               border: Border.all(
                 color: filled
                     ? AppTheme.brandInk
-                    : const Color(0xFFC9D0DA).withValues(alpha: 0.35),
+                    : AppColors.tutorPinKeyDisabled.withValues(alpha: 0.35),
               ),
             ),
           ),

@@ -18,12 +18,14 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -225,8 +227,12 @@ class _ChildGrantsSection extends ConsumerWidget {
           ),
           error: (e, _) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
+            // AUD-tutoring-11: never interpolate the raw exception text into
+            // UI copy (EH-5) — a fixed localized string still distinguishes
+            // this from "No tutors invited." (R-TU2: a load failure must
+            // never be masked as an empty roster).
             child: Text(
-              l10n.manageTutorsLoadError(e.toString()),
+              l10n.manageTutorsLoadErrorGeneric,
               style: TextStyle(color: theme.colorScheme.error),
             ),
           ),
@@ -250,32 +256,51 @@ class _ChildGrantsSection extends ConsumerWidget {
                 .where((g) => g.grantState is PendingGrant)
                 .toList();
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (active.isNotEmpty) ...[
-                  _SectionDivider(
-                    label: l10n.manageTutorsActiveSection(active.length),
-                  ),
-                  for (final grant in active)
-                    _TutorGrantRow.active(
-                      grant: grant,
-                      childProfileId: profile.id.toString(),
-                      childName: profile.displayName,
-                    ),
-                ],
-                if (pending.isNotEmpty) ...[
-                  _SectionDivider(
-                    label: l10n.manageTutorsPendingSection(pending.length),
-                  ),
-                  for (final grant in pending)
-                    _TutorGrantRow.pending(
-                      grant: grant,
-                      childProfileId: profile.id.toString(),
-                      childName: profile.displayName,
-                    ),
-                ],
+            // AUD-tutoring-08 (PF-2, verify-correction site): flatten
+            // headers + rows and build via ListView.builder rather than
+            // eagerly expanding every tutor row with a `for` loop inside a
+            // plain Column, matching the fix applied to ManageGrantsScreen.
+            final items = <_TutorGrantListItem>[
+              if (active.isNotEmpty) ...[
+                _TutorGrantHeaderItem(
+                  l10n.manageTutorsActiveSection(active.length),
+                ),
+                for (final grant in active)
+                  _TutorGrantRowItem(grant: grant, isActive: true),
               ],
+              if (pending.isNotEmpty) ...[
+                _TutorGrantHeaderItem(
+                  l10n.manageTutorsPendingSection(pending.length),
+                ),
+                for (final grant in pending)
+                  _TutorGrantRowItem(grant: grant, isActive: false),
+              ],
+            ];
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return switch (item) {
+                  _TutorGrantHeaderItem(:final label) => _SectionDivider(
+                    label: label,
+                  ),
+                  _TutorGrantRowItem(:final grant, :final isActive) =>
+                    isActive
+                        ? _TutorGrantRow.active(
+                            grant: grant,
+                            childProfileId: profile.id.toString(),
+                            childName: profile.displayName,
+                          )
+                        : _TutorGrantRow.pending(
+                            grant: grant,
+                            childProfileId: profile.id.toString(),
+                            childName: profile.displayName,
+                          ),
+                };
+              },
             );
           },
         ),
@@ -302,6 +327,24 @@ class _ChildGrantsSection extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// AUD-tutoring-08 (PF-2): a flattened row model so a child's tutor list can
+/// be fed to a single [ListView.builder] instead of eagerly expanding a
+/// `for` loop of widgets per section.
+sealed class _TutorGrantListItem {
+  const _TutorGrantListItem();
+}
+
+class _TutorGrantHeaderItem extends _TutorGrantListItem {
+  const _TutorGrantHeaderItem(this.label);
+  final String label;
+}
+
+class _TutorGrantRowItem extends _TutorGrantListItem {
+  const _TutorGrantRowItem({required this.grant, required this.isActive});
+  final TutorGrant grant;
+  final bool isActive;
 }
 
 class _SectionDivider extends StatelessWidget {
@@ -364,35 +407,60 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
 
     setState(() => _acting = true);
     try {
-      await ref.read(revokeTutorGrantUseCaseProvider).call(grant: widget.grant);
-      if (mounted) {
-        // R4-M3: wipe the mirror and exit the tutored session so listeners
-        // detach immediately rather than waiting for the next entry attempt.
-        final grantId = widget.grant.grantId;
-        unawaited(
-          buildTutoredMirrorWipeServiceFromWidget(
-            ref: ref,
-            onWipe: (_) =>
-                ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),
-          ).wipeMirrorForGrant(grantId),
-        );
-        ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
-        // WS3.3g: fire-and-forget notification — tutor is notified of revocation.
-        // Parent name from current auth user; falls back to 'Parent' if unavailable.
-        final parentName =
-            ref.read(authRepositoryProvider).currentUser?.displayName ??
-            l10n.tutorFallbackParent;
-        unawaited(
-          ref
-              .read(tutorNotificationGatewayProvider)
-              .notifyTutorOfRevocation(
-                tutorEmail: widget.grant.tutorEmail,
-                parentName: parentName,
-                childName: widget.childName,
-              ),
-        );
+      final result = await ref
+          .read(revokeTutorGrantUseCaseProvider)
+          .call(grant: widget.grant);
+      if (!mounted) return;
+      // AUD-tutoring-01: the CF result must be checked before treating the
+      // action as successful — a genuine server rejection (permission-denied,
+      // already-revoked race, offline) must not wipe the local mirror or tell
+      // the tutor their access was cut off while it is still active
+      // server-side.
+      switch (result) {
+        case TutorGrantSuccess():
+          // R4-M3: wipe the mirror and exit the tutored session so listeners
+          // detach immediately rather than waiting for the next entry attempt.
+          final grantId = widget.grant.grantId;
+          unawaited(
+            buildTutoredMirrorWipeServiceFromWidget(
+              ref: ref,
+              onWipe: (_) => ref
+                  .read(activeTutoredProfileSelectionProvider.notifier)
+                  .exit(),
+            ).wipeMirrorForGrant(grantId),
+          );
+          ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
+          // WS3.3g: fire-and-forget notification — tutor is notified of
+          // revocation. Parent name from current auth user; falls back to
+          // 'Parent' if unavailable.
+          final parentName =
+              ref.read(authRepositoryProvider).currentUser?.displayName ??
+              l10n.tutorFallbackParent;
+          unawaited(
+            ref
+                .read(tutorNotificationGatewayProvider)
+                .notifyTutorOfRevocation(
+                  tutorEmail: widget.grant.tutorEmail,
+                  parentName: parentName,
+                  childName: widget.childName,
+                ),
+          );
+        case TutorGrantFailure(:final code):
+          AppLogger.instance.error(
+            event: 'Tutor grant revoke rejected by server',
+            fields: {'code': code ?? 'unknown'},
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageTutorsRevokeErrorGeneric)),
+          );
+        case TutorGrantPreconditionError():
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageTutorsRevokeErrorGeneric)),
+          );
       }
     } catch (e, st) {
+      // AUD-tutoring-11: log the real exception for diagnostics, but never
+      // interpolate its raw text into UI copy (EH-5).
       AppLogger.instance.error(
         event: 'Failed to revoke tutor grant',
         exception: e,
@@ -400,7 +468,7 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.manageTutorsRevokeError(e.toString()))),
+          SnackBar(content: Text(l10n.manageTutorsRevokeErrorGeneric)),
         );
       }
     } finally {
@@ -422,13 +490,31 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
 
     setState(() => _acting = true);
     try {
-      await ref
+      final result = await ref
           .read(rescindTutorInviteUseCaseProvider)
           .call(grant: widget.grant);
-      if (mounted) {
-        ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
+      if (!mounted) return;
+      // AUD-tutoring-01: check the CF result before invalidating the grants
+      // list as if the rescind succeeded.
+      switch (result) {
+        case TutorGrantSuccess():
+          ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
+        case TutorGrantFailure(:final code):
+          AppLogger.instance.error(
+            event: 'Tutor invite rescind rejected by server',
+            fields: {'code': code ?? 'unknown'},
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageTutorsRescindErrorGeneric)),
+          );
+        case TutorGrantPreconditionError():
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageTutorsRescindErrorGeneric)),
+          );
       }
     } catch (e, st) {
+      // AUD-tutoring-11: log the real exception for diagnostics, but never
+      // interpolate its raw text into UI copy (EH-5).
       AppLogger.instance.error(
         event: 'Failed to rescind tutor invite',
         exception: e,
@@ -436,7 +522,7 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.manageTutorsRescindError(e.toString()))),
+          SnackBar(content: Text(l10n.manageTutorsRescindErrorGeneric)),
         );
       }
     } finally {
@@ -460,8 +546,8 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
     final grantState = widget.grant.grantState;
 
     final statusColor = grantState is ActiveGrant
-        ? Colors.green.shade600
-        : Colors.orange.shade700;
+        ? AppColors.statusActiveBadge
+        : AppColors.statusPendingBadge;
     final statusLabel = grantState is ActiveGrant
         ? l10n.statusActive
         : l10n.statusPending;

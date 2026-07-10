@@ -125,6 +125,23 @@ ProfileModel _adultProfile({int id = 1, String name = 'Adult'}) {
   );
 }
 
+/// AUD-tutoring-08: a pending tutor-invite grant addressed to this tutor.
+TutorGrant _pendingInviteGrant({required String grantId}) {
+  final now = DateTime.utc(2026, 1, 1);
+  final doc = TutorGrantDoc(
+    grantId: grantId,
+    parentUid: 'parent-uid-$grantId',
+    childProfileId: 'child-$grantId',
+    tutorEmail: 'tutor@example.com',
+    state: TutorGrantState.pending,
+    invitedAt: now,
+    updatedAt: now,
+    expiresAt: now.add(const Duration(days: 7)),
+    childName: 'Talmid $grantId',
+  );
+  return TutorGrant.fromDoc(doc);
+}
+
 ProfileModel _childProfile({int id = 2, String name = 'Child'}) {
   final now = DateTime.utc(2026, 1, 1);
   return ProfileModel(
@@ -223,6 +240,7 @@ Widget _buildSettings({
   bool isTutored = false,
   TutorPermissions tutorPerms = const TutorPermissions(),
   Locale locale = const Locale('en'),
+  List<TutorGrant> pendingInvites = const [],
   List<Override> extraOverrides = const [],
 }) {
   final profile = profileMode == 'child'
@@ -257,7 +275,7 @@ Widget _buildSettings({
         (ref) => Future<List<TutorGrant>>.value([]),
       ),
       pendingTutorInvitesProvider.overrideWith(
-        (ref) => Future<List<TutorGrant>>.value([]),
+        (ref) => Future<List<TutorGrant>>.value(pendingInvites),
       ),
       syncWriteFacadeProvider.overrideWithValue(null),
       ...extraOverrides,
@@ -609,6 +627,112 @@ void main() {
 
         // In a tutored session the _PendingInvitesSection is not rendered.
         expect(find.text('TALMID PROFILES'), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    // ── AUD-tutoring-08 (PF-2): capped inline preview ───────────────────────────
+
+    testWidgets(
+      'AUD-tutoring-08: pending-invites section caps the inline preview and '
+      'shows a "View all" row for the rest',
+      (tester) async {
+        // A dedicated tutor's roster has no archiving path and is not
+        // bounded small — 50 pending invites must not all render inline on
+        // every Settings open.
+        final grants = [
+          for (var i = 0; i < 50; i++) _pendingInviteGrant(grantId: 'g$i'),
+        ];
+        final db = await _dbWithAdultProfile();
+        addTearDown(db.close);
+
+        await tester.pumpWidget(
+          _buildSettings(
+            db: db,
+            auth: auth,
+            router: router,
+            pendingInvites: grants,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // Only the capped preview count renders inline...
+        expect(find.text('Talmid g0'), findsOneWidget);
+        expect(find.text('Talmid g4'), findsOneWidget);
+        // ...the rest are NOT built.
+        expect(find.text('Talmid g5'), findsNothing);
+        expect(find.text('Talmid g49'), findsNothing);
+
+        // A "View all" row surfaces the remaining count instead.
+        expect(find.text('View all (45 more)'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'AUD-tutoring-08: "View all" row navigates to ManageGrantsRoute',
+      (tester) async {
+        final grants = [
+          for (var i = 0; i < 10; i++) _pendingInviteGrant(grantId: 'g$i'),
+        ];
+        final db = await _dbWithAdultProfile();
+        addTearDown(db.close);
+
+        await tester.pumpWidget(
+          _buildSettings(
+            db: db,
+            auth: auth,
+            router: router,
+            pendingInvites: grants,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // The "View all" row sits below the fold in the outer settings
+        // ListView on the default test viewport — scroll it into view first.
+        await tester.ensureVisible(find.text('View all (5 more)'));
+        await tester.pump();
+        await tester.tap(find.text('View all (5 more)'));
+        await tester.pump();
+
+        verify(
+          () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+        ).called(1);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'AUD-tutoring-08: no "View all" row when the roster fits the cap',
+      (tester) async {
+        final grants = [
+          for (var i = 0; i < 3; i++) _pendingInviteGrant(grantId: 'g$i'),
+        ];
+        final db = await _dbWithAdultProfile();
+        addTearDown(db.close);
+
+        await tester.pumpWidget(
+          _buildSettings(
+            db: db,
+            auth: auth,
+            router: router,
+            pendingInvites: grants,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(find.text('Talmid g0'), findsOneWidget);
+        expect(find.text('Talmid g2'), findsOneWidget);
+        expect(find.textContaining('View all'), findsNothing);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);

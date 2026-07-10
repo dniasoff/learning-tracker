@@ -67,13 +67,6 @@ ResignTutorGrantUseCase resignTutorGrantUseCase(Ref ref) {
   );
 }
 
-/// Lists active/pending grants where the current user is the tutor.
-@riverpod
-Future<List<TutorGrant>> incomingTutorGrants(Ref ref) {
-  final repo = ref.watch(tutorGrantRepositoryProvider);
-  return repo.listIncomingGrants();
-}
-
 /// Lists PENDING invites addressed to the current user's email so a tutor can
 /// discover + accept them in-app — without the emailed deep link and without
 /// being forced to create a learner profile first.
@@ -82,6 +75,17 @@ Future<List<TutorGrant>> pendingTutorInvites(Ref ref) {
   final repo = ref.watch(tutorGrantRepositoryProvider);
   return repo.listPendingInvitesForMe();
 }
+
+// AUD-tutoring-03: there is intentionally NO `incomingTutorGrants` provider
+// in this file. A network-only @riverpod codegen version used to live here
+// alongside the offline-first `incomingTutorGrantsProvider` in
+// manage_tutors_providers.dart — two top-level providers with the identical
+// name (AG-4 violation), forcing every consumer that needed both files to
+// `show`/`hide`/alias-import around the collision. The offline-first one in
+// manage_tutors_providers.dart (reconciles the CF result against the locally
+// mirrored tutored profiles — see D18) is the one every tutoring/profile
+// screen actually watches; it is canonical. Do not reintroduce a duplicate
+// here — add new incoming-grants logic to manage_tutors_providers.dart.
 
 // ── S4 — Tutor write-path service provider ────────────────────────────────────
 

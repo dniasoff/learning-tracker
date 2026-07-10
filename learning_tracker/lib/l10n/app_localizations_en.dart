@@ -1261,6 +1261,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePickerTalmidProfiles => 'TALMID PROFILES';
 
   @override
+  String settingsTutoringViewAll(int count) {
+    return 'View all ($count more)';
+  }
+
+  @override
   String get profilePickerSkipToSettings => 'Skip to Settings';
 
   @override
@@ -4599,9 +4604,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageGrantsResign => 'Resign';
 
   @override
-  String manageGrantsResignError(String error) {
-    return 'Could not resign: $error';
-  }
+  String get manageGrantsResignErrorGeneric =>
+      'Could not resign. Please try again.';
 
   @override
   String get tutorFallbackName => 'Your tutor';
@@ -4614,9 +4618,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add a child profile to start inviting tutors.';
 
   @override
-  String manageTutorsLoadError(String error) {
-    return 'Could not load tutors: $error';
-  }
+  String get manageTutorsLoadErrorGeneric =>
+      'Could not load tutors. Please try again.';
 
   @override
   String get manageTutorsNoTutors => 'No tutors invited.';
@@ -4646,9 +4649,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageTutorsRevoke => 'Revoke';
 
   @override
-  String manageTutorsRevokeError(String error) {
-    return 'Could not revoke: $error';
-  }
+  String get manageTutorsRevokeErrorGeneric =>
+      'Could not revoke. Please try again.';
 
   @override
   String get manageTutorsRescindTitle => 'Rescind invitation?';
@@ -4662,9 +4664,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageTutorsRescind => 'Rescind';
 
   @override
-  String manageTutorsRescindError(String error) {
-    return 'Could not rescind: $error';
-  }
+  String get manageTutorsRescindErrorGeneric =>
+      'Could not rescind. Please try again.';
 
   @override
   String get manageTutorsViewAuditLog => 'View audit log';

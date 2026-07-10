@@ -2277,6 +2277,12 @@ abstract class AppLocalizations {
   /// **'TALMID PROFILES'**
   String get profilePickerTalmidProfiles;
 
+  /// No description provided for @settingsTutoringViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all ({count} more)'**
+  String settingsTutoringViewAll(int count);
+
   /// No description provided for @profilePickerSkipToSettings.
   ///
   /// In en, this message translates to:
@@ -7692,11 +7698,11 @@ abstract class AppLocalizations {
   /// **'Resign'**
   String get manageGrantsResign;
 
-  /// No description provided for @manageGrantsResignError.
+  /// No description provided for @manageGrantsResignErrorGeneric.
   ///
   /// In en, this message translates to:
-  /// **'Could not resign: {error}'**
-  String manageGrantsResignError(String error);
+  /// **'Could not resign. Please try again.'**
+  String get manageGrantsResignErrorGeneric;
 
   /// No description provided for @tutorFallbackName.
   ///
@@ -7716,11 +7722,11 @@ abstract class AppLocalizations {
   /// **'Add a child profile to start inviting tutors.'**
   String get manageTutorsEmptyBody;
 
-  /// No description provided for @manageTutorsLoadError.
+  /// No description provided for @manageTutorsLoadErrorGeneric.
   ///
   /// In en, this message translates to:
-  /// **'Could not load tutors: {error}'**
-  String manageTutorsLoadError(String error);
+  /// **'Could not load tutors. Please try again.'**
+  String get manageTutorsLoadErrorGeneric;
 
   /// No description provided for @manageTutorsNoTutors.
   ///
@@ -7764,11 +7770,11 @@ abstract class AppLocalizations {
   /// **'Revoke'**
   String get manageTutorsRevoke;
 
-  /// No description provided for @manageTutorsRevokeError.
+  /// No description provided for @manageTutorsRevokeErrorGeneric.
   ///
   /// In en, this message translates to:
-  /// **'Could not revoke: {error}'**
-  String manageTutorsRevokeError(String error);
+  /// **'Could not revoke. Please try again.'**
+  String get manageTutorsRevokeErrorGeneric;
 
   /// No description provided for @manageTutorsRescindTitle.
   ///
@@ -7788,11 +7794,11 @@ abstract class AppLocalizations {
   /// **'Rescind'**
   String get manageTutorsRescind;
 
-  /// No description provided for @manageTutorsRescindError.
+  /// No description provided for @manageTutorsRescindErrorGeneric.
   ///
   /// In en, this message translates to:
-  /// **'Could not rescind: {error}'**
-  String manageTutorsRescindError(String error);
+  /// **'Could not rescind. Please try again.'**
+  String get manageTutorsRescindErrorGeneric;
 
   /// No description provided for @manageTutorsViewAuditLog.
   ///

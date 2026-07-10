@@ -167,7 +167,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
           child: Icon(
             Icons.lock_reset_rounded,
             size: 36,
-            color: Color(0xFFB07A00),
+            color: AppColors.statusWarningSoftText,
           ),
         ),
         const SizedBox(height: 20),
@@ -244,11 +244,11 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
         const SizedBox(height: 16),
         const CircleAvatar(
           radius: 36,
-          backgroundColor: Color(0xFFEAF5EA),
+          backgroundColor: AppColors.statusSuccessSoftBg,
           child: Icon(
             Icons.mark_email_read_rounded,
             size: 36,
-            color: Color(0xFF3A7C3A),
+            color: AppColors.statusSuccessSoftText,
           ),
         ),
         const SizedBox(height: 20),

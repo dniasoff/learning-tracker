@@ -16,6 +16,7 @@
 // local mirror (trigger a tutored pull) so the change is visible in the UI.
 
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 
 /// Result type for tutor write operations.
 sealed class TutorWriteResult {
@@ -72,8 +73,21 @@ class TutorWriteService {
         message: e.message ?? 'Cloud Function call failed',
         code: e.code,
       );
-    } catch (e) {
-      return TutorWriteFailure(message: e.toString());
+    } catch (e, st) {
+      // AUD-tutoring-11: log the real exception for diagnostics, but never
+      // stash its raw text in the value a caller may surface to the UI
+      // (EH-5). FirebaseFunctionsException already carries a structured
+      // code/message (handled above) — this covers only the genuinely
+      // unexpected fallback.
+      AppLogger.instance.error(
+        event: 'TutorWriteService.$functionName unexpected error',
+        exception: e,
+        stackTrace: st,
+      );
+      return const TutorWriteFailure(
+        message: 'An unexpected error occurred.',
+        code: 'unknown-error',
+      );
     }
   }
 

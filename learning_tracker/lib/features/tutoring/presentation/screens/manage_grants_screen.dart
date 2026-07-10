@@ -14,10 +14,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -79,29 +81,48 @@ class _ManageGrantsScreenState extends ConsumerState<ManageGrantsScreen> {
               return _EmptyGrantsView(theme: theme);
             }
 
-            return ListView(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              children: [
-                if (activeGrants.isNotEmpty) ...[
-                  _SectionHeader(
-                    label: l10n.manageGrantsActiveSection(activeGrants.length),
-                    theme: theme,
-                  ),
-                  for (final grant in activeGrants)
-                    _GrantRow(grant: grant, canResign: true),
-                  const SizedBox(height: 8),
-                ],
-                if (pendingGrants.isNotEmpty) ...[
-                  _SectionHeader(
-                    label: l10n.manageGrantsPendingSection(
-                      pendingGrants.length,
-                    ),
-                    theme: theme,
-                  ),
-                  for (final grant in pendingGrants)
-                    _GrantRow(grant: grant, canResign: false),
-                ],
+            // AUD-tutoring-08 (PF-2): flatten headers + rows into a single
+            // lazily-built item list instead of eagerly expanding every row
+            // via a `for` loop inside a non-lazy ListView. A dedicated
+            // tutor (e.g. a rebbi/melamed tracking many talmidim across
+            // seasons — the tutoring feature's own stated use case)
+            // accumulates one grant per student relationship over time with
+            // no archiving path, so this roster is not bounded small.
+            final items = <_GrantListItem>[
+              if (activeGrants.isNotEmpty) ...[
+                _GrantHeaderItem(
+                  l10n.manageGrantsActiveSection(activeGrants.length),
+                ),
+                for (final grant in activeGrants)
+                  _GrantRowItem(grant: grant, canResign: true),
+                const _GrantSpacerItem(),
               ],
+              if (pendingGrants.isNotEmpty) ...[
+                _GrantHeaderItem(
+                  l10n.manageGrantsPendingSection(pendingGrants.length),
+                ),
+                for (final grant in pendingGrants)
+                  _GrantRowItem(grant: grant, canResign: false),
+              ],
+            ];
+
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return switch (item) {
+                  _GrantHeaderItem(:final label) => _SectionHeader(
+                    label: label,
+                    theme: theme,
+                  ),
+                  _GrantRowItem(:final grant, :final canResign) => _GrantRow(
+                    grant: grant,
+                    canResign: canResign,
+                  ),
+                  _GrantSpacerItem() => const SizedBox(height: 8),
+                };
+              },
             );
           },
         ),
@@ -148,6 +169,28 @@ class _EmptyGrantsView extends StatelessWidget {
       ),
     );
   }
+}
+
+/// AUD-tutoring-08 (PF-2): a flattened row model so the grants list can be
+/// fed to a single lazy [ListView.builder] instead of eagerly expanding a
+/// `for` loop of widgets per section.
+sealed class _GrantListItem {
+  const _GrantListItem();
+}
+
+class _GrantHeaderItem extends _GrantListItem {
+  const _GrantHeaderItem(this.label);
+  final String label;
+}
+
+class _GrantRowItem extends _GrantListItem {
+  const _GrantRowItem({required this.grant, required this.canResign});
+  final TutorGrant grant;
+  final bool canResign;
+}
+
+class _GrantSpacerItem extends _GrantListItem {
+  const _GrantSpacerItem();
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -224,43 +267,70 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
 
     setState(() => _acting = true);
     try {
-      await ref.read(resignTutorGrantUseCaseProvider).call(grant: widget.grant);
-      if (mounted) {
-        // R4-M3: wipe the mirror and exit the tutored session so listeners
-        // detach immediately rather than waiting for the next entry attempt.
-        final grantId = widget.grant.grantId;
-        unawaited(
-          buildTutoredMirrorWipeServiceFromWidget(
-            ref: ref,
-            onWipe: (_) =>
-                ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),
-          ).wipeMirrorForGrant(grantId),
-        );
-        ref.invalidate(incomingTutorGrantsProvider);
-        // WS3.3g / M1: fire-and-forget notification — parent is notified of the
-        // resignation. The parent email is not readable from the grant doc (UID
-        // only), so we route by parentUid; the gateway falls back to a
-        // uid-addressed recipient so the notification is not dropped.
-        final currentUser = ref.read(authRepositoryProvider).currentUser;
-        final tutorName =
-            currentUser?.displayName ??
-            currentUser?.email ??
-            l10n.tutorFallbackName;
-        unawaited(
-          ref
-              .read(tutorNotificationGatewayProvider)
-              .notifyParentOfResignation(
-                parentEmail: '',
-                parentUid: widget.grant.parentUid,
-                tutorName: tutorName,
-                // GA-5: use the human-readable display label, not the raw
-                // Firestore profile id (childProfileId was a string like
-                // "raw_firestore_profile_id_123" — not a child name).
-                childName: widget.grant.childDisplayLabel,
-              ),
-        );
+      final result = await ref
+          .read(resignTutorGrantUseCaseProvider)
+          .call(grant: widget.grant);
+      if (!mounted) return;
+      // AUD-tutoring-01: the CF result must be checked before treating the
+      // action as successful — the sibling invite/accept/decline screens
+      // already switch exhaustively on TutorGrantResult; this row previously
+      // discarded the result and ran the success side effects unconditionally,
+      // so a genuine server rejection (permission-denied, already-resigned
+      // race, offline) still wiped the local mirror and told the parent the
+      // resignation succeeded.
+      switch (result) {
+        case TutorGrantSuccess():
+          // R4-M3: wipe the mirror and exit the tutored session so listeners
+          // detach immediately rather than waiting for the next entry attempt.
+          final grantId = widget.grant.grantId;
+          unawaited(
+            buildTutoredMirrorWipeServiceFromWidget(
+              ref: ref,
+              onWipe: (_) => ref
+                  .read(activeTutoredProfileSelectionProvider.notifier)
+                  .exit(),
+            ).wipeMirrorForGrant(grantId),
+          );
+          ref.invalidate(incomingTutorGrantsProvider);
+          // WS3.3g / M1: fire-and-forget notification — parent is notified of
+          // the resignation. The parent email is not readable from the grant
+          // doc (UID only), so we route by parentUid; the gateway falls back
+          // to a uid-addressed recipient so the notification is not dropped.
+          final currentUser = ref.read(authRepositoryProvider).currentUser;
+          final tutorName =
+              currentUser?.displayName ??
+              currentUser?.email ??
+              l10n.tutorFallbackName;
+          unawaited(
+            ref
+                .read(tutorNotificationGatewayProvider)
+                .notifyParentOfResignation(
+                  parentEmail: '',
+                  parentUid: widget.grant.parentUid,
+                  tutorName: tutorName,
+                  // GA-5: use the human-readable display label, not the raw
+                  // Firestore profile id (childProfileId was a string like
+                  // "raw_firestore_profile_id_123" — not a child name).
+                  childName: widget.grant.childDisplayLabel,
+                ),
+          );
+        case TutorGrantFailure(:final code):
+          AppLogger.instance.error(
+            event: 'Tutor grant resign rejected by server',
+            fields: {'code': code ?? 'unknown'},
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageGrantsResignErrorGeneric)),
+          );
+        case TutorGrantPreconditionError():
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.manageGrantsResignErrorGeneric)),
+          );
       }
     } catch (e, st) {
+      // AUD-tutoring-11: log the real exception for diagnostics, but never
+      // interpolate its raw text into UI copy — a Hebrew sentence must not
+      // end in an untranslated English/gRPC fragment (EH-5).
       AppLogger.instance.error(
         event: 'Failed to resign tutor grant',
         exception: e,
@@ -268,7 +338,7 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.manageGrantsResignError(e.toString()))),
+          SnackBar(content: Text(l10n.manageGrantsResignErrorGeneric)),
         );
       }
     } finally {
@@ -282,8 +352,8 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
     final l10n = AppLocalizations.of(context)!;
     final isActive = widget.grant.grantState is ActiveGrant;
     final statusColor = isActive
-        ? Colors.green.shade600
-        : Colors.orange.shade700;
+        ? AppColors.statusActiveBadge
+        : AppColors.statusPendingBadge;
 
     return ListTile(
       leading: CircleAvatar(

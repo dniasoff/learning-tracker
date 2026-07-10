@@ -1253,6 +1253,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get profilePickerTalmidProfiles => 'פרופילי תלמידים';
 
   @override
+  String settingsTutoringViewAll(int count) {
+    return 'הצג הכל (עוד $count)';
+  }
+
+  @override
   String get profilePickerSkipToSettings => 'מעבר להגדרות';
 
   @override
@@ -4561,9 +4566,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get manageGrantsResign => 'התפטרות';
 
   @override
-  String manageGrantsResignError(String error) {
-    return 'לא ניתן להתפטר: $error';
-  }
+  String get manageGrantsResignErrorGeneric => 'לא ניתן להתפטר. נסו שוב.';
 
   @override
   String get tutorFallbackName => 'המדריך שלכם';
@@ -4576,9 +4579,7 @@ class AppLocalizationsHe extends AppLocalizations {
       'הוסיפו פרופיל ילד כדי להתחיל להזמין מדריכים.';
 
   @override
-  String manageTutorsLoadError(String error) {
-    return 'לא ניתן לטעון מדריכים: $error';
-  }
+  String get manageTutorsLoadErrorGeneric => 'לא ניתן לטעון מדריכים. נסו שוב.';
 
   @override
   String get manageTutorsNoTutors => 'לא הוזמנו מדריכים.';
@@ -4608,9 +4609,8 @@ class AppLocalizationsHe extends AppLocalizations {
   String get manageTutorsRevoke => 'ביטול גישה';
 
   @override
-  String manageTutorsRevokeError(String error) {
-    return 'לא ניתן לבטל את הגישה: $error';
-  }
+  String get manageTutorsRevokeErrorGeneric =>
+      'לא ניתן לבטל את הגישה. נסו שוב.';
 
   @override
   String get manageTutorsRescindTitle => 'לבטל את ההזמנה?';
@@ -4624,9 +4624,8 @@ class AppLocalizationsHe extends AppLocalizations {
   String get manageTutorsRescind => 'ביטול הזמנה';
 
   @override
-  String manageTutorsRescindError(String error) {
-    return 'לא ניתן לבטל את ההזמנה: $error';
-  }
+  String get manageTutorsRescindErrorGeneric =>
+      'לא ניתן לבטל את ההזמנה. נסו שוב.';
 
   @override
   String get manageTutorsViewAuditLog => 'צפייה ביומן הפעולות';

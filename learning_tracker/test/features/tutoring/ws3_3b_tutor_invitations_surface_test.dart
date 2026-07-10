@@ -153,12 +153,14 @@ void main() {
         // watch so the row flips in-session (no force-stop + cold restart).
         expect(
           acceptInviteSrc,
-          contains('ref.invalidate(manage_tutors.incomingTutorGrantsProvider)'),
+          contains('ref.invalidate(incomingTutorGrantsProvider)'),
           reason:
-              'AcceptInviteScreen must invalidate the (manage_tutors) '
-              'incomingTutorGrantsProvider on success — the SAME provider the '
-              'tutored-children UI watches — so the accepted row flips '
-              'in-session',
+              'AcceptInviteScreen must invalidate incomingTutorGrantsProvider '
+              'on success — the SAME (offline-first, manage_tutors_providers) '
+              'provider the tutored-children UI watches — so the accepted row '
+              'flips in-session. AUD-tutoring-03 removed the duplicate '
+              'same-named codegen provider, so the alias prefix that used to '
+              'disambiguate this call is gone.',
         );
         expect(
           acceptInviteSrc,

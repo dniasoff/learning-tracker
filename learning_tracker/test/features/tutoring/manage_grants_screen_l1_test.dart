@@ -29,6 +29,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -529,9 +530,170 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Snackbar contains the l10n error prefix (manageGrantsResignError)
-    expect(find.textContaining('Could not resign:'), findsOneWidget);
+    // AUD-tutoring-11: the snackbar shows a fixed localized string — never
+    // the raw exception text interpolated into UI copy (EH-5).
+    expect(find.text('Could not resign. Please try again.'), findsOneWidget);
+    expect(find.textContaining('CF error'), findsNothing);
 
     await tearDownWidget(tester);
   });
+
+  // ── 13. AUD-tutoring-01: TutorGrantFailure must NOT be treated as success ──
+  //
+  // Regression for the P1 finding: the resign handler previously discarded
+  // the awaited TutorGrantResult and ran the success side effects (mirror
+  // wipe, provider invalidate, parent notification) unconditionally. A
+  // genuine server rejection (e.g. permission-denied) must NOT wipe the
+  // local mirror, must NOT invalidate the grants list, must NOT notify the
+  // parent, and MUST show an error to the tutor.
+
+  testWidgets(
+    'AUD-tutoring-01: TutorGrantFailure does not wipe the mirror, notify, '
+    'or invalidate — and shows an error',
+    (tester) async {
+      final grant = _activeGrant();
+      when(() => mockResignUseCase.call(grant: any(named: 'grant'))).thenAnswer(
+        (_) async =>
+            const TutorGrantFailure(message: 'nope', code: 'permission-denied'),
+      );
+
+      // Count how many times the grants provider is (re)built — an
+      // `ref.invalidate` on failure would force a second build.
+      var fetchCount = 0;
+      Future<List<TutorGrant>> grantsFactory() {
+        fetchCount++;
+        return Future.value([grant]);
+      }
+
+      // Seed a tutored-mirror profile row keyed to this grantId so a real
+      // `wipeMirrorForGrant` call would delete it — proving (by its
+      // survival) that the wipe was never invoked on the failure path.
+      final db = inMemoryDb();
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'tutor@example.com',
+              tier: 'localBorn',
+              displayName: 'Test Tutor',
+              createdAt: _kNow,
+              updatedAt: _kNow,
+            ),
+          );
+      await db.profileDao.upsertTutoredProfile(
+        accountId: accountId,
+        parentUid: grant.parentUid,
+        remoteChildProfileId: grant.childProfileId,
+        grantId: grant.grantId,
+        displayName: 'Mirrored Child',
+        mode: 'child',
+        now: _kNow,
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, __) => null,
+          overrides: [
+            incomingTutorGrantsProvider.overrideWith((ref) => grantsFactory()),
+            resignTutorGrantUseCaseProvider.overrideWithValue(
+              mockResignUseCase,
+            ),
+            authRepositoryProvider.overrideWithValue(mockAuthRepo),
+            tutorNotificationGatewayProvider.overrideWithValue(
+              mockNotificationGateway,
+            ),
+            userDatabaseProvider.overrideWithValue(db),
+          ],
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ManageGrantsScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(fetchCount, 1);
+
+      // Confirm resign.
+      await tester.tap(find.text('Resign'));
+      await tester.pump();
+      await tester.tap(find.text('Resign').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // 1. An error is shown — the fixed generic string, never the raw
+      //    failure message/code.
+      expect(find.text('Could not resign. Please try again.'), findsOneWidget);
+      expect(find.textContaining('permission-denied'), findsNothing);
+
+      // 2. No re-fetch was triggered — ref.invalidate(incomingTutorGrantsProvider)
+      //    was NOT called.
+      expect(fetchCount, 1);
+
+      // 3. The notification gateway was never invoked.
+      verifyNever(
+        () => mockNotificationGateway.notifyParentOfResignation(
+          parentEmail: any(named: 'parentEmail'),
+          parentUid: any(named: 'parentUid'),
+          tutorName: any(named: 'tutorName'),
+          childName: any(named: 'childName'),
+        ),
+      );
+
+      // 4. The seeded tutored mirror was NOT deleted — proves
+      //    wipeMirrorForGrant was never invoked.
+      final survivors = await db.profileDao.getTutoredMirrorsForAccount(
+        accountId,
+      );
+      expect(survivors, hasLength(1));
+
+      await tearDownWidget(tester);
+      await db.close();
+    },
+  );
+
+  // ── 14. AUD-tutoring-08: lazy-build the grants roster (PF-2) ────────────────
+
+  testWidgets(
+    'AUD-tutoring-08: grants list is backed by ListView.builder (lazy), not '
+    'a fully-expanded ListView(children:)',
+    (tester) async {
+      // 50 active grants — a dedicated tutor's talmid roster has no
+      // archiving path and is not bounded small.
+      final grants = [
+        for (var i = 0; i < 50; i++)
+          _activeGrant(grantId: 'grant-$i', childName: 'Talmid $i'),
+      ];
+      await tester.pumpWidget(buildSubject(() => Future.value(grants)));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Structural proof of laziness: ListView.builder uses a
+      // SliverChildBuilderDelegate; the old ListView(children: [...]) used a
+      // SliverChildListDelegate that eagerly builds every row up front.
+      final listView = tester.widget<ListView>(find.byType(ListView));
+      expect(
+        listView.childrenDelegate,
+        isA<SliverChildBuilderDelegate>(),
+        reason:
+            'The grants list must be built via ListView.builder (lazy) so '
+            'off-screen rows are not realized on every open/rebuild.',
+      );
+
+      // Behavioural proof: the first talmid (near the top) is realized;
+      // one deep in the roster, far past the viewport + cache extent, is
+      // not — it was never built.
+      expect(find.text('Talmid 0'), findsOneWidget);
+      expect(find.text('Talmid 49'), findsNothing);
+
+      await tearDownWidget(tester);
+    },
+  );
 }

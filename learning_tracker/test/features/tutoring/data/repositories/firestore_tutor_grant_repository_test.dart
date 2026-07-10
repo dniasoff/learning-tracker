@@ -929,20 +929,29 @@ void main() {
       expect(failure.message, 'Invite already pending');
     });
 
-    test('generic Exception → TutorGrantFailure without code', () async {
-      final repo = _buildRepo(
-        (_, __) async => throw Exception('network timeout'),
-      );
+    test(
+      // AUD-tutoring-11: the generic-exception fallback now returns a
+      // stable code and a fixed message — never the raw exception text
+      // (EH-5) — instead of a null code / e.toString() message.
+      'generic Exception → TutorGrantFailure with stable code, no raw '
+      'exception text',
+      () async {
+        final repo = _buildRepo(
+          (_, __) async => throw Exception('network timeout'),
+        );
 
-      final result = await repo.inviteTutor(
-        tutorEmail: 'tutor@example.com',
-        childProfileId: 'profile_1',
-        permissions: TutorPermissions.defaults(),
-      );
+        final result = await repo.inviteTutor(
+          tutorEmail: 'tutor@example.com',
+          childProfileId: 'profile_1',
+          permissions: TutorPermissions.defaults(),
+        );
 
-      expect(result, isA<TutorGrantFailure>());
-      expect((result as TutorGrantFailure).code, isNull);
-    });
+        expect(result, isA<TutorGrantFailure>());
+        final failure = result as TutorGrantFailure;
+        expect(failure.code, 'unknown-error');
+        expect(failure.message, isNot(contains('network timeout')));
+      },
+    );
   });
 
   // ── acceptInvite ──────────────────────────────────────────────────────────
@@ -1083,13 +1092,20 @@ void main() {
       expect(result, isA<TutorGrantFailure>());
     });
 
-    test('generic error → TutorGrantFailure without code', () async {
-      final repo = _buildRepo((_, __) async => throw Exception('io error'));
+    test(
+      // AUD-tutoring-11: stable code + fixed message, never raw e.toString().
+      'generic error → TutorGrantFailure with stable code, no raw exception '
+      'text',
+      () async {
+        final repo = _buildRepo((_, __) async => throw Exception('io error'));
 
-      final result = await repo.revokeGrant(grantId: 'g');
-      expect(result, isA<TutorGrantFailure>());
-      expect((result as TutorGrantFailure).code, isNull);
-    });
+        final result = await repo.revokeGrant(grantId: 'g');
+        expect(result, isA<TutorGrantFailure>());
+        final failure = result as TutorGrantFailure;
+        expect(failure.code, 'unknown-error');
+        expect(failure.message, isNot(contains('io error')));
+      },
+    );
   });
 
   // ── resignGrant ───────────────────────────────────────────────────────────

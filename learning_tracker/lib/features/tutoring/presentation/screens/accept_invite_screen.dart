@@ -26,21 +26,20 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
-// The grant list the tutored-children UI (profile-picker / Settings /
-// ManageGrants) actually watches is the offline-first FutureProvider in
-// manage_tutors_providers — NOT the @riverpod `incomingTutorGrants` codegen
-// provider in tutor_grant_providers (which is a distinct provider with the
-// same name). Use the manage_tutors one so loading + invalidation here drive
-// the SAME provider those surfaces read, otherwise the accepted row never
-// flips in-session.
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    as manage_tutors;
+// AUD-tutoring-03: incomingTutorGrantsProvider is the offline-first
+// FutureProvider defined here (manage_tutors_providers.dart) — the one the
+// tutored-children UI (profile-picker / Settings / ManageGrants) actually
+// watches. It no longer collides with a same-named provider in
+// tutor_grant_providers.dart (that duplicate was deleted), so this import no
+// longer needs an alias to disambiguate.
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart';
@@ -133,9 +132,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
     // Falls back to a minimal grant object if not yet in the cached list
     // (the Cloud Function validates ownership and state server-side anyway).
     try {
-      final grants = await ref.read(
-        manage_tutors.incomingTutorGrantsProvider.future,
-      );
+      final grants = await ref.read(incomingTutorGrantsProvider.future);
       _loadedGrant = grants
           .where((g) => g.grantId == token)
           .cast<TutorGrant?>()
@@ -177,7 +174,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
           // restart. This is the single funnel all accept entry points pass
           // through (deep link, Settings, profile-picker), so invalidating here
           // fixes the stale row regardless of how acceptance was initiated.
-          ref.invalidate(manage_tutors.incomingTutorGrantsProvider);
+          ref.invalidate(incomingTutorGrantsProvider);
           ref.invalidate(pendingTutorInvitesProvider);
           // C4: check whether the tutor has provisioned a Tutor PIN yet, keyed
           // on their OWN profile id (resolved in _initialize). If not, route to
@@ -320,11 +317,11 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 const SizedBox(height: 16),
                 const CircleAvatar(
                   radius: 36,
-                  backgroundColor: Color(0xFFE8E0FF),
+                  backgroundColor: AppColors.tutorPinBadgeBg,
                   child: Icon(
                     Icons.handshake_rounded,
                     size: 36,
-                    color: Color(0xFF6B3FA0),
+                    color: AppColors.tutorPinBadgeIcon,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -364,7 +361,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 ),
                 _PermissionRow(
                   icon: Icons.cancel_rounded,
-                  color: Colors.red.shade600,
+                  color: AppColors.statusErrorCardText,
                   text: l10n.acceptInvitePermissionNoLive,
                 ),
                 const SizedBox(height: 24),
@@ -425,11 +422,11 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 children: [
                   const CircleAvatar(
                     radius: 40,
-                    backgroundColor: Color(0xFFEAF5EA),
+                    backgroundColor: AppColors.statusSuccessSoftBg,
                     child: Icon(
                       Icons.check_circle_rounded,
                       size: 48,
-                      color: Color(0xFF3A7C3A),
+                      color: AppColors.statusSuccessSoftText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -490,13 +487,13 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 40,
-                    backgroundColor: Colors.red.shade50,
+                    backgroundColor: AppColors.statusErrorCardBg,
                     child: Icon(
                       Icons.error_rounded,
                       size: 48,
-                      color: Colors.red.shade600,
+                      color: AppColors.statusErrorCardText,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -543,7 +540,7 @@ class _PermissionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final iconColor = color ?? Colors.green.shade600;
+    final iconColor = color ?? AppColors.statusActiveBadge;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
