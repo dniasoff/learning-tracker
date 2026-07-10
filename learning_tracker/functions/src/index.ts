@@ -2174,16 +2174,27 @@ export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
   // Learner profile is at users/{ownerUid}/learner_profiles/{profileId} (the profilePath doc itself).
   // H2 fix: read the full existing doc first, merge the edit fields on top, then
   // write the complete doc so LearnerProfileCodec.decode() never sees a partial doc.
-  const beforeSnap = await profilePath.get();
-  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
-
   const updates: Record<string, unknown> = { updated_at: writtenAt };
   if (displayName !== undefined) updates["display_name"] = displayName.trim();
   if (avatar !== undefined) updates["avatar"] = avatar;
   if (mode !== undefined) updates["mode"] = mode;
 
-  const fullDoc = beforeValue ? { ...beforeValue, ...updates } : updates;
-  await profilePath.set(fullDoc, { merge: false });
+  // AUD-firebase-11: wrap the read+merge+write in a transaction, matching
+  // the runTransaction pattern already used by acceptTutorInvite /
+  // revokeTutorGrant / resignTutorGrant / expirePendingInvites elsewhere in
+  // this file. Without this, a concurrent writer (the owner's own device,
+  // or a second tutor) that changes an UNRELATED field on the same doc
+  // between the plain get() and the full-document set(merge:false) has its
+  // write silently clobbered — a lost-update race. A transaction detects
+  // that the doc changed after its read and automatically retries the
+  // callback with a fresh read, so the concurrent field survives.
+  const beforeValue = await db.runTransaction(async (txn) => {
+    const snap = await txn.get(profilePath);
+    const before = snap.exists ? snap.data()! : null;
+    const fullDoc = before ? { ...before, ...updates } : updates;
+    txn.set(profilePath, fullDoc, { merge: false });
+    return before;
+  });
 
   await writeAuditLog(
     grantId, grant, callerUid,

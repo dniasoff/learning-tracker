@@ -4,6 +4,7 @@
 
 import assert from 'node:assert/strict';
 import { beforeEach, describe, test } from 'node:test';
+import admin from 'firebase-admin';
 import {
   GRANT,
   PARENT,
@@ -323,6 +324,81 @@ describe('tutorEditProfile', () => {
     assert.equal(res.success, true);
     const snap = await profileRef().get();
     assert.equal(snap.data().mode, 'adult');
+  });
+
+  // AUD-firebase-11: tutorEditProfile reads the full profile doc, merges the
+  // edit fields in application memory, then does a full-document
+  // set(merge:false). If a concurrent writer (the owner's own device, or a
+  // second tutor) changes an unrelated field on the SAME doc between the
+  // read and the write, that field must not be silently lost. We prove this
+  // by injecting a real concurrent (non-transactional) write immediately
+  // after the FIRST `get()` the CF issues against the profile doc — whether
+  // that is a plain DocumentReference.get() (pre-fix) or a
+  // Transaction.get() (post-fix, which Firestore auto-retries on conflict).
+  //
+  // The injected write is fired WITHOUT being awaited inside the hook: the
+  // emulator holds a per-document lock for the lifetime of an open
+  // transaction, so awaiting a competing non-transactional write from
+  // inside that transaction's own get() deadlocks (the write can't land
+  // until the transaction ends, but the transaction is stuck awaiting the
+  // write). Firing it and yielding one microtask tick is enough to let it
+  // reach the emulator well before the CF's own commit.
+  test('AUD-firebase-11: concurrent write to an unrelated field between read and write survives', async () => {
+    await seedActiveGrant({});
+    const ref = profileRef();
+    await ref.set({ display_name: 'Old Name', mode: 'child', extra_field: 'original' });
+
+    const originalDocGet = admin.firestore.DocumentReference.prototype.get;
+    const originalTxnGet = admin.firestore.Transaction.prototype.get;
+    let injected = false;
+    let concurrentWriteDone = Promise.resolve();
+    const fireConcurrentWrite = () => {
+      if (injected) return;
+      injected = true;
+      // A genuinely concurrent, non-transactional writer (e.g. the owner's
+      // own device syncing) touching an UNRELATED field on the same doc.
+      concurrentWriteDone = ref.set({ extra_field: 'concurrent-write' }, { merge: true });
+    };
+    admin.firestore.DocumentReference.prototype.get = async function (...args) {
+      const result = await originalDocGet.apply(this, args);
+      if (this.path === ref.path) {
+        fireConcurrentWrite();
+        await concurrentWriteDone; // no open transaction here — safe to await
+      }
+      return result;
+    };
+    admin.firestore.Transaction.prototype.get = async function (docRef, ...rest) {
+      const result = await originalTxnGet.call(this, docRef, ...rest);
+      if (docRef?.path === ref.path) {
+        fireConcurrentWrite(); // NOT awaited — would deadlock the open transaction
+        await Promise.resolve(); // yield one microtask tick so the request is sent
+      }
+      return result;
+    };
+
+    try {
+      const res = await call(fns.tutorEditProfile, {
+        grantId: GRANT,
+        ownerUid: PARENT,
+        profileId: PROFILE,
+        displayName: 'New Name',
+      });
+      assert.equal(res.success, true);
+    } finally {
+      admin.firestore.DocumentReference.prototype.get = originalDocGet;
+      admin.firestore.Transaction.prototype.get = originalTxnGet;
+    }
+
+    await concurrentWriteDone;
+    assert.equal(injected, true, 'test setup sanity: the injection hook must have fired');
+
+    const after = (await ref.get()).data();
+    assert.equal(
+      after.extra_field,
+      'concurrent-write',
+      'the concurrent writer\'s field must survive tutorEditProfile\'s read-then-write',
+    );
+    assert.equal(after.display_name, 'New Name', 'tutorEditProfile\'s own edit must also land');
   });
 });
 
