@@ -446,6 +446,9 @@ class _RecordingMergeStore implements MergeStore {
   }) async {
     upserts.add(_Upsert(kind: kind, fields: fields));
   }
+
+  @override
+  Future<T> runInTransaction<T>(Future<T> Function() body) => body();
 }
 
 class _NullMergeStore implements MergeStore {
@@ -498,4 +501,7 @@ class _NullMergeStore implements MergeStore {
     required String naturalKey,
     required Map<String, dynamic> fields,
   }) async {}
+
+  @override
+  Future<T> runInTransaction<T>(Future<T> Function() body) => body();
 }

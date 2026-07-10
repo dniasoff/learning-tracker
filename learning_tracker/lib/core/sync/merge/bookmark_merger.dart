@@ -49,14 +49,20 @@ class BookmarkMerger implements EntityMerger {
       )) {
         continue;
       }
-      await _store.upsert(kind: kind, profileId: profileId, fields: row);
-      await _store.persistUpdatedAt(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey,
-        updatedAt: decoded.updatedAt,
-        syncedAt: decoded.syncedAt,
-      );
+      // AUD-core-sync-08: apply + persist the LWW shadow atomically so a
+      // process death between the two can never leave a stale SyncKv
+      // timestamp that silently lets a later remote pull clobber a newer
+      // local edit (DB-2).
+      await _store.runInTransaction(() async {
+        await _store.upsert(kind: kind, profileId: profileId, fields: row);
+        await _store.persistUpdatedAt(
+          kind: kind,
+          profileId: profileId,
+          naturalKey: naturalKey,
+          updatedAt: decoded.updatedAt,
+          syncedAt: decoded.syncedAt,
+        );
+      });
     }
   }
 }

@@ -93,29 +93,37 @@ class GoalMerger implements EntityMerger {
         continue;
       }
 
-      await _db.goalDao.upsertGoalByTrack(
-        profileId: profileId,
-        trackId: trackId,
-        curriculumId: curriculumId,
-        description: row['description'] as String? ?? '',
-        targetPercent: (row['target_percent'] as num?)?.toDouble() ?? 100.0,
-        targetDate: FirestoreCodec.parseDateTime(row['target_date']),
-        dateType: row['date_type'] as String? ?? 'gregorian',
-        goalType: row['goal_type'] as String? ?? 'deadline',
-        paceValue: FirestoreCodec.parseInt(row['pace_value']),
-        pacePeriod: row['pace_unit'] as String?,
-        paceGranularity: row['pace_granularity'] as String?,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
+      // AUD-core-sync-08: apply + persist the LWW shadow atomically — see
+      // BookmarkMerger for the crash-mid-sequence rationale. GoalMerger
+      // writes via GoalDao directly (not MergeStore.upsert) but both this
+      // write and persistUpdatedAt below hit the same underlying database
+      // instance as _store, so they still participate in _store's
+      // transaction.
+      await _store.runInTransaction(() async {
+        await _db.goalDao.upsertGoalByTrack(
+          profileId: profileId,
+          trackId: trackId,
+          curriculumId: curriculumId,
+          description: row['description'] as String? ?? '',
+          targetPercent: (row['target_percent'] as num?)?.toDouble() ?? 100.0,
+          targetDate: FirestoreCodec.parseDateTime(row['target_date']),
+          dateType: row['date_type'] as String? ?? 'gregorian',
+          goalType: row['goal_type'] as String? ?? 'deadline',
+          paceValue: FirestoreCodec.parseInt(row['pace_value']),
+          pacePeriod: row['pace_unit'] as String?,
+          paceGranularity: row['pace_granularity'] as String?,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+        );
 
-      await _store.persistUpdatedAt(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey,
-        updatedAt: updatedAt,
-        syncedAt: syncedAt,
-      );
+        await _store.persistUpdatedAt(
+          kind: kind,
+          profileId: profileId,
+          naturalKey: naturalKey,
+          updatedAt: updatedAt,
+          syncedAt: syncedAt,
+        );
+      });
     }
   }
 }

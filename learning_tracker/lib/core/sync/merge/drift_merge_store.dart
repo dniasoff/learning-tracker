@@ -212,6 +212,13 @@ class DriftMergeStore implements MergeStore {
     // Other kinds use upsert — insertIfAbsent is only meaningful for event logs.
   }
 
+  // ── runInTransaction ────────────────────────────────────────────────────────
+
+  /// AUD-core-sync-08: see [MergeStore.runInTransaction].
+  @override
+  Future<T> runInTransaction<T>(Future<T> Function() body) =>
+      _db.transaction(body);
+
   // ── Private helpers ─────────────────────────────────────────────────────────
 
   Future<void> _insertCompletionIfAbsent(

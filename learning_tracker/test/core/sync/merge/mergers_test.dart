@@ -122,6 +122,9 @@ class _FakeMergeStore implements MergeStore {
   }) async {
     inserted.add({...fields, '__kind': kind, '__profileId': profileId});
   }
+
+  @override
+  Future<T> runInTransaction<T>(Future<T> Function() body) => body();
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

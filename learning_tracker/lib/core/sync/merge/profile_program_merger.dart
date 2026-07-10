@@ -83,16 +83,20 @@ class ProfileProgramMerger implements EntityMerger {
             );
       if (!shouldApply) continue;
 
-      await _store.upsert(kind: kind, profileId: profileId, fields: row);
-      if (remoteUpdatedAt != null) {
-        await _store.persistUpdatedAt(
-          kind: kind,
-          profileId: profileId,
-          naturalKey: naturalKey,
-          updatedAt: remoteUpdatedAt,
-          syncedAt: decoded.syncedAt,
-        );
-      }
+      // AUD-core-sync-08: apply + persist the LWW shadow atomically — see
+      // BookmarkMerger for the crash-mid-sequence rationale.
+      await _store.runInTransaction(() async {
+        await _store.upsert(kind: kind, profileId: profileId, fields: row);
+        if (remoteUpdatedAt != null) {
+          await _store.persistUpdatedAt(
+            kind: kind,
+            profileId: profileId,
+            naturalKey: naturalKey,
+            updatedAt: remoteUpdatedAt,
+            syncedAt: decoded.syncedAt,
+          );
+        }
+      });
     }
   }
 }
