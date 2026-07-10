@@ -1,12 +1,31 @@
 // tutored_mirror_wipe_service.dart — T5.lifecycle
 //
 // Purges the local tutored-profile mirror when the grant is revoked, resigned,
-// or the tutor signs out.  Three triggers, one deletion path:
+// or the tutor signs out.  Two triggers, one deletion path:
 //
 //   (1) Revoke/resign — parent or tutor terminates the grant server-side; the
-//       client detects the terminal state on pull/refresh and calls wipeMirror().
+//       client detects the terminal state on pull/refresh and calls
+//       wipeMirrorForGrant() for each grant no longer present in the
+//       authoritative CF result (see `incomingTutorGrantsProvider` in
+//       manage_tutors_providers.dart, the D18 revoke-reconcile path).
 //   (2) Sign-out — wipe every tutored mirror for the current account so no
 //       child data persists for the next user of the device.
+//
+// AUD-core-sync-28: this file previously also exposed a batch revoke-reconcile
+// method plus a companion owner-account-id resolution helper
+// (tutored_pull_providers.dart), built to guard against
+// `currentAccountIdProvider` resolving to the talmid's `learner_profiles.id`
+// during a tutored session. That premise does not hold: `currentAccountIdProvider`
+// (profile_providers.dart) is derived solely from `authStateProvider`, which is
+// driven only by Firebase-session/local-account resolution and never by
+// `activeTutoredProfileSelectionProvider` / `resolvedTutoredLocalProfileIdProvider`
+// (the providers that DO carry the talmid's local id — see `activeProfileIdProvider`
+// in active_profile_provider.dart, a *different* provider). The described failure
+// mode was therefore unreachable, the removed helpers had zero production callers,
+// and the shipped reconcile path in `incomingTutorGrantsProvider` already resolves
+// the owner account id correctly via `currentAccountIdProvider`. See
+// `test/sync/tutored_wipe_wrong_id_test.dart` for the regression proof that
+// `currentAccountIdProvider` cannot leak the talmid's id.
 //
 // The FK `ON DELETE CASCADE` on MOST per-profile child tables means deleting
 // the learner_profiles row cascades to most mirrored rows (completions,
@@ -25,14 +44,12 @@ import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 
 /// Purges one or all tutored-profile mirrors from local Drift storage.
 ///
-/// Call [wipeMirrorForGrant] when a specific grant is revoked or resigned.
+/// Call [wipeMirrorForGrant] when a specific grant is revoked or resigned —
+/// this is what the D18 incoming-grants reconcile path
+/// (`incomingTutorGrantsProvider` in manage_tutors_providers.dart) calls, once
+/// per grant id that is no longer in the authoritative CF result, scoped by
+/// `currentAccountIdProvider` (confirmed safe — see the file header).
 /// Call [wipeAllMirrors] on tutor sign-out.
-/// Call [wipeRevokedMirrors] from the D18 reconcile path (incoming-grants CF
-/// success) with the **owning** account id resolved directly from the
-/// [accounts] table — NOT from `currentAccountIdProvider`.  This keeps the
-/// wipe independent of any active talmid session state that could cause
-/// `currentAccountIdProvider` to resolve to the mirror's `learner_profiles.id`
-/// (the talmid profile) rather than the tutor's `accounts.id`.
 ///
 /// [onWipe] is an optional callback invoked after the DB delete — use it to
 /// clear the `resolvedTutoredLocalProfileIdProvider` and call
@@ -74,34 +91,6 @@ class TutoredMirrorWipeService {
 
     for (final grantId in tutoredGrantIds) {
       _onWipe?.call(grantId);
-    }
-  }
-
-  /// D18 revoke-reconcile: wipe any mirror whose grant id is NOT in
-  /// [activeGrantIds], using the tutor's **owning** [accountId] (from
-  /// `accounts.id`, not from `currentAccountIdProvider`).
-  ///
-  /// This is the safe version for the incoming-grants CF success path:
-  /// `currentAccountIdProvider` can resolve to the talmid's local
-  /// `learner_profiles.id` during an active TUTORED session (not the tutor's
-  /// `accounts.id`), causing [getTutoredMirrorsForAccount] to return empty and
-  /// silently skip the wipe.  Callers MUST pass the account id resolved from
-  /// the [accounts] table directly — see `resolveOwnerAccountIdForWipe` in
-  /// `tutored_pull_providers.dart`.
-  ///
-  /// Idempotent — safe to call when no mirrors match.
-  Future<void> wipeRevokedMirrors({
-    required int ownerAccountId,
-    required Set<String> activeGrantIds,
-  }) async {
-    final mirrors = await _profileDao.getTutoredMirrorsForAccount(
-      ownerAccountId,
-    );
-    for (final m in mirrors) {
-      final gid = m.tutorGrantId;
-      if (gid != null && !activeGrantIds.contains(gid)) {
-        await wipeMirrorForGrant(gid);
-      }
     }
   }
 }

@@ -26,8 +26,6 @@ import 'package:learning_tracker/core/sync/tutored_mirror_wipe_service.dart';
 import 'package:learning_tracker/core/sync/tutored_pull_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
-    show currentAccountIdProvider;
 
 /// Build a [TutoredPullService] scoped to [parentUid]'s Firestore namespace.
 ///
@@ -163,31 +161,3 @@ FirestoreGatewayImpl buildTutoredGateway({
   authRepository: ref.read(authRepositoryProvider),
   activeAccountUid: () => parentUid,
 );
-
-// ── D18 — owner-account id resolution ────────────────────────────────────────
-
-/// D18 fix: resolve the owning account id directly from the [accounts] table
-/// instead of relying on [currentAccountIdProvider], which during an active
-/// TUTORED session can resolve to the talmid's [learner_profiles.id] rather
-/// than the tutor's [accounts.id].
-///
-/// Background: [currentAccountIdProvider] returns
-/// `authState.currentUser?.profileId ?? 1` where `profileId` is `Account.id`.
-/// In a per-user DB the `accounts` table always has exactly one row, so
-/// `getAllUserProfiles().first.id` is the unambiguous owner account id.  In the
-/// legacy shared-DB case (multiple account rows) the first row is still the
-/// device owner and gives the correct id for the wipe scope.
-///
-/// Falls back to [currentAccountIdProvider] only when the accounts table is
-/// empty (should never occur in a valid session, but prevents a null-dereference
-/// crash).
-///
-/// Usage: call this from the D18 incoming-grants reconcile path to get the id
-/// to pass to [TutoredMirrorWipeService.wipeRevokedMirrors].
-Future<int> resolveOwnerAccountIdForWipe(Ref ref) async {
-  final db = ref.read(userDatabaseProvider);
-  final rows = await db.userProfileDao.getAllUserProfiles();
-  if (rows.isNotEmpty) return rows.first.id;
-  // Fallback — should not be reachable in a valid session.
-  return ref.read(currentAccountIdProvider);
-}
