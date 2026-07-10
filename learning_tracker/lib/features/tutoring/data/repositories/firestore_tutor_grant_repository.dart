@@ -14,6 +14,7 @@
 // use-case classes.
 
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/repositories/tutor_grant_repository.dart';
@@ -55,8 +56,8 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
         message: e.message ?? 'Failed to send invite',
         code: e.code,
       );
-    } catch (e) {
-      return TutorGrantFailure(message: e.toString());
+    } catch (e, st) {
+      return _unexpectedFailure('inviteTutor', e, st);
     }
   }
 
@@ -73,8 +74,8 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
         message: e.message ?? 'Failed to accept invite',
         code: e.code,
       );
-    } catch (e) {
-      return TutorGrantFailure(message: e.toString());
+    } catch (e, st) {
+      return _unexpectedFailure('acceptInvite', e, st);
     }
   }
 
@@ -91,8 +92,8 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
         message: e.message ?? 'Failed to decline invite',
         code: e.code,
       );
-    } catch (e) {
-      return TutorGrantFailure(message: e.toString());
+    } catch (e, st) {
+      return _unexpectedFailure('declineInvite', e, st);
     }
   }
 
@@ -109,8 +110,8 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
         message: e.message ?? 'Failed to rescind invite',
         code: e.code,
       );
-    } catch (e) {
-      return TutorGrantFailure(message: e.toString());
+    } catch (e, st) {
+      return _unexpectedFailure('rescindInvite', e, st);
     }
   }
 
@@ -127,8 +128,8 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
         message: e.message ?? 'Failed to revoke grant',
         code: e.code,
       );
-    } catch (e) {
-      return TutorGrantFailure(message: e.toString());
+    } catch (e, st) {
+      return _unexpectedFailure('revokeGrant', e, st);
     }
   }
 
@@ -145,9 +146,31 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
         message: e.message ?? 'Failed to resign grant',
         code: e.code,
       );
-    } catch (e) {
-      return TutorGrantFailure(message: e.toString());
+    } catch (e, st) {
+      return _unexpectedFailure('resignGrant', e, st);
     }
+  }
+
+  /// AUD-tutoring-11: a non-[FirebaseFunctionsException] error (client
+  /// plugin/network failure) — log the real exception for diagnostics but
+  /// never stash its raw text in the value the UI eventually reads (EH-5).
+  /// [FirebaseFunctionsException] already carries a structured code/message
+  /// (see the `on FirebaseFunctionsException catch` branches above) — this
+  /// covers only the genuinely-unexpected fallback.
+  TutorGrantFailure _unexpectedFailure(
+    String operation,
+    Object e,
+    StackTrace st,
+  ) {
+    AppLogger.instance.error(
+      event: 'FirestoreTutorGrantRepository.$operation unexpected error',
+      exception: e,
+      stackTrace: st,
+    );
+    return const TutorGrantFailure(
+      message: 'An unexpected error occurred.',
+      code: 'unknown-error',
+    );
   }
 
   // ── List operations ──────────────────────────────────────────────────────────

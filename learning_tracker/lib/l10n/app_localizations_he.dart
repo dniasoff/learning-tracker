@@ -4566,11 +4566,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get manageGrantsResign => 'התפטרות';
 
   @override
-  String manageGrantsResignError(String error) {
-    return 'לא ניתן להתפטר: $error';
-  }
-
-  @override
   String get manageGrantsResignErrorGeneric => 'לא ניתן להתפטר. נסו שוב.';
 
   @override
@@ -4584,9 +4579,7 @@ class AppLocalizationsHe extends AppLocalizations {
       'הוסיפו פרופיל ילד כדי להתחיל להזמין מדריכים.';
 
   @override
-  String manageTutorsLoadError(String error) {
-    return 'לא ניתן לטעון מדריכים: $error';
-  }
+  String get manageTutorsLoadErrorGeneric => 'לא ניתן לטעון מדריכים. נסו שוב.';
 
   @override
   String get manageTutorsNoTutors => 'לא הוזמנו מדריכים.';
@@ -4616,11 +4609,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get manageTutorsRevoke => 'ביטול גישה';
 
   @override
-  String manageTutorsRevokeError(String error) {
-    return 'לא ניתן לבטל את הגישה: $error';
-  }
-
-  @override
   String get manageTutorsRevokeErrorGeneric =>
       'לא ניתן לבטל את הגישה. נסו שוב.';
 
@@ -4634,11 +4622,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get manageTutorsRescind => 'ביטול הזמנה';
-
-  @override
-  String manageTutorsRescindError(String error) {
-    return 'לא ניתן לבטל את ההזמנה: $error';
-  }
 
   @override
   String get manageTutorsRescindErrorGeneric =>

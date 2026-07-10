@@ -4604,11 +4604,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageGrantsResign => 'Resign';
 
   @override
-  String manageGrantsResignError(String error) {
-    return 'Could not resign: $error';
-  }
-
-  @override
   String get manageGrantsResignErrorGeneric =>
       'Could not resign. Please try again.';
 
@@ -4623,9 +4618,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add a child profile to start inviting tutors.';
 
   @override
-  String manageTutorsLoadError(String error) {
-    return 'Could not load tutors: $error';
-  }
+  String get manageTutorsLoadErrorGeneric =>
+      'Could not load tutors. Please try again.';
 
   @override
   String get manageTutorsNoTutors => 'No tutors invited.';
@@ -4655,11 +4649,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageTutorsRevoke => 'Revoke';
 
   @override
-  String manageTutorsRevokeError(String error) {
-    return 'Could not revoke: $error';
-  }
-
-  @override
   String get manageTutorsRevokeErrorGeneric =>
       'Could not revoke. Please try again.';
 
@@ -4673,11 +4662,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get manageTutorsRescind => 'Rescind';
-
-  @override
-  String manageTutorsRescindError(String error) {
-    return 'Could not rescind: $error';
-  }
 
   @override
   String get manageTutorsRescindErrorGeneric =>

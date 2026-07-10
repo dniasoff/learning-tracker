@@ -2476,23 +2476,12 @@
     }
   },
   "manageGrantsResign": "התפטרות",
-  "manageGrantsResignError": "לא ניתן להתפטר: {error}",
-  "@manageGrantsResignError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
   "manageGrantsResignErrorGeneric": "לא ניתן להתפטר. נסו שוב.",
   "tutorFallbackName": "המדריך שלכם",
 
   "manageTutorsEmptyHeading": "אין עדיין פרופילי ילדים",
   "manageTutorsEmptyBody": "הוסיפו פרופיל ילד כדי להתחיל להזמין מדריכים.",
-  "manageTutorsLoadError": "לא ניתן לטעון מדריכים: {error}",
-  "@manageTutorsLoadError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "manageTutorsLoadErrorGeneric": "לא ניתן לטעון מדריכים. נסו שוב.",
   "manageTutorsNoTutors": "לא הוזמנו מדריכים.",
   "manageTutorsActiveSection": "פעילים ({count})",
   "@manageTutorsActiveSection": {
@@ -2515,12 +2504,6 @@
     }
   },
   "manageTutorsRevoke": "ביטול גישה",
-  "manageTutorsRevokeError": "לא ניתן לבטל את הגישה: {error}",
-  "@manageTutorsRevokeError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
   "manageTutorsRevokeErrorGeneric": "לא ניתן לבטל את הגישה. נסו שוב.",
   "manageTutorsRescindTitle": "לבטל את ההזמנה?",
   "manageTutorsRescindBody": "ההזמנה הממתינה אל {email} תבוטל.",
@@ -2530,12 +2513,6 @@
     }
   },
   "manageTutorsRescind": "ביטול הזמנה",
-  "manageTutorsRescindError": "לא ניתן לבטל את ההזמנה: {error}",
-  "@manageTutorsRescindError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
   "manageTutorsRescindErrorGeneric": "לא ניתן לבטל את ההזמנה. נסו שוב.",
   "manageTutorsViewAuditLog": "צפייה ביומן הפעולות",
   "tutorFallbackParent": "הורה",

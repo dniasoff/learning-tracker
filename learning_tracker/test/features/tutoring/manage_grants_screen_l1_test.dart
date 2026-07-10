@@ -530,8 +530,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Snackbar contains the l10n error prefix (manageGrantsResignError)
-    expect(find.textContaining('Could not resign:'), findsOneWidget);
+    // AUD-tutoring-11: the snackbar shows a fixed localized string — never
+    // the raw exception text interpolated into UI copy (EH-5).
+    expect(find.text('Could not resign. Please try again.'), findsOneWidget);
+    expect(find.textContaining('CF error'), findsNothing);
 
     await tearDownWidget(tester);
   });

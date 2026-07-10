@@ -1157,8 +1157,49 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // SnackBar appears with the error text
+    // SnackBar appears...
     expect(find.byType(SnackBar), findsOneWidget);
+    // AUD-tutoring-11: ...with a fixed localized string — never the raw
+    // exception text interpolated into UI copy (EH-5).
+    expect(find.text('Could not revoke. Please try again.'), findsOneWidget);
+    expect(find.textContaining('Server unavailable'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
+  testWidgets('AUD-tutoring-11: Revoke SnackBar text is the same fixed string '
+      'regardless of the exception message', (tester) async {
+    final child = _childProfile(id: 1, displayName: 'ErrorTest2');
+    final grant = _activeGrant(tutorEmail: 'fail2@revoke.com');
+    final mockRevoke = _MockRevoke();
+    // A completely different exception message/type than the other test.
+    when(
+      () => mockRevoke.call(grant: any(named: 'grant')),
+    ).thenThrow(StateError('PERMISSION_DENIED: gRPC status 7'));
+
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        profilesState: AsyncData([child]),
+        grantsPerChild: {
+          '1': AsyncData([grant]),
+        },
+        revoke: mockRevoke,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.text('Revoke'));
+    await tester.pump();
+    await tester.tap(find.text('Revoke').last);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Could not revoke. Please try again.'), findsOneWidget);
+    expect(find.textContaining('gRPC'), findsNothing);
+    expect(find.textContaining('PERMISSION_DENIED'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
@@ -1197,6 +1238,10 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(SnackBar), findsOneWidget);
+    // AUD-tutoring-11: a fixed localized string — never the raw exception
+    // text interpolated into UI copy (EH-5).
+    expect(find.text('Could not rescind. Please try again.'), findsOneWidget);
+    expect(find.textContaining('Network error'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
@@ -1566,11 +1611,14 @@ void main() {
 
       // Child section header is present
       expect(find.text('ErrorChild'), findsOneWidget);
-      // Per-child error text (from l10n.manageTutorsLoadError) is shown
+      // AUD-tutoring-11: per-child error text is a fixed localized string
+      // (l10n.manageTutorsLoadErrorGeneric) — never the raw exception text
+      // interpolated into UI copy (EH-5).
       expect(
-        find.textContaining('Exception: Firestore unavailable'),
+        find.text('Could not load tutors. Please try again.'),
         findsOneWidget,
       );
+      expect(find.textContaining('Firestore unavailable'), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
@@ -1634,13 +1682,15 @@ void main() {
 
       // Child name header is still visible.
       expect(find.text('PermDeniedChild'), findsOneWidget);
-      // The per-child error text MUST be shown.
+      // The per-child error text MUST be shown — as a fixed localized
+      // string (AUD-tutoring-11: never the raw exception text; EH-5).
       expect(
-        find.textContaining('PERMISSION_DENIED'),
+        find.text('Could not load tutors. Please try again.'),
         findsOneWidget,
         reason:
             'R-TU2: permission-denied must surface as an error, not an empty list',
       );
+      expect(find.textContaining('PERMISSION_DENIED'), findsNothing);
       // "No tutors invited." MUST NOT be shown — that would mask the denial.
       expect(
         find.text('No tutors invited.'),

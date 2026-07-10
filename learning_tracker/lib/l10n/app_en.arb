@@ -2680,23 +2680,12 @@
     }
   },
   "manageGrantsResign": "Resign",
-  "manageGrantsResignError": "Could not resign: {error}",
-  "@manageGrantsResignError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
   "manageGrantsResignErrorGeneric": "Could not resign. Please try again.",
   "tutorFallbackName": "Your tutor",
 
   "manageTutorsEmptyHeading": "No children profiles yet",
   "manageTutorsEmptyBody": "Add a child profile to start inviting tutors.",
-  "manageTutorsLoadError": "Could not load tutors: {error}",
-  "@manageTutorsLoadError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "manageTutorsLoadErrorGeneric": "Could not load tutors. Please try again.",
   "manageTutorsNoTutors": "No tutors invited.",
   "manageTutorsActiveSection": "Active ({count})",
   "@manageTutorsActiveSection": {
@@ -2719,12 +2708,6 @@
     }
   },
   "manageTutorsRevoke": "Revoke",
-  "manageTutorsRevokeError": "Could not revoke: {error}",
-  "@manageTutorsRevokeError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
   "manageTutorsRevokeErrorGeneric": "Could not revoke. Please try again.",
   "manageTutorsRescindTitle": "Rescind invitation?",
   "manageTutorsRescindBody": "The pending invite to {email} will be cancelled.",
@@ -2734,12 +2717,6 @@
     }
   },
   "manageTutorsRescind": "Rescind",
-  "manageTutorsRescindError": "Could not rescind: {error}",
-  "@manageTutorsRescindError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
   "manageTutorsRescindErrorGeneric": "Could not rescind. Please try again.",
   "manageTutorsViewAuditLog": "View audit log",
   "tutorFallbackParent": "Parent",

@@ -220,17 +220,26 @@ void main() {
 
       // AC4: non-Firebase errors also surface as TutorWriteFailure.
       group('AC4: generic error → TutorWriteFailure (no rethrow)', () {
-        test('generic exception → TutorWriteFailure without code', () async {
-          final result = await _svc(_genericErrorInvoker).upsertGoal(
-            grantId: _grantId,
-            ownerUid: _ownerUid,
-            profileId: _profileId,
-            goalId: 'goal_1',
-            goalData: {'target': 5},
-          );
-          expect(result, isA<TutorWriteFailure>());
-          expect((result as TutorWriteFailure).code, isNull);
-        });
+        test(
+          // AUD-tutoring-11: a stable code + fixed message, never the raw
+          // exception text (EH-5) — a Hebrew UI sentence must not end in an
+          // untranslated fragment.
+          'generic exception → TutorWriteFailure with stable code, no raw '
+          'exception text',
+          () async {
+            final result = await _svc(_genericErrorInvoker).upsertGoal(
+              grantId: _grantId,
+              ownerUid: _ownerUid,
+              profileId: _profileId,
+              goalId: 'goal_1',
+              goalData: {'target': 5},
+            );
+            expect(result, isA<TutorWriteFailure>());
+            final failure = result as TutorWriteFailure;
+            expect(failure.code, 'unknown-error');
+            expect(failure.message, isNot(contains('network timeout')));
+          },
+        );
       });
     },
   );

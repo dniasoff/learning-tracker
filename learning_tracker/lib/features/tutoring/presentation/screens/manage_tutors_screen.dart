@@ -226,8 +226,12 @@ class _ChildGrantsSection extends ConsumerWidget {
           ),
           error: (e, _) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
+            // AUD-tutoring-11: never interpolate the raw exception text into
+            // UI copy (EH-5) — a fixed localized string still distinguishes
+            // this from "No tutors invited." (R-TU2: a load failure must
+            // never be masked as an empty roster).
             child: Text(
-              l10n.manageTutorsLoadError(e.toString()),
+              l10n.manageTutorsLoadErrorGeneric,
               style: TextStyle(color: theme.colorScheme.error),
             ),
           ),
@@ -454,6 +458,8 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
           );
       }
     } catch (e, st) {
+      // AUD-tutoring-11: log the real exception for diagnostics, but never
+      // interpolate its raw text into UI copy (EH-5).
       AppLogger.instance.error(
         event: 'Failed to revoke tutor grant',
         exception: e,
@@ -461,7 +467,7 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.manageTutorsRevokeError(e.toString()))),
+          SnackBar(content: Text(l10n.manageTutorsRevokeErrorGeneric)),
         );
       }
     } finally {
@@ -506,6 +512,8 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
           );
       }
     } catch (e, st) {
+      // AUD-tutoring-11: log the real exception for diagnostics, but never
+      // interpolate its raw text into UI copy (EH-5).
       AppLogger.instance.error(
         event: 'Failed to rescind tutor invite',
         exception: e,
@@ -513,7 +521,7 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.manageTutorsRescindError(e.toString()))),
+          SnackBar(content: Text(l10n.manageTutorsRescindErrorGeneric)),
         );
       }
     } finally {

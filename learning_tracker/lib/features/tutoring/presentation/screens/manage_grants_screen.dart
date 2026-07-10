@@ -327,6 +327,9 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
           );
       }
     } catch (e, st) {
+      // AUD-tutoring-11: log the real exception for diagnostics, but never
+      // interpolate its raw text into UI copy — a Hebrew sentence must not
+      // end in an untranslated English/gRPC fragment (EH-5).
       AppLogger.instance.error(
         event: 'Failed to resign tutor grant',
         exception: e,
@@ -334,7 +337,7 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.manageGrantsResignError(e.toString()))),
+          SnackBar(content: Text(l10n.manageGrantsResignErrorGeneric)),
         );
       }
     } finally {
