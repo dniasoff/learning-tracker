@@ -3952,13 +3952,19 @@
   {
    "id": "AUD-app-06",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Log the swallowed exceptions in firebase_bootstrap.dart's two comment-only catch blocks (lines 39-41, 50-52) \u2014 invisible to the Makefile's single-line-only empty-catch grep",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "550a605764602a3d0479e7149d7e545c70033c9f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-app-06 AC1 OK: firebase_bootstrap.dart:42-46 warns app_check_activation_failed and :58-62 firebase_init_failed, distinct events capturing e+stack",
+    "AUD-app-06 AC2 OK: Makefile [9/12] runs check_empty_catch_blocks.dart; verified it fires exit 1 on an injected comment-only catch; sites 39,50 unbaselined",
+    "AUD-app-06 AC3 OK: two tests force activate()/initializeApp to throw, assert Talker history+exception; red-first proven (fail 'Expected: non-empty' pre-fix), 2/2 post-fix"
+   ],
+   "notes": "Both catches log via AppLogger.instance, distinct events. Reordered bootstrap.dart (init before bootstrapFirebase) per verify.corrections, else history wiped. Added checker wired into root Makefile [9/12]: fires on 2 sites pre-fix, 0 post-fix. 25 unrelated hits baselined as follow-up. Merged --no-ff onto audit-fix/2026-07-03 as 550a605764602a3d0479e7149d7e545c70033c9f. Post-rebase gate: rebase (tip bd85f93e -> 550a6057) was file-disjoint against audit-fix/2026-07-03 (touched Makefile, learning_tracker/lib/app/bootstrap/bootstrap.dart, learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart, learning_tracker/test/app/bootstrap/firebase_bootstrap_test.dart, tool/check_empty_catch_blocks.dart -- no overlap with branch tip's changed-file set), so gatePolicy=disjoint-skip per the wave-closing make ci integration gate; payload.testsToRun were already run red-first/green by the reviewer per payload note. make audit checks 1-24 and 26-27 clean, flutter analyze clean (no issues). Check 25/26 (single coding-standards.md) failed both pre- and post-merge due to `find ..` from learning_tracker sweeping the entire parent directory of the repo on this machine, which also contains unrelated sibling project checkouts (../mishnayos-tracker, ../zmanim_old) plus ~45 concurrent .claude/worktrees/ lanes each with their own docs/coding-standards.md; reproduced identically on the unmodified audit-fix/2026-07-03 tip in an isolated worktree elsewhere on disk (0 extra hits there), confirming this is pre-existing environmental noise unrelated to this diff, consistent with the same pattern already documented on AUD-profiles-01's row. Not a regression from this change."
   },
   {
    "id": "AUD-account-14",
