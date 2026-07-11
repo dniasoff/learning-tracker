@@ -130,6 +130,12 @@ class _OnboardingProfileCreationStepState
     // in learner_profiles.mode and synced via the profile repository, not via
     // a separate Firestore account-doc write.
 
+    // AUD-onboarding-01 (SM-4): repo.createProfile(...) above is a DB write
+    // that may still be in flight when the step widget is popped (e.g. the
+    // user backs out of onboarding). Touching `ref` unconditionally after
+    // that await throws once this State is disposed — bail out first.
+    if (!mounted) return;
+
     ref.read(selectedProfileIdProvider.notifier).select(profile.id);
     await PendingLocalSignupStore.finalizeAfterFirstProfile(ref);
 

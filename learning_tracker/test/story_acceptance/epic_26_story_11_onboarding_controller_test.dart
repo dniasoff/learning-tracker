@@ -11,6 +11,8 @@
 @Tags(['epic_26'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_controller.dart';
@@ -18,6 +20,38 @@ import 'package:learning_tracker/features/onboarding/presentation/steps/onboardi
 import 'package:test/test.dart';
 
 // ── Stub step helpers ─────────────────────────────────────────────────────────
+
+/// A step whose [save] does not complete until [gate] resolves — lets a test
+/// dispose the owning [ProviderContainer] while [OnboardingController.advance]
+/// is suspended mid-`await`, reproducing the AUD-onboarding-01 (SM-4) crash
+/// window.
+class _DelayedSaveStep extends OnboardingStep {
+  _DelayedSaveStep(this._id, this.gate);
+
+  final String _id;
+  final Future<void> gate;
+
+  @override
+  String get id => _id;
+
+  @override
+  Widget build(
+    BuildContext context,
+    WidgetRef ref,
+    OnboardingStepContext ctx,
+  ) => const SizedBox.shrink();
+
+  @override
+  Future<void> load(Ref ref) async {}
+
+  @override
+  Future<void> save(Ref ref) async {
+    await gate;
+  }
+
+  @override
+  String? validate(Ref ref) => null;
+}
 
 class _StubStep extends OnboardingStep {
   _StubStep(this._id);
@@ -154,6 +188,41 @@ void main() {
         expect(error, isNull);
         final state = container.read(onboardingControllerProvider);
         expect(state.currentIndex, 0); // Still on step a (no next)
+      });
+
+      // AUD-onboarding-01 (SM-4): advance() touches `state` after
+      // `await current.save(ref)`. If the provider is disposed while that
+      // save is in flight (e.g. the wizard screen is popped), resuming and
+      // touching `state`/`ref` unconditionally throws. A `ref.mounted` guard
+      // must make this a clean no-op instead.
+      test('advance does not throw when the container is disposed mid-await '
+          '(AUD-onboarding-01)', () async {
+        final saveGate = Completer<void>();
+        final delayedStep = _DelayedSaveStep('a', saveGate.future);
+        final nextStep = _StubStep('b');
+
+        final localContainer = ProviderContainer();
+        addTearDown(() {
+          if (!saveGate.isCompleted) saveGate.complete();
+        });
+        final localController = localContainer.read(
+          onboardingControllerProvider.notifier,
+        );
+        await localController.init([delayedStep, nextStep]);
+
+        // Kick off advance() — it suspends inside save() awaiting saveGate.
+        final advanceFuture = localController.advance();
+
+        // Dispose the container while save() is still in flight — mirrors
+        // the wizard screen being popped mid-step-save.
+        localContainer.dispose();
+
+        // Let save() resolve now that the provider has been torn down.
+        saveGate.complete();
+
+        // Must resolve cleanly (mounted guard short-circuits) — no
+        // UnmountedRefException / disposed-ref crash.
+        await expectLater(advanceFuture, completes);
       });
 
       // ── OnboardingController: retreat ──────────────────────────────────

@@ -145,7 +145,7 @@ The only permitted call sites for `useHebrewTermsProvider` are `lib/core/labels/
 
 **SM-4 — After any `await` in a Notifier method or async callback, check `ref.mounted` before touching `ref` or `state`.**
 **Why:** Riverpod 3 throws `UnmountedRefException` when a disposed Ref is touched — an autoDispose provider can be torn down mid-`await` and crash the app. (The `BuildContext` analog is covered by the enabled `use_build_context_synchronously` lint.)
-**Enforce:** [Pending] custom_lint rule flagging `ref.`/`state =` after `await` without a `ref.mounted` guard.
+**Enforce:** [Enforced] `no_unguarded_state_touch_after_await` custom_lint rule (AUD-onboarding-01) flags `state =`/`setState(...)` after an `await` in a Notifier/State method with no intervening `mounted`/`ref.mounted` guard (scoped to the method body's own statement sequence, including `try`/`catch`).
 **Source:** riverpod.dev/docs/whats_new
 
 **SM-5 — Async mutations follow `state = const AsyncLoading(); state = await AsyncValue.guard(() => …)`. Let `build` throw; never hand-manage loading/error with a try/catch that assigns `state`.**

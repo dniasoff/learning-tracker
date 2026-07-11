@@ -68,6 +68,12 @@ class OnboardingController extends _$OnboardingController {
 
     await current.save(ref);
 
+    // AUD-onboarding-01 (SM-4): current.save(ref) may perform DB-touching
+    // work. If the wizard screen (and therefore this autoDispose provider)
+    // was torn down while that save was in flight, resuming and touching
+    // `state` below throws — bail out cleanly instead.
+    if (!ref.mounted) return null;
+
     if (!state.hasNext) return null;
 
     final nextIndex = state.currentIndex + 1;

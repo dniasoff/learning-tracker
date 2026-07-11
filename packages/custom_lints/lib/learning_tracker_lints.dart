@@ -31,6 +31,9 @@
 ///   - [NoUnguardedAsyncNotifierInit]: flags a Riverpod Notifier's `build()`
 ///     firing a private async method fire-and-forget (unawaited, unguarded)
 ///     whose body has zero try/catch anywhere (AUD-account-11).
+///   - [NoUnguardedStateTouchAfterAwait]: flags `state =` / `setState(...)`
+///     appearing after an `await` in a Notifier/State method with no
+///     intervening `mounted`/`ref.mounted` guard (SM-4, AUD-onboarding-01).
 library learning_tracker_lints;
 
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -47,6 +50,7 @@ import 'src/rules/no_hardcoded_text_direction.dart';
 import 'src/rules/no_raw_logevent.dart';
 import 'src/rules/no_raw_talker.dart';
 import 'src/rules/no_unguarded_async_notifier_init.dart';
+import 'src/rules/no_unguarded_state_touch_after_await.dart';
 
 /// Entrypoint called by the custom_lint plugin runner.
 PluginBase createPlugin() => _LearningTrackerLintPlugin();
@@ -66,5 +70,6 @@ class _LearningTrackerLintPlugin extends PluginBase {
         NoRawLogEvent(),
         NoRawTalker(),
         NoUnguardedAsyncNotifierInit(),
+        NoUnguardedStateTouchAfterAwait(),
       ];
 }

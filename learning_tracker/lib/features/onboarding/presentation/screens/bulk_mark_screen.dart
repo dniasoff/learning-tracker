@@ -336,6 +336,12 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       selections: _selections.toList(),
     );
 
+    // AUD-onboarding-01 (SM-4): resolveSelections is a DB read that may
+    // still be in flight when this screen is popped (backgrounding the app,
+    // hitting back). Touching ref/context/setState below unconditionally
+    // after that await throws once this State is disposed.
+    if (!mounted) return;
+
     // Validate: can't mark everything as completed
     final repository = ref.read(contentRepositoryProvider);
     final allItems = await repository.getContentForCurriculum(
@@ -354,6 +360,11 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       );
       return;
     }
+
+    // AUD-onboarding-01 (SM-4): second guard for the getContentForCurriculum
+    // await above — disposal could also land there, not just at the first
+    // await, before reaching this setState.
+    if (!mounted) return;
 
     setState(() {
       _resolvedItems = resolved;
@@ -377,6 +388,12 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
         resolvedItems: _resolvedItems!,
         stageIds: const [1],
       );
+
+      // AUD-onboarding-01 (SM-4): execute() commits the bulk-mark write and
+      // may still be in flight when this screen is popped. Touching setState
+      // below unconditionally after that await throws once this State is
+      // disposed.
+      if (!mounted) return;
 
       setState(() {
         _result = result;
@@ -403,6 +420,11 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       ref.invalidate(progressOverviewStatsProvider);
       ref.invalidate(allDailyTasksProvider);
     } catch (e) {
+      // AUD-onboarding-01 (SM-4): the try block above awaits execute(); if
+      // this screen was popped while that write was in flight and it then
+      // throws, touching setState here unconditionally throws again (on a
+      // disposed State) instead of surfacing the original error.
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _phase = _Phase.confirmation;
