@@ -66,6 +66,11 @@ final class _SyncEvents {
   String get pushFailed => 'sync_push_failed';
   String get outboxItemEnqueued => 'sync_outbox_item_enqueued';
   String get outboxDeadLettered => 'sync_outbox_dead_lettered';
+  // AUD-core-sync-40 — distinct from [pushFailed]: scoped to failures raised
+  // while draining the on-device outbox (OutboxProcessor), which carry
+  // outbox-specific fields (kind/entity_key/attempts) rather than a generic
+  // push failure.
+  String get outboxPushFailed => 'sync_outbox_push_failed';
   // Phase-4 observability gauge: outbox depth + oldest-row age, logged on
   // every drain attempt (≥60 s apart given the periodic-drain trigger) so
   // dashboards can graph stuck-backlog age over time.
