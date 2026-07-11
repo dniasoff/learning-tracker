@@ -6285,13 +6285,17 @@
   {
    "id": "AUD-core-sync-40",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace outbox_processor.dart's raw 'sync_outbox_push_failed' literal with a LogEvents catalog constant",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "b14264f8e7402574275e1732ba7f54eaf9a74c7b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-40 AC1 OK: grep event:' in outbox_processor.dart empty (exit 1); both sites use LogEvents.sync.outboxPushFailed; no double-quote form"
+   ],
+   "notes": "Re-verified: both calls hand-typed 'sync_outbox_push_failed', distinct from LogEvents.sync.pushFailed. Added outboxPushFailed getter to _SyncEvents (same literal, no telemetry drift); switched both sites to it. AC grep was red (2 matches) before, green (0) after."
   },
   {
    "id": "AUD-t-account-06",
