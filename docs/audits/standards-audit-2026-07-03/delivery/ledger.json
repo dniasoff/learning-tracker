@@ -222,13 +222,18 @@
   {
    "id": "AUD-core-sync-13",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Write server timestamps for LWW ordering fields in FirestoreGatewayImpl's push* methods (FB-2)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d645d1b2d075ba8ffe8675d0e2a575a29cc7f93b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-13 AC1 OK: 2a tests assert persisted field isA<Timestamp> and != client value; mergers confirmed compare updated_at / state_changed_at",
+    "AUD-core-sync-13 AC2 OK: make audit check 27 greps serverTimestamp overwrites; I verified it trips when overwrites removed"
+   ],
+   "notes": "pushTrack/Settings/Bookmark/Goal now overwrite their actual LWW field (state_changed_at for tracks, updated_at otherwise; confirmed against merge/codec sources) with serverTimestamp(). Shipped make-audit check 27."
   },
   {
    "id": "AUD-account-05",
@@ -395,13 +400,18 @@
   {
    "id": "AUD-core-sync-06",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Give OutboxProcessor's single-flight guard a generation token so stale-reclaim can't run concurrent drains",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d645d1b2d075ba8ffe8675d0e2a575a29cc7f93b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-06 AC1 OK: test op_test:1695 reproduces true overlap (callCount==2), asserts stale drain1 finally cannot free guard drain2 owns (drain3 gated=0)",
+    "AUD-core-sync-06 AC2 OK: _generation token; finally clears guard only if _generation==myGeneration (outbox_processor.dart:229/236)"
+   ],
+   "notes": "Added monotonic _generation token to the single-flight guard; a superseded invocation's finally now only clears state if its generation still matches, stopping a third caller from barging in on a still-reclaiming drain."
   },
   {
    "id": "AUD-gamification-02",
@@ -576,24 +586,34 @@
   {
    "id": "AUD-core-sync-02",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Fix FirestoreGatewayImpl.deleteUserData to target real nested Firestore paths instead of empty top-level ones",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d645d1b2d075ba8ffe8675d0e2a575a29cc7f93b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-02 AC1 OK: test fgi_test:2216 seeds nested completions/streak_events/goals under learner_profiles/{id}, asserts deleteUserData removes them",
+    "AUD-core-sync-02 AC2 OK: parity test fgi_test:2249 asserts deletion names subset of push/listen names (no divergent/stale names)"
+   ],
+   "notes": "deleteUserData now enumerates learner_profiles and deletes real nested per-profile subcollections (name-parity-tested vs push* methods) instead of querying wrong always-empty top-level paths."
   },
   {
    "id": "AUD-core-sync-12",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Wire onError (and a recovery-pull path) into TutoredListenerSupervisor's inner ListenerSupervisor",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d645d1b2d075ba8ffe8675d0e2a575a29cc7f93b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-12 AC1 OK: test (H) emits stream error, AppLogger history contains 'tutored_listener_stream_error' (confirmed in run log)",
+    "AUD-core-sync-12 AC2 OK: attach() passes non-null onError to inner ListenerSupervisor (tutored_listener_supervisor.dart:102-103)"
+   ],
+   "notes": "attach() now passes onError into the inner ListenerSupervisor, logging via AppLogger. recoveryPullTriggers wiring is a follow-up not named by this finding's AC."
   },
   {
    "id": "AUD-guardrails-02",
@@ -815,24 +835,35 @@
   {
    "id": "AUD-core-sync-09",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Move _decodePayload() calls inside outbox_processor.dart's per-row try blocks so one bad payload can't abort the whole drain",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d645d1b2d075ba8ffe8675d0e2a575a29cc7f93b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-09 AC1 OK: test op_test:1343 malformed completion 'null' + valid streak -> drain no throw, streak pushed, bad row markAttempted",
+    "AUD-core-sync-09 AC2 OK: decode moved inside per-row try both sites; malformed streak test op_test:1379 (completion path in first test)"
+   ],
+   "notes": "_decodePayload moved inside per-row/per-key try blocks at both call sites; a malformed payload is now logged + marked attempted without aborting the rest of the drain."
   },
   {
    "id": "AUD-core-sync-01",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Add real coverage for FB-3 self-echo (hasPendingWrites) filtering and implement the missing isFromCache guard in FirestoreGatewayImpl listeners",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d645d1b2d075ba8ffe8675d0e2a575a29cc7f93b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-01 AC1 OK: test fgi_test:1643 drives hand-rolled DocumentChange hasPendingWrites=true through mapQuerySnapshot -> rows empty",
+    "AUD-core-sync-01 AC2 OK: isUnresolvedSnapshot adds isFromCache at all 4 sites (L774/939/1181 via mapQuerySnapshot, L894 direct); isFromCache test 7a:1667",
+    "AUD-core-sync-01 AC3 OK: grep isFromCache lib/core/sync -> firestore_gateway_impl.dart:847 (non-zero)"
+   ],
+   "notes": "Extracted mapQuerySnapshot/isUnresolvedSnapshot (@visibleForTesting); hasPendingWrites AND isFromCache now suppress a row for one snapshot. Hand-rolled cloud_firestore fakes (TQ-4) prove it since fake_cloud_firestore hardcodes hasPendingWrites=false."
   },
   {
    "id": "AUD-t-cross-02",
@@ -2450,13 +2481,18 @@
   {
    "id": "AUD-core-sync-18",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Close the TutoredListenerSource channel gap and de-duplicate the two hand-maintained channelToKind switches",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d645d1b2d075ba8ffe8675d0e2a575a29cc7f93b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-18 AC1 OK: parity test (I) openChannels==tutoredCollections+prefs; red pre-fix on learning_order, green after",
+    "AUD-core-sync-18 AC2 OK: _channelToKind gains 'learning_order'=>EntityKind.learningOrder (supervisor:130); routed event test (J)"
+   ],
+   "notes": "Added missing learning_order channel + EntityKind case. Extracted PullPipeline.tutoredCollections/tutoredPreferenceDocs (@visibleForTesting) for a channel-set parity test."
   },
   {
    "id": "AUD-core-theme-01",
@@ -4105,13 +4141,18 @@
   {
    "id": "AUD-core-sync-17",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Batch OutboxProcessor's post-commit deleteRow/markAttempted cleanup instead of awaiting it per row",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d645d1b2d075ba8ffe8675d0e2a575a29cc7f93b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-17 AC1 OK: deleteRows (single DELETE WHERE IN) + markAttemptedBulk (single batch); called once per outcome group",
+    "AUD-core-sync-17 AC2 OK: K3/K4 tests pass; _CountingOutboxDao spy (op_test:561) asserts each bulk method invoked exactly once"
+   ],
+   "notes": "Added OutboxDao.deleteRows/markAttemptedBulk; the commit/failure loop calls each once per outcome group. Spy test proves exactly-once invocation; existing K3/K4 tests still pass."
   },
   {
    "id": "AUD-core-sync-28",
