@@ -301,4 +301,75 @@ abstract final class AppColors {
 
   /// Unselected bottom-nav icon/label colour (slate grey).
   static const Color navUnselectedText = Color(0xFF708090);
+
+  // ---------------------------------------------------------------------------
+  // Onboarding intro carousel (AUD-onboarding-13) — was independently
+  // hand-typed as a private `_kNavy` etc. constant in each of
+  // intro_mishna_page.dart, intro_page_indicator.dart,
+  // intro_rewards_page.dart, glowing_cta_button.dart and
+  // intro_daily_plan_page.dart; centralised here so the five copies cannot
+  // drift out of sync on a future rebrand/dark-mode pass.
+  // ---------------------------------------------------------------------------
+
+  /// Deep navy used for the intro carousel's hero card fill, chip text, and
+  /// accent text (was duplicated as `_kNavy` in 5 files).
+  static const Color introNavy = Color(0xFF1A36A5);
+
+  /// Soft peach used for the Mishna/Rewards illustration accent chips.
+  static const Color introPeach = Color(0xFFFFD8C8);
+
+  /// Pale blue pill background for the Mishna "review" chip.
+  static const Color introPillBlue = Color(0xFFC8D8F8);
+
+  /// Unfilled track colour for the intro progress bars.
+  static const Color introProgressTrackBg = Color(0xFFE2E5EB);
+
+  /// Filled/active colour for the intro progress bars (Mishna page bar and
+  /// the Rewards page's scholar-level example bar).
+  static const Color introProgressFillGreen = Color(0xFF1DB97D);
+
+  /// Border colour for the Rewards page's "Mystery Prizes" feature card.
+  static const Color introMysteryBorder = Color(0xFFC9A86A);
+
+  /// Circle background behind the Rewards page's "Badge Collection" icon
+  /// and the child-mode tag icon.
+  static const Color introBadgeBg = Color(0xFFE8ECFF);
+
+  /// Circle background behind the Rewards page's "Mystery Prizes" icon.
+  static const Color introMysteryBg = Color(0xFFFFF3E0);
+
+  /// Text colour on the "Mystery Prizes" feature card.
+  static const Color introMysteryText = Color(0xFF5C4A2A);
+
+  /// Icon colour on the "Mystery Prizes" feature card.
+  static const Color introMysteryIcon = Color(0xFF6B4E1E);
+
+  /// Drop-shadow colour for the Rewards page's streak badge.
+  static const Color introCardShadow = Color(0x2E000000);
+
+  /// Unfilled track colour for the Rewards page's scholar-level example bar.
+  static const Color introScholarTrackBg = Color(0xFFE8EAEF);
+
+  /// Inactive-dot colour for the intro page indicator.
+  static const Color introIndicatorInactive = Color(0xFFDCE0EA);
+
+  /// Third "window dot" accent (sky blue) in the daily-plan illustration's
+  /// mock browser-chrome header.
+  static const Color introWindowDotBlue = Color(0xFF5BC0EB);
+
+  /// Pill-shaped row background for the daily-plan illustration's checked
+  /// and empty task rows.
+  static const Color introDailyRowPillBg = Color(0xFFF0F1F4);
+
+  /// Filled track colour for the daily-plan illustration's checked-row
+  /// progress bar and the first "empty" row variant.
+  static const Color introDailyRowTrackFilled = Color(0xFFDCDFE5);
+
+  /// Border colour for the daily-plan illustration's unchecked checkbox
+  /// circle.
+  static const Color introDailyCheckboxBorder = Color(0xFFC9CED6);
+
+  /// Unfilled track colour for the daily-plan illustration's second "empty"
+  /// row variant.
+  static const Color introDailyRowTrackEmpty = Color(0xFFE5E7EC);
 }

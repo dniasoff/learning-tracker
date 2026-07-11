@@ -4,11 +4,6 @@ import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-const _kNavy = Color(0xFF1A36A5);
-const _kGreen = Color(0xFF1DB97D);
-const _kCoral = Color(0xFFF86B6B);
-const _kPeach = Color(0xFFFFD8C8);
-
 /// Animated illustration for the first intro page ("Your Daily Torah Plan").
 class IntroDailyPlanIllustration extends StatelessWidget {
   const IntroDailyPlanIllustration({super.key, required this.animation});
@@ -38,7 +33,7 @@ class IntroDailyPlanIllustration extends StatelessWidget {
               height: 52,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: _kPeach,
+                color: AppColors.introPeach,
               ),
             ),
           ),
@@ -56,7 +51,7 @@ class IntroDailyPlanIllustration extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: _kNavy.withValues(alpha: 0.12),
+                      color: AppColors.introNavy.withValues(alpha: 0.12),
                       blurRadius: 16,
                       offset: const Offset(0, 8),
                     ),
@@ -70,9 +65,9 @@ class IntroDailyPlanIllustration extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _WindowDot(c: _kCoral),
+                            _WindowDot(c: AppColors.accentCoral),
                             _WindowDot(c: AppColors.goldTrophy),
-                            _WindowDot(c: Color(0xFF5BC0EB)),
+                            _WindowDot(c: AppColors.introWindowDotBlue),
                           ],
                         ),
                         Spacer(),
@@ -104,7 +99,7 @@ class IntroDailyPlanIllustration extends StatelessWidget {
               height: 36,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: _kNavy,
+                color: AppColors.introNavy,
               ),
               child: const Center(
                 child: Icon(
@@ -125,7 +120,7 @@ Widget _dailyListRow1Checked() {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
     decoration: BoxDecoration(
-      color: const Color(0xFFF0F1F4),
+      color: AppColors.introDailyRowPillBg,
       borderRadius: BorderRadius.circular(999),
     ),
     child: Row(
@@ -135,7 +130,7 @@ Widget _dailyListRow1Checked() {
           height: 22,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            color: _kNavy,
+            color: AppColors.introNavy,
           ),
           child: const Icon(
             Icons.check,
@@ -148,7 +143,7 @@ Widget _dailyListRow1Checked() {
           child: Container(
             height: 7,
             decoration: BoxDecoration(
-              color: const Color(0xFFDCDFE5),
+              color: AppColors.introDailyRowTrackFilled,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -162,11 +157,11 @@ Widget _dailyListRow2Highlight() {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
     decoration: BoxDecoration(
-      color: _kNavy,
+      color: AppColors.introNavy,
       borderRadius: BorderRadius.circular(999),
       boxShadow: [
         BoxShadow(
-          color: _kNavy.withValues(alpha: 0.2),
+          color: AppColors.introNavy.withValues(alpha: 0.2),
           blurRadius: 8,
           offset: const Offset(0, 3),
         ),
@@ -181,7 +176,11 @@ Widget _dailyListRow2Highlight() {
             color: AppTheme.brandCreamCard,
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.play_arrow_rounded, color: _kNavy, size: 16),
+          child: const Icon(
+            Icons.play_arrow_rounded,
+            color: AppColors.introNavy,
+            size: 16,
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -202,7 +201,7 @@ Widget _dailyListRowEmpty({required bool filled}) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
     decoration: BoxDecoration(
-      color: const Color(0xFFF0F1F4),
+      color: AppColors.introDailyRowPillBg,
       borderRadius: BorderRadius.circular(999),
     ),
     child: Row(
@@ -212,7 +211,7 @@ Widget _dailyListRowEmpty({required bool filled}) {
           height: 20,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFC9CED6)),
+            border: Border.all(color: AppColors.introDailyCheckboxBorder),
           ),
         ),
         const SizedBox(width: 10),
@@ -220,7 +219,9 @@ Widget _dailyListRowEmpty({required bool filled}) {
           child: Container(
             height: 7,
             decoration: BoxDecoration(
-              color: filled ? const Color(0xFFDCDFE5) : const Color(0xFFE5E7EC),
+              color: filled
+                  ? AppColors.introDailyRowTrackFilled
+                  : AppColors.introDailyRowTrackEmpty,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -255,7 +256,7 @@ class IntroDailyPlanProgressBar extends StatelessWidget {
                           width: c.maxWidth,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE2E5EB),
+                            color: AppColors.introProgressTrackBg,
                             borderRadius: BorderRadius.circular(999),
                           ),
                         ),
@@ -265,7 +266,7 @@ class IntroDailyPlanProgressBar extends StatelessWidget {
                             width: c.maxWidth * t,
                             height: 6,
                             decoration: const BoxDecoration(
-                              color: _kGreen,
+                              color: AppColors.introProgressFillGreen,
                               borderRadius: BorderRadius.horizontal(
                                 left: Radius.circular(999),
                               ),

@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-
-const _kNavy = Color(0xFF1A36A5);
-const _kCoral = Color(0xFFF86B6B);
-const _kPeach = Color(0xFFFFD8C8);
-const _kPillBlue = Color(0xFFC8D8F8);
 
 /// Animated illustration for the second intro page ("Never Forget a Mishna").
 class IntroMishnaIllustration extends StatelessWidget {
@@ -39,13 +35,13 @@ class IntroMishnaIllustration extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: _kPillBlue,
+                    color: AppColors.introPillBlue,
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     AppLocalizations.of(context)!.introMishnaReviewChip,
                     style: GoogleFonts.plusJakartaSans(
-                      color: _kNavy,
+                      color: AppColors.introNavy,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -64,7 +60,7 @@ class IntroMishnaIllustration extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: _kPeach.withValues(alpha: 0.7),
+                    color: AppColors.introPeach.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -83,11 +79,11 @@ class IntroMishnaIllustration extends StatelessWidget {
                 width: 188,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: _kNavy,
+                  color: AppColors.introNavy,
                   borderRadius: BorderRadius.circular(32),
                   boxShadow: [
                     BoxShadow(
-                      color: _kNavy.withValues(alpha: 0.28),
+                      color: AppColors.introNavy.withValues(alpha: 0.28),
                       blurRadius: 22,
                       offset: const Offset(0, 14),
                     ),
@@ -110,7 +106,7 @@ class IntroMishnaIllustration extends StatelessWidget {
                         height: 36,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _kCoral,
+                          color: AppColors.accentCoral,
                         ),
                         child: const Icon(
                           Icons.sync,
@@ -131,7 +127,7 @@ class IntroMishnaIllustration extends StatelessWidget {
                         ),
                         child: const Icon(
                           Icons.lightbulb_outline,
-                          color: _kNavy,
+                          color: AppColors.introNavy,
                           size: 26,
                         ),
                       ),
@@ -169,14 +165,14 @@ class IntroMishnaProgressBar extends StatelessWidget {
                     Container(
                       width: c.maxWidth,
                       height: 5,
-                      color: const Color(0xFFE2E5EB),
+                      color: AppColors.introProgressTrackBg,
                     ),
                     Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: Container(
                         width: c.maxWidth * t,
                         height: 5,
-                        color: const Color(0xFF1DB97D),
+                        color: AppColors.introProgressFillGreen,
                       ),
                     ),
                   ],
