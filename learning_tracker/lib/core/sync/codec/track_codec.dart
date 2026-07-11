@@ -81,14 +81,16 @@ class TrackCodec extends EntityCodec<TrackRow> {
     // the stored profile_id from the push payload). Parse them from raw if
     // present (pull side), otherwise default to 0 — the merger ignores these
     // fields for the upsert path (it uses the injected profileId param).
-    final profileId =
-        raw['profile_id'] as int? ??
-        int.tryParse(raw['profile_id']?.toString() ?? '') ??
-        0;
-    final trackId =
-        raw['track_id'] as int? ??
-        int.tryParse(raw['track_id']?.toString() ?? '') ??
-        0;
+    //
+    // AUD-core-sync-05: these fields must go through FirestoreCodec.parseInt
+    // rather than an unguarded nullable-int type cast — an unguarded cast
+    // throws on a malformed/wrong-typed value (e.g. a String from a
+    // hand-edited doc) instead of returning null, which violates the
+    // decode() contract (EntityCodec.decode — "returns null when required
+    // fields are missing or malformed") and would crash the whole
+    // pull-on-launch pass.
+    final profileId = FirestoreCodec.parseInt(raw['profile_id']) ?? 0;
+    final trackId = FirestoreCodec.parseInt(raw['track_id']) ?? 0;
 
     return TrackRow(
       profileId: profileId,

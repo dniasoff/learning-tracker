@@ -73,9 +73,14 @@ class GoalCodec extends EntityCodec<GoalRow> {
       updatedAt: updatedAt,
       createdAt: createdAt,
       trackId: FirestoreCodec.parseInt(raw['track_id']),
+      // AUD-core-sync-05: parse via FirestoreCodec.parseDouble rather than
+      // an unguarded nullable-num type cast — an unguarded cast throws on a
+      // malformed/wrong-typed value instead of returning null, violating
+      // the decode() null-on-malformed contract.
       targetPercent:
-          ((raw['target_percent'] ?? raw['targetPercent']) as num?)
-              ?.toDouble() ??
+          FirestoreCodec.parseDouble(
+            raw['target_percent'] ?? raw['targetPercent'],
+          ) ??
           100.0,
       description: raw['description'] as String? ?? '',
       dateType: (raw['date_type'] ?? raw['dateType']) as String? ?? 'gregorian',

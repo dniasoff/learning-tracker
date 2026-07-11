@@ -70,6 +70,16 @@ abstract class FirestoreCodec {
     return null;
   }
 
+  /// Parse a `double` from a field that may arrive as `String` or `num`.
+  ///
+  /// Returns `null` when [raw] is null or cannot be parsed.
+  static double? parseDouble(Object? raw) {
+    if (raw is double) return raw;
+    if (raw is num) return raw.toDouble();
+    if (raw is String) return double.tryParse(raw);
+    return null;
+  }
+
   /// Parse a `bool` from a field that may arrive as `String` or `int`.
   ///
   /// `"true"` / `1` → `true`; `"false"` / `0` → `false`.
