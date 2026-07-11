@@ -46,6 +46,22 @@ import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dar
 ///     the singleton guarantee protects against.
 ///   * R1 fix: it does NOT watch the active-profile provider directly. The
 ///     active profile is resolved lazily via [resolveProfileIdProvider].
+///   * AUD-core-sync-10 (follow-on to R1): [resolveProfileId] is not only
+///     used for the orchestrator's own `resolveProfileId` parameter — it is
+///     ALSO threaded into [OutboxSyncWriteFacade] / [LocalDataUploadService]
+///     (constructed below) and reused as the resolver every subsequent write
+///     of theirs consults. Before this fix those two collaborators took a
+///     one-time `int profileId` snapshot at orchestrator-build time; since
+///     the orchestrator singleton survives a profile switch without
+///     rebuilding (see the bullet above), every write of the entity kinds
+///     they own got permanently stamped with the STALE boot-time profile id
+///     after a switch — silently orphaning that data (the outbox drain only
+///     sweeps the active profile + account-level 0). The `ref.listen` below
+///     also re-runs [PointsBalanceDao.reEnqueueUnsyncedLedgerRows] on every
+///     switch (not just once at build) for the same reason; re-wiring
+///     `syncSink` itself is unnecessary because it is the SAME `uploadFacade`
+///     instance for the singleton's whole lifetime and its resolver-based
+///     profile lookups are already live.
 ///
 final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   // keepAlive: the orchestrator owns a WidgetsBinding observer and a set of
@@ -76,12 +92,15 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   // W2.32 — build LocalDataUploadService so the orchestrator can route
   // pushAllLocalData through the outbox path.
   final database = ref.read(userDatabaseProvider);
-  final profileId = ref.read(activeProfileIdProvider);
   final clock = ref.read(localDayClockProvider);
+  // AUD-core-sync-10: pass the SAME live resolver used above for the
+  // orchestrator's own resolveProfileId — never a captured `int` snapshot —
+  // so this facade keeps tracking the active profile across switches for the
+  // rest of this singleton's lifetime.
   final uploadFacade = OutboxSyncWriteFacade(
     outboxDao: database.outboxDao,
     database: database,
-    profileId: profileId,
+    resolveProfileId: resolveProfileId,
     clock: clock,
   );
   // WS9 Wave-B (C#2): register the points-sync sink at the sync-orchestrator
@@ -92,11 +111,13 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   // D14: recover any ledger rows written before the sink was wired (recovers
   // a cloud-born account's first credit, and any crash-window gap) by
   // re-enqueuing every row still lacking a sync marker. Fire-and-forget.
-  unawaited(database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(profileId));
+  unawaited(
+    database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(resolveProfileId()),
+  );
   final uploadService = LocalDataUploadService(
     facade: uploadFacade,
     database: database,
-    profileId: profileId,
+    resolveProfileId: resolveProfileId,
     logger: AppLogger(talker),
   );
 
@@ -179,7 +200,16 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   // listeners track the active profile. ref.listen does not rebuild the
   // provider, so the singleton invariant (S7) is preserved.
   ref.listen<int>(activeProfileIdProvider, (previous, next) {
-    if (previous != next) orchestrator.restartListeners();
+    if (previous == next) return;
+    orchestrator.restartListeners();
+    // AUD-core-sync-10: sweep any ledger rows for the NEWLY-active profile
+    // that predate this session's syncSink wiring (D14) on every switch, not
+    // just once at orchestrator build — matching the DAO's own contract
+    // ("call right after wiring syncSink (cloud session start / profile
+    // switch)"). `uploadFacade`/`syncSink` themselves do not need re-wiring:
+    // it is the same facade instance for the singleton's whole lifetime and
+    // its profile lookups are already live via [resolveProfileId].
+    unawaited(database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(next));
   });
 
   // SYNC-DRAIN-DELAY-01: on a device with multiple Firebase accounts, the

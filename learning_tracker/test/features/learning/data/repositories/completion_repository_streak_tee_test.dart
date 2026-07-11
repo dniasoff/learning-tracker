@@ -69,7 +69,7 @@ void main() {
       final outboxFacade = OutboxSyncWriteFacade(
         outboxDao: db.outboxDao,
         database: db,
-        profileId: profileId,
+        resolveProfileId: () => profileId,
         clock: FakeLocalDayClock(DateTime.utc(2026, 5, 21)),
       );
       final contentRepo = _MockContentRepository();

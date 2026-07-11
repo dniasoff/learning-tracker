@@ -90,7 +90,11 @@ final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
   final outboxFacade = OutboxSyncWriteFacade(
     outboxDao: database.outboxDao,
     database: database,
-    profileId: profileId,
+    // AUD-core-sync-10: this provider already rebuilds a fresh facade on
+    // every profile switch (it `ref.watch`es activeProfileIdProvider above),
+    // so wrapping the already-fresh `profileId` value keeps behaviour
+    // unchanged while matching the OutboxSyncWriteFacade resolver contract.
+    resolveProfileId: () => profileId,
     clock: clock,
     // Phase 1 — write-tee: kick the outbox processor after every enqueue
     // so writes reach Firestore in the same network round as the local
@@ -155,7 +159,10 @@ final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
   final facade = OutboxSyncWriteFacade(
     outboxDao: database.outboxDao,
     database: database,
-    profileId: profileId,
+    // AUD-core-sync-10: see the matching comment in syncWriteFacadeProvider
+    // above — this provider also rebuilds on every profile switch, so this
+    // wrapped snapshot stays live in practice.
+    resolveProfileId: () => profileId,
     clock: clock,
     // Same write-tee + recordDrainAttempt pattern as [syncWriteFacadeProvider]
     // so points/redemption writes also update the badge immediately.

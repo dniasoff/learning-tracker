@@ -39,7 +39,7 @@ void main() {
       final facade = OutboxSyncWriteFacade(
         outboxDao: db.outboxDao,
         database: db,
-        profileId: activeProfileId,
+        resolveProfileId: () => activeProfileId,
         clock: FakeLocalDayClock(DateTime.utc(2026, 6, 1)),
       );
 

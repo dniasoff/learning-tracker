@@ -76,7 +76,7 @@ void main() {
         final facade = OutboxSyncWriteFacade(
           outboxDao: db.outboxDao,
           database: db,
-          profileId: profileId,
+          resolveProfileId: () => profileId,
           clock: const SystemLocalDayClock(),
         );
 
@@ -116,7 +116,7 @@ void main() {
           final facade = OutboxSyncWriteFacade(
             outboxDao: db.outboxDao,
             database: db,
-            profileId: profileId,
+            resolveProfileId: () => profileId,
             clock: const SystemLocalDayClock(),
           );
 
