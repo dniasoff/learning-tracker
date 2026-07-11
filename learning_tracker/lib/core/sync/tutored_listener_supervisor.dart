@@ -97,6 +97,8 @@ class TutoredListenerSupervisor {
     _supervisor = ListenerSupervisor(
       source: source,
       onEvent: (channel, payload) => _onEvent(localProfileId, channel, payload),
+      onError: (channel, error, stackTrace) =>
+          _onError(localProfileId, channel, error, stackTrace),
     );
 
     await _supervisor!.start();
@@ -164,6 +166,35 @@ class TutoredListenerSupervisor {
             );
             return MergeOutcome.halt;
           }),
+    );
+  }
+
+  // ── Error routing (AUD-core-sync-12) ─────────────────────────────────────
+
+  /// Surfaces a tutored-channel stream error via [AppLogger] instead of
+  /// letting it vanish silently.
+  ///
+  /// The inner [ListenerSupervisor] no-ops a stream error when its `onError`
+  /// callback is null (`_onError?.call(...)`) — before this fix, `attach()`
+  /// never passed one. Firestore terminates a `.snapshots()` stream on error
+  /// (e.g. permission-denied when a parent revokes the grant while the
+  /// tutor's 15 tutored channels are live, or any transient stream fault),
+  /// so that one channel would go permanently dark for the rest of the
+  /// session — zero AppLogger entry, zero Crashlytics record, no
+  /// resubscription — while sibling channels kept working. Mirrors (at
+  /// minimum) the logging half of the own-profile path's `onError` wiring
+  /// in `SyncOrchestratorImpl.start` / `_onListenerError`.
+  void _onError(
+    int localProfileId,
+    String channel,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    AppLogger.instance.warning(
+      event: 'tutored_listener_stream_error',
+      fields: {'channel': channel, 'profileId': localProfileId},
+      exception: error,
+      stackTrace: stackTrace,
     );
   }
 }

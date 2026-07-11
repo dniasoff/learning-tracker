@@ -14,6 +14,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/tutored_listener_supervisor.dart';
@@ -51,6 +52,14 @@ class _DrivenChildGateway implements FirestoreGateway {
 
   void emitDocument(String collection, String docId, Map<String, dynamic> row) {
     _ctrl('$collection/$docId').add(row);
+  }
+
+  /// Emits a stream error on [collection]'s channel — models Firestore
+  /// terminating a `.snapshots()` stream (e.g. permission-denied on grant
+  /// revocation, or a transient stream fault). Used by the
+  /// AUD-core-sync-12 regression test.
+  void emitError(String collection, Object error, [StackTrace? stackTrace]) {
+    _ctrl(collection).addError(error, stackTrace ?? StackTrace.current);
   }
 
   @override
@@ -385,6 +394,36 @@ void main() {
       for (final d in gamDispatches) {
         expect(d.profileId, 7);
       }
+
+      await supervisor.detach();
+    });
+
+    // (H) AUD-core-sync-12 ───────────────────────────────────────────────────
+    test('(H) AUD-core-sync-12: a stream error on a tutored channel reaches '
+        'AppLogger instead of being silently dropped', () async {
+      AppLogger.init();
+      final gateway = _DrivenChildGateway();
+      await supervisor.attach(
+        localProfileId: 5,
+        gateway: gateway,
+        parentUid: 'parent-uid',
+        remoteProfileId: 'child-1',
+      );
+
+      gateway.emitError('goals', Exception('permission-denied (simulated)'));
+      await Future<void>.delayed(Duration.zero);
+
+      final history = AppLogger.instance.talker.history
+          .map((e) => e.generateTextMessage())
+          .toList();
+      expect(
+        history.any((m) => m.contains('tutored_listener_stream_error')),
+        isTrue,
+        reason:
+            'A tutored-channel stream error must reach AppLogger instead '
+            'of vanishing silently (the inner ListenerSupervisor no-ops '
+            'onError when null). Talker history: $history',
+      );
 
       await supervisor.detach();
     });
