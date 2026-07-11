@@ -102,6 +102,9 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     database: database,
     resolveProfileId: resolveProfileId,
     clock: clock,
+    // AUD-sync-03 (EH-3): so a swallowed drain-tee failure is observable
+    // instead of vanishing into a log-less catchError.
+    logger: AppLogger(talker),
   );
   // WS9 Wave-B (C#2): register the points-sync sink at the sync-orchestrator
   // composition root so every PointsBalanceDao mutation (credit on completion,

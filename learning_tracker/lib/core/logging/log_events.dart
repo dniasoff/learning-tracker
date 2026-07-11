@@ -82,6 +82,13 @@ final class _SyncEvents {
   String get outboxDrainStarted => 'sync_outbox_drain_started';
   String get outboxDrainCompleted => 'sync_outbox_drain_completed';
   String get outboxDrainFailed => 'sync_outbox_drain_failed';
+  // AUD-sync-03 (EH-3): the write-tee drain-kick fired by every
+  // OutboxSyncWriteFacade._enqueue/_enqueueBatch is fire-and-forget by
+  // design (the caller's local commit must not block on the network), but
+  // a failure there must still be observable instead of vanishing into a
+  // log-less catchError.
+  String get outboxEnqueueDrainTeeFailed =>
+      'sync_outbox_enqueue_drain_tee_failed';
 
   // Merge / router
   String get mergeRowSkipped => 'sync_merge_row_skipped';

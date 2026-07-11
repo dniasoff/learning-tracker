@@ -18,8 +18,9 @@ library;
 
 import 'dart:convert';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' show Batch, Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -1181,4 +1182,87 @@ void main() {
       expect(rows.first.entityKey, expectedId);
     });
   });
+
+  // ── DB-3 (AUD-sync-02): batched outbox writes ───────────────────────────────
+  group('batched outbox writes (DB-3)', () {
+    test('pushAllLocalData with N seeded tracks performs O(1) outbox INSERT '
+        'statements for that kind, not O(N)', () async {
+      const trackCount = 20;
+      for (var i = 0; i < trackCount; i++) {
+        await seedTrack(db, profileId: _profileId, curriculumId: 'c$i');
+      }
+
+      final spyDao = _SpyOutboxDao(db);
+      final clock = FakeLocalDayClock(_now);
+      final facade = OutboxSyncWriteFacade(
+        outboxDao: spyDao,
+        database: db,
+        resolveProfileId: () => _profileId,
+        clock: clock,
+      );
+      final service = LocalDataUploadService(
+        facade: facade,
+        database: db,
+        resolveProfileId: () => _profileId,
+      );
+
+      await service.pushAllLocalData();
+
+      // The rows genuinely landed — batching must not have dropped any.
+      final rows = await _rowsOf(db, OutboxEntityKind.track);
+      expect(rows, hasLength(trackCount));
+
+      // O(1): pushAllLocalData enqueues (up to) 7 entity kinds through the
+      // batched path — one batch() call per kind, regardless of how many
+      // rows that kind has. The outer setUp's seedProfile(db) means the
+      // "learner profiles" kind also has exactly 1 row here, so 2 batch
+      // calls are expected (tracks + learner profile); the other 5 kinds
+      // are empty and _enqueueBatch short-circuits before calling the DAO
+      // at all. The load-bearing assertion is that the call count stays
+      // WAY below trackCount, not tied to it.
+      expect(
+        spyDao.batchInsertOutboxRowsCalls,
+        lessThan(trackCount),
+        reason:
+            'all $trackCount track rows must go through ONE batch() '
+            'call per kind, not $trackCount individually-awaited inserts',
+      );
+      expect(
+        spyDao.batchInsertOutboxRowsCalls,
+        lessThanOrEqualTo(2),
+        reason:
+            'exactly the tracks batch + the incidental learner-profile '
+            'batch from setUp\'s seeded profile — no other kind is seeded',
+      );
+      expect(
+        spyDao.insertOutboxRowCalls,
+        lessThan(trackCount),
+        reason:
+            'the per-row insert path must stay at its fixed baseline '
+            '(notification/gamification/ui-prefs snapshots) regardless '
+            'of how many tracks were seeded',
+      );
+    });
+  });
+}
+
+/// Hand-written fake (TQ-4) — counts calls to the per-row vs batched insert
+/// paths so a test can assert O(1) statements for O(N) rows (DB-3).
+class _SpyOutboxDao extends OutboxDao {
+  _SpyOutboxDao(super.db);
+
+  int insertOutboxRowCalls = 0;
+  int batchInsertOutboxRowsCalls = 0;
+
+  @override
+  Future<int> insertOutboxRow(OutboxCompanion companion) {
+    insertOutboxRowCalls++;
+    return super.insertOutboxRow(companion);
+  }
+
+  @override
+  void batchInsertOutboxRows(Batch batch, List<OutboxCompanion> rows) {
+    batchInsertOutboxRowsCalls++;
+    super.batchInsertOutboxRows(batch, rows);
+  }
 }

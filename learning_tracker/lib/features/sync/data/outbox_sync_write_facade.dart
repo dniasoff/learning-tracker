@@ -5,6 +5,8 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/daos/points_balance_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
@@ -47,11 +49,18 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
     required int Function() resolveProfileId,
     required LocalDayClock clock,
     Future<void> Function()? onEnqueueDrain,
+    // AUD-sync-03 (EH-3): optional so tests can build the facade without
+    // wiring a logger, mirroring LocalDataUploadService's `logger:` param.
+    // Production providers pass AppLogger.instance so a swallowed drain-tee
+    // failure (permission-denied, UnmountedRefException, network error) is
+    // no longer discarded with zero trace.
+    AppLogger? logger,
   }) : _dao = outboxDao,
        _database = database,
        _resolveProfileId = resolveProfileId,
        _clock = clock,
-       _onEnqueueDrain = onEnqueueDrain;
+       _onEnqueueDrain = onEnqueueDrain,
+       _logger = logger;
 
   final OutboxDao _dao;
   final UserDatabase _database;
@@ -60,6 +69,7 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   /// profile switch on a long-lived facade instance is picked up immediately.
   final int Function() _resolveProfileId;
   final LocalDayClock _clock;
+  final AppLogger? _logger;
 
   /// Phase 1 — write-tee callback. The facade fires this fire-and-forget at
   /// the end of every [_enqueue] so a write reaches Firestore in the same
@@ -304,10 +314,70 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
     // tees collapse to one push round. A throw in the drain must not bubble
     // back to the enqueue caller — the row is already durable in Drift so a
     // subsequent trigger (periodic, pull-complete) will retry it.
+    _kickDrainTee(kind);
+  }
+
+  /// DB-3 (AUD-sync-02): batch-insert several outbox rows of the SAME entity
+  /// [kind] via one Drift `batch()`/`insertAll` call instead of a loop of
+  /// individually-awaited [_enqueue] calls, and fire at most ONE drain-kick
+  /// for the whole batch (not one per row). Used by bulk callers (e.g.
+  /// [LocalDataUploadService.pushAllLocalData]) whose per-row loop would
+  /// otherwise re-prepare the same INSERT statement N times and fire N
+  /// concurrent drain-kick Futures for a single logical operation.
+  ///
+  /// A no-op when [items] is empty (matches [_enqueue]'s callers, which
+  /// never call it for an empty payload either).
+  Future<void> _enqueueBatch(
+    String kind,
+    List<({String entityKey, Map<String, dynamic> payload})> items, {
+    // See [_enqueue]'s matching parameter.
+    int? outboxProfileId,
+  }) async {
+    if (items.isEmpty) return;
+    // AUD-core-sync-10: resolved live, once for this whole batch — every row
+    // in a single batch call is for the same logical bulk operation, so
+    // resolving once (rather than per-item) is correct and avoids N redundant
+    // resolver calls.
+    final profileId = outboxProfileId ?? _resolveProfileId();
+    final now = _clock.nowUtc();
+    final companions = items
+        .map(
+          (item) => OutboxCompanion(
+            profileId: Value(profileId),
+            entityKind: Value(kind),
+            entityKey: Value(item.entityKey),
+            payload: Value(jsonEncode(item.payload)),
+            createdAt: Value(now),
+          ),
+        )
+        .toList(growable: false);
+    await _database.batch((batch) {
+      _dao.batchInsertOutboxRows(batch, companions);
+    });
+    _kickDrainTee(kind);
+  }
+
+  /// Fire-and-forget write-tee drain-kick shared by [_enqueue] and
+  /// [_enqueueBatch]. See the call sites for the fire-and-forget rationale.
+  ///
+  /// AUD-sync-03 (EH-3): the failure must still be observable — this used
+  /// to be a log-less `catchError((Object _) {})` that discarded every
+  /// drain-tee exception (permission-denied, UnmountedRefException,
+  /// network error) with zero trace, and this class had no AppLogger field
+  /// to log through even if it wanted to.
+  void _kickDrainTee(String kind) {
     final tee = _onEnqueueDrain;
-    if (tee != null) {
-      unawaited(tee().catchError((Object _) {}));
-    }
+    if (tee == null) return;
+    unawaited(
+      tee().catchError((Object e, StackTrace st) {
+        _logger?.warning(
+          event: LogEvents.sync.outboxEnqueueDrainTeeFailed,
+          fields: {'entity_kind': kind},
+          exception: e,
+          stackTrace: st,
+        );
+      }),
+    );
   }
 
   /// Derive a stable entity key from a payload by concatenating a few
@@ -382,6 +452,101 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
         DateTimeFactory.nowUtc().millisecondsSinceEpoch.toString(),
     payload,
   );
+
+  // ── DB-3 (AUD-sync-02) batch variants for LocalDataUploadService ───────────
+  //
+  // pushAllLocalData is a one-time bulk reconciler that can enqueue hundreds
+  // of rows per entity kind. Each batch* method below enqueues its whole list
+  // via ONE Drift batch()/insertAll call (through _enqueueBatch) instead of a
+  // loop of individually-awaited enqueue calls, and fires at most one
+  // drain-kick per kind instead of one per row. Each mirrors the entityKey
+  // derivation of its singular sibling exactly, so behaviour (Firestore doc
+  // id / outbox dedup semantics) is unchanged — only the write shape is.
+
+  /// Batch variant of [pushLearnerProfile].
+  Future<void> enqueueLearnerProfilesBatch(
+    List<Map<String, dynamic>> profiles,
+  ) => _enqueueBatch(
+    OutboxEntityKind.learnerProfile,
+    profiles
+        .map(
+          (p) => (
+            entityKey:
+                p['profile_id']?.toString() ?? _resolveProfileId().toString(),
+            payload: p,
+          ),
+        )
+        .toList(growable: false),
+  );
+
+  /// Batch variant of [pushBookmark].
+  Future<void> enqueueBookmarksBatch(List<Map<String, dynamic>> bookmarks) =>
+      _enqueueBatch(
+        OutboxEntityKind.bookmark,
+        bookmarks
+            .map((b) => (entityKey: _key(b), payload: b))
+            .toList(growable: false),
+      );
+
+  /// Batch variant of [pushGoal].
+  Future<void> enqueueGoalsBatch(List<Map<String, dynamic>> goals) =>
+      _enqueueBatch(
+        OutboxEntityKind.goal,
+        goals
+            .map((g) => (entityKey: _goalKey(g), payload: g))
+            .toList(growable: false),
+      );
+
+  /// Batch variant of [enqueueProfileProgram].
+  Future<void> enqueueProfileProgramsBatch(
+    List<Map<String, dynamic>> payloads,
+  ) => _enqueueBatch(
+    OutboxEntityKind.profileProgram,
+    payloads
+        .map(
+          (p) => (
+            entityKey: '${p['curriculum_id'] ?? ''}_${p['program_id'] ?? ''}',
+            payload: p,
+          ),
+        )
+        .toList(growable: false),
+  );
+
+  /// Batch variant of [enqueueStreakPayload].
+  Future<void> enqueueStreakPayloadsBatch(
+    List<Map<String, dynamic>> payloads,
+  ) => _enqueueBatch(
+    OutboxEntityKind.streak,
+    payloads
+        .map((p) => (entityKey: 'streak_${_resolveProfileId()}', payload: p))
+        .toList(growable: false),
+  );
+
+  /// Batch variant of [enqueueLedgerEntry].
+  Future<void> enqueueLedgerEntriesBatch(List<Map<String, dynamic>> payloads) =>
+      _enqueueBatch(
+        OutboxEntityKind.learningLedgerEntry,
+        payloads
+            .map(
+              (p) => (
+                entityKey:
+                    p['unit_identifier']?.toString() ??
+                    p['unitIdentifier']?.toString() ??
+                    DateTimeFactory.nowUtc().millisecondsSinceEpoch.toString(),
+                payload: p,
+              ),
+            )
+            .toList(growable: false),
+      );
+
+  /// Batch variant of [pushCurriculumTrack].
+  Future<void> pushCurriculumTracksBatch(List<Map<String, dynamic>> tracks) =>
+      _enqueueBatch(
+        OutboxEntityKind.track,
+        tracks
+            .map((t) => (entityKey: _key(t), payload: t))
+            .toList(growable: false),
+      );
 
   /// Plan §F Phase 5 deliverable 6 — push a stage-definition snapshot via the
   /// dedicated `stage_definition` outbox kind.

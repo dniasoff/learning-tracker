@@ -89,21 +89,24 @@ class LocalDataUploadService {
       final ownProfiles = accountProfiles
           .where((p) => p.tutorParentUid == null)
           .toList();
-      for (final p in ownProfiles) {
-        await _facade.pushLearnerProfile(
-          learnerProfileCodec.encode(
-            LearnerProfileRow(
-              profileId: p.id,
-              accountId: p.accountId,
-              displayName: p.displayName,
-              mode: p.mode,
-              avatarIndex: p.avatarIndex,
-              createdAt: p.createdAt,
-              updatedAt: p.updatedAt,
+      // DB-3 (AUD-sync-02): build the whole payload list first, then enqueue
+      // it via one Drift batch() call instead of an awaited-per-row loop.
+      final learnerProfilePayloads = ownProfiles
+          .map(
+            (p) => learnerProfileCodec.encode(
+              LearnerProfileRow(
+                profileId: p.id,
+                accountId: p.accountId,
+                displayName: p.displayName,
+                mode: p.mode,
+                avatarIndex: p.avatarIndex,
+                createdAt: p.createdAt,
+                updatedAt: p.updatedAt,
+              ),
             ),
-          ),
-        );
-      }
+          )
+          .toList(growable: false);
+      await _facade.enqueueLearnerProfilesBatch(learnerProfilePayloads);
       _logger?.debug(
         event: 'local_data_upload_learner_profiles_queued',
         fields: {'count': ownProfiles.length},
@@ -140,12 +143,16 @@ class LocalDataUploadService {
     // is identical to the per-save shape in BookmarkEntity.toFirestore().
     const bookmarkCodec = BookmarkCodec();
     final bookmarks = await _database.bookmarkDao.getAllBookmarks();
+    // DB-3 (AUD-sync-02): the per-row track lookup below is a READ (not the
+    // write this rule targets) so it stays a loop; only the outbox INSERT is
+    // batched — build the payload list first, then enqueue it in one call.
+    final bookmarkPayloads = <Map<String, dynamic>>[];
     for (final b in bookmarks) {
       final track = await (_database.select(
         _database.curriculumTracks,
       )..where((t) => t.id.equals(b.trackId))).getSingleOrNull();
       if (track == null) continue;
-      await _facade.pushBookmark(
+      bookmarkPayloads.add(
         bookmarkCodec.encode(
           BookmarkRow(
             curriculumId: b.curriculumId,
@@ -155,9 +162,10 @@ class LocalDataUploadService {
         ),
       );
     }
+    await _facade.enqueueBookmarksBatch(bookmarkPayloads);
     _logger?.debug(
       event: 'local_data_upload_bookmarks_queued',
-      fields: {'count': bookmarks.length},
+      fields: {'count': bookmarkPayloads.length},
     );
 
     // ── Goals ─────────────────────────────────────────────────────────────
@@ -167,31 +175,34 @@ class LocalDataUploadService {
     // FirestoreGateway.pushGoal's doc-id convention).
     const goalCodec = GoalCodec();
     final goals = await _database.goalDao.getAllGoals();
-    for (final g in goals) {
-      final firestoreId =
-          '${g.curriculumId}_${g.targetPercent.toStringAsFixed(1)}_'
-          '${g.createdAt.millisecondsSinceEpoch}';
-      final payload = goalCodec.encode(
-        GoalRow(
-          firestoreId: firestoreId,
-          profileId: g.profileId,
-          curriculumId: g.curriculumId,
-          trackId: g.trackId,
-          targetPercent: g.targetPercent,
-          description: g.description,
-          dateType: g.dateType,
-          goalType: g.goalType,
-          paceValue: g.paceValue,
-          pacePeriod: g.pacePeriod,
-          paceGranularity: g.paceGranularity,
-          targetDate: g.targetDate,
-          createdAt: g.createdAt,
-          updatedAt: g.updatedAt,
-        ),
-      );
-      payload['id'] = firestoreId;
-      await _facade.pushGoal(payload);
-    }
+    final goalPayloads = goals
+        .map((g) {
+          final firestoreId =
+              '${g.curriculumId}_${g.targetPercent.toStringAsFixed(1)}_'
+              '${g.createdAt.millisecondsSinceEpoch}';
+          final payload = goalCodec.encode(
+            GoalRow(
+              firestoreId: firestoreId,
+              profileId: g.profileId,
+              curriculumId: g.curriculumId,
+              trackId: g.trackId,
+              targetPercent: g.targetPercent,
+              description: g.description,
+              dateType: g.dateType,
+              goalType: g.goalType,
+              paceValue: g.paceValue,
+              pacePeriod: g.pacePeriod,
+              paceGranularity: g.paceGranularity,
+              targetDate: g.targetDate,
+              createdAt: g.createdAt,
+              updatedAt: g.updatedAt,
+            ),
+          );
+          payload['id'] = firestoreId;
+          return payload;
+        })
+        .toList(growable: false);
+    await _facade.enqueueGoalsBatch(goalPayloads);
     _logger?.debug(
       event: 'local_data_upload_goals_queued',
       fields: {'count': goals.length},
@@ -201,23 +212,25 @@ class LocalDataUploadService {
     const profileProgramCodec = ProfileProgramCodec();
     final profilePrograms = await _database.profileProgramDao
         .getProgramsForProfile(profileId);
-    for (final p in profilePrograms) {
-      final payload = profileProgramCodec.encode(
-        ProfileProgramRow(
-          profileId: p.profileId,
-          curriculumId: p.curriculumType,
-          programId: p.programId,
-          trackingStartDate: p.trackingStartDate,
-          trackingStartRef: p.trackingStartRef,
-          // The local DB has no stored updated_at — use now() so the
-          // remote document carries a valid LWW timestamp. The merger
-          // falls back to trackingStartDate for pre-codec rows, so this
-          // is strictly additive and safe to back-fill.
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-      await _facade.enqueueProfileProgram(payload);
-    }
+    final profileProgramPayloads = profilePrograms
+        .map(
+          (p) => profileProgramCodec.encode(
+            ProfileProgramRow(
+              profileId: p.profileId,
+              curriculumId: p.curriculumType,
+              programId: p.programId,
+              trackingStartDate: p.trackingStartDate,
+              trackingStartRef: p.trackingStartRef,
+              // The local DB has no stored updated_at — use now() so the
+              // remote document carries a valid LWW timestamp. The merger
+              // falls back to trackingStartDate for pre-codec rows, so this
+              // is strictly additive and safe to back-fill.
+              updatedAt: DateTimeFactory.nowUtc(),
+            ),
+          ),
+        )
+        .toList(growable: false);
+    await _facade.enqueueProfileProgramsBatch(profileProgramPayloads);
     _logger?.debug(
       event: 'local_data_upload_profile_programs_queued',
       fields: {'count': profilePrograms.length},
@@ -234,22 +247,24 @@ class LocalDataUploadService {
     final streakEvents = await _database.streakEventDao.getEventsByProfile(
       profileId,
     );
-    for (final e in streakEvents) {
-      final payload = streakCodec.encode(
-        StreakEventRow(
-          profileId: profileId,
-          eventType: e.eventType,
-          studyDate: DateTime.utc(
-            e.eventTimestamp.year,
-            e.eventTimestamp.month,
-            e.eventTimestamp.day,
+    final streakPayloads = streakEvents
+        .map(
+          (e) => streakCodec.encode(
+            StreakEventRow(
+              profileId: profileId,
+              eventType: e.eventType,
+              studyDate: DateTime.utc(
+                e.eventTimestamp.year,
+                e.eventTimestamp.month,
+                e.eventTimestamp.day,
+              ),
+              createdAt: e.createdAt,
+              ulid: newUlid(e.eventTimestamp),
+            ),
           ),
-          createdAt: e.createdAt,
-          ulid: newUlid(e.eventTimestamp),
-        ),
-      );
-      await _facade.enqueueStreakPayload(payload);
-    }
+        )
+        .toList(growable: false);
+    await _facade.enqueueStreakPayloadsBatch(streakPayloads);
     _logger?.debug(
       event: 'local_data_upload_streak_queued',
       fields: {'count': streakEvents.length},
@@ -263,27 +278,28 @@ class LocalDataUploadService {
     final ledgerEntries = await _database
         .select(_database.learningLedger)
         .get();
-    for (final e in ledgerEntries) {
-      await _facade.enqueueLedgerEntry(
-        ledgerCodec.encode(
-          LearningLedgerRow(
-            ulid: e.ulid,
-            profileId: e.profileId,
-            curriculumId: e.curriculumId,
-            entryScope: e.entryScope,
-            unitIdentifier: e.unitIdentifier,
-            unitDisplayNameHe: e.unitDisplayNameHe,
-            unitDisplayNameEn: e.unitDisplayNameEn,
-            trackType: e.trackType,
-            trackId: e.trackId,
-            completedAt: e.completedAt,
-            completionNumber: e.completionNumber,
-            markedBy: e.markedBy,
-            isManual: e.isManual,
+    final ledgerPayloads = ledgerEntries
+        .map(
+          (e) => ledgerCodec.encode(
+            LearningLedgerRow(
+              ulid: e.ulid,
+              profileId: e.profileId,
+              curriculumId: e.curriculumId,
+              entryScope: e.entryScope,
+              unitIdentifier: e.unitIdentifier,
+              unitDisplayNameHe: e.unitDisplayNameHe,
+              unitDisplayNameEn: e.unitDisplayNameEn,
+              trackType: e.trackType,
+              trackId: e.trackId,
+              completedAt: e.completedAt,
+              completionNumber: e.completionNumber,
+              markedBy: e.markedBy,
+              isManual: e.isManual,
+            ),
           ),
-        ),
-      );
-    }
+        )
+        .toList(growable: false);
+    await _facade.enqueueLedgerEntriesBatch(ledgerPayloads);
     _logger?.debug(
       event: 'local_data_upload_ledger_entries_queued',
       fields: {'count': ledgerEntries.length},
@@ -292,21 +308,22 @@ class LocalDataUploadService {
     // ── Curriculum tracks ─────────────────────────────────────────────────
     const trackCodec = TrackCodec();
     final tracks = await _database.trackDao.getAllForProfile(profileId);
-    for (final t in tracks) {
-      await _facade.pushCurriculumTrack(
-        trackCodec.encode(
-          TrackRow(
-            profileId: t.profileId,
-            trackId: t.id,
-            curriculumId: t.curriculumId,
-            state: t.state,
-            stateChangedAt: t.stateChangedAt,
-            activatedAt: t.activatedAt,
-            paceResetDate: t.paceResetDate,
+    final trackPayloads = tracks
+        .map(
+          (t) => trackCodec.encode(
+            TrackRow(
+              profileId: t.profileId,
+              trackId: t.id,
+              curriculumId: t.curriculumId,
+              state: t.state,
+              stateChangedAt: t.stateChangedAt,
+              activatedAt: t.activatedAt,
+              paceResetDate: t.paceResetDate,
+            ),
           ),
-        ),
-      );
-    }
+        )
+        .toList(growable: false);
+    await _facade.pushCurriculumTracksBatch(trackPayloads);
     _logger?.debug(
       event: 'local_data_upload_curriculum_tracks_queued',
       fields: {'count': tracks.length},
