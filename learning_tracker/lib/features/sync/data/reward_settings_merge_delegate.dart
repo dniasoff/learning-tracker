@@ -16,6 +16,20 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/merge/gamification_settings_merger.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 
+/// Factory for [RewardMilestoneService], injectable so callers — and their
+/// tests — can substitute a fake without also faking [UserDatabase].
+///
+/// AUD-sync-05 (SM-7): construction lives inside exactly this one provider;
+/// [rewardSettingsMergeDelegateProvider] below depends on the factory
+/// function instead of constructing [RewardMilestoneService] itself, so a
+/// test can override just this provider to inject a fake service.
+final rewardMilestoneServiceFactoryProvider =
+    Provider<RewardMilestoneService Function({required int profileId})>((ref) {
+      final db = ref.watch(userDatabaseProvider);
+      return ({required int profileId}) =>
+          RewardMilestoneService(db, profileId: profileId);
+    });
+
 /// Build a [RewardSettingsMergeDelegate] that hands the remote
 /// `reward_settings` sub-map to [RewardMilestoneService.mergeCloudPayload]
 /// for the active profile.
@@ -29,10 +43,12 @@ import 'package:learning_tracker/features/gamification/domain/services/reward_mi
 /// idempotent.
 final rewardSettingsMergeDelegateProvider =
     Provider<RewardSettingsMergeDelegate>((ref) {
-      final db = ref.watch(userDatabaseProvider);
+      final rewardMilestoneServiceFactory = ref.watch(
+        rewardMilestoneServiceFactoryProvider,
+      );
       return (Map<String, dynamic>? remote, int profileId) async {
         if (remote == null) return;
-        final service = RewardMilestoneService(db, profileId: profileId);
+        final service = rewardMilestoneServiceFactory(profileId: profileId);
         await service.mergeCloudPayload(remote);
       };
     });

@@ -349,6 +349,89 @@ void main() {
     }, timeout: const Timeout(Duration(minutes: 3)));
   });
 
+  group('make audit check 37/37 — AUD-sync-05 (SM-7)', () {
+    test(
+      'clean on the AUD-sync-05 fix sites (no ad-hoc Repository/Service '
+      'construction)',
+      () async {
+        final result = await Process.run('make', [
+          'audit',
+        ], workingDirectory: packageDir);
+        expect(
+          result.stdout.toString(),
+          contains('37/37'),
+          reason: 'make audit must run the SM-7 AUD-sync-05 scoped check.',
+        );
+        expect(
+          result.exitCode,
+          0,
+          reason:
+              'the three AUD-sync-05 fix sites must be clean.\n'
+              'stdout=${result.stdout}\nstderr=${result.stderr}',
+        );
+      },
+      // AUD-guardrails-17 (see file-level NOTE above): shells out to
+      // `make audit`; see the longer rationale on the 25/26 test above.
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
+
+    test('AC1: reintroducing ad-hoc RewardMilestoneService construction in '
+        'outbox_sync_write_facade.dart flips check 37/37 from clean to FAIL '
+        'and back', () async {
+      final fixtureFile = File(
+        '$packageDir/lib/features/sync/data/outbox_sync_write_facade.dart',
+      );
+      final original = fixtureFile.readAsStringSync();
+
+      Future<ProcessResult> runAudit() =>
+          Process.run('make', ['audit'], workingDirectory: packageDir);
+
+      try {
+        // Append a syntactically-valid, unmistakable-as-debris top-level
+        // function reproducing the exact violation shape check 37/37
+        // greps for: a `final x = RewardMilestoneService(...)` reaching
+        // for a fresh instance instead of going through the injected
+        // `_rewardMilestoneServiceFactory`.
+        fixtureFile.writeAsStringSync(
+          '$original\n'
+          '// AUDIT FIXTURE - DO NOT COMMIT (AUD-sync-05 check 37/37 test)\n'
+          'void zzzAuditFixtureDoNotCommit(UserDatabase database) {\n'
+          '  final rewardService = RewardMilestoneService(\n'
+          '    database,\n'
+          '    profileId: 1,\n'
+          '  );\n'
+          '  rewardService.exportCloudPayload();\n'
+          '}\n',
+        );
+
+        final dirty = await runAudit();
+        expect(
+          dirty.stdout.toString(),
+          contains('outbox_sync_write_facade.dart'),
+          reason:
+              'a reintroduced ad-hoc RewardMilestoneService construction '
+              'must be caught by check 37/37, not silently swallowed.\n'
+              'stdout=${dirty.stdout}',
+        );
+        expect(
+          dirty.exitCode,
+          isNot(0),
+          reason: 'check 37/37 is a hard gate — it must fail the build.',
+        );
+      } finally {
+        fixtureFile.writeAsStringSync(original);
+      }
+
+      final clean = await runAudit();
+      expect(
+        clean.stdout.toString(),
+        isNot(contains('zzzAuditFixtureDoNotCommit')),
+        reason: 'removing the fixture restores a clean pass.',
+      );
+      expect(clean.exitCode, 0);
+    }, timeout: const Timeout(Duration(minutes: 5)));
+  });
+
   group('tool/arb_parity_check.dart (DNI-389 — Story 27.13 AC2)', () {
     final scriptPath = '$repoRoot/tool/arb_parity_check.dart';
 

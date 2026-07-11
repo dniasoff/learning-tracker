@@ -20,8 +20,11 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' show Batch, Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
+import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -31,6 +34,67 @@ import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dar
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/drift_memory.dart';
+
+/// Fake [ParentAnalyticsRepository] for AUD-sync-05 (SM-7): proves
+/// [LocalDataUploadService] can have its analytics dependency substituted
+/// via the constructor seam without also faking [UserDatabase].
+///
+/// Only [getAllCompletions] is exercised by [LocalDataUploadService
+/// .pushAllLocalData] — the remaining methods are unused by that path and
+/// throw if ever called, so an accidental new dependency on them fails
+/// loudly instead of silently returning empty data.
+class _FakeParentAnalyticsRepository implements ParentAnalyticsRepository {
+  _FakeParentAnalyticsRepository(this._completions);
+
+  final List<Completion> _completions;
+  int getAllCompletionsCallCount = 0;
+
+  @override
+  Future<List<Completion>> getAllCompletions({
+    required CrossProfileScope scope,
+  }) async {
+    getAllCompletionsCallCount++;
+    return _completions;
+  }
+
+  @override
+  Future<List<Completion>> getCompletionsByCurriculum(
+    String curriculumId, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<List<Completion>> getCompletionsForContent(
+    String sefariaRef, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<List<Completion>> getCompletionsByDateRange(
+    DateTime start,
+    DateTime end, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<bool> hasCompletionsInDateRange(
+    DateTime start,
+    DateTime end, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<int> getAggregateCount(
+    String curriculumId, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<Map<String, int>> getTrackBreakdown(
+    String curriculumId, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -272,6 +336,61 @@ void main() {
         expect(completionRows, isEmpty);
       },
     );
+
+    test('pushAllLocalData reads completions from the injected '
+        'analyticsRepository, not from a self-constructed '
+        'ParentAnalyticsRepositoryImpl (AUD-sync-05, SM-7)', () async {
+      // Start from a truly empty completions view so the only completion
+      // that can possibly be enqueued is the one the fake repository
+      // hands back — proving the constructor seam is actually wired
+      // through to pushAllLocalData rather than being an unused parameter.
+      await db.delete(db.outbox).go();
+
+      final fakeRepo = _FakeParentAnalyticsRepository([
+        Completion(
+          id: 999,
+          profileId: _profileId,
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Injected Ref 1:1',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: 0,
+          completedAt: _now.subtract(const Duration(days: 3)),
+          points: 5,
+        ),
+      ]);
+      final clock = FakeLocalDayClock(_now);
+      final facade = OutboxSyncWriteFacade(
+        outboxDao: db.outboxDao,
+        database: db,
+        resolveProfileId: () => _profileId,
+        clock: clock,
+      );
+      final service = LocalDataUploadService(
+        facade: facade,
+        database: db,
+        resolveProfileId: () => _profileId,
+        analyticsRepository: fakeRepo,
+      );
+
+      await service.pushAllLocalData();
+
+      expect(
+        fakeRepo.getAllCompletionsCallCount,
+        1,
+        reason: 'pushAllLocalData must call the injected repository',
+      );
+      final payloads = await _payloadsOf(db, OutboxEntityKind.completion);
+      expect(
+        payloads.any((p) => p['sefaria_ref'] == 'Injected Ref 1:1'),
+        isTrue,
+        reason:
+            "the outbox row must come from the fake repository's "
+            'completion, proving pushAllLocalData used the injected '
+            'seam instead of constructing its own '
+            'ParentAnalyticsRepositoryImpl',
+      );
+    });
   });
 
   // ── 3. Bookmarks ───────────────────────────────────────────────────────────

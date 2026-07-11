@@ -55,12 +55,25 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
     // failure (permission-denied, UnmountedRefException, network error) is
     // no longer discarded with zero trace.
     AppLogger? logger,
+    // AUD-sync-05 (SM-7): optional so tests can substitute a fake
+    // [RewardMilestoneService] without also faking the whole Drift database
+    // it reads, mirroring the `logger:` seam above. The factory takes just
+    // the profile id (not the whole service) because — per AUD-core-sync-10
+    // — the profile id is resolved live per call, not captured at
+    // construction time; a fixed service instance would go stale across a
+    // profile switch on this long-lived facade.
+    RewardMilestoneService Function(int profileId)?
+    rewardMilestoneServiceFactory,
   }) : _dao = outboxDao,
        _database = database,
        _resolveProfileId = resolveProfileId,
        _clock = clock,
        _onEnqueueDrain = onEnqueueDrain,
-       _logger = logger;
+       _logger = logger,
+       _rewardMilestoneServiceFactory =
+           rewardMilestoneServiceFactory ??
+           ((profileId) =>
+               RewardMilestoneService(database, profileId: profileId));
 
   final OutboxDao _dao;
   final UserDatabase _database;
@@ -70,6 +83,8 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   final int Function() _resolveProfileId;
   final LocalDayClock _clock;
   final AppLogger? _logger;
+  final RewardMilestoneService Function(int profileId)
+  _rewardMilestoneServiceFactory;
 
   /// Phase 1 — write-tee callback. The facade fires this fire-and-forget at
   /// the end of every [_enqueue] so a write reaches Firestore in the same
@@ -165,10 +180,7 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
       _database.pointConfigs,
     )..where((t) => t.profileId.equals(profileId))).get();
 
-    final rewardService = RewardMilestoneService(
-      _database,
-      profileId: profileId,
-    );
+    final rewardService = _rewardMilestoneServiceFactory(profileId);
     final rewardPayload = await rewardService.exportCloudPayload();
 
     final totalPointsExpr = _database.completionEvents.points.sum();

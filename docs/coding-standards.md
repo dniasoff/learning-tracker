@@ -160,7 +160,7 @@ The only permitted call sites for `useHebrewTermsProvider` are `lib/core/labels/
 
 **SM-7 — Construct repositories, services, and DAOs only inside their `@riverpod` provider (or a test override). No global/static mutable singletons; no service-locator lookups inside methods.**
 **Why:** globals can't be overridden in tests and reintroduce exactly the coupling the layering rules remove.
-**Enforce:** [Pending] audit grep for `static final .*(Repository|Service|Dao)` and direct construction outside provider files/tests.
+**Enforce:** [Enforced, scoped] `make audit` check 37/37 forbids ad-hoc mid-method `ParentAnalyticsRepositoryImpl`/`RewardMilestoneService` construction in the three sites AUD-sync-05 fixed (`features/sync/data/local_data_upload_service.dart`, `outbox_sync_write_facade.dart`, `reward_settings_merge_delegate.dart`) — each now takes the dependency as an optional constructor/factory parameter (or, for `reward_settings_merge_delegate.dart`, a dedicated `rewardMilestoneServiceFactoryProvider`) defaulting to the prior ad-hoc construction. **[Pending, backlog]** this is diff-scoped, not repo-wide: ~20 further ad-hoc `RewardMilestoneService`/similar construction sites remain (e.g. `lib/core/navigation/guards/restore_guard.dart`, `lib/features/gamification/presentation/providers/reward_config_controller.dart`, `dashboard_providers.dart`, `achievements_overview_provider.dart`, `points_service.dart`, `child_redemption_screen.dart`) — a general `static final .*(Repository|Service|Dao)` / direct-construction-outside-provider-files grep covering all of them is future work; do not add to the AUD-sync-05 scoped check's file list without also fixing the site.
 **Source:** docs.flutter.dev/app-architecture/case-study/dependency-injection
 
 **SM-8 — Repositories never import or depend on other repositories; compose multi-source data in a Notifier or domain service.**
@@ -759,6 +759,9 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 26 | Every `.logEvent()` call site in `lib/` passes an `AnalyticsEvent.*` catalog member as the event name — `tool/check_analytics_catalog.dart` (PV-5, AUD-core-analytics-01) |
 | 27 | Every `SeedManager(` construction site in `lib/` passes a `logger:` argument (EH-3, AUD-app-07) |
 | 33 | EH-5: no `@freezed sealed class` status/result type has a `required String message` field, and no raw `error.toString()`/`e.toString()` flows into a `message:` argument (AUD-sync-01) |
+| 37 | SM-7 (scoped): no ad-hoc `ParentAnalyticsRepositoryImpl`/`RewardMilestoneService` construction in the three AUD-sync-05 fix sites (`local_data_upload_service.dart`, `outbox_sync_write_facade.dart`, `reward_settings_merge_delegate.dart`) — see SM-7 above for the wider repo-wide backlog |
+
+The table above has known gaps between the last-renumbered entries (34–36 exist in the Makefile but aren't yet reflected here) — tracked under the same Makefile/doc consolidation noted at the top of this section.
 
 Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|right:)`** (RTL violation — AX-1).
 

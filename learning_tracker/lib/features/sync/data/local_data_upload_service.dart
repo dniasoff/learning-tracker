@@ -36,13 +36,21 @@ class LocalDataUploadService {
     required UserDatabase database,
     required int Function() resolveProfileId,
     AppLogger? logger,
+    // AUD-sync-05 (SM-7): optional so tests can substitute a fake
+    // [ParentAnalyticsRepository] without also faking the whole Drift
+    // database it reads, mirroring the existing `logger:` seam. Production
+    // callers omit this and get the real DB-backed implementation.
+    ParentAnalyticsRepository? analyticsRepository,
   }) : _facade = facade,
        _database = database,
        _resolveProfileId = resolveProfileId,
-       _logger = logger;
+       _logger = logger,
+       _analyticsRepository =
+           analyticsRepository ?? ParentAnalyticsRepositoryImpl(database);
 
   final OutboxSyncWriteFacade _facade;
   final UserDatabase _database;
+  final ParentAnalyticsRepository _analyticsRepository;
 
   /// AUD-core-sync-10: resolved live — see [OutboxSyncWriteFacade]'s matching
   /// doc. [pushAllLocalData] resolves this exactly once, at the top of the
@@ -114,7 +122,7 @@ class LocalDataUploadService {
     }
 
     // ── Completions (append-only via CompletionWriter) ────────────────────
-    final analytics = ParentAnalyticsRepositoryImpl(_database);
+    final analytics = _analyticsRepository;
     final completions = await analytics.getAllCompletions(
       scope: CrossProfileScope.syncRestore,
     );
