@@ -103,6 +103,102 @@ class _NullAuth extends _StubAuth {
   AppUser? get currentUser => null;
 }
 
+// ── Hand-rolled Firestore snapshot fakes (AUD-core-sync-01, TQ-4) ─────────
+//
+// fake_cloud_firestore's own MockSnapshotMetadata hardcodes
+// `hasPendingWrites => false` unconditionally (see mock_snapshot_metadata.dart
+// in the fake_cloud_firestore package), so no test built on
+// createFakeFirestore() can ever construct a snapshot where a document is
+// mid-write — FirestoreGatewayImpl.mapQuerySnapshot's FB-3 guard is
+// therefore unreachable through the public listener methods in this test
+// file. These fakes implement the cloud_firestore snapshot interfaces
+// directly so both hasPendingWrites and isFromCache can be set true.
+// QueryDocumentSnapshot and DocumentChange are `@sealed` in cloud_firestore
+// — `// ignore: subtype_of_sealed_class` is the exact suppression
+// fake_cloud_firestore's own MockDocumentSnapshot uses for the identical
+// reason (implementing a sealed class is the intended extension point for
+// test doubles; the lint just can't tell "test fake" from "production
+// subtype").
+
+class _FakeSnapshotMetadata implements SnapshotMetadata {
+  const _FakeSnapshotMetadata({
+    this.hasPendingWrites = false,
+    this.isFromCache = false,
+  });
+
+  @override
+  final bool hasPendingWrites;
+
+  @override
+  final bool isFromCache;
+}
+
+// ignore: subtype_of_sealed_class
+class _FakeQueryDocumentSnapshot
+    implements QueryDocumentSnapshot<Map<String, dynamic>> {
+  _FakeQueryDocumentSnapshot(this.id, this._data, this.metadata);
+
+  @override
+  final String id;
+  final Map<String, dynamic> _data;
+  @override
+  final SnapshotMetadata metadata;
+
+  @override
+  bool get exists => true;
+
+  @override
+  Map<String, dynamic> data() => _data;
+
+  @override
+  DocumentReference<Map<String, dynamic>> get reference =>
+      throw UnimplementedError('not exercised by mapQuerySnapshot');
+
+  @override
+  dynamic get(Object field) => _data[field];
+
+  @override
+  dynamic operator [](Object field) => _data[field];
+}
+
+// ignore: subtype_of_sealed_class
+class _FakeDocumentChange implements DocumentChange<Map<String, dynamic>> {
+  _FakeDocumentChange(this.doc);
+
+  @override
+  final QueryDocumentSnapshot<Map<String, dynamic>> doc;
+
+  // Every fixture in this file models the "added" case (a document appearing
+  // in the snapshot for the first time) — the only DocumentChangeType
+  // mapQuerySnapshot's guard actually branches on is presence in docChanges,
+  // not the change type itself.
+  @override
+  DocumentChangeType get type => DocumentChangeType.added;
+
+  @override
+  int get oldIndex => -1;
+
+  @override
+  int get newIndex => 0;
+}
+
+class _FakeQuerySnapshot implements QuerySnapshot<Map<String, dynamic>> {
+  _FakeQuerySnapshot({required this.docs, required this.docChanges});
+
+  @override
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
+
+  @override
+  final List<DocumentChange<Map<String, dynamic>>> docChanges;
+
+  @override
+  SnapshotMetadata get metadata =>
+      throw UnimplementedError('not exercised by mapQuerySnapshot');
+
+  @override
+  int get size => docs.length;
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const _uid = 'uid_gateway_impl_test';
@@ -1385,6 +1481,124 @@ void main() {
           )
           .first;
       expect(value, isNull);
+    });
+  });
+
+  // ── 7a. mapQuerySnapshot — FB-3 local-echo/cache-echo guard ──────────────
+  // (AUD-core-sync-01)
+
+  group('7a. mapQuerySnapshot — FB-3 local-echo/cache-echo guard '
+      '(AUD-core-sync-01)', () {
+    test('excludes a document whose docChange carries hasPendingWrites '
+        '(local write echo)', () {
+      final pendingDoc = _FakeQueryDocumentSnapshot('g_pending', {
+        'target': 1,
+      }, const _FakeSnapshotMetadata(hasPendingWrites: true));
+      final snapshot = _FakeQuerySnapshot(
+        docs: [pendingDoc],
+        docChanges: [_FakeDocumentChange(pendingDoc)],
+      );
+
+      final result = FirestoreGatewayImpl.mapQuerySnapshot(
+        snapshot,
+        limit: 500,
+      );
+
+      expect(
+        result.rows,
+        isEmpty,
+        reason:
+            'a doc that is only present as an un-acked local write must '
+            'not reach the merge pipeline (FB-3)',
+      );
+    });
+
+    test('excludes a document whose docChange carries isFromCache '
+        '(unconfirmed cache-sourced read)', () {
+      final cachedDoc = _FakeQueryDocumentSnapshot('g_cached', {
+        'target': 1,
+      }, const _FakeSnapshotMetadata(isFromCache: true));
+      final snapshot = _FakeQuerySnapshot(
+        docs: [cachedDoc],
+        docChanges: [_FakeDocumentChange(cachedDoc)],
+      );
+
+      final result = FirestoreGatewayImpl.mapQuerySnapshot(
+        snapshot,
+        limit: 500,
+      );
+
+      expect(
+        result.rows,
+        isEmpty,
+        reason:
+            'a doc served purely from the local persistence cache has no '
+            'server-resolved timestamp yet and must not be treated as '
+            'authoritative (FB-3)',
+      );
+    });
+
+    test(
+      'includes a document with neither flag set (genuine confirmed data)',
+      () {
+        final confirmedDoc = _FakeQueryDocumentSnapshot('g_confirmed', {
+          'target': 1,
+        }, const _FakeSnapshotMetadata());
+        final snapshot = _FakeQuerySnapshot(
+          docs: [confirmedDoc],
+          docChanges: [_FakeDocumentChange(confirmedDoc)],
+        );
+
+        final result = FirestoreGatewayImpl.mapQuerySnapshot(
+          snapshot,
+          limit: 500,
+        );
+
+        expect(result.rows, hasLength(1));
+        expect(result.rows.first['firestore_id'], equals('g_confirmed'));
+        expect(result.rows.first['target'], equals(1));
+      },
+    );
+
+    test('isAtLimit reflects the raw snapshot count, ignoring the guard', () {
+      final pendingDoc = _FakeQueryDocumentSnapshot('g_pending', {
+        'target': 1,
+      }, const _FakeSnapshotMetadata(hasPendingWrites: true));
+      final snapshot = _FakeQuerySnapshot(
+        docs: [pendingDoc],
+        docChanges: [_FakeDocumentChange(pendingDoc)],
+      );
+
+      final result = FirestoreGatewayImpl.mapQuerySnapshot(snapshot, limit: 1);
+
+      expect(
+        result.isAtLimit,
+        isTrue,
+        reason:
+            'isAtLimit is computed against the raw snapshot.docs count, '
+            'not the post-guard row count',
+      );
+    });
+
+    test('isUnresolvedSnapshot predicate matches either flag', () {
+      expect(
+        FirestoreGatewayImpl.isUnresolvedSnapshot(
+          const _FakeSnapshotMetadata(),
+        ),
+        isFalse,
+      );
+      expect(
+        FirestoreGatewayImpl.isUnresolvedSnapshot(
+          const _FakeSnapshotMetadata(hasPendingWrites: true),
+        ),
+        isTrue,
+      );
+      expect(
+        FirestoreGatewayImpl.isUnresolvedSnapshot(
+          const _FakeSnapshotMetadata(isFromCache: true),
+        ),
+        isTrue,
+      );
     });
   });
 
