@@ -801,13 +801,19 @@
   {
    "id": "AUD-core-sync-05",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P1",
    "title": "Fix unsafe `as int?`/`as num?` casts in TrackCodec.decode and GoalCodec.decode that throw instead of returning null",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). Prior state: reclassified TODO<-BLOCKED by the 2026-07-11 gate-repair pass (no genuine external blocker found at that time -- unreconciled salvage/w2c-12/-7 and salvage/w2f-33/-6 approaches conflict with codec-area work already merged onto audit-fix/2026-07-03). Bulk-reopened again via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)'. This engine run re-attempted the fix and again terminated at no-progress cap / loop end with this id in its final blocked set; commits=[] on this branch. Independently spot-checked: TrackCodec.decode/GoalCodec.decode still throw on unsafe `as int?`/`as num?` casts rather than returning null -- defect genuinely unfixed, not a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+   "commits": [
+    "9aba2c1f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1",
+    "AC2",
+    "AC3"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): Genuinely re-fixed (this row's prior blocked note was accurate — the defect was real and unfixed). TrackCodec.decode/GoalCodec.decode now route profile_id/track_id/target_percent through FirestoreCodec.parseInt/parseDouble instead of bare 'as int?'/'as num?' casts. New regression test track_and_goal_codec_malformed_numeric_test.dart; make audit check 34/36 wired to guard the regression going forward."
   },
   {
    "id": "AUD-core-sync-07",
@@ -1387,13 +1393,18 @@
   {
    "id": "AUD-sync-02",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "LocalDataUploadService.pushAllLocalData enqueues every entity kind via a per-row awaited loop instead of a batched outbox write",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). Prior state: reclassified TODO<-BLOCKED by the 2026-07-11 gate-repair pass (no genuine external blocker found at that time -- unreconciled salvage/w2c-18 commit 2f9bb70e conflicts with local_data_upload_service.dart changes already landed via AUD-core-sync-10; AUD-sync-03 is built directly on top of this commit and cannot be isolated from it either). Bulk-reopened again via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)'. This engine run re-attempted the fix and again terminated at no-progress cap / loop end with this id in its final blocked set; commits=[] on this branch. Left todo for a future harvest/relaunch pass alongside AUD-sync-03."
+   "commits": [
+    "c8ae8ea3"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1",
+    "AC2"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): Genuinely re-fixed. Added OutboxSyncWriteFacade._enqueueBatch (backed by OutboxDao.batchInsertOutboxRows / Drift batch()) plus 7 package-visible *Batch methods; local_data_upload_service.dart's 7 per-row loops now build the payload list first and enqueue it with one batch call, firing at most one drain-kick per kind instead of one per row. New O(1)-call-count regression test with a hand-written spy OutboxDao (20 seeded tracks -> batch call count stays at 2, not 20). make audit check 36/36 (check_db3_batch_inserts.dart) wired to guard the regression."
   },
   {
    "id": "AUD-progress-08",
@@ -1541,13 +1552,18 @@
   {
    "id": "AUD-core-sync-19",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete the dead duplicate syncStatusStreamProvider/syncStatusProvider in features/sync/presentation/providers/sync_providers.dart and fix the false 'delegates here' comment in sync_status_providers.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). Prior state: reclassified TODO<-BLOCKED by the 2026-07-11 gate-repair pass (no genuine external blocker found at that time -- unreconciled salvage/w2c-50/-6/w2f-16/-2 commit 6cea5ecd et al. conflicts with sync_providers.dart, since modified by AUD-sync-01, AUD-sync-04, and AUD-core-sync-10). Bulk-reopened again via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)'. This engine run re-attempted the fix and again terminated at no-progress cap / loop end with this id in its final blocked set; commits=[] on this branch. Left todo for a future harvest/relaunch pass."
+   "commits": [
+    "865d41d6"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1",
+    "AC2"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): Genuinely re-fixed. Deleted the dead duplicate syncStatusStreamProvider/syncStatusProvider from features/sync/presentation/providers/sync_providers.dart (zero production consumers — verified by grep across lib/ and test/), corrected the false 'also delegates here' doc comment in core/sync/providers/sync_status_providers.dart, and relocated the one test that exercised the dead copy to test/core/sync/providers/sync_status_providers_test.dart (AG-5)."
   },
   {
    "id": "AUD-account-06",
@@ -1623,13 +1639,18 @@
   {
    "id": "AUD-core-sync-24",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Stop FirestoreGatewayImpl.pushGoal from using non-idempotent add() for id-less goals",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). Prior state: reclassified TODO<-BLOCKED by the 2026-07-11 gate-repair pass (no genuine external blocker found at that time -- same salvage/w2c-18 lineage as AUD-core-sync-20, commit 5d319b4e, same firestore_gateway_impl.dart conflict). Bulk-reopened again via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)'. This engine run re-attempted the fix and again terminated at no-progress cap / loop end with this id in its final blocked set; commits=[] on this branch. Left todo for a future harvest/relaunch pass."
+   "commits": [
+    "5d1b1d35"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1",
+    "AC2"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): Genuinely re-fixed (same commit as AUD-core-sync-20 — both touch firestore_gateway_impl.dart and were delivered together). pushGoal no longer falls back to collection.add() for an id-less payload; replaced with a deterministic natural-key fallback doc-id mirroring OutboxSyncWriteFacade._goalKey, so a retried id-less push overwrites the same document instead of creating a duplicate. New regression test proves exactly one document exists after pushing the same id-less payload twice."
   },
   {
    "id": "AUD-core-logging-01",
@@ -2496,13 +2517,19 @@
   {
    "id": "AUD-core-sync-20",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Extend FirestorePermissionDeniedException conversion beyond the 2 read call sites it currently covers",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). Prior state: reclassified TODO<-BLOCKED by the 2026-07-11 gate-repair pass (no genuine external blocker found at that time -- unreconciled salvage/w2c-18 commit dbd315eb conflicts with firestore_gateway_impl.dart changes already landed via AUD-core-sync-13/-01/-02). Bulk-reopened again via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)'. This engine run re-attempted the fix and again terminated at no-progress cap / loop end with this id in its final blocked set; commits=[] on this branch. Left todo for a future harvest/relaunch pass."
+   "commits": [
+    "5d1b1d35"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1",
+    "AC2",
+    "AC3"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): Genuinely re-fixed. Extended FirestoreGatewayImpl._guardPermission from 2 to 38 call sites (every remaining push*/fetch*/delete* method), rethrows FirestorePermissionDeniedException ahead of pushCompletionsBatch's generic SyncPushException wrap, and wired OutboxProcessor to fire AnalyticsEvent.syncPermissionDenied from both its completion-batch and non-completion push failure paths. New group-17 tests in firestore_gateway_impl_test.dart simulate a real PERMISSION_DENIED at the exact set()/commit() I/O point via hand-written FirebaseFirestore/WriteBatch/DocumentReference proxies."
   },
   {
    "id": "AUD-core-sync-18",
@@ -3283,13 +3310,20 @@
   {
    "id": "AUD-app-07",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Thread AppLogger into database_provider.dart's SeedManager construction — bootstrapSeedDb's logger wiring is dead code and SeedManager's diagnostics are silent in production",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). MISMATCH FLAGGED: prior state was merged (commit 72562c2e7c403e6b80fd2924d007f7f0abc884a2, 1 review round, 4/4 ACs verified -- AppLogger wired into SeedManager, dead seed_bootstrap.dart deleted, Rule-0 audit check 27/27 added). Bulk-reopened to todo via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)' immediately prior to this pass. This run's fresh engine outcome does not include this id in merged (merged=[] this run) and places it in blocked instead, terminating at no-progress cap / loop end without re-certifying it. Independently checked: commit 72562c2e remains an ancestor of this branch's HEAD, AppLogger wiring is still present in database_provider.dart, and seed_bootstrap.dart is still absent -- the source change itself is real and unreverted; the wave-2 gate's 'undelivered or regression' finding for this batch most likely traces to something else in the wave (CF-import/stale-codegen). The bulk reopen that preceded this pass also cleared this row's commits/reviewRounds/acVerified fields (matching the uniform treatment applied to all 13 ids in this batch, not something this pass did); the commit SHA above is cited in this note's prose, not the commits field, for the evidence trail. Per this run's engine outcome the row is downgraded to blocked pending the gate-repair investigation identifying and fixing the actual regression, then re-certifying (at which point commits/acVerified should be restored). Do not treat this note as a finding that the fix is broken; it records only that this pass could not confirm 'merged' against the fresh engine outcome and is deferring to it."
+   "commits": [
+    "72562c2e7c403e6b80fd2924d007f7f0abc884a2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1",
+    "AC2",
+    "AC3",
+    "AC4"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): MISMATCH resolved (ledger-correction only, no re-fix needed). The row's own prior note already independently verified commit 72562c2e remains an ancestor of audit-fix HEAD, AppLogger wiring is still present in database_provider.dart, and seed_bootstrap.dart is still absent — the source change is real and unreverted. Restored to merged with the original commit/reviewRounds/acVerified per that note's own closing instruction ('at which point commits/acVerified should be restored'). The blocking gate reason (GATE1 CF-import regression in tutored_pull_providers.dart) was unrelated to this finding and has been fixed separately this pass."
   },
   {
    "id": "AUD-core-analytics-02",
@@ -4182,13 +4216,19 @@
   {
    "id": "AUD-core-sync-28",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Wire the tested D18 tutored-mirror-wipe fix (resolveOwnerAccountIdForWipe / wipeRevokedMirrors) into the real incoming-grants reconcile path, or delete it",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). MISMATCH FLAGGED: prior state was merged (w2r1c10, mergeSha e39faa03618288d9caeb2074cd3aa88d00446ead, commit 5f59ba4d5bf4e303eb9f96dbc807ab40d5778fb4 deleting the dead resolveOwnerAccountIdForWipe/wipeRevokedMirrors helpers, 2 review rounds, 3/3 ACs verified). Bulk-reopened to todo via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)' immediately prior to this pass. This run's fresh engine outcome does not include this id in merged (merged=[] this run) and places it in blocked instead, terminating at no-progress cap / loop end without re-certifying it. Independently checked: commit 5f59ba4d remains an ancestor of this branch's HEAD and the deleted symbols are still absent from tutored_pull_providers.dart -- the source change itself is real and unreverted, so the wave-2 gate's 'undelivered or regression' finding for this batch most likely traces to something else in the wave (CF-import/stale-codegen), not a revert of this specific diff. The bulk reopen that preceded this pass also cleared this row's commits/reviewRounds/acVerified fields (matching the uniform treatment applied to all 13 ids in this batch, not something this pass did); the commit SHA above is cited in this note's prose, not the commits field, for the evidence trail. Per this run's engine outcome the row is downgraded to blocked pending the gate-repair investigation identifying and fixing the actual regression, then re-certifying (at which point commits/acVerified should be restored). Do not treat this note as a finding that the fix is broken; it records only that this pass could not confirm 'merged' against the fresh engine outcome and is deferring to it."
+   "commits": [
+    "5f59ba4d5bf4e303eb9f96dbc807ab40d5778fb4"
+   ],
+   "reviewRounds": 2,
+   "acVerified": [
+    "AC1",
+    "AC2",
+    "AC3"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): MISMATCH resolved (ledger-correction only, no re-fix needed). The row's own prior note already independently verified commit 5f59ba4d remains an ancestor of audit-fix HEAD and the deleted resolveOwnerAccountIdForWipe/wipeRevokedMirrors symbols are still absent from tutored_pull_providers.dart — the source change is real and unreverted. Restored to merged (w2r1c10, mergeSha e39faa03618288d9caeb2074cd3aa88d00446ead) per that note's own closing instruction. The blocking gate reason (GATE1 CF-import regression, a DIFFERENT defect in the same file) was unrelated to this finding and has been fixed separately this pass."
   },
   {
    "id": "AUD-account-08",
@@ -4981,13 +5021,19 @@
   {
    "id": "AUD-sync-03",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "OutboxSyncWriteFacade._enqueue swallows every drain-tee failure with no log and no AppLogger field in the class",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). Prior state: reclassified TODO<-BLOCKED by the 2026-07-11 gate-repair pass (no genuine external blocker found at that time -- unreconciled salvage/w2c-18 commit 48b5e820 is built directly on top of AUD-sync-02's uncommitted refactor and is not independently cherry-pickable from it). Bulk-reopened again via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)'. This engine run re-attempted the fix and again terminated at no-progress cap / loop end with this id in its final blocked set; commits=[] on this branch. Left todo for a future harvest/relaunch pass alongside AUD-sync-02."
+   "commits": [
+    "865d41d6",
+    "c8ae8ea3"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1",
+    "AC2"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): Genuinely re-fixed. OutboxSyncWriteFacade._enqueue's log-less 'catchError((Object _) {})' around the write-tee drain-kick is replaced by a shared _kickDrainTee helper that logs via the new LogEvents.sync.outboxEnqueueDrainTeeFailed event through an optional 'logger:' constructor param, wired at all 3 production construction sites (sync_orchestrator_providers.dart, sync_providers.dart x2). New outbox_sync_write_facade_test.dart asserts a thrown drain-tee exception is logged and a successful one is not. make audit check 35/36 (check_eh3_log_less_catch.dart) wired to guard the regression."
   },
   {
    "id": "AUD-tutoring-13",
@@ -5988,13 +6034,19 @@
   {
    "id": "AUD-core-sync-31",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "Deduplicate the Ref/WidgetRef builder pairs in tutored_pull_providers.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). MISMATCH FLAGGED: prior state was merged (w2r1c10, mergeSha e39faa03618288d9caeb2074cd3aa88d00446ead, commits 187b1991ecbfdf51d9d0f69e0eb2fce78f4b7f10 + 96bb1147ba34e6cf259f27007f37e92accc2ef91, 2 review rounds, AC verified). Bulk-reopened to todo via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)' immediately prior to this pass. This run's fresh engine outcome does not include this id in merged (merged=[] this run) and places it in blocked instead, terminating at no-progress cap / loop end without re-certifying it. Independently checked: both commits remain ancestors of this branch's HEAD -- the dedup (_buildMirrorWipeService) is still present in tutored_pull_providers.dart, so the source change itself is real and unreverted; the wave-2 gate's 'undelivered or regression' finding for this batch most likely traces to something else in the wave (CF-import/stale-codegen). The bulk reopen that preceded this pass also cleared this row's commits/reviewRounds/acVerified fields (matching the uniform treatment applied to all 13 ids in this batch, not something this pass did); the commit SHA above is cited in this note's prose, not the commits field, for the evidence trail. Per this run's engine outcome the row is downgraded to blocked pending the gate-repair investigation identifying and fixing the actual regression, then re-certifying (at which point commits/acVerified should be restored). Do not treat this note as a finding that the fix is broken; it records only that this pass could not confirm 'merged' against the fresh engine outcome and is deferring to it."
+   "commits": [
+    "187b1991ecbfdf51d9d0f69e0eb2fce78f4b7f10",
+    "96bb1147ba34e6cf259f27007f37e92accc2ef91"
+   ],
+   "reviewRounds": 2,
+   "acVerified": [
+    "AC1",
+    "AC2"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): MISMATCH resolved (ledger-correction only, no re-fix needed). The row's own prior note already independently verified both commits remain ancestors of audit-fix HEAD and the dedup (_buildMirrorWipeService) is still present in tutored_pull_providers.dart — the source change is real and unreverted. Restored to merged (w2r1c10, mergeSha e39faa03618288d9caeb2074cd3aa88d00446ead) per that note's own closing instruction. The blocking gate reason (GATE1 CF-import regression, a DIFFERENT defect in the same file) was unrelated to this finding and has been fixed separately this pass."
   },
   {
    "id": "AUD-core-widgets-02",
@@ -6306,13 +6358,17 @@
   {
    "id": "AUD-core-sync-32",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "Deduplicate the copy-pasted cause-suffix toString() snippet across 3 sync exception classes",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). Prior state: skipped-refuted (wave-2 engine outcome, ledger reconciliation, 2026-07-11) but flagged with an explicit evidence gap -- no rationale/review transcript found anywhere on disk, and the duplicated cause-suffix toString() ternary was independently confirmed still present verbatim in all 3 cited files, i.e. NOT an already-fixed-in-code basis. That entry's own 'action required' note called for the wave-2 closing-gate reviewer to either confirm the refutation with real evidence or reopen as todo/blocked -- consistent with that, the row was bulk-reopened via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)' and this run's fresh engine outcome places it in blocked (not refuted, not merged). Re-independently checked: the duplicated ternary is still present verbatim in firestore_permission_denied_exception.dart:37, merge_exception.dart:25, and outbox_dead_letter_exception.dart:27 -- genuinely unfixed. commits=[] on this branch. Left todo for a future harvest/relaunch pass (extract a shared causeSuffix getter/mixin per the finding's recommendation)."
+   "commits": [
+    "1fc6f259"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): Genuinely re-fixed, scope reduced by AUD-core-sync-27 (landed earlier in this delivery run): the finding originally named 3 sibling classes with a duplicated cause-suffix toString() ternary, but 2 of the 3 (MergeException, OutboxDeadLetterException) were deleted as dead code by AUD-core-sync-27 before this pass — re-verified via grep that only FirestorePermissionDeniedException still had the duplicate. Extracted a shared CauseSuffix mixin (core/exceptions/app_exception.dart) and mixed it in there. Flagged (not fixed — out of this finding's named scope) an identical duplicate in core/network/sefaria/curriculum_content_fetcher.dart's SefariaApiException as a candidate follow-up."
   },
   {
    "id": "AUD-core-sync-37",
@@ -6611,13 +6667,18 @@
   {
    "id": "AUD-sync-08",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "outboxSyncWriteFacadeProvider mutates DAO state and fires a network re-enqueue from inside its Provider build function",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). Prior state: reclassified TODO<-BLOCKED by the 2026-07-11 gate-repair pass (no genuine external blocker found at that time -- unreconciled salvage/w2c-50 and salvage/w2c-6/w2f-16/-2 branches conflict on coding-standards.md, sync_providers_test.dart, and learning_tracker_lints.dart against the already-landed AUD-sync-04 rule registration). Bulk-reopened again via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)'. This engine run re-attempted the fix and again terminated at no-progress cap / loop end with this id in its final blocked set; commits=[] on this branch. Left todo for a future harvest/relaunch pass."
+   "commits": [
+    "865d41d6"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1",
+    "AC2"
+   ],
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): Genuinely re-fixed. outboxSyncWriteFacadeProvider's DAO field mutation (pointsBalanceDao.syncSink = facade) and unawaited D14 recovery-scan call — both previously synchronous statements inside the Provider build callback — are now deferred to a ref.mounted-guarded scheduleMicrotask; the recovery scan is additionally gated by a new keepAlive _recoveredLedgerProfileIdsProvider Set so it fires at most once per profile per session. New custom_lint rule no_side_effect_in_provider_build (NoSideEffectInProviderBuild) flags this shape going forward; registered with its own 8-test suite."
   },
   {
    "id": "AUD-sync-07",
@@ -6650,7 +6711,7 @@
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). Prior state: reclassified TODO<-BLOCKED by the 2026-07-11 gate-repair pass (no genuine external blocker found at that time -- unreconciled salvage/w2c-49/-56 commit 92867ae2 conflicts with local_data_upload_service.dart changes already landed via AUD-core-sync-10). Bulk-reopened again via 'wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)'. This engine run re-attempted the fix and again terminated at no-progress cap / loop end with this id in its final blocked set; commits=[] on this branch. Left todo for a future harvest/relaunch pass."
+   "notes": "GATE-REPAIR (2026-07-11, wave-2 closing-gate remediation pass): NOT delivered this pass — genuinely incomplete, not a false blocker and not re-classified to hide that. This finding (inject Repository/Service instead of constructing inline at 3 SM-7 sites: LocalDataUploadService's ParentAnalyticsRepositoryImpl, OutboxSyncWriteFacade's RewardMilestoneService, and reward_settings_merge_delegate.dart's per-call RewardMilestoneService) was deliberately deprioritised in this gate-repair pass in favour of completing the other 11 wave-2 blocked ids (3 MISMATCH ledger corrections + 8 genuine re-fixes, all delivered and verified via make audit / make ci this pass) within the pass's time budget. Left as a real, scoped follow-up: add an optional 'analyticsRepository'/'rewardMilestoneService' constructor param (mirrors LocalDataUploadService's existing 'logger' pattern) at the first two sites, and a dedicated rewardMilestoneServiceFactoryProvider for the third — no design obstacle, just not attempted here."
   },
   {
    "id": "AUD-tracks-21",
