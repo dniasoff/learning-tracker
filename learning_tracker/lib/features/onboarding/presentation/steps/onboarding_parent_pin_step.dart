@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Sub-steps within the parent PIN setup phase.
 ///
@@ -52,7 +53,7 @@ class _OnboardingParentPinStepState
   Future<void> _onConfirmPinEntered(String pin) async {
     if (pin != _firstPin) {
       setState(() {
-        _pinError = 'PINs do not match';
+        _pinError = AppLocalizations.of(context)!.pinsDoNotMatch;
         _pinStep = PinStep.enterPin;
         _firstPin = null;
       });
@@ -61,10 +62,13 @@ class _OnboardingParentPinStepState
 
     try {
       await ref.read(pinServiceProvider).setProfilePin(widget.profileId, pin);
-    } on ArgumentError catch (e) {
+    } on InvalidPinFormatException {
+      // AUD-onboarding-16 (EH-2/EH-5): resolve the display string via
+      // AppLocalizations instead of reading the exception's (English,
+      // developer-facing only) message.
       if (mounted) {
         setState(() {
-          _pinError = e.message as String?;
+          _pinError = AppLocalizations.of(context)!.pinInvalidFormat;
           _pinStep = PinStep.enterPin;
           _firstPin = null;
         });

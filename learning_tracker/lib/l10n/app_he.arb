@@ -812,6 +812,7 @@
   "enterNewPin": "הזינו קוד חדש",
   "confirmNewPin": "אשרו את הקוד החדש",
   "pinsDoNotMatch": "הקודים אינם תואמים",
+  "pinInvalidFormat": "יש להזין קוד בן 4 ספרות",
   "pinFailedToSave": "שמירת הקוד נכשלה",
   "pinNoActiveProfile": "אין פרופיל פעיל",
   "tabBarDashboard": "לוח",

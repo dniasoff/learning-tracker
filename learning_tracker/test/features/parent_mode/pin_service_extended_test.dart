@@ -103,13 +103,15 @@ void main() {
 
   group('PinService profile PIN', () {
     test('setProfilePin validates 4-digit numeric PIN', () async {
+      // AUD-onboarding-16: PinService now throws a typed
+      // InvalidPinFormatException (EH-2/EH-5) instead of ArgumentError.
       expect(
         () => service.setProfilePin(profileId, '123'),
-        throwsArgumentError,
+        throwsA(isA<InvalidPinFormatException>()),
       );
       expect(
         () => service.setProfilePin(profileId, 'abcd'),
-        throwsArgumentError,
+        throwsA(isA<InvalidPinFormatException>()),
       );
     });
 
@@ -222,7 +224,12 @@ void main() {
 
   group('PinService tutor PIN', () {
     test('setTutorPin validates 4-digit numeric PIN', () async {
-      expect(() => service.setTutorPin(profileId, '12'), throwsArgumentError);
+      // AUD-onboarding-16: PinService now throws a typed
+      // InvalidPinFormatException (EH-2/EH-5) instead of ArgumentError.
+      expect(
+        () => service.setTutorPin(profileId, '12'),
+        throwsA(isA<InvalidPinFormatException>()),
+      );
     });
 
     test('setTutorPin stores a hash', () async {
