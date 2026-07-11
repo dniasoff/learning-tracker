@@ -1264,6 +1264,90 @@ void main() {
     });
   });
 
+  group('OutboxProcessor.drain — malformed payload isolation '
+      '(AUD-core-sync-09)', () {
+    Future<void> insertRawRow({
+      required String entityKind,
+      required String entityKey,
+      required String rawPayload,
+    }) => db.outboxDao.insertOutboxRow(
+      OutboxCompanion.insert(
+        profileId: profileId,
+        entityKind: entityKind,
+        entityKey: entityKey,
+        payload: rawPayload,
+        createdAt: DateTime.utc(2026, 5, 14),
+      ),
+    );
+
+    test(
+      'a malformed non-JSON-object completion payload does not abort the '
+      'whole drain — the sibling valid row of a different kind still pushes, '
+      'and the bad row is marked attempted without blocking siblings',
+      () async {
+        // Non-JSON-object payload (a bare JSON null) — decodes fine via
+        // jsonDecode but fails the `is Map<String, dynamic>` check.
+        await insertRawRow(
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'bad-completion',
+          rawPayload: 'null',
+        );
+        await insertRow(entityKind: OutboxEntityKind.streak, entityKey: 's1');
+
+        final count = await processor.drain(profileId);
+
+        expect(count, 1, reason: 'the valid streak row must still be pushed');
+        expect(
+          pipeline.calls,
+          contains(('streak', 's1')),
+          reason: 'sibling of a different kind is not blocked by the bad row',
+        );
+
+        final rows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.completion,
+          profileId,
+        );
+        expect(rows, hasLength(1), reason: 'bad row is retained, not deleted');
+        expect(
+          rows.single.attempts,
+          greaterThan(0),
+          reason: 'bad row is marked attempted, not left at 0 forever',
+        );
+      },
+    );
+
+    test(
+      'a malformed non-JSON-object non-completion payload does not abort '
+      'the whole drain — a sibling valid row of the SAME kind still pushes, '
+      'and the bad row is marked attempted without blocking siblings',
+      () async {
+        await insertRawRow(
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'bad-streak',
+          rawPayload: 'null',
+        );
+        await insertRow(entityKind: OutboxEntityKind.streak, entityKey: 'ok');
+
+        final count = await processor.drain(profileId);
+
+        expect(count, 1, reason: 'the valid streak row must still be pushed');
+        expect(pipeline.calls, contains(('streak', 'ok')));
+
+        final rows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.streak,
+          profileId,
+        );
+        expect(rows, hasLength(1), reason: 'bad row is retained, not deleted');
+        expect(rows.single.entityKey, 'bad-streak');
+        expect(
+          rows.single.attempts,
+          greaterThan(0),
+          reason: 'bad row is marked attempted, not left at 0 forever',
+        );
+      },
+    );
+  });
+
   group('OutboxEntityKind constants', () {
     test('completion constant is "completion"', () {
       expect(OutboxEntityKind.completion, 'completion');

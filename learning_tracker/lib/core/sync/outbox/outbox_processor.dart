@@ -306,13 +306,45 @@ class OutboxProcessor {
       final rowIdsByKey = <String, List<int>>{};
       final representativePayload = <String, Map<String, dynamic>>{};
       final orderedKeys = <String>[];
+      // AUD-core-sync-09: entityKeys whose representative row failed to
+      // decode. Decoding happened OUTSIDE any try/catch here, before the
+      // batch-push try/catch below — a single malformed payload (DB
+      // corruption, jsonEncode(null), a future write bug) threw all the way
+      // out of drain(), skipping every remaining completion, every
+      // non-completion kind, AND the profile-0 sweep. A bad payload can
+      // never succeed on retry either, so it is treated like any other
+      // per-row failure: marked attempted (not retried forever) without
+      // blocking its siblings or other kinds.
+      final undecodableKeys = <String>{};
       for (final row in eligibleCompletions) {
-        final ids = rowIdsByKey.putIfAbsent(row.entityKey, () {
-          orderedKeys.add(row.entityKey);
-          representativePayload[row.entityKey] = _decodePayload(row.payload);
-          return <int>[];
-        });
+        final ids = rowIdsByKey.putIfAbsent(row.entityKey, () => <int>[]);
         ids.add(row.id);
+        if (representativePayload.containsKey(row.entityKey) ||
+            undecodableKeys.contains(row.entityKey)) {
+          continue; // already decoded (or known-bad) for this key
+        }
+        try {
+          representativePayload[row.entityKey] = _decodePayload(row.payload);
+          orderedKeys.add(row.entityKey);
+        } catch (e) {
+          undecodableKeys.add(row.entityKey);
+          AppLogger.instance.warning(
+            event: 'sync_outbox_push_failed',
+            fields: {
+              'kind': OutboxEntityKind.completion,
+              'entity_key': row.entityKey,
+              'error': e.toString(),
+            },
+          );
+        }
+      }
+      for (final key in undecodableKeys) {
+        for (final id in rowIdsByKey[key]!) {
+          await _dao.markAttempted(
+            id,
+            error: 'Malformed outbox payload: cannot decode as JSON object',
+          );
+        }
       }
 
       final entries = orderedKeys
@@ -397,8 +429,12 @@ class OutboxProcessor {
           continue; // backoff window not yet elapsed
         }
 
-        final payload = _decodePayload(row.payload);
         try {
+          // AUD-core-sync-09: decode INSIDE the try so a malformed payload
+          // is treated like any other per-row failure (logged + marked
+          // attempted, siblings and other kinds keep draining) instead of
+          // throwing out of the whole kind loop.
+          final payload = _decodePayload(row.payload);
           await _dispatch(
             kind: kind,
             profileId: profileId,
