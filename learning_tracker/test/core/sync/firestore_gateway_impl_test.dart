@@ -2056,6 +2056,81 @@ void main() {
         expect(snap.docs, isEmpty);
       },
     );
+
+    // AUD-core-sync-02: the real data lives at
+    // users/{uid}/learner_profiles/{profileId}/<collection>/... (per this
+    // class's own doc comment) — NOT at users/{uid}/<collection> directly.
+    // deleteUserData previously queried the wrong (always-empty) top-level
+    // paths and silently deleted nothing under a profile.
+    test('deleteUserData removes real nested per-profile subcollections '
+        '(completions, streak_events, goals) — AUD-core-sync-02', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      final profileRef = fs
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc('1');
+      await profileRef.set({'name': 'Profile 1'});
+      await profileRef.collection('completions').doc('c1').set({
+        'sefaria_ref': 'Berakhot.2a',
+      });
+      await profileRef.collection('streak_events').doc('s1').set({
+        'ulid': 'ulid1',
+      });
+      await profileRef.collection('goals').doc('g1').set({'target': 10});
+
+      await _gw(fs).deleteUserData(_uid);
+
+      final completions = await profileRef.collection('completions').get();
+      final streaks = await profileRef.collection('streak_events').get();
+      final goals = await profileRef.collection('goals').get();
+      expect(
+        completions.docs,
+        isEmpty,
+        reason:
+            'nested completions must actually be deleted, not silently '
+            'skipped by querying the wrong top-level path',
+      );
+      expect(streaks.docs, isEmpty);
+      expect(goals.docs, isEmpty);
+    });
+
+    test('deleteUserData collection names match this file\'s own push*/listen* '
+        'collection names exactly (no diverging/stale names) — '
+        'AUD-core-sync-02', () {
+      // The list this test asserts against is intentionally re-derived
+      // from a grep of _collection(profileId, '<name>') call sites in this
+      // same file, not copy-pasted from the production constant — so a
+      // future collection rename that updates one but not the other still
+      // fails this test.
+      const namesUsedByPushListenMethods = <String>{
+        'completions',
+        'streak_events',
+        'settings',
+        'curriculum_tracks',
+        'learning_order',
+        'bookmarks',
+        'preferences',
+        'learning_ledger',
+        'profile_programs',
+        'goals',
+        'stage_definitions',
+        'study_day_configs',
+        'points_ledger',
+        'reward_redemptions',
+      };
+      final divergentNames = FirestoreGatewayImpl
+          .perProfileSubcollectionsForDeletion
+          .toSet()
+          .difference(namesUsedByPushListenMethods);
+      expect(
+        divergentNames,
+        isEmpty,
+        reason:
+            'deleteUserData targets a collection name no push*/listen* '
+            'method uses: $divergentNames',
+      );
+    });
   });
 
   // ── 13. fetchAuditLogEntries ───────────────────────────────────────────────

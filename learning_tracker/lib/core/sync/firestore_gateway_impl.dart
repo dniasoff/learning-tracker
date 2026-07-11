@@ -625,26 +625,52 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     }, SetOptions(merge: true));
   }
 
+  /// Real per-profile subcollection names — matches this file's own
+  /// `_collection(profileId, '<name>')` call sites in every `push*` method
+  /// exactly (AUD-core-sync-02: the class doc comment already states the
+  /// real layout is `users/{uid}/learner_profiles/{profileId}/<collection>`;
+  /// [deleteUserData] previously queried the wrong, always-empty top-level
+  /// `users/{uid}/<collection>` paths and silently deleted nothing here).
+  /// `@visibleForTesting` so a test can assert this list never diverges from
+  /// the names the push/listen methods actually use.
+  @visibleForTesting
+  static const List<String> perProfileSubcollectionsForDeletion = [
+    'completions',
+    'streak_events',
+    'settings',
+    'curriculum_tracks',
+    'learning_order',
+    'bookmarks',
+    'preferences',
+    'learning_ledger',
+    'profile_programs',
+    'goals',
+    'stage_definitions',
+    'study_day_configs',
+    'points_ledger',
+    'reward_redemptions',
+  ];
+
   @override
   Future<void> deleteUserData(String uid) async {
     final userDoc = _firestore.collection('users').doc(uid);
-    const subcollections = [
-      'completions',
-      'bookmarks',
-      'settings',
-      'streaks',
-      'profiles',
-      'learner_profiles',
-      'goals',
-      'rewards',
-      'sync_queue',
-      'learning_order',
-      'stage_definitions',
-      'diagnostic_logs',
-    ];
-    for (final sub in subcollections) {
-      await _deleteCollection(userDoc.collection(sub));
+
+    // Enumerate every learner profile under this account and delete its
+    // real per-profile subcollections — the data lives at
+    // users/{uid}/learner_profiles/{profileId}/<collection>, not at
+    // users/{uid}/<collection> (see the class doc comment).
+    final profilesSnapshot = await userDoc.collection('learner_profiles').get();
+    for (final profileDoc in profilesSnapshot.docs) {
+      for (final sub in perProfileSubcollectionsForDeletion) {
+        await _deleteCollection(profileDoc.reference.collection(sub));
+      }
+      await profileDoc.reference.delete();
     }
+
+    // Account-level collections that are NOT nested under a profile.
+    await _deleteCollection(userDoc.collection('diagnostic_logs'));
+    await _deleteCollection(userDoc.collection('profile'));
+
     await userDoc.delete();
   }
 
