@@ -539,6 +539,7 @@ audit: lint-rules-test ## Run all 27 enforcement greps (NFR19) — exits non-zer
 	HITS=$$(find .. -name "coding-standards.md" \
 	    -not -path "*/_archive/*" \
 	    -not -path "*/.git/*" \
+	    -not -path "*/.claude/*" \
 	    -not -path "*/node_modules/*" \
 	    -not -path "*/build/*" \
 	    -not -path "*/.dart_tool/*"); \
