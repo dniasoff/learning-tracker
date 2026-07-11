@@ -22,6 +22,9 @@
 ///   * completed_at  — maps to eventTimestamp; required field
 ///   * points        — persisted as-is
 ///   * prior_mark_only — conditional; only emitted when true
+///
+/// AG-5 (AUD-app-05): relocated from
+/// test/sync/merge/completions_roundtrip_test.dart to its mirrored path.
 @Tags(['unit', 'sync'])
 library;
 
@@ -34,7 +37,7 @@ import 'package:learning_tracker/core/sync/merge/completion_event_merger.dart';
 import 'package:learning_tracker/core/sync/merge/drift_merge_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/test_database.dart';
+import '../../../helpers/test_database.dart';
 
 const _codec = CompletionEventCodec();
 

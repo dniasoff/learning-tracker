@@ -5,15 +5,47 @@
 /// the Firestore schema migrated to snake_case in W3.18/W3.19. Every
 /// pulled row would silently fail the null-guard and be discarded, causing
 /// complete data loss on new-device / device-restore scenarios.
+///
+/// AG-5 (AUD-app-05): also folds in
+/// test/sync/merge/learning_ledger_roundtrip_test.dart's codec.encode() ->
+/// merger -> DB round-trip group (Phase B invariant: the codec's key names
+/// must match what the merger reads).
 library;
 
+import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/codec/learning_ledger_codec.dart';
 import 'package:learning_tracker/core/sync/merge/learning_ledger_merger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/test_database.dart';
 
+// ── codec.encode() → merger → DB round-trip fixtures ─────────────────────────
+const _rtCodec = LearningLedgerCodec();
+const _rtProfileId = 1;
+const _rtUlid = '01JBVZ0000TESTLLID00000AB';
+const _rtCurriculumId = 'bavli';
+const _rtEntryScope = 'masechta';
+const _rtUnitIdentifier = 'Berakhot';
+const _rtUnitDisplayNameHe = 'ברכות';
+const _rtUnitDisplayNameEn = 'Berakhot';
+const _rtTrackType = 'personal';
+// track_id is nullable (ON DELETE SET NULL); use null in the round-trip so we
+// don't need to seed a curriculum_tracks row in this FK-constrained test.
+const int? _rtTrackId = null;
+final _rtCompletedAt = DateTime.utc(2026, 6, 18, 10, 0, 0);
+const _rtCompletionNumber = 2;
+const _rtMarkedBy = _rtProfileId;
+const _rtIsManual = false;
+
 void main() {
+  setUpAll(() {
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+  });
+
   group('LearningLedgerMerger', () {
     test('C1 regression: snake_case row is inserted into Drift', () async {
       // GIVEN an in-memory DB with a seeded learner profile (profileId = 1).
@@ -230,6 +262,198 @@ void main() {
       );
 
       await db.close();
+    });
+  });
+
+  group('learning_ledger — codec.encode() → merger → DB round-trip', () {
+    late UserDatabase db;
+    late LearningLedgerMerger merger;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      db = UserDatabase(NativeDatabase.memory());
+      merger = LearningLedgerMerger(db);
+
+      // Seed account + profile so FK constraints on learning_ledger are met.
+      await seedProfile(db);
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    test(
+      'codec.encode() payload is accepted by the merger and the row lands in DB',
+      () async {
+        final row = LearningLedgerRow(
+          ulid: _rtUlid,
+          profileId: _rtProfileId,
+          curriculumId: _rtCurriculumId,
+          entryScope: _rtEntryScope,
+          unitIdentifier: _rtUnitIdentifier,
+          unitDisplayNameHe: _rtUnitDisplayNameHe,
+          unitDisplayNameEn: _rtUnitDisplayNameEn,
+          trackType: _rtTrackType,
+          trackId: _rtTrackId,
+          completedAt: _rtCompletedAt,
+          completionNumber: _rtCompletionNumber,
+          markedBy: _rtMarkedBy,
+          isManual: _rtIsManual,
+        );
+        final payload = _rtCodec.encode(row);
+
+        // Verify the payload carries all expected keys.
+        expect(payload['ulid'], _rtUlid);
+        expect(payload['profile_id'], _rtProfileId);
+        expect(payload['curriculum_id'], _rtCurriculumId);
+        expect(payload['entry_scope'], _rtEntryScope);
+        expect(payload['unit_identifier'], _rtUnitIdentifier);
+        expect(payload['unit_display_name_he'], _rtUnitDisplayNameHe);
+        expect(payload['unit_display_name_en'], _rtUnitDisplayNameEn);
+        expect(payload['track_type'], _rtTrackType);
+        expect(payload['track_id'], _rtTrackId);
+        expect(payload.containsKey('completed_at'), isTrue);
+        expect(payload['completion_number'], _rtCompletionNumber);
+        expect(payload['marked_by'], _rtMarkedBy);
+        expect(payload['is_manual'], _rtIsManual);
+
+        // The merger must accept the codec payload and write it to Drift.
+        await merger.merge(profileId: _rtProfileId, rows: [payload]);
+
+        // Assert: the row materialised in the DB — not skipped.
+        final entries = await db.learningLedgerDao.getEntriesByProfile(
+          _rtProfileId,
+        );
+
+        expect(
+          entries,
+          hasLength(1),
+          reason:
+              'LearningLedgerMerger must INSERT the row when codec.encode() '
+              'payload is fed in — if empty, the merge read-keys diverge from '
+              'the codec write-keys (push↔merge key-contract bug). '
+              'Most likely cause: merger reads a key (e.g. "completed_at") '
+              'that the old codec emitted under a different name '
+              '("created_at"), causing the null-guard to discard the row.',
+        );
+
+        final stored = entries.first;
+        expect(stored.ulid, _rtUlid);
+        expect(stored.curriculumId, _rtCurriculumId);
+        expect(stored.unitIdentifier, _rtUnitIdentifier);
+        expect(stored.trackType, _rtTrackType);
+        expect(stored.trackId, _rtTrackId);
+        expect(stored.completionNumber, _rtCompletionNumber);
+        expect(stored.markedBy, _rtMarkedBy);
+        expect(stored.isManual, _rtIsManual);
+
+        // completed_at round-trips as UTC ISO-8601.
+        final storedUtc = stored.completedAt.toUtc();
+        expect(storedUtc.year, _rtCompletedAt.year);
+        expect(storedUtc.month, _rtCompletedAt.month);
+        expect(storedUtc.day, _rtCompletedAt.day);
+      },
+    );
+
+    test(
+      'dedup: two merges of the same codec payload produce exactly one DB row',
+      () async {
+        final payload = _rtCodec.encode(
+          LearningLedgerRow(
+            ulid: _rtUlid,
+            profileId: _rtProfileId,
+            curriculumId: _rtCurriculumId,
+            entryScope: _rtEntryScope,
+            unitIdentifier: _rtUnitIdentifier,
+            unitDisplayNameHe: _rtUnitDisplayNameHe,
+            unitDisplayNameEn: _rtUnitDisplayNameEn,
+            trackType: _rtTrackType,
+            completedAt: _rtCompletedAt,
+            completionNumber: _rtCompletionNumber,
+            markedBy: _rtMarkedBy,
+            isManual: _rtIsManual,
+          ),
+        );
+
+        // Simulate an outbox retry: merge the same payload twice.
+        await merger.merge(profileId: _rtProfileId, rows: [payload]);
+        await merger.merge(profileId: _rtProfileId, rows: [payload]);
+
+        final entries = await db.learningLedgerDao.getEntriesByProfile(
+          _rtProfileId,
+        );
+        expect(
+          entries,
+          hasLength(1),
+          reason:
+              'learning_ledger has a UNIQUE (profileId, ulid) index; '
+              'a duplicate push must be silently collapsed to one row '
+              '(INSERT OR IGNORE semantics).',
+        );
+      },
+    );
+
+    test('codec round-trips through encode → decode', () {
+      final row = LearningLedgerRow(
+        ulid: _rtUlid,
+        profileId: _rtProfileId,
+        curriculumId: _rtCurriculumId,
+        entryScope: _rtEntryScope,
+        unitIdentifier: _rtUnitIdentifier,
+        unitDisplayNameHe: _rtUnitDisplayNameHe,
+        unitDisplayNameEn: _rtUnitDisplayNameEn,
+        trackType: _rtTrackType,
+        trackId: _rtTrackId,
+        completedAt: _rtCompletedAt,
+        completionNumber: _rtCompletionNumber,
+        markedBy: _rtMarkedBy,
+        isManual: _rtIsManual,
+      );
+      final payload = _rtCodec.encode(row);
+      final decoded = _rtCodec.decode(payload);
+
+      expect(decoded, isNotNull);
+      expect(decoded!.ulid, _rtUlid);
+      expect(decoded.profileId, _rtProfileId);
+      expect(decoded.curriculumId, _rtCurriculumId);
+      expect(decoded.entryScope, _rtEntryScope);
+      expect(decoded.unitIdentifier, _rtUnitIdentifier);
+      expect(decoded.unitDisplayNameHe, _rtUnitDisplayNameHe);
+      expect(decoded.unitDisplayNameEn, _rtUnitDisplayNameEn);
+      expect(decoded.trackType, _rtTrackType);
+      expect(decoded.trackId, _rtTrackId);
+      expect(decoded.completionNumber, _rtCompletionNumber);
+      expect(decoded.markedBy, _rtMarkedBy);
+      expect(decoded.isManual, _rtIsManual);
+
+      final decodedUtc = decoded.completedAt.toUtc();
+      expect(decodedUtc.year, _rtCompletedAt.year);
+      expect(decodedUtc.month, _rtCompletedAt.month);
+      expect(decodedUtc.day, _rtCompletedAt.day);
+    });
+
+    test('null-guard: missing curriculum_id causes decode to return null', () {
+      final payload = _rtCodec.encode(
+        LearningLedgerRow(
+          ulid: _rtUlid,
+          profileId: _rtProfileId,
+          curriculumId: _rtCurriculumId,
+          entryScope: _rtEntryScope,
+          unitIdentifier: _rtUnitIdentifier,
+          unitDisplayNameHe: _rtUnitDisplayNameHe,
+          unitDisplayNameEn: _rtUnitDisplayNameEn,
+          trackType: _rtTrackType,
+          completedAt: _rtCompletedAt,
+          completionNumber: _rtCompletionNumber,
+          markedBy: _rtMarkedBy,
+          isManual: _rtIsManual,
+        ),
+      );
+      // Remove required field to simulate a corrupt / partial doc.
+      final broken = Map<String, dynamic>.from(payload)
+        ..remove('curriculum_id');
+
+      expect(_rtCodec.decode(broken), isNull);
     });
   });
 }

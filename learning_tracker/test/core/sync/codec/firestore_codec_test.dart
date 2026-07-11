@@ -5,6 +5,12 @@
 /// despite being the shared parsing primitive for all 15 entity codecs.
 /// A regression here would silently corrupt every entity kind's pull with
 /// nothing to catch it — this file is the direct-unit backstop.
+///
+/// AG-5 (AUD-app-05): this is also the exhaustive unit-level home AG-5's
+/// test-mirroring checker requires for
+/// lib/core/sync/codec/firestore_codec.dart — every concrete codec
+/// (BookmarkCodec, GoalCodec, StageDefinitionCodec, ...) delegates its
+/// timestamp/primitive coercions to this helper.
 @Tags(['unit', 'sync'])
 library;
 
@@ -108,6 +114,12 @@ void main() {
       final result = FirestoreCodec.encodeDateTime(utc);
 
       expect(result, '2026-06-18T10:00:00.000Z');
+    });
+
+    test('round-trips through parseDateTime', () {
+      final ts = DateTime.utc(2026, 3, 15, 12, 30);
+      final encoded = FirestoreCodec.encodeDateTime(ts);
+      expect(FirestoreCodec.parseDateTime(encoded), ts);
     });
   });
 

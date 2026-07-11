@@ -1,3 +1,8 @@
+/// Unit tests for [SettingsCodec]: the decode-only status checker
+/// (AUD-core-sync-38), decode()'s required curriculum_id null-guard, and
+/// the nested `stages` array (W3.32 combined-document shape, delegating to
+/// [StageDefinitionCodec]).
+///
 /// AUD-core-sync-38 checker: [SettingsCodec.encode] has zero production
 /// call sites (`grep -rn 'SettingsCodec()' lib/ test/` finds only the
 /// decode-side caller in `settings_merger.dart`) — unlike every sibling
@@ -12,6 +17,12 @@
 /// for that: it fails red while `encode()` still silently returns a
 /// working map, and passes once `encode()` is converted to a documented
 /// throwing stub.
+///
+/// AG-5 (AUD-app-05): decode()-side coverage below is the mirrored test
+/// this checker requires for lib/core/sync/codec/settings_codec.dart —
+/// built on raw maps rather than via `encode()`, since `encode()` is
+/// decode-only (see above). SettingsMerger's own tests likewise use raw
+/// maps built by hand rather than this codec's encode().
 @Tags(['unit', 'sync'])
 library;
 
@@ -19,10 +30,17 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/sync/codec/settings_codec.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 const _codec = SettingsCodec();
 
 void main() {
+  group('SettingsCodec — kind', () {
+    test('kind is "settings"', () {
+      expect(_codec.kind, EntityKind.settings);
+    });
+  });
+
   group('SettingsCodec.encode — decode-only status (AUD-core-sync-38)', () {
     test(
       'encode() throws to document that settings is currently pull/decode-only',
@@ -81,6 +99,56 @@ void main() {
             'and this AUD-core-sync-38 checker test should be updated / '
             'removed to match. Offending files: $offendingFiles',
       );
+    });
+  });
+
+  group('SettingsCodec — decode returns null for malformed inputs', () {
+    test('missing curriculum_id', () {
+      expect(_codec.decode({'track_id': 1}), isNull);
+    });
+
+    test('empty map', () {
+      expect(_codec.decode(const {}), isNull);
+    });
+  });
+
+  group('SettingsCodec — nested stage definitions', () {
+    test('decodes a nested stages array via StageDefinitionCodec', () {
+      final decoded = _codec.decode({
+        'curriculum_id': 'bavli',
+        'stages': [
+          {
+            'curriculum_id': 'bavli',
+            'track_id': 1,
+            'stage_order': 0,
+            'stage_name': 'Stage 1',
+            'schedule': '{"type":"delay","delay_days":7}',
+            'is_default': true,
+          },
+        ],
+      });
+      expect(decoded, isNotNull);
+      expect(decoded!.stages, hasLength(1));
+      expect(decoded.stages.single.stageName, 'Stage 1');
+    });
+
+    test(
+      'a malformed nested stage entry is dropped, not the whole document',
+      () {
+        final decoded = _codec.decode({
+          'curriculum_id': 'bavli',
+          'stages': [
+            {'stage_name': 'missing required fields'},
+          ],
+        });
+        expect(decoded, isNotNull);
+        expect(decoded!.stages, isEmpty);
+      },
+    );
+
+    test('missing stages key decodes to an empty list', () {
+      final decoded = _codec.decode({'curriculum_id': 'bavli'});
+      expect(decoded?.stages, isEmpty);
     });
   });
 }
