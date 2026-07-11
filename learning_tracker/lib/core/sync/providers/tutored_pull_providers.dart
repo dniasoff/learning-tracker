@@ -14,7 +14,6 @@
 // the tutored-session listener set.  Call attach() on successful entry and
 // detach() on exit/wipe/sign-out (via the onWipe callback).
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -45,10 +44,18 @@ TutoredPullService buildTutoredPullService({
   TutoredMirrorWipeService? wipeService,
 }) => _build(
   authRepository: ref.read(authRepositoryProvider),
-  firestore: ref.read(firebaseFirestoreProvider),
+  // Gateway construction happens here (rather than inside [_build]) so this
+  // file never spells out the `FirebaseFirestore` type by name — the DNI-333
+  // AC quarantines that import to `firestore_gateway_impl.dart` /
+  // `firestore_instance_provider.dart` only. `ref.read(...)`'s return value
+  // flows straight into [FirestoreGatewayImpl]'s constructor by inference.
+  gateway: FirestoreGatewayImpl(
+    firestore: ref.read(firebaseFirestoreProvider),
+    authRepository: ref.read(authRepositoryProvider),
+    activeAccountUid: () => parentUid,
+  ),
   database: ref.read(userDatabaseProvider),
   mergeRouter: ref.read(mergeRouterProvider),
-  parentUid: parentUid,
   wipeService: wipeService,
 );
 
@@ -60,24 +67,28 @@ TutoredPullService buildTutoredPullServiceFromWidget({
   TutoredMirrorWipeService? wipeService,
 }) => _build(
   authRepository: ref.read(authRepositoryProvider),
-  firestore: ref.read(firebaseFirestoreProvider),
+  gateway: FirestoreGatewayImpl(
+    firestore: ref.read(firebaseFirestoreProvider),
+    authRepository: ref.read(authRepositoryProvider),
+    activeAccountUid: () => parentUid,
+  ),
   database: ref.read(userDatabaseProvider),
   mergeRouter: ref.read(mergeRouterProvider),
-  parentUid: parentUid,
   wipeService: wipeService,
 );
 
 /// Shared arg-computation body for [buildTutoredPullService] and
 /// [buildTutoredPullServiceFromWidget] — takes the already-`ref.read` values
-/// (the only step that must stay duplicated, since [Ref] and [WidgetRef]
-/// share no common supertype to read through) and does the gateway
-/// construction, session gating, and service construction exactly once.
+/// / already-built [gateway] (the only steps that must stay duplicated,
+/// since [Ref] and [WidgetRef] share no common supertype to read through,
+/// and gateway construction must happen where `FirebaseFirestore`'s type can
+/// be inferred rather than named — see [buildTutoredPullService]) and does
+/// session gating and service construction exactly once.
 TutoredPullService _build({
   required AuthRepository authRepository,
-  required FirebaseFirestore firestore,
+  required FirestoreGatewayImpl gateway,
   required UserDatabase database,
   required MergeRouter mergeRouter,
-  required String parentUid,
   TutoredMirrorWipeService? wipeService,
 }) {
   // The pull reads the PARENT's Firestore namespace; authorisation is by the
@@ -94,11 +105,7 @@ TutoredPullService _build({
   }
 
   return TutoredPullService(
-    gateway: FirestoreGatewayImpl(
-      firestore: firestore,
-      authRepository: authRepository,
-      activeAccountUid: () => parentUid,
-    ),
+    gateway: gateway,
     dispatcher: mergeRouter,
     profileDao: database.profileDao,
     wipeService: wipeService,
