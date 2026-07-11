@@ -1045,42 +1045,60 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('error in execute stays on confirmation with error text', (
-      tester,
-    ) async {
-      when(
-        () => service.execute(
-          curriculumId: any(named: 'curriculumId'),
-          resolvedItems: any(named: 'resolvedItems'),
-          stageIds: any(named: 'stageIds'),
-        ),
-      ).thenThrow(Exception('Network error'));
+    // AUD-onboarding-05: the raw exception must never reach the UI. The
+    // confirmation-phase error banner shows an AppLocalizations-sourced
+    // string (errorSaveFailed), verified in both en and he, in place of the
+    // untranslated `e.toString()` implementation detail.
+    for (final locale in const [Locale('en'), Locale('he')]) {
+      testWidgets(
+        'error in execute stays on confirmation with a localized error '
+        '(${locale.languageCode})',
+        (tester) async {
+          when(
+            () => service.execute(
+              curriculumId: any(named: 'curriculumId'),
+              resolvedItems: any(named: 'resolvedItems'),
+              stageIds: any(named: 'stageIds'),
+            ),
+          ).thenThrow(Exception('Network error'));
 
-      await tester.pumpWidget(
-        _bulkMarkRig(
-          completionRepo: completionRepo,
-          contentRepo: contentRepo,
-          service: service,
-          allItems: _twoLeaves,
-        ),
+          await tester.pumpWidget(
+            _bulkMarkRig(
+              completionRepo: completionRepo,
+              contentRepo: contentRepo,
+              service: service,
+              allItems: _twoLeaves,
+              locale: locale,
+            ),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          // Button labels are localized (he != "Next"/"Confirm"), so locate
+          // by type rather than by English text — each phase renders exactly
+          // one FilledButton.
+          await tester.tap(find.byType(FilledButton).last);
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          await tester.tap(find.byType(FilledButton).last);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 200));
+
+          final expectedError = locale.languageCode == 'he'
+              ? 'השמירה נכשלה. נסו שוב.'
+              : 'Failed to save. Please try again.';
+
+          // Still on confirmation phase, showing the localized error — never
+          // the raw exception's toString().
+          expect(find.text(expectedError), findsOneWidget);
+          expect(find.textContaining('Exception'), findsNothing);
+          expect(find.textContaining('Network error'), findsNothing);
+
+          await _tearDown(tester);
+        },
       );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      await tester.tap(find.widgetWithText(FilledButton, 'Next'));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
-
-      // Should still be on confirmation phase with error text
-      expect(find.text('Confirm Bulk Mark'), findsOneWidget);
-      expect(find.textContaining('Exception: Network error'), findsOneWidget);
-
-      await _tearDown(tester);
-    });
+    }
   });
 
   group('BulkMarkScreen — "mark everything" guard', () {

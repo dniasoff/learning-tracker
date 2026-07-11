@@ -425,8 +425,12 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       // throws, touching setState here unconditionally throws again (on a
       // disposed State) instead of surfacing the original error.
       if (!mounted) return;
+      // AUD-onboarding-05 (EH-5): never surface the raw exception's
+      // toString() in the UI -- it is untranslated and leaks implementation
+      // detail. Show a localized, user-facing message instead.
+      final l10n = AppLocalizations.of(context)!;
       setState(() {
-        _error = e.toString();
+        _error = l10n.errorSaveFailed;
         _phase = _Phase.confirmation;
       });
     }
