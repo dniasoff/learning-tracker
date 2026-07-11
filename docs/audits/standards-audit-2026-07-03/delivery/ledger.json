@@ -8,7 +8,7 @@
       "wave": 1,
       "status": "merged",
       "severity": "P0",
-      "title": "Constrain AnalyticsService.logEvent to the AnalyticsEvent catalog \u2014 LogEvents-sourced calls leak profile_id and content identifiers to Firebase Analytics",
+      "title": "Constrain AnalyticsService.logEvent to the AnalyticsEvent catalog — LogEvents-sourced calls leak profile_id and content identifiers to Firebase Analytics",
       "commits": [
         "a9fee07e2ab6b5b12690789d55770da63f5f2441"
       ],
@@ -26,7 +26,7 @@
       "wave": 1,
       "status": "merged",
       "severity": "P0",
-      "title": "Fix ParentTrackManagementScreen 'Archive (keep history)' \u2014 it wipes stage/goal/point config via deleteTrackAndData exactly like 'Delete and wipe history', and ts3_parent_track_archive_test.dart doesn't catch it",
+      "title": "Fix ParentTrackManagementScreen 'Archive (keep history)' — it wipes stage/goal/point config via deleteTrackAndData exactly like 'Delete and wipe history', and ts3_parent_track_archive_test.dart doesn't catch it",
       "commits": [
         "3467bd4fce793a36117eb3f141dc6960bee7ad9c"
       ],
@@ -43,7 +43,7 @@
       "wave": 1,
       "status": "merged",
       "severity": "P0",
-      "title": "Add profileId FK+CASCADE to 6 tables \u2014 tutored-mirror wipe currently orphans a mirrored child's data",
+      "title": "Add profileId FK+CASCADE to 6 tables — tutored-mirror wipe currently orphans a mirrored child's data",
       "commits": [
         "93155211"
       ],
@@ -295,7 +295,7 @@
         "[gate-repair 2026-07-03] learning_screen.dart's tutoring import resolves through features/tutoring/tutoring.dart",
         "[gate-repair 2026-07-03] coding-standards.md and learning_tracker/CLAUDE.md name the same barrel file pattern for Rule 2"
       ],
-      "notes": "Re-reviewed wave-0 build attempt (8a071e37, tip of the chained component on worktree-wf_db098473-725-2) and merged --no-ff onto audit-fix/2026-07-03. Reconciles the Rule-2 barrel-name doc conflict (docs/coding-standards.md said providers.dart; learning_tracker/CLAUDE.md and all 15 real barrels say Y.dart) and routes learning_screen.dart's tutoring import through the barrel. Verified: flutter analyze clean, targeted suites green. Note: this fix's barrel-routing later required a companion update to test/features/tutoring/t3_readonly_surfaces_gating_test.dart AC3 (see 2026-07-03 gate-repair commit 4f95cb8a) \u2014 an over-specified implementation-detail assertion, not a defect in this fix."
+      "notes": "Re-reviewed wave-0 build attempt (8a071e37, tip of the chained component on worktree-wf_db098473-725-2) and merged --no-ff onto audit-fix/2026-07-03. Reconciles the Rule-2 barrel-name doc conflict (docs/coding-standards.md said providers.dart; learning_tracker/CLAUDE.md and all 15 real barrels say Y.dart) and routes learning_screen.dart's tutoring import through the barrel. Verified: flutter analyze clean, targeted suites green. Note: this fix's barrel-routing later required a companion update to test/features/tutoring/t3_readonly_surfaces_gating_test.dart AC3 (see 2026-07-03 gate-repair commit 4f95cb8a) — an over-specified implementation-detail assertion, not a defect in this fix."
     },
     {
       "id": "AUD-tracks-03",
@@ -340,7 +340,7 @@
       "wave": 0,
       "status": "merged",
       "severity": "P1",
-      "title": "Add Goals to tool/schema_check.dart's whitelist \u2014 the profileId-in-PK Rule-0 checker silently skips it",
+      "title": "Add Goals to tool/schema_check.dart's whitelist — the profileId-in-PK Rule-0 checker silently skips it",
       "commits": [
         "c7d271fe",
         "adc0d9e2"
@@ -438,13 +438,15 @@
     {
       "id": "AUD-onboarding-01",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P1",
       "title": "Check ref.mounted/State.mounted before touching state after await in onboarding async flows",
-      "commits": [],
+      "commits": [
+        "9b6e8ae168ad18d33e7fed1c4a58b1f4d0d950dd"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_12646bf5-ddc-3 (commit 2993cbc4de44fd9ba1a6877c2859aac401f0909b) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: guarded ref/State touches after await across onboarding async flows (OnboardingProfileCreationStep, BulkMarkScreen, epic_26_story_11 onboarding controller) with mounted/ref.mounted checks; added a new custom_lint rule no_unguarded_state_touch_after_await (packages/custom_lints/test/no_unguarded_state_touch_after_await_test.dart, 17 cases) plus disposed-mid-await/mounted regression tests (epic_26_story_11_onboarding_controller_test.dart, onboarding_profile_creation_step_mounted_test.dart, bulk_mark_screen_mounted_test.dart). Per merge-lane payload cid w2r1c3, worktree removed and branch worktree-wf_12646bf5-ddc-3 left unmerged (commit not patch-equivalent to audit-fix/2026-07-03 per git cherry) for a future harvest pass; MODE=ledger-only, no code merged this cid."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): this row's prior BLOCKED note described genuine finished deliverable work stranded on worktree branch worktree-wf_12646bf5-ddc-3 (commit 2993cbc4) when its review agent was lost to quota exhaustion mid-wave-2 -- not an external blocker. Cherry-picked cleanly onto audit-fix/2026-07-03 (zero source conflicts; only docs/coding-standards.md's SM-4 Enforce line needed a one-line reconcile with the (also-landed) AUD-sync-04 rule, verified semantically correct). Re-verified post-merge: flutter analyze clean; the commit's cited suites (epic_26_story_11_onboarding_controller_test.dart, onboarding_profile_creation_step_mounted_test.dart, bulk_mark_screen_mounted_test.dart, onboarding_bulk_l1_test.dart, bulk_mark_screen_test.dart -- 62 tests) pass; packages/custom_lints dart test 138/138 pass (17 for no_unguarded_state_touch_after_await); make audit 33/33 clean at final merge tip."
     },
     {
       "id": "AUD-profiles-04",
@@ -484,7 +486,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P1",
-      "title": "Rewire or retarget tutored_wipe_wrong_id_test.dart \u2014 its D18 fix symbols (resolveOwnerAccountIdForWipe, wipeRevokedMirrors) have zero production callers",
+      "title": "Rewire or retarget tutored_wipe_wrong_id_test.dart — its D18 fix symbols (resolveOwnerAccountIdForWipe, wipeRevokedMirrors) have zero production callers",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -495,7 +497,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P1",
-      "title": "Stop testing the stale copy of AddTrackFlowScreen._getSmartDefault in add_track_result_test.dart \u2014 it asserts pre-fix buggy behavior",
+      "title": "Stop testing the stale copy of AddTrackFlowScreen._getSmartDefault in add_track_result_test.dart — it asserts pre-fix buggy behavior",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -517,7 +519,7 @@
       "wave": 2,
       "status": "merged",
       "severity": "P1",
-      "title": "Fix app_shell.dart's fixed-height context banners \u2014 they truncate text under accessibility scaling and undersize the exit-button tap targets",
+      "title": "Fix app_shell.dart's fixed-height context banners — they truncate text under accessibility scaling and undersize the exit-button tap targets",
       "commits": [
         "8f69bf15080c7d77e2cdf9638362b36e18c27f94"
       ],
@@ -545,7 +547,7 @@
       "wave": 1,
       "status": "merged",
       "severity": "P1",
-      "title": "Add UNIQUE(profileId, ulid) to PointsLedger and RewardRedemptions \u2014 sync merge can double-credit a child's points",
+      "title": "Add UNIQUE(profileId, ulid) to PointsLedger and RewardRedemptions — sync merge can double-credit a child's points",
       "commits": [
         "1dd456b3bf684dff75c014f33a43150832feb684"
       ],
@@ -626,7 +628,7 @@
       "wave": 0,
       "status": "merged",
       "severity": "P1",
-      "title": "Fix the cross-feature-deep-import checker (Makefile audit 15/15) \u2014 its awk logic can never fire",
+      "title": "Fix the cross-feature-deep-import checker (Makefile audit 15/15) — its awk logic can never fire",
       "commits": [
         "30dc641c",
         "adc0d9e2"
@@ -655,7 +657,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P1",
-      "title": "Override userDatabaseProvider/coarsePacedTrackIdsProvider/contentIndexProvider in LearningScreen widget tests \u2014 real Drift DB is being constructed on every pump",
+      "title": "Override userDatabaseProvider/coarsePacedTrackIdsProvider/contentIndexProvider in LearningScreen widget tests — real Drift DB is being constructed on every pump",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -675,13 +677,15 @@
     {
       "id": "AUD-onboarding-06",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P1",
       "title": "Wrap multi-statement Drift writes in transaction() in the wizard stage-apply and prior-completion expunge paths",
-      "commits": [],
+      "commits": [
+        "dda35998cc2025130e4e2e8de2699d38d9b29f94"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): prior BLOCKED note ('no-progress cap / loop end ... commits=[]') was a reconciliation-pass bookkeeping gap, not a genuine blocker -- real deliverable work existed on unreconciled salvage branch salvage/w2c-10 (commit bf20ebd4), a wave-2 merge-lane retry that was never landed. Cherry-picked onto audit-fix/2026-07-03; only conflict was learning_tracker/Makefile's audit-check numbering (this branch's own new Rule-0 checker, tool/check_db_transactions.dart, needed renumbering from its stale 27/27 to the current 30/31 slot -- mechanical, hand-resolved, no logic touched). Re-verified post-merge: flutter analyze clean; bulk_prior_completion_service_test.dart + learning_process_wizard_service_test.dart + check_db_transactions_test.dart (part of the commit's cited 50 tests) pass; make audit 33/33 clean at final merge tip (check 30/33)."
     },
     {
       "id": "AUD-onboarding-03",
@@ -778,7 +782,7 @@
       "reviewRounds": 1,
       "acVerified": [
         "AUD-firebase-04 AC1 OK: ci.yml functions job (PR, hard-fail) runs make test-functions = tsc build + node --test cf_*.test.mjs; fails PR on TS error or test failure",
-        "AUD-firebase-04 AC2 OK: Makefile:214 `ci: analyze validate-calendar lint-rules-test test test-functions` \u2014 test-functions is a direct prereq of ci",
+        "AUD-firebase-04 AC2 OK: Makefile:214 `ci: analyze validate-calendar lint-rules-test test test-functions` — test-functions is a direct prereq of ci",
         "AUD-firebase-04 AC3 OK: functions/package.json:10 test script `node --test --test-concurrency=1 test/cf_*.test.mjs`; Makefile invokes it, 274 tests run"
       ],
       "notes": "Confirmed gap stood: no CI job for functions/, make ci lacked test-functions, no test script. Added functions CI job (hard-fail), folded test-functions into make ci, added package.json test script. make test-functions 274/274 pre+post; TS error confirmed build step fails. Merged --no-ff onto audit-fix/2026-07-03 (file-disjoint rebase vs branch tip -- only ci.yml, learning_tracker/Makefile, learning_tracker/functions/package.json touched, no overlap with branch-side changes since common ancestor -- gatePolicy=disjoint-skip, wave-closing make ci is the integration gate). Post-rebase gate: make audit checks 1-24 clean, flutter analyze clean. Check 25/25 (single coding-standards.md) failed both pre- and post-merge due to ~21 concurrent sibling worktrees under the gitignored .claude/worktrees/ (other live engine lanes, each a full checkout with its own docs/coding-standards.md) being swept up by the check's `find ..`; identical failure reproduced on the unmodified audit-fix/2026-07-03 tip before this merge, confirming it is pre-existing environmental noise from concurrent worktree-based sessions, not a regression introduced by this change."
@@ -788,7 +792,7 @@
       "wave": 3,
       "status": "todo",
       "severity": "P1",
-      "title": "Make SacredWindowDao's cache replace atomic \u2014 clearAll()+insertAll() must be one transaction, not the caller's fire-and-forget chain",
+      "title": "Make SacredWindowDao's cache replace atomic — clearAll()+insertAll() must be one transaction, not the caller's fire-and-forget chain",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -797,13 +801,13 @@
     {
       "id": "AUD-core-sync-05",
       "wave": 2,
-      "status": "blocked",
+      "status": "todo",
       "severity": "P1",
       "title": "Fix unsafe `as int?`/`as num?` casts in TrackCodec.decode and GoalCodec.decode that throw instead of returning null",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "TODO (gate-repair reconciliation, 2026-07-11): reclassified from BLOCKED -- prior note's 'no-progress cap' framing implied a genuine external blocker; there is none. Two competing unreconciled salvage attempts exist (salvage/w2c-12/-7 routing TrackCodec/GoalCodec decode() through FirestoreCodec parsers; salvage/w2f-33/-6 guarding unsafe `as int?`/`as num?` casts directly) but both conflict on real source files (test/core/sync/codec/{goal,track,firestore}_codec_test.dart) with codec-area work already merged onto audit-fix/2026-07-03 since these were built -- not a clean cherry-pick, and reconciling two divergent implementation approaches on a stale base is genuine dev work, not mechanical residue cleanup, so left undone here per this pass's mechanical-only mandate. Defect remains open for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-core-sync-07",
@@ -887,7 +891,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P1",
-      "title": "Add a real >500-item chunk-boundary test for pushCompletionsBatch \u2014 the existing H3 partial-commit 'regression test' never calls it",
+      "title": "Add a real >500-item chunk-boundary test for pushCompletionsBatch — the existing H3 partial-commit 'regression test' never calls it",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -951,13 +955,15 @@
     {
       "id": "AUD-onboarding-05",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P1",
       "title": "Stop surfacing e.toString() as user-facing error text in BulkMarkScreen; route through AppErrorView/l10n",
-      "commits": [],
+      "commits": [
+        "6cfe0286ab8d8c0ad395c36ed739beeb29b121b9"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_12646bf5-ddc-3 (commit f3701761d29f8cfa3e612e0e1ce5ffb6b3827b93) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: stopped surfacing e.toString() as user-facing error text in BulkMarkScreen, routed through AppErrorView/l10n instead; rewrote the error-path test in onboarding_bulk_l1_test.dart to assert localized copy for both en/he. Per merge-lane payload cid w2r1c3, worktree removed and branch worktree-wf_12646bf5-ddc-3 left unmerged (commit not patch-equivalent to audit-fix/2026-07-03 per git cherry) for a future harvest pass; MODE=ledger-only, no code merged this cid."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): same worktree-wf_12646bf5-ddc-3 stranding as AUD-onboarding-01 (commit f3701761), lost to quota exhaustion, not an external blocker. Cherry-picked cleanly onto audit-fix/2026-07-03 (zero conflicts). Re-verified post-merge: flutter analyze clean; onboarding_bulk_l1_test.dart and sibling onboarding suites (62 tests) pass; make audit 33/33 clean at final merge tip."
     },
     {
       "id": "AUD-onboarding-02",
@@ -1189,20 +1195,22 @@
       "reviewRounds": 1,
       "acVerified": [
         "[gate-repair 2026-07-03] AC2 MET (via its documented 'or' branch): CI custom_lint step stays warn-only, but docs/coding-standards.md 'custom_lint toolchain status' + ci.yml comments now state the real, honest status (compile-crash fixed; CLI cannot discover the project without also breaking the dart analyze hard gate) and make audit check 23/25 hard-guards the regression class.",
-        "[gate-repair 2026-07-03] AC1 NOT MET: `dart run custom_lint` exits 0 but reports a FALSE 'No issues found!' (0 projects discovered, not 0 violations) \u2014 verified directly. The marker required for real discovery structurally conflicts with the dart analyze --fatal-infos hard gate (verified: re-adding it reproduces exit 4). This is a genuine, documented partial repair, not a full one \u2014 recorded honestly so downstream waves are not poisoned by a false 'fully repaired' assumption."
+        "[gate-repair 2026-07-03] AC1 NOT MET: `dart run custom_lint` exits 0 but reports a FALSE 'No issues found!' (0 projects discovered, not 0 violations) — verified directly. The marker required for real discovery structurally conflicts with the dart analyze --fatal-infos hard gate (verified: re-adding it reproduces exit 4). This is a genuine, documented partial repair, not a full one — recorded honestly so downstream waves are not poisoned by a false 'fully repaired' assumption."
       ],
       "notes": "Re-reviewed BOTH wave-0 build rounds (895774b8 round 1: analyzer-9 dependency_overrides pin + re-enabled the custom_lint analyzer-plugin marker -- correctly bounced by the prior opus review for breaking the dart analyze --fatal-infos hard gate; 2d304875 round 2, reachable only via a detached worktree HEAD before this pass, anchored to a safety tag before merging: keeps the pin, omits the marker again, corrects docs/ci comments to state the honest status, adds make audit check 23 [renumbered 23/25 in this pass] guarding the regression class) and merged round 2 --no-ff onto audit-fix/2026-07-03. Independently re-verified every claim in round 2's commit body rather than trusting it: dart analyze --fatal-infos exit 0 (was exit 4 with the marker present), make audit's new check fires when the marker is reintroduced then clears when removed, dart run custom_lint honestly no-ops (0 projects scanned) as documented. HONEST STATUS: this is a partial repair, not a full one -- AC1 ('dart run custom_lint exits 0 and reports real diagnostics') is not met (structural marker-vs-hard-gate conflict); AC2 is met via its documented doc-truthfulness branch. Downstream waves must not assume custom_lint is fully functional."
     },
     {
       "id": "AUD-sync-01",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P1",
       "title": "SyncStatus.error and RestoreStatus.error carry a free-text message instead of a stable code, inviting raw/untranslated text downstream",
-      "commits": [],
+      "commits": [
+        "34138f953d3028d1154ca800cdb1ae23964b1f91"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): prior BLOCKED note was a reconciliation-pass bookkeeping gap; the actual fix existed on unreconciled salvage branches salvage/w2-26ac4c76-9a8-3/w2c-50/-6/w2f-16/-2 (landed from commit 2d104090 -- SyncStatus.error/RestoreStatus.error now carry SyncErrorCode instead of free text, plus a new make audit check for EH-5). Cherry-picked onto audit-fix/2026-07-03; conflicts confined to docs/coding-standards.md and Makefile (this commit's own new audit check, stale at 27/27 from its original base, renumbered to 33/33) plus a docs table entry corrected from a stale duplicate '27' to the real '33' -- both mechanical, no logic touched; sync_orchestrator.dart/sync_providers.dart auto-merged cleanly against the since-landed AUD-core-sync-26 changes. New lib file lib/features/sync/domain/models/sync_error_code.dart was missing its AG-5-mirrored test (pre-existing salvage commit predates the AG-5 ratchet landing) -- added test/features/sync/domain/models/sync_error_code_test.dart (3 real assertions, not a stub) to close the gap rather than weakening the AG-5 checker (TQ-7). Re-verified post-merge: flutter analyze clean; device_restore_screen_l1_test.dart, backup_sync_section_l1_test.dart, sync_orchestrator_test.dart, sy3_sync_error_message_sanitize_test.dart, sync_status_test.dart, epic_01/epic_13 story acceptance, e2e infra_p0/settings_p1/sync_p1 all pass; make audit 33/33 clean at final merge tip."
     },
     {
       "id": "AUD-account-04",
@@ -1328,20 +1336,22 @@
     {
       "id": "AUD-core-sync-26",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Type the catch/catchError clauses across sync_orchestrator.dart, pull_pipeline.dart and tutored_listener_supervisor.dart (EH-4)",
-      "commits": [],
+      "commits": [
+        "a5ce75e7a7fa782b00070aebc0adaab6fe7360dc"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): prior BLOCKED note was a reconciliation-pass bookkeeping gap; the actual fix existed on unreconciled salvage branch salvage/w2c-47/-58/-63 (landed from commit 4aff26b9 -- typed catch clauses across sync_orchestrator.dart/pull_pipeline.dart/tutored_listener_supervisor.dart, plus a new tool/check_eh4_typed_catches.dart Rule-0 checker). Cherry-picked onto audit-fix/2026-07-03; auto-merged cleanly against sync_orchestrator.dart despite that file's since-landed AUD-sync-01/AUD-core-sync-13 changes; only conflict was Makefile audit-check numbering (mechanical renumber to 32/33). Re-verified post-merge: flutter analyze clean; sync_orchestrator_drain_triggers_test.dart, tutored_listener_supervisor_test.dart, tutored_pull_isolation_test.dart pass; make audit 33/33 clean at final merge tip (check 32/33 fires correctly)."
     },
     {
       "id": "AUD-app-05",
       "wave": 2,
       "status": "merged",
       "severity": "P2",
-      "title": "Land the AG-5 test-mirroring checker \u2014 537/715 lib files lack a mirrored test",
+      "title": "Land the AG-5 test-mirroring checker — 537/715 lib files lack a mirrored test",
       "commits": [
         "5cd778a8fe5af49f4a1c3492a09c928051208892"
       ],
@@ -1377,13 +1387,13 @@
     {
       "id": "AUD-sync-02",
       "wave": 2,
-      "status": "blocked",
+      "status": "todo",
       "severity": "P2",
       "title": "LocalDataUploadService.pushAllLocalData enqueues every entity kind via a per-row awaited loop instead of a batched outbox write",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "TODO (gate-repair reconciliation, 2026-07-11): reclassified from BLOCKED -- no genuine external blocker. Unreconciled salvage branch salvage/w2c-18 (commit 2f9bb70e -- batch LocalDataUploadService's per-kind outbox inserts) conflicts on lib/features/sync/data/local_data_upload_service.dart, substantially modified by the already-landed AUD-core-sync-10 profileId-resolution fix -- real source-code conflict. AUD-sync-03 (below) is built on top of this exact commit in the original branch and cannot be soundly isolated from it either. Left undone; defect remains open for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-progress-08",
@@ -1451,7 +1461,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Close or auto-close inMemoryDb() in profiles _buildApp test helpers \u2014 3 files leak native Drift handles whenever db: is omitted",
+      "title": "Close or auto-close inMemoryDb() in profiles _buildApp test helpers — 3 files leak native Drift handles whenever db: is omitted",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -1489,7 +1499,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Remove or explicitly justify AppLogger.setupFlutterErrorHandlers \u2014 dead code duplicating crashlytics_bootstrap.dart's live handlers",
+      "title": "Remove or explicitly justify AppLogger.setupFlutterErrorHandlers — dead code duplicating crashlytics_bootstrap.dart's live handlers",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -1511,7 +1521,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Add profileId to TrackLearningOrder \u2014 the one user_database table with a bare autoincrement PK, and make audit's claimed profileId check doesn't exist",
+      "title": "Add profileId to TrackLearningOrder — the one user_database table with a bare autoincrement PK, and make audit's claimed profileId check doesn't exist",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -1531,13 +1541,13 @@
     {
       "id": "AUD-core-sync-19",
       "wave": 2,
-      "status": "blocked",
+      "status": "todo",
       "severity": "P2",
       "title": "Delete the dead duplicate syncStatusStreamProvider/syncStatusProvider in features/sync/presentation/providers/sync_providers.dart and fix the false 'delegates here' comment in sync_status_providers.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "TODO (gate-repair reconciliation, 2026-07-11): reclassified from BLOCKED -- no genuine external blocker. Unreconciled salvage attempts exist (salvage/w2c-50/-6/w2f-16/-2, commit 6cea5ecd et al. -- delete dead duplicate syncStatusStreamProvider/syncStatusProvider) but conflict on lib/features/sync/presentation/providers/sync_providers.dart, which AUD-sync-01 and AUD-sync-04 (both landed in this pass) and AUD-core-sync-10 (landed earlier) have all since modified -- real source-code conflict requiring semantic reconciliation across three overlapping changes, not mechanical. Left undone; defect remains open for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-account-06",
@@ -1571,7 +1581,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Stop testing RewardSaveNoTrack/RewardSaveDuplicateThreshold \u2014 both sealed variants are unreachable post-DEC-32/GA-3",
+      "title": "Stop testing RewardSaveNoTrack/RewardSaveDuplicateThreshold — both sealed variants are unreachable post-DEC-32/GA-3",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -1593,7 +1603,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Extract a shared pumpApp test helper \u2014 profiles feature hand-rolls the 4-delegate MaterialApp wrapper 13 times",
+      "title": "Extract a shared pumpApp test helper — profiles feature hand-rolls the 4-delegate MaterialApp wrapper 13 times",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -1613,20 +1623,20 @@
     {
       "id": "AUD-core-sync-24",
       "wave": 2,
-      "status": "blocked",
+      "status": "todo",
       "severity": "P2",
       "title": "Stop FirestoreGatewayImpl.pushGoal from using non-idempotent add() for id-less goals",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "TODO (gate-repair reconciliation, 2026-07-11): reclassified from BLOCKED -- no genuine external blocker. Same salvage/w2c-18 lineage as AUD-core-sync-20 (commit 5d319b4e -- pushGoal never falls back to add() for id-less goals), same firestore_gateway_impl.dart conflict with already-landed AUD-core-sync-01/-02/-13. Left undone; defect remains open for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-core-logging-01",
       "wave": 0,
       "status": "merged",
       "severity": "P2",
-      "title": "Guard CrashlyticsService's unawaited analytics calls with catchError \u2014 unguarded rejection can re-enter the runZonedGuarded fatal-error handler",
+      "title": "Guard CrashlyticsService's unawaited analytics calls with catchError — unguarded rejection can re-enter the runZonedGuarded fatal-error handler",
       "commits": [
         "29447a74",
         "64a84b03"
@@ -1770,7 +1780,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Confirm TrackManagementBody is wired into a real screen \u2014 it currently has zero callers in lib/",
+      "title": "Confirm TrackManagementBody is wired into a real screen — it currently has zero callers in lib/",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -1821,7 +1831,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Fix track_dao_extended_test.dart's deactivateTrack group \u2014 neither test calls deactivateTrack",
+      "title": "Fix track_dao_extended_test.dart's deactivateTrack group — neither test calls deactivateTrack",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -1948,7 +1958,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Give sync_status_emission_test.dart's 'empty outbox + online + after pull \u2192 synced' test actual assertions",
+      "title": "Give sync_status_emission_test.dart's 'empty outbox + online + after pull → synced' test actual assertions",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -1959,7 +1969,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Stop TrackLearningOrderRepositoryImpl importing ContentRepository directly \u2014 compose in a service/notifier (SM-8)",
+      "title": "Stop TrackLearningOrderRepositoryImpl importing ContentRepository directly — compose in a service/notifier (SM-8)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -1970,7 +1980,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Fix the self-referential SY-3 timeout-message assertion in sync_orchestrator_test.dart \u2014 it never calls SyncOrchestratorImpl",
+      "title": "Fix the self-referential SY-3 timeout-message assertion in sync_orchestrator_test.dart — it never calls SyncOrchestratorImpl",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2098,7 +2108,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Regenerate architecture.md's Feature Dependency Graph \u2014 5 fabricated/renamed nodes, 3 missing features, 2 reversed edges",
+      "title": "Regenerate architecture.md's Feature Dependency Graph — 5 fabricated/renamed nodes, 3 missing features, 2 reversed edges",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2136,7 +2146,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Delete or rewrite the 474 row-existence-only Drift Manager-API tests in test/core/database/user_database_managers_*_test.dart \u2014 none can detect an ordering or filtering regression",
+      "title": "Delete or rewrite the 474 row-existence-only Drift Manager-API tests in test/core/database/user_database_managers_*_test.dart — none can detect an ordering or filtering regression",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2224,7 +2234,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Regenerate index.md/project-overview.md/source-tree-analysis.md's DB-schema, feature-list and file-count inventory \u2014 frozen before the Epic 24-27 rebuild",
+      "title": "Regenerate index.md/project-overview.md/source-tree-analysis.md's DB-schema, feature-list and file-count inventory — frozen before the Epic 24-27 rebuild",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2235,7 +2245,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Correct sprint-status.yaml's false 'done' marking on 10 Epic-19 stories \u2014 confirmed unimplemented cleanup in story 19-10",
+      "title": "Correct sprint-status.yaml's false 'done' marking on 10 Epic-19 stories — confirmed unimplemented cleanup in story 19-10",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2246,7 +2256,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Finish the W1.2 router migration \u2014 delete lib/core/navigation/{app_router,app_shell,router_provider,guards/auth_guard}.dart re-export shims and repoint every importer",
+      "title": "Finish the W1.2 router migration — delete lib/core/navigation/{app_router,app_shell,router_provider,guards/auth_guard}.dart re-export shims and repoint every importer",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2268,7 +2278,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Adopt or delete 6 of 7 unused NaturalKey.forX factories \u2014 mergers duplicate the exact key-format logic inline",
+      "title": "Adopt or delete 6 of 7 unused NaturalKey.forX factories — mergers duplicate the exact key-format logic inline",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2301,7 +2311,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Deduplicate 5 shadowed top-level keys in app_he.arb/app_en.arb \u2014 one silently kills a zero-task notification branch",
+      "title": "Deduplicate 5 shadowed top-level keys in app_he.arb/app_en.arb — one silently kills a zero-task notification branch",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2312,7 +2322,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Delete or merge user_database_dataclass_core_test.dart \u2014 it wholesale duplicates user_database_dataclass_test.dart's 8 DataClass groups",
+      "title": "Delete or merge user_database_dataclass_core_test.dart — it wholesale duplicates user_database_dataclass_test.dart's 8 DataClass groups",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2334,7 +2344,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Delete dead core/navigation re-export shims and break the app_router\u2194guards import cycle",
+      "title": "Delete dead core/navigation re-export shims and break the app_router↔guards import cycle",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2367,7 +2377,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Stop keying GoalEntity.firestoreId on mutable targetPercent \u2014 every goal-percent edit orphans a Firestore document instead of updating it",
+      "title": "Stop keying GoalEntity.firestoreId on mutable targetPercent — every goal-percent edit orphans a Firestore document instead of updating it",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2422,7 +2432,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Fix testing-guide.md's copy-paste test examples \u2014 they import AppDatabase/CompletionsCompanion/UserMode, all deleted in the schema-v1 rebuild",
+      "title": "Fix testing-guide.md's copy-paste test examples — they import AppDatabase/CompletionsCompanion/UserMode, all deleted in the schema-v1 rebuild",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2444,7 +2454,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Update or disclaim docs/scenarios/stitch-prompts/{03-mode-selection,04-curriculum-selection,06-dashboard}.md \u2014 describe a product IA the shipped app doesn't have",
+      "title": "Update or disclaim docs/scenarios/stitch-prompts/{03-mode-selection,04-curriculum-selection,06-dashboard}.md — describe a product IA the shipped app doesn't have",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2455,7 +2465,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Archive or rewrite epic-19 sync stories 19-8/19-9 \u2014 both still target a SyncEngine/syncEngineProvider architecture that has been deleted",
+      "title": "Archive or rewrite epic-19 sync stories 19-8/19-9 — both still target a SyncEngine/syncEngineProvider architecture that has been deleted",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2486,13 +2496,13 @@
     {
       "id": "AUD-core-sync-20",
       "wave": 2,
-      "status": "blocked",
+      "status": "todo",
       "severity": "P2",
       "title": "Extend FirestorePermissionDeniedException conversion beyond the 2 read call sites it currently covers",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "TODO (gate-repair reconciliation, 2026-07-11): reclassified from BLOCKED -- no genuine external blocker. Unreconciled salvage branch salvage/w2c-18 (commit dbd315eb -- extend PERMISSION_DENIED conversion to push* methods) conflicts on lib/core/sync/firestore_gateway_impl.dart, which AUD-core-sync-13 and AUD-core-sync-01/-02 (landed earlier on audit-fix/2026-07-03) have since substantially modified -- real source-code conflict, not mechanical. Left undone; defect remains open for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-core-sync-18",
@@ -2559,7 +2569,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Extract a shared pumpApp/l10n test harness \u2014 25+ duplicated MaterialApp+delegate blocks across features/profiles/presentation tests",
+      "title": "Extract a shared pumpApp/l10n test harness — 25+ duplicated MaterialApp+delegate blocks across features/profiles/presentation tests",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2733,13 +2743,15 @@
     {
       "id": "AUD-core-sync-27",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
-      "title": "Wire or delete dead MergeException and OutboxDeadLetterException \u2014 neither is ever thrown in lib/",
-      "commits": [],
+      "title": "Wire or delete dead MergeException and OutboxDeadLetterException — neither is ever thrown in lib/",
+      "commits": [
+        "65fd423a11ffa4a82df3b81753557fca6fe65b42"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): prior BLOCKED note was a reconciliation-pass bookkeeping gap ('commits=[]' on this branch); the actual fix existed on unreconciled salvage branch salvage/w2c-18 (commit 317f7825, deletes the unused MergeException/OutboxDeadLetterException dead code). Cherry-picked cleanly onto audit-fix/2026-07-03 (zero conflicts). Re-verified post-merge: flutter analyze clean; grep -rn \"MergeException\\|OutboxDeadLetterException\" lib/ test/ returns zero code references; learning_screen_test.dart passes; make audit 33/33 clean at final merge tip."
     },
     {
       "id": "AUD-core-sync-22",
@@ -2771,9 +2783,9 @@
       "reviewRounds": 1,
       "acVerified": [
         "AUD-account-10 AC1 OK: test/core/utils/firebase_error_code_test.dart (from AUD-account-04's shared-helper extraction) asserts both '[code]' and '[plugin/code]' shapes.",
-        "AUD-account-10 AC2 OK (as of this repair): sign_in_controller.dart/magic_link_service.dart/upgrade_to_cloud_service.dart/signup_screen.dart were already delegated to core/utils/firebase_error_code.dart via 70cc86f5+e2873f4c; the 5th, previously-unmigrated copy in upgrade_to_cloud_screen.dart (the finding's own verify-pass-cited 'real second half of the reachable bug chain') was still live on HEAD with the stale non-matching regex. `grep -rn _extractFirebaseCode lib/` now returns zero hits after cherry-picking 7fbe3c1e (originally authored on orphan worktree wf_0fa16715-47a-13, never merged \u2014 rescued during this gate repair rather than discarded with the worktree). 24 widget tests green, flutter analyze clean."
+        "AUD-account-10 AC2 OK (as of this repair): sign_in_controller.dart/magic_link_service.dart/upgrade_to_cloud_service.dart/signup_screen.dart were already delegated to core/utils/firebase_error_code.dart via 70cc86f5+e2873f4c; the 5th, previously-unmigrated copy in upgrade_to_cloud_screen.dart (the finding's own verify-pass-cited 'real second half of the reachable bug chain') was still live on HEAD with the stale non-matching regex. `grep -rn _extractFirebaseCode lib/` now returns zero hits after cherry-picking 7fbe3c1e (originally authored on orphan worktree wf_0fa16715-47a-13, never merged — rescued during this gate repair rather than discarded with the worktree). 24 widget tests green, flutter analyze clean."
       ],
-      "notes": "Gate-repair reconciliation (2026-07-10): ledger falsely showed blocked/commits=[]/'not attempted' despite 2 of 3 needed commits already merged (70cc86f5, e2873f4c) leaving one real site (upgrade_to_cloud_screen.dart) unmigrated. Its finishing commit (originally 23f95dc6, red-first tested, flutter test all-green, flutter analyze clean per its own commit body) existed only on orphan worktree wf_0fa16715-47a-13/14 \u2014 about to be deleted as RESIDUE FAIL cleanup. Cherry-picked as 7fbe3c1e onto audit-fix/2026-07-03 (git cherry-pick -x, clean apply, no conflicts) rather than let genuine finished/tested work be destroyed by worktree pruning. Re-verified post-cherry-pick: flutter test test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart test/core/utils/firebase_error_code_test.dart -> 24 passed; flutter analyze on touched files -> No issues found; grep confirms zero remaining _extractFirebaseCode definitions. Ledger corrected to merged."
+      "notes": "Gate-repair reconciliation (2026-07-10): ledger falsely showed blocked/commits=[]/'not attempted' despite 2 of 3 needed commits already merged (70cc86f5, e2873f4c) leaving one real site (upgrade_to_cloud_screen.dart) unmigrated. Its finishing commit (originally 23f95dc6, red-first tested, flutter test all-green, flutter analyze clean per its own commit body) existed only on orphan worktree wf_0fa16715-47a-13/14 — about to be deleted as RESIDUE FAIL cleanup. Cherry-picked as 7fbe3c1e onto audit-fix/2026-07-03 (git cherry-pick -x, clean apply, no conflicts) rather than let genuine finished/tested work be destroyed by worktree pruning. Re-verified post-cherry-pick: flutter test test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart test/core/utils/firebase_error_code_test.dart -> 24 passed; flutter analyze on touched files -> No issues found; grep confirms zero remaining _extractFirebaseCode definitions. Ledger corrected to merged."
     },
     {
       "id": "AUD-t-auth-01",
@@ -2890,7 +2902,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Rewire pp16/ts14 regression assertions onto the real widget \u2014 pp16 tests Flutter's SliverGrid math instead of ProfileGrid's config, ts14's second test reads a bare ARB getter instead of the rendered archive dialog",
+      "title": "Rewire pp16/ts14 regression assertions onto the real widget — pp16 tests Flutter's SliverGrid math instead of ProfileGrid's config, ts14's second test reads a bare ARB getter instead of the rendered archive dialog",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2901,7 +2913,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Collapse chart_data_service.dart's *Live methods \u2014 byte-identical duplicates of their non-Live counterparts",
+      "title": "Collapse chart_data_service.dart's *Live methods — byte-identical duplicates of their non-Live counterparts",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2923,7 +2935,7 @@
       "wave": 3,
       "status": "todo",
       "severity": "P2",
-      "title": "Delete or wire up dead _summaryForSection / ComposedDailySchedule.summary \u2014 hardcoded-English field is never rendered",
+      "title": "Delete or wire up dead _summaryForSection / ComposedDailySchedule.summary — hardcoded-English field is never rendered",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2934,7 +2946,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Delete unused features/scheduler/presentation/widgets/pace_indicator.dart \u2014 dead code, duplicate class name, hardcoded English",
+      "title": "Delete unused features/scheduler/presentation/widgets/pace_indicator.dart — dead code, duplicate class name, hardcoded English",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2945,7 +2957,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Delete dead StudyDayConfigRepositoryImpl/toggleStudyDay \u2014 live _toggleDay write path bypasses the repository layer (DB-1)",
+      "title": "Delete dead StudyDayConfigRepositoryImpl/toggleStudyDay — live _toggleDay write path bypasses the repository layer (DB-1)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -2978,7 +2990,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Add a test for OutboxSyncWriteFacade's onEnqueueDrain chain \u2014 write_tee_status_update_test.dart only unit-tests recordDrainAttempt() in isolation",
+      "title": "Add a test for OutboxSyncWriteFacade's onEnqueueDrain chain — write_tee_status_update_test.dart only unit-tests recordDrainAttempt() in isolation",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3218,7 +3230,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Update linear-status.md \u2014 Epics 25-27 marked 'all Backlog' despite dozens of implemented, non-skipped story-acceptance tests",
+      "title": "Update linear-status.md — Epics 25-27 marked 'all Backlog' despite dozens of implemented, non-skipped story-acceptance tests",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3229,7 +3241,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Rewrite docs/explainers/sync-subsystem.md \u2014 it still presents the deleted SyncEngine/OfflineQueue dual-stack as the live, highest-risk architecture",
+      "title": "Rewrite docs/explainers/sync-subsystem.md — it still presents the deleted SyncEngine/OfflineQueue dual-stack as the live, highest-risk architecture",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3251,7 +3263,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Fix the GoalSetupScreen \"provably-dead \u2014 delete\" verdict in docs/planning/on-device-preflight-cheatsheet.md before anyone acts on it",
+      "title": "Fix the GoalSetupScreen \"provably-dead — delete\" verdict in docs/planning/on-device-preflight-cheatsheet.md before anyone acts on it",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3273,13 +3285,13 @@
       "wave": 2,
       "status": "merged",
       "severity": "P2",
-      "title": "Thread AppLogger into database_provider.dart's SeedManager construction \u2014 bootstrapSeedDb's logger wiring is dead code and SeedManager's diagnostics are silent in production",
+      "title": "Thread AppLogger into database_provider.dart's SeedManager construction — bootstrapSeedDb's logger wiring is dead code and SeedManager's diagnostics are silent in production",
       "commits": [
         "72562c2e7c403e6b80fd2924d007f7f0abc884a2"
       ],
       "reviewRounds": 1,
       "acVerified": [
-        "AUD-app-07 AC1 OK: database_provider.dart:55-58 builds SeedManager(..., logger: AppLogger.instance) \u2014 non-null singleton",
+        "AUD-app-07 AC1 OK: database_provider.dart:55-58 builds SeedManager(..., logger: AppLogger.instance) — non-null singleton",
         "AUD-app-07 AC2 OK: test forces ensureContentDb() throw, asserts seed_manager_extract_failed in AppLogger history; red-first (fails when logger reverted)",
         "AUD-app-07 AC3 OK: Makefile check 27 greps lib/ SeedManager( for logger:; injected violation fires (audit exit 2), clean on tree",
         "AUD-app-07 AC4 OK: seed_bootstrap.dart deleted, no code refs remain (only doc-comment in test)"
@@ -3335,7 +3347,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Rewrite ConnectivityGateway's only test \u2014 it is tautologically true and hits the real network",
+      "title": "Rewrite ConnectivityGateway's only test — it is tautologically true and hits the real network",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3357,7 +3369,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Delete or rewrite generated_providers_coverage_test.dart (757 lines) \u2014 every test only exercises riverpod_generator boilerplate",
+      "title": "Delete or rewrite generated_providers_coverage_test.dart (757 lines) — every test only exercises riverpod_generator boilerplate",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3368,7 +3380,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Delete or re-target calendar_program_service_ref_extraction_test.dart \u2014 tests hand-duplicated logic absent from production",
+      "title": "Delete or re-target calendar_program_service_ref_extraction_test.dart — tests hand-duplicated logic absent from production",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3379,7 +3391,7 @@
       "wave": 2,
       "status": "merged",
       "severity": "P2",
-      "title": "Add test coverage for firestore_codec.dart, settings_codec.dart and tutor_grant_codec.dart \u2014 the only codecs with zero tests",
+      "title": "Add test coverage for firestore_codec.dart, settings_codec.dart and tutor_grant_codec.dart — the only codecs with zero tests",
       "commits": [
         "6aa266098c4861be3f0a8a5706550dac0aa67eb2"
       ],
@@ -3440,7 +3452,7 @@
       "wave": 3,
       "status": "todo",
       "severity": "P2",
-      "title": "Remove the dead dashboardChildNextReward pipeline \u2014 result is computed but never displayed",
+      "title": "Remove the dead dashboardChildNextReward pipeline — result is computed but never displayed",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3563,13 +3575,15 @@
     {
       "id": "AUD-onboarding-08",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "BulkPriorCompletionService.execute()'s profileId branch bypasses DI and its bookmark write is never asserted",
-      "commits": [],
+      "commits": [
+        "3bb938452f78fefd598adfc4321c6b3b5c562141"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): same salvage/w2c-10 lineage as AUD-onboarding-06 (commit e56c555e), unreconciled merge-lane retry, not a genuine blocker. Cherry-picked cleanly onto audit-fix/2026-07-03 (zero conflicts; stacks directly on the AUD-onboarding-06 fix from the same original branch). Re-verified post-merge: flutter analyze clean; bulk_prior_completion_service_test.dart (95 tests incl. this commit's 15 new) passes; make audit 33/33 clean at final merge tip."
     },
     {
       "id": "AUD-profiles-09",
@@ -3640,20 +3654,22 @@
     {
       "id": "AUD-sync-04",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "onEnqueueDrain closures in sync_providers.dart read ref after an await with no ref.mounted guard",
-      "commits": [],
+      "commits": [
+        "032118c92aafa21ea80c5f9493c2d3ecc82a4352"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): prior BLOCKED note was a reconciliation-pass bookkeeping gap; the actual fix existed on unreconciled salvage branches salvage/w2c-50/-6/w2f-16/-2 (landed from commit f259a96c -- outboxDrainAndRecordAttempt ref.mounted guard + new no_ref_after_await_without_mounted_check custom_lint rule). Cherry-picked onto audit-fix/2026-07-03; only conflict was docs/coding-standards.md's SM-4 Enforce line (merged to document both this rule and AUD-onboarding-01's complementary rule together, since both landed in this pass). Re-verified post-merge: flutter analyze clean; sync_providers_test.dart (2 new, container-disposed-mid-drain regression) passes; packages/custom_lints dart test 138/138 pass; make audit 33/33 clean at final merge tip."
     },
     {
       "id": "AUD-docs-08",
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Fix docs/sync-conflict-resolution.md's LWW tie-break rule \u2014 it contradicts the implemented and tested behavior",
+      "title": "Fix docs/sync-conflict-resolution.md's LWW tie-break rule — it contradicts the implemented and tested behavior",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3752,7 +3768,7 @@
       "wave": 1,
       "status": "merged",
       "severity": "P2",
-      "title": "Move TutorAuditLogReadRepository/TutorGrantRepository interfaces into domain/repositories/ to remove the data\u2192presentation import",
+      "title": "Move TutorAuditLogReadRepository/TutorGrantRepository interfaces into domain/repositories/ to remove the data→presentation import",
       "commits": [
         "0b2453f9b623e7a5acd31c4d58eb3b8bfa2de1ce"
       ],
@@ -3845,7 +3861,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Fix or rename AT-19.3.6 \u2014 it never exercises SeedManager's first-launch gzip decompression",
+      "title": "Fix or rename AT-19.3.6 — it never exercises SeedManager's first-launch gzip decompression",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3856,7 +3872,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Un-skip hebrew_rtl_p1_test.dart E2E-1510 \u2014 R-OB7 onboarding hardcoded-English bug is already fixed",
+      "title": "Un-skip hebrew_rtl_p1_test.dart E2E-1510 — R-OB7 onboarding hardcoded-English bug is already fixed",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -3878,7 +3894,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "test/helpers/golden_runner.dart and flutter_test_config.dart produce no usable golden-regression coverage \u2014 no fonts loaded, and every caller skips the pixel assertion",
+      "title": "test/helpers/golden_runner.dart and flutter_test_config.dart produce no usable golden-regression coverage — no fonts loaded, and every caller skips the pixel assertion",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -4004,7 +4020,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Rewrite docs/planning/testing-quick-reference.md \u2014 it teaches the banned mockito pattern and cites nonexistent files",
+      "title": "Rewrite docs/planning/testing-quick-reference.md — it teaches the banned mockito pattern and cites nonexistent files",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -4015,7 +4031,7 @@
       "wave": 2,
       "status": "merged",
       "severity": "P2",
-      "title": "Log the swallowed exceptions in firebase_bootstrap.dart's two comment-only catch blocks (lines 39-41, 50-52) \u2014 invisible to the Makefile's single-line-only empty-catch grep",
+      "title": "Log the swallowed exceptions in firebase_bootstrap.dart's two comment-only catch blocks (lines 39-41, 50-52) — invisible to the Makefile's single-line-only empty-catch grep",
       "commits": [
         "550a605764602a3d0479e7149d7e545c70033c9f"
       ],
@@ -4040,7 +4056,7 @@
       ],
       "reviewRounds": 1,
       "acVerified": [
-        "AUD-account-14 AC1 OK: signInWithEmail/signInWithGoogle bodies migrated to private _...Body() helpers each wrapped in exactly one AsyncValue.guard(...); every success exit is a bare return, every soft failure throws a marker exception resolved once \u2014 state can no longer be left at Submitting.",
+        "AUD-account-14 AC1 OK: signInWithEmail/signInWithGoogle bodies migrated to private _...Body() helpers each wrapped in exactly one AsyncValue.guard(...); every success exit is a bare return, every soft failure throws a marker exception resolved once — state can no longer be left at Submitting.",
         "AUD-account-14 AC2 OK: new AUD-account-14 regression test group plus full targeted suite (sign_in_controller_test.dart + routing + signout-throws x3 + wrong_password + E2E auth_p0) 51 passed / 6 skipped per commit body.",
         "AUD-account-14 AC3 OK: d9608514 adds no_hand_rolled_async_state_notifier custom_lint rule (packages/custom_lints), 6 targeted + 94 full custom_lints suite passed, wired into make lint-rules-test (dependency of make audit)."
       ],
@@ -4132,7 +4148,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P2",
-      "title": "Deduplicate the CurriculumId storageKey\u2192enum linear scan repeated in curriculum_label_providers.dart and curriculum_label_renderer.dart",
+      "title": "Deduplicate the CurriculumId storageKey→enum linear scan repeated in curriculum_label_providers.dart and curriculum_label_renderer.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -4386,13 +4402,15 @@
     {
       "id": "AUD-onboarding-07",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Await BulkMarkScreen._expungeRefs's expunge writes before invalidating dependent providers",
-      "commits": [],
+      "commits": [
+        "1d2f619b952f6fb75115fde7e8b2e3dfb868a35b"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_12646bf5-ddc-3 (commit 0254a615f62cafac056bcbd4148702f2efddced1) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: awaited BulkMarkScreen._expungeRefs's expunge writes before invalidating dependent providers; new regression coverage in bulk_mark_screen_expunge_ordering_test.dart. Per merge-lane payload cid w2r1c3, worktree removed and branch worktree-wf_12646bf5-ddc-3 left unmerged (commit not patch-equivalent to audit-fix/2026-07-03 per git cherry) for a future harvest pass; MODE=ledger-only, no code merged this cid."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): same worktree-wf_12646bf5-ddc-3 stranding as AUD-onboarding-01 (commit 0254a615), lost to quota exhaustion, not an external blocker. Cherry-picked cleanly onto audit-fix/2026-07-03 (zero conflicts). Re-verified post-merge: flutter analyze clean; bulk_mark_screen_expunge_ordering_test.dart and sibling onboarding suites (62 tests) pass; make audit 33/33 clean at final merge tip."
     },
     {
       "id": "AUD-profiles-08",
@@ -4695,7 +4713,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Remove the stale R-GA-boot skip on gamification_p0_test.dart E2E-601 \u2014 the bug it cites is already fixed",
+      "title": "Remove the stale R-GA-boot skip on gamification_p0_test.dart E2E-601 — the bug it cites is already fixed",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -4800,7 +4818,7 @@
       "wave": 0,
       "status": "merged",
       "severity": "P2",
-      "title": "Wire packages/custom_lints/test/ into CI or a make target \u2014 the entire suite runs nowhere today",
+      "title": "Wire packages/custom_lints/test/ into CI or a make target — the entire suite runs nowhere today",
       "commits": [
         "3e859e9c",
         "619d116e"
@@ -4926,13 +4944,15 @@
     {
       "id": "AUD-onboarding-11",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Log the swallowed exception in BulkMarkScreen._loadPreExistingCompletions's catch block",
-      "commits": [],
+      "commits": [
+        "16afe2faae4f4e2d989e8921b1f324496f4602ba"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_12646bf5-ddc-3 (commit fcdc0e4c9bf9c586a0e671c326d38bcf3753b4f8) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: logged the previously swallowed exception in BulkMarkScreen._loadPreExistingCompletions's catch block; added bulk_mark_screen_pretick_load_failure_test.dart plus a new custom_lint rule no_log_less_catch (packages/custom_lints/test/no_log_less_catch_test.dart, 7 cases) to guard against future silent catches. Per merge-lane payload cid w2r1c3, worktree removed and branch worktree-wf_12646bf5-ddc-3 left unmerged (commit not patch-equivalent to audit-fix/2026-07-03 per git cherry) for a future harvest pass; MODE=ledger-only, no code merged this cid."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): same worktree-wf_12646bf5-ddc-3 stranding as AUD-onboarding-01 (commit fcdc0e4c), lost to quota exhaustion, not an external blocker. Cherry-picked cleanly onto audit-fix/2026-07-03 (docs/coding-standards.md EH-3 Enforce-line auto-merged cleanly, verified correct). Re-verified post-merge: flutter analyze clean; the commit's cited suites (62 tests) pass; packages/custom_lints dart test 138/138 pass (7 for no_log_less_catch); make audit 33/33 clean at final merge tip."
     },
     {
       "id": "AUD-onboarding-09",
@@ -4954,7 +4974,7 @@
       "wave": 3,
       "status": "todo",
       "severity": "P2",
-      "title": "Localize the hardcoded '\u2026yos' decorative chip text in IntroMishnaIllustration",
+      "title": "Localize the hardcoded '…yos' decorative chip text in IntroMishnaIllustration",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -4974,13 +4994,13 @@
     {
       "id": "AUD-sync-03",
       "wave": 2,
-      "status": "blocked",
+      "status": "todo",
       "severity": "P2",
       "title": "OutboxSyncWriteFacade._enqueue swallows every drain-tee failure with no log and no AppLogger field in the class",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "TODO (gate-repair reconciliation, 2026-07-11): reclassified from BLOCKED -- no genuine external blocker. Unreconciled salvage branch salvage/w2c-18 (commit 48b5e820 -- log OutboxSyncWriteFacade's swallowed drain-tee failure) is built directly on top of AUD-sync-02's uncommitted refactor of outbox_sync_write_facade.dart/local_data_upload_service.dart in the same original branch; isolating it from AUD-sync-02 produced a Makefile hunk referencing AUD-sync-02's checker file with no home, confirming the two are not independently cherry-pickable. Left undone; defect remains open for a future harvest/relaunch pass alongside AUD-sync-02."
     },
     {
       "id": "AUD-tutoring-13",
@@ -5014,7 +5034,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Fix inverted guard in epic_26_story_15's 'isComposite returns false for leaf curricula' test \u2014 it cannot fail",
+      "title": "Fix inverted guard in epic_26_story_15's 'isComposite returns false for leaf curricula' test — it cannot fail",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -5042,7 +5062,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P2",
-      "title": "Flag docs/planning/sync-architecture-plan.md Part A as stale \u2014 its outbox-drain headline finding is now false",
+      "title": "Flag docs/planning/sync-architecture-plan.md Part A as stale — its outbox-drain headline finding is now false",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -5117,7 +5137,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Introduce test/helpers/pump_app.dart \u2014 6 gamification test files hand-roll near-identical MaterialApp/ProviderScope boilerplate",
+      "title": "Introduce test/helpers/pump_app.dart — 6 gamification test files hand-roll near-identical MaterialApp/ProviderScope boilerplate",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -5265,7 +5285,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Rewrite completion_dao_test.dart null-scope test \u2014 the null-check operator throws before the DAO method is ever called",
+      "title": "Rewrite completion_dao_test.dart null-scope test — the null-check operator throws before the DAO method is ever called",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -5287,7 +5307,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Update docs/delete-policy.md \u2014 curriculum_tracks moved from deletedAt to state/stateChangedAt in W3.28/W3.29",
+      "title": "Update docs/delete-policy.md — curriculum_tracks moved from deletedAt to state/stateChangedAt in W3.28/W3.29",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -5298,7 +5318,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Assert digit interpolation in he.todaysLearning(5) test \u2014 it only checks isNotEmpty while the EN counterpart checks contains('3')",
+      "title": "Assert digit interpolation in he.todaysLearning(5) test — it only checks isNotEmpty while the EN counterpart checks contains('3')",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -5532,7 +5552,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Dedupe the copy-pasted DB-wipe block in epic_26_story_23 \u2014 duplicate per-table delete calls in both tests",
+      "title": "Dedupe the copy-pasted DB-wipe block in epic_26_story_23 — duplicate per-table delete calls in both tests",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -5631,7 +5651,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Backfill or formally waive verification evidence on epic-21 'done' stories \u2014 16 files ship an all-unchecked task list and an empty Dev Agent Record",
+      "title": "Backfill or formally waive verification evidence on epic-21 'done' stories — 16 files ship an all-unchecked task list and an empty Dev Agent Record",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -5763,7 +5783,7 @@
       "wave": 3,
       "status": "todo",
       "severity": "P3",
-      "title": "Fix 7 stale 'HARDCODED STRING' comments in upgrade_to_cloud_screen_l1_test.dart \u2014 the strings are l10n-sourced now",
+      "title": "Fix 7 stale 'HARDCODED STRING' comments in upgrade_to_cloud_screen_l1_test.dart — the strings are l10n-sourced now",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -5972,7 +5992,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P3",
-      "title": "Remove dead DuplicateCompletionException / InvalidTrackOperationException or wire them up \u2014 neither is thrown in production",
+      "title": "Remove dead DuplicateCompletionException / InvalidTrackOperationException or wire them up — neither is thrown in production",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -6074,13 +6094,15 @@
     {
       "id": "AUD-onboarding-14",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
-      "title": "Extract the hardcoded '\u05dc\u05d9\u05de\u05d5\u05d3' stage-name sentinel to a shared constant",
-      "commits": [],
+      "title": "Extract the hardcoded 'לימוד' stage-name sentinel to a shared constant",
+      "commits": [
+        "21944b34ea31932405277cc8ed673bae398edc65"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): same salvage/w2c-10 lineage as AUD-onboarding-06/-08 (commit fca4f6e8), unreconciled merge-lane retry, not a genuine blocker; depends on -06's _buildCustomStages/_buildNoReviewStages rename, landed in the same lineage order. Cherry-picked onto audit-fix/2026-07-03; only conflict was Makefile audit-check numbering (mechanical renumber to 31/33). Re-verified post-merge: flutter analyze clean; grep -rn \"stageName: 'לימוד'\" lib/ returns no matches; learning_process_wizard_service_test.dart, curriculum_defaults_test.dart, stage_definition_repository_impl_test.dart, stage_definition_repository_impl_26_26_test.dart, epic_18_track_overhaul_test.dart (111+54 tests) pass; make audit 33/33 clean at final merge tip."
     },
     {
       "id": "AUD-profiles-22",
@@ -6109,7 +6131,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Delete scheduler_screen_test.dart \u2014 its scenarios duplicate scheduler_screen_l1_test.dart",
+      "title": "Delete scheduler_screen_test.dart — its scenarios duplicate scheduler_screen_l1_test.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -6282,7 +6304,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P3",
-      "title": "Delete dead HebrewTerms.getCurriculumDisplayName \u2014 unused, violates Rule 5 displayNameHe placement, tested twice by duplicate groups",
+      "title": "Delete dead HebrewTerms.getCurriculumDisplayName — unused, violates Rule 5 displayNameHe placement, tested twice by duplicate groups",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -6293,7 +6315,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Add `_codec.dart` to coding-standards.md's File Naming Conventions table \u2014 15 files use it, no documented suffix fits",
+      "title": "Add `_codec.dart` to coding-standards.md's File Naming Conventions table — 15 files use it, no documented suffix fits",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -6350,7 +6372,7 @@
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "skipped-refuted (wave-2 engine outcome, ledger reconciliation, 2026-07-11). Already-fixed-in-code basis, independently confirmed: commit 1d131567 (fix(core/analytics): constrain logEvent to the AnalyticsEvent catalog, AUD-core-analytics-01) added AnalyticsEvent.syncOutboxDeadLettered ('sync_outbox_dead_lettered') and converted both outbox_processor.dart analytics call sites (now lines 285, 431) from LogEvents.sync.outboxDeadLettered to AnalyticsEvent.syncOutboxDeadLettered \u2014 exactly this finding's recommendation, delivered as a side effect of the broader catalog-constraint sweep. grep confirms no LogEvents.sync.outboxDeadLettered analytics call site remains. Recorded in kill-log-addendum.md."
+      "notes": "skipped-refuted (wave-2 engine outcome, ledger reconciliation, 2026-07-11). Already-fixed-in-code basis, independently confirmed: commit 1d131567 (fix(core/analytics): constrain logEvent to the AnalyticsEvent catalog, AUD-core-analytics-01) added AnalyticsEvent.syncOutboxDeadLettered ('sync_outbox_dead_lettered') and converted both outbox_processor.dart analytics call sites (now lines 285, 431) from LogEvents.sync.outboxDeadLettered to AnalyticsEvent.syncOutboxDeadLettered — exactly this finding's recommendation, delivered as a side effect of the broader catalog-constraint sweep. grep confirms no LogEvents.sync.outboxDeadLettered analytics call site remains. Recorded in kill-log-addendum.md."
     },
     {
       "id": "AUD-core-sync-40",
@@ -6607,13 +6629,13 @@
     {
       "id": "AUD-sync-08",
       "wave": 2,
-      "status": "blocked",
+      "status": "todo",
       "severity": "P3",
       "title": "outboxSyncWriteFacadeProvider mutates DAO state and fires a network re-enqueue from inside its Provider build function",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "TODO (gate-repair reconciliation, 2026-07-11): reclassified from BLOCKED -- no genuine external blocker. Unreconciled salvage branches salvage/w2c-50 (3-commit 'bounce round 3' sequence) and salvage/w2c-6/w2f-16/-2 (earlier single-commit versions) all extract DAO-sink wiring out of outboxSyncWriteFacadeProvider's build() (SM-2), but conflict on docs/coding-standards.md, test/features/sync/presentation/providers/sync_providers_test.dart, and packages/custom_lints/lib/learning_tracker_lints.dart against the already-landed AUD-sync-04 rule registration in the same files -- real conflicts requiring semantic reconciliation across two custom_lint rule additions. Left undone; defect remains open for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-sync-07",
@@ -6640,13 +6662,13 @@
     {
       "id": "AUD-sync-05",
       "wave": 2,
-      "status": "blocked",
+      "status": "todo",
       "severity": "P3",
       "title": "Repositories/services constructed inline instead of injected via a provider at three sync-path call sites",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "TODO (gate-repair reconciliation, 2026-07-11): reclassified from BLOCKED -- no genuine external blocker. Unreconciled salvage branches salvage/w2c-49/-56 (commit 92867ae2 -- inject repositories/services at 3 sync-path sites, SM-7) conflict on lib/features/sync/data/local_data_upload_service.dart, substantially modified by the already-landed AUD-core-sync-10 fix -- real source-code conflict. Left undone; defect remains open for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-tracks-21",
@@ -6802,7 +6824,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P3",
-      "title": "Drop dead UIBackgroundModes (fetch, remote-notification) from ios/Runner/Info.plist \u2014 no backing implementation exists",
+      "title": "Drop dead UIBackgroundModes (fetch, remote-notification) from ios/Runner/Info.plist — no backing implementation exists",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -6857,7 +6879,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P3",
-      "title": "Type streak_milestone_analytics_observer.dart's two catch blocks to Exception \u2014 bare Object catches swallow Error subtypes as warnings",
+      "title": "Type streak_milestone_analytics_observer.dart's two catch blocks to Exception — bare Object catches swallow Error subtypes as warnings",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -6868,7 +6890,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Delete logger_extra_test.dart \u2014 near-total weak-assertion duplicate of logger_extended_test.dart",
+      "title": "Delete logger_extra_test.dart — near-total weak-assertion duplicate of logger_extended_test.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -6879,7 +6901,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P3",
-      "title": "Fix misleading 'Keeps alive' doc comment on streakMilestoneAnalyticsObserverProvider \u2014 it is declared autoDispose",
+      "title": "Fix misleading 'Keeps alive' doc comment on streakMilestoneAnalyticsObserverProvider — it is declared autoDispose",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -6967,7 +6989,7 @@
       "wave": 3,
       "status": "todo",
       "severity": "P3",
-      "title": "Fix completion_events.dart docstring \u2014 natural key description omits curriculumId that the enforced index actually includes",
+      "title": "Fix completion_events.dart docstring — natural key description omits curriculumId that the enforced index actually includes",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -7033,7 +7055,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P3",
-      "title": "Fix or delete NaturalKey.forLearnerProfile's fragile non-null-Object emptiness check \u2014 fallbackProfileId branch is effectively unreachable and untested",
+      "title": "Fix or delete NaturalKey.forLearnerProfile's fragile non-null-Object emptiness check — fallbackProfileId branch is effectively unreachable and untested",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -7070,7 +7092,7 @@
       "wave": 2,
       "status": "merged",
       "severity": "P3",
-      "title": "Update BookmarkCodec's dual-key comment \u2014 it describes the pre-Phase-B bug as still live",
+      "title": "Update BookmarkCodec's dual-key comment — it describes the pre-Phase-B bug as still live",
       "commits": [
         "926f6ab3e0a119577d02cefddabf8920e9e6b9d4"
       ],
@@ -7084,20 +7106,22 @@
     {
       "id": "AUD-core-sync-33",
       "wave": 2,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Defensively copy SyncPushException.committed so the partial-commit invariant can't be violated by a future caller",
-      "commits": [],
+      "commits": [
+        "c5af25ff20611c8ec5db31e8257abc924a07a1c7"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+      "notes": "MERGED (gate-repair reconciliation, 2026-07-11): same salvage/w2c-18 lineage as AUD-core-sync-27 (commit 8f5e04e1). Cherry-picked cleanly onto audit-fix/2026-07-03 (zero conflicts). Re-verified post-merge: flutter analyze clean; sync_push_exception_test.dart (new, growable-list defensive-copy regression) + outbox_processor_test.dart + firestore_gateway_impl_test.dart pass; make audit 33/33 clean at final merge tip."
     },
     {
       "id": "AUD-core-sync-36",
       "wave": 2,
       "status": "merged",
       "severity": "P3",
-      "title": "Remove or justify PushPipeline.pushCompletion \u2014 OutboxProcessor never calls it",
+      "title": "Remove or justify PushPipeline.pushCompletion — OutboxProcessor never calls it",
       "commits": [
         "42d81b13d180843ae983dbbd5f81c8eb72fb9b08"
       ],
@@ -7352,7 +7376,7 @@
       "wave": 3,
       "status": "todo",
       "severity": "P3",
-      "title": "Correct streak_event_log.dart's doc comment \u2014 the real unique index is (profileId, dayUtc, eventType), not eventTimestamp",
+      "title": "Correct streak_event_log.dart's doc comment — the real unique index is (profileId, dayUtc, eventType), not eventTimestamp",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -7763,7 +7787,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Rename account_actions_sheet_nav_test.dart's single-account Sign Out test \u2014 title claims SignInRoute, assertion checks AccountPickerRoute",
+      "title": "Rename account_actions_sheet_nav_test.dart's single-account Sign Out test — title claims SignInRoute, assertion checks AccountPickerRoute",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -7818,7 +7842,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Delete sync_rework_engine_test.dart \u2014 all 5 groups are skip-only placeholders with zero assertions",
+      "title": "Delete sync_rework_engine_test.dart — all 5 groups are skip-only placeholders with zero assertions",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -7962,7 +7986,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Fix epic_26_story_26_31 AC4's add_track_flow.dart check \u2014 dead branch references the deleted track_setup/ directory",
+      "title": "Fix epic_26_story_26_31 AC4's add_track_flow.dart check — dead branch references the deleted track_setup/ directory",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -7973,7 +7997,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Fix stale AC5 doc comment in epic_26_story_26_20 \u2014 still claims hebrewTerms/hebrewDate default to false",
+      "title": "Fix stale AC5 doc comment in epic_26_story_26_20 — still claims hebrewTerms/hebrewDate default to false",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8116,7 +8140,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Remove flutter_test_config.dart's FlutterError.onError GoogleFonts filter \u2014 TestWidgetsFlutterBinding never lets it run during a test",
+      "title": "Remove flutter_test_config.dart's FlutterError.onError GoogleFonts filter — TestWidgetsFlutterBinding never lets it run during a test",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8127,7 +8151,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Fix migration_test_helper.dart's doc comment \u2014 claims post-migration schemaVersion 19, actual is 32",
+      "title": "Fix migration_test_helper.dart's doc comment — claims post-migration schemaVersion 19, actual is 32",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8149,7 +8173,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P3",
-      "title": "Delete or wire up tool/curate_curricula/sefaria_settings.py \u2014 a vestigial placeholder never referenced by the documented workflow",
+      "title": "Delete or wire up tool/curate_curricula/sefaria_settings.py — a vestigial placeholder never referenced by the documented workflow",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8160,7 +8184,7 @@
       "wave": "parked",
       "status": "parked",
       "severity": "P3",
-      "title": "Fix stale password_hasher.dart path printed by tool/argon2id_benchmark.dart \u2014 file moved from features/auth to features/account",
+      "title": "Fix stale password_hasher.dart path printed by tool/argon2id_benchmark.dart — file moved from features/auth to features/account",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8344,7 +8368,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Mark hebrew-terms.md \u00a711 item 5 as fixed \u2014 the make audit grep already targets the right symbol",
+      "title": "Mark hebrew-terms.md §11 item 5 as fixed — the make audit grep already targets the right symbol",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8377,7 +8401,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Correct seed-build.md's bundled seed version \u2014 doc says 14, seed_version.dart says 15",
+      "title": "Correct seed-build.md's bundled seed version — doc says 14, seed_version.dart says 15",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8388,7 +8412,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Verify testing-guide.md's 'progress_providers.g.dart is manually authored' gotcha \u2014 the file now carries a clean, unmodified codegen header",
+      "title": "Verify testing-guide.md's 'progress_providers.g.dart is manually authored' gotcha — the file now carries a clean, unmodified codegen header",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8399,7 +8423,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Fix docs/qa/legacy/00-testing-methodology.md \u00a79 document index \u2014 none of the listed filenames exist",
+      "title": "Fix docs/qa/legacy/00-testing-methodology.md §9 document index — none of the listed filenames exist",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8524,7 +8548,7 @@
       "wave": 2,
       "status": "merged",
       "severity": "P3",
-      "title": "Remove or wire up SettingsCodec.encode \u2014 zero callers in lib/ or test/",
+      "title": "Remove or wire up SettingsCodec.encode — zero callers in lib/ or test/",
       "commits": [
         "6aa266098c4861be3f0a8a5706550dac0aa67eb2"
       ],
@@ -8540,7 +8564,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Fix the self-comparison assertion in firestore_listener_source_test.dart:153 \u2014 expect(x, equals(x)) always passes",
+      "title": "Fix the self-comparison assertion in firestore_listener_source_test.dart:153 — expect(x, equals(x)) always passes",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8615,7 +8639,7 @@
       "wave": 3,
       "status": "todo",
       "severity": "P3",
-      "title": "Rename StreakStateProvider \u2014 it is a plain service class, not a @riverpod provider",
+      "title": "Rename StreakStateProvider — it is a plain service class, not a @riverpod provider",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
@@ -8910,7 +8934,7 @@
       "wave": 4,
       "status": "todo",
       "severity": "P3",
-      "title": "Remove test-options.md's reference to tool/device_e2e/night_runner.py \u2014 the file does not exist in the repo",
+      "title": "Remove test-options.md's reference to tool/device_e2e/night_runner.py — the file does not exist in the repo",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],

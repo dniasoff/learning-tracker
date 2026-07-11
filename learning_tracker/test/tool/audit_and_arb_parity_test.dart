@@ -115,36 +115,48 @@ void main() {
           're-enable once make audit is fully clean (DNI-389 tracks this)',
     );
 
-    test('check 25/26 asserts exactly one coding-standards.md outside '
-        'docs/_archive/ (AUD-docs-04)', () async {
-      final result = await Process.run('make', [
-        'audit',
-      ], workingDirectory: packageDir);
-      final stdout = result.stdout.toString();
-      expect(
-        stdout,
-        contains('25/26'),
-        reason:
-            'make audit must run the coding-standards.md uniqueness '
-            'check (AUD-docs-04). Renumbered from 23/23 to 25/25 during '
-            'wave-0 gate-repair merge (this check collided with two other '
-            'wave-0 additions to the same target: AUD-guardrails-03\'s '
-            'custom_lint-marker check and AUD-repo-01\'s AG-4 '
-            'duplicate-type-name check, both also originally 23/23), then '
-            'to 25/26 when AUD-core-analytics-01 (wave-1) appended a 26th '
-            'check (the AnalyticsEvent catalog enforcement).\n'
-            'stdout=$stdout\nstderr=${result.stderr}',
-      );
-      expect(
-        stdout,
-        isNot(contains('Expected exactly one coding-standards.md')),
-        reason:
-            'docs/coding-standards.md must be the only file named '
-            'coding-standards.md outside docs/_archive/ — a duplicate '
-            'root copy would regress AUD-docs-04.\n'
-            'stdout=$stdout\nstderr=${result.stderr}',
-      );
-    });
+    test(
+      'check 25/26 asserts exactly one coding-standards.md outside '
+      'docs/_archive/ (AUD-docs-04)',
+      () async {
+        final result = await Process.run('make', [
+          'audit',
+        ], workingDirectory: packageDir);
+        final stdout = result.stdout.toString();
+        expect(
+          stdout,
+          contains('25/26'),
+          reason:
+              'make audit must run the coding-standards.md uniqueness '
+              'check (AUD-docs-04). Renumbered from 23/23 to 25/25 during '
+              'wave-0 gate-repair merge (this check collided with two other '
+              'wave-0 additions to the same target: AUD-guardrails-03\'s '
+              'custom_lint-marker check and AUD-repo-01\'s AG-4 '
+              'duplicate-type-name check, both also originally 23/23), then '
+              'to 25/26 when AUD-core-analytics-01 (wave-1) appended a 26th '
+              'check (the AnalyticsEvent catalog enforcement).\n'
+              'stdout=$stdout\nstderr=${result.stderr}',
+        );
+        expect(
+          stdout,
+          isNot(contains('Expected exactly one coding-standards.md')),
+          reason:
+              'docs/coding-standards.md must be the only file named '
+              'coding-standards.md outside docs/_archive/ — a duplicate '
+              'root copy would regress AUD-docs-04.\n'
+              'stdout=$stdout\nstderr=${result.stderr}',
+        );
+      },
+      // AUD-guardrails-17 (see file-level NOTE above): this test shells out
+      // to `make audit`, which depends on `lint-rules-test` alone taking
+      // ~30s, plus a growing set of individual `dart run tool/check_*.dart`
+      // subprocess checks (33 as of gate-repair 2026-07-11) that each carry
+      // their own dart-VM startup cost — the combined run now reliably blows
+      // the default 30s `test()` timeout even with no other load. Matches
+      // the explicit longer timeout already carried by this group's other
+      // `make audit`-shelling tests above.
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
   });
 
   group('make audit check 15/15 cross-feature-import detector '
@@ -252,6 +264,9 @@ void main() {
               'the auth state provider via features/account/account.dart',
         );
       },
+      // AUD-guardrails-17 (see file-level NOTE above): shells out to
+      // `make audit`; see the longer rationale on the 25/26 test above.
+      timeout: const Timeout(Duration(minutes: 3)),
     );
   });
 
@@ -271,10 +286,16 @@ void main() {
               'features/tutoring/tutoring.dart, which already exported it',
         );
       },
+      // AUD-guardrails-17 (see file-level NOTE above): shells out to
+      // `make audit`; see the longer rationale on the 25/26 test above.
+      timeout: const Timeout(Duration(minutes: 3)),
     );
 
     test('AC1: adding then removing a throwaway cross-feature import flips '
         'check 15/15 from clean to WARN and back', () async {
+      // NOTE: this test shells out to `make audit` TWICE (see auditStdout()
+      // below) — AUD-guardrails-17 (file-level NOTE above) applies doubly
+      // here, hence the explicit longer timeout passed below.
       // A disposable feature directory outside any real feature, so this
       // can never collide with a real barrel and is unmistakable debris
       // if cleanup is ever interrupted.
@@ -322,7 +343,10 @@ void main() {
         isNot(contains('zzz_audit_fixture_do_not_commit.dart')),
         reason: 'removing the fixture restores a clean pass for that file',
       );
-    });
+      // AUD-guardrails-17 (see file-level NOTE above): shells out to
+      // `make audit` twice; see the longer rationale on the 25/26 test
+      // above.
+    }, timeout: const Timeout(Duration(minutes: 3)));
   });
 
   group('tool/arb_parity_check.dart (DNI-389 — Story 27.13 AC2)', () {
