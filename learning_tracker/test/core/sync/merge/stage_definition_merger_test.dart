@@ -1,20 +1,13 @@
-/// Round-trip test: the canonical write serializer (StageDefinitionCodec.encode)
-/// must produce a payload that StageDefinitionMerger accepts and persists.
+/// Unit tests for [StageDefinitionMerger]: Phase-3 LWW symmetry +
+/// persistUpdatedAt against a real [DriftMergeStore], and the
+/// codec.encode() -> merger -> DB round-trip (Phase B invariant, including
+/// the legacy Map-typed schedule back-compat path).
 ///
-/// This test guards the Phase B invariant: if the codec's encode() ever drifts
-/// from the key names the merger reads, stage definitions will be silently
-/// skipped on pull and cross-device sync breaks without any error. The test
-/// MUST fail before the fix when there is a real mismatch, and pass after.
-///
-/// The critical mismatch caught here:
-///   - Before Phase B: _stagePushPayload emitted `schedule` as a decoded Map
-///     plus a legacy quartet (delay_days / schedule_type / days_of_week /
-///     rolling_window_size). The codec emits `schedule` as a JSON String with
-///     no legacy fields.
-///   - If the merger's _encodeSchedule only handled Strings and rejected Maps,
-///     the round-trip would fail. The merger handles both, but the codec is now
-///     the canonical (String) writer so this test locks that shape.
-@Tags(['unit', 'sync'])
+/// AG-5 (AUD-app-05): consolidates test/sync/merge/lww_symmetric_test.dart's
+/// StageDefinitionMerger group, test/sync/merge/persist_updated_at_test.dart's
+/// StageDefinitionMerger case, and
+/// test/sync/merge/stage_definitions_roundtrip_test.dart into the single
+/// file mirroring lib/core/sync/merge/stage_definition_merger.dart.
 library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
@@ -28,13 +21,23 @@ import 'package:learning_tracker/core/sync/merge/stage_definition_merger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/test_database.dart';
+import '../../../helpers/test_database.dart';
 
-const _codec = StageDefinitionCodec();
-
+// ── Phase 3 LWW-symmetry / persistUpdatedAt fixtures ────────────────────────
+final _local = DateTime.utc(2026, 5, 21, 12, 0, 0);
+final _remoteNewer = DateTime.utc(2026, 5, 21, 13, 0, 0);
+final _remoteOlder = DateTime.utc(2026, 5, 21, 11, 0, 0);
+final _localSkew = DateTime.utc(2026, 5, 21, 12, 0, 0);
+final _remoteSkew = DateTime.utc(2026, 5, 21, 12, 0, 2);
+final _localSynced = DateTime.utc(2026, 5, 21, 12, 0, 5);
+final _remoteSyncedNewer = DateTime.utc(2026, 5, 21, 12, 0, 10);
 const _profileId = 1;
-const _curriculumId = 'bavli';
+final _ts = DateTime.utc(2026, 5, 21, 12, 0, 0);
+final _syncedAt = DateTime.utc(2026, 5, 21, 12, 0, 30);
 
+// ── codec.encode() → merger → DB round-trip fixtures ─────────────────────────
+const _codec = StageDefinitionCodec();
+const _curriculumId = 'bavli';
 final _updatedAt = DateTime.utc(2026, 6, 18, 10, 0, 0);
 final _olderUpdatedAt = DateTime.utc(2026, 6, 18, 9, 0, 0);
 
@@ -42,6 +45,160 @@ void main() {
   setUpAll(() {
     driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   });
+
+  group(
+    'StageDefinitionMerger — LWW symmetry + persistence (real DriftMergeStore)',
+    () {
+      late UserDatabase db;
+      late DriftMergeStore store;
+      const profileId = 1;
+
+      setUp(() async {
+        SharedPreferences.setMockInitialValues({});
+        db = UserDatabase(NativeDatabase.memory());
+        await seedProfile(db);
+        store = DriftMergeStore(db);
+      });
+
+      tearDown(() async {
+        await db.close();
+      });
+
+      group('StageDefinitionMerger', () {
+        late StageDefinitionMerger merger;
+        late int seededTrackId;
+
+        setUp(() async {
+          merger = StageDefinitionMerger(store: store);
+          // stage_definitions.track_id FKs curriculum_tracks(id); seed one so
+          // the merger's upsert doesn't fail with SqliteException(787).
+          seededTrackId = await db
+              .into(db.curriculumTracks)
+              .insert(
+                CurriculumTracksCompanion.insert(
+                  profileId: profileId,
+                  curriculumId: 'bavli',
+                  stateChangedAt: _local,
+                  activatedAt: _local,
+                ),
+              );
+        });
+
+        Map<String, dynamic> row({
+          required DateTime updatedAt,
+          DateTime? syncedAt,
+        }) => {
+          'curriculum_id': 'bavli',
+          'track_id': seededTrackId,
+          'stage_order': 0,
+          'stage_name': 'learning',
+          'is_default': true,
+          'updated_at': updatedAt.toIso8601String(),
+          if (syncedAt != null) 'synced_at': syncedAt.toIso8601String(),
+        };
+
+        test('remote newer than local → applies', () async {
+          await store.persistUpdatedAt(
+            kind: EntityKind.stageDefinition,
+            profileId: profileId,
+            naturalKey: 'bavli|$seededTrackId|0',
+            updatedAt: _local,
+          );
+
+          await merger.merge(
+            profileId: profileId,
+            rows: [row(updatedAt: _remoteNewer)],
+          );
+
+          final after = await store.currentUpdatedAt(
+            kind: EntityKind.stageDefinition,
+            profileId: profileId,
+            naturalKey: 'bavli|$seededTrackId|0',
+          );
+          expect(after, _remoteNewer);
+        });
+
+        test('local newer than remote → does NOT apply', () async {
+          await store.persistUpdatedAt(
+            kind: EntityKind.stageDefinition,
+            profileId: profileId,
+            naturalKey: 'bavli|$seededTrackId|0',
+            updatedAt: _local,
+          );
+
+          await merger.merge(
+            profileId: profileId,
+            rows: [row(updatedAt: _remoteOlder)],
+          );
+
+          final after = await store.currentUpdatedAt(
+            kind: EntityKind.stageDefinition,
+            profileId: profileId,
+            naturalKey: 'bavli|$seededTrackId|0',
+          );
+          expect(after, _local);
+        });
+
+        test('within ±5 s — remote synced_at newer → applies', () async {
+          await store.persistUpdatedAt(
+            kind: EntityKind.stageDefinition,
+            profileId: profileId,
+            naturalKey: 'bavli|$seededTrackId|0',
+            updatedAt: _localSkew,
+            syncedAt: _localSynced,
+          );
+
+          await merger.merge(
+            profileId: profileId,
+            rows: [row(updatedAt: _remoteSkew, syncedAt: _remoteSyncedNewer)],
+          );
+
+          final after = await store.currentUpdatedAt(
+            kind: EntityKind.stageDefinition,
+            profileId: profileId,
+            naturalKey: 'bavli|$seededTrackId|0',
+          );
+          expect(after, _remoteSkew);
+        });
+      });
+
+      test('StageDefinitionMerger', () async {
+        // stage_definitions.track_id FKs curriculum_tracks(id).
+        final trackId = await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: _profileId,
+                curriculumId: 'bavli',
+                stateChangedAt: _ts.subtract(const Duration(days: 1)),
+                activatedAt: _ts.subtract(const Duration(days: 1)),
+              ),
+            );
+
+        await StageDefinitionMerger(store: store).merge(
+          profileId: _profileId,
+          rows: [
+            {
+              'curriculum_id': 'bavli',
+              'track_id': trackId,
+              'stage_order': 0,
+              'stage_name': 'learning',
+              'is_default': true,
+              'updated_at': _ts.toIso8601String(),
+              'synced_at': _syncedAt.toIso8601String(),
+            },
+          ],
+        );
+
+        final updatedAt = await store.currentUpdatedAt(
+          kind: EntityKind.stageDefinition,
+          profileId: _profileId,
+          naturalKey: 'bavli|$trackId|0',
+        );
+        expect(updatedAt, _ts);
+      });
+    },
+  );
 
   group('stage_definitions — codec.encode() → merger → DB round-trip', () {
     late UserDatabase db;

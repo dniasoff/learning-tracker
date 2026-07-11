@@ -1,12 +1,13 @@
-/// Phase 3: assert [GamificationSettingsMerger] invokes the
-/// `onRewardSettings` callback after a successful apply, so the
-/// reward-milestones sub-map propagates from device A to device B.
+/// Unit tests for [GamificationSettingsMerger]: the onRewardSettings
+/// callback wiring, plus Phase-3 LWW symmetry and persistUpdatedAt against
+/// a real [DriftMergeStore].
 ///
-/// The wiring previously had `onRewardSettings: null` (the override
-/// promised in W2.31 never landed), silently dropping reward-milestone
-/// deltas pulled from the cloud. Phase 3 wires it via
-/// [rewardSettingsMergeDelegateProvider] in features/sync.
-@Tags(['gamification_reward_merge'])
+/// AG-5 (AUD-app-05): consolidates
+/// test/sync/merge/gamification_reward_merge_test.dart,
+/// test/sync/merge/lww_symmetric_test.dart's GamificationSettingsMerger
+/// group, and test/sync/merge/persist_updated_at_test.dart's
+/// GamificationSettingsMerger case into the single file mirroring
+/// lib/core/sync/merge/gamification_settings_merger.dart.
 library;
 
 import 'package:drift/drift.dart' show driftRuntimeOptions;
@@ -18,7 +19,15 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/gamification_settings_merger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../helpers/test_database.dart';
+import '../../../helpers/test_database.dart';
+
+// ── Phase 3 LWW-symmetry / persistUpdatedAt fixtures ────────────────────────
+final _local = DateTime.utc(2026, 5, 21, 12, 0, 0);
+final _remoteNewer = DateTime.utc(2026, 5, 21, 13, 0, 0);
+final _remoteOlder = DateTime.utc(2026, 5, 21, 11, 0, 0);
+const _profileId = 1;
+final _ts = DateTime.utc(2026, 5, 21, 12, 0, 0);
+final _syncedAt = DateTime.utc(2026, 5, 21, 12, 0, 30);
 
 void main() {
   setUpAll(() {
@@ -142,6 +151,113 @@ void main() {
       );
     });
   });
+
+  group(
+    'GamificationSettingsMerger — LWW symmetry + persistence (real DriftMergeStore)',
+    () {
+      late UserDatabase db;
+      late DriftMergeStore store;
+      const profileId = 1;
+
+      setUp(() async {
+        SharedPreferences.setMockInitialValues({});
+        db = UserDatabase(NativeDatabase.memory());
+        await seedProfile(db);
+        store = DriftMergeStore(db);
+      });
+
+      tearDown(() async {
+        await db.close();
+      });
+
+      group('GamificationSettingsMerger', () {
+        late GamificationSettingsMerger merger;
+
+        setUp(() {
+          merger = GamificationSettingsMerger(
+            db: db,
+            store: store,
+            onRewardSettings: null,
+          );
+        });
+
+        Map<String, dynamic> row({
+          required DateTime updatedAt,
+          DateTime? syncedAt,
+        }) => {
+          'updated_at': updatedAt.toIso8601String(),
+          if (syncedAt != null) 'synced_at': syncedAt.toIso8601String(),
+          'points_config': const <Map<String, Object?>>[],
+        };
+
+        test('remote newer than local → applies', () async {
+          await store.persistUpdatedAt(
+            kind: EntityKind.gamificationSettings,
+            profileId: profileId,
+            naturalKey: 'config',
+            updatedAt: _local,
+          );
+
+          await merger.merge(
+            profileId: profileId,
+            rows: [row(updatedAt: _remoteNewer)],
+          );
+
+          final after = await store.currentUpdatedAt(
+            kind: EntityKind.gamificationSettings,
+            profileId: profileId,
+            naturalKey: 'config',
+          );
+          expect(after, _remoteNewer);
+        });
+
+        test('local newer than remote → does NOT apply', () async {
+          await store.persistUpdatedAt(
+            kind: EntityKind.gamificationSettings,
+            profileId: profileId,
+            naturalKey: 'config',
+            updatedAt: _local,
+          );
+
+          await merger.merge(
+            profileId: profileId,
+            rows: [row(updatedAt: _remoteOlder)],
+          );
+
+          final after = await store.currentUpdatedAt(
+            kind: EntityKind.gamificationSettings,
+            profileId: profileId,
+            naturalKey: 'config',
+          );
+          expect(after, _local);
+        });
+      });
+
+      test('GamificationSettingsMerger', () async {
+        await GamificationSettingsMerger(
+          db: db,
+          store: store,
+          onRewardSettings: null,
+        ).merge(
+          profileId: _profileId,
+          rows: [
+            {
+              'updated_at': _ts.toIso8601String(),
+              'synced_at': _syncedAt.toIso8601String(),
+              'points_config': const <Map<String, Object?>>[],
+            },
+          ],
+        );
+
+        final updatedAt = await store.currentUpdatedAt(
+          kind: EntityKind.gamificationSettings,
+          profileId: _profileId,
+          naturalKey: 'config',
+        );
+        expect(updatedAt, _ts);
+      });
+    },
+  );
 }
 
 class _RewardCall {

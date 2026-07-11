@@ -522,7 +522,7 @@ The offline account model (credential-less local account, converted on reconnect
 
 **AG-5 — `test/` mirrors `lib/` 1:1 (`lib/a/b/foo.dart` ↔ `test/a/b/foo_test.dart`, story-acceptance suites exempt); a new source file's test goes at the mirrored path, nowhere else.**
 **Why:** predictable structure lets agents glob straight to the right test and know where a new one belongs; scattered tests cause missing or duplicated coverage.
-**Enforce:** [Pending] audit check for unmirrored test files.
+**Enforce:** `dart run tool/check_test_mirroring.dart` (learning_tracker/), wired into `make audit` (check 27/27). It is a RATCHET, not a full-repo hard-fail: `tool/ag5_unmirrored_baseline.txt` tracks the pre-existing backlog, and the gate fails only when a NEW unmirrored file appears outside that backlog — burn the backlog down incrementally, finding by finding (AUD-app-05 burned down `lib/core/sync/merge/` and `lib/core/sync/codec/` to zero as the first tranche).
 **Source:** anthropic.com/engineering — context engineering
 
 **AG-6 — Every `TODO`/`FIXME` carries a Linear id (`DNI-####`); no commented-out code blocks.**

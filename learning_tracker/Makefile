@@ -274,7 +274,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 28 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 29 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -549,7 +549,7 @@ audit: lint-rules-test ## Run all 28 enforcement greps (NFR19) — exits non-zer
 	  echo "$$HITS"; \
 	  FAIL=1; \
 	fi; \
-	echo "26/28 — Every .logEvent() call site in lib/ uses an AnalyticsEvent.* catalog member (AUD-core-analytics-01, PV-1/PV-5)"; \
+	echo "26/29 — Every .logEvent() call site in lib/ uses an AnalyticsEvent.* catalog member (AUD-core-analytics-01, PV-1/PV-5)"; \
 	if ! dart run tool/check_analytics_catalog.dart > /tmp/analytics_catalog_check.$$$$.log 2>&1; then \
 	  cat /tmp/analytics_catalog_check.$$$$.log; \
 	  rm -f /tmp/analytics_catalog_check.$$$$.log; \
@@ -557,7 +557,7 @@ audit: lint-rules-test ## Run all 28 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/analytics_catalog_check.$$$$.log; \
 	fi; \
-	echo "27/28 — Every SeedManager( construction site in lib/ passes a logger: argument (AUD-app-07, EH-3)"; \
+	echo "27/29 — Every SeedManager( construction site in lib/ passes a logger: argument (AUD-app-07, EH-3)"; \
 	# A SeedManager built without a logger silently no-ops every one of its \
 	# ~13 internal _logger?.info/warning/error(...) diagnostic calls (first- \
 	# launch extraction, version-driven upgrade, .bak rollback, corruption \
@@ -579,7 +579,7 @@ audit: lint-rules-test ## Run all 28 enforcement greps (NFR19) — exits non-zer
 	    FAIL=1; \
 	  fi; \
 	done; \
-	echo "28/28 — pushTrack/pushSettings/pushBookmark/pushGoal overwrite their LWW ordering field with a server Timestamp, never the caller's client-clock value (FB-2, AUD-core-sync-13)"; \
+	echo "28/29 — pushTrack/pushSettings/pushBookmark/pushGoal overwrite their LWW ordering field with a server Timestamp, never the caller's client-clock value (FB-2, AUD-core-sync-13)"; \
 	GW=lib/core/sync/firestore_gateway_impl.dart; \
 	UPDATED_AT_COUNT=$$(grep -c "'updated_at': FieldValue.serverTimestamp()," "$$GW"); \
 	if [ "$$UPDATED_AT_COUNT" -lt 5 ]; then \
@@ -594,9 +594,17 @@ audit: lint-rules-test ## Run all 28 enforcement greps (NFR19) — exits non-zer
 	  echo "  found no such site in $$GW (FB-2)."; \
 	  FAIL=1; \
 	fi; \
+	echo "29/29 — AG-5 test-mirroring ratchet: no NEW unmirrored lib/ file outside the tracked backlog (AUD-app-05)"; \
+	if ! dart run tool/check_test_mirroring.dart > /tmp/ag5_mirroring_check.$$$$.log 2>&1; then \
+	  cat /tmp/ag5_mirroring_check.$$$$.log; \
+	  rm -f /tmp/ag5_mirroring_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/ag5_mirroring_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 28 greps clean ==="; \
+	  echo "=== audit PASSED — all 29 greps clean ==="; \
 	fi
