@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
+import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
@@ -328,7 +329,7 @@ class OutboxProcessor {
       // requiring a DB pull to diagnose).
       if (failedError != null) {
         AppLogger.instance.warning(
-          event: 'sync_outbox_push_failed',
+          event: LogEvents.sync.outboxPushFailed,
           fields: {
             'kind': OutboxEntityKind.completion,
             'error': failedError.toString(),
@@ -391,7 +392,7 @@ class OutboxProcessor {
           successCount++;
         } catch (e) {
           AppLogger.instance.warning(
-            event: 'sync_outbox_push_failed',
+            event: LogEvents.sync.outboxPushFailed,
             fields: {
               'kind': kind,
               'entity_key': row.entityKey,
