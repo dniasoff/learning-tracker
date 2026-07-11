@@ -6705,13 +6705,17 @@
   {
    "id": "AUD-sync-05",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "Repositories/services constructed inline instead of injected via a provider at three sync-path call sites",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (wave-2 engine run outcome, ledger reconciliation, 2026-07-11, reopen-and-reconfirm pass). Prior state: this row was gate-repair-blocked (2026-07-11, wave-2 closing-gate remediation pass) as genuinely incomplete -- deliberately deprioritised behind the other 11 wave-2 blocked ids within that pass's time budget, with a concrete scoped follow-up noted (add an optional analyticsRepository/rewardMilestoneService constructor param at LocalDataUploadService/OutboxSyncWriteFacade, mirroring the existing 'logger' pattern, and a dedicated rewardMilestoneServiceFactoryProvider for reward_settings_merge_delegate.dart -- no design obstacle, just not attempted). Reopened to TODO for this pass under that scoped follow-up. This engine run re-attempted the fix and again terminated at no-progress cap / loop end with this id in its final blocked set; commits=[] on this branch. Independently spot-checked against the current tree: all 3 cited sites still construct inline rather than inject -- local_data_upload_service.dart:117 (ParentAnalyticsRepositoryImpl(_database)), outbox_sync_write_facade.dart:168 (RewardMilestoneService(...)), reward_settings_merge_delegate.dart:35 (RewardMilestoneService(db, profileId: profileId)) -- defect remains genuinely open, not a bookkeeping gap. Left todo for a future harvest/relaunch pass."
+   "commits": [
+    "f207a95ee3c87c5c87d4d6a5bb20b608c6be3591"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-sync-05 AC1 OK: make audit check 37/37 (new scoped SM-7 Rule-0 checker) greps the three fix sites and hard-fails on ad-hoc ParentAnalyticsRepositoryImpl/RewardMilestoneService construction; verified red-first via test/tool/audit_and_arb_parity_test.dart's fixture test (flips clean->FAIL->clean), and the wider repo-wide SM-7 pattern is explicitly filed as backlog in docs/coding-standards.md per the AC's alternative clause."
+   ],
+   "notes": "MERGED (gate-repair 2026-07-12, GATE2 remediation). Prior state: swept-under-blocked across two passes with no external blocker ('just not attempted' / 'no-progress cap' / 'defect remains genuinely open') -- unfinished deliverable work, not a genuine escalation. Fixed properly: added optional analyticsRepository param to LocalDataUploadService, optional rewardMilestoneServiceFactory param to OutboxSyncWriteFacade (a factory, not a fixed instance, since AUD-core-sync-10 resolves profileId live per call), and a new rewardMilestoneServiceFactoryProvider for reward_settings_merge_delegate.dart. Also delivered the finding's Rule-0 checker AC (make audit check 37/37, was 36 checks) with a red-first fixture test proving it fires, not just that it's wired in. Discovered and harvested-by-reimplementation an equivalent but stale prior attempt (commit 1502f2c0 in the now-removed stray worktree .claude/worktrees/wf_6e1e0397-511-1) that predated the AUD-core-sync-10 profileId-resolver refactor and could not be cherry-picked cleanly; this commit reimplements the same design against the current file shapes. commit=f207a95e."
   },
   {
    "id": "AUD-tracks-21",
