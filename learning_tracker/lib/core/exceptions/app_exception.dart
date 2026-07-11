@@ -93,3 +93,30 @@ abstract class NetworkException extends AppException {
 abstract class InternalException extends AppException {
   const InternalException(super.message);
 }
+
+// ─── Shared toString() formatting ────────────────────────────────────────────
+
+/// Shared ` caused by: <cause>` formatting for leaf exceptions that carry an
+/// optional underlying [cause].
+///
+/// AUD-core-sync-32: this ternary was hand-copied into 3 sync exception
+/// classes (`FirestorePermissionDeniedException`, `MergeException`,
+/// `OutboxDeadLetterException`) — the latter two were since deleted as dead
+/// code by AUD-core-sync-27, leaving `FirestorePermissionDeniedException` as
+/// the sole current user. Mixing this in still gives every future leaf
+/// exception one place to change the formatting — e.g. to redact a
+/// PII-bearing `FirebaseException` payload before it reaches
+/// AppLogger/Crashlytics.
+///
+/// Not applied to [SyncPushException] — its `toString()` uses a
+/// deliberately different, unconditional `cause: $cause` shape (it always
+/// has a cause, by construction) rather than this optional-suffix form.
+mixin CauseSuffix {
+  /// The underlying error, if any. Implementers typically already declare
+  /// this field (directly or inherited from [NetworkException]); the mixin
+  /// only requires it be readable.
+  Object? get cause;
+
+  /// `' caused by: $cause'` when [cause] is non-null, else the empty string.
+  String get causeSuffix => cause != null ? ' caused by: $cause' : '';
+}

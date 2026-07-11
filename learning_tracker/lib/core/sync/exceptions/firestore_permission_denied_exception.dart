@@ -12,7 +12,8 @@ import 'package:learning_tracker/core/exceptions/app_exception.dart';
 ///
 /// Distinct from [TutorWriteForbiddenException], which is a *client-side*
 /// domain guard thrown before the request reaches Firestore.
-class FirestorePermissionDeniedException extends PermissionException {
+class FirestorePermissionDeniedException extends PermissionException
+    with CauseSuffix {
   const FirestorePermissionDeniedException(
     super.message, {
     this.collection,
@@ -27,6 +28,7 @@ class FirestorePermissionDeniedException extends PermissionException {
   final String? operation;
 
   /// The underlying Firestore error.
+  @override
   final Object? cause;
 
   @override
@@ -34,5 +36,5 @@ class FirestorePermissionDeniedException extends PermissionException {
       'FirestorePermissionDeniedException: $message'
       '${collection != null ? ' (collection: $collection)' : ''}'
       '${operation != null ? ', op: $operation' : ''}'
-      '${cause != null ? ' caused by: $cause' : ''}';
+      '$causeSuffix';
 }
