@@ -214,12 +214,22 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     /// events for dashboards.
     AnalyticsService? analytics,
 
-    /// Phase 0 sync-architecture-plan: outbox processor used by the five
-    /// drain triggers (write-tee, pull-complete, connectivity-online,
-    /// lifecycle-resume, periodic safety net). Cloud-born accounts must
-    /// provide it; tests that only exercise the pull path can omit it
-    /// (drain calls become no-ops).
-    OutboxProcessor? outboxProcessor,
+    /// Phase 0 sync-architecture-plan: resolver for the outbox processor used
+    /// by the five drain triggers (write-tee, pull-complete,
+    /// connectivity-online, lifecycle-resume, periodic safety net).
+    /// Cloud-born accounts must provide it; tests that only exercise the pull
+    /// path can omit it (drain calls become no-ops).
+    ///
+    /// AUD-core-sync-23: resolved lazily — like [resolveMergeRouter] /
+    /// [resolveGateway] / [resolveOutboxDao] — so a `userDatabaseProvider`
+    /// swap (multi-account flow) is picked up without rebuilding the
+    /// orchestrator singleton. `outboxProcessorProvider` itself watches
+    /// `userDatabaseProvider`; capturing its value once at construction let
+    /// this be the one collaborator that could go stale relative to its
+    /// already-lazy siblings — draining through a processor still bound to
+    /// the pre-swap database while `resolveOutboxDao`/`resolveMergeRouter`
+    /// already point at the new one (split-database state).
+    OutboxProcessor? Function()? resolveOutboxProcessor,
 
     /// Phase 0 sync-architecture-plan: interval between periodic drain
     /// attempts while the orchestrator is started AND online. Exposed for
@@ -262,7 +272,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
        _resolveBackfillGoals = resolveBackfillGoals,
        _connectivityStream = connectivityStream,
        _resetFirestoreNetworkOverride = resetFirestoreNetworkOverride,
-       _outboxProcessor = outboxProcessor,
+       _resolveOutboxProcessor = resolveOutboxProcessor,
        _periodicDrainInterval = periodicDrainInterval,
        _resolveOutboxDao = resolveOutboxDao,
        _resolveIdentityStatus = resolveIdentityStatus,
@@ -336,9 +346,13 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// Test seam — see constructor doc.
   final Future<void> Function()? _resetFirestoreNetworkOverride;
 
-  /// Phase 0 — outbox processor that drains queued mutations to Firestore.
-  /// Null when not cloud-born (the wired triggers all bail early in that case).
-  final OutboxProcessor? _outboxProcessor;
+  /// Phase 0 — resolves the outbox processor that drains queued mutations to
+  /// Firestore, on demand. Null (or a resolver returning null) when not
+  /// cloud-born (the wired triggers all bail early in that case).
+  ///
+  /// AUD-core-sync-23: resolved lazily rather than captured — see the
+  /// constructor doc.
+  final OutboxProcessor? Function()? _resolveOutboxProcessor;
 
   /// Phase 0 — cadence for the periodic drain timer. Defaults to 60 s in
   /// production; tests override to a short interval to exercise the trigger.
@@ -367,7 +381,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// outbox processor itself owns the single-flight guard so this method is
   /// safe to call from multiple triggers near-simultaneously.
   Future<void> _drainOutbox(String trigger) async {
-    final processor = _outboxProcessor;
+    // AUD-core-sync-23: resolved live on every drain, not read once at
+    // construction — see the field doc.
+    final processor = _resolveOutboxProcessor?.call();
     if (processor == null) return;
     // One-shot per launch: give rows that dead-lettered under a since-resolved
     // condition (wrong account signed in, or Firestore rules not yet deployed)

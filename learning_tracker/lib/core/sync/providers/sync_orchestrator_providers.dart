@@ -143,12 +143,6 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     );
   }();
 
-  // Phase 0 — outbox processor wired into the orchestrator. Cloud-born
-  // accounts must have one (this provider returns null only when the user
-  // is local-born, in which case `authState.isCloudBorn` above already
-  // short-circuits and we never reach this point).
-  final outboxProcessor = ref.read(outboxProcessorProvider);
-
   final orchestrator = SyncOrchestratorImpl(
     // Every collaborator that can itself rebuild is handed in as a lazy
     // resolver, so a later rebuild of any of these providers is picked up
@@ -175,10 +169,17 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     analytics: analytics,
     // Phase 0 — drain triggers and single-flight: the orchestrator owns
     // the five drain triggers (write-tee, pull-complete, connectivity
-    // online, lifecycle resume, periodic safety net). Passed via `read`
-    // so the orchestrator singleton is not rebuilt when the underlying
-    // processor changes.
-    outboxProcessor: outboxProcessor,
+    // online, lifecycle resume, periodic safety net).
+    //
+    // AUD-core-sync-23: resolved lazily via ref.read, matching
+    // resolveMergeRouter/resolveGateway/resolveOutboxDao, so the orchestrator
+    // singleton is not rebuilt when the underlying processor changes AND a
+    // later drain always uses the CURRENT processor — outboxProcessorProvider
+    // itself watches userDatabaseProvider, so capturing it once at build time
+    // (the pre-fix shape) could leave the orchestrator draining through a
+    // processor still bound to a pre-DB-swap outboxDao while
+    // resolveOutboxDao/resolveMergeRouter (already lazy) had moved on.
+    resolveOutboxProcessor: () => ref.read(outboxProcessorProvider),
     // Phase 4 — outbox-driven sync-status emission + observability gauge.
     // Resolved lazily via ref.read so a DB swap (multi-account flow) is
     // picked up without rebuilding the orchestrator singleton.
