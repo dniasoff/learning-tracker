@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
@@ -96,6 +97,12 @@ class _FakePipeline extends Fake implements PushPipeline {
   /// per-push timeout guards against).
   bool hangStreak = false;
 
+  /// When set, [pushStreak] throws this (typically a
+  /// [FirestorePermissionDeniedException]) instead of succeeding. One-shot —
+  /// cleared after it fires. Models a permission-denied write failure
+  /// (AUD-core-sync-20) distinctly from [failNextPush]'s generic Exception.
+  Exception? throwOnNextStreak;
+
   @override
   Future<void> pushStreak({
     required int profileId,
@@ -104,6 +111,11 @@ class _FakePipeline extends Fake implements PushPipeline {
   }) async {
     if (hangStreak) {
       await Completer<void>().future; // never completes
+    }
+    final toThrow = throwOnNextStreak;
+    if (toThrow != null) {
+      throwOnNextStreak = null;
+      throw toThrow;
     }
     calls.add(('streak', entityKey));
   }
@@ -939,6 +951,95 @@ void main() {
       },
     );
   });
+
+  // ── AUD-core-sync-20: permission_denied analytics from an outbox PUSH ──────
+  //
+  // Before this fix, sync_orchestrator.dart's AnalyticsEvent.syncPermissionDenied
+  // fired only from the pullOnLaunch error handler — a permission-denied
+  // outbox PUSH failure was silently indistinguishable from any other push
+  // error. These tests show the same event now also fires from a drain(),
+  // regardless of which trigger (periodic, connectivity, write-tee, ...)
+  // invoked it.
+  group(
+    'OutboxProcessor.drain — permission_denied analytics (AUD-core-sync-20)',
+    () {
+      late FakeLocalDayClock clock;
+      late _FakeAnalyticsService analytics;
+
+      setUp(() {
+        clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
+        useLocalDayClock(clock);
+        analytics = _FakeAnalyticsService();
+        processor = OutboxProcessor(
+          outboxDao: db.outboxDao,
+          pipeline: pipeline,
+          clock: clock,
+          analytics: analytics,
+        );
+      });
+
+      tearDown(resetLocalDayClock);
+
+      test('a permission-denied non-completion push failure fires '
+          'sync_permission_denied — not only from pullOnLaunch', () async {
+        await db.outboxDao.insertOutboxRow(
+          OutboxCompanion.insert(
+            profileId: profileId,
+            entityKind: OutboxEntityKind.streak,
+            entityKey: 'sk-denied',
+            payload: jsonEncode({'count': 1}),
+            createdAt: clock.nowUtc(),
+          ),
+        );
+        pipeline.throwOnNextStreak = const FirestorePermissionDeniedException(
+          'simulated PERMISSION_DENIED',
+          collection: 'streak_events',
+          operation: 'write',
+        );
+
+        await processor.drain(profileId);
+
+        final eventNames = analytics.events.map((e) => e.$1).toList();
+        expect(
+          eventNames,
+          contains('sync_permission_denied'),
+          reason:
+              'a permission-denied outbox PUSH failure must fire the same '
+              'analytics event the pull path already fires — this is the '
+              'gap AUD-core-sync-20 closes',
+        );
+        final params = analytics.events
+            .firstWhere((e) => e.$1 == 'sync_permission_denied')
+            .$2;
+        expect(params?['collection'], 'streak_events');
+        expect(params?['operation'], 'write');
+      });
+
+      test(
+        'a non-permission-denied push failure does NOT fire '
+        'sync_permission_denied (only genuine permission-denied errors do)',
+        () async {
+          await db.outboxDao.insertOutboxRow(
+            OutboxCompanion.insert(
+              profileId: profileId,
+              entityKind: OutboxEntityKind.streak,
+              entityKey: 'sk-offline',
+              payload: jsonEncode({'count': 1}),
+              createdAt: clock.nowUtc(),
+            ),
+          );
+          pipeline.throwOnNextStreak = Exception(
+            'offline: network unreachable',
+          );
+
+          await processor.drain(profileId);
+
+          final eventNames = analytics.events.map((e) => e.$1).toList();
+          expect(eventNames, isNot(contains('sync_permission_denied')));
+        },
+      );
+    },
+  );
 
   // ── T1.isolation — tutored-profile guard ──────────────────────────────────
   group('OutboxProcessor.drain — isTutoredProfile guard (T1.isolation)', () {

@@ -12,6 +12,13 @@
 ///     (FakeFirebaseFirestore is always "offline-safe")
 library;
 
+// AUD-core-sync-20: group 17's permission-denied test proxies implement
+// cloud_firestore's `@sealed`-annotated CollectionReference/DocumentReference
+// to intercept a `set()`/`commit()` call at the exact I/O point (see the
+// class docs below) — a deliberate, narrow, test-only exception to the
+// "don't implement sealed classes" guidance.
+// ignore_for_file: subtype_of_sealed_class
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
@@ -133,7 +140,6 @@ class _FakeSnapshotMetadata implements SnapshotMetadata {
   final bool isFromCache;
 }
 
-// ignore: subtype_of_sealed_class
 class _FakeQueryDocumentSnapshot
     implements QueryDocumentSnapshot<Map<String, dynamic>> {
   _FakeQueryDocumentSnapshot(this.id, this._data, this.metadata);
@@ -161,7 +167,6 @@ class _FakeQueryDocumentSnapshot
   dynamic operator [](Object field) => _data[field];
 }
 
-// ignore: subtype_of_sealed_class
 class _FakeDocumentChange implements DocumentChange<Map<String, dynamic>> {
   _FakeDocumentChange(this.doc);
 
@@ -569,12 +574,52 @@ void main() {
       expect(snap.docs.first.id, equals('77'));
     });
 
-    test('pushGoal without id uses auto-generated doc ID', () async {
+    test(
+      'pushGoal without id derives a deterministic doc ID (never add())',
+      () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        await _gw(fs).pushGoal(
+          profileId: _profileId,
+          data: {
+            'curriculum_id': 'mishnayos',
+            'target_percent': 50,
+            'created_at': '2026-01-01T00:00:00.000Z',
+          },
+        );
+        final snap = await _subcollection(fs, _uid, _profileId, 'goals');
+        expect(snap.docs, hasLength(1));
+        expect(snap.docs.first.id, isNotEmpty);
+      },
+    );
+
+    // AUD-core-sync-24: pushGoal must NEVER fall back to collection.add()
+    // for an id-less payload — add() mints a fresh random doc-id on every
+    // call, so an outbox retry after a lost ack (the exact scenario the
+    // at-least-once outbox exists to survive) would create a second,
+    // permanent duplicate goal document. The fix derives a deterministic
+    // fallback doc-id from the payload's natural key so a retry of the
+    // SAME payload always lands on the SAME document.
+    test('pushGoal called twice with the same id-less payload writes exactly '
+        'one document (idempotent — no add() duplication)', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
-      await _gw(fs).pushGoal(profileId: _profileId, data: {'target': 2});
+      final gw = _gw(fs);
+      final payload = {
+        'curriculum_id': 'mishnayos',
+        'target_percent': 50,
+        'created_at': '2026-01-01T00:00:00.000Z',
+      };
+      await gw.pushGoal(profileId: _profileId, data: Map.of(payload));
+      // Simulate an outbox retry after a lost ack: the exact same
+      // payload is pushed a second time.
+      await gw.pushGoal(profileId: _profileId, data: Map.of(payload));
       final snap = await _subcollection(fs, _uid, _profileId, 'goals');
-      expect(snap.docs, hasLength(1));
-      expect(snap.docs.first.id, isNotEmpty);
+      expect(
+        snap.docs,
+        hasLength(1),
+        reason:
+            'a retried id-less pushGoal must overwrite the same '
+            'document, never create a second one via add()',
+      );
     });
 
     test('pushProfileProgram uses curriculum_id as doc ID', () async {
@@ -2476,4 +2521,181 @@ void main() {
       expect(ids, contains('grant_parent'));
     });
   });
+
+  // ── 17. Permission-denied on write paths (AUD-core-sync-20) ────────────────
+
+  group('17. Permission-denied on write paths', () {
+    test('pushCompletionsBatch surfaces FirestorePermissionDeniedException — '
+        'not a generic SyncPushException/raw FirebaseException — when the '
+        'underlying commit fails with code permission-denied', () async {
+      final real = createFakeFirestore(authenticatedUid: _uid);
+      final proxy = _PermissionDeniedOnBatchCommitFirestore(real);
+      final gw = FirestoreGatewayImpl(
+        firestore: proxy,
+        authRepository: _StubAuth(_uid),
+      );
+
+      await expectLater(
+        gw.pushCompletionsBatch(
+          profileId: _profileId,
+          items: [
+            (
+              entityKey: 'k1',
+              payload: {
+                'sefaria_ref': 'Berakhot 1:1',
+                'stage_id': 1,
+                'curriculum_id': 'mishnayos',
+              },
+            ),
+          ],
+        ),
+        throwsA(isA<FirestorePermissionDeniedException>()),
+      );
+    });
+
+    test('pushCompletion surfaces FirestorePermissionDeniedException when the '
+        'underlying set() fails with code permission-denied', () async {
+      final real = createFakeFirestore(authenticatedUid: _uid);
+      final proxy = _PermissionDeniedOnSetFirestore(real);
+      final gw = FirestoreGatewayImpl(
+        firestore: proxy,
+        authRepository: _StubAuth(_uid),
+      );
+
+      await expectLater(
+        gw.pushCompletion(
+          profileId: _profileId,
+          data: {
+            'sefaria_ref': 'Berakhot 1:1',
+            'stage_id': 1,
+            'curriculum_id': 'mishnayos',
+          },
+        ),
+        throwsA(isA<FirestorePermissionDeniedException>()),
+      );
+    });
+  });
+}
+
+// ── Permission-denied simulation helpers (group 17) ─────────────────────────
+//
+// FakeFirebaseFirestore's own security-rules engine (see group 9's comment)
+// cannot deterministically deny a WRITE without also being stricter than
+// production in ways that make the test flaky. These proxies instead
+// deterministically simulate a real Firestore PERMISSION_DENIED error at the
+// exact I/O point (`WriteBatch.commit()` / `DocumentReference.set()`) while
+// delegating every other call (collection/doc navigation) to the real fake,
+// so path-building behaviour is unaffected.
+
+/// Delegates every [FirebaseFirestore] member to [_delegate] except
+/// [collection], which is intercepted so the returned [CollectionReference]
+/// can itself be wrapped to simulate a denied `set()`.
+class _PermissionDeniedOnSetFirestore implements FirebaseFirestore {
+  _PermissionDeniedOnSetFirestore(this._delegate);
+  final FirebaseFirestore _delegate;
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String collectionPath) =>
+      _DenySetCollectionReference(_delegate.collection(collectionPath));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled FirebaseFirestore member in test proxy: '
+    '${invocation.memberName}',
+  );
+}
+
+/// Wraps a real [CollectionReference], delegating [doc] to a
+/// [_DenySetDocumentReference] so a `set()` anywhere under this collection
+/// (including nested subcollections reached via further `.doc().collection()`
+/// navigation) throws a simulated PERMISSION_DENIED.
+class _DenySetCollectionReference
+    implements CollectionReference<Map<String, dynamic>> {
+  _DenySetCollectionReference(this._delegate);
+  final CollectionReference<Map<String, dynamic>> _delegate;
+
+  @override
+  DocumentReference<Map<String, dynamic>> doc([String? path]) =>
+      _DenySetDocumentReference(_delegate.doc(path));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled CollectionReference member in test proxy: '
+    '${invocation.memberName}',
+  );
+}
+
+/// Wraps a real [DocumentReference]; [set] throws a simulated PERMISSION_DENIED
+/// [FirebaseException] instead of writing. Every other member (notably
+/// [collection], used by nested subcollection navigation) delegates through.
+class _DenySetDocumentReference
+    implements DocumentReference<Map<String, dynamic>> {
+  _DenySetDocumentReference(this._delegate);
+  final DocumentReference<Map<String, dynamic>> _delegate;
+
+  @override
+  Future<void> set(Map<String, dynamic> data, [SetOptions? options]) async {
+    throw FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'permission-denied',
+      message: 'simulated PERMISSION_DENIED (test)',
+    );
+  }
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String collectionPath) =>
+      _DenySetCollectionReference(_delegate.collection(collectionPath));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled DocumentReference member in test proxy: '
+    '${invocation.memberName}',
+  );
+}
+
+/// Delegates every [FirebaseFirestore] member to [_delegate] except
+/// [collection] (for path navigation, unaffected) and [batch], which returns
+/// a batch whose `commit()` simulates a PERMISSION_DENIED error.
+class _PermissionDeniedOnBatchCommitFirestore implements FirebaseFirestore {
+  _PermissionDeniedOnBatchCommitFirestore(this._delegate);
+  final FirebaseFirestore _delegate;
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String collectionPath) =>
+      _delegate.collection(collectionPath);
+
+  @override
+  WriteBatch batch() => _PermissionDeniedBatch();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled FirebaseFirestore member in test proxy: '
+    '${invocation.memberName}',
+  );
+}
+
+/// A [WriteBatch] whose [set] calls are accepted (no-ops — the batch never
+/// actually commits) and whose [commit] throws a simulated PERMISSION_DENIED
+/// [FirebaseException].
+class _PermissionDeniedBatch implements WriteBatch {
+  @override
+  WriteBatch set<T extends Object?>(
+    DocumentReference<T> document,
+    T data, [
+    SetOptions? options,
+  ]) => this;
+
+  @override
+  Future<void> commit() async {
+    throw FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'permission-denied',
+      message: 'simulated PERMISSION_DENIED (test)',
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled WriteBatch member in test proxy: ${invocation.memberName}',
+  );
 }

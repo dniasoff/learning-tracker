@@ -237,10 +237,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // diverges from the batch path). The [docId] parameter is retained on the
     // interface for non-completion callers; for completions it is ignored.
     final id = _completionDocId(profileId, data);
-    await collection.doc(id).set({
-      ..._timestampifyCompletedAt(_stripInternalKeys(data)),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => collection.doc(id).set({
+        ..._timestampifyCompletedAt(_stripInternalKeys(data)),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'completions',
+      operation: 'write',
+    );
   }
 
   @override
@@ -272,8 +276,25 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       // [BatchPushException] so the caller (OutboxProcessor) can delete
       // exactly the rows that genuinely landed and retry only the rest —
       // committed rows are never re-pushed or dead-lettered (H3).
+      //
+      // AUD-core-sync-20: a permission-denied commit failure surfaces as
+      // FirestorePermissionDeniedException — not the generic
+      // SyncPushException every other commit failure wraps as — so the
+      // dedicated permission_denied analytics/handling path (previously
+      // reachable only from the pull side) also sees write-path denials.
+      // Any prior chunk's commits are unaffected: `pushed` is already
+      // durable server-side and safe to leave out of this exception (a
+      // retry of those rows is a harmless idempotent overwrite, never data
+      // loss — H3's guarantee comes from OutboxProcessor never re-pushing
+      // rows Drift has already deleted, not from this exception's shape).
       try {
-        await batch.commit();
+        await _guardPermission(
+          () => batch.commit(),
+          collection: 'completions',
+          operation: 'write',
+        );
+      } on FirestorePermissionDeniedException {
+        rethrow;
       } catch (e) {
         throw SyncPushException(
           committed: List.unmodifiable(pushed),
@@ -299,10 +320,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (collection == null) throw _notAuthenticated;
     final ulid = data['ulid'] as String?;
     final ref = ulid != null ? collection.doc(ulid) : collection.doc();
-    await ref.set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => ref.set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'streak_events',
+      operation: 'write',
+    );
   }
 
   @override
@@ -313,16 +338,20 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final collection = _collection(profileId, 'settings');
     if (collection == null) throw _notAuthenticated;
     final docId = data['curriculum_id']?.toString() ?? 'default';
-    await collection.doc(docId).set({
-      ..._stripInternalKeys(data),
-      // FB-2 (AUD-core-sync-13): SettingsCodec/SettingsMerger compare this
-      // document's top-level `updated_at` for cross-device LWW — overwrite
-      // the caller's client-clock value with a server timestamp so a
-      // fast/skewed local clock can never make a stale settings write
-      // silently beat a genuinely newer one from another device.
-      'updated_at': FieldValue.serverTimestamp(),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => collection.doc(docId).set({
+        ..._stripInternalKeys(data),
+        // FB-2 (AUD-core-sync-13): SettingsCodec/SettingsMerger compare this
+        // document's top-level `updated_at` for cross-device LWW — overwrite
+        // the caller's client-clock value with a server timestamp so a
+        // fast/skewed local clock can never make a stale settings write
+        // silently beat a genuinely newer one from another device.
+        'updated_at': FieldValue.serverTimestamp(),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'settings',
+      operation: 'write',
+    );
   }
 
   @override
@@ -340,16 +369,20 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // the same document on multi-curriculum accounts.
     final curriculumId = data['curriculum_id']?.toString() ?? '';
     final docId = curriculumId;
-    await collection.doc(docId).set({
-      ..._stripInternalKeys(data),
-      // FB-2 (AUD-core-sync-13): TrackCodec/TrackConfigMerger compare
-      // `state_changed_at` (NOT `updated_at`) for cross-device LWW —
-      // overwrite the caller's client-clock value with a server timestamp
-      // so a fast/skewed local clock can never make a stale track write
-      // silently beat a genuinely newer one from another device.
-      'state_changed_at': FieldValue.serverTimestamp(),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => collection.doc(docId).set({
+        ..._stripInternalKeys(data),
+        // FB-2 (AUD-core-sync-13): TrackCodec/TrackConfigMerger compare
+        // `state_changed_at` (NOT `updated_at`) for cross-device LWW —
+        // overwrite the caller's client-clock value with a server timestamp
+        // so a fast/skewed local clock can never make a stale track write
+        // silently beat a genuinely newer one from another device.
+        'state_changed_at': FieldValue.serverTimestamp(),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'curriculum_tracks',
+      operation: 'write',
+    );
   }
 
   @override
@@ -363,10 +396,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final ref =
         data['sefaria_ref']?.toString() ?? data['ref']?.toString() ?? '';
     final docId = '${curriculumId}_$ref';
-    await collection.doc(docId).set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => collection.doc(docId).set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'learning_order',
+      operation: 'write',
+    );
   }
 
   @override
@@ -378,16 +415,20 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (collection == null) throw _notAuthenticated;
     // One track per curriculum, so the curriculum id alone is the natural key.
     final docId = data['curriculum_id']?.toString() ?? '';
-    await collection.doc(docId).set({
-      ..._stripInternalKeys(data),
-      // FB-2 (AUD-core-sync-13): BookmarkCodec/BookmarkMerger compare this
-      // document's `updated_at` for cross-device LWW — overwrite the
-      // caller's client-clock value with a server timestamp so a
-      // fast/skewed local clock can never make a stale bookmark write
-      // silently beat a genuinely newer one from another device.
-      'updated_at': FieldValue.serverTimestamp(),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => collection.doc(docId).set({
+        ..._stripInternalKeys(data),
+        // FB-2 (AUD-core-sync-13): BookmarkCodec/BookmarkMerger compare this
+        // document's `updated_at` for cross-device LWW — overwrite the
+        // caller's client-clock value with a server timestamp so a
+        // fast/skewed local clock can never make a stale bookmark write
+        // silently beat a genuinely newer one from another device.
+        'updated_at': FieldValue.serverTimestamp(),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'bookmarks',
+      operation: 'write',
+    );
   }
 
   // ── P2a additions ──────────────────────────────────────────────────────────
@@ -400,10 +441,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // W3.33: unified into preferences/{scope} — scope = 'notification_settings'.
     final doc = _doc(profileId, 'preferences', 'notification_settings');
     if (doc == null) throw _notAuthenticated;
-    await doc.set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => doc.set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'preferences',
+      operation: 'write',
+    );
   }
 
   @override
@@ -414,10 +459,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // W3.33: unified into preferences/{scope} — scope = 'gamification_settings'.
     final doc = _doc(profileId, 'preferences', 'gamification_settings');
     if (doc == null) throw _notAuthenticated;
-    await doc.set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => doc.set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'preferences',
+      operation: 'write',
+    );
   }
 
   // ── P2b additions ──────────────────────────────────────────────────────────
@@ -431,10 +480,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // profile subcollection:  users/{uid}/learner_profiles/{profileId}
     final learnerProfileDoc = _learnerProfileDoc(profileId);
     if (learnerProfileDoc == null) throw _notAuthenticated;
-    await learnerProfileDoc.set({
-      ..._stripInternalKeys(data),
-      'updated_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => learnerProfileDoc.set({
+        ..._stripInternalKeys(data),
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'learner_profiles',
+      operation: 'write',
+    );
   }
 
   @override
@@ -446,7 +499,15 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final callable = FirebaseFunctions.instance.httpsCallable(
       'deleteLearnerProfile',
     );
-    await callable.call<Map<String, dynamic>>({'profileId': profileId});
+    // AUD-core-sync-20: FirebaseFunctionsException extends FirebaseException,
+    // so the same permission-denied conversion applies to this Callable's
+    // errors (Cloud Functions surfaces gRPC-style status codes, including
+    // 'permission-denied', identically to Firestore).
+    await _guardPermission(
+      () => callable.call<Map<String, dynamic>>({'profileId': profileId}),
+      collection: 'learner_profiles',
+      operation: 'delete',
+    );
   }
 
   // ── P2c additions ──────────────────────────────────────────────────────────
@@ -463,10 +524,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (collection == null) throw _notAuthenticated;
     final ulid = data['ulid'] as String?;
     final ref = ulid != null ? collection.doc(ulid) : collection.doc();
-    await ref.set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => ref.set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'learning_ledger',
+      operation: 'write',
+    );
   }
 
   @override
@@ -487,7 +552,11 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         'synced_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     }
-    await batch.commit();
+    await _guardPermission(
+      () => batch.commit(),
+      collection: 'learning_ledger',
+      operation: 'write',
+    );
   }
 
   // ── P2d additions ──────────────────────────────────────────────────────────
@@ -500,10 +569,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final collection = _collection(profileId, 'profile_programs');
     if (collection == null) throw _notAuthenticated;
     final curriculumId = data['curriculum_id']?.toString() ?? '';
-    await collection.doc(curriculumId).set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => collection.doc(curriculumId).set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'profile_programs',
+      operation: 'write',
+    );
   }
 
   @override
@@ -513,7 +586,11 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }) async {
     final collection = _collection(profileId, 'profile_programs');
     if (collection == null) throw _notAuthenticated;
-    await collection.doc(curriculumStorageKey).delete();
+    await _guardPermission(
+      () => collection.doc(curriculumStorageKey).delete(),
+      collection: 'profile_programs',
+      operation: 'delete',
+    );
   }
 
   // ── pull ──────────────────────────────────────────────────────────────────
@@ -560,7 +637,11 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }) async {
     final ref = _collection(profileId, collection);
     if (ref == null) return [];
-    final snapshot = await ref.get();
+    final snapshot = await _guardPermission(
+      () => ref.get(),
+      collection: collection,
+      operation: 'read',
+    );
     return snapshot.docs
         .map((doc) => _normalizeRow({...doc.data(), 'firestore_id': doc.id}))
         .toList(growable: false);
@@ -575,25 +656,55 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }) async {
     final collection = _collection(profileId, 'goals');
     if (collection == null) throw _notAuthenticated;
-    final docId = data['id']?.toString() ?? data['goal_id']?.toString();
+    // AUD-core-sync-24 / FB-4: every other push* method here derives a
+    // deterministic doc id so an outbox retry after a lost ack is a safe
+    // overwrite via set(merge:true). pushGoal must NEVER fall back to
+    // collection.add() — a fresh random doc-id on every call — because a
+    // retried outbox row (the exact at-least-once scenario the outbox
+    // exists to survive) would then create a second, permanent duplicate
+    // goal document. Every real producer (GoalRepositoryImpl._syncGoal,
+    // LocalDataUploadService's goal-upload loop, TutoredWriteRouter's
+    // pass-through) already injects data['id']/data['goal_id']; the
+    // natural-key fallback below is a defensive backstop so a future
+    // caller that forgets to set an id still gets a deterministic,
+    // idempotent doc-id instead of a duplicate-prone add().
+    final docId =
+        data['id']?.toString() ??
+        data['goal_id']?.toString() ??
+        _fallbackGoalDocId(data);
     // FB-2 (AUD-core-sync-13): GoalMerger compares this document's
     // `updated_at` for cross-device LWW — overwrite the caller's
     // client-clock value with a server timestamp so a fast/skewed local
     // clock can never make a stale goal write silently beat a genuinely
     // newer one from another device.
-    if (docId != null) {
-      await collection.doc(docId).set({
+    await _guardPermission(
+      () => collection.doc(docId).set({
         ..._stripInternalKeys(data),
         'updated_at': FieldValue.serverTimestamp(),
         'synced_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    } else {
-      await collection.add({
-        ..._stripInternalKeys(data),
-        'updated_at': FieldValue.serverTimestamp(),
-        'synced_at': FieldValue.serverTimestamp(),
-      });
-    }
+      }, SetOptions(merge: true)),
+      collection: 'goals',
+      operation: 'write',
+    );
+  }
+
+  /// Deterministic fallback goal doc-id for the (unreachable in practice)
+  /// case where a caller omits both `id` and `goal_id`. Mirrors
+  /// [OutboxSyncWriteFacade]'s `_goalKey` natural-key fallback
+  /// (`curriculum_targetPercent_createdAt`) so the SAME id-less payload
+  /// always maps to the SAME document, keeping a retry idempotent.
+  static String _fallbackGoalDocId(Map<String, dynamic> data) {
+    final curriculum = (data['curriculum_id'] ?? data['curriculumId'] ?? '')
+        .toString();
+    final pct = (data['target_percent'] ?? data['targetPercent'] ?? '')
+        .toString();
+    final createdAt = (data['created_at'] ?? data['createdAt'] ?? '')
+        .toString();
+    return [
+      _encodeKeyComponent(curriculum),
+      _encodeKeyComponent(pct),
+      _encodeKeyComponent(createdAt),
+    ].join('_');
   }
 
   @override
@@ -603,7 +714,11 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }) async {
     final collection = _collection(profileId, 'goals');
     if (collection == null) throw _notAuthenticated;
-    await collection.doc(firestoreId).delete();
+    await _guardPermission(
+      () => collection.doc(firestoreId).delete(),
+      collection: 'goals',
+      operation: 'delete',
+    );
   }
 
   @override
@@ -614,25 +729,33 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // W3.33: unified into preferences/{scope} — scope = 'ui_preferences'.
     final doc = _doc(profileId, 'preferences', 'ui_preferences');
     if (doc == null) throw _notAuthenticated;
-    await doc.set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => doc.set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'preferences',
+      operation: 'write',
+    );
   }
 
   @override
   Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {
     final uid = _addressedUid;
     if (uid == null) throw _notAuthenticated;
-    await _firestore
+    final doc = _firestore
         .collection('users')
         .doc(uid)
         .collection('profile')
-        .doc('data')
-        .set({
-          ..._stripInternalKeys(data),
-          'synced_at': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        .doc('data');
+    await _guardPermission(
+      () => doc.set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'profile',
+      operation: 'write',
+    );
   }
 
   @override
@@ -644,10 +767,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final collection = _collection(profileId, 'import_metadata');
     if (collection == null) throw _notAuthenticated;
     final docId = data['curriculum_id']?.toString() ?? 'default';
-    await collection.doc(docId).set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => collection.doc(docId).set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'import_metadata',
+      operation: 'write',
+    );
   }
 
   /// Real per-profile subcollection names — matches this file's own
@@ -684,34 +811,58 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     // real per-profile subcollections — the data lives at
     // users/{uid}/learner_profiles/{profileId}/<collection>, not at
     // users/{uid}/<collection> (see the class doc comment).
-    final profilesSnapshot = await userDoc.collection('learner_profiles').get();
+    final profilesSnapshot = await _guardPermission(
+      () => userDoc.collection('learner_profiles').get(),
+      collection: 'learner_profiles',
+      operation: 'read',
+    );
     for (final profileDoc in profilesSnapshot.docs) {
       for (final sub in perProfileSubcollectionsForDeletion) {
-        await _deleteCollection(profileDoc.reference.collection(sub));
+        await _deleteCollection(sub, profileDoc.reference.collection(sub));
       }
-      await profileDoc.reference.delete();
+      await _guardPermission(
+        () => profileDoc.reference.delete(),
+        collection: 'learner_profiles',
+        operation: 'delete',
+      );
     }
 
     // Account-level collections that are NOT nested under a profile.
-    await _deleteCollection(userDoc.collection('diagnostic_logs'));
-    await _deleteCollection(userDoc.collection('profile'));
+    await _deleteCollection(
+      'diagnostic_logs',
+      userDoc.collection('diagnostic_logs'),
+    );
+    await _deleteCollection('profile', userDoc.collection('profile'));
 
-    await userDoc.delete();
+    await _guardPermission(
+      () => userDoc.delete(),
+      collection: 'users',
+      operation: 'delete',
+    );
   }
 
   Future<void> _deleteCollection(
+    String collectionName,
     CollectionReference<Map<String, dynamic>> ref,
   ) async {
     const batchSize = 500;
     QuerySnapshot<Map<String, dynamic>> snapshot;
     do {
-      snapshot = await ref.limit(batchSize).get();
+      snapshot = await _guardPermission(
+        () => ref.limit(batchSize).get(),
+        collection: collectionName,
+        operation: 'read',
+      );
       if (snapshot.docs.isEmpty) break;
       final batch = _firestore.batch();
       for (final doc in snapshot.docs) {
         batch.delete(doc.reference);
       }
-      await batch.commit();
+      await _guardPermission(
+        () => batch.commit(),
+        collection: collectionName,
+        operation: 'delete',
+      );
     } while (snapshot.docs.length >= batchSize);
   }
 
@@ -720,14 +871,18 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required String uid,
     required Map<String, dynamic> data,
   }) async {
-    await _firestore
+    final collection = _firestore
         .collection('users')
         .doc(uid)
-        .collection('diagnostic_logs')
-        .add({
-          ..._stripInternalKeys(data),
-          'captured_at': FieldValue.serverTimestamp(),
-        });
+        .collection('diagnostic_logs');
+    await _guardPermission(
+      () => collection.add({
+        ..._stripInternalKeys(data),
+        'captured_at': FieldValue.serverTimestamp(),
+      }),
+      collection: 'diagnostic_logs',
+      operation: 'write',
+    );
   }
 
   @override
@@ -735,10 +890,15 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required String uid,
     required Map<String, dynamic> data,
   }) async {
-    await _firestore.collection('users').doc(uid).set({
-      ..._stripInternalKeys(data),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    final doc = _firestore.collection('users').doc(uid);
+    await _guardPermission(
+      () => doc.set({
+        ..._stripInternalKeys(data),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'users',
+      operation: 'write',
+    );
   }
 
   @override
@@ -960,11 +1120,15 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async {
     final uid = _addressedUid;
     if (uid == null) return [];
-    final snap = await _firestore
+    final collection = _firestore
         .collection('users')
         .doc(uid)
-        .collection('learner_profiles')
-        .get();
+        .collection('learner_profiles');
+    final snap = await _guardPermission(
+      () => collection.get(),
+      collection: 'learner_profiles',
+      operation: 'read',
+    );
     return snap.docs
         .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
         .toList(growable: false);
@@ -978,7 +1142,11 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   }) async {
     final ref = _doc(profileId, collection, docId);
     if (ref == null) return null;
-    final snap = await ref.get();
+    final snap = await _guardPermission(
+      () => ref.get(),
+      collection: collection,
+      operation: 'read',
+    );
     if (!snap.exists) return null;
     final data = snap.data();
     if (data == null) return null;
@@ -1003,10 +1171,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       );
     }
     final docId = '${trackId}_$stageOrder';
-    await collection.doc(docId).set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => collection.doc(docId).set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'stage_definitions',
+      operation: 'write',
+    );
   }
 
   // ── Phase 1 — study_day_configs/ collection ─────────────────────────────
@@ -1027,10 +1199,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       );
     }
     final docId = '${curriculumId}_${dayOfWeek}_$trackId';
-    await collection.doc(docId).set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => collection.doc(docId).set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'study_day_configs',
+      operation: 'write',
+    );
   }
 
   // ── WS9 Wave-B (C#2) — points spend economy ────────────────────────────────
@@ -1047,10 +1223,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (collection == null) throw _notAuthenticated;
     final ulid = data['ulid'] as String?;
     final ref = ulid != null ? collection.doc(ulid) : collection.doc();
-    await ref.set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => ref.set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'points_ledger',
+      operation: 'write',
+    );
   }
 
   @override
@@ -1064,10 +1244,14 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     if (collection == null) throw _notAuthenticated;
     final ulid = data['ulid'] as String?;
     final ref = ulid != null ? collection.doc(ulid) : collection.doc();
-    await ref.set({
-      ..._stripInternalKeys(data),
-      'synced_at': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await _guardPermission(
+      () => ref.set({
+        ..._stripInternalKeys(data),
+        'synced_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)),
+      collection: 'reward_redemptions',
+      operation: 'write',
+    );
   }
 
   // ── helpers ───────────────────────────────────────────────────────────────
@@ -1156,7 +1340,11 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       remoteProfileId,
       collection,
     ).doc(docId);
-    final snap = await ref.get();
+    final snap = await _guardPermission(
+      () => ref.get(),
+      collection: collection,
+      operation: 'read',
+    );
     if (!snap.exists) return null;
     final data = snap.data();
     if (data == null) return null;
@@ -1233,7 +1421,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       q = q.where('action', isEqualTo: actionFilter);
     }
 
-    final snapshot = await q.get();
+    final finalQuery = q;
+    final snapshot = await _guardPermission(
+      () => finalQuery.get(),
+      collection: 'audit_log',
+      operation: 'read',
+    );
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 

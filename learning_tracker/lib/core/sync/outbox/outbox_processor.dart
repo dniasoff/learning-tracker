@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -384,6 +385,14 @@ class OutboxProcessor {
             'error': failedError.toString(),
           },
         );
+        // AUD-core-sync-20: the dedicated permission_denied analytics event
+        // (sync_orchestrator.dart's AnalyticsEvent.syncPermissionDenied)
+        // previously fired only from the pull path — a permission-denied
+        // outbox PUSH failure was indistinguishable from any other push
+        // error. Firing it here too closes that gap for every drain
+        // trigger (pull, periodic, connectivity, write-tee), not just
+        // pullOnLaunch.
+        _maybeFirePermissionDeniedAnalytics(failedError);
       }
 
       // AUD-core-sync-17 (DB-3): collect the whole commit/failure group and
@@ -462,6 +471,10 @@ class OutboxProcessor {
               'error': e.toString(),
             },
           );
+          // AUD-core-sync-20: see the completions-path comment above — the
+          // same permission_denied analytics event fires from this
+          // non-completion push failure too.
+          _maybeFirePermissionDeniedAnalytics(e);
           await _dao.markAttempted(row.id, error: e.toString());
           // Continue draining other rows — don't abort the whole batch on
           // a single failure.
@@ -473,6 +486,24 @@ class OutboxProcessor {
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────
+
+  /// Fires the same `permission_denied` analytics event
+  /// `sync_orchestrator.dart`'s `pullOnLaunch` error handler fires, but from
+  /// an outbox PUSH failure (AUD-core-sync-20). A no-op unless [error] is a
+  /// [FirestorePermissionDeniedException] — i.e. the gateway's
+  /// `_guardPermission` actually converted a Firestore `permission-denied`
+  /// code, not some other push failure (offline, timeout, ...).
+  void _maybeFirePermissionDeniedAnalytics(Object? error) {
+    if (error is! FirestorePermissionDeniedException) return;
+    final future = _analytics?.logEvent(
+      AnalyticsEvent.syncPermissionDenied,
+      parameters: {
+        'collection': error.collection ?? 'unknown',
+        'operation': error.operation ?? 'write',
+      },
+    );
+    if (future != null) unawaited(future);
+  }
 
   /// Deterministic drain order for non-completion kinds — time-sensitive
   /// entities (streaks) are flushed before cosmetic ones (settings, order).
