@@ -188,7 +188,7 @@ The only permitted call sites for `useHebrewTermsProvider` are `lib/core/labels/
 
 **EH-4 — Catch with typed `on <Type> catch` clauses; never catch `Error` subtypes; throw only `Exception`/`Error` subclasses.**
 **Why:** a bare catch traps programming-error `Error`s that should crash loudly with a stack, masking real bugs; thrown strings defeat every typed `on` clause downstream.
-**Enforce:** [Enforced] `only_throw_errors` (enabled). [Pending] enable `avoid_catches_without_on_clauses` + `avoid_catching_errors` (see [Lint Baseline](#lint-baseline)).
+**Enforce:** [Enforced] `only_throw_errors` (enabled). [Enforced, scoped] `make audit` check 27 (`tool/check_eh4_typed_catches.dart`) requires every named `catch`/`catchError` in `lib/core/sync/{sync_orchestrator,pull_pipeline}.dart` and `lib/core/sync/tutored_listener_supervisor.dart` to carry an `on <Type>` clause (or a `catchError` `test:` filter), or an inline `// audit:eh4-broad-catch-ok` marker documenting why it must stay broad (AUD-core-sync-26). [Pending] the project-wide `avoid_catches_without_on_clauses` + `avoid_catching_errors` analyzer lints remain pending — ~150 bare `catch` sites exist outside core/sync (see [Lint Baseline](#lint-baseline)); enabling them globally is a separate, larger sweep.
 **Source:** dart.dev/tools/linter-rules/only_throw_errors
 
 **EH-5 — Domain/data errors carry a stable error code or enum, never a pre-formatted human message. Presentation resolves the code through `AppLocalizations`/ARB.**
@@ -701,8 +701,8 @@ Adopted additions (each closes a gap named by the rules above) — **[Pending]**
 | Lint | Closes |
 |------|--------|
 | `discarded_futures` | the un-awaited-future gap `unawaited_futures` alone leaves in sync/async fields |
-| `avoid_catches_without_on_clauses` | EH-4 |
-| `avoid_catching_errors` | EH-4 |
+| `avoid_catches_without_on_clauses` (project-wide) | EH-4 — scoped equivalent already enforced for core/sync via `make audit` check 27, see EH-4 above |
+| `avoid_catching_errors` (project-wide) | EH-4 — scoped equivalent already enforced for core/sync via `make audit` check 27, see EH-4 above |
 | `prefer_const_constructors_in_immutables` | PF-1 |
 | `prefer_const_literals_to_create_immutables` | PF-1 |
 | `non_exhaustive_switch_statement` → **error** severity | EH-6 |

@@ -127,6 +127,16 @@ class _Setup {
   Future<void> close() async {
     orchestrator.dispose();
     await connectivity.close();
+    // AUD-core-sync-26 (EH-4): pullOnLaunch() fires a trailing
+    // `unawaited(_recomputeOutboxStatus())` follow-up query that this test
+    // helper does not otherwise wait for. Before EH-4 narrowed
+    // _recomputeOutboxStatus's catches, a query landing after the DB below
+    // was closed threw a Drift `StateError` ("closed database") that a bare
+    // `catch` silently swallowed-and-logged; now it propagates, so this
+    // helper must let the dangling task settle before closing the DB out
+    // from under it — otherwise every caller of `pullOnLaunch` in this file
+    // would need its own manual settle-then-close dance.
+    await Future<void>.delayed(const Duration(milliseconds: 20));
     await db.close();
   }
 }

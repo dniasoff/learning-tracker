@@ -160,15 +160,22 @@ class TutoredListenerSupervisor {
     unawaited(
       _resolveDispatcher()
           .dispatch(profileId: localProfileId, kind: kind, rows: rows)
-          .catchError((Object err, StackTrace st) {
-            AppLogger.instance.warning(
-              event: 'tutored_listener_merge_error',
-              fields: {'kind': kind, 'profileId': localProfileId},
-              exception: err,
-              stackTrace: st,
-            );
-            return MergeOutcome.halt;
-          }),
+          .catchError(
+            (Object err, StackTrace st) {
+              AppLogger.instance.warning(
+                event: 'tutored_listener_merge_error',
+                fields: {'kind': kind, 'profileId': localProfileId},
+                exception: err,
+                stackTrace: st,
+              );
+              return MergeOutcome.halt;
+            },
+            // AUD-core-sync-26 (EH-4): only Exception subtypes are logged and
+            // swallowed here — a programming-error Error subtype escaping the
+            // merger must propagate instead of being folded into an ordinary
+            // "tutored listener merge error" warning.
+            test: (err) => err is Exception,
+          ),
     );
   }
 

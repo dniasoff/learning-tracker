@@ -317,7 +317,12 @@ class PullPipeline {
         );
       } on FirestorePermissionDeniedException {
         rethrow;
-      } catch (e, stackTrace) {
+      } on Exception catch (e, stackTrace) {
+        // AUD-core-sync-26 (EH-4): narrowed from a bare `catch` — an `Error`
+        // subtype (TypeError/StateError/RangeError/NoSuchMethodError) escaping
+        // a merger is a programming bug, not the transient per-collection I/O
+        // failure this guard exists to isolate, so it must propagate instead
+        // of being folded into `failureCount` and swallowed.
         failureCount++;
         AppLogger.instance.warning(
           event: 'tutored_pull_collection_failed',
@@ -341,7 +346,10 @@ class PullPipeline {
         );
       } on FirestorePermissionDeniedException {
         rethrow;
-      } catch (e, stackTrace) {
+      } on Exception catch (e, stackTrace) {
+        // AUD-core-sync-26 (EH-4): see the matching comment above — narrowed
+        // so a programming-error `Error` subtype propagates rather than
+        // being absorbed into `failureCount`.
         failureCount++;
         AppLogger.instance.warning(
           event: 'tutored_pull_document_failed',

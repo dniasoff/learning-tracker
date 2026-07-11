@@ -126,15 +126,24 @@ class _DrivenChildGateway implements FirestoreGateway {
   );
 }
 
-/// A dispatcher that always throws on dispatch — used to test the R4-M1
-/// catchError path in TutoredListenerSupervisor._onEvent.
+/// A dispatcher that always throws [error] on dispatch — used to test the
+/// R4-M1 catchError path in TutoredListenerSupervisor._onEvent.
+///
+/// AUD-core-sync-26 (EH-4): [error] is caller-supplied (not hardcoded) so
+/// the same fake drives both halves of the EH-4 contract — an [Exception]
+/// is still swallowed-and-logged (transient failure), while an [Error]
+/// subtype now propagates to the zone instead (programming bug).
 class _ThrowingDispatcher implements MergeDispatcher {
+  _ThrowingDispatcher({required this.error});
+
+  final Object error;
+
   @override
   Future<MergeOutcome> dispatch({
     required int profileId,
     required String kind,
     required List<Map<String, dynamic>> rows,
-  }) => Future<MergeOutcome>.error(StateError('intentional test error'));
+  }) => Future<MergeOutcome>.error(error);
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -344,35 +353,84 @@ void main() {
     );
 
     // (G) R4-M1: a failing dispatch must not crash (catchError is wired) ──────
-    test(
-      '(G) R4-M1: dispatch error is swallowed by catchError (no unhandled exception)',
-      () async {
-        final throwingSupervisor = TutoredListenerSupervisor(
-          dispatcher: _ThrowingDispatcher(),
-        );
-        final gateway = _DrivenChildGateway();
-        await throwingSupervisor.attach(
-          localProfileId: 1,
-          gateway: gateway,
-          parentUid: 'parent-uid',
-          remoteProfileId: 'child-1',
-        );
+    test('(G) R4-M1: an Exception from dispatch is swallowed by catchError '
+        '(no unhandled exception)', () async {
+      final throwingSupervisor = TutoredListenerSupervisor(
+        dispatcher: _ThrowingDispatcher(
+          error: Exception('intentional test error'),
+        ),
+      );
+      final gateway = _DrivenChildGateway();
+      await throwingSupervisor.attach(
+        localProfileId: 1,
+        gateway: gateway,
+        parentUid: 'parent-uid',
+        remoteProfileId: 'child-1',
+      );
 
-        // Emit a valid payload — dispatch will throw but must not cause an
-        // unhandled exception (the catchError in _onEvent absorbs it).
-        gateway.emitCollection('goals', [
-          {
-            'firestore_id': 'g1',
-            'updated_at': DateTime.now().toIso8601String(),
-          },
-        ]);
-        // If catchError is missing this await would surface an unhandled error.
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+      // Emit a valid payload — dispatch will throw but must not cause an
+      // unhandled exception (the catchError in _onEvent absorbs it).
+      gateway.emitCollection('goals', [
+        {'firestore_id': 'g1', 'updated_at': DateTime.now().toIso8601String()},
+      ]);
+      // If catchError is missing this await would surface an unhandled error.
+      await Future<void>.delayed(const Duration(milliseconds: 10));
 
-        // Reaching here means no crash — catchError is wired correctly.
-        await throwingSupervisor.detach();
-      },
-    );
+      // Reaching here means no crash — catchError is wired correctly.
+      await throwingSupervisor.detach();
+    });
+
+    // (H) AUD-core-sync-26 (EH-4): an Error subtype must NOT be swallowed ────
+    test('(H) AUD-core-sync-26 (EH-4): a StateError from dispatch propagates '
+        'to the zone instead of being silently swallowed', () async {
+      final caught = <Object>[];
+      final done = Completer<void>();
+
+      await runZonedGuarded(
+        () async {
+          final throwingSupervisor = TutoredListenerSupervisor(
+            dispatcher: _ThrowingDispatcher(
+              error: StateError(
+                'programming bug inside the goals merger — e.g. a bad '
+                'cast or null dereference, NOT a transient I/O failure',
+              ),
+            ),
+          );
+          final gateway = _DrivenChildGateway();
+          await throwingSupervisor.attach(
+            localProfileId: 1,
+            gateway: gateway,
+            parentUid: 'parent-uid',
+            remoteProfileId: 'child-1',
+          );
+
+          gateway.emitCollection('goals', [
+            {
+              'firestore_id': 'g1',
+              'updated_at': DateTime.now().toIso8601String(),
+            },
+          ]);
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await throwingSupervisor.detach();
+          if (!done.isCompleted) done.complete();
+        },
+        (error, stack) {
+          caught.add(error);
+          if (!done.isCompleted) done.complete();
+        },
+      );
+
+      await done.future;
+      expect(
+        caught,
+        hasLength(1),
+        reason:
+            'the StateError must reach the zone error handler exactly '
+            'once — before AUD-core-sync-26 it was caught and logged by '
+            'the bare catchError instead',
+      );
+      expect(caught.single, isA<StateError>());
+    });
 
     // (F) ─────────────────────────────────────────────────────────────────────
     test('(F) preference document payloads routed correctly', () async {

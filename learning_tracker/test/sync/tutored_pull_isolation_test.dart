@@ -41,6 +41,32 @@ class _RecordingDispatcher implements MergeDispatcher {
   }
 }
 
+/// A [MergeDispatcher] that throws [error] for the single [throwForKind]
+/// kind and otherwise behaves like [_RecordingDispatcher]. Used by
+/// AUD-core-sync-26 (EH-4) to inject a programming-error-shaped
+/// [StateError] into a merger/dispatch call reached from
+/// [PullPipeline.pullForTutoredProfile]'s per-collection catch (the exact
+/// site the finding narrows from a bare `catch` to `on Exception catch`).
+class _ThrowingDispatcher implements MergeDispatcher {
+  _ThrowingDispatcher({required this.throwForKind, required this.error});
+
+  final String throwForKind;
+  final Error error;
+
+  final dispatched = <({int profileId, String kind, int rowCount})>[];
+
+  @override
+  Future<MergeOutcome> dispatch({
+    required int profileId,
+    required String kind,
+    required List<Map<String, dynamic>> rows,
+  }) async {
+    if (kind == throwForKind) throw error;
+    dispatched.add((profileId: profileId, kind: kind, rowCount: rows.length));
+    return MergeOutcome.continueNext;
+  }
+}
+
 /// Gateway that returns one page per collection and then signals empty (done).
 ///
 /// Respects [cursor]: once a cursor is set (i.e. second call for the same
@@ -764,4 +790,42 @@ void main() {
       },
     );
   });
+
+  group(
+    'AUD-core-sync-26 (EH-4) — typed catches in the tutored dispatch path',
+    () {
+      test(
+        'a StateError raised inside a merger/dispatch call propagates out of '
+        'pullForTutoredProfile instead of being silently logged-and-continued',
+        () async {
+          final gateway = _ChildDataGateway();
+          final dispatcher = _ThrowingDispatcher(
+            throwForKind: 'completion',
+            error: StateError(
+              'programming bug inside the completions merger — e.g. a bad '
+              'cast or null dereference, NOT a transient I/O failure',
+            ),
+          );
+          final pipeline = PullPipeline(
+            gateway: gateway,
+            dispatcher: dispatcher,
+          );
+
+          // Before the fix, pull_pipeline.dart:298's bare `catch (e, stackTrace)`
+          // swallows every error (including Error subtypes) and returns a
+          // failure count instead of throwing — masking the bug. After the fix
+          // (`on Exception catch`), a StateError is NOT an Exception, so it is
+          // not caught here and propagates to the caller.
+          await expectLater(
+            pipeline.pullForTutoredProfile(
+              parentUid: 'parent-uid-123',
+              remoteProfileId: 'remote-child-42',
+              localProfileId: 5,
+            ),
+            throwsA(isA<StateError>()),
+          );
+        },
+      );
+    },
+  );
 }

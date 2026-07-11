@@ -402,7 +402,10 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         event: LogEvents.sync.outboxDrainCompleted,
         fields: {'trigger': trigger, 'rows_pushed': pushed},
       );
-    } catch (e, st) {
+    } on Exception catch (e, st) {
+      // AUD-core-sync-26 (EH-4): narrowed from a bare `catch` so an `Error`
+      // subtype escaping the drain (a programming bug) propagates instead of
+      // being folded into an ordinary "drain failed" warning.
       _logger?.warning(
         event: LogEvents.sync.outboxDrainFailed,
         fields: {'trigger': trigger},
@@ -516,7 +519,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       resetFirestoreNetwork: () async {
         try {
           await _doFirestoreNetworkReset();
-        } catch (e, st) {
+        } on Exception catch (e, st) {
+          // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
           _logger?.warning(
             event: 'firestore_network_reset_failed',
             exception: e,
@@ -542,7 +546,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         try {
           await supervisor.park();
           _logger?.info(event: LogEvents.sync.listenersParked);
-        } catch (e, st) {
+        } on Exception catch (e, st) {
+          // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
           _logger?.warning(
             event: 'sync_listeners_park_failed',
             exception: e,
@@ -556,7 +561,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         try {
           await supervisor.unpark();
           _logger?.info(event: LogEvents.sync.listenersUnparked);
-        } catch (e, st) {
+        } on Exception catch (e, st) {
+          // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
           _logger?.warning(
             event: 'sync_listeners_unpark_failed',
             exception: e,
@@ -634,7 +640,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
           // recovers. Anything queued while offline rides the freshly-reset
           // channel up to Firestore.
           await _drainOutbox('connectivity');
-        } catch (e, st) {
+        } on Exception catch (e, st) {
+          // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
           _logger?.warning(
             event: 'firestore_network_reset_on_reconnect_failed',
             exception: e,
@@ -782,6 +789,14 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
             ),
           );
         } catch (e, stackTrace) {
+          // audit:eh4-broad-catch-ok — AUD-core-sync-26 (EH-4): deliberately
+          // broad. This guard needs to inspect the runtime type of anything
+          // that escapes a merger (including local-DB `Error` subtypes such
+          // as a Drift-wrapped constraint violation), then classify via
+          // `_isLocalDatabaseError` below before deciding to swallow —
+          // matching the recommendation's own template for guards that must
+          // stay broad on purpose. Everything else is rethrown.
+          //
           // Bug 1 resilience (defence-in-depth): a single collection's local
           // DATABASE error — most importantly a SqliteException(787) FK
           // violation while merging one row (e.g. a learner_profiles row
@@ -944,7 +959,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       if (backfill != null) {
         try {
           await backfill();
-        } catch (e, stackTrace) {
+        } on Exception catch (e, stackTrace) {
+          // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
           _logger?.warning(
             event: 'sync_goal_backfill_failed',
             exception: e,
@@ -953,6 +969,14 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         }
       }
     } catch (e, stackTrace) {
+      // audit:eh4-broad-catch-ok — AUD-core-sync-26 (EH-4): deliberately
+      // broad. This is the pull's top-level error boundary — it converts
+      // ANY escaping error (including a programming-error `Error` subtype)
+      // into a status update for the UI and then `rethrow`s unconditionally
+      // at the bottom of this block, so nothing is masked; narrowing the
+      // `on` clause here would only change what status/analytics classify
+      // the error as, not whether it propagates.
+      //
       // Reset the pull guard so DeviceRestoreService.retry() (or any other
       // external retry) can re-run a cold-start pull after a failed attempt
       // (I4 / S8). Transitions to [_PullFailed] (not [_PullNeverRun]) so the
@@ -1092,7 +1116,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
           fields: {'count': revived},
         );
       }
-    } catch (e, st) {
+    } on Exception catch (e, st) {
+      // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
       // Reset the flag so a transient DB error doesn't permanently skip the
       // one-shot revive for this launch.
       _identityDeadLettersRevived = false;
@@ -1159,7 +1184,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     OutboxDao dao;
     try {
       dao = resolveDao();
-    } catch (e, st) {
+    } on Exception catch (e, st) {
+      // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
       // DB swap mid-flight: log and bail; the next drain attempt will retry.
       _logger?.warning(
         event: 'sync_outbox_status_resolver_failed',
@@ -1196,7 +1222,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
           oldest = oldest0;
         }
       }
-    } catch (e, st) {
+    } on Exception catch (e, st) {
+      // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
       // Drift errors during shutdown / DB swap — degrade gracefully.
       _logger?.warning(
         event: 'sync_outbox_status_query_failed',
@@ -1307,13 +1334,20 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // gateway resolver returns null mid-upgrade), log it so the failure is
     // observable and the supervisor is not left silently detached (L2).
     unawaited(
-      supervisor.restart().catchError((Object e, StackTrace stackTrace) {
-        _logger?.error(
-          event: 'sync_orchestrator_listeners_restart_failed',
-          exception: e,
-          stackTrace: stackTrace,
-        );
-      }),
+      supervisor.restart().catchError(
+        (Object e, StackTrace stackTrace) {
+          _logger?.error(
+            event: 'sync_orchestrator_listeners_restart_failed',
+            exception: e,
+            stackTrace: stackTrace,
+          );
+        },
+        // AUD-core-sync-26 (EH-4): only handle Exception subtypes here — an
+        // Error subtype (programming bug) must propagate to the zone's
+        // uncaught-error handler instead of being logged as an ordinary
+        // "listeners restart failed" warning.
+        test: (e) => e is Exception,
+      ),
     );
   }
 
@@ -1333,7 +1367,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     _logger?.info(event: 'sync_orchestrator_listeners_stop_for_switch');
     try {
       await supervisor.stop();
-    } catch (e, stackTrace) {
+    } on Exception catch (e, stackTrace) {
+      // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
       _logger?.warning(
         event: 'sync_orchestrator_listeners_stop_failed',
         exception: e,
@@ -1393,15 +1428,22 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // Resolve the MergeRouter lazily so a router rebuild is picked up (I5).
     _resolveMergeRouter()
         .dispatch(profileId: _profileId, kind: kind, rows: rows)
-        .catchError((Object e, StackTrace st) {
-          _logger?.error(
-            event: 'sync_orchestrator_listener_merge_failed',
-            fields: {'channel': channel, 'kind': kind},
-            exception: e,
-            stackTrace: st,
-          );
-          return MergeOutcome.halt;
-        });
+        .catchError(
+          (Object e, StackTrace st) {
+            _logger?.error(
+              event: 'sync_orchestrator_listener_merge_failed',
+              fields: {'channel': channel, 'kind': kind},
+              exception: e,
+              stackTrace: st,
+            );
+            return MergeOutcome.halt;
+          },
+          // AUD-core-sync-26 (EH-4): only Exception subtypes are logged and
+          // swallowed here — a programming-error Error subtype escaping the
+          // merger must propagate instead of being folded into an ordinary
+          // "listener merge failed" warning.
+          test: (e) => e is Exception,
+        );
   }
 
   void _onListenerError(String channel, Object error, StackTrace stackTrace) {
@@ -1491,7 +1533,8 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       );
       try {
         await op();
-      } catch (e, st) {
+      } on Exception catch (e, st) {
+        // AUD-core-sync-26 (EH-4): narrowed from a bare `catch`.
         _logger?.warning(
           event: 'sync_listener_recovery_pull_failed',
           fields: {'channel': channel},
