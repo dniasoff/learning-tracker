@@ -861,18 +861,20 @@ run live in CI.
 
 **AUD-onboarding-13 update (2026-07-11):** the same manual-marker scratch-run
 technique was used to verify the `no_color_literal_outside_theme` fix for
-this finding's 3 evidence files (`intro_mishna_page.dart`,
-`intro_page_indicator.dart`, `intro_rewards_page.dart` — a `_kNavy` etc.
-hex-literal constant independently hand-typed in each). With the marker
-temporarily enabled, the rule found **zero** hits in those 3 files
-post-fix (all 19 pre-fix literals now reference the new
-"Onboarding intro carousel" section of `AppColors`), and **13** genuine
-pre-existing hits of the same pattern in two sibling files under the same
-`lib/features/onboarding/presentation/widgets/` directory that this
-finding's evidence does not name — `glowing_cta_button.dart` (1) and
-`intro_daily_plan_page.dart` (12). Per scope discipline these are left
-unfixed and tracked as a follow-up, mirroring how AUD-tutoring-08's own
-out-of-scope hits above were handled.
+this finding. The finding's own acceptance criterion reads "...reports zero
+`no_color_literal_outside_theme` violations under
+`lib/features/onboarding/presentation/widgets/`" — i.e. the whole directory
+is the AC's scope, not merely the 3 files named in the finding's evidence
+(`intro_mishna_page.dart`, `intro_page_indicator.dart`,
+`intro_rewards_page.dart`). A first delivery attempt fixed only those 3
+files and deferred the other 2 files in the same directory
+(`glowing_cta_button.dart`, 1 hit; `intro_daily_plan_page.dart`, 12 hits) as
+"out of scope"; that was incorrect — deferring part of a finding's own AC is
+fake-done, not a scope call — and was bounced. All 5 files are now fixed:
+every hand-typed `Color(0x...)` literal across the directory (32 total: the
+original 19 plus these 13) references the "Onboarding intro carousel"
+section of `AppColors`. With the marker temporarily enabled, the rule found
+**zero** hits across all 5 files post-fix.
 
 ---
 

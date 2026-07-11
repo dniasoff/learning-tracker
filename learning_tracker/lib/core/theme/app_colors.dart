@@ -305,13 +305,14 @@ abstract final class AppColors {
   // ---------------------------------------------------------------------------
   // Onboarding intro carousel (AUD-onboarding-13) — was independently
   // hand-typed as a private `_kNavy` etc. constant in each of
-  // intro_mishna_page.dart, intro_page_indicator.dart and
-  // intro_rewards_page.dart; centralised here so the three copies cannot
+  // intro_mishna_page.dart, intro_page_indicator.dart,
+  // intro_rewards_page.dart, glowing_cta_button.dart and
+  // intro_daily_plan_page.dart; centralised here so the five copies cannot
   // drift out of sync on a future rebrand/dark-mode pass.
   // ---------------------------------------------------------------------------
 
   /// Deep navy used for the intro carousel's hero card fill, chip text, and
-  /// accent text (was duplicated as `_kNavy` in 3 files).
+  /// accent text (was duplicated as `_kNavy` in 5 files).
   static const Color introNavy = Color(0xFF1A36A5);
 
   /// Soft peach used for the Mishna/Rewards illustration accent chips.
@@ -351,4 +352,24 @@ abstract final class AppColors {
 
   /// Inactive-dot colour for the intro page indicator.
   static const Color introIndicatorInactive = Color(0xFFDCE0EA);
+
+  /// Third "window dot" accent (sky blue) in the daily-plan illustration's
+  /// mock browser-chrome header.
+  static const Color introWindowDotBlue = Color(0xFF5BC0EB);
+
+  /// Pill-shaped row background for the daily-plan illustration's checked
+  /// and empty task rows.
+  static const Color introDailyRowPillBg = Color(0xFFF0F1F4);
+
+  /// Filled track colour for the daily-plan illustration's checked-row
+  /// progress bar and the first "empty" row variant.
+  static const Color introDailyRowTrackFilled = Color(0xFFDCDFE5);
+
+  /// Border colour for the daily-plan illustration's unchecked checkbox
+  /// circle.
+  static const Color introDailyCheckboxBorder = Color(0xFFC9CED6);
+
+  /// Unfilled track colour for the daily-plan illustration's second "empty"
+  /// row variant.
+  static const Color introDailyRowTrackEmpty = Color(0xFFE5E7EC);
 }
