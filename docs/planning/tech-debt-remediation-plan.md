@@ -528,7 +528,7 @@ Final wave — land the cross-cutting contracts after every consumer is in its f
 ```
 Phase 7a · Exception leaves
 □ W7.1  (M) Re-parent all existing exception classes under the 5 category bases
-□ W7.2  (S) Add new exceptions: MergeException, OutboxDeadLetterException, FirestorePermissionDeniedException
+□ W7.2  (S) Add new exceptions: MergeException, OutboxDeadLetterException, FirestorePermissionDeniedException — AUD-core-sync-27 (2026-07): only FirestorePermissionDeniedException was ever wired to a throw site; MergeException/OutboxDeadLetterException were added but never threaded into drift_merge_store.dart/profile_program_merger.dart or outbox_processor.dart — the W7.5/W7.6/W7.7 telemetry below fires via inline AppLogger/analytics calls instead. Both dead classes were deleted rather than wired, since the merge/dead-letter paths they targeted are designed to skip-and-continue, not throw. See docs/coding-standards.md EH-2/EH-6 for the current typed-exception boundary pattern.
 □ W7.3  (S) Move BatchPushException → core/sync/exceptions/sync_push_exception.dart under NetworkException
 □ W7.4  (S) Rename InvalidOperationException → InvalidTrackOperationException; under ValidationException
 
