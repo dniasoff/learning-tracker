@@ -8551,13 +8551,18 @@
   {
    "id": "AUD-onboarding-16",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Stop surfacing PinService's raw ArgumentError.message as OnboardingParentPinStep's error text",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "b4410f23ea40cfa13ca57f8f5b7b004a4fe37e55"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-onboarding-16 AC1 OK: pin_service.dart:65,135,199 throw typed InvalidPinFormatException (extends ValidationException), not ArgumentError",
+    "AUD-onboarding-16 AC2 OK: onboarding_parent_pin_step_test.dart 4 tests assert pinInvalidFormat+pinsDoNotMatch via AppLocalizations en+he; pass"
+   ],
+   "notes": "Re-verified: evidence still present. PinService's 3 throw sites throw typed InvalidPinFormatException (ValidationException, EH-2/EH-5) not ArgumentError. Widget resolves both error strings via AppLocalizations (en/he ARB). 2 sibling catch sites kept neutral (l10n fix = AUD-profiles-09/20, parked)."
   },
   {
    "id": "AUD-onboarding-17",
