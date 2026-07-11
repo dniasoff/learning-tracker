@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -314,6 +315,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final docId = data['curriculum_id']?.toString() ?? 'default';
     await collection.doc(docId).set({
       ..._stripInternalKeys(data),
+      // FB-2 (AUD-core-sync-13): SettingsCodec/SettingsMerger compare this
+      // document's top-level `updated_at` for cross-device LWW — overwrite
+      // the caller's client-clock value with a server timestamp so a
+      // fast/skewed local clock can never make a stale settings write
+      // silently beat a genuinely newer one from another device.
+      'updated_at': FieldValue.serverTimestamp(),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -335,6 +342,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final docId = curriculumId;
     await collection.doc(docId).set({
       ..._stripInternalKeys(data),
+      // FB-2 (AUD-core-sync-13): TrackCodec/TrackConfigMerger compare
+      // `state_changed_at` (NOT `updated_at`) for cross-device LWW —
+      // overwrite the caller's client-clock value with a server timestamp
+      // so a fast/skewed local clock can never make a stale track write
+      // silently beat a genuinely newer one from another device.
+      'state_changed_at': FieldValue.serverTimestamp(),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -367,6 +380,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final docId = data['curriculum_id']?.toString() ?? '';
     await collection.doc(docId).set({
       ..._stripInternalKeys(data),
+      // FB-2 (AUD-core-sync-13): BookmarkCodec/BookmarkMerger compare this
+      // document's `updated_at` for cross-device LWW — overwrite the
+      // caller's client-clock value with a server timestamp so a
+      // fast/skewed local clock can never make a stale bookmark write
+      // silently beat a genuinely newer one from another device.
+      'updated_at': FieldValue.serverTimestamp(),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -557,14 +576,21 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final collection = _collection(profileId, 'goals');
     if (collection == null) throw _notAuthenticated;
     final docId = data['id']?.toString() ?? data['goal_id']?.toString();
+    // FB-2 (AUD-core-sync-13): GoalMerger compares this document's
+    // `updated_at` for cross-device LWW — overwrite the caller's
+    // client-clock value with a server timestamp so a fast/skewed local
+    // clock can never make a stale goal write silently beat a genuinely
+    // newer one from another device.
     if (docId != null) {
       await collection.doc(docId).set({
         ..._stripInternalKeys(data),
+        'updated_at': FieldValue.serverTimestamp(),
         'synced_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } else {
       await collection.add({
         ..._stripInternalKeys(data),
+        'updated_at': FieldValue.serverTimestamp(),
         'synced_at': FieldValue.serverTimestamp(),
       });
     }
@@ -624,26 +650,52 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     }, SetOptions(merge: true));
   }
 
+  /// Real per-profile subcollection names — matches this file's own
+  /// `_collection(profileId, '<name>')` call sites in every `push*` method
+  /// exactly (AUD-core-sync-02: the class doc comment already states the
+  /// real layout is `users/{uid}/learner_profiles/{profileId}/<collection>`;
+  /// [deleteUserData] previously queried the wrong, always-empty top-level
+  /// `users/{uid}/<collection>` paths and silently deleted nothing here).
+  /// `@visibleForTesting` so a test can assert this list never diverges from
+  /// the names the push/listen methods actually use.
+  @visibleForTesting
+  static const List<String> perProfileSubcollectionsForDeletion = [
+    'completions',
+    'streak_events',
+    'settings',
+    'curriculum_tracks',
+    'learning_order',
+    'bookmarks',
+    'preferences',
+    'learning_ledger',
+    'profile_programs',
+    'goals',
+    'stage_definitions',
+    'study_day_configs',
+    'points_ledger',
+    'reward_redemptions',
+  ];
+
   @override
   Future<void> deleteUserData(String uid) async {
     final userDoc = _firestore.collection('users').doc(uid);
-    const subcollections = [
-      'completions',
-      'bookmarks',
-      'settings',
-      'streaks',
-      'profiles',
-      'learner_profiles',
-      'goals',
-      'rewards',
-      'sync_queue',
-      'learning_order',
-      'stage_definitions',
-      'diagnostic_logs',
-    ];
-    for (final sub in subcollections) {
-      await _deleteCollection(userDoc.collection(sub));
+
+    // Enumerate every learner profile under this account and delete its
+    // real per-profile subcollections — the data lives at
+    // users/{uid}/learner_profiles/{profileId}/<collection>, not at
+    // users/{uid}/<collection> (see the class doc comment).
+    final profilesSnapshot = await userDoc.collection('learner_profiles').get();
+    for (final profileDoc in profilesSnapshot.docs) {
+      for (final sub in perProfileSubcollectionsForDeletion) {
+        await _deleteCollection(profileDoc.reference.collection(sub));
+      }
+      await profileDoc.reference.delete();
     }
+
+    // Account-level collections that are NOT nested under a profile.
+    await _deleteCollection(userDoc.collection('diagnostic_logs'));
+    await _deleteCollection(userDoc.collection('profile'));
+
     await userDoc.delete();
   }
 
@@ -712,39 +764,87 @@ class FirestoreGatewayImpl implements FirestoreGateway {
 
     // The stream must always reflect the full server-confirmed collection
     // state — including, while offline, the locally-cached documents — so the
-    // consumer never sees the collection "vanish" off the network.
-    //
-    // The only thing we suppress is the *local echo*: when this device writes
-    // a document, the listener fires immediately with a snapshot in which that
-    // document's change carries `hasPendingWrites == true`. Re-processing that
-    // self-write would loop the merge pipeline. So we iterate `docChanges` and
-    // drop a document from the emitted list ONLY when it appears solely as an
-    // un-acked local write — i.e. it is `added` (or `modified`) with
-    // `hasPendingWrites` and the document is not otherwise present as a
-    // server-confirmed entry. Genuine remote snapshots still emit in full.
-    return bounded.snapshots().map((snapshot) {
-      // Doc IDs that exist only as un-acked local writes in this snapshot.
-      final localOnly = <String>{};
-      for (final change in snapshot.docChanges) {
-        if (change.doc.metadata.hasPendingWrites) {
-          localOnly.add(change.doc.id);
-        }
-      }
-      final rows = snapshot.docs
-          .where(
-            (d) => !localOnly.contains(d.id) || !d.metadata.hasPendingWrites,
-          )
-          .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
-          .toList(growable: false);
-      // isAtLimit is computed against the raw snapshot count (pre-local-echo
-      // filtering): the at-limit signal is about the *server's* page, not the
-      // post-filter row count. A snapshot that filled the page even though
-      // some rows were local-echo placeholders still indicates there may be
-      // older changes the listener window did not cover.
-      final isAtLimit = snapshot.docs.length >= limit;
-      return ListenerSnapshot(rows: rows, isAtLimit: isAtLimit);
-    });
+    // consumer never sees the collection "vanish" off the network. Emitting
+    // an empty [ListenerSnapshot] for one snapshot event is always safe: every
+    // consumer (SyncOrchestrator, TutoredListenerSupervisor) treats
+    // `rows.isEmpty` as a pure no-op and Drift retains whatever it last
+    // merged, so a one-snapshot suppression never makes previously-synced
+    // data disappear from the UI — see [mapQuerySnapshot].
+    return bounded.snapshots().map(
+      (snapshot) => mapQuerySnapshot(snapshot, limit: limit),
+    );
   }
+
+  /// Pure transform from a raw Firestore [QuerySnapshot] into a
+  /// [ListenerSnapshot], applying the FB-3 local-echo/cache-echo guard.
+  ///
+  /// A document is suppressed from [ListenerSnapshot.rows] only while it is
+  /// *exclusively* present in this snapshot's `docChanges` as an unresolved
+  /// local artifact:
+  ///   - an un-acked local write (`hasPendingWrites`) — re-processing this
+  ///     device's own write through the merge pipeline would loop it, or
+  ///   - an unconfirmed read served purely from the SDK's on-disk
+  ///     persistence cache (`isFromCache`) — e.g. the first snapshot
+  ///     delivered on listener reattach, before the live snapshot catches
+  ///     up. Neither case has arrived via a server round-trip, so neither
+  ///     has a resolved `FieldValue.serverTimestamp()` yet; treating either
+  ///     as authoritative for LWW risks clobbering fresher local state with
+  ///     data the server may already have superseded (FB-3).
+  ///
+  /// This is a **one-snapshot** suppression, not a permanent block: once the
+  /// write is acknowledged (or the listener catches up live), the very same
+  /// document reappears in a later snapshot with both flags `false` and is
+  /// emitted normally. A genuinely offline device produces no *new*
+  /// `docChanges` until it reconnects (Firestore does not emit a fresh
+  /// snapshot for a metadata-only transition without `includeMetadataChanges:
+  /// true`), so steady-state data already merged into Drift on a prior sync
+  /// is untouched by this guard.
+  ///
+  /// Extracted as a standalone, `@visibleForTesting` function because
+  /// `fake_cloud_firestore`'s `MockSnapshotMetadata` hardcodes
+  /// `hasPendingWrites => false`, making this guard unreachable through the
+  /// public listener methods in tests built on `createFakeFirestore()` — see
+  /// AUD-core-sync-01.
+  @visibleForTesting
+  static ListenerSnapshot mapQuerySnapshot(
+    QuerySnapshot<Map<String, dynamic>> snapshot, {
+    required int limit,
+  }) {
+    // Doc IDs present in this snapshot ONLY as an unresolved local write or
+    // an unconfirmed cache-sourced read (FB-3).
+    final unresolved = <String>{};
+    for (final change in snapshot.docChanges) {
+      if (isUnresolvedSnapshot(change.doc.metadata)) {
+        unresolved.add(change.doc.id);
+      }
+    }
+    final rows = snapshot.docs
+        .where(
+          (d) =>
+              !unresolved.contains(d.id) || !isUnresolvedSnapshot(d.metadata),
+        )
+        .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
+        .toList(growable: false);
+    // isAtLimit is computed against the raw snapshot count (pre-guard
+    // filtering): the at-limit signal is about the *server's* page, not the
+    // post-filter row count. A snapshot that filled the page even though
+    // some rows were suppressed as unresolved still indicates there may be
+    // older changes the listener window did not cover.
+    return ListenerSnapshot(
+      rows: rows,
+      isAtLimit: snapshot.docs.length >= limit,
+    );
+  }
+
+  /// Whether [metadata] makes its document FB-3-unresolved: an un-acked
+  /// local write (`hasPendingWrites`) or an unconfirmed read served purely
+  /// from the SDK's on-disk cache (`isFromCache`). See [mapQuerySnapshot] for
+  /// the full rationale. `@visibleForTesting` so the predicate itself — and
+  /// [listenToTutorGrants]'s direct use of it — can be unit-tested without a
+  /// full [QuerySnapshot] fixture (AUD-core-sync-01).
+  @visibleForTesting
+  static bool isUnresolvedSnapshot(SnapshotMetadata metadata) =>
+      metadata.hasPendingWrites || metadata.isFromCache;
 
   @override
   Stream<ListenerSnapshot> listenToTutorGrants({
@@ -791,7 +891,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         }
       }
       final rows = docs.values
-          .where((d) => !d.metadata.hasPendingWrites)
+          .where((d) => !isUnresolvedSnapshot(d.metadata))
           .map((d) => _normalizeRow({...d.data()!, 'firestore_id': d.id}))
           .toList(growable: false);
       // A grant document with no `tutor_email`, `revoked_at` etc. can still
@@ -835,24 +935,9 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         .doc(uid)
         .collection('learner_profiles');
     final bounded = ref.orderBy('updated_at', descending: true).limit(limit);
-    return bounded.snapshots().map((snapshot) {
-      final localOnly = <String>{};
-      for (final change in snapshot.docChanges) {
-        if (change.doc.metadata.hasPendingWrites) {
-          localOnly.add(change.doc.id);
-        }
-      }
-      final rows = snapshot.docs
-          .where(
-            (d) => !localOnly.contains(d.id) || !d.metadata.hasPendingWrites,
-          )
-          .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
-          .toList(growable: false);
-      return ListenerSnapshot(
-        rows: rows,
-        isAtLimit: snapshot.docs.length >= limit,
-      );
-    });
+    return bounded.snapshots().map(
+      (snapshot) => mapQuerySnapshot(snapshot, limit: limit),
+    );
   }
 
   @override
@@ -1092,22 +1177,9 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final bounded = orderField == FirestoreGateway.documentIdOrderField
         ? ref.orderBy(FieldPath.documentId, descending: true).limit(limit)
         : ref.orderBy(orderField, descending: true).limit(limit);
-    return bounded.snapshots().map((snapshot) {
-      final localOnly = <String>{};
-      for (final change in snapshot.docChanges) {
-        if (change.doc.metadata.hasPendingWrites) {
-          localOnly.add(change.doc.id);
-        }
-      }
-      final rows = snapshot.docs
-          .where(
-            (d) => !localOnly.contains(d.id) || !d.metadata.hasPendingWrites,
-          )
-          .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
-          .toList(growable: false);
-      final isAtLimit = snapshot.docs.length >= limit;
-      return ListenerSnapshot(rows: rows, isAtLimit: isAtLimit);
-    });
+    return bounded.snapshots().map(
+      (snapshot) => mapQuerySnapshot(snapshot, limit: limit),
+    );
   }
 
   @override

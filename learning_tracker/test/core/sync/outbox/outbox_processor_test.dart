@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
@@ -548,6 +549,65 @@ void main() {
       expect(rows, hasLength(2));
       for (final row in rows) {
         expect(row.attempts, 1);
+      }
+    });
+
+    // AUD-core-sync-17: pushCompletionsBatch exists specifically to avoid an
+    // N-round-trip problem against Firestore, but the local cleanup after a
+    // large committed/failed group still ran one awaited deleteRow/
+    // markAttempted per outbox row — reintroducing that same cost against
+    // Drift. Assert the bulk DAO methods are invoked exactly ONCE per
+    // outcome group, regardless of how many rows are in it.
+    test('AUD-core-sync-17: deleteRows/markAttemptedBulk are each invoked '
+        'exactly once for a multi-row commit/failure group', () async {
+      final countingDao = _CountingOutboxDao(db);
+      final p = OutboxProcessor(
+        outboxDao: countingDao,
+        pipeline: pipeline,
+        clock: clock,
+      );
+
+      // Three committed rows (distinct keys) + two rows sharing a key that
+      // fails — one commit group of 3 ids, one failure group of 2 ids.
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c2');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c3');
+      await insertRow(
+        entityKind: OutboxEntityKind.completion,
+        entityKey: 'bad',
+      );
+      await insertRow(
+        entityKind: OutboxEntityKind.completion,
+        entityKey: 'bad',
+      );
+
+      pipeline.partialFailureCommitted = ['c1', 'c2', 'c3'];
+
+      final count = await p.drain(profileId);
+
+      expect(count, 3, reason: 'three distinct completions committed');
+      expect(
+        countingDao.deleteRowsCalls,
+        1,
+        reason: 'one bulk delete for the whole 3-row commit group, not 3',
+      );
+      expect(
+        countingDao.markAttemptedBulkCalls,
+        1,
+        reason:
+            'one bulk markAttempted for the whole 2-row failure group, '
+            'not 2',
+      );
+
+      // Functional correctness is preserved by the batching.
+      expect(await pendingCompletionKeys(), equals(['bad', 'bad']));
+      final badRows = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.completion,
+        profileId,
+      );
+      for (final row in badRows) {
+        expect(row.attempts, 1);
+        expect(row.lastError, isNotNull);
       }
     });
   });
@@ -1264,6 +1324,90 @@ void main() {
     });
   });
 
+  group('OutboxProcessor.drain — malformed payload isolation '
+      '(AUD-core-sync-09)', () {
+    Future<void> insertRawRow({
+      required String entityKind,
+      required String entityKey,
+      required String rawPayload,
+    }) => db.outboxDao.insertOutboxRow(
+      OutboxCompanion.insert(
+        profileId: profileId,
+        entityKind: entityKind,
+        entityKey: entityKey,
+        payload: rawPayload,
+        createdAt: DateTime.utc(2026, 5, 14),
+      ),
+    );
+
+    test(
+      'a malformed non-JSON-object completion payload does not abort the '
+      'whole drain — the sibling valid row of a different kind still pushes, '
+      'and the bad row is marked attempted without blocking siblings',
+      () async {
+        // Non-JSON-object payload (a bare JSON null) — decodes fine via
+        // jsonDecode but fails the `is Map<String, dynamic>` check.
+        await insertRawRow(
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'bad-completion',
+          rawPayload: 'null',
+        );
+        await insertRow(entityKind: OutboxEntityKind.streak, entityKey: 's1');
+
+        final count = await processor.drain(profileId);
+
+        expect(count, 1, reason: 'the valid streak row must still be pushed');
+        expect(
+          pipeline.calls,
+          contains(('streak', 's1')),
+          reason: 'sibling of a different kind is not blocked by the bad row',
+        );
+
+        final rows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.completion,
+          profileId,
+        );
+        expect(rows, hasLength(1), reason: 'bad row is retained, not deleted');
+        expect(
+          rows.single.attempts,
+          greaterThan(0),
+          reason: 'bad row is marked attempted, not left at 0 forever',
+        );
+      },
+    );
+
+    test(
+      'a malformed non-JSON-object non-completion payload does not abort '
+      'the whole drain — a sibling valid row of the SAME kind still pushes, '
+      'and the bad row is marked attempted without blocking siblings',
+      () async {
+        await insertRawRow(
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'bad-streak',
+          rawPayload: 'null',
+        );
+        await insertRow(entityKind: OutboxEntityKind.streak, entityKey: 'ok');
+
+        final count = await processor.drain(profileId);
+
+        expect(count, 1, reason: 'the valid streak row must still be pushed');
+        expect(pipeline.calls, contains(('streak', 'ok')));
+
+        final rows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.streak,
+          profileId,
+        );
+        expect(rows, hasLength(1), reason: 'bad row is retained, not deleted');
+        expect(rows.single.entityKey, 'bad-streak');
+        expect(
+          rows.single.attempts,
+          greaterThan(0),
+          reason: 'bad row is marked attempted, not left at 0 forever',
+        );
+      },
+    );
+  });
+
   group('OutboxEntityKind constants', () {
     test('completion constant is "completion"', () {
       expect(OutboxEntityKind.completion, 'completion');
@@ -1540,6 +1684,101 @@ void main() {
         reason: 'guard was released — second drain pushed the row',
       );
     });
+
+    // AUD-core-sync-06: a generation token must stop a SUPERSEDED (stale)
+    // invocation's `finally` from clearing a guard a later, still-in-flight
+    // reclaiming drain currently owns. The pre-fix code cleared
+    // _draining/_drainingSince unconditionally in every `finally`, so a
+    // wedged drain that eventually finished WHILE the reclaiming drain was
+    // still genuinely running would wrongly free the guard, letting a THIRD
+    // caller start a concurrent _doDrain on top of the second.
+    test(
+      'AUD-core-sync-06: a stale invocation completing AFTER a reclaiming '
+      'drain has already started does not clear the guard out from under '
+      'the still-running reclaimer, so a third caller cannot barge in',
+      () async {
+        final clock = FakeLocalDayClock(DateTime.utc(2026, 6, 1));
+        final blocking = _IndependentlyBlockingPipeline();
+        final p = OutboxProcessor(
+          outboxDao: db.outboxDao,
+          pipeline: blocking,
+          clock: clock,
+          pushTimeout: const Duration(hours: 1),
+          drainStaleAfter: const Duration(milliseconds: 100),
+        );
+
+        await insertRow(
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'hung',
+        );
+
+        // drain1 acquires the guard and parks inside its pipeline call
+        // (call #0) — the still-pending 'hung' row is what it is pushing.
+        final drain1 = p.drain(profileId);
+        await blocking.awaitCallStarted(0);
+
+        // Advance the clock so drain1's held guard now looks stale.
+        clock.advance(const Duration(milliseconds: 200));
+
+        // drain2 detects the stale guard, reclaims it (new generation), and
+        // starts a genuinely NEW _doDrain — 'hung' is still pending (drain1
+        // hasn't deleted it yet), so drain2 re-pushes it too, blocking on
+        // its OWN pipeline call (call #1). Both calls are now truly
+        // concurrent — this is the real-world race the finding describes.
+        final drain2 = p.drain(profileId);
+        await blocking.awaitCallStarted(1);
+        expect(
+          blocking.callCount,
+          2,
+          reason: 'drain1 and drain2 are both genuinely in flight',
+        );
+
+        // Let drain1 finish WHILE drain2 is still genuinely running.
+        blocking.releaseCall(0);
+        expect(await drain1, 1, reason: 'drain1 pushed the row it committed');
+
+        // A third caller, arriving the instant drain1 has returned, must be
+        // gated by the guard drain2 still legitimately holds — NOT slip
+        // through because drain1's finally (belatedly) cleared state it no
+        // longer owned.
+        await insertRow(
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'r3',
+        );
+        final drain3Result = await p.drain(profileId);
+        expect(
+          drain3Result,
+          0,
+          reason:
+              'drain2 is still genuinely in flight (blocked inside its own '
+              'pipeline call) — a stale finally from the superseded drain1 '
+              'must not release the guard drain2 still owns',
+        );
+        expect(
+          blocking.callCount,
+          2,
+          reason:
+              'drain3 must not have started a third concurrent pipeline call',
+        );
+
+        // Let drain2 finish; the guard is now genuinely free.
+        blocking.releaseCall(1);
+        expect(await drain2, 1);
+
+        // A drain called AFTER the guard is genuinely free must proceed
+        // normally, pushing 'r3' — the guard is not permanently wedged by
+        // the reclaim. The pipeline still blocks every call by design, so
+        // release its call (#2) once it starts.
+        final drain4 = p.drain(profileId);
+        await blocking.awaitCallStarted(2);
+        blocking.releaseCall(2);
+        expect(
+          await drain4,
+          1,
+          reason: 'r3 is pushed once the guard is truly free',
+        );
+      },
+    );
   });
 }
 
@@ -1559,6 +1798,75 @@ class _BlockingPipeline extends Fake implements PushPipeline {
   }) async {
     batchCalls++;
     await _gate.future;
+    return entries.map((e) => e.entityKey).toList();
+  }
+}
+
+/// [OutboxDao] wrapper that counts calls to the AUD-core-sync-17 bulk
+/// methods while delegating to the real (in-memory) implementation for
+/// every other operation — TQ-4: a hand-written fake/spy around the real
+/// collaborator, not a full mock, so functional correctness is unaffected.
+class _CountingOutboxDao extends OutboxDao {
+  _CountingOutboxDao(super.db);
+
+  int deleteRowsCalls = 0;
+  int markAttemptedBulkCalls = 0;
+
+  @override
+  Future<int> deleteRows(List<int> ids) {
+    deleteRowsCalls++;
+    return super.deleteRows(ids);
+  }
+
+  @override
+  Future<void> markAttemptedBulk(List<int> ids, {String? error}) {
+    markAttemptedBulkCalls++;
+    return super.markAttemptedBulk(ids, error: error);
+  }
+}
+
+/// Pipeline whose `pushCompletionsBatch` calls block on INDEPENDENT gates —
+/// the Nth call parks on its own [Completer], only released by an explicit
+/// [releaseCall]. Lets a test hold multiple concurrent drains' pipeline
+/// calls open independently — needed to reproduce true overlap between a
+/// stale (wedged) drain and the reclaiming drain that supersedes it
+/// (AUD-core-sync-06), which the single shared gate in [_BlockingPipeline]
+/// cannot model (releasing it unblocks every call, not just one).
+///
+/// [awaitCallStarted] is deterministic regardless of how many internal async
+/// hops precede the pipeline call (e.g. the DAO query inside `_doDrain`): it
+/// polls with `Future.delayed(Duration.zero)` until the Nth call has been
+/// entered, so tests never need a fixed-duration sleep to synchronize.
+class _IndependentlyBlockingPipeline extends Fake implements PushPipeline {
+  final List<Completer<void>> _releaseGates = [];
+  final List<Completer<void>> _startedGates = [];
+
+  /// Total number of `pushCompletionsBatch` calls entered so far.
+  int get callCount => _releaseGates.length;
+
+  /// Completes once the [index]-th call (0-based, in call order) has been
+  /// entered and is now parked on its release gate.
+  Future<void> awaitCallStarted(int index) async {
+    while (_startedGates.length <= index) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    await _startedGates[index].future;
+  }
+
+  /// Release the [index]-th call so it can return.
+  void releaseCall(int index) => _releaseGates[index].complete();
+
+  @override
+  Future<List<String>> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> entries,
+  }) async {
+    final releaseGate = Completer<void>();
+    final startedGate = Completer<void>();
+    _releaseGates.add(releaseGate);
+    _startedGates.add(startedGate);
+    startedGate.complete();
+    await releaseGate.future;
     return entries.map((e) => e.entityKey).toList();
   }
 }

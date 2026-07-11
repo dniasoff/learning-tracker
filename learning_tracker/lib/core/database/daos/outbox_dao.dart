@@ -78,6 +78,48 @@ class OutboxDao extends DatabaseAccessor<UserDatabase> with _$OutboxDaoMixin {
   Future<int> deleteRow(int id) =>
       (delete(outbox)..where((t) => t.id.equals(id))).go();
 
+  /// Delete every row in [ids] in a single `DELETE ... WHERE id IN (...)`
+  /// statement, instead of one `deleteRow` round trip per id.
+  ///
+  /// AUD-core-sync-17 (DB-3): `pushCompletionsBatch` exists specifically to
+  /// eliminate the N-round-trip problem for the Firestore push, but the
+  /// local cleanup after a large committed group still ran one awaited
+  /// `deleteRow` per outbox row — reintroducing the exact per-row
+  /// round-trip cost DB-3 exists to prevent, now against the local DB, on
+  /// every large backlog / bulk-mark commit. A no-op (returns 0) for an
+  /// empty list.
+  Future<int> deleteRows(List<int> ids) {
+    if (ids.isEmpty) return Future.value(0);
+    return (delete(outbox)..where((t) => t.id.isIn(ids))).go();
+  }
+
+  /// Increment the attempt counter and record [error] for every row in
+  /// [ids] in a single `batch()` round trip, instead of one awaited
+  /// `markAttempted` call per row (AUD-core-sync-17 / DB-3).
+  ///
+  /// Mirrors [markAttempted]'s semantics exactly (attempts + 1, `lastError`
+  /// set to [error], `lastAttemptAt` stamped to now) — just applied to a
+  /// whole commit/failure group at once. A no-op for an empty list.
+  Future<void> markAttemptedBulk(List<int> ids, {String? error}) async {
+    if (ids.isEmpty) return;
+    final rows = await (select(outbox)..where((t) => t.id.isIn(ids))).get();
+    if (rows.isEmpty) return;
+    final now = DateTimeFactory.nowUtc();
+    await batch((b) {
+      for (final row in rows) {
+        b.update(
+          outbox,
+          OutboxCompanion(
+            attempts: Value(row.attempts + 1),
+            lastError: Value(error),
+            lastAttemptAt: Value(now),
+          ),
+          where: (t) => t.id.equals(row.id),
+        );
+      }
+    });
+  }
+
   /// Total number of pending outbox rows for [profileId] across every kind.
   ///
   /// Used by the orchestrator to compute the `pending` / `degraded` /

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
@@ -51,6 +52,50 @@ class PullPipeline {
   final AnalyticsService? _analytics;
 
   static const int defaultPageSize = 200;
+
+  /// Child collections pulled by [pullForTutoredProfile], in pull order.
+  ///
+  /// Bug 3: `curriculum_tracks` MUST be pulled before any collection whose
+  /// rows are bound to a track id (settings/stage_definitions/goals/
+  /// study_day_configs). Those rows carry the REMOTE track id; the mergers
+  /// resolve the LOCAL mirror track id by (profile, curriculum), so the
+  /// local track row has to exist first or the resolution falls back to the
+  /// stale remote id (study_day_configs would then be dropped by its FK
+  /// guard) and the scheduler projection computes nothing for the tutor.
+  ///
+  /// `@visibleForTesting`: [TutoredListenerSource.openChannels]'s
+  /// collection-channel set is hand-maintained separately and must mirror
+  /// this list exactly — a parity test in
+  /// `tutored_listener_source_test.dart` asserts the two sets are identical
+  /// (AUD-core-sync-18). Extracted from a `pullForTutoredProfile` local so
+  /// that test can reference the canonical list instead of duplicating it.
+  @visibleForTesting
+  static const List<(String collection, String kind)> tutoredCollections = [
+    ('completions', EntityKind.completion),
+    ('bookmarks', EntityKind.bookmark),
+    ('curriculum_tracks', EntityKind.trackConfig),
+    ('settings', EntityKind.settings),
+    ('goals', EntityKind.goal),
+    ('learning_ledger', EntityKind.learningLedger),
+    ('stage_definitions', EntityKind.stageDefinition),
+    ('streak_events', EntityKind.streak),
+    ('study_day_configs', EntityKind.studyDayConfig),
+    ('profile_programs', EntityKind.profileProgram),
+    ('learning_order', EntityKind.learningOrder),
+    ('points_ledger', EntityKind.pointsLedger),
+    ('reward_redemptions', EntityKind.rewardRedemption),
+  ];
+
+  /// Preference document ids pulled by [pullForTutoredProfile] under the
+  /// `preferences/{docId}` sub-collection, alongside the [EntityKind] each
+  /// decodes to. `@visibleForTesting` for the same channel-parity test as
+  /// [tutoredCollections] (AUD-core-sync-18).
+  @visibleForTesting
+  static const List<(String docId, String kind)> tutoredPreferenceDocs = [
+    ('notification_settings', EntityKind.notificationSettings),
+    ('gamification_settings', EntityKind.gamificationSettings),
+    ('ui_preferences', EntityKind.uiPreferences),
+  ];
 
   Future<void> pullCompletions({
     required int profileId,
@@ -254,30 +299,7 @@ class PullPipeline {
     int pageSize = defaultPageSize,
   }) async {
     var failureCount = 0;
-    // Bug 3: curriculum_tracks MUST be pulled before any collection whose rows
-    // are bound to a track id (settings/stage_definitions/goals/
-    // study_day_configs). Those rows carry the REMOTE track id; the mergers
-    // resolve the LOCAL mirror track id by (profile, curriculum), so the local
-    // track row has to exist first or the resolution falls back to the stale
-    // remote id (study_day_configs would then be dropped by its FK guard) and
-    // the scheduler projection computes nothing for the tutor.
-    final collections = <(String collection, String kind)>[
-      ('completions', EntityKind.completion),
-      ('bookmarks', EntityKind.bookmark),
-      ('curriculum_tracks', EntityKind.trackConfig),
-      ('settings', EntityKind.settings),
-      ('goals', EntityKind.goal),
-      ('learning_ledger', EntityKind.learningLedger),
-      ('stage_definitions', EntityKind.stageDefinition),
-      ('streak_events', EntityKind.streak),
-      ('study_day_configs', EntityKind.studyDayConfig),
-      ('profile_programs', EntityKind.profileProgram),
-      ('learning_order', EntityKind.learningOrder),
-      ('points_ledger', EntityKind.pointsLedger),
-      ('reward_redemptions', EntityKind.rewardRedemption),
-    ];
-
-    for (final (collection, kind) in collections) {
+    for (final (collection, kind) in tutoredCollections) {
       // Bug 3: isolate each collection. A single collection's merge/DB error
       // (e.g. gamification_settings' point_configs FK violation) must NOT abort
       // the whole tutored pull — that left the mirror with only partial data
@@ -307,11 +329,7 @@ class PullPipeline {
     }
 
     // Preference documents — single-doc sub-collections.
-    for (final (docId, kind) in [
-      ('notification_settings', EntityKind.notificationSettings),
-      ('gamification_settings', EntityKind.gamificationSettings),
-      ('ui_preferences', EntityKind.uiPreferences),
-    ]) {
+    for (final (docId, kind) in tutoredPreferenceDocs) {
       try {
         await _pullChildDocument(
           parentUid: parentUid,

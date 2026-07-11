@@ -14,8 +14,10 @@ library;
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
+import 'package:learning_tracker/core/sync/tutored_listener_source.dart';
 import 'package:learning_tracker/core/sync/tutored_listener_supervisor.dart';
 
 // ── Fakes ─────────────────────────────────────────────────────────────────────
@@ -51,6 +53,14 @@ class _DrivenChildGateway implements FirestoreGateway {
 
   void emitDocument(String collection, String docId, Map<String, dynamic> row) {
     _ctrl('$collection/$docId').add(row);
+  }
+
+  /// Emits a stream error on [collection]'s channel — models Firestore
+  /// terminating a `.snapshots()` stream (e.g. permission-denied on grant
+  /// revocation, or a transient stream fault). Used by the
+  /// AUD-core-sync-12 regression test.
+  void emitError(String collection, Object error, [StackTrace? stackTrace]) {
+    _ctrl(collection).addError(error, stackTrace ?? StackTrace.current);
   }
 
   @override
@@ -150,16 +160,18 @@ void main() {
       );
 
       expect(supervisor.isAttached, isTrue);
-      // 12 collection channels + 3 preference document channels = 15 total.
+      // 13 collection channels + 3 preference document channels = 16 total
+      // (AUD-core-sync-18: learning_order added to close the real-time gap).
       // Collection channels: completions, bookmarks, settings, streak_events,
       //   curriculum_tracks, stage_definitions, study_day_configs, goals,
-      //   learning_ledger, profile_programs, points_ledger, reward_redemptions.
+      //   learning_ledger, profile_programs, learning_order, points_ledger,
+      //   reward_redemptions.
       // Document channels: preferences/notification_settings,
       //   preferences/gamification_settings, preferences/ui_preferences.
       expect(
         gateway.childCollectionListenerCount,
-        12,
-        reason: '12 collection listeners opened',
+        13,
+        reason: '13 collection listeners opened',
       );
       expect(
         gateway.childDocumentListenerCount,
@@ -384,6 +396,98 @@ void main() {
       expect(gamDispatches, isNotEmpty);
       for (final d in gamDispatches) {
         expect(d.profileId, 7);
+      }
+
+      await supervisor.detach();
+    });
+
+    // (H) AUD-core-sync-12 ───────────────────────────────────────────────────
+    test('(H) AUD-core-sync-12: a stream error on a tutored channel reaches '
+        'AppLogger instead of being silently dropped', () async {
+      AppLogger.init();
+      final gateway = _DrivenChildGateway();
+      await supervisor.attach(
+        localProfileId: 5,
+        gateway: gateway,
+        parentUid: 'parent-uid',
+        remoteProfileId: 'child-1',
+      );
+
+      gateway.emitError('goals', Exception('permission-denied (simulated)'));
+      await Future<void>.delayed(Duration.zero);
+
+      final history = AppLogger.instance.talker.history
+          .map((e) => e.generateTextMessage())
+          .toList();
+      expect(
+        history.any((m) => m.contains('tutored_listener_stream_error')),
+        isTrue,
+        reason:
+            'A tutored-channel stream error must reach AppLogger instead '
+            'of vanishing silently (the inner ListenerSupervisor no-ops '
+            'onError when null). Talker history: $history',
+      );
+
+      await supervisor.detach();
+    });
+
+    // (I) AUD-core-sync-18 ───────────────────────────────────────────────────
+    test('(I) AUD-core-sync-18: TutoredListenerSource.openChannels() channel '
+        "set is identical to PullPipeline.pullForTutoredProfile's collection "
+        'set', () {
+      final source = TutoredListenerSource(
+        gateway: _DrivenChildGateway(),
+        parentUid: 'parent-uid',
+        remoteProfileId: 'child-1',
+      );
+      final channelKeys = source.openChannels().keys.toSet();
+
+      final pullKeys = <String>{
+        for (final entry in PullPipeline.tutoredCollections) entry.$1,
+        for (final entry in PullPipeline.tutoredPreferenceDocs)
+          'preferences/${entry.$1}',
+      };
+
+      expect(
+        channelKeys,
+        equals(pullKeys),
+        reason:
+            'TutoredListenerSource.openChannels() must mirror the pull '
+            'set in PullPipeline.pullForTutoredProfile exactly — a '
+            'collection present in the pull set but not the listener '
+            'channel set reaches the mirror only on the next explicit '
+            'pull, never in real time (learning_order was missing from '
+            'openChannels before the fix).',
+      );
+    });
+
+    // (J) AUD-core-sync-18 ───────────────────────────────────────────────────
+    test('(J) AUD-core-sync-18: a learning_order channel event is routed to '
+        'the dispatcher as EntityKind.learningOrder', () async {
+      final gateway = _DrivenChildGateway();
+      await supervisor.attach(
+        localProfileId: 9,
+        gateway: gateway,
+        parentUid: 'parent-uid',
+        remoteProfileId: 'child-1',
+      );
+
+      gateway.emitCollection('learning_order', [
+        {
+          'firestore_id': 'lo-1',
+          'curriculum_id': 'dafYomi',
+          'sefaria_ref': 'Berakhot.2a',
+          'user_sort_order': 1,
+        },
+      ]);
+      await Future<void>.delayed(Duration.zero);
+
+      final dispatches = dispatcher.dispatched.where(
+        (d) => d.kind == 'learning_order',
+      );
+      expect(dispatches, isNotEmpty);
+      for (final d in dispatches) {
+        expect(d.profileId, 9);
       }
 
       await supervisor.detach();

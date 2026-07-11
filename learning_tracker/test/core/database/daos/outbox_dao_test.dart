@@ -139,5 +139,89 @@ void main() {
         expect(affected, 0);
       });
     });
+
+    // AUD-core-sync-17: bulk equivalents of deleteRow/markAttempted, used by
+    // OutboxProcessor to clean up a whole commit/failure group in a single
+    // round trip instead of one awaited call per row (DB-3).
+    group('deleteRows', () {
+      test(
+        'deletes every row in the list and returns the affected count',
+        () async {
+          final a = await db.outboxDao.insertOutboxRow(
+            makeRow(entityKey: 'k1'),
+          );
+          final b = await db.outboxDao.insertOutboxRow(
+            makeRow(entityKey: 'k2'),
+          );
+          // A third row NOT in the list must survive.
+          await db.outboxDao.insertOutboxRow(makeRow(entityKey: 'k3'));
+
+          final affected = await db.outboxDao.deleteRows([a, b]);
+          expect(affected, 2);
+
+          final rows = await db.select(db.outbox).get();
+          expect(rows, hasLength(1));
+          expect(rows.single.entityKey, 'k3');
+        },
+      );
+
+      test(
+        'is a no-op for an empty list (does not throw, deletes nothing)',
+        () async {
+          await db.outboxDao.insertOutboxRow(makeRow());
+          final affected = await db.outboxDao.deleteRows(const []);
+          expect(affected, 0);
+          expect(await db.select(db.outbox).get(), hasLength(1));
+        },
+      );
+
+      test('ignores ids that do not exist (partial match still deletes the '
+          'ones that do)', () async {
+        final a = await db.outboxDao.insertOutboxRow(makeRow());
+        final affected = await db.outboxDao.deleteRows([a, 404, 405]);
+        expect(affected, 1);
+        expect(await db.select(db.outbox).get(), isEmpty);
+      });
+    });
+
+    group('markAttemptedBulk', () {
+      test('increments attempts and records the error for every row in the '
+          'list, preserving each row\'s own prior attempt count', () async {
+        final a = await db.outboxDao.insertOutboxRow(makeRow(entityKey: 'k1'));
+        final b = await db.outboxDao.insertOutboxRow(makeRow(entityKey: 'k2'));
+        // b already failed once before — bulk marking must add to its
+        // existing count, not reset it.
+        await db.outboxDao.markAttempted(b, error: 'first try');
+
+        await db.outboxDao.markAttemptedBulk([a, b], error: 'network down');
+
+        final rowA = await (db.select(
+          db.outbox,
+        )..where((t) => t.id.equals(a))).getSingle();
+        final rowB = await (db.select(
+          db.outbox,
+        )..where((t) => t.id.equals(b))).getSingle();
+        expect(rowA.attempts, 1);
+        expect(rowA.lastError, 'network down');
+        expect(rowA.lastAttemptAt, isNotNull);
+        expect(rowB.attempts, 2, reason: 'adds to the prior attempt count');
+        expect(rowB.lastError, 'network down');
+      });
+
+      test('is a no-op for an empty list (does not throw)', () async {
+        final id = await db.outboxDao.insertOutboxRow(makeRow());
+        await db.outboxDao.markAttemptedBulk(const [], error: 'whatever');
+        final row = await (db.select(
+          db.outbox,
+        )..where((t) => t.id.equals(id))).getSingle();
+        expect(row.attempts, 0);
+      });
+
+      test('is a no-op for ids that do not exist (does not throw)', () async {
+        await db.outboxDao.markAttemptedBulk([9999, 9998], error: 'whatever');
+        final rows = await db.select(db.outbox).get();
+        expect(rows, isEmpty);
+      });
+    });
   });
 }

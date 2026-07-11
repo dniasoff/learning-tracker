@@ -103,6 +103,102 @@ class _NullAuth extends _StubAuth {
   AppUser? get currentUser => null;
 }
 
+// ── Hand-rolled Firestore snapshot fakes (AUD-core-sync-01, TQ-4) ─────────
+//
+// fake_cloud_firestore's own MockSnapshotMetadata hardcodes
+// `hasPendingWrites => false` unconditionally (see mock_snapshot_metadata.dart
+// in the fake_cloud_firestore package), so no test built on
+// createFakeFirestore() can ever construct a snapshot where a document is
+// mid-write — FirestoreGatewayImpl.mapQuerySnapshot's FB-3 guard is
+// therefore unreachable through the public listener methods in this test
+// file. These fakes implement the cloud_firestore snapshot interfaces
+// directly so both hasPendingWrites and isFromCache can be set true.
+// QueryDocumentSnapshot and DocumentChange are `@sealed` in cloud_firestore
+// — `// ignore: subtype_of_sealed_class` is the exact suppression
+// fake_cloud_firestore's own MockDocumentSnapshot uses for the identical
+// reason (implementing a sealed class is the intended extension point for
+// test doubles; the lint just can't tell "test fake" from "production
+// subtype").
+
+class _FakeSnapshotMetadata implements SnapshotMetadata {
+  const _FakeSnapshotMetadata({
+    this.hasPendingWrites = false,
+    this.isFromCache = false,
+  });
+
+  @override
+  final bool hasPendingWrites;
+
+  @override
+  final bool isFromCache;
+}
+
+// ignore: subtype_of_sealed_class
+class _FakeQueryDocumentSnapshot
+    implements QueryDocumentSnapshot<Map<String, dynamic>> {
+  _FakeQueryDocumentSnapshot(this.id, this._data, this.metadata);
+
+  @override
+  final String id;
+  final Map<String, dynamic> _data;
+  @override
+  final SnapshotMetadata metadata;
+
+  @override
+  bool get exists => true;
+
+  @override
+  Map<String, dynamic> data() => _data;
+
+  @override
+  DocumentReference<Map<String, dynamic>> get reference =>
+      throw UnimplementedError('not exercised by mapQuerySnapshot');
+
+  @override
+  dynamic get(Object field) => _data[field];
+
+  @override
+  dynamic operator [](Object field) => _data[field];
+}
+
+// ignore: subtype_of_sealed_class
+class _FakeDocumentChange implements DocumentChange<Map<String, dynamic>> {
+  _FakeDocumentChange(this.doc);
+
+  @override
+  final QueryDocumentSnapshot<Map<String, dynamic>> doc;
+
+  // Every fixture in this file models the "added" case (a document appearing
+  // in the snapshot for the first time) — the only DocumentChangeType
+  // mapQuerySnapshot's guard actually branches on is presence in docChanges,
+  // not the change type itself.
+  @override
+  DocumentChangeType get type => DocumentChangeType.added;
+
+  @override
+  int get oldIndex => -1;
+
+  @override
+  int get newIndex => 0;
+}
+
+class _FakeQuerySnapshot implements QuerySnapshot<Map<String, dynamic>> {
+  _FakeQuerySnapshot({required this.docs, required this.docChanges});
+
+  @override
+  final List<QueryDocumentSnapshot<Map<String, dynamic>>> docs;
+
+  @override
+  final List<DocumentChange<Map<String, dynamic>>> docChanges;
+
+  @override
+  SnapshotMetadata get metadata =>
+      throw UnimplementedError('not exercised by mapQuerySnapshot');
+
+  @override
+  int get size => docs.length;
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const _uid = 'uid_gateway_impl_test';
@@ -740,6 +836,157 @@ void main() {
         final fs = createFakeFirestore();
         final profiles = await _nullAuthGw(fs).fetchLearnerProfiles();
         expect(profiles, isEmpty);
+      },
+    );
+  });
+
+  // ── 2a. FB-2 — server timestamps for LWW ordering fields ─────────────────
+  // (AUD-core-sync-13)
+
+  group('2a. FB-2 — server timestamps for LWW ordering fields '
+      '(AUD-core-sync-13)', () {
+    // A deliberately wrong/stale client-clock value — proves the persisted
+    // field is NOT the client-supplied one, whatever the fake's current time
+    // happens to be.
+    final clientClockValue = DateTime.utc(2000, 1, 1).toIso8601String();
+
+    test('pushSettings overwrites updated_at (the field SettingsCodec/'
+        'SettingsMerger compare) with a server Timestamp', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      await _gw(fs).pushSettings(
+        profileId: _profileId,
+        data: {
+          'curriculum_id': 'dafYomi',
+          'stages': <Map<String, dynamic>>[],
+          'updated_at': clientClockValue,
+        },
+      );
+      final snap = await fs
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId.toString())
+          .collection('settings')
+          .doc('dafYomi')
+          .get();
+      final raw = snap.data()!['updated_at'];
+      expect(
+        raw,
+        isA<Timestamp>(),
+        reason:
+            'updated_at must be a server Timestamp, not the '
+            'client-supplied ISO string',
+      );
+      expect(
+        (raw as Timestamp).toDate().toUtc(),
+        isNot(equals(DateTime.utc(2000, 1, 1))),
+        reason: 'the persisted value must not be the client-clock value',
+      );
+    });
+
+    test(
+      'pushTrack overwrites state_changed_at (the field TrackCodec/'
+      'TrackConfigMerger compare, NOT updated_at) with a server Timestamp',
+      () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        await _gw(fs).pushTrack(
+          profileId: _profileId,
+          data: {
+            'curriculum_id': 'dafYomi',
+            'state': 'active',
+            'activated_at': clientClockValue,
+            'state_changed_at': clientClockValue,
+          },
+        );
+        final snap = await fs
+            .collection('users')
+            .doc(_uid)
+            .collection('learner_profiles')
+            .doc(_profileId.toString())
+            .collection('curriculum_tracks')
+            .doc('dafYomi')
+            .get();
+        final raw = snap.data()!['state_changed_at'];
+        expect(raw, isA<Timestamp>());
+        expect(
+          (raw as Timestamp).toDate().toUtc(),
+          isNot(equals(DateTime.utc(2000, 1, 1))),
+        );
+      },
+    );
+
+    test('pushBookmark overwrites updated_at (the field BookmarkCodec/'
+        'BookmarkMerger compare) with a server Timestamp', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      await _gw(fs).pushBookmark(
+        profileId: _profileId,
+        data: {
+          'curriculum_id': 'dafYomi',
+          'sefaria_ref': 'Berakhot.2a',
+          'updated_at': clientClockValue,
+        },
+      );
+      final snap = await fs
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId.toString())
+          .collection('bookmarks')
+          .doc('dafYomi')
+          .get();
+      final raw = snap.data()!['updated_at'];
+      expect(raw, isA<Timestamp>());
+      expect(
+        (raw as Timestamp).toDate().toUtc(),
+        isNot(equals(DateTime.utc(2000, 1, 1))),
+      );
+    });
+
+    test('pushGoal (doc-ID path) overwrites updated_at (the field GoalMerger '
+        'compares) with a server Timestamp', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      await _gw(fs).pushGoal(
+        profileId: _profileId,
+        data: {'id': 'g1', 'target': 5, 'updated_at': clientClockValue},
+      );
+      final snap = await fs
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId.toString())
+          .collection('goals')
+          .doc('g1')
+          .get();
+      final raw = snap.data()!['updated_at'];
+      expect(raw, isA<Timestamp>());
+      expect(
+        (raw as Timestamp).toDate().toUtc(),
+        isNot(equals(DateTime.utc(2000, 1, 1))),
+      );
+    });
+
+    test(
+      'pushGoal (auto-ID path) overwrites updated_at with a server Timestamp',
+      () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        await _gw(fs).pushGoal(
+          profileId: _profileId,
+          data: {'target': 2, 'updated_at': clientClockValue},
+        );
+        final snap = await fs
+            .collection('users')
+            .doc(_uid)
+            .collection('learner_profiles')
+            .doc(_profileId.toString())
+            .collection('goals')
+            .get();
+        expect(snap.docs, hasLength(1));
+        final raw = snap.docs.first.data()['updated_at'];
+        expect(raw, isA<Timestamp>());
+        expect(
+          (raw as Timestamp).toDate().toUtc(),
+          isNot(equals(DateTime.utc(2000, 1, 1))),
+        );
       },
     );
   });
@@ -1388,6 +1635,124 @@ void main() {
     });
   });
 
+  // ── 7a. mapQuerySnapshot — FB-3 local-echo/cache-echo guard ──────────────
+  // (AUD-core-sync-01)
+
+  group('7a. mapQuerySnapshot — FB-3 local-echo/cache-echo guard '
+      '(AUD-core-sync-01)', () {
+    test('excludes a document whose docChange carries hasPendingWrites '
+        '(local write echo)', () {
+      final pendingDoc = _FakeQueryDocumentSnapshot('g_pending', {
+        'target': 1,
+      }, const _FakeSnapshotMetadata(hasPendingWrites: true));
+      final snapshot = _FakeQuerySnapshot(
+        docs: [pendingDoc],
+        docChanges: [_FakeDocumentChange(pendingDoc)],
+      );
+
+      final result = FirestoreGatewayImpl.mapQuerySnapshot(
+        snapshot,
+        limit: 500,
+      );
+
+      expect(
+        result.rows,
+        isEmpty,
+        reason:
+            'a doc that is only present as an un-acked local write must '
+            'not reach the merge pipeline (FB-3)',
+      );
+    });
+
+    test('excludes a document whose docChange carries isFromCache '
+        '(unconfirmed cache-sourced read)', () {
+      final cachedDoc = _FakeQueryDocumentSnapshot('g_cached', {
+        'target': 1,
+      }, const _FakeSnapshotMetadata(isFromCache: true));
+      final snapshot = _FakeQuerySnapshot(
+        docs: [cachedDoc],
+        docChanges: [_FakeDocumentChange(cachedDoc)],
+      );
+
+      final result = FirestoreGatewayImpl.mapQuerySnapshot(
+        snapshot,
+        limit: 500,
+      );
+
+      expect(
+        result.rows,
+        isEmpty,
+        reason:
+            'a doc served purely from the local persistence cache has no '
+            'server-resolved timestamp yet and must not be treated as '
+            'authoritative (FB-3)',
+      );
+    });
+
+    test(
+      'includes a document with neither flag set (genuine confirmed data)',
+      () {
+        final confirmedDoc = _FakeQueryDocumentSnapshot('g_confirmed', {
+          'target': 1,
+        }, const _FakeSnapshotMetadata());
+        final snapshot = _FakeQuerySnapshot(
+          docs: [confirmedDoc],
+          docChanges: [_FakeDocumentChange(confirmedDoc)],
+        );
+
+        final result = FirestoreGatewayImpl.mapQuerySnapshot(
+          snapshot,
+          limit: 500,
+        );
+
+        expect(result.rows, hasLength(1));
+        expect(result.rows.first['firestore_id'], equals('g_confirmed'));
+        expect(result.rows.first['target'], equals(1));
+      },
+    );
+
+    test('isAtLimit reflects the raw snapshot count, ignoring the guard', () {
+      final pendingDoc = _FakeQueryDocumentSnapshot('g_pending', {
+        'target': 1,
+      }, const _FakeSnapshotMetadata(hasPendingWrites: true));
+      final snapshot = _FakeQuerySnapshot(
+        docs: [pendingDoc],
+        docChanges: [_FakeDocumentChange(pendingDoc)],
+      );
+
+      final result = FirestoreGatewayImpl.mapQuerySnapshot(snapshot, limit: 1);
+
+      expect(
+        result.isAtLimit,
+        isTrue,
+        reason:
+            'isAtLimit is computed against the raw snapshot.docs count, '
+            'not the post-guard row count',
+      );
+    });
+
+    test('isUnresolvedSnapshot predicate matches either flag', () {
+      expect(
+        FirestoreGatewayImpl.isUnresolvedSnapshot(
+          const _FakeSnapshotMetadata(),
+        ),
+        isFalse,
+      );
+      expect(
+        FirestoreGatewayImpl.isUnresolvedSnapshot(
+          const _FakeSnapshotMetadata(hasPendingWrites: true),
+        ),
+        isTrue,
+      );
+      expect(
+        FirestoreGatewayImpl.isUnresolvedSnapshot(
+          const _FakeSnapshotMetadata(isFromCache: true),
+        ),
+        isTrue,
+      );
+    });
+  });
+
   // ── 8. Error propagation — unauthenticated ────────────────────────────────
 
   group('8. Error propagation — unauthenticated throws', () {
@@ -1842,6 +2207,81 @@ void main() {
         expect(snap.docs, isEmpty);
       },
     );
+
+    // AUD-core-sync-02: the real data lives at
+    // users/{uid}/learner_profiles/{profileId}/<collection>/... (per this
+    // class's own doc comment) — NOT at users/{uid}/<collection> directly.
+    // deleteUserData previously queried the wrong (always-empty) top-level
+    // paths and silently deleted nothing under a profile.
+    test('deleteUserData removes real nested per-profile subcollections '
+        '(completions, streak_events, goals) — AUD-core-sync-02', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      final profileRef = fs
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc('1');
+      await profileRef.set({'name': 'Profile 1'});
+      await profileRef.collection('completions').doc('c1').set({
+        'sefaria_ref': 'Berakhot.2a',
+      });
+      await profileRef.collection('streak_events').doc('s1').set({
+        'ulid': 'ulid1',
+      });
+      await profileRef.collection('goals').doc('g1').set({'target': 10});
+
+      await _gw(fs).deleteUserData(_uid);
+
+      final completions = await profileRef.collection('completions').get();
+      final streaks = await profileRef.collection('streak_events').get();
+      final goals = await profileRef.collection('goals').get();
+      expect(
+        completions.docs,
+        isEmpty,
+        reason:
+            'nested completions must actually be deleted, not silently '
+            'skipped by querying the wrong top-level path',
+      );
+      expect(streaks.docs, isEmpty);
+      expect(goals.docs, isEmpty);
+    });
+
+    test('deleteUserData collection names match this file\'s own push*/listen* '
+        'collection names exactly (no diverging/stale names) — '
+        'AUD-core-sync-02', () {
+      // The list this test asserts against is intentionally re-derived
+      // from a grep of _collection(profileId, '<name>') call sites in this
+      // same file, not copy-pasted from the production constant — so a
+      // future collection rename that updates one but not the other still
+      // fails this test.
+      const namesUsedByPushListenMethods = <String>{
+        'completions',
+        'streak_events',
+        'settings',
+        'curriculum_tracks',
+        'learning_order',
+        'bookmarks',
+        'preferences',
+        'learning_ledger',
+        'profile_programs',
+        'goals',
+        'stage_definitions',
+        'study_day_configs',
+        'points_ledger',
+        'reward_redemptions',
+      };
+      final divergentNames = FirestoreGatewayImpl
+          .perProfileSubcollectionsForDeletion
+          .toSet()
+          .difference(namesUsedByPushListenMethods);
+      expect(
+        divergentNames,
+        isEmpty,
+        reason:
+            'deleteUserData targets a collection name no push*/listen* '
+            'method uses: $divergentNames',
+      );
+    });
   });
 
   // ── 13. fetchAuditLogEntries ───────────────────────────────────────────────

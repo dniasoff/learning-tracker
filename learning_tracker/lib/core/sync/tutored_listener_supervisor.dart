@@ -64,8 +64,10 @@ class TutoredListenerSupervisor {
   /// Number of channels open (test helper).
   ///
   /// Counted by [TutoredListenerSource.openChannels] — exposed so tests can
-  /// verify that exactly N subscriptions are created on attach.
-  static const int channelCount = 15;
+  /// verify that exactly N subscriptions are created on attach. 16 = 13
+  /// collection channels + 3 preference document channels (AUD-core-sync-18
+  /// added `learning_order`, bringing the collection count from 12 to 13).
+  static const int channelCount = 16;
 
   /// Attach listeners for a talmid entry.
   ///
@@ -97,6 +99,8 @@ class TutoredListenerSupervisor {
     _supervisor = ListenerSupervisor(
       source: source,
       onEvent: (channel, payload) => _onEvent(localProfileId, channel, payload),
+      onError: (channel, error, stackTrace) =>
+          _onError(localProfileId, channel, error, stackTrace),
     );
 
     await _supervisor!.start();
@@ -123,6 +127,7 @@ class TutoredListenerSupervisor {
     'goals' => EntityKind.goal,
     'learning_ledger' => EntityKind.learningLedger,
     'profile_programs' => EntityKind.profileProgram,
+    'learning_order' => EntityKind.learningOrder, // AUD-core-sync-18
     'preferences/notification_settings' => EntityKind.notificationSettings,
     'preferences/gamification_settings' => EntityKind.gamificationSettings,
     'preferences/ui_preferences' => EntityKind.uiPreferences,
@@ -164,6 +169,35 @@ class TutoredListenerSupervisor {
             );
             return MergeOutcome.halt;
           }),
+    );
+  }
+
+  // ── Error routing (AUD-core-sync-12) ─────────────────────────────────────
+
+  /// Surfaces a tutored-channel stream error via [AppLogger] instead of
+  /// letting it vanish silently.
+  ///
+  /// The inner [ListenerSupervisor] no-ops a stream error when its `onError`
+  /// callback is null (`_onError?.call(...)`) — before this fix, `attach()`
+  /// never passed one. Firestore terminates a `.snapshots()` stream on error
+  /// (e.g. permission-denied when a parent revokes the grant while the
+  /// tutor's 15 tutored channels are live, or any transient stream fault),
+  /// so that one channel would go permanently dark for the rest of the
+  /// session — zero AppLogger entry, zero Crashlytics record, no
+  /// resubscription — while sibling channels kept working. Mirrors (at
+  /// minimum) the logging half of the own-profile path's `onError` wiring
+  /// in `SyncOrchestratorImpl.start` / `_onListenerError`.
+  void _onError(
+    int localProfileId,
+    String channel,
+    Object error,
+    StackTrace stackTrace,
+  ) {
+    AppLogger.instance.warning(
+      event: 'tutored_listener_stream_error',
+      fields: {'channel': channel, 'profileId': localProfileId},
+      exception: error,
+      stackTrace: stackTrace,
     );
   }
 }

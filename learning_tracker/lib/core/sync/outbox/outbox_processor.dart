@@ -163,6 +163,18 @@ class OutboxProcessor {
   /// healthy (timed-out-and-retrying) drain is never pre-empted.
   final Duration _drainStaleAfter;
 
+  /// Monotonically increasing token identifying the CURRENT single-flight
+  /// invocation, bumped every time the guard is acquired (a fresh call or a
+  /// stale reclaim). Without this, a superseded (stale) invocation's
+  /// `finally` unconditionally cleared `_draining`/`_drainingSince` whenever
+  /// it eventually returned — even while a LATER invocation that had already
+  /// reclaimed the guard was still genuinely in flight. That let a THIRD
+  /// caller see a falsely-free guard and start a concurrent `_doDrain` on
+  /// top of the still-running reclaimer (AUD-core-sync-06). Each `finally`
+  /// now only clears guard state when its own generation still matches —
+  /// i.e. no one has reclaimed the guard out from under it since it started.
+  int _generation = 0;
+
   /// Hard timeout on a single push operation. Firestore writes do NOT reliably
   /// error when the device is online-but-unreachable (e.g. broken IPv6 to
   /// firestore.googleapis.com) — the Future just hangs. Without this, one hung
@@ -204,21 +216,26 @@ class OutboxProcessor {
         return 0;
       }
       // The in-flight drain is wedged (elapsed >= _drainStaleAfter, or
-      // _drainingSince was null). Reset both guard fields so the new drain
-      // establishes a clean, fresh single-flight state — without this reset
-      // the two fields stay out-of-sync for the duration of the new drain,
-      // and any concurrent caller entering this branch before the new drain
-      // finishes could incorrectly reclaim the guard a second time.
-      _draining = false;
-      _drainingSince = null;
+      // _drainingSince was null). Fall through to reclaim below — acquiring
+      // a fresh generation there makes the wedged invocation's own
+      // `finally` (whenever it eventually returns) a no-op instead of
+      // clobbering the guard this new drain is about to establish.
     }
+    final myGeneration = ++_generation;
     _draining = true;
     _drainingSince = _clock.nowUtc();
     try {
       return await _doDrain(profileId);
     } finally {
-      _draining = false;
-      _drainingSince = null;
+      // Only release the guard if THIS invocation still owns it. A later
+      // invocation may have already reclaimed a stale guard out from under
+      // this one (this invocation was itself the wedged/superseded drain),
+      // and its state must not be clobbered by this invocation's belated
+      // cleanup (AUD-core-sync-06).
+      if (_generation == myGeneration) {
+        _draining = false;
+        _drainingSince = null;
+      }
     }
   }
 
@@ -289,13 +306,45 @@ class OutboxProcessor {
       final rowIdsByKey = <String, List<int>>{};
       final representativePayload = <String, Map<String, dynamic>>{};
       final orderedKeys = <String>[];
+      // AUD-core-sync-09: entityKeys whose representative row failed to
+      // decode. Decoding happened OUTSIDE any try/catch here, before the
+      // batch-push try/catch below — a single malformed payload (DB
+      // corruption, jsonEncode(null), a future write bug) threw all the way
+      // out of drain(), skipping every remaining completion, every
+      // non-completion kind, AND the profile-0 sweep. A bad payload can
+      // never succeed on retry either, so it is treated like any other
+      // per-row failure: marked attempted (not retried forever) without
+      // blocking its siblings or other kinds.
+      final undecodableKeys = <String>{};
       for (final row in eligibleCompletions) {
-        final ids = rowIdsByKey.putIfAbsent(row.entityKey, () {
-          orderedKeys.add(row.entityKey);
-          representativePayload[row.entityKey] = _decodePayload(row.payload);
-          return <int>[];
-        });
+        final ids = rowIdsByKey.putIfAbsent(row.entityKey, () => <int>[]);
         ids.add(row.id);
+        if (representativePayload.containsKey(row.entityKey) ||
+            undecodableKeys.contains(row.entityKey)) {
+          continue; // already decoded (or known-bad) for this key
+        }
+        try {
+          representativePayload[row.entityKey] = _decodePayload(row.payload);
+          orderedKeys.add(row.entityKey);
+        } catch (e) {
+          undecodableKeys.add(row.entityKey);
+          AppLogger.instance.warning(
+            event: 'sync_outbox_push_failed',
+            fields: {
+              'kind': OutboxEntityKind.completion,
+              'entity_key': row.entityKey,
+              'error': e.toString(),
+            },
+          );
+        }
+      }
+      for (final key in undecodableKeys) {
+        for (final id in rowIdsByKey[key]!) {
+          await _dao.markAttempted(
+            id,
+            error: 'Malformed outbox payload: cannot decode as JSON object',
+          );
+        }
       }
 
       final entries = orderedKeys
@@ -337,23 +386,32 @@ class OutboxProcessor {
         );
       }
 
+      // AUD-core-sync-17 (DB-3): collect the whole commit/failure group and
+      // hand each to a single bulk DAO call, instead of one awaited
+      // deleteRow/markAttempted per outbox row — pushCompletionsBatch exists
+      // specifically to avoid this exact per-row round-trip cost against
+      // Firestore; the local cleanup was still paying it against Drift.
       final committedKeys = committed.toSet();
+      final deleteIds = <int>[];
+      final retryIds = <int>[];
       for (final key in orderedKeys) {
         final ids = rowIdsByKey[key]!;
         if (committedKeys.contains(key)) {
           // The completion landed — delete EVERY outbox row carrying this
           // key (duplicates all describe the same idempotent completion).
-          for (final id in ids) {
-            await _dao.deleteRow(id);
-          }
+          deleteIds.addAll(ids);
           successCount++;
         } else if (failedError != null) {
           // Not committed — mark every row with this key as attempted so the
           // whole group is retried together on the next drain.
-          for (final id in ids) {
-            await _dao.markAttempted(id, error: failedError.toString());
-          }
+          retryIds.addAll(ids);
         }
+      }
+      if (deleteIds.isNotEmpty) {
+        await _dao.deleteRows(deleteIds);
+      }
+      if (retryIds.isNotEmpty && failedError != null) {
+        await _dao.markAttemptedBulk(retryIds, error: failedError.toString());
       }
     }
 
@@ -380,8 +438,12 @@ class OutboxProcessor {
           continue; // backoff window not yet elapsed
         }
 
-        final payload = _decodePayload(row.payload);
         try {
+          // AUD-core-sync-09: decode INSIDE the try so a malformed payload
+          // is treated like any other per-row failure (logged + marked
+          // attempted, siblings and other kinds keep draining) instead of
+          // throwing out of the whole kind loop.
+          final payload = _decodePayload(row.payload);
           await _dispatch(
             kind: kind,
             profileId: profileId,
