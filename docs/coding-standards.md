@@ -859,6 +859,21 @@ not remediated here (out of scope for a single-finding checker delivery);
 tracked as a follow-up once the toolchain itself is fixed and this rule can
 run live in CI.
 
+**AUD-onboarding-13 update (2026-07-11):** the same manual-marker scratch-run
+technique was used to verify the `no_color_literal_outside_theme` fix for
+this finding's 3 evidence files (`intro_mishna_page.dart`,
+`intro_page_indicator.dart`, `intro_rewards_page.dart` — a `_kNavy` etc.
+hex-literal constant independently hand-typed in each). With the marker
+temporarily enabled, the rule found **zero** hits in those 3 files
+post-fix (all 19 pre-fix literals now reference the new
+"Onboarding intro carousel" section of `AppColors`), and **13** genuine
+pre-existing hits of the same pattern in two sibling files under the same
+`lib/features/onboarding/presentation/widgets/` directory that this
+finding's evidence does not name — `glowing_cta_button.dart` (1) and
+`intro_daily_plan_page.dart` (12). Per scope discipline these are left
+unfixed and tracked as a follow-up, mirroring how AUD-tutoring-08's own
+out-of-scope hits above were handled.
+
 ---
 
 ## Custom Lints Reference
