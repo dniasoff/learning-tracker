@@ -4932,13 +4932,17 @@
   {
    "id": "AUD-onboarding-09",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Hoist EmptyLoginScreen's getAllAccounts() future out of build()",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "90b520ffa3766ab460fe24991acf99b15b991005"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-onboarding-09 AC1 OK: new test forces unrelated rebuild, asserts call count==1; RED-first proven (pre-fix Actual:2 FAIL, post-fix pass); behavioral not mock"
+   ],
+   "notes": "Re-verified: line 40 still had inline future: ref.read(...).getAllAccounts(). Converted to ConsumerStatefulWidget, hoisted Future to late final in initState (mirrors AUD-account-07's fix). Red-first test: pre-fix called twice on unrelated rebuild, post-fix once."
   },
   {
    "id": "AUD-onboarding-10",
