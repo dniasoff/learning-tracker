@@ -1339,13 +1339,18 @@
     {
       "id": "AUD-app-05",
       "wave": 2,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Land the AG-5 test-mirroring checker \u2014 537/715 lib files lack a mirrored test",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "5cd778a8fe5af49f4a1c3492a09c928051208892"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-app-05 AC1 OK: --report shows 0 lib/core/sync/{merge,codec} unmirrored; baseline has 0 such entries; wired make audit 27/27; probe file makes checker exit 1",
+        "AUD-app-05 AC2 OK: all 7 named merger suites keep scenarios (ledger+streak=union of old merger+roundtrip); aggregate 706->900 tests; 1 exact remoteIsNewer dup dropped"
+      ],
+      "notes": "Landed tool/check_test_mirroring.dart (ratchet checker), wired into make audit 27/27. Consolidated lib/core/sync/{merge,codec}/*.dart test duplication into 1:1 mirrors. AC1: zero unmirrored entries verified. AC2: 7 named mergers consolidated, 1 exact dup dropped, no scenario lost."
     },
     {
       "id": "AUD-t-cross-38",
@@ -5132,13 +5137,18 @@
     {
       "id": "AUD-app-08",
       "wave": 2,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Close the DeviceRegistryDatabase connection on account_bootstrap.dart's exception path",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "5cd778a8fe5af49f4a1c3492a09c928051208892"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-app-08 AC1 OK: registry.close() in finally (account_bootstrap.dart:59-66) wrapping resolve/find; runs on success+exception; exception-path test green",
+        "AUD-app-08 AC2 OK: test makes resolveActiveAccountId throw via _SpyInterceptor.ensureOpen, asserts closeCalled==true on real executor; red-first in commit body"
+      ],
+      "notes": "Wrapped registry construction in try/finally so close() runs on every exit path. Added optional test-only registryExecutor seam. Red-first: reverted fix, ran new test, captured failure, restored, reran green via QueryInterceptor forcing resolveActiveAccountId() to throw."
     },
     {
       "id": "AUD-core-domain-06",
