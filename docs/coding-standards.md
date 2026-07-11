@@ -183,7 +183,7 @@ The only permitted call sites for `useHebrewTermsProvider` are `lib/core/labels/
 **Source:** docs.flutter.dev/app-architecture/design-patterns/result
 
 **EH-3 — Never swallow an error: every `catch` rethrows, converts, or logs through `AppLogger`. No empty and no log-less catch blocks.**
-**Enforce:** [Enforced] `empty_catches` analyzer lint + inner audit check 9. [Pending] tighten the grep to catch log-less (not just empty) bodies.
+**Enforce:** [Enforced] `empty_catches` analyzer lint + inner audit check 9 (literally-empty bodies) + `no_log_less_catch` custom_lint rule (AUD-onboarding-11) for the log-less half — flags any `catch` under `lib/` with no `AppLogger` call and no `rethrow`, including the comment-only shape that dodges `empty_catches`.
 **Source:** dart.dev/effective-dart/usage
 
 **EH-4 — Catch with typed `on <Type> catch` clauses; never catch `Error` subtypes; throw only `Exception`/`Error` subclasses.**
@@ -895,6 +895,8 @@ Eleven custom lint rules live in `packages/custom_lints/` (landed) and run via `
 | `no_raw_logevent` | Analytics events bypassing the typed event layer (PV-5) |
 | `no_hand_rolled_async_state_notifier` | `Notifier<T>` whose state is a hand-rolled sealed Idle/Loading/Error union — SM-5 AsyncNotifier-migration candidate, INFO severity (AUD-account-14) |
 | `no_eager_list_in_non_lazy_scroll_container` | A `for`/`.map()` widget expansion fed into a non-lazy `ListView(children:)` or a scrollable `Column` under `lib/features/**` (PF-2, AUD-tutoring-08) |
+| `no_unguarded_state_touch_after_await` | `state =`/`setState(...)` after an `await` in a Notifier/State method with no intervening `mounted`/`ref.mounted` guard (SM-4, AUD-onboarding-01) |
+| `no_log_less_catch` | A `catch` under `lib/` with no `AppLogger` call and no `rethrow` — the log-less half of EH-3, including the comment-only shape `empty_catches` misses (AUD-onboarding-11) |
 
 Each rule's own matching/whitelist logic has a `package:test` unit-test file under `packages/custom_lints/test/`, run via `make lint-rules-test` (`cd learning_tracker && make lint-rules-test`, or `cd packages/custom_lints && dart test` directly). This is wired into `make audit` / `make ci` and runs on every PR — independent of whether the `custom_lint` plugin itself can attach to the analyzer (AUD-guardrails-17).
 

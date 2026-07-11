@@ -148,8 +148,16 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
       if (mounted && preTickedSelections.isNotEmpty) {
         setState(() => _selections.addAll(preTickedSelections));
       }
-    } catch (_) {
-      // Non-fatal: if pre-tick loading fails just open with unticked state.
+    } catch (e, st) {
+      // AUD-onboarding-11 (EH-3): non-fatal -- if pre-tick loading fails just
+      // open with unticked state -- but log it (matching the pattern used in
+      // _expungeRefs's catch a few lines below) so a production regression
+      // here isn't completely invisible.
+      AppLogger.instance.warning(
+        event: 'bulk mark pre-tick load failed',
+        exception: e,
+        stackTrace: st,
+      );
     }
   }
 

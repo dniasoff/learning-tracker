@@ -34,6 +34,8 @@
 ///   - [NoUnguardedStateTouchAfterAwait]: flags `state =` / `setState(...)`
 ///     appearing after an `await` in a Notifier/State method with no
 ///     intervening `mounted`/`ref.mounted` guard (SM-4, AUD-onboarding-01).
+///   - [NoLogLessCatch]: flags a `catch` block under `lib/` that neither logs
+///     through `AppLogger` nor rethrows (EH-3, AUD-onboarding-11).
 library learning_tracker_lints;
 
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -47,6 +49,7 @@ import 'src/rules/no_firebase_outside_core.dart';
 import 'src/rules/no_hand_rolled_async_state_notifier.dart';
 import 'src/rules/no_hardcoded_domain_term.dart';
 import 'src/rules/no_hardcoded_text_direction.dart';
+import 'src/rules/no_log_less_catch.dart';
 import 'src/rules/no_raw_logevent.dart';
 import 'src/rules/no_raw_talker.dart';
 import 'src/rules/no_unguarded_async_notifier_init.dart';
@@ -67,6 +70,7 @@ class _LearningTrackerLintPlugin extends PluginBase {
         NoHandRolledAsyncStateNotifier(),
         NoHardcodedDomainTerm(),
         NoHardcodedTextDirection(),
+        NoLogLessCatch(),
         NoRawLogEvent(),
         NoRawTalker(),
         NoUnguardedAsyncNotifierInit(),
