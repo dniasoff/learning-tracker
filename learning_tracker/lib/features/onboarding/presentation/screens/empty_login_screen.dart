@@ -22,11 +22,36 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
-class EmptyLoginScreen extends ConsumerWidget {
+class EmptyLoginScreen extends ConsumerStatefulWidget {
   const EmptyLoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EmptyLoginScreen> createState() => _EmptyLoginScreenState();
+}
+
+class _EmptyLoginScreenState extends ConsumerState<EmptyLoginScreen> {
+  // AUD-onboarding-09: captured ONCE in initState, not rebuilt inside
+  // build(). Calling registry.getAllAccounts() directly inside
+  // `Widget build()` (via `FutureBuilder(future: registry.getAllAccounts())`)
+  // returned a brand-new Future every rebuild — FutureBuilder tracks futures
+  // by identity, so any unrelated rebuild of this widget (theme change,
+  // locale change, any ancestor rebuild) restarted the FutureBuilder into
+  // its loading/no-data state, flickering the account-switch icon and
+  // re-querying the device registry. deviceRegistryProvider is
+  // `keepAlive: true` (an app-lifetime singleton opened once at startup),
+  // so reading it once here — rather than watching it in build() — loses
+  // no reactivity. Mirrors the identical fix for AccountPickerScreen
+  // (AUD-account-07).
+  late final Future<List<DeviceAccount>> _accountsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _accountsFuture = ref.read(deviceRegistryProvider).getAllAccounts();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
@@ -37,7 +62,7 @@ class EmptyLoginScreen extends ConsumerWidget {
           // Reuse the canonical multi-account switch surface (AccountPicker),
           // count-gated so it only appears when another account exists.
           FutureBuilder<List<DeviceAccount>>(
-            future: ref.read(deviceRegistryProvider).getAllAccounts(),
+            future: _accountsFuture,
             builder: (context, snapshot) {
               final accountCount = snapshot.data?.length ?? 0;
               if (accountCount < 2) return const SizedBox.shrink();
