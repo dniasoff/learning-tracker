@@ -163,6 +163,18 @@ class OutboxProcessor {
   /// healthy (timed-out-and-retrying) drain is never pre-empted.
   final Duration _drainStaleAfter;
 
+  /// Monotonically increasing token identifying the CURRENT single-flight
+  /// invocation, bumped every time the guard is acquired (a fresh call or a
+  /// stale reclaim). Without this, a superseded (stale) invocation's
+  /// `finally` unconditionally cleared `_draining`/`_drainingSince` whenever
+  /// it eventually returned — even while a LATER invocation that had already
+  /// reclaimed the guard was still genuinely in flight. That let a THIRD
+  /// caller see a falsely-free guard and start a concurrent `_doDrain` on
+  /// top of the still-running reclaimer (AUD-core-sync-06). Each `finally`
+  /// now only clears guard state when its own generation still matches —
+  /// i.e. no one has reclaimed the guard out from under it since it started.
+  int _generation = 0;
+
   /// Hard timeout on a single push operation. Firestore writes do NOT reliably
   /// error when the device is online-but-unreachable (e.g. broken IPv6 to
   /// firestore.googleapis.com) — the Future just hangs. Without this, one hung
@@ -204,21 +216,26 @@ class OutboxProcessor {
         return 0;
       }
       // The in-flight drain is wedged (elapsed >= _drainStaleAfter, or
-      // _drainingSince was null). Reset both guard fields so the new drain
-      // establishes a clean, fresh single-flight state — without this reset
-      // the two fields stay out-of-sync for the duration of the new drain,
-      // and any concurrent caller entering this branch before the new drain
-      // finishes could incorrectly reclaim the guard a second time.
-      _draining = false;
-      _drainingSince = null;
+      // _drainingSince was null). Fall through to reclaim below — acquiring
+      // a fresh generation there makes the wedged invocation's own
+      // `finally` (whenever it eventually returns) a no-op instead of
+      // clobbering the guard this new drain is about to establish.
     }
+    final myGeneration = ++_generation;
     _draining = true;
     _drainingSince = _clock.nowUtc();
     try {
       return await _doDrain(profileId);
     } finally {
-      _draining = false;
-      _drainingSince = null;
+      // Only release the guard if THIS invocation still owns it. A later
+      // invocation may have already reclaimed a stale guard out from under
+      // this one (this invocation was itself the wedged/superseded drain),
+      // and its state must not be clobbered by this invocation's belated
+      // cleanup (AUD-core-sync-06).
+      if (_generation == myGeneration) {
+        _draining = false;
+        _drainingSince = null;
+      }
     }
   }
 
