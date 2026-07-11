@@ -675,13 +675,13 @@
     {
       "id": "AUD-onboarding-06",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Wrap multi-statement Drift writes in transaction() in the wizard stage-apply and prior-completion expunge paths",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-onboarding-03",
@@ -797,13 +797,13 @@
     {
       "id": "AUD-core-sync-05",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Fix unsafe `as int?`/`as num?` casts in TrackCodec.decode and GoalCodec.decode that throw instead of returning null",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-core-sync-07",
@@ -1196,13 +1196,13 @@
     {
       "id": "AUD-sync-01",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "SyncStatus.error and RestoreStatus.error carry a free-text message instead of a stable code, inviting raw/untranslated text downstream",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-account-04",
@@ -1328,13 +1328,13 @@
     {
       "id": "AUD-core-sync-26",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Type the catch/catchError clauses across sync_orchestrator.dart, pull_pipeline.dart and tutored_listener_supervisor.dart (EH-4)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-app-05",
@@ -1377,13 +1377,13 @@
     {
       "id": "AUD-sync-02",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "LocalDataUploadService.pushAllLocalData enqueues every entity kind via a per-row awaited loop instead of a batched outbox write",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-progress-08",
@@ -1531,13 +1531,13 @@
     {
       "id": "AUD-core-sync-19",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Delete the dead duplicate syncStatusStreamProvider/syncStatusProvider in features/sync/presentation/providers/sync_providers.dart and fix the false 'delegates here' comment in sync_status_providers.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-account-06",
@@ -1613,13 +1613,13 @@
     {
       "id": "AUD-core-sync-24",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Stop FirestoreGatewayImpl.pushGoal from using non-idempotent add() for id-less goals",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-core-logging-01",
@@ -2486,13 +2486,13 @@
     {
       "id": "AUD-core-sync-20",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Extend FirestorePermissionDeniedException conversion beyond the 2 read call sites it currently covers",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-core-sync-18",
@@ -2733,13 +2733,13 @@
     {
       "id": "AUD-core-sync-27",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Wire or delete dead MergeException and OutboxDeadLetterException \u2014 neither is ever thrown in lib/",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-core-sync-22",
@@ -3563,13 +3563,13 @@
     {
       "id": "AUD-onboarding-08",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "BulkPriorCompletionService.execute()'s profileId branch bypasses DI and its bookmark write is never asserted",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-profiles-09",
@@ -3640,13 +3640,13 @@
     {
       "id": "AUD-sync-04",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "onEnqueueDrain closures in sync_providers.dart read ref after an await with no ref.mounted guard",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-docs-08",
@@ -4974,13 +4974,13 @@
     {
       "id": "AUD-sync-03",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "OutboxSyncWriteFacade._enqueue swallows every drain-tee failure with no log and no AppLogger field in the class",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-tutoring-13",
@@ -6074,13 +6074,13 @@
     {
       "id": "AUD-onboarding-14",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Extract the hardcoded '\u05dc\u05d9\u05de\u05d5\u05d3' stage-name sentinel to a shared constant",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-profiles-22",
@@ -6302,13 +6302,13 @@
     {
       "id": "AUD-core-sync-32",
       "wave": 2,
-      "status": "todo",
+      "status": "skipped-refuted",
       "severity": "P3",
       "title": "Deduplicate the copy-pasted cause-suffix toString() snippet across 3 sync exception classes",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "skipped-refuted (wave-2 engine outcome, ledger reconciliation, 2026-07-11). Evidence gap - read before trusting this disposition: this pass was handed only the engine's summary verdict (refuted), no accompanying rationale, review transcript, or write-up; none found anywhere on disk (git log --all has zero commits touching this id; commits=[] on this branch). Independently re-checked the current tree: the duplicated cause-suffix toString() ternary (${cause != null ? ' caused by: $cause' : ''}) is still present verbatim in all 3 cited files (firestore_permission_denied_exception.dart:37, merge_exception.dart:25, outbox_dead_letter_exception.dart:27) - so this was NOT refuted on an already-fixed-in-code basis, the one basis that would be self-evidencing. The actual basis is not recoverable from any persisted artifact. Action required before wave-2 is certified: the wave-2 closing-gate reviewer must independently confirm this refutation with real evidence, or reopen as todo/blocked for a real fix. Recorded in kill-log-addendum.md."
     },
     {
       "id": "AUD-core-sync-37",
@@ -6344,13 +6344,13 @@
     {
       "id": "AUD-core-sync-30",
       "wave": 2,
-      "status": "todo",
+      "status": "skipped-refuted",
       "severity": "P3",
       "title": "Add an AnalyticsEvent.outboxDeadLettered constant instead of reusing LogEvents.sync.outboxDeadLettered for analytics",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "skipped-refuted (wave-2 engine outcome, ledger reconciliation, 2026-07-11). Already-fixed-in-code basis, independently confirmed: commit 1d131567 (fix(core/analytics): constrain logEvent to the AnalyticsEvent catalog, AUD-core-analytics-01) added AnalyticsEvent.syncOutboxDeadLettered ('sync_outbox_dead_lettered') and converted both outbox_processor.dart analytics call sites (now lines 285, 431) from LogEvents.sync.outboxDeadLettered to AnalyticsEvent.syncOutboxDeadLettered \u2014 exactly this finding's recommendation, delivered as a side effect of the broader catalog-constraint sweep. grep confirms no LogEvents.sync.outboxDeadLettered analytics call site remains. Recorded in kill-log-addendum.md."
     },
     {
       "id": "AUD-core-sync-40",
@@ -6607,13 +6607,13 @@
     {
       "id": "AUD-sync-08",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "outboxSyncWriteFacadeProvider mutates DAO state and fires a network re-enqueue from inside its Provider build function",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-sync-07",
@@ -6640,13 +6640,13 @@
     {
       "id": "AUD-sync-05",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Repositories/services constructed inline instead of injected via a provider at three sync-path call sites",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-tracks-21",
@@ -7084,13 +7084,13 @@
     {
       "id": "AUD-core-sync-33",
       "wave": 2,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Defensively copy SyncPushException.committed so the partial-commit invariant can't be violated by a future caller",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (ledger-only) per wave-2 engine run outcome (ledger reconciliation, 2026-07-11): engine terminated at no-progress cap / loop end with this id in its final blocked set. This reconciliation pass received only the engine's summary verdict, no accompanying build/rationale artifact or worktree handoff for this id; commits=[] on this branch. Independently spot-checked against the current tree: the finding's underlying defect is still present (not accidentally already-fixed), consistent with a genuine unmet fix rather than a bookkeeping gap. Left todo for a future harvest/relaunch pass."
     },
     {
       "id": "AUD-core-sync-36",
