@@ -5395,13 +5395,17 @@
     {
       "id": "AUD-onboarding-12",
       "wave": 2,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Confirm whether Positioned(left:/right:) illustration badges in intro pages need PositionedDirectional for RTL",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "183541bfbdf20c613ee208a25e6365f830d95d88"
+      ],
+      "reviewRounds": 2,
+      "acVerified": [
+        "AUD-onboarding-12 AC1 OK: golden test exists, 4 he+en goldens pages 2-3 pass, review in docstring; I visually confirmed he goldens show correct pages w/ badges"
+      ],
+      "notes": "AC required a golden test of pages 2-3 in he locale, reviewed for badge placement. Added 4 goldens + review docstring. Badges don't mirror under RTL but this is intentional decorative-collage design, not a bug - no PositionedDirectional needed. Also fixed an RTL swipe-direction bug in the test rig."
     },
     {
       "id": "AUD-profiles-20",
@@ -6466,13 +6470,19 @@
     {
       "id": "AUD-onboarding-13",
       "wave": 2,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Extract onboarding intro-page Color(0x...) literals into core/theme constants",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "183541bfbdf20c613ee208a25e6365f830d95d88"
+      ],
+      "reviewRounds": 2,
+      "acVerified": [
+        "AUD-onboarding-13 AC1 OK: AC-named grep checker scans WHOLE widgets dir (mirrors Rule-0 rule), passes; independent grep finds 0 hex literals across all 5 files",
+        "AUD-onboarding-13 red-first OK: injected Color(0xFF123456) -> checker failed on that line; reverted, tree clean vs HEAD",
+        "AUD-onboarding-13 no-drift OK: every extracted const equals its removed literal; reuses exact (accentCoral=0xFFF86B6B, goldTrophy=0xFFFFC94A)"
+      ],
+      "notes": "Extracted 19 raw Color literals (13 distinct) from 3 evidence files into AppColors. Red-first grep-test failed pre-fix (19 hits), green post-fix. Verified live via manual-marker custom_lint scratch-run: 0 hits post-fix; 2 sibling files' unrelated debt left out of scope as follow-up."
     },
     {
       "id": "AUD-progress-14",
