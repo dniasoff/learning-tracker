@@ -9,7 +9,6 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/ui_preferences_merger.dart';
