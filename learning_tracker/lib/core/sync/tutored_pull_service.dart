@@ -79,16 +79,28 @@ class TutoredPullService {
     required String childDisplayName,
     required String childMode,
   }) async {
-    // T1.profile — stable upsert; re-entry with same triple reuses the row.
-    final localId = await _profileDao.upsertTutoredProfile(
-      accountId: accountId,
-      parentUid: parentUid,
-      remoteChildProfileId: remoteProfileId,
-      grantId: grantId,
-      displayName: childDisplayName,
-      mode: childMode,
-      now: _clock(),
-    );
+    // AUD-core-sync-04 — the upsert must be inside a try/catch of its own:
+    // a DB failure here (busy, unique-constraint violation on grantId, disk
+    // I/O) is a soft error like every other failure path in this method
+    // (EH-2: a raw exception must never propagate into presentation). No
+    // local id exists yet on this path, so callers — which ignore
+    // localProfileId on the error branch — get the same `0` sentinel the
+    // caller-side pull timeout already uses.
+    final int localId;
+    try {
+      // T1.profile — stable upsert; re-entry with same triple reuses the row.
+      localId = await _profileDao.upsertTutoredProfile(
+        accountId: accountId,
+        parentUid: parentUid,
+        remoteChildProfileId: remoteProfileId,
+        grantId: grantId,
+        displayName: childDisplayName,
+        mode: childMode,
+        now: _clock(),
+      );
+    } on Exception {
+      return (localProfileId: 0, result: TutoredPullResult.error);
+    }
 
     // T1.pull-decouple — read parent namespace, merge under synthetic local id.
     final pipeline = PullPipeline(gateway: _gateway, dispatcher: _dispatcher);
@@ -115,8 +127,10 @@ class TutoredPullService {
         result: TutoredPullResult.permissionDenied,
       );
     } on Exception {
-      // A failure outside the per-collection guards (e.g. the synthetic-profile
-      // upsert) — surface as a soft error; do NOT wipe (not a revocation).
+      // A failure inside the pull pipeline (rare — pullForTutoredProfile is
+      // itself per-collection resilient, see the Bug 3 note above) that
+      // still escaped to here — surface as a soft error; do NOT wipe (not a
+      // revocation).
       return (localProfileId: localId, result: TutoredPullResult.error);
     }
 
