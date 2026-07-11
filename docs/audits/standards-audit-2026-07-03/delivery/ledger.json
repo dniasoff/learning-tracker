@@ -1217,13 +1217,17 @@
   {
    "id": "AUD-core-sync-04",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Fix TutoredPullService.pull()'s misleading on-Exception comment / uncaught upsert failure",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "4fa4713212b3cd7d02ed6bb5196a162f2edcf451"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-04 AC1 OK: test throws in upsert, asserts pull() returns TutoredPullResult.error; fix wraps upsert in try/catch (tutored_pull_service.dart:92); green"
+   ],
+   "notes": "Confirmed: upsert ran before the try block; the comment falsely claimed to cover it, so failures escaped uncaught (EH-2), reachable via caller's pull(). Red test failed pre-fix at line 83. Fix wraps upsert in its own try/catch returning error; comment corrected. 20/20 tests green."
   },
   {
    "id": "AUD-core-auth-02",
