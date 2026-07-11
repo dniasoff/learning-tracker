@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
@@ -291,29 +293,46 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     }
 
     if (refs.isEmpty) return;
-    _expungeRefs(refs);
+    // _maybeExpunge is called synchronously from a Checkbox/ListTile
+    // callback, so it cannot itself be awaited — _expungeRefs' own body
+    // still awaits every write before invalidating (AUD-onboarding-07).
+    unawaited(_expungeRefs(refs));
   }
 
-  void _expungeRefs(List<String> refs) {
+  Future<void> _expungeRefs(List<String> refs) async {
     final service = ref.read(bulkPriorCompletionServiceProvider);
     final profileId = ref.read(activeProfileIdProvider);
 
-    // B8: expunge each ref individually — service API is per-ref.
-    for (final ref_ in refs) {
-      service
-          .expungePriorCompletions(
+    // AUD-onboarding-07: await every expunge write (each ref individually —
+    // service API is per-ref) BEFORE invalidating the dependent providers
+    // below. dashboardCompletionPercentageProvider et al. are manually
+    // invalidated rather than reactively derived from these writes, so
+    // invalidating first let a listener refetch before the write landed,
+    // showing a stale (pre-expunge) value with nothing to correct it once
+    // the write actually completed. A failed ref is logged and does not
+    // block the others.
+    await Future.wait(
+      refs.map((ref_) async {
+        try {
+          await service.expungePriorCompletions(
             profileId: profileId,
             sefariaRef: ref_,
             curriculumId: widget.curriculumId,
-          )
-          .catchError((Object e, StackTrace st) {
-            AppLogger.instance.error(
-              event: 'expunge failed',
-              exception: e,
-              stackTrace: st,
-            );
-          });
-    }
+          );
+        } catch (e, st) {
+          AppLogger.instance.error(
+            event: 'expunge failed',
+            exception: e,
+            stackTrace: st,
+          );
+        }
+      }),
+    );
+
+    // AUD-onboarding-01 (SM-4): the awaits above may outlive this screen
+    // (backgrounding, popping mid-expunge) — touching ref below unconditionally
+    // after them throws once this State is disposed.
+    if (!mounted) return;
 
     // Refresh progress surfaces after expunge.
     ref.invalidate(dashboardCompletionPercentageProvider(widget.curriculumId));
