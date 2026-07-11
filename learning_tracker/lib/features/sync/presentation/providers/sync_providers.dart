@@ -1,72 +1,24 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
-import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
-import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
-/// Provider for sync status stream.
-///
-/// W2.33: delegates to the orchestrator's own status stream via
-/// [syncOrchestratorProvider]. Emits [SyncStatus.localOnly] when no
-/// orchestrator is available.
-///
-/// Canonical source of truth for sync-status is
-/// `core/sync/providers/sync_status_providers.dart`.
-final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
-  final orchestrator = ref.watch<SyncOrchestrator?>(syncOrchestratorProvider);
-  if (orchestrator == null) {
-    return Stream.value(const SyncStatus.localOnly());
-  }
-  return orchestrator.statusStream;
-});
-
-/// Provider for current sync status (from stream).
-///
-/// W2.33: delegates to the orchestrator's own status via
-/// [syncOrchestratorProvider].
-///
-/// Canonical source of truth for sync-status is
-/// `core/sync/providers/sync_status_providers.dart`.
-///
-/// loop-iter2 fix: on loading (late subscriber attaches to a broadcast stream
-/// with no buffered events) delegate to [orchestrator.currentStatus] instead
-/// of emitting a spurious [SyncStatus.syncing]. A late subscriber (e.g.
-/// navigating to a screen after pullOnLaunch already completed) must see the
-/// real current status ("Synced", "Offline", …), not a Syncing flash.  Mirrors
-/// the fix already in `core/sync/providers/sync_status_providers.dart`.
-final syncStatusProvider = Provider<SyncStatus>((ref) {
-  final orchestrator = ref.watch<SyncOrchestrator?>(syncOrchestratorProvider);
-  if (orchestrator == null) return const SyncStatus.localOnly();
-
-  final asyncStatus = ref.watch(syncStatusStreamProvider);
-  return asyncStatus.when(
-    data: (status) => status,
-    // Late subscribers attach to a broadcast stream that has no pending
-    // events; Riverpod's StreamProvider enters the loading state. Return the
-    // orchestrator's authoritative snapshot rather than a synthetic
-    // SyncStatus.syncing so the UI never shows a spurious "Syncing…" flash.
-    loading: () => orchestrator.currentStatus,
-    // AUD-sync-01 (EH-5): the stream itself errored (not a classified
-    // domain exception) — code is unknown; error.toString() is retained
-    // only as non-user-facing debugDetail.
-    error: (error, _) => SyncStatus.error(
-      code: SyncErrorCode.unknown,
-      failedAt: DateTimeFactory.nowLocal(),
-      debugDetail: error.toString(),
-    ),
-  );
-});
+// AUD-core-sync-19: the sync-status stream/current providers formerly
+// declared here (syncStatusStreamProvider / syncStatusProvider) were an
+// unread, character-for-character duplicate of the canonical providers in
+// `core/sync/providers/sync_status_providers.dart` (zero production
+// consumers imported this copy). Deleted to remove the shotgun-surgery risk
+// of the two copies drifting; consumers must import the core-layer
+// providers directly.
 
 /// Drains the outbox for [profileId] then records the attempt on the sync
 /// orchestrator so the sync-status badge updates immediately to reflect push
@@ -135,6 +87,9 @@ final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
     // comment for the recordDrainAttempt rationale and the SM-4 ref.mounted
     // guard (AUD-sync-04).
     onEnqueueDrain: () => outboxDrainAndRecordAttempt(ref, profileId),
+    // AUD-sync-03 (EH-3): so a swallowed drain-tee failure is observable
+    // instead of vanishing into a log-less catchError.
+    logger: AppLogger.instance,
   );
 
   final tutoredSelection = ref.watch(activeTutoredProfileSelectionProvider);
@@ -159,6 +114,22 @@ final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
 /// provider builds its own facade so widening the surface here cannot
 /// accidentally retire the `SyncWriteFacade` type on the other consumers.
 ///
+/// AUD-sync-08 (SM-2 Enforce backstop): tracks which profile ids have
+/// already had their pre-sink ledger rows recovered this session, so the
+/// one-shot D14 recovery scan below (see [outboxSyncWriteFacadeProvider])
+/// fires at most once per profile per session — not once per rebuild.
+/// [outboxSyncWriteFacadeProvider] watches several dependencies (auth tier,
+/// tutored selection, database, profile id, day clock) that can each change
+/// independently of a genuine profile switch, and would otherwise re-fire
+/// the scan on every one of those unrelated rebuilds.
+final _recoveredLedgerProfileIdsProvider = Provider<Set<int>>((ref) {
+  // keepAlive: this Set is session-lifetime bookkeeping, not build state —
+  // it must survive outboxSyncWriteFacadeProvider's own (much more
+  // frequent) rebuilds/disposals.
+  ref.keepAlive();
+  return <int>{};
+});
+
 /// R1-H1: returns `null` during a tutored session so the mirror profile id is
 /// never used as the outbox enqueue target.  Direct readers handle null
 /// gracefully; the isProfileTutored drain guard remains as the fallback.
@@ -171,8 +142,16 @@ final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
   final tutoredSelection = ref.watch(activeTutoredProfileSelectionProvider);
   if (tutoredSelection != null) {
     // Clear any previously wired sink so the DAO does not retain a stale
-    // facade from before the tutored session started.
-    ref.read(userDatabaseProvider).pointsBalanceDao.syncSink = null;
+    // facade from before the tutored session started. AUD-sync-08 (SM-2):
+    // deferred to a microtask so build's synchronous body never mutates the
+    // DAO directly — `ref.mounted` guards against this provider having been
+    // disposed before the microtask runs (SM-4 discipline for deferred
+    // callbacks).
+    final database = ref.read(userDatabaseProvider);
+    scheduleMicrotask(() {
+      if (!ref.mounted) return;
+      database.pointsBalanceDao.syncSink = null;
+    });
     return null;
   }
 
@@ -193,15 +172,41 @@ final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
     // [outboxDrainAndRecordAttempt]'s doc comment for the SM-4 ref.mounted
     // guard (AUD-sync-04).
     onEnqueueDrain: () => outboxDrainAndRecordAttempt(ref, profileId),
+    // AUD-sync-03 (EH-3): so a swallowed drain-tee failure is observable
+    // instead of vanishing into a log-less catchError.
+    logger: AppLogger.instance,
   );
-  // WS9 Wave-B (C#2): register this facade as the points-sync sink so every
-  // ledger insert + redemption mutation made via PointsBalanceDao is pushed
-  // to the outbox. The DAO lives in core/ and cannot import the facade, so the
-  // wiring happens here at the features-layer composition root.
-  database.pointsBalanceDao.syncSink = facade;
-  // D14: recover any ledger rows written before this sink was wired (e.g. a
-  // cloud-born account's first credit) by re-enqueuing every row still lacking
-  // a sync marker. Idempotent + fire-and-forget so it never blocks the UI.
-  unawaited(database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(profileId));
+
+  // AUD-sync-08 (SM-2): the sink wiring and the D14 recovery scan used to be
+  // synchronous statements directly in build's body — a DAO field mutation
+  // and an unawaited fire-and-forget call, exactly the side effects build
+  // must stay pure of ("no writes, no request-firing, no side effects").
+  // Deferred to a microtask so build's synchronous body only constructs and
+  // returns the facade; `ref.mounted` guards against this provider having
+  // been disposed (e.g. a second rapid profile switch) before the microtask
+  // runs. The recovery scan is additionally gated by
+  // [_recoveredLedgerProfileIdsProvider] so it fires at most once per
+  // profile per session rather than once per rebuild — the sink wiring
+  // itself still re-fires on every rebuild, which is correct: a stale sink
+  // would otherwise misroute writes to a previous profile's facade.
+  final recoveredProfileIds = ref.read(_recoveredLedgerProfileIdsProvider);
+  scheduleMicrotask(() {
+    if (!ref.mounted) return;
+    // WS9 Wave-B (C#2): register this facade as the points-sync sink so
+    // every ledger insert + redemption mutation made via PointsBalanceDao is
+    // pushed to the outbox. The DAO lives in core/ and cannot import the
+    // facade, so the wiring happens here at the features-layer composition
+    // root.
+    database.pointsBalanceDao.syncSink = facade;
+    if (recoveredProfileIds.add(profileId)) {
+      // D14: recover any ledger rows written before this sink was wired
+      // (e.g. a cloud-born account's first credit) by re-enqueuing every row
+      // still lacking a sync marker. Idempotent + fire-and-forget so it
+      // never blocks the UI.
+      unawaited(
+        database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(profileId),
+      );
+    }
+  });
   return facade;
 });

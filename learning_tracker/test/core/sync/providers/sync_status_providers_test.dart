@@ -1,8 +1,8 @@
-// Regression test for loop-iter2: feature-layer syncStatusProvider loading
-// state must return orchestrator.currentStatus (not SyncStatus.syncing) when
-// the broadcast stream has no pending event and a late subscriber attaches.
+// Regression test for loop-iter2: syncStatusProvider's loading state must
+// return orchestrator.currentStatus (not SyncStatus.syncing) when the
+// broadcast stream has no pending event and a late subscriber attaches.
 //
-// The bug: sync_providers.dart:47 returned
+// The bug: this provider returned
 //   `SyncStatus.syncing(startedAt: DateTimeFactory.nowLocal())`
 // when asyncStatus is AsyncLoading.  A late subscriber (e.g. navigating to a
 // screen AFTER pullOnLaunch already completed) attaches to a broadcast stream
@@ -12,8 +12,14 @@
 //
 // Fix: replace `loading: () => SyncStatus.syncing(...)` with
 //      `loading: () => orchestrator.currentStatus`
-// mirroring the core-layer canonical provider in
-// `core/sync/providers/sync_status_providers.dart`.
+//
+// AUD-core-sync-19: this test previously lived at
+// test/features/sync/presentation/sync_status_provider_loading_state_test.dart
+// and exercised a now-deleted, character-for-character duplicate provider in
+// features/sync/presentation/providers/sync_providers.dart. Relocated here
+// (AG-4 mirrors lib/core/sync/providers/sync_status_providers.dart per AG-5)
+// to cover the sole surviving, canonical implementation. Assertions are
+// unchanged from the original file.
 //
 // RED before fix: the loading branch returns syncing instead of currentStatus.
 // GREEN after fix: the loading branch delegates to orchestrator.currentStatus.
@@ -23,15 +29,15 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
-import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockOrchestrator extends Mock implements SyncOrchestrator {}
 
 void main() {
-  group('feature-layer syncStatusProvider — loading state must use '
+  group('syncStatusProvider — loading state must use '
       'orchestrator.currentStatus (loop-iter2 regression)', () {
     // Verify the RED path first: if loading returns syncing, the test would
     // fail because we expect the status to match currentStatus, not syncing.
@@ -61,9 +67,9 @@ void main() {
         status,
         equals(syncedStatus),
         reason:
-            'feature-layer syncStatusProvider must return '
-            'orchestrator.currentStatus when the status stream has no '
-            'buffered event, not a spurious SyncStatus.syncing',
+            'syncStatusProvider must return orchestrator.currentStatus when '
+            'the status stream has no buffered event, not a spurious '
+            'SyncStatus.syncing',
       );
       // Verify it is NOT syncing (the buggy behaviour).
       expect(

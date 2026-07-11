@@ -16,8 +16,8 @@ import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 /// orchestrator is available (local-born / unauthenticated).
 ///
 /// Canonical source of truth for sync-status in core/sync/. Feature-layer
-/// UI can watch this directly; [syncStatusProvider] in sync_providers.dart
-/// also delegates here.
+/// UI watches this directly (there is no feature-layer copy — see
+/// AUD-core-sync-19).
 final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
   final orchestrator = ref.watch<SyncOrchestrator?>(syncOrchestratorProvider);
   if (orchestrator == null) {
@@ -33,8 +33,8 @@ final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
 /// Returns [SyncStatus.error] if the stream itself errors.
 ///
 /// Canonical source of truth for sync-status in core/sync/. Feature-layer
-/// UI can watch this directly; [syncStatusProvider] in sync_providers.dart
-/// also delegates here.
+/// UI watches this directly (there is no feature-layer copy — see
+/// AUD-core-sync-19).
 final syncStatusProvider = Provider<SyncStatus>((ref) {
   final orchestrator = ref.watch<SyncOrchestrator?>(syncOrchestratorProvider);
   if (orchestrator == null) return const SyncStatus.localOnly();

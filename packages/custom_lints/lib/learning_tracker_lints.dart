@@ -1,6 +1,6 @@
 /// Custom lint rules for the Learning Tracker project.
 ///
-/// Provides twelve rules:
+/// Provides sixteen rules:
 ///   - [NoColorLiteralOutsideTheme]: warns on direct `Color(0x…)` hex-literal
 ///     constructor calls outside `lib/core/theme/`; use AppColors/AppTheme constants.
 ///   - [NoCurriculumDisplayNameBypass]: prevents access to `.displayNameEn` /
@@ -28,6 +28,10 @@
 ///     `analytics_service.dart`; use typed helper methods instead.
 ///   - [NoRawTalker]: prevents `package:talker/talker.dart` imports outside
 ///     `lib/core/logging/`.
+///   - [NoSideEffectInProviderBuild]: flags a chained-property (DAO field)
+///     mutation or an `unawaited(...)` fire-and-forget call made directly
+///     inside a legacy `Provider`/`StreamProvider`/`FutureProvider`
+///     `create` callback (AUD-sync-08, SM-2 Enforce backstop).
 ///   - [NoRefAfterAwaitWithoutMountedCheck]: flags `ref.read`/`ref.watch`/
 ///     `state = ...` after an earlier `await` in the same async
 ///     method/closure with no `if (!ref.mounted) return;` guard in between
@@ -57,6 +61,7 @@ import 'src/rules/no_log_less_catch.dart';
 import 'src/rules/no_raw_logevent.dart';
 import 'src/rules/no_raw_talker.dart';
 import 'src/rules/no_ref_after_await_without_mounted_check.dart';
+import 'src/rules/no_side_effect_in_provider_build.dart';
 import 'src/rules/no_unguarded_async_notifier_init.dart';
 import 'src/rules/no_unguarded_state_touch_after_await.dart';
 
@@ -79,6 +84,7 @@ class _LearningTrackerLintPlugin extends PluginBase {
         NoRawLogEvent(),
         NoRawTalker(),
         NoRefAfterAwaitWithoutMountedCheck(),
+        NoSideEffectInProviderBuild(),
         NoUnguardedAsyncNotifierInit(),
         NoUnguardedStateTouchAfterAwait(),
       ];
