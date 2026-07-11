@@ -68,6 +68,7 @@ class TutoredListenerSource implements ListenerSource {
       'learning_ledger': coll('learning_ledger'),
       'profile_programs': coll('profile_programs'),
       'study_day_configs': coll('study_day_configs'),
+      'learning_order': coll('learning_order'), // AUD-core-sync-18
       'points_ledger': coll('points_ledger'),
       'reward_redemptions': coll('reward_redemptions'),
       'preferences/notification_settings': doc(

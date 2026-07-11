@@ -64,8 +64,10 @@ class TutoredListenerSupervisor {
   /// Number of channels open (test helper).
   ///
   /// Counted by [TutoredListenerSource.openChannels] — exposed so tests can
-  /// verify that exactly N subscriptions are created on attach.
-  static const int channelCount = 15;
+  /// verify that exactly N subscriptions are created on attach. 16 = 13
+  /// collection channels + 3 preference document channels (AUD-core-sync-18
+  /// added `learning_order`, bringing the collection count from 12 to 13).
+  static const int channelCount = 16;
 
   /// Attach listeners for a talmid entry.
   ///
@@ -125,6 +127,7 @@ class TutoredListenerSupervisor {
     'goals' => EntityKind.goal,
     'learning_ledger' => EntityKind.learningLedger,
     'profile_programs' => EntityKind.profileProgram,
+    'learning_order' => EntityKind.learningOrder, // AUD-core-sync-18
     'preferences/notification_settings' => EntityKind.notificationSettings,
     'preferences/gamification_settings' => EntityKind.gamificationSettings,
     'preferences/ui_preferences' => EntityKind.uiPreferences,
