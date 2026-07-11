@@ -438,13 +438,13 @@
   {
    "id": "AUD-onboarding-01",
    "wave": 2,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P1",
    "title": "Check ref.mounted/State.mounted before touching state after await in onboarding async flows",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_12646bf5-ddc-3 (commit 2993cbc4de44fd9ba1a6877c2859aac401f0909b) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: guarded ref/State touches after await across onboarding async flows (OnboardingProfileCreationStep, BulkMarkScreen, epic_26_story_11 onboarding controller) with mounted/ref.mounted checks; added a new custom_lint rule no_unguarded_state_touch_after_await (packages/custom_lints/test/no_unguarded_state_touch_after_await_test.dart, 17 cases) plus disposed-mid-await/mounted regression tests (epic_26_story_11_onboarding_controller_test.dart, onboarding_profile_creation_step_mounted_test.dart, bulk_mark_screen_mounted_test.dart). Per merge-lane payload cid w2r1c3, worktree removed and branch worktree-wf_12646bf5-ddc-3 left unmerged (commit not patch-equivalent to audit-fix/2026-07-03 per git cherry) for a future harvest pass; MODE=ledger-only, no code merged this cid."
   },
   {
    "id": "AUD-profiles-04",
@@ -945,13 +945,13 @@
   {
    "id": "AUD-onboarding-05",
    "wave": 2,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P1",
    "title": "Stop surfacing e.toString() as user-facing error text in BulkMarkScreen; route through AppErrorView/l10n",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_12646bf5-ddc-3 (commit f3701761d29f8cfa3e612e0e1ce5ffb6b3827b93) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: stopped surfacing e.toString() as user-facing error text in BulkMarkScreen, routed through AppErrorView/l10n instead; rewrote the error-path test in onboarding_bulk_l1_test.dart to assert localized copy for both en/he. Per merge-lane payload cid w2r1c3, worktree removed and branch worktree-wf_12646bf5-ddc-3 left unmerged (commit not patch-equivalent to audit-fix/2026-07-03 per git cherry) for a future harvest pass; MODE=ledger-only, no code merged this cid."
   },
   {
    "id": "AUD-onboarding-02",
@@ -4370,13 +4370,13 @@
   {
    "id": "AUD-onboarding-07",
    "wave": 2,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Await BulkMarkScreen._expungeRefs's expunge writes before invalidating dependent providers",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_12646bf5-ddc-3 (commit 0254a615f62cafac056bcbd4148702f2efddced1) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: awaited BulkMarkScreen._expungeRefs's expunge writes before invalidating dependent providers; new regression coverage in bulk_mark_screen_expunge_ordering_test.dart. Per merge-lane payload cid w2r1c3, worktree removed and branch worktree-wf_12646bf5-ddc-3 left unmerged (commit not patch-equivalent to audit-fix/2026-07-03 per git cherry) for a future harvest pass; MODE=ledger-only, no code merged this cid."
   },
   {
    "id": "AUD-profiles-08",
@@ -4910,13 +4910,13 @@
   {
    "id": "AUD-onboarding-11",
    "wave": 2,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Log the swallowed exception in BulkMarkScreen._loadPreExistingCompletions's catch block",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_12646bf5-ddc-3 (commit fcdc0e4c9bf9c586a0e671c326d38bcf3753b4f8) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: logged the previously swallowed exception in BulkMarkScreen._loadPreExistingCompletions's catch block; added bulk_mark_screen_pretick_load_failure_test.dart plus a new custom_lint rule no_log_less_catch (packages/custom_lints/test/no_log_less_catch_test.dart, 7 cases) to guard against future silent catches. Per merge-lane payload cid w2r1c3, worktree removed and branch worktree-wf_12646bf5-ddc-3 left unmerged (commit not patch-equivalent to audit-fix/2026-07-03 per git cherry) for a future harvest pass; MODE=ledger-only, no code merged this cid."
   },
   {
    "id": "AUD-onboarding-09",
