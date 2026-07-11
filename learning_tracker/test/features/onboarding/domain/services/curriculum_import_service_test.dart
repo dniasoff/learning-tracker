@@ -79,6 +79,26 @@ void main() {
       expect(result.success, isFalse);
     });
 
+    test(
+      // AUD-onboarding-17: a bare `catch (e)` also traps Error subtypes
+      // (programming bugs) and misreports them as an ordinary activation
+      // failure. A StateError thrown by the activation service must
+      // propagate out of importSingle/_activateOne, not be swallowed into
+      // a CurriculumImportResult(success: false).
+      'importSingle lets a StateError from the activation service propagate '
+      'instead of swallowing it as a failed result',
+      () async {
+        when(
+          () => mockActivationService.activate(CurriculumId.chumash),
+        ).thenThrow(StateError('programming bug during activation'));
+
+        expect(
+          () => service.importSingle(CurriculumId.chumash),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
+
     test('importAll activates each curriculum in database', () async {
       final curricula = [CurriculumId.mishnayos, CurriculumId.bavli];
 
