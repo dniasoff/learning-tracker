@@ -575,13 +575,19 @@
   {
    "id": "AUD-core-sync-10",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Resolve profileId live, not by snapshot, when wiring OutboxSyncWriteFacade/LocalDataUploadService/PointsBalanceDao.syncSink in syncOrchestratorProvider",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "eaa292c9559b28c5c9a64b94006e94ea25f64a74"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-10 AC1 OK: facade+service take int Function() resolveProfileId; resolved live per _enqueue and once per pushAllLocalData run",
+    "AUD-core-sync-10 AC2 OK: live_profile_switch_test drives real activeProfileIdProvider chain, switches A->B on one facade, asserts post-switch row stamped B; passes",
+    "AUD-core-sync-10 AC3 OK: sync_orchestrator_providers.dart class-doc gains AUD-core-sync-10 bullet extending R1 resolver-vs-snapshot note"
+   ],
+   "notes": "Verified evidence matches tree. Facade/service take a live resolveProfileId resolver, not a captured value; ledger re-enqueue now re-runs per switch. All call sites updated. Red-first: confirmed red pre-fix, green post-fix. Commit 1df19c19. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c5, mergeSha eaa292c9559b28c5c9a64b94006e94ea25f64a74). Post-rebase gate: make audit 28/28 clean, flutter analyze clean (no touchedStrings, arb-parity skipped). gatePolicy=overlap-tested: rebase vs audit-fix/2026-07-03 tip overlapped in learning_tracker/test/sync/study_day_config_sync_test.dart; ran payload.testsToRun (outbox_write_facade_live_profile_switch_test.dart, sync_orchestrator_provider_outbox_processor_swap_test.dart) plus study_day_config_sync_test.dart -- all 11 tests green."
   },
   {
    "id": "AUD-core-sync-02",
@@ -1641,13 +1647,18 @@
   {
    "id": "AUD-core-sync-23",
    "wave": 2,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Resolve outboxProcessor lazily in syncOrchestratorProvider instead of capturing it by value",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "eaa292c9559b28c5c9a64b94006e94ea25f64a74"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-23 AC1 OK: provider wires resolveOutboxProcessor:()=>ref.read(outboxProcessorProvider); _drainOutbox calls it fresh (sync_orchestrator.dart:384)",
+    "AUD-core-sync-23 AC2 OK: swap_test invalidates userDatabaseProvider mid-session (authState unchanged), asserts post-swap drain empties dbB, leaves dbA row; passes"
+   ],
+   "notes": "Verified evidence matches tree; verify-pass gateway correction noted but core finding holds. outboxProcessor now a lazy resolver called per drain. Also fixed a real single-flight-guard bug found while updating a test. Red-first confirmed. Commit a7edf148. Merged --no-ff onto audit-fix/2026-07-03 (w2r1c5, mergeSha eaa292c9559b28c5c9a64b94006e94ea25f64a74). Post-rebase gate: make audit 28/28 clean, flutter analyze clean (no touchedStrings, arb-parity skipped). gatePolicy=overlap-tested: rebase vs audit-fix/2026-07-03 tip overlapped in learning_tracker/test/sync/study_day_config_sync_test.dart; ran payload.testsToRun (outbox_write_facade_live_profile_switch_test.dart, sync_orchestrator_provider_outbox_processor_swap_test.dart) plus study_day_config_sync_test.dart -- all 11 tests green."
   },
   {
    "id": "AUD-gamification-07",
