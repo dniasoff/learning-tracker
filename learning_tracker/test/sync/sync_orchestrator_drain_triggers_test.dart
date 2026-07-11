@@ -157,7 +157,7 @@ _Setup _buildSetup({
     resolveBackfillGoals: () async => 0,
     connectivityStream: connectivity.stream,
     resetFirestoreNetworkOverride: () async {},
-    outboxProcessor: processor,
+    resolveOutboxProcessor: () => processor,
     periodicDrainInterval: periodic,
     resolveIdentityStatus: resolveIdentityStatus,
     resolveOutboxDao: wireOutboxDao ? () => db.outboxDao : null,

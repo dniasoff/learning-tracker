@@ -117,7 +117,7 @@ class _Harness {
     final facade = OutboxSyncWriteFacade(
       outboxDao: db.outboxDao,
       database: db,
-      profileId: 1,
+      resolveProfileId: () => 1,
       clock: FakeLocalDayClock(DateTime.utc(2026, 5, 21)),
     );
     return _Harness(

@@ -30,22 +30,35 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// This replaces the [SyncEngine] as the canonical [SyncWriteFacade] for
 /// all outbox-enrolled entity kinds (W2.31).
+///
+/// **AUD-core-sync-10:** [resolveProfileId] is a resolver, not a captured
+/// value, so every method reads the CURRENT active profile at call time
+/// instead of the profile that was active when this facade was constructed.
+/// A long-lived caller (e.g. `syncOrchestratorProvider`'s keepAlive
+/// singleton, which wires one facade instance for the whole session and
+/// survives profile switches without rebuilding — see that file's R1
+/// comment) would otherwise stamp every outbox row for a NEWLY-active
+/// profile with the STALE boot-time profile id, silently orphaning that
+/// data (the drain only sweeps the active profile + account-level 0).
 class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   OutboxSyncWriteFacade({
     required OutboxDao outboxDao,
     required UserDatabase database,
-    required int profileId,
+    required int Function() resolveProfileId,
     required LocalDayClock clock,
     Future<void> Function()? onEnqueueDrain,
   }) : _dao = outboxDao,
        _database = database,
-       _profileId = profileId,
+       _resolveProfileId = resolveProfileId,
        _clock = clock,
        _onEnqueueDrain = onEnqueueDrain;
 
   final OutboxDao _dao;
   final UserDatabase _database;
-  final int _profileId;
+
+  /// AUD-core-sync-10: resolved live at each call site — never cached — so a
+  /// profile switch on a long-lived facade instance is picked up immediately.
+  final int Function() _resolveProfileId;
   final LocalDayClock _clock;
 
   /// Phase 1 — write-tee callback. The facade fires this fire-and-forget at
@@ -107,7 +120,7 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   @override
   Future<void> pushLearnerProfile(Map<String, dynamic> profile) => _enqueue(
     OutboxEntityKind.learnerProfile,
-    profile['profile_id']?.toString() ?? _profileId.toString(),
+    profile['profile_id']?.toString() ?? _resolveProfileId().toString(),
     profile,
   );
 
@@ -133,14 +146,18 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   /// re-enqueuing to the outbox (which the tutored-profile guard would drop).
   Future<Map<String, dynamic>> buildGamificationSnapshot() async {
     final now = _clock.nowUtc();
+    // AUD-core-sync-10: resolve once per call so the queried data and the
+    // outbox row this snapshot is later enqueued under (via _enqueue's own
+    // live resolve) agree on the same profile.
+    final profileId = _resolveProfileId();
 
     final pointRows = await (_database.select(
       _database.pointConfigs,
-    )..where((t) => t.profileId.equals(_profileId))).get();
+    )..where((t) => t.profileId.equals(profileId))).get();
 
     final rewardService = RewardMilestoneService(
       _database,
-      profileId: _profileId,
+      profileId: profileId,
     );
     final rewardPayload = await rewardService.exportCloudPayload();
 
@@ -149,7 +166,7 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
         await (_database.selectOnly(_database.completionEvents)
               ..addColumns([totalPointsExpr])
               ..where(
-                _database.completionEvents.profileId.equals(_profileId) &
+                _database.completionEvents.profileId.equals(profileId) &
                     _database.completionEvents.purgedAt.isNull(),
               ))
             .getSingle();
@@ -183,9 +200,10 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   @override
   Future<void> pushGamificationSettingsSnapshot() async {
     final now = _clock.nowUtc();
+    final profileId = _resolveProfileId();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
-      '$_gamificationUpdatedAtMsKeyPrefix$_profileId',
+      '$_gamificationUpdatedAtMsKeyPrefix$profileId',
       now.millisecondsSinceEpoch,
     );
 
@@ -193,7 +211,7 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
 
     await _enqueue(
       OutboxEntityKind.gamificationSettings,
-      'gamification_settings_$_profileId',
+      'gamification_settings_$profileId',
       payload,
     );
   }
@@ -205,42 +223,40 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   @override
   Future<void> pushUiPreferencesSnapshot() async {
     final now = _clock.nowUtc();
+    final profileId = _resolveProfileId();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
-      ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(_profileId),
+      ProfileScopedPreferenceKeys.uiPreferencesUpdatedAtMs(profileId),
       now.millisecondsSinceEpoch,
     );
 
     final payload = <String, dynamic>{
       'schema_version': 2,
-      'profile_id': _profileId,
+      'profile_id': profileId,
       'updated_at': now.toIso8601String(),
-      'app_locale': ProfileScopedPreferenceKeys.readAppLocale(
-        prefs,
-        _profileId,
-      ),
+      'app_locale': ProfileScopedPreferenceKeys.readAppLocale(prefs, profileId),
       'use_hebrew_calendar': ProfileScopedPreferenceKeys.readUseHebrewCalendar(
         prefs,
-        _profileId,
+        profileId,
       ),
       'text_display': {
         'font_size_index': ProfileScopedPreferenceKeys.readFontSizeIndex(
           prefs,
-          _profileId,
+          profileId,
         ),
         'show_nikud': ProfileScopedPreferenceKeys.readShowNikud(
           prefs,
-          _profileId,
+          profileId,
         ),
       },
       'learning_order_parent_controls':
           ProfileScopedPreferenceKeys.readLearningOrderParentControls(
             prefs,
-            _profileId,
+            profileId,
           ),
       'hebrew_terms_script': ProfileScopedPreferenceKeys.readHebrewTermsScript(
         prefs,
-        _profileId,
+        profileId,
       ),
     };
 
@@ -255,7 +271,7 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
     // re-detected or manually set on each device.
     await _enqueue(
       OutboxEntityKind.uiPreferences,
-      'ui_preferences_$_profileId',
+      'ui_preferences_$profileId',
       payload,
     );
   }
@@ -271,9 +287,11 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
     // active (the processor's _doDrain sweeps the active profile AND 0).
     int? outboxProfileId,
   }) async {
+    // AUD-core-sync-10: resolved live, at enqueue time, not captured at
+    // facade-construction time — see the class doc.
     await _dao.insertOutboxRow(
       OutboxCompanion(
-        profileId: Value(outboxProfileId ?? _profileId),
+        profileId: Value(outboxProfileId ?? _resolveProfileId()),
         entityKind: Value(kind),
         entityKey: Value(entityKey),
         payload: Value(jsonEncode(payload)),
@@ -339,7 +357,7 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   Future<void> enqueueNotificationSettings(Map<String, dynamic> payload) =>
       _enqueue(
         OutboxEntityKind.notificationSettings,
-        'notification_settings_$_profileId',
+        'notification_settings_${_resolveProfileId()}',
         payload,
       );
 
@@ -349,8 +367,11 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
     payload,
   );
 
-  Future<void> enqueueStreakPayload(Map<String, dynamic> payload) =>
-      _enqueue(OutboxEntityKind.streak, 'streak_$_profileId', payload);
+  Future<void> enqueueStreakPayload(Map<String, dynamic> payload) => _enqueue(
+    OutboxEntityKind.streak,
+    'streak_${_resolveProfileId()}',
+    payload,
+  );
 
   Future<void> enqueueLedgerEntry(Map<String, dynamic> payload) => _enqueue(
     OutboxEntityKind.learningLedgerEntry,

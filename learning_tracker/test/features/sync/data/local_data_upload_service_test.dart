@@ -49,13 +49,13 @@ final _now = DateTime.utc(2026, 5, 29, 10, 0);
   final facade = OutboxSyncWriteFacade(
     outboxDao: db.outboxDao,
     database: db,
-    profileId: _profileId,
+    resolveProfileId: () => _profileId,
     clock: clock,
   );
   final service = LocalDataUploadService(
     facade: facade,
     database: db,
-    profileId: _profileId,
+    resolveProfileId: () => _profileId,
   );
   return (service: service, facade: facade);
 }

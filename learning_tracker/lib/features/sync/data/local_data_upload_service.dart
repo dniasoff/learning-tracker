@@ -34,16 +34,21 @@ class LocalDataUploadService {
   LocalDataUploadService({
     required OutboxSyncWriteFacade facade,
     required UserDatabase database,
-    required int profileId,
+    required int Function() resolveProfileId,
     AppLogger? logger,
   }) : _facade = facade,
        _database = database,
-       _profileId = profileId,
+       _resolveProfileId = resolveProfileId,
        _logger = logger;
 
   final OutboxSyncWriteFacade _facade;
   final UserDatabase _database;
-  final int _profileId;
+
+  /// AUD-core-sync-10: resolved live — see [OutboxSyncWriteFacade]'s matching
+  /// doc. [pushAllLocalData] resolves this exactly once, at the top of the
+  /// call, and reuses that value throughout so the entity data it reads and
+  /// the outbox rows it enqueues all agree on the same profile for one run.
+  final int Function() _resolveProfileId;
   final AppLogger? _logger;
 
   // Notification-settings SharedPreferences keys are now per-profile
@@ -59,6 +64,9 @@ class LocalDataUploadService {
   /// path.
   Future<void> pushAllLocalData() async {
     _logger?.info(event: 'local_data_upload_start');
+    // AUD-core-sync-10: resolve once for this whole (non-re-entrant) run —
+    // see the field doc on [_resolveProfileId].
+    final profileId = _resolveProfileId();
 
     // ── Learner profiles (account-level) ──────────────────────────────────
     // The learner_profile ROWS themselves are only ever pushed to the cloud
@@ -72,7 +80,7 @@ class LocalDataUploadService {
     // talmid copies and must NOT be pushed as the account's own profiles.
     const learnerProfileCodec = LearnerProfileCodec();
     final activeProfileRow = await _database.profileDao.getProfileById(
-      _profileId,
+      profileId,
     );
     if (activeProfileRow != null) {
       final accountProfiles = await _database.profileDao.getProfilesByAccount(
@@ -192,7 +200,7 @@ class LocalDataUploadService {
     // ── Profile programs ──────────────────────────────────────────────────
     const profileProgramCodec = ProfileProgramCodec();
     final profilePrograms = await _database.profileProgramDao
-        .getProgramsForProfile(_profileId);
+        .getProgramsForProfile(profileId);
     for (final p in profilePrograms) {
       final payload = profileProgramCodec.encode(
         ProfileProgramRow(
@@ -224,12 +232,12 @@ class LocalDataUploadService {
     // write shape (Phase B serialization-unify).
     const streakCodec = StreakEventCodec();
     final streakEvents = await _database.streakEventDao.getEventsByProfile(
-      _profileId,
+      profileId,
     );
     for (final e in streakEvents) {
       final payload = streakCodec.encode(
         StreakEventRow(
-          profileId: _profileId,
+          profileId: profileId,
           eventType: e.eventType,
           studyDate: DateTime.utc(
             e.eventTimestamp.year,
@@ -283,7 +291,7 @@ class LocalDataUploadService {
 
     // ── Curriculum tracks ─────────────────────────────────────────────────
     const trackCodec = TrackCodec();
-    final tracks = await _database.trackDao.getAllForProfile(_profileId);
+    final tracks = await _database.trackDao.getAllForProfile(profileId);
     for (final t in tracks) {
       await _facade.pushCurriculumTrack(
         trackCodec.encode(
@@ -305,7 +313,7 @@ class LocalDataUploadService {
     );
 
     // ── Notification settings ─────────────────────────────────────────────
-    final notifPayload = await _buildNotificationSettingsPayload();
+    final notifPayload = await _buildNotificationSettingsPayload(profileId);
     await _facade.enqueueNotificationSettings(notifPayload);
     _logger?.debug(event: 'local_data_upload_notification_settings_queued');
 
@@ -331,12 +339,14 @@ class LocalDataUploadService {
 
   // ── helpers ─────────────────────────────────────────────────────────────────
 
-  Future<Map<String, dynamic>> _buildNotificationSettingsPayload() async {
+  Future<Map<String, dynamic>> _buildNotificationSettingsPayload(
+    int profileId,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     // WS5.key-prefs: keys are per-profile namespaced.
     final updatedAtMs = prefs.getInt(
       NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey(
-        _profileId,
+        profileId,
       ),
     );
     final updatedAt = updatedAtMs == null
@@ -348,17 +358,17 @@ class LocalDataUploadService {
       'daily_reminder': {
         'enabled':
             prefs.getBool(
-              NotificationPreferencesRepository.reminderEnabledKey(_profileId),
+              NotificationPreferencesRepository.reminderEnabledKey(profileId),
             ) ??
             true,
         'hour':
             prefs.getInt(
-              NotificationPreferencesRepository.reminderHourKey(_profileId),
+              NotificationPreferencesRepository.reminderHourKey(profileId),
             ) ??
             19,
         'minute':
             prefs.getInt(
-              NotificationPreferencesRepository.reminderMinuteKey(_profileId),
+              NotificationPreferencesRepository.reminderMinuteKey(profileId),
             ) ??
             0,
       },
@@ -366,20 +376,18 @@ class LocalDataUploadService {
         'enabled':
             prefs.getBool(
               NotificationPreferencesRepository.streakAlertEnabledKey(
-                _profileId,
+                profileId,
               ),
             ) ??
             true,
         'hour':
             prefs.getInt(
-              NotificationPreferencesRepository.streakAlertHourKey(_profileId),
+              NotificationPreferencesRepository.streakAlertHourKey(profileId),
             ) ??
             21,
         'minute':
             prefs.getInt(
-              NotificationPreferencesRepository.streakAlertMinuteKey(
-                _profileId,
-              ),
+              NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
             ) ??
             0,
       },
@@ -387,7 +395,7 @@ class LocalDataUploadService {
         'enabled':
             prefs.getBool(
               NotificationPreferencesRepository.rewardNotificationEnabledKey(
-                _profileId,
+                profileId,
               ),
             ) ??
             true,

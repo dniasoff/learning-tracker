@@ -119,7 +119,7 @@ SyncOrchestratorImpl _buildOrchestrator(
     resolveGateway: _EmptyGateway.new,
     resolveProfileId: () => 1,
     resolvePushAllLocalData: () async {},
-    outboxProcessor: outboxProcessor,
+    resolveOutboxProcessor: () => outboxProcessor,
     resolveOutboxDao: () => db.outboxDao,
     // Disable periodic drain so it doesn't interfere with assertions.
     periodicDrainInterval: const Duration(hours: 24),

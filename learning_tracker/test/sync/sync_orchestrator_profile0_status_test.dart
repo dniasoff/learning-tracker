@@ -29,17 +29,22 @@ void main() {
 
   setUp(() {
     db = inMemoryDb();
+    // Constructed once and captured by the resolver closure below — a fresh
+    // OutboxProcessor per call would reset its in-memory single-flight guard
+    // on every drain, unlike the production wiring (which resolves the same
+    // cached provider instance on every call).
+    final processor = OutboxProcessor(
+      outboxDao: db.outboxDao,
+      pipeline: _Pipeline(),
+      clock: FakeLocalDayClock(DateTime.utc(2026, 5, 31)),
+    );
     orchestrator = SyncOrchestratorImpl(
       resolveMergeRouter: () =>
           MergeRouter(mergers: const <String, EntityMerger>{}),
       resolveGateway: _Gw.new,
       resolveProfileId: () => 1,
       resolvePushAllLocalData: () async {},
-      outboxProcessor: OutboxProcessor(
-        outboxDao: db.outboxDao,
-        pipeline: _Pipeline(),
-        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 31)),
-      ),
+      resolveOutboxProcessor: () => processor,
       resolveOutboxDao: () => db.outboxDao,
     );
   });
