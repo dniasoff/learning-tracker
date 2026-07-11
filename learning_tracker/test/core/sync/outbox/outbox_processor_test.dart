@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
@@ -548,6 +549,65 @@ void main() {
       expect(rows, hasLength(2));
       for (final row in rows) {
         expect(row.attempts, 1);
+      }
+    });
+
+    // AUD-core-sync-17: pushCompletionsBatch exists specifically to avoid an
+    // N-round-trip problem against Firestore, but the local cleanup after a
+    // large committed/failed group still ran one awaited deleteRow/
+    // markAttempted per outbox row — reintroducing that same cost against
+    // Drift. Assert the bulk DAO methods are invoked exactly ONCE per
+    // outcome group, regardless of how many rows are in it.
+    test('AUD-core-sync-17: deleteRows/markAttemptedBulk are each invoked '
+        'exactly once for a multi-row commit/failure group', () async {
+      final countingDao = _CountingOutboxDao(db);
+      final p = OutboxProcessor(
+        outboxDao: countingDao,
+        pipeline: pipeline,
+        clock: clock,
+      );
+
+      // Three committed rows (distinct keys) + two rows sharing a key that
+      // fails — one commit group of 3 ids, one failure group of 2 ids.
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c2');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c3');
+      await insertRow(
+        entityKind: OutboxEntityKind.completion,
+        entityKey: 'bad',
+      );
+      await insertRow(
+        entityKind: OutboxEntityKind.completion,
+        entityKey: 'bad',
+      );
+
+      pipeline.partialFailureCommitted = ['c1', 'c2', 'c3'];
+
+      final count = await p.drain(profileId);
+
+      expect(count, 3, reason: 'three distinct completions committed');
+      expect(
+        countingDao.deleteRowsCalls,
+        1,
+        reason: 'one bulk delete for the whole 3-row commit group, not 3',
+      );
+      expect(
+        countingDao.markAttemptedBulkCalls,
+        1,
+        reason:
+            'one bulk markAttempted for the whole 2-row failure group, '
+            'not 2',
+      );
+
+      // Functional correctness is preserved by the batching.
+      expect(await pendingCompletionKeys(), equals(['bad', 'bad']));
+      final badRows = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.completion,
+        profileId,
+      );
+      for (final row in badRows) {
+        expect(row.attempts, 1);
+        expect(row.lastError, isNotNull);
       }
     });
   });
@@ -1739,6 +1799,29 @@ class _BlockingPipeline extends Fake implements PushPipeline {
     batchCalls++;
     await _gate.future;
     return entries.map((e) => e.entityKey).toList();
+  }
+}
+
+/// [OutboxDao] wrapper that counts calls to the AUD-core-sync-17 bulk
+/// methods while delegating to the real (in-memory) implementation for
+/// every other operation — TQ-4: a hand-written fake/spy around the real
+/// collaborator, not a full mock, so functional correctness is unaffected.
+class _CountingOutboxDao extends OutboxDao {
+  _CountingOutboxDao(super.db);
+
+  int deleteRowsCalls = 0;
+  int markAttemptedBulkCalls = 0;
+
+  @override
+  Future<int> deleteRows(List<int> ids) {
+    deleteRowsCalls++;
+    return super.deleteRows(ids);
+  }
+
+  @override
+  Future<void> markAttemptedBulk(List<int> ids, {String? error}) {
+    markAttemptedBulkCalls++;
+    return super.markAttemptedBulk(ids, error: error);
   }
 }
 

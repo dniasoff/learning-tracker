@@ -386,23 +386,32 @@ class OutboxProcessor {
         );
       }
 
+      // AUD-core-sync-17 (DB-3): collect the whole commit/failure group and
+      // hand each to a single bulk DAO call, instead of one awaited
+      // deleteRow/markAttempted per outbox row — pushCompletionsBatch exists
+      // specifically to avoid this exact per-row round-trip cost against
+      // Firestore; the local cleanup was still paying it against Drift.
       final committedKeys = committed.toSet();
+      final deleteIds = <int>[];
+      final retryIds = <int>[];
       for (final key in orderedKeys) {
         final ids = rowIdsByKey[key]!;
         if (committedKeys.contains(key)) {
           // The completion landed — delete EVERY outbox row carrying this
           // key (duplicates all describe the same idempotent completion).
-          for (final id in ids) {
-            await _dao.deleteRow(id);
-          }
+          deleteIds.addAll(ids);
           successCount++;
         } else if (failedError != null) {
           // Not committed — mark every row with this key as attempted so the
           // whole group is retried together on the next drain.
-          for (final id in ids) {
-            await _dao.markAttempted(id, error: failedError.toString());
-          }
+          retryIds.addAll(ids);
         }
+      }
+      if (deleteIds.isNotEmpty) {
+        await _dao.deleteRows(deleteIds);
+      }
+      if (retryIds.isNotEmpty && failedError != null) {
+        await _dao.markAttemptedBulk(retryIds, error: failedError.toString());
       }
     }
 
