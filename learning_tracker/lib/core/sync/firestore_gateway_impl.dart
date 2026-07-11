@@ -315,6 +315,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final docId = data['curriculum_id']?.toString() ?? 'default';
     await collection.doc(docId).set({
       ..._stripInternalKeys(data),
+      // FB-2 (AUD-core-sync-13): SettingsCodec/SettingsMerger compare this
+      // document's top-level `updated_at` for cross-device LWW — overwrite
+      // the caller's client-clock value with a server timestamp so a
+      // fast/skewed local clock can never make a stale settings write
+      // silently beat a genuinely newer one from another device.
+      'updated_at': FieldValue.serverTimestamp(),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -336,6 +342,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final docId = curriculumId;
     await collection.doc(docId).set({
       ..._stripInternalKeys(data),
+      // FB-2 (AUD-core-sync-13): TrackCodec/TrackConfigMerger compare
+      // `state_changed_at` (NOT `updated_at`) for cross-device LWW —
+      // overwrite the caller's client-clock value with a server timestamp
+      // so a fast/skewed local clock can never make a stale track write
+      // silently beat a genuinely newer one from another device.
+      'state_changed_at': FieldValue.serverTimestamp(),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -368,6 +380,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final docId = data['curriculum_id']?.toString() ?? '';
     await collection.doc(docId).set({
       ..._stripInternalKeys(data),
+      // FB-2 (AUD-core-sync-13): BookmarkCodec/BookmarkMerger compare this
+      // document's `updated_at` for cross-device LWW — overwrite the
+      // caller's client-clock value with a server timestamp so a
+      // fast/skewed local clock can never make a stale bookmark write
+      // silently beat a genuinely newer one from another device.
+      'updated_at': FieldValue.serverTimestamp(),
       'synced_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -558,14 +576,21 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final collection = _collection(profileId, 'goals');
     if (collection == null) throw _notAuthenticated;
     final docId = data['id']?.toString() ?? data['goal_id']?.toString();
+    // FB-2 (AUD-core-sync-13): GoalMerger compares this document's
+    // `updated_at` for cross-device LWW — overwrite the caller's
+    // client-clock value with a server timestamp so a fast/skewed local
+    // clock can never make a stale goal write silently beat a genuinely
+    // newer one from another device.
     if (docId != null) {
       await collection.doc(docId).set({
         ..._stripInternalKeys(data),
+        'updated_at': FieldValue.serverTimestamp(),
         'synced_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } else {
       await collection.add({
         ..._stripInternalKeys(data),
+        'updated_at': FieldValue.serverTimestamp(),
         'synced_at': FieldValue.serverTimestamp(),
       });
     }

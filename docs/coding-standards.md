@@ -248,7 +248,7 @@ These rules govern `lib/core/sync/` — the only place Firestore is touched (Rul
 
 **FB-2 — Every cross-device LWW ordering field is written as `FieldValue.serverTimestamp()`, never a client clock. Keep a client timestamp locally for optimistic ordering; reconcile to the server-resolved value on write-ack.**
 **Why:** two devices with skewed clocks writing client timestamps make last-write-wins non-deterministic — the faster clock always wins and silently overwrites newer data.
-**Enforce:** [Pending] audit grep: no `DateTime.now()` in sync codecs' ordering fields (generalizes inner check 6); emulator test asserting the persisted ordering field is a server `Timestamp`.
+**Enforce:** [Enforced] for `pushTrack`/`pushSettings`/`pushBookmark`/`pushGoal` (AUD-core-sync-13): `make audit` check 28 greps `firestore_gateway_impl.dart` for the `FieldValue.serverTimestamp()` overwrite on each method's LWW field (`state_changed_at` for tracks, `updated_at` for the rest — `pushLearnerProfile` already did this); matching emulator tests live in `firestore_gateway_impl_test.dart` group "2a". [Pending] elsewhere: other `push*` methods whose entity is LWW-merged by a client-set timestamp (e.g. the gamification/UI-preferences snapshot pushes) are not yet covered — extend the same pattern before relying on their ordering fields.
 **Source:** firebase.google.com/docs/firestore/manage-data/add-data
 
 **FB-3 — Mergers skip LWW resolution for snapshots with `metadata.hasPendingWrites` or `metadata.isFromCache`, and never treat an unresolved (null) server timestamp as epoch-0.**

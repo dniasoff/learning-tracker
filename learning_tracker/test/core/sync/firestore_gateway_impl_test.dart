@@ -840,6 +840,157 @@ void main() {
     );
   });
 
+  // ── 2a. FB-2 — server timestamps for LWW ordering fields ─────────────────
+  // (AUD-core-sync-13)
+
+  group('2a. FB-2 — server timestamps for LWW ordering fields '
+      '(AUD-core-sync-13)', () {
+    // A deliberately wrong/stale client-clock value — proves the persisted
+    // field is NOT the client-supplied one, whatever the fake's current time
+    // happens to be.
+    final clientClockValue = DateTime.utc(2000, 1, 1).toIso8601String();
+
+    test('pushSettings overwrites updated_at (the field SettingsCodec/'
+        'SettingsMerger compare) with a server Timestamp', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      await _gw(fs).pushSettings(
+        profileId: _profileId,
+        data: {
+          'curriculum_id': 'dafYomi',
+          'stages': <Map<String, dynamic>>[],
+          'updated_at': clientClockValue,
+        },
+      );
+      final snap = await fs
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId.toString())
+          .collection('settings')
+          .doc('dafYomi')
+          .get();
+      final raw = snap.data()!['updated_at'];
+      expect(
+        raw,
+        isA<Timestamp>(),
+        reason:
+            'updated_at must be a server Timestamp, not the '
+            'client-supplied ISO string',
+      );
+      expect(
+        (raw as Timestamp).toDate().toUtc(),
+        isNot(equals(DateTime.utc(2000, 1, 1))),
+        reason: 'the persisted value must not be the client-clock value',
+      );
+    });
+
+    test(
+      'pushTrack overwrites state_changed_at (the field TrackCodec/'
+      'TrackConfigMerger compare, NOT updated_at) with a server Timestamp',
+      () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        await _gw(fs).pushTrack(
+          profileId: _profileId,
+          data: {
+            'curriculum_id': 'dafYomi',
+            'state': 'active',
+            'activated_at': clientClockValue,
+            'state_changed_at': clientClockValue,
+          },
+        );
+        final snap = await fs
+            .collection('users')
+            .doc(_uid)
+            .collection('learner_profiles')
+            .doc(_profileId.toString())
+            .collection('curriculum_tracks')
+            .doc('dafYomi')
+            .get();
+        final raw = snap.data()!['state_changed_at'];
+        expect(raw, isA<Timestamp>());
+        expect(
+          (raw as Timestamp).toDate().toUtc(),
+          isNot(equals(DateTime.utc(2000, 1, 1))),
+        );
+      },
+    );
+
+    test('pushBookmark overwrites updated_at (the field BookmarkCodec/'
+        'BookmarkMerger compare) with a server Timestamp', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      await _gw(fs).pushBookmark(
+        profileId: _profileId,
+        data: {
+          'curriculum_id': 'dafYomi',
+          'sefaria_ref': 'Berakhot.2a',
+          'updated_at': clientClockValue,
+        },
+      );
+      final snap = await fs
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId.toString())
+          .collection('bookmarks')
+          .doc('dafYomi')
+          .get();
+      final raw = snap.data()!['updated_at'];
+      expect(raw, isA<Timestamp>());
+      expect(
+        (raw as Timestamp).toDate().toUtc(),
+        isNot(equals(DateTime.utc(2000, 1, 1))),
+      );
+    });
+
+    test('pushGoal (doc-ID path) overwrites updated_at (the field GoalMerger '
+        'compares) with a server Timestamp', () async {
+      final fs = createFakeFirestore(authenticatedUid: _uid);
+      await _gw(fs).pushGoal(
+        profileId: _profileId,
+        data: {'id': 'g1', 'target': 5, 'updated_at': clientClockValue},
+      );
+      final snap = await fs
+          .collection('users')
+          .doc(_uid)
+          .collection('learner_profiles')
+          .doc(_profileId.toString())
+          .collection('goals')
+          .doc('g1')
+          .get();
+      final raw = snap.data()!['updated_at'];
+      expect(raw, isA<Timestamp>());
+      expect(
+        (raw as Timestamp).toDate().toUtc(),
+        isNot(equals(DateTime.utc(2000, 1, 1))),
+      );
+    });
+
+    test(
+      'pushGoal (auto-ID path) overwrites updated_at with a server Timestamp',
+      () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        await _gw(fs).pushGoal(
+          profileId: _profileId,
+          data: {'target': 2, 'updated_at': clientClockValue},
+        );
+        final snap = await fs
+            .collection('users')
+            .doc(_uid)
+            .collection('learner_profiles')
+            .doc(_profileId.toString())
+            .collection('goals')
+            .get();
+        expect(snap.docs, hasLength(1));
+        final raw = snap.docs.first.data()['updated_at'];
+        expect(raw, isA<Timestamp>());
+        expect(
+          (raw as Timestamp).toDate().toUtc(),
+          isNot(equals(DateTime.utc(2000, 1, 1))),
+        );
+      },
+    );
+  });
+
   // ── 3. Internal-key stripping ─────────────────────────────────────────────
 
   group('3. Internal-key stripping', () {
