@@ -274,7 +274,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 33 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 36 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -549,7 +549,7 @@ audit: lint-rules-test ## Run all 33 enforcement greps (NFR19) — exits non-zer
 	  echo "$$HITS"; \
 	  FAIL=1; \
 	fi; \
-	echo "26/33 — Every .logEvent() call site in lib/ uses an AnalyticsEvent.* catalog member (AUD-core-analytics-01, PV-1/PV-5)"; \
+	echo "26/36 — Every .logEvent() call site in lib/ uses an AnalyticsEvent.* catalog member (AUD-core-analytics-01, PV-1/PV-5)"; \
 	if ! dart run tool/check_analytics_catalog.dart > /tmp/analytics_catalog_check.$$$$.log 2>&1; then \
 	  cat /tmp/analytics_catalog_check.$$$$.log; \
 	  rm -f /tmp/analytics_catalog_check.$$$$.log; \
@@ -557,7 +557,7 @@ audit: lint-rules-test ## Run all 33 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/analytics_catalog_check.$$$$.log; \
 	fi; \
-	echo "27/33 — Every SeedManager( construction site in lib/ passes a logger: argument (AUD-app-07, EH-3)"; \
+	echo "27/36 — Every SeedManager( construction site in lib/ passes a logger: argument (AUD-app-07, EH-3)"; \
 	# A SeedManager built without a logger silently no-ops every one of its \
 	# ~13 internal _logger?.info/warning/error(...) diagnostic calls (first- \
 	# launch extraction, version-driven upgrade, .bak rollback, corruption \
@@ -579,12 +579,14 @@ audit: lint-rules-test ## Run all 33 enforcement greps (NFR19) — exits non-zer
 	    FAIL=1; \
 	  fi; \
 	done; \
-	echo "28/33 — pushTrack/pushSettings/pushBookmark/pushGoal overwrite their LWW ordering field with a server Timestamp, never the caller's client-clock value (FB-2, AUD-core-sync-13)"; \
+	echo "28/36 — pushTrack/pushSettings/pushBookmark/pushGoal overwrite their LWW ordering field with a server Timestamp, never the caller's client-clock value (FB-2, AUD-core-sync-13)"; \
 	GW=lib/core/sync/firestore_gateway_impl.dart; \
 	UPDATED_AT_COUNT=$$(grep -c "'updated_at': FieldValue.serverTimestamp()," "$$GW"); \
-	if [ "$$UPDATED_AT_COUNT" -lt 5 ]; then \
-	  echo "  Expected at least 5 \"'updated_at': FieldValue.serverTimestamp(),\" sites in $$GW"; \
-	  echo "  (pushLearnerProfile, pushSettings, pushBookmark, pushGoal x2, ...) — found $$UPDATED_AT_COUNT."; \
+	if [ "$$UPDATED_AT_COUNT" -lt 4 ]; then \
+	  echo "  Expected at least 4 \"'updated_at': FieldValue.serverTimestamp(),\" sites in $$GW"; \
+	  echo "  (pushLearnerProfile, pushSettings, pushBookmark, pushGoal — AUD-core-sync-24 collapsed pushGoal's"; \
+	  echo "  former if(docId!=null)/else(add()) branches into a single set(merge:true) path, so pushGoal now"; \
+	  echo "  contributes 1 site instead of 2 — see AUD-core-sync-24) — found $$UPDATED_AT_COUNT."; \
 	  echo "  A push* method may have regressed to passing the caller's client-clock updated_at straight through (FB-2)."; \
 	  FAIL=1; \
 	fi; \
@@ -594,7 +596,7 @@ audit: lint-rules-test ## Run all 33 enforcement greps (NFR19) — exits non-zer
 	  echo "  found no such site in $$GW (FB-2)."; \
 	  FAIL=1; \
 	fi; \
-	echo "29/33 — AG-5 test-mirroring ratchet: no NEW unmirrored lib/ file outside the tracked backlog (AUD-app-05)"; \
+	echo "29/36 — AG-5 test-mirroring ratchet: no NEW unmirrored lib/ file outside the tracked backlog (AUD-app-05)"; \
 	if ! dart run tool/check_test_mirroring.dart > /tmp/ag5_mirroring_check.$$$$.log 2>&1; then \
 	  cat /tmp/ag5_mirroring_check.$$$$.log; \
 	  rm -f /tmp/ag5_mirroring_check.$$$$.log; \
@@ -602,7 +604,7 @@ audit: lint-rules-test ## Run all 33 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/ag5_mirroring_check.$$$$.log; \
 	fi; \
-	echo "30/33 — DB-2: no multi-write service method in features/onboarding/domain/services without an enclosing transaction() (AUD-onboarding-06)"; \
+	echo "30/36 — DB-2: no multi-write service method in features/onboarding/domain/services without an enclosing transaction() (AUD-onboarding-06)"; \
 	if ! dart run tool/check_db_transactions.dart > /tmp/db_transactions_check.$$$$.log 2>&1; then \
 	  cat /tmp/db_transactions_check.$$$$.log; \
 	  rm -f /tmp/db_transactions_check.$$$$.log; \
@@ -610,13 +612,13 @@ audit: lint-rules-test ## Run all 33 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/db_transactions_check.$$$$.log; \
 	fi; \
-	echo "31/33 — The לימוד stage-name sentinel is never hand-typed; every write site references kLimudStageName (AUD-onboarding-14)"; \
+	echo "31/36 — The לימוד stage-name sentinel is never hand-typed; every write site references kLimudStageName (AUD-onboarding-14)"; \
 	if grep -rn "stageName: 'לימוד'" lib/ --include="*.dart" | grep -q .; then \
 	  echo "  stageName: 'לימוד' must not be hand-typed — reference kLimudStageName (lib/core/constants/hebrew_terms.dart) instead, so a typo in one copy cannot silently desync DomainTermLabels.resolveStoredStageName's lookup:"; \
 	  grep -rn "stageName: 'לימוד'" lib/ --include="*.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "32/33 — EH-4: catch clauses in core/sync's periodic-drain / recovery-pull / listener-dispatch paths are typed (AUD-core-sync-26)"; \
+	echo "32/36 — EH-4: catch clauses in core/sync's periodic-drain / recovery-pull / listener-dispatch paths are typed (AUD-core-sync-26)"; \
 	if ! dart run tool/check_eh4_typed_catches.dart > /tmp/eh4_typed_catches_check.$$$$.log 2>&1; then \
 	  cat /tmp/eh4_typed_catches_check.$$$$.log; \
 	  rm -f /tmp/eh4_typed_catches_check.$$$$.log; \
@@ -624,7 +626,7 @@ audit: lint-rules-test ## Run all 33 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/eh4_typed_catches_check.$$$$.log; \
 	fi; \
-	echo "33/33 — EH-5: sealed status/result types must carry a stable code, never a free-text 'message', and no raw error.toString()/e.toString() may flow into a 'message:' argument (AUD-sync-01)"; \
+	echo "33/36 — EH-5: sealed status/result types must carry a stable code, never a free-text 'message', and no raw error.toString()/e.toString() may flow into a 'message:' argument (AUD-sync-01)"; \
 	for f in $$(grep -rlE "@freezed" lib/ --include="*.dart" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"); do \
 	  if grep -qE "sealed class" "$$f" && grep -qE "required String message" "$$f"; then \
 	    echo "  $$f: sealed status/result type has a free-text 'message' field — carry a stable code/enum instead (EH-5, see SyncErrorCode):"; \
@@ -639,9 +641,31 @@ audit: lint-rules-test ## Run all 33 enforcement greps (NFR19) — exits non-zer
 	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
 	  FAIL=1; \
 	fi; \
+	echo "34/36 — No bare 'as int?'/'as num?'/'as double?'/'as bool?' casts in lib/core/sync/codec/*.dart (AUD-core-sync-05)"; \
+	if grep -rnE "as (int|num|double|bool)\?" lib/core/sync/codec/*.dart | grep -q .; then \
+	  echo "  Bare nullable-numeric/bool cast in a codec decode() — use FirestoreCodec.parseInt/parseDouble/parseBool instead:"; \
+	  grep -rnE "as (int|num|double|bool)\?" lib/core/sync/codec/*.dart; \
+	  FAIL=1; \
+	fi; \
+	echo "35/36 — EH-3: no log-less catch/catchError in the scoped sync-write-facade file (AUD-sync-03)"; \
+	if ! dart run tool/check_eh3_log_less_catch.dart > /tmp/eh3_log_less_catch_check.$$$$.log 2>&1; then \
+	  cat /tmp/eh3_log_less_catch_check.$$$$.log; \
+	  rm -f /tmp/eh3_log_less_catch_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/eh3_log_less_catch_check.$$$$.log; \
+	fi; \
+	echo "36/36 — DB-3: no looped singular outbox push/enqueue calls in local_data_upload_service.dart (AUD-sync-02)"; \
+	if ! dart run tool/check_db3_batch_inserts.dart > /tmp/db3_batch_check.$$$$.log 2>&1; then \
+	  cat /tmp/db3_batch_check.$$$$.log; \
+	  rm -f /tmp/db3_batch_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/db3_batch_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 33 greps clean ==="; \
+	  echo "=== audit PASSED — all 36 greps clean ==="; \
 	fi
