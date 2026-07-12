@@ -180,9 +180,9 @@ void main() {
     //   • Overdue task card (isOverdue=true) is present in the filtered list.
     //   • TODAY'S GOAL card shows count = 1 (only the overdue task is visible).
     //
-    // Note: _summaryForSection() computes "N missed/overdue tasks" but that
-    // string is stored in ComposedDailySchedule.summary and never rendered
-    // in the widget tree — asserting it would always fail.
+    // Note: AUD-scheduler-07 removed the dead, unlocalized
+    // ComposedDailySchedule.summary field (nothing ever rendered it); there
+    // is no summary string to assert here.
     //
     // Implementation note: We inject an overdue task and set
     // schedulerTaskSectionProvider to SchedulerTaskSection.overdue via an
