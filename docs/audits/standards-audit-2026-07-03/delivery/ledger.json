@@ -816,13 +816,19 @@
   {
    "id": "AUD-tutoring-02",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Localize TutorGrantPreconditionError.message instead of rendering raw English in accept/decline-invite screens",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "752aaa7881ec1427aa8e00f51efee47236fe8bb9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-02 AC1 OK: repository.dart:120 code field + 6-variant enum; use cases pass codes; grep shows no message: construction in lib",
+    "AUD-tutoring-02 AC2 OK: accept:200/decline:141 exhaustive switch -> AppLocalizations; new EN+HE ARB keys; arb-parity PASS",
+    "AUD-tutoring-02 AC3 OK: pinned raw-English asserts flipped to exact localized find.text; new Locale('he') tests run & pass (+2)"
+   ],
+   "notes": "Re-verified, no drift. message -> TutorGrantPreconditionCode enum (6 variants), all 6 construction sites + 3 consumer screens fixed via exhaustive l10n switch; new EN+HE ARB keys. Updated pinned raw-English asserts + added Locale('he') tests (AC3)."
   },
   {
    "id": "AUD-t-story-acceptance-02",
@@ -3905,13 +3911,19 @@
   {
    "id": "AUD-tutoring-09",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Localize TutorPinValidationError.message instead of leaking raw English into tutor PIN screens",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "752aaa7881ec1427aa8e00f51efee47236fe8bb9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tutoring-09 AC1 OK: tutor_pin_service.dart:76 code field + TutorPinValidationCode.malformedPin enum; sites :103/:122 use code",
+    "AUD-tutoring-09 AC2 OK: setup:132/gate:107 exhaustive switch -> l10n.tutorPinValidationMalformed; EN+HE key added; arb-parity PASS",
+    "AUD-tutoring-09 AC3 OK: gate+setup+dialog tests force validation branch, assert 'Your Tutor PIN must be exactly 4 numeric digits.'; pass"
+   ],
+   "notes": "Re-verified, no drift. message -> TutorPinValidationCode enum, both construction sites + 3 consumers fixed via exhaustive l10n switch; new EN+HE ARB key. Forced validation-error branch in 3 widget tests per AC3, asserted localized string."
   },
   {
    "id": "AUD-t-tutoring-02",
