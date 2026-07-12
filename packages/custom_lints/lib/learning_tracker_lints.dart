@@ -1,6 +1,6 @@
 /// Custom lint rules for the Learning Tracker project.
 ///
-/// Provides sixteen rules:
+/// Provides seventeen rules:
 ///   - [NoColorLiteralOutsideTheme]: warns on direct `Color(0x…)` hex-literal
 ///     constructor calls outside `lib/core/theme/`; use AppColors/AppTheme constants.
 ///   - [NoCurriculumDisplayNameBypass]: prevents access to `.displayNameEn` /
@@ -21,6 +21,10 @@
 ///   - [NoHardcodedDomainTerm]: warns on hardcoded Torah domain-term English
 ///     literals in user-facing strings in presentation code; render via
 ///     domainTermLabels / CurriculumLabels / l10n instead.
+///   - [NoHardcodedErrorWidgetString]: warns on any hardcoded English literal
+///     in a user-facing string slot inside AppErrorView, ErrorDisplay, or
+///     PinEntryWidget specifically; resolve through AppLocalizations/ARB
+///     instead (AUD-core-widgets-01, AX-2/EH-5).
 ///   - [NoHardcodedTextDirection]: warns on hardcoded directional layout values
 ///     that break RTL locales (EdgeInsets.only(left/right), Alignment.centerLeft/
 ///     centerRight, TextAlign.left/right).
@@ -56,6 +60,7 @@ import 'src/rules/no_feature_cross_import.dart';
 import 'src/rules/no_firebase_outside_core.dart';
 import 'src/rules/no_hand_rolled_async_state_notifier.dart';
 import 'src/rules/no_hardcoded_domain_term.dart';
+import 'src/rules/no_hardcoded_error_widget_string.dart';
 import 'src/rules/no_hardcoded_text_direction.dart';
 import 'src/rules/no_log_less_catch.dart';
 import 'src/rules/no_raw_logevent.dart';
@@ -79,6 +84,7 @@ class _LearningTrackerLintPlugin extends PluginBase {
         NoFirebaseOutsideCore(),
         NoHandRolledAsyncStateNotifier(),
         NoHardcodedDomainTerm(),
+        NoHardcodedErrorWidgetString(),
         NoHardcodedTextDirection(),
         NoLogLessCatch(),
         NoRawLogEvent(),
