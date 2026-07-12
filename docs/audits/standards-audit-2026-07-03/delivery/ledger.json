@@ -472,13 +472,19 @@
     {
       "id": "AUD-scheduler-02",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Route HebrewDatePicker's 5 hardcoded English strings through AppLocalizations",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "669de901c57a9f35d1a51949132601356cefd4b4"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-02 AC1 OK: all 5 build-tree strings route through l10n (lines 151,177,248,280,326); only imports + numeric interp remain as literals",
+        "AUD-scheduler-02 AC2 OK: make arb-parity exit0 '1434 keys all present in Hebrew'; 5 new keys in both en+he arb",
+        "AUD-scheduler-02 AC3 OK: test uses l10n getters for positive asserts; English only in findsNothing guards under Locale('he')"
+      ],
+      "notes": "Re-verified all 6 evidence sites present. Added 5 ARB keys (EN+HE) and wired all 5 build-tree call sites through AppLocalizations. Red-first: new Locale('he') test failed pre-fix (found 0 widgets with Hebrew title text), passes post-fix (6/6 green). All 3 ACs satisfied."
     },
     {
       "id": "AUD-t-cross-04",
