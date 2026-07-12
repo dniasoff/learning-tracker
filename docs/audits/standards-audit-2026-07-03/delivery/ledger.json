@@ -222,18 +222,13 @@
   {
    "id": "AUD-core-sync-13",
    "wave": 2,
-   "status": "merged",
+   "status": "blocked",
    "severity": "P1",
    "title": "Write server timestamps for LWW ordering fields in FirestoreGatewayImpl's push* methods (FB-2)",
-   "commits": [
-    "d645d1b2d075ba8ffe8675d0e2a575a29cc7f93b"
-   ],
-   "reviewRounds": 1,
-   "acVerified": [
-    "AUD-core-sync-13 AC1 OK: 2a tests assert persisted field isA<Timestamp> and != client value; mergers confirmed compare updated_at / state_changed_at",
-    "AUD-core-sync-13 AC2 OK: make audit check 27 greps serverTimestamp overwrites; I verified it trips when overwrites removed"
-   ],
-   "notes": "pushTrack/Settings/Bookmark/Goal now overwrite their actual LWW field (state_changed_at for tracks, updated_at otherwise; confirmed against merge/codec sources) with serverTimestamp(). Shipped make-audit check 27."
+   "commits": [],
+   "reviewRounds": 0,
+   "acVerified": [],
+   "notes": "not attempted: no-progress cap / loop end"
   },
   {
    "id": "AUD-account-05",
@@ -6415,17 +6410,13 @@
   {
    "id": "AUD-core-sync-40",
    "wave": 2,
-   "status": "merged",
+   "status": "blocked",
    "severity": "P3",
    "title": "Replace outbox_processor.dart's raw 'sync_outbox_push_failed' literal with a LogEvents catalog constant",
-   "commits": [
-    "b14264f8e7402574275e1732ba7f54eaf9a74c7b"
-   ],
-   "reviewRounds": 1,
-   "acVerified": [
-    "AUD-core-sync-40 AC1 OK: grep event:' in outbox_processor.dart empty (exit 1); both sites use LogEvents.sync.outboxPushFailed; no double-quote form"
-   ],
-   "notes": "Re-verified: both calls hand-typed 'sync_outbox_push_failed', distinct from LogEvents.sync.pushFailed. Added outboxPushFailed getter to _SyncEvents (same literal, no telemetry drift); switched both sites to it. AC grep was red (2 matches) before, green (0) after."
+   "commits": [],
+   "reviewRounds": 0,
+   "acVerified": [],
+   "notes": "not attempted: no-progress cap / loop end"
   },
   {
    "id": "AUD-t-account-06",
