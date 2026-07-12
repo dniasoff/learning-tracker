@@ -7596,13 +7596,13 @@
   {
    "id": "AUD-gamification-18",
    "wave": 3,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Populate or delete the dead gamification.dart barrel file",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_a74eec8f-022-52 (branch worktree-wf_a74eec8f-022-52, commit f6ee8abeac38557961aa0fe3223fbb9a4722ca65, tip of this cid's build) but the review agent was lost (quota) before opus review/merge could complete. Per merge-lane payload cid w3r1c20, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_a74eec8f-022-52 removed per payload.worktreesToRemove (`git worktree remove --force`). Branch worktree-wf_a74eec8f-022-52 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_a74eec8f-022-52` shows its sole commit (f6ee8abe) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
   },
   {
    "id": "AUD-gamification-23",
