@@ -71,6 +71,14 @@ void main() {
 
   // ── Story 12.1: Local notifications ───────────────────────────
 
+  // (AUD-notifications-04) NotificationScheduler.schedule()/.cancel() (the
+  // pre-per-profile API with taskCount/curriculumCount pluralization built
+  // in) were deleted as dead code — zero production callers once
+  // WS5.per-profile's scheduleReminderForProfile()/cancelForProfile() took
+  // over the only production call site (notification_providers.dart's
+  // reminderSyncEffect). This group now drives that live surface directly;
+  // body pluralization itself has moved to AppLocalizations at the provider
+  // layer and is no longer NotificationScheduler's concern.
   group('Story 12.1 -- Local notifications', tags: ['story_12_1'], () {
     late MockNotificationGateway mockService;
     late NotificationScheduler scheduler;
@@ -79,27 +87,34 @@ void main() {
       mockService = MockNotificationGateway();
       scheduler = NotificationScheduler(service: mockService);
       when(
-        () => mockService.scheduleBatchReminders(
+        () => mockService.scheduleBatchRemindersForProfile(
+          profileId: any(named: 'profileId'),
           fireTimes: any(named: 'fireTimes'),
           title: any(named: 'title'),
           body: any(named: 'body'),
         ),
       ).thenAnswer((_) async {});
-      when(() => mockService.cancelBatchReminders()).thenAnswer((_) async {});
-      when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
+      when(
+        () => mockService.cancelBatchRemindersForProfile(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockService.cancelDailyReminderForProfile(any()),
+      ).thenAnswer((_) async {});
     });
 
     test(
-      'schedule() calls service with correct body for plural counts',
+      'scheduleReminderForProfile calls service with the supplied body',
       () async {
-        await scheduler.schedule(
+        await scheduler.scheduleReminderForProfile(
+          profileId: 1,
           time: const TimeOfDay(hour: 19, minute: 0),
-          taskCount: 5,
-          curriculumCount: 2,
+          title: 'Learning Reminder',
+          body: 'You have 5 tasks across 2 curricula today',
         );
 
         verify(
-          () => mockService.scheduleBatchReminders(
+          () => mockService.scheduleBatchRemindersForProfile(
+            profileId: 1,
             fireTimes: any(named: 'fireTimes'),
             title: 'Learning Reminder',
             body: 'You have 5 tasks across 2 curricula today',
@@ -108,39 +123,43 @@ void main() {
       },
     );
 
-    test('schedule() uses singular forms for count of 1', () async {
-      await scheduler.schedule(
-        time: const TimeOfDay(hour: 8, minute: 30),
-        taskCount: 1,
-        curriculumCount: 1,
-      );
-
-      verify(
-        () => mockService.scheduleBatchReminders(
-          fireTimes: any(named: 'fireTimes'),
+    test(
+      'scheduleReminderForProfile forwards singular-form bodies verbatim',
+      () async {
+        await scheduler.scheduleReminderForProfile(
+          profileId: 1,
+          time: const TimeOfDay(hour: 8, minute: 30),
           title: 'Learning Reminder',
           body: 'You have 1 task across 1 curriculum today',
-        ),
-      ).called(1);
-    });
+        );
 
-    test(
-      'cancel() delegates to service.cancelDailyReminder() and batch',
-      () async {
-        await scheduler.cancel();
-
-        verify(() => mockService.cancelDailyReminder()).called(1);
-        verify(() => mockService.cancelBatchReminders()).called(1);
+        verify(
+          () => mockService.scheduleBatchRemindersForProfile(
+            profileId: 1,
+            fireTimes: any(named: 'fireTimes'),
+            title: 'Learning Reminder',
+            body: 'You have 1 task across 1 curriculum today',
+          ),
+        ).called(1);
       },
     );
+
+    test('cancelForProfile delegates to cancelDailyReminderForProfile and '
+        'cancelBatchRemindersForProfile', () async {
+      await scheduler.cancelForProfile(1);
+
+      verify(() => mockService.cancelDailyReminderForProfile(1)).called(1);
+      verify(() => mockService.cancelBatchRemindersForProfile(1)).called(1);
+    });
 
     test('notification payload enables deep link to daily tasks', () {
       expect(dailyReminderPayload, 'daily_reminder');
     });
 
     test('daily reminder ID is stable', () {
-      // Verified by the notification ID constant.
-      expect(dailyReminderId, 0);
+      // Verified by the per-profile notification ID helper — profile 0's
+      // block starts at ID 0, mirroring the pre-per-profile singleton ID.
+      expect(dailyReminderIdForProfile(0), 0);
     });
   });
 
@@ -275,6 +294,8 @@ void main() {
 
   // ── Story 12.4: Notification Preferences & Shabbos Mode ──────
 
+  // (AUD-notifications-04) Converted to the *ForProfile surface — see the
+  // Story 12.1 group above for the removal rationale.
   group(
     'Story 12.4 -- Notification Preferences & Shabbos Mode',
     tags: ['story_12_4'],
@@ -287,14 +308,19 @@ void main() {
         scheduler = NotificationScheduler(service: mockService);
 
         when(
-          () => mockService.scheduleBatchReminders(
+          () => mockService.scheduleBatchRemindersForProfile(
+            profileId: any(named: 'profileId'),
             fireTimes: any(named: 'fireTimes'),
             title: any(named: 'title'),
             body: any(named: 'body'),
           ),
         ).thenAnswer((_) async {});
-        when(() => mockService.cancelBatchReminders()).thenAnswer((_) async {});
-        when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
+        when(
+          () => mockService.cancelBatchRemindersForProfile(any()),
+        ).thenAnswer((_) async {});
+        when(
+          () => mockService.cancelDailyReminderForProfile(any()),
+        ).thenAnswer((_) async {});
         when(
           () => mockService.scheduleStreakAlertForProfile(
             profileId: any(named: 'profileId'),
@@ -310,30 +336,33 @@ void main() {
 
       // Unit: Disabling daily reminder cancels scheduled notification
       test('disabling daily reminder cancels scheduled notification', () async {
-        await scheduler.cancel();
+        await scheduler.cancelForProfile(1);
 
-        verify(() => mockService.cancelDailyReminder()).called(1);
-        verify(() => mockService.cancelBatchReminders()).called(1);
+        verify(() => mockService.cancelDailyReminderForProfile(1)).called(1);
+        verify(() => mockService.cancelBatchRemindersForProfile(1)).called(1);
       });
 
       // Unit: Changing reminder time reschedules notification batch
       test('changing reminder time reschedules notification', () async {
-        await scheduler.schedule(
+        await scheduler.scheduleReminderForProfile(
+          profileId: 1,
           time: const TimeOfDay(hour: 19, minute: 0),
-          taskCount: 3,
-          curriculumCount: 1,
+          title: 'Learning Reminder',
+          body: 'You have 3 tasks across 1 curriculum today',
         );
 
         // Change time
-        await scheduler.schedule(
+        await scheduler.scheduleReminderForProfile(
+          profileId: 1,
           time: const TimeOfDay(hour: 7, minute: 30),
-          taskCount: 3,
-          curriculumCount: 1,
+          title: 'Learning Reminder',
+          body: 'You have 3 tasks across 1 curriculum today',
         );
 
         // Called twice total (once for 19:00, once for 7:30)
         verify(
-          () => mockService.scheduleBatchReminders(
+          () => mockService.scheduleBatchRemindersForProfile(
+            profileId: 1,
             fireTimes: any(named: 'fireTimes'),
             title: 'Learning Reminder',
             body: 'You have 3 tasks across 1 curriculum today',

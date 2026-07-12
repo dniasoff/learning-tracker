@@ -309,37 +309,45 @@ void main() {
 
   // ── 9. notification_fired (daily_reminder) ─────────────────────────────────
   group('27.14 — notification_fired / daily_reminder', () {
-    test('NotificationScheduler.schedule fires notification_fired', () async {
-      final analytics = FakeAnalyticsService();
-      final notifSvc = _MockNotificationGateway();
+    test(
+      'NotificationScheduler.scheduleReminder fires notification_fired',
+      () async {
+        final analytics = FakeAnalyticsService();
+        final notifSvc = _MockNotificationGateway();
 
-      when(
-        () => notifSvc.scheduleBatchReminders(
-          fireTimes: any(named: 'fireTimes'),
-          title: any(named: 'title'),
-          body: any(named: 'body'),
-        ),
-      ).thenAnswer((_) async {});
-      when(() => notifSvc.cancelBatchReminders()).thenAnswer((_) async {});
+        // (AUD-notifications-04) scheduleReminder() now routes through the
+        // profile-0 block of the *ForProfile gateway API.
+        when(
+          () => notifSvc.scheduleBatchRemindersForProfile(
+            profileId: any(named: 'profileId'),
+            fireTimes: any(named: 'fireTimes'),
+            title: any(named: 'title'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer((_) async {});
+        when(
+          () => notifSvc.cancelBatchRemindersForProfile(any()),
+        ).thenAnswer((_) async {});
 
-      final scheduler = NotificationScheduler(
-        service: notifSvc,
-        analytics: analytics,
-      );
+        final scheduler = NotificationScheduler(
+          service: notifSvc,
+          analytics: analytics,
+        );
 
-      await scheduler.schedule(
-        time: const TimeOfDay(hour: 9, minute: 0),
-        taskCount: 3,
-        curriculumCount: 1,
-      );
-      await Future<void>.delayed(Duration.zero);
+        await scheduler.scheduleReminder(
+          time: const TimeOfDay(hour: 9, minute: 0),
+          title: 'Learning Reminder',
+          body: 'You have 3 tasks across 1 curriculum today',
+        );
+        await Future<void>.delayed(Duration.zero);
 
-      expect(analytics.countOf(AnalyticsEvent.notificationFired), 1);
-      expect(
-        analytics.lastParamsOf(AnalyticsEvent.notificationFired),
-        containsPair('notification_type', 'daily_reminder'),
-      );
-    });
+        expect(analytics.countOf(AnalyticsEvent.notificationFired), 1);
+        expect(
+          analytics.lastParamsOf(AnalyticsEvent.notificationFired),
+          containsPair('notification_type', 'daily_reminder'),
+        );
+      },
+    );
   });
 
   // ── 9b. notification_fired (streak_alert) ──────────────────────────────────
@@ -388,35 +396,38 @@ void main() {
 
   // ── 10. notification_suppressed_sacred_time ────────────────────────────────
   group('27.14 — notification_suppressed_sacred_time', () {
-    test(
-      'NotificationScheduler.cancelForSacredTime fires suppression event',
-      () async {
-        final analytics = FakeAnalyticsService();
-        final notifSvc = _MockNotificationGateway();
+    test('NotificationScheduler.cancelForProfileSacredTime fires suppression '
+        'event', () async {
+      final analytics = FakeAnalyticsService();
+      final notifSvc = _MockNotificationGateway();
 
-        when(() => notifSvc.cancelDailyReminder()).thenAnswer((_) async {});
-        when(() => notifSvc.cancelBatchReminders()).thenAnswer((_) async {});
+      // (AUD-notifications-04) cancelForSacredTime() (non-profile) was
+      // deleted as dead code; cancelForProfileSacredTime is the surviving
+      // production call site and fires the same analytics event.
+      when(
+        () => notifSvc.cancelDailyReminderForProfile(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => notifSvc.cancelBatchRemindersForProfile(any()),
+      ).thenAnswer((_) async {});
 
-        final scheduler = NotificationScheduler(
-          service: notifSvc,
-          analytics: analytics,
-        );
+      final scheduler = NotificationScheduler(
+        service: notifSvc,
+        analytics: analytics,
+      );
 
-        await scheduler.cancelForSacredTime();
-        await Future<void>.delayed(Duration.zero);
+      await scheduler.cancelForProfileSacredTime(1);
+      await Future<void>.delayed(Duration.zero);
 
-        expect(
-          analytics.countOf(AnalyticsEvent.notificationSuppressedSacredTime),
-          1,
-        );
-        expect(
-          analytics.lastParamsOf(
-            AnalyticsEvent.notificationSuppressedSacredTime,
-          ),
-          containsPair('notification_type', 'daily_reminder'),
-        );
-      },
-    );
+      expect(
+        analytics.countOf(AnalyticsEvent.notificationSuppressedSacredTime),
+        1,
+      );
+      expect(
+        analytics.lastParamsOf(AnalyticsEvent.notificationSuppressedSacredTime),
+        containsPair('notification_type', 'daily_reminder'),
+      );
+    });
   });
 
   // ── 11. cloud_restore_completed ────────────────────────────────────────────

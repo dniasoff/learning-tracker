@@ -26,8 +26,20 @@
 ///   changes (a re-anchor), allDailyTasksProvider rebuilds (next read).
 ///   The effect re-reads the new task list and reschedules with the corrected
 ///   body count.  The test verifies this chain works by injecting a fake
-///   scheduleBatchReminders that records calls, then triggering a re-anchor
-///   and asserting a NEW scheduleBatchReminders call with the updated count.
+///   scheduleBatchRemindersForProfile that records calls, then triggering a
+///   re-anchor and asserting a NEW scheduleBatchRemindersForProfile call with
+///   the updated count.
+///
+/// AUD-notifications-04: the non-profile scheduleBatchReminders/
+/// cancelBatchReminders/cancelDailyReminder/cancel() methods this file used
+/// to drive (via NotificationScheduler.scheduleReminder()/.cancel()) were
+/// deleted as dead code from NotificationGateway/NotificationScheduler —
+/// zero production callers once WS5.per-profile's *ForProfile equivalents
+/// took over. scheduleReminder() itself is kept (not one of the removed
+/// methods) but now routes through the profile-0 *ForProfile block
+/// internally, so the fake below records via *ForProfile overrides and the
+/// zero-count case now drives cancelForProfile(0) — the real call
+/// reminderSyncEffect's D2 fix makes in production.
 library;
 
 import 'package:flutter/material.dart';
@@ -46,8 +58,8 @@ import 'package:timezone/timezone.dart' as tz_lib;
 
 class MockNotificationGateway extends Mock implements NotificationGateway {}
 
-/// Records all `scheduleBatchReminders` calls so tests can assert on the body
-/// string passed without touching the OS notification stack.
+/// Records all `scheduleBatchRemindersForProfile` calls so tests can assert
+/// on the body string passed without touching the OS notification stack.
 class _RecordingNotificationGateway implements NotificationGateway {
   final List<({List<tz_lib.TZDateTime> fireTimes, String title, String body})>
   scheduledBatches = [];
@@ -56,7 +68,8 @@ class _RecordingNotificationGateway implements NotificationGateway {
   int cancelDailyCount = 0;
 
   @override
-  Future<void> scheduleBatchReminders({
+  Future<void> scheduleBatchRemindersForProfile({
+    required int profileId,
     required List<tz_lib.TZDateTime> fireTimes,
     required String title,
     required String body,
@@ -65,12 +78,12 @@ class _RecordingNotificationGateway implements NotificationGateway {
   }
 
   @override
-  Future<void> cancelBatchReminders() async {
+  Future<void> cancelBatchRemindersForProfile(int profileId) async {
     cancelBatchCount++;
   }
 
   @override
-  Future<void> cancelDailyReminder() async {
+  Future<void> cancelDailyReminderForProfile(int profileId) async {
     cancelDailyCount++;
   }
 
@@ -88,13 +101,6 @@ class _RecordingNotificationGateway implements NotificationGateway {
   Future<bool> hasPermission() => Future.value(false);
 
   @override
-  Future<void> scheduleDailyReminder({
-    required int hour,
-    required int minute,
-    required String body,
-  }) async {}
-
-  @override
   Future<void> scheduleDailyReminderForProfile({
     required int profileId,
     required int hour,
@@ -102,31 +108,6 @@ class _RecordingNotificationGateway implements NotificationGateway {
     required String title,
     required String body,
   }) async {}
-
-  @override
-  Future<void> cancelDailyReminderForProfile(int profileId) async {}
-
-  @override
-  Future<void> scheduleBatchRemindersForProfile({
-    required int profileId,
-    required List<tz_lib.TZDateTime> fireTimes,
-    required String title,
-    required String body,
-  }) async {}
-
-  @override
-  Future<void> cancelBatchRemindersForProfile(int profileId) async {}
-
-  @override
-  Future<void> scheduleStreakAlert({
-    required int hour,
-    required int minute,
-    required String body,
-    String title = 'Streak at Risk!',
-  }) async {}
-
-  @override
-  Future<void> cancelStreakAlert() async {}
 
   @override
   Future<void> scheduleStreakAlertForProfile({
@@ -217,12 +198,14 @@ void main() {
         inIsrael: false,
       );
 
-      // Then: scheduleBatchReminders was called exactly once with the correct body.
+      // Then: scheduleBatchRemindersForProfile was called exactly once with
+      // the correct body.
       expect(
         notifService.scheduledBatches,
         hasLength(1),
         reason:
-            'O8-a: scheduleReminder must call scheduleBatchReminders exactly once.',
+            'O8-a: scheduleReminder must call scheduleBatchRemindersForProfile '
+            'exactly once.',
       );
       expect(
         notifService.scheduledBatches.single.body,
@@ -243,7 +226,7 @@ void main() {
     // current code (which fires the 0-task reminder).
     //
     // Wave 4 fix: add a guard in reminderSyncEffect (or NotificationScheduler):
-    //   if (taskCount == 0) { await scheduler.cancel(); return; }
+    //   if (taskCount == 0) { await scheduler.cancelForProfile(profileId); return; }
     test('O8-b: when task count is zero, reminder is cancelled (not fired with '
         '"0 tasks")', () async {
       // Simulates what reminderSyncEffect SHOULD do when tasks is empty.
@@ -253,13 +236,14 @@ void main() {
       //   body = "You have 0 tasks across 0 curricula today"
       //   scheduler.scheduleReminder(body: body)  ← fires a 0-count reminder
       //
-      // The corrected path:
-      //   if (taskCount == 0) { scheduler.cancel(); return; }
+      // The corrected path (H1 fix — the real production call is per-profile):
+      //   if (taskCount == 0) { scheduler.cancelForProfile(profileId); return; }
 
       // When taskCount == 0 the scheduler must be cancelled.
-      // We call scheduler.cancel() directly to show the EXPECTED call;
-      // the actual test is that no scheduleBatchReminders call is made.
-      await scheduler.cancel();
+      // We call scheduler.cancelForProfile(0) directly to show the EXPECTED
+      // call — the same one reminderSyncEffect makes in production; the
+      // actual test is that no scheduleBatchRemindersForProfile call is made.
+      await scheduler.cancelForProfile(0);
 
       // scheduleReminder must NOT have been called (no 0-task notification).
       expect(
@@ -273,7 +257,8 @@ void main() {
         notifService.cancelBatchCount,
         greaterThanOrEqualTo(1),
         reason:
-            'O8-b: cancelling must call cancelBatchReminders at least once.',
+            'O8-b: cancelling must call cancelBatchRemindersForProfile at '
+            'least once.',
       );
     });
 
@@ -291,7 +276,7 @@ void main() {
     // level: calling scheduleReminder a SECOND time (with new count) must
     // cancel the previous batch before scheduling the new one.
     //
-    // See NotificationGateway.scheduleBatchReminders (~line 153):
+    // See NotificationGateway.scheduleBatchRemindersForProfile:
     //   "Cancel existing batch first."
     // That cancel + reschedule must happen atomically (no moment where both
     // old and new batches are active).
@@ -326,8 +311,9 @@ void main() {
         inIsrael: false,
       );
 
-      // Two scheduleBatchReminders calls recorded (cancel-then-reschedule
-      // happens INSIDE NotificationGateway.scheduleBatchReminders, which our
+      // Two scheduleBatchRemindersForProfile calls recorded (cancel-then-
+      // reschedule happens INSIDE
+      // NotificationGateway.scheduleBatchRemindersForProfile, which our
       // recording fake doesn't simulate — it records the outer call).
       expect(
         notifService.scheduledBatches,

@@ -18,8 +18,11 @@ const String _channelDescription = 'Daily learning reminder notifications';
 //   profile N: IDs N*1000 … N*1000+999
 //
 // This guarantees no collisions across profiles (up to 1000 profiles, well
-// beyond any real-world use). The block scheme replaces the old singleton
-// constants (dailyReminderId=0, streakAlertId=1, batchBaseId=10).
+// beyond any real-world use). The block scheme is the sole source of
+// notification IDs — the old singleton constants (dailyReminderId=0,
+// streakAlertId=1, batchBaseId=10) and their non-profile scheduling methods
+// were removed once WS5.per-profile's *ForProfile equivalents took over
+// every production call site (AUD-notifications-04).
 // ---------------------------------------------------------------------------
 
 /// Offset for the daily reminder ID within a profile's block.
@@ -53,15 +56,6 @@ int streakAlertIdForProfile(int profileId) =>
 int batchBaseIdForProfile(int profileId) =>
     profileId * _idsPerProfile + _batchBaseOffset;
 
-// Legacy singleton constants — kept for backward compatibility with callers
-// that schedule for the active profile only; prefer the per-profile helpers.
-
-/// Notification ID for the daily reminder (profile 0, legacy).
-const int dailyReminderId = 0;
-
-/// Base notification ID for the rolling 14-day one-shot batch (profile 0, legacy).
-const int _batchBaseId = 10;
-
 /// Payload used when a streak protection notification is tapped.
 const String streakAlertPayload = 'streak_protection';
 
@@ -70,9 +64,6 @@ const String _streakChannelId = 'streak_alerts';
 const String _streakChannelName = 'Streak Alerts';
 const String _streakChannelDescription =
     'Alerts when your learning streak is at risk';
-
-/// Notification ID for the streak protection alert (profile 0, legacy).
-const int streakAlertId = 1;
 
 /// Payload used when a reward milestone notification is tapped.
 const String rewardMilestonePayload = 'reward_earned';
@@ -162,91 +153,6 @@ class NotificationGateway {
     return true;
   }
 
-  /// Schedule a daily repeating notification at [time].
-  ///
-  /// [body] is the notification text, e.g. "You have 5 tasks across 2 curricula today".
-  Future<void> scheduleDailyReminder({
-    required int hour,
-    required int minute,
-    required String body,
-  }) async {
-    final scheduledTime = _nextInstanceOfTime(hour, minute);
-
-    const androidDetails = AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: _channelDescription,
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
-    );
-    const notificationDetails = NotificationDetails(android: androidDetails);
-
-    await _plugin.zonedSchedule(
-      id: dailyReminderId,
-      title: 'Learning Reminder',
-      body: body,
-      scheduledDate: scheduledTime,
-      notificationDetails: notificationDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
-      payload: dailyReminderPayload,
-    );
-  }
-
-  /// Cancel the daily reminder notification.
-  Future<void> cancelDailyReminder() async {
-    await _plugin.cancel(id: dailyReminderId);
-  }
-
-  /// Schedule a rolling 14-day batch of pre-filtered one-shot reminders
-  /// (DNI-367, Story 26.24).
-  ///
-  /// Cancels any existing batch notifications (IDs 10–23), then schedules
-  /// a one-shot for each [fireTimes] entry. Fire-times that have already
-  /// been filtered (e.g. by [SacredWindowRepository]) are omitted before
-  /// this call — this method schedules every entry in [fireTimes] without
-  /// further filtering.
-  ///
-  /// [title] and [body] are the notification strings, resolved at schedule
-  /// time so that locale is captured correctly (UX-DR7).
-  Future<void> scheduleBatchReminders({
-    required List<tz.TZDateTime> fireTimes,
-    required String title,
-    required String body,
-  }) async {
-    // Cancel existing batch first.
-    await cancelBatchReminders();
-
-    const androidDetails = AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: _channelDescription,
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
-    );
-    const notificationDetails = NotificationDetails(android: androidDetails);
-
-    for (var i = 0; i < fireTimes.length && i < _batchSize; i++) {
-      await _plugin.zonedSchedule(
-        id: _batchBaseId + i,
-        title: title,
-        body: body,
-        scheduledDate: fireTimes[i],
-        notificationDetails: notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: dailyReminderPayload,
-      );
-    }
-  }
-
-  /// Cancel all batch reminder notifications (IDs [_batchBaseId] to
-  /// [_batchBaseId] + [_batchSize] - 1).
-  Future<void> cancelBatchReminders() async {
-    for (var i = 0; i < _batchSize; i++) {
-      await _plugin.cancel(id: _batchBaseId + i);
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // Per-profile scheduling (WS5.per-profile)
   // ---------------------------------------------------------------------------
@@ -327,43 +233,6 @@ class NotificationGateway {
     for (var i = 0; i < _batchSize; i++) {
       await _plugin.cancel(id: baseId + i);
     }
-  }
-
-  /// Schedule a daily streak protection alert at [hour]:[minute].
-  ///
-  /// [body] is the notification text, e.g. "Your 5-day streak is at risk!"
-  Future<void> scheduleStreakAlert({
-    required int hour,
-    required int minute,
-    required String body,
-    String title = 'Streak at Risk!',
-  }) async {
-    final scheduledTime = _nextInstanceOfTime(hour, minute);
-
-    const androidDetails = AndroidNotificationDetails(
-      _streakChannelId,
-      _streakChannelName,
-      channelDescription: _streakChannelDescription,
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    const notificationDetails = NotificationDetails(android: androidDetails);
-
-    await _plugin.zonedSchedule(
-      id: streakAlertId,
-      title: title,
-      body: body,
-      scheduledDate: scheduledTime,
-      notificationDetails: notificationDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
-      payload: streakAlertPayload,
-    );
-  }
-
-  /// Cancel the streak protection alert.
-  Future<void> cancelStreakAlert() async {
-    await _plugin.cancel(id: streakAlertId);
   }
 
   /// Schedule a daily streak protection alert for [profileId] at
