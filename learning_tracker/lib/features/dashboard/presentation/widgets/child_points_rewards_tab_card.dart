@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -13,7 +11,6 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
     required this.l10n,
     required this.theme,
     required this.numberFormat,
-    required this.nextRewardAsync,
     required this.onOpenRewards,
   });
 
@@ -21,11 +18,6 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
   final AppLocalizations l10n;
   final ThemeData theme;
   final NumberFormat numberFormat;
-
-  /// Retained for API compatibility with the dashboard body call-site. The
-  /// spend economy (DEC-32) no longer renders a cumulative "next reward"
-  /// progress bar (R4o-M1), so this value is no longer displayed.
-  final AsyncValue<DashboardChildNextReward?> nextRewardAsync;
   final VoidCallback onOpenRewards;
 
   @override
