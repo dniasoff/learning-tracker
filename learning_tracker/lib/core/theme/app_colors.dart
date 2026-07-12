@@ -372,4 +372,58 @@ abstract final class AppColors {
   /// Unfilled track colour for the daily-plan illustration's second "empty"
   /// row variant.
   static const Color introDailyRowTrackEmpty = Color(0xFFE5E7EC);
+
+  // ---------------------------------------------------------------------------
+  // Notifications settings screen (AUD-notifications-12) — daily-reminder /
+  // streak-alert / reward-milestone row icon tints+backgrounds, shared text
+  // tones, the "HOT STREAK" badge, and the device-level OS toggle's track
+  // colours. Centralised here so notifications_screen.dart and
+  // device_notification_toggle.dart no longer hand-type hex literals
+  // alongside their existing AppColors/AppTheme usage.
+  // ---------------------------------------------------------------------------
+
+  /// "Daily Reminder" row icon tint (blue).
+  static const Color notifReminderIconTint = Color(0xFF2A4BB3);
+
+  /// "Daily Reminder" row icon background, paired with
+  /// [notifReminderIconTint].
+  static const Color notifReminderIconBg = Color(0xFFE8EBFF);
+
+  /// "Streak Alert" row icon tint (coral).
+  static const Color notifStreakIconTint = Color(0xFFE35D66);
+
+  /// "Streak Alert" row icon background, paired with [notifStreakIconTint].
+  static const Color notifStreakIconBg = Color(0xFFFDECEF);
+
+  /// "Reward Milestones" row icon tint (amber).
+  static const Color notifRewardIconTint = Color(0xFFB07A2A);
+
+  /// "Reward Milestones" row icon background, paired with
+  /// [notifRewardIconTint].
+  static const Color notifRewardIconBg = Color(0xFFFDF2DE);
+
+  /// Settings-group card drop shadow (translucent navy, ~7% alpha).
+  static const Color notifCardShadow = Color(0x12061D56);
+
+  /// Primary row-title text colour (near-black).
+  static const Color notifTitleText = Color(0xFF151B2D);
+
+  /// Secondary/subtitle text colour — shared by the settings-row subtitles
+  /// and the device-level toggle's status subtitle.
+  static const Color notifSubtitleText = Color(0xFF7A8293);
+
+  /// Enabled time-row text colour (reminder/streak time-picker rows).
+  static const Color notifTimeTextEnabled = Color(0xFF1A2340);
+
+  /// Disabled time-row text colour.
+  static const Color notifTimeTextDisabled = Color(0xFF9CA3B4);
+
+  /// "HOT STREAK" top-badge background.
+  static const Color notifHotStreakBadge = Color(0xFFFF6A78);
+
+  /// Device-level OS toggle active track colour.
+  static const Color notifDeviceToggleActiveTrack = Color(0xFF123CA5);
+
+  /// Device-level OS toggle inactive track colour.
+  static const Color notifDeviceToggleInactiveTrack = Color(0xFFE0E4ED);
 }

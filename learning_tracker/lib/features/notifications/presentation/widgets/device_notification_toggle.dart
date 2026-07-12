@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -114,14 +115,17 @@ class _DeviceNotificationToggleState
               : permitted
               ? l10n.deviceNotificationsAllowed
               : l10n.deviceNotificationsBlocked,
-          style: const TextStyle(fontSize: 13, color: Color(0xFF7A8293)),
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppColors.notifSubtitleText,
+          ),
         ),
         value: permitted ?? true,
         onChanged: _onToggleChanged,
         activeThumbColor: Colors.white,
-        activeTrackColor: const Color(0xFF123CA5),
+        activeTrackColor: AppColors.notifDeviceToggleActiveTrack,
         inactiveThumbColor: Colors.white,
-        inactiveTrackColor: const Color(0xFFE0E4ED),
+        inactiveTrackColor: AppColors.notifDeviceToggleInactiveTrack,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
     );
