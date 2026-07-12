@@ -4065,6 +4065,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get curriculumProgressSettingsTooltip => 'Curriculum settings';
+
+  @override
   String get tierLensRecentActivity => 'Recent Activity';
 
   @override

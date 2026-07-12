@@ -4021,6 +4021,9 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get curriculumProgressSettingsTooltip => 'הגדרות קורס הלימוד';
+
+  @override
   String get tierLensRecentActivity => 'פעילות אחרונה';
 
   @override

@@ -73,7 +73,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
           if (curriculum != null)
             IconButton(
               icon: const Icon(Icons.settings_outlined),
-              tooltip: 'Curriculum settings',
+              tooltip: l10n.curriculumProgressSettingsTooltip,
               onPressed: () => context.router.push(
                 CurriculumSettingsRoute(curriculumId: curriculumId),
               ),
