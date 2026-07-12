@@ -255,13 +255,13 @@
     {
       "id": "AUD-notifications-01",
       "wave": 3,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Guard ref access after await in notification_providers.dart effect providers (SM-4)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_99373b08-163-2 (branch worktree-wf_99373b08-163-2, tip ad818c62d21bb0f040de7576bedb86b473fd1a5a) with two later reviewer-bounce commits continued unbranched on wf_7cbfdbd5-328-8 (d74844132bceb72c755a4013e35c9ed41b1bcdfe) and wf_7cbfdbd5-328-23 (232ea8de490c07a5e06ed217bae0c591852f6b78), but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: 69fe5b25 converted the 5 notification-preference Notifier<T>s to AsyncNotifier (build() now loads from SharedPreferences instead of returning a hardcoded default) and added ref.mounted guards in the effect providers to stop the mid-flight-invalidation race documented in reminder_sync_sacred_time_test.dart's own pre-fix comment (UnmountedRefException on a superseded in-flight future); ad818c62 added the AC1-literal regression test (Completer-gated mid-flight dependency swap via container.updateOverrides, asserting the superseded future settles rather than throwing); d7484413 was a first reviewer bounce adding a further 'if (!ref.mounted) return;' guard before the streakAlertServiceProvider read in allProfilesReminderBootstrap (line ~694), which the first pass had missed; 232ea8de was a second reviewer bounce regenerating the notification_providers.g.dart that d7484413 left stale/non-idempotent. Per merge-lane payload cid w3r0c3, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. `git cherry audit-fix/2026-07-03 232ea8de490c07a5e06ed217bae0c591852f6b78` shows all 7 commits in this chain as `+` (not patch-equivalent to anything on audit-fix/2026-07-03). Per the orphaned-branch deletion protocol, branch worktree-wf_99373b08-163-2 is left in place (not deleted) for a future harvest pass; its worktree directory was already gone from disk before this pass (tolerated remove --force no-op). Worktree directories wf_7cbfdbd5-328-8 and wf_7cbfdbd5-328-23 were removed by this pass (git worktree remove --force); neither carried its own branch, so their unique tip commits d7484413 and 232ea8de (the two reviewer-bounce fixes above) are no longer reachable from any ref after this cleanup -- recoverable by SHA from the object store only until a future git gc prunes unreachable objects. A harvest pass wanting the complete AUD-notifications-01 fix must re-apply the ref.mounted guard + .g.dart regen from these SHAs (recorded here) on top of whatever lands from branch worktree-wf_99373b08-163-2, not just cherry-pick the branch tip."
     },
     {
       "id": "AUD-tracks-01",
@@ -433,13 +433,13 @@
     {
       "id": "AUD-notifications-02",
       "wave": 3,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Stop returning a hardcoded default from build() in the 5 notification preference providers (SM-2)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_99373b08-163-2 (branch worktree-wf_99373b08-163-2, tip ad818c62d21bb0f040de7576bedb86b473fd1a5a; this finding's own commit 69fe5b25df957bc89aa034772b10694b4583f391 is an ancestor) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: 69fe5b25 converted ReminderEnabled/ReminderTime/StreakAlertEnabled/StreakAlertTime/RewardNotificationEnabled from Notifier<T> (build() returning a hardcoded synchronous default of true/19:00/21:00 while firing an unawaited _loadFromPrefs()) to AsyncNotifier<T>, so build() itself now awaits SharedPreferences and callers see the real persisted value instead of a placeholder default before the fire-and-forget load lands (combined into the same commit as AUD-notifications-01/03 because the three findings mutate the exact same statements). Per merge-lane payload cid w3r0c3, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. `git cherry audit-fix/2026-07-03 worktree-wf_99373b08-163-2` shows 69fe5b25 (and its 4 ancestors) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03), so per the orphaned-branch deletion protocol the branch is left in place (not deleted) for a future harvest pass; its worktree directory was already gone from disk before this pass (tolerated). Unlike AUD-notifications-01/03, this finding's sole commit stays reachable via that branch after this pass's unrelated wf_7cbfdbd5-328-8/-23 worktree removals (neither of which touched this commit)."
     },
     {
       "id": "AUD-onboarding-01",
@@ -1961,13 +1961,13 @@
     {
       "id": "AUD-notifications-07",
       "wave": 3,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Use a clock-skew-safe timestamp, not client clock, for notification_settings updated_at LWW field",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_99373b08-163-2 (branch worktree-wf_99373b08-163-2, tip ad818c62d21bb0f040de7576bedb86b473fd1a5a; this finding's own commit eb6e58d3f786d1a1a63edc3810994503c77f86df is an ancestor) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: eb6e58d3 makes pushNotificationSettings overwrite updated_at with FieldValue.serverTimestamp() placed after the data spread, mirroring the pattern already used by pushBookmark/pushSettings/pushGoal/pushRewardRedemption (FB-2, AUD-core-sync-13) instead of writing the client-computed timestamp straight into the notification_settings LWW field, closing the clock-skew window where a fast/skewed-clock device's stale push could look newer under LWW and silently revert a correctly-clocked device's genuinely newer change. Commit body reports a red-first test added to the existing FB-2 group in firestore_gateway_impl_test.dart asserting a server Timestamp, matching this cid's testsToRun entry for that file. Per merge-lane payload cid w3r0c3, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. `git cherry audit-fix/2026-07-03 worktree-wf_99373b08-163-2` shows eb6e58d3 as `+` (not patch-equivalent), so per the orphaned-branch deletion protocol the branch is left in place (not deleted) for a future harvest pass; its worktree directory was already gone from disk before this pass (tolerated). This finding's sole commit stays reachable via that branch; unaffected by this pass's unrelated wf_7cbfdbd5-328-8/-23 worktree removals."
     },
     {
       "id": "AUD-profiles-10",
@@ -3646,13 +3646,13 @@
     {
       "id": "AUD-notifications-05",
       "wave": 3,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Log-less catch blocks in notifications swallow exceptions with no AppLogger trail (EH-3)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_99373b08-163-2 (branch worktree-wf_99373b08-163-2, tip ad818c62d21bb0f040de7576bedb86b473fd1a5a; this finding's own commit 37469d532fb982a8659ef26a2e4dcd23840bb990 is an ancestor) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: 37469d53 added AppLogger.instance.warning(exception, stackTrace) calls to the 3 previously log-less catch blocks in features/notifications -- _persistNotificationSettingsToCloud's outbox-facade catch (the highest-impact one: it swallows any exception from the whole outboxSyncWriteFacadeProvider chain, not just the test-override case its own comment described, silently disabling cloud sync of notification settings for the session), plus TimezoneLifecycleObserver's and NotificationInitializer's timezone-detection catches -- before falling through to the same graceful-fallback behavior as before. Cites the existing no_log_less_catch Rule-0 custom_lint checker (EH-3 / AUD-onboarding-11) as already covering this pattern going forward. Per merge-lane payload cid w3r0c3, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. `git cherry audit-fix/2026-07-03 worktree-wf_99373b08-163-2` shows 37469d53 (and its ancestors/descendants on that branch) as `+` (not patch-equivalent), so per the orphaned-branch deletion protocol the branch is left in place (not deleted) for a future harvest pass; its worktree directory was already gone from disk before this pass (tolerated). This finding's sole commit stays reachable via that branch; unaffected by this pass's unrelated wf_7cbfdbd5-328-8/-23 worktree removals."
     },
     {
       "id": "AUD-account-16",
@@ -4461,13 +4461,13 @@
     {
       "id": "AUD-notifications-08",
       "wave": 3,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Wire up or delete the unused SharedPrefsNotificationPreferencesRepository",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_99373b08-163-2 (branch worktree-wf_99373b08-163-2, tip ad818c62d21bb0f040de7576bedb86b473fd1a5a; this finding's own commit 8e64187a50ebab7d3a947fbb46c1d278de43f5ae is the branch's root commit off audit-fix/2026-07-03) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: 8e64187a deletes SharedPrefsNotificationPreferencesRepository (zero call sites in lib/, confirmed by grep, despite its doc comment claiming prefs were centralised there -- the 5 notification preference providers actually still read/write SharedPreferences key-by-key inline) along with the now-pointless load()/save() abstract methods on NotificationPreferencesRepository and their unused ReminderPreferences import, keeping only the static key helpers that are actually used elsewhere. Commit body reports `flutter analyze lib/features/notifications` clean. Per merge-lane payload cid w3r0c3, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. `git cherry audit-fix/2026-07-03 worktree-wf_99373b08-163-2` shows 8e64187a as `+` (not patch-equivalent), so per the orphaned-branch deletion protocol the branch is left in place (not deleted) for a future harvest pass; its worktree directory was already gone from disk before this pass (tolerated). This finding's sole commit stays reachable via that branch; unaffected by this pass's unrelated wf_7cbfdbd5-328-8/-23 worktree removals."
     },
     {
       "id": "AUD-notifications-09",
@@ -4498,13 +4498,13 @@
     {
       "id": "AUD-notifications-03",
       "wave": 3,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Construct StreakAlertService only through its @riverpod provider (SM-7)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_99373b08-163-2 (branch worktree-wf_99373b08-163-2, tip ad818c62d21bb0f040de7576bedb86b473fd1a5a) with a related reviewer-bounce commit continued unbranched on wf_7cbfdbd5-328-8/wf_7cbfdbd5-328-23, but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: 69fe5b25 (this finding's primary commit, reachable via the branch above) made StreakAlertService family-scoped so every call site now goes through its @riverpod provider instead of ad-hoc construction (combined with AUD-notifications-01/02 because all three findings mutate the same effect-provider statements). d7484413 (unbranched, worktree wf_7cbfdbd5-328-8/-23 only) was a reviewer bounce that added an 'if (!ref.mounted) return;' guard immediately before allProfilesReminderBootstrap's streakAlertServiceProvider read -- a further hardening of this same provider-construction path flagged during review, not a separate finding. Per merge-lane payload cid w3r0c3, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. `git cherry` confirms every commit in the chain (including 69fe5b25 and d7484413) is `+` against audit-fix/2026-07-03. Per the orphaned-branch deletion protocol, branch worktree-wf_99373b08-163-2 is left in place (not deleted; not patch-equivalent) for a future harvest pass; its worktree directory was already gone from disk before this pass (tolerated). Worktree directories wf_7cbfdbd5-328-8 and wf_7cbfdbd5-328-23 were removed by this pass; neither carried its own branch, so d7484413's streakAlertServiceProvider guard is no longer reachable from any ref after this cleanup -- recoverable by SHA d74844132bceb72c755a4013e35c9ed41b1bcdfe from the object store only until a future git gc prunes unreachable objects."
     },
     {
       "id": "AUD-t-notifications-01",
