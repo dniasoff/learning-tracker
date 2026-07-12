@@ -3015,6 +3015,12 @@ abstract class AppLocalizations {
   /// **'Enter your 4-digit PIN to access parent settings.'**
   String get enterParentPinSubtitle;
 
+  /// No description provided for @pinEntryDefaultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter PIN'**
+  String get pinEntryDefaultTitle;
+
   /// PIN dialog subtitle shown specifically in the profile-switch context. Replaces the generic 'access parent settings' copy when the PIN prompt is triggered by a profile switch rather than by opening parent settings.
   ///
   /// In en, this message translates to:
@@ -4148,6 +4154,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start Here'**
   String get actionStartHereLabel;
+
+  /// No description provided for @actionClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get actionClear;
+
+  /// No description provided for @appErrorViewNoConnectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection'**
+  String get appErrorViewNoConnectionTitle;
+
+  /// No description provided for @appErrorViewNoConnectionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your internet connection and try again.'**
+  String get appErrorViewNoConnectionBody;
+
+  /// No description provided for @appErrorViewInvalidDataTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid data'**
+  String get appErrorViewInvalidDataTitle;
+
+  /// No description provided for @appErrorViewInvalidDataBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The information provided isn\'t valid. Please check and try again.'**
+  String get appErrorViewInvalidDataBody;
+
+  /// No description provided for @appErrorViewAccessDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Access denied'**
+  String get appErrorViewAccessDeniedTitle;
+
+  /// No description provided for @appErrorViewAccessDeniedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have permission to view this. Sign in or contact support.'**
+  String get appErrorViewAccessDeniedBody;
+
+  /// No description provided for @appErrorViewNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not found'**
+  String get appErrorViewNotFoundTitle;
+
+  /// No description provided for @appErrorViewNotFoundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The requested item could not be found.'**
+  String get appErrorViewNotFoundBody;
+
+  /// No description provided for @appErrorViewGenericTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get appErrorViewGenericTitle;
+
+  /// No description provided for @appErrorViewGenericBody.
+  ///
+  /// In en, this message translates to:
+  /// **'An unexpected error occurred. Try again or report the issue.'**
+  String get appErrorViewGenericBody;
+
+  /// No description provided for @appErrorViewReportButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Report this issue'**
+  String get appErrorViewReportButton;
+
+  /// No description provided for @appErrorViewReportedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks — we\'ve logged the issue.'**
+  String get appErrorViewReportedSnackbar;
 
   /// No description provided for @errorGeneric.
   ///

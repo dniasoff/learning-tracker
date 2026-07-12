@@ -1677,6 +1677,9 @@ class AppLocalizationsHe extends AppLocalizations {
       'הזינו קוד בן 4 ספרות כדי לגשת להגדרות הורה.';
 
   @override
+  String get pinEntryDefaultTitle => 'הזינו קוד';
+
+  @override
   String get pinDialogSubtitleSwitchProfile =>
       'הזינו את הקוד כדי לעבור בין פרופילים.';
 
@@ -2314,6 +2317,48 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get actionStartHereLabel => 'התחל כאן';
+
+  @override
+  String get actionClear => 'נקה';
+
+  @override
+  String get appErrorViewNoConnectionTitle => 'אין חיבור';
+
+  @override
+  String get appErrorViewNoConnectionBody => 'בדקו את חיבור האינטרנט ונסו שוב.';
+
+  @override
+  String get appErrorViewInvalidDataTitle => 'נתונים לא תקינים';
+
+  @override
+  String get appErrorViewInvalidDataBody =>
+      'המידע שסופק אינו תקין. בדקו ונסו שוב.';
+
+  @override
+  String get appErrorViewAccessDeniedTitle => 'הגישה נדחתה';
+
+  @override
+  String get appErrorViewAccessDeniedBody =>
+      'אין לכם הרשאה לצפות בתוכן זה. התחברו או פנו לתמיכה.';
+
+  @override
+  String get appErrorViewNotFoundTitle => 'לא נמצא';
+
+  @override
+  String get appErrorViewNotFoundBody => 'הפריט המבוקש לא נמצא.';
+
+  @override
+  String get appErrorViewGenericTitle => 'משהו השתבש';
+
+  @override
+  String get appErrorViewGenericBody =>
+      'אירעה שגיאה בלתי צפויה. נסו שוב או דווחו על הבעיה.';
+
+  @override
+  String get appErrorViewReportButton => 'דווח על הבעיה';
+
+  @override
+  String get appErrorViewReportedSnackbar => 'תודה — תיעדנו את הבעיה.';
 
   @override
   String errorGeneric(String error) {

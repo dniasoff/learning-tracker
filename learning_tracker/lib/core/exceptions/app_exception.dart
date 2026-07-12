@@ -40,12 +40,44 @@ abstract class AppException implements Exception {
 
 // ─── Category bases ──────────────────────────────────────────────────────────
 
+/// Stable, localizable failure category for [ValidationException] (EH-5).
+///
+/// This app ships EN + Hebrew. [ValidationException.message] is a
+/// developer-facing (English-only) string meant for logs/Crashlytics — it
+/// must never be surfaced directly in the UI. Presentation resolves the
+/// user-facing string for [ValidationException.validationCode] through
+/// `AppLocalizations`/ARB instead (mirrors the `SyncErrorCode` reference
+/// pattern in `lib/features/sync/domain/models/sync_error_code.dart`; see
+/// `AppErrorView._configFor` for the resolution site).
+///
+/// Named `validationCode` rather than `code` because some leaves (e.g.
+/// [InvalidInputException] in `local_auth_service.dart`) already declare
+/// their own, more granular `code` field with a leaf-specific enum for
+/// callers that catch that leaf directly — this base-level field is a
+/// separate, always-present, coarser-grained code every [ValidationException]
+/// carries for generic consumers like [AppErrorView]. A same-named field
+/// would collide (Dart requires override-compatible types).
+enum ValidationErrorCode {
+  /// Generic invalid-input / invariant-violation failure not covered by a
+  /// more specific code. Every current [ValidationException] leaf uses this
+  /// code today; splitting individual leaves into more specific codes as
+  /// their user-facing copy is designed is a future, additive change.
+  invalidInput,
+}
+
 /// Thrown when a value object or service receives invalid or out-of-range input.
 ///
 /// Examples: malformed Sefaria reference, negative pace value, start date
 /// outside the allowed enrollment window.
 abstract class ValidationException extends AppException {
-  const ValidationException(super.message);
+  const ValidationException(
+    super.message, {
+    this.validationCode = ValidationErrorCode.invalidInput,
+  });
+
+  /// Stable, localizable failure category (EH-5). Presentation must resolve
+  /// this — never [message] — into a user-facing string.
+  final ValidationErrorCode validationCode;
 }
 
 /// Thrown when an operation cannot proceed because of a conflicting state.

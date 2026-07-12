@@ -1,6 +1,30 @@
+// AUD-core-widgets-01 (AX-2): PinEntryWidget's default title, lockout
+// copy, and Clear button are resolved through AppLocalizations/ARB, not
+// hardcoded English literals. Assertions below reference the resolved
+// `l10n.*` value (never a literal English string) for those slots, and a
+// Locale('he') test proves the Hebrew ARB value actually renders — a
+// reintroduced hardcoded English literal could never satisfy that
+// assertion.
+
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
+
+Widget _wrap(Widget child, {Locale locale = const Locale('en')}) {
+  return MaterialApp(
+    locale: locale,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: Scaffold(body: child),
+  );
+}
 
 void main() {
   group('PinEntryWidget', () {
@@ -8,13 +32,11 @@ void main() {
       String? completedPin;
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PinEntryWidget(
-              onPinComplete: (pin) {
-                completedPin = pin;
-              },
-            ),
+        _wrap(
+          PinEntryWidget(
+            onPinComplete: (pin) {
+              completedPin = pin;
+            },
           ),
         ),
       );
@@ -40,16 +62,15 @@ void main() {
     testWidgets('should show error feedback after incorrect PIN entry', (
       tester,
     ) async {
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      // errorMessage is a caller-supplied String — not a widget-owned
+      // literal, so this stays a plain string (mirrors real callers like
+      // onboarding_parent_pin_step.dart resolving it via l10n themselves).
       const errorMessage = 'Incorrect PIN';
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PinEntryWidget(
-              onPinComplete: (_) {},
-              errorMessage: errorMessage,
-            ),
-          ),
+        _wrap(
+          PinEntryWidget(onPinComplete: (_) {}, errorMessage: errorMessage),
         ),
       );
 
@@ -59,23 +80,22 @@ void main() {
       // Verify error icon is displayed
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
 
-      // Verify clear button is displayed
-      expect(find.text('Clear'), findsOneWidget);
+      // Verify the localized clear button is displayed
+      expect(find.text(l10n.actionClear), findsOneWidget);
     });
 
     testWidgets(
       'should show lockout state with countdown timer when locked out',
       (tester) async {
+        final l10n = await AppLocalizations.delegate.load(const Locale('en'));
         const remainingMinutes = 3;
 
         await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: PinEntryWidget(
-                onPinComplete: (_) {},
-                isLockedOut: true,
-                lockoutRemainingMinutes: remainingMinutes,
-              ),
+          _wrap(
+            PinEntryWidget(
+              onPinComplete: (_) {},
+              isLockedOut: true,
+              lockoutRemainingMinutes: remainingMinutes,
             ),
           ),
         );
@@ -83,10 +103,10 @@ void main() {
         // Verify lockout icon is displayed
         expect(find.byIcon(Icons.lock_clock), findsOneWidget);
 
-        // Verify lockout message is displayed
-        expect(find.text('Too many failed attempts'), findsOneWidget);
+        // Verify the localized lockout message is displayed
+        expect(find.text(l10n.parentPinLockoutTitle), findsOneWidget);
         expect(
-          find.textContaining('Try again in $remainingMinutes minute'),
+          find.text(l10n.parentPinLockoutBody(remainingMinutes)),
           findsOneWidget,
         );
 
@@ -99,13 +119,11 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PinEntryWidget(
-              onPinComplete: (_) {},
-              isLockedOut: true,
-              lockoutRemainingMinutes: 2,
-            ),
+        _wrap(
+          PinEntryWidget(
+            onPinComplete: (_) {},
+            isLockedOut: true,
+            lockoutRemainingMinutes: 2,
           ),
         ),
       );
@@ -117,12 +135,10 @@ void main() {
     testWidgets('should clear all digits when Clear button is tapped', (
       tester,
     ) async {
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PinEntryWidget(onPinComplete: (_) {}, errorMessage: 'Error'),
-          ),
-        ),
+        _wrap(PinEntryWidget(onPinComplete: (_) {}, errorMessage: 'Error')),
       );
 
       final textFields = find.byType(TextField);
@@ -133,7 +149,7 @@ void main() {
       await tester.pump();
 
       // Tap Clear button
-      await tester.tap(find.text('Clear'));
+      await tester.tap(find.text(l10n.actionClear));
       await tester.pump();
 
       // Verify all fields are cleared
@@ -147,32 +163,24 @@ void main() {
       const customTitle = 'Enter Parent PIN';
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PinEntryWidget(onPinComplete: (_) {}, title: customTitle),
-          ),
-        ),
+        _wrap(PinEntryWidget(onPinComplete: (_) {}, title: customTitle)),
       );
 
       expect(find.text(customTitle), findsOneWidget);
     });
 
-    testWidgets('should use default title when not provided', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: PinEntryWidget(onPinComplete: (_) {})),
-        ),
-      );
+    testWidgets('should use the localized default title when not provided', (
+      tester,
+    ) async {
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
 
-      expect(find.text('Enter PIN'), findsOneWidget);
+      await tester.pumpWidget(_wrap(PinEntryWidget(onPinComplete: (_) {})));
+
+      expect(find.text(l10n.pinEntryDefaultTitle), findsOneWidget);
     });
 
     testWidgets('should only accept numeric input', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: PinEntryWidget(onPinComplete: (_) {})),
-        ),
-      );
+      await tester.pumpWidget(_wrap(PinEntryWidget(onPinComplete: (_) {})));
 
       final textFields = find.byType(TextField);
 
@@ -186,11 +194,7 @@ void main() {
     });
 
     testWidgets('should limit each field to 1 digit', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: PinEntryWidget(onPinComplete: (_) {})),
-        ),
-      );
+      await tester.pumpWidget(_wrap(PinEntryWidget(onPinComplete: (_) {})));
 
       final textFields = find.byType(TextField);
 
@@ -207,11 +211,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PinEntryWidget(onPinComplete: (_) {}, errorMessage: 'Error'),
-          ),
-        ),
+        _wrap(PinEntryWidget(onPinComplete: (_) {}, errorMessage: 'Error')),
       );
 
       // Find TextField widgets to verify error styling is applied
@@ -225,11 +225,7 @@ void main() {
     });
 
     testWidgets('should obscure PIN digits', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: PinEntryWidget(onPinComplete: (_) {})),
-        ),
-      );
+      await tester.pumpWidget(_wrap(PinEntryWidget(onPinComplete: (_) {})));
 
       final textFields = find.byType(TextField);
       final firstField = tester.widget<TextField>(textFields.first);
@@ -248,13 +244,11 @@ void main() {
       String? completedPin;
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PinEntryWidget(
-              onPinComplete: (pin) {
-                completedPin = pin;
-              },
-            ),
+        _wrap(
+          PinEntryWidget(
+            onPinComplete: (pin) {
+              completedPin = pin;
+            },
           ),
         ),
       );
@@ -282,11 +276,7 @@ void main() {
     });
 
     testWidgets('should handle backspace navigation', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(body: PinEntryWidget(onPinComplete: (_) {})),
-        ),
-      );
+      await tester.pumpWidget(_wrap(PinEntryWidget(onPinComplete: (_) {})));
 
       final textFields = find.byType(TextField);
 
@@ -303,6 +293,45 @@ void main() {
       // The widget should handle this gracefully
       final secondField = tester.widget<TextField>(textFields.at(1));
       expect(secondField.controller!.text, isEmpty);
+    });
+
+    testWidgets('renders the Hebrew ARB default title, lockout copy, and Clear '
+        'label under Locale("he") — a hardcoded English literal could '
+        'never satisfy this assertion', (tester) async {
+      final l10nHe = await AppLocalizations.delegate.load(const Locale('he'));
+      final l10nEn = await AppLocalizations.delegate.load(const Locale('en'));
+
+      await tester.pumpWidget(
+        _wrap(
+          PinEntryWidget(
+            onPinComplete: (_) {},
+            isLockedOut: true,
+            lockoutRemainingMinutes: 3,
+          ),
+          locale: const Locale('he'),
+        ),
+      );
+
+      expect(find.text(l10nHe.parentPinLockoutTitle), findsOneWidget);
+      expect(find.text(l10nHe.parentPinLockoutBody(3)), findsOneWidget);
+      expect(
+        l10nHe.parentPinLockoutTitle,
+        isNot(equals(l10nEn.parentPinLockoutTitle)),
+      );
+
+      // Default title + Clear button, under the non-lockout branch.
+      await tester.pumpWidget(
+        _wrap(
+          PinEntryWidget(onPinComplete: (_) {}, errorMessage: 'Error'),
+          locale: const Locale('he'),
+        ),
+      );
+      expect(find.text(l10nHe.pinEntryDefaultTitle), findsOneWidget);
+      expect(find.text(l10nHe.actionClear), findsOneWidget);
+      expect(
+        l10nHe.pinEntryDefaultTitle,
+        isNot(equals(l10nEn.pinEntryDefaultTitle)),
+      );
     });
   });
 }

@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// A widget that renders an [AsyncValue.error] as a category-appropriate UI.
 ///
@@ -78,7 +79,8 @@ class AppErrorView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final config = _configFor(error);
+    final l10n = AppLocalizations.of(context)!;
+    final config = _configFor(error, l10n);
 
     return Center(
       child: Padding(
@@ -109,7 +111,7 @@ class AppErrorView extends ConsumerWidget {
               ElevatedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+                label: Text(l10n.actionRetry),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
                   foregroundColor: theme.colorScheme.onPrimary,
@@ -129,14 +131,14 @@ class AppErrorView extends ConsumerWidget {
                       .recordError(error, stackTrace, fatal: false);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Thanks — we've logged the issue."),
-                        duration: Duration(seconds: 3),
+                      SnackBar(
+                        content: Text(l10n.appErrorViewReportedSnackbar),
+                        duration: const Duration(seconds: 3),
                       ),
                     );
                   }
                 },
-                child: const Text('Report this issue'),
+                child: Text(l10n.appErrorViewReportButton),
               ),
             ],
           ],
@@ -145,53 +147,59 @@ class AppErrorView extends ConsumerWidget {
     );
   }
 
-  static _ErrorConfig _configFor(Object error) {
+  static _ErrorConfig _configFor(Object error, AppLocalizations l10n) {
     if (error is NetworkException) {
-      return const _ErrorConfig(
+      return _ErrorConfig(
         icon: Icons.wifi_off_outlined,
-        title: 'No connection',
-        subtitle: 'Check your internet connection and try again.',
+        title: l10n.appErrorViewNoConnectionTitle,
+        subtitle: l10n.appErrorViewNoConnectionBody,
         showRetry: true,
         showBugReport: false,
         severity: _Severity.warning,
       );
     }
     if (error is ValidationException) {
+      // EH-5: never surface `error.message` (developer-facing, English-only)
+      // directly — resolve the stable ValidationErrorCode through ARB
+      // instead. The switch expression is exhaustive over the enum, so
+      // adding a new code is a compile error here until it is localized.
+      final subtitle = switch (error.validationCode) {
+        ValidationErrorCode.invalidInput => l10n.appErrorViewInvalidDataBody,
+      };
       return _ErrorConfig(
         icon: Icons.error_outline,
-        title: 'Invalid data',
-        subtitle: error.message,
+        title: l10n.appErrorViewInvalidDataTitle,
+        subtitle: subtitle,
         showRetry: false,
         showBugReport: false,
         severity: _Severity.warning,
       );
     }
     if (error is PermissionException) {
-      return const _ErrorConfig(
+      return _ErrorConfig(
         icon: Icons.lock_outline,
-        title: 'Access denied',
-        subtitle:
-            "You don't have permission to view this. Sign in or contact support.",
+        title: l10n.appErrorViewAccessDeniedTitle,
+        subtitle: l10n.appErrorViewAccessDeniedBody,
         showRetry: false,
         showBugReport: false,
         severity: _Severity.warning,
       );
     }
     if (error is NotFoundException) {
-      return const _ErrorConfig(
+      return _ErrorConfig(
         icon: Icons.search_off_outlined,
-        title: 'Not found',
-        subtitle: 'The requested item could not be found.',
+        title: l10n.appErrorViewNotFoundTitle,
+        subtitle: l10n.appErrorViewNotFoundBody,
         showRetry: true,
         showBugReport: false,
         severity: _Severity.warning,
       );
     }
     // ConflictException, InternalException, and everything else → generic.
-    return const _ErrorConfig(
+    return _ErrorConfig(
       icon: Icons.bug_report_outlined,
-      title: 'Something went wrong',
-      subtitle: 'An unexpected error occurred. Try again or report the issue.',
+      title: l10n.appErrorViewGenericTitle,
+      subtitle: l10n.appErrorViewGenericBody,
       showRetry: true,
       showBugReport: true,
       severity: _Severity.error,
