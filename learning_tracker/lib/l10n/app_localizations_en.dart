@@ -491,6 +491,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get introMishnaReviewChip => 'Review…';
 
   @override
+  String get introMishnaWordFragmentChip => '…yos';
+
+  @override
   String get introChildModeTagTitle => 'For Child profiles only';
 
   @override

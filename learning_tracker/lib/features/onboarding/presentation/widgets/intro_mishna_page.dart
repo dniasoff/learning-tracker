@@ -64,7 +64,7 @@ class IntroMishnaIllustration extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    '…yos',
+                    AppLocalizations.of(context)!.introMishnaWordFragmentChip,
                     style: GoogleFonts.plusJakartaSans(
                       color: AppTheme.brandInk,
                       fontSize: 12,

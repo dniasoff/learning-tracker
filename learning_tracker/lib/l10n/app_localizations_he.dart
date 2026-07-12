@@ -489,6 +489,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get introMishnaReviewChip => 'חזרה…';
 
   @override
+  String get introMishnaWordFragmentChip => '…משניות';
+
+  @override
   String get introChildModeTagTitle => 'לפרופילי ילד בלבד';
 
   @override

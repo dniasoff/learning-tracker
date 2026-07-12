@@ -290,6 +290,10 @@
   "@introMishnaReviewChip": {
     "description": "Decorative chip on the Mishna intro illustration showing a partial 'Review…' word."
   },
+  "introMishnaWordFragmentChip": "…yos",
+  "@introMishnaWordFragmentChip": {
+    "description": "Second decorative chip on the Mishna intro illustration; a word fragment that pairs with introMishnaReviewChip to suggest 'Review Mishnayos'."
+  },
   "introChildModeTagTitle": "For Child profiles only",
   "@introChildModeTagTitle": {
     "description": "Title of the banner on the rewards intro page clarifying that points/rewards apply to Child profiles."

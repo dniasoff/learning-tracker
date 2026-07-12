@@ -960,6 +960,12 @@ abstract class AppLocalizations {
   /// **'Review…'**
   String get introMishnaReviewChip;
 
+  /// Second decorative chip on the Mishna intro illustration; a word fragment that pairs with introMishnaReviewChip to suggest 'Review Mishnayos'.
+  ///
+  /// In en, this message translates to:
+  /// **'…yos'**
+  String get introMishnaWordFragmentChip;
+
   /// Title of the banner on the rewards intro page clarifying that points/rewards apply to Child profiles.
   ///
   /// In en, this message translates to:
