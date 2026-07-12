@@ -356,6 +356,77 @@ void main() {
     });
   });
 
+  // ── Error state ──────────────────────────────────────────────────────────────
+  //
+  // AUD-tracks-24: activeTracksProvider erroring must never surface the raw
+  // exception object to the user (was `Text('Error: $e')` — untranslated,
+  // leaks internal detail). It must route through AppErrorView instead, same
+  // as the sibling TrackManagementBody widget.
+
+  group('Error state', () {
+    testWidgets(
+      'error from activeTracksProvider → AppErrorView, no raw exception text',
+      (tester) async {
+        final track = _track();
+        final db = inMemoryDb();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            retry: (_, __) => null,
+            overrides: [
+              activeProfileIdProvider.overrideWithValue(track.profileId),
+              userDatabaseProvider.overrideWith((ref) => db),
+              activeTracksProvider.overrideWith(
+                (ref) =>
+                    Stream<List<CurriculumTrack>>.error(Exception('DB error')),
+              ),
+              ..._perTrackOverrides([track]),
+              useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+              curriculumActivationServiceProvider.overrideWith(
+                (ref) => CurriculumActivationService(
+                  database: db,
+                  pushCurriculumTrack: null,
+                  trackRepository: _TrackRepositoryForTest(db),
+                  profileId: track.profileId,
+                  syncFacade: null,
+                ),
+              ),
+            ],
+            child: MaterialApp(
+              locale: const Locale('en'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: StackRouterScope(
+                controller: router,
+                stateHash: 0,
+                child: const TrackManagementHubScreen(),
+              ),
+            ),
+          ),
+        );
+        await _settle(tester);
+
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+        // AppErrorView renders a category-mapped "Something went wrong"
+        // message + Retry button rather than the raw exception object.
+        expect(find.text('Something went wrong'), findsOneWidget);
+        expect(find.text('Retry'), findsOneWidget);
+        // The raw `Exception: DB error` text (and the old "Error: " prefix)
+        // must never reach the screen.
+        expect(find.textContaining('DB error'), findsNothing);
+        expect(find.textContaining('Error: '), findsNothing);
+
+        await db.close();
+        await _teardown(tester);
+      },
+    );
+  });
+
   // ── Delete dialog — cancel ──────────────────────────────────────────────────
 
   group('Delete dialog — cancel', () {

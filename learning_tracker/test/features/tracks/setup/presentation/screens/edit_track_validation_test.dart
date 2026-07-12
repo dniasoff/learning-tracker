@@ -3,8 +3,14 @@
 /// study days per week with no warning.
 ///
 /// Fix:
-/// - [validateTrackName] returns an error message when the name is blank.
+/// - [validateTrackName] returns false when the name is blank/whitespace-only.
 /// - [studyDayCount] is used in _save() to warn before saving with 0 study days.
+///
+/// AUD-tracks-24: [validateTrackName] was changed from returning a
+/// hardcoded English error message (`String?`) to returning a plain `bool` —
+/// a validator that hands back natural-language text invites a future bug
+/// where that raw string gets displayed unlocalized. The caller now derives
+/// its (localized) error copy from the bool result instead.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -13,39 +19,34 @@ import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit
 void main() {
   group('R1-(5) edit-track validation', () {
     group('validateTrackName', () {
-      test('empty string returns error', () {
-        final error = validateTrackName('');
+      test('empty string is invalid', () {
         expect(
-          error,
-          isNotNull,
-          reason: 'R1-(5): empty name must produce a validation error.',
+          validateTrackName(''),
+          isFalse,
+          reason: 'R1-(5): empty name must fail validation.',
         );
-        expect(error, isA<String>());
+      });
+
+      test('whitespace-only string is invalid', () {
         expect(
-          (error as String).isNotEmpty,
+          validateTrackName('   '),
+          isFalse,
+          reason: 'R1-(5): whitespace-only name must fail validation.',
+        );
+      });
+
+      test('non-empty name is valid', () {
+        expect(
+          validateTrackName('Bereishis'),
           isTrue,
-          reason: 'Error message must be non-empty.',
+          reason: 'R1-(5): a non-empty name must pass validation.',
         );
       });
 
-      test('whitespace-only string returns error', () {
-        final error = validateTrackName('   ');
-        expect(
-          error,
-          isNotNull,
-          reason:
-              'R1-(5): whitespace-only name must produce a validation error.',
-        );
-      });
-
-      test('non-empty name returns null', () {
-        final error = validateTrackName('Bereishis');
-        expect(
-          error,
-          isNull,
-          reason:
-              'R1-(5): a non-empty name must not produce a validation error.',
-        );
+      test('does not return a String (AUD-tracks-24)', () {
+        // Guards against regressing to a hardcoded natural-language message.
+        expect(validateTrackName(''), isA<bool>());
+        expect(validateTrackName('Bereishis'), isA<bool>());
       });
     });
 

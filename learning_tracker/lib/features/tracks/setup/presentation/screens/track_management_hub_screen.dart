@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
@@ -116,7 +117,15 @@ class _TrackManagementHubScreenState
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: activeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        // AUD-tracks-24: route through AppErrorView instead of interpolating
+        // the raw exception into a Text widget — that leaked untranslated,
+        // internal exception detail straight to the user. Matches the
+        // sibling TrackManagementBody widget's error handling.
+        error: (e, st) => AppErrorView(
+          error: e,
+          stackTrace: st,
+          onRetry: () => ref.refresh(activeTracksProvider),
+        ),
         data: (activeTracks) {
           if (activeTracks.isEmpty) {
             return _buildEmptyState();
