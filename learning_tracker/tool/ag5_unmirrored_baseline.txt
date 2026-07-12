@@ -193,7 +193,6 @@ lib/features/content_browsing/presentation/providers/text_display_providers.dart
 lib/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart
 lib/features/content_browsing/presentation/widgets/item_review_breakdown.dart
 lib/features/content_browsing/presentation/widgets/review_count_badge.dart
-lib/features/dashboard/dashboard.dart
 lib/features/dashboard/domain/models/calendar_position.dart
 lib/features/dashboard/domain/models/chazara_status.dart
 lib/features/dashboard/domain/models/models.dart
