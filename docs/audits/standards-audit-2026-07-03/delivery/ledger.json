@@ -8167,13 +8167,13 @@
   {
    "id": "AUD-tracks-24",
    "wave": 3,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Route track_management_hub_screen's error text and edit_track_screen's validation sentinel through AppLocalizations",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_a74eec8f-022-73 (branch worktree-wf_a74eec8f-022-73, commit 3442bde78530e431138ed73265429457ff07c8c6, tip of this cid's build) but the review agent was lost (quota) before opus review/merge could complete. Per merge-lane payload cid w3r1c28, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_a74eec8f-022-73 removed per payload.worktreesToRemove (`git worktree remove --force`). Branch worktree-wf_a74eec8f-022-73 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_a74eec8f-022-73` shows its sole commit (3442bde7) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
   },
   {
    "id": "AUD-t-tracks-07",
