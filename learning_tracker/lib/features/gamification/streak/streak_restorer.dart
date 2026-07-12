@@ -11,6 +11,7 @@
 library;
 
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 
@@ -36,11 +37,12 @@ class StreakRestorer {
     // completions (completedAt == year-2000 sentinel date). Neither should seed
     // streak_events — (a) are lifetime/non-tracked items; (b) are prior-mark
     // placeholders inserted when a user bulk-marks past learning, not genuine
-    // learning sessions. The sentinel date matches SchedulerEngine
-    // kBulkPriorSentinelMs (DateTime.utc(2000, 1, 1)); we define it locally to
-    // avoid a core→features layering violation.
+    // learning sessions. [kBulkPriorSentinelMs] is core's single source of
+    // truth for this sentinel (features/ → core/ is a legal import direction;
+    // see docs/coding-standards.md Rule 1/Rule 2 — the layering hazard here
+    // would have been a cross-feature import of SchedulerEngine, not a
+    // core→features one).
     // Reads from completionsView (C1: backed by completion_events).
-    const bulkPriorSentinelMs = 946684800000; // DateTime.utc(2000,1,1) ms
     final allCompletions = await _db.completionDao.getCompletionsByProfile(
       profileId,
     );
@@ -48,7 +50,7 @@ class StreakRestorer {
         .where(
           (c) =>
               c.trackId != 0 &&
-              c.completedAt.millisecondsSinceEpoch != bulkPriorSentinelMs,
+              c.completedAt.millisecondsSinceEpoch != kBulkPriorSentinelMs,
         )
         .toList();
 
