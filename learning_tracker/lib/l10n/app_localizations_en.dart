@@ -902,6 +902,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contentHierarchySearchTooltip => 'Search';
 
   @override
+  String get curriculumListTitle => 'Browse Content';
+
+  @override
+  String get curriculumListSearchTooltip => 'Search curricula';
+
+  @override
+  String get curriculumListSearchHint => 'Search curricula...';
+
+  @override
+  String get curriculumListSectionCurricula => 'CURRICULA';
+
+  @override
+  String get curriculumListSectionRecentActivity => 'RECENT ACTIVITY';
+
+  @override
+  String curriculumListPercentDone(String pctDisplay) {
+    return '$pctDisplay Done';
+  }
+
+  @override
+  String get curriculumListNewBadge => 'New';
+
+  @override
+  String get curriculumListActivityEmptyTitle =>
+      'Start learning to see activity here';
+
+  @override
+  String get curriculumListActivityEmptySubtitle =>
+      'Your recent completions will appear below';
+
+  @override
+  String get contentSearchClearTooltip => 'Clear';
+
+  @override
+  String get stageBreakdownReviewHistoryTitle => 'Review History';
+
+  @override
+  String itemReviewBreakdownStageFallback(int stageId) {
+    return 'Stage $stageId';
+  }
+
+  @override
   String get noItemsAtThisLevel => 'No items at this level';
 
   @override

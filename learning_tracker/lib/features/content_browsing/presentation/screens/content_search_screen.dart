@@ -128,7 +128,9 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.clear),
-                    tooltip: 'Clear',
+                    tooltip: AppLocalizations.of(
+                      context,
+                    )!.contentSearchClearTooltip,
                     onPressed: () {
                       _searchController.clear();
                       _onSearchChanged('');

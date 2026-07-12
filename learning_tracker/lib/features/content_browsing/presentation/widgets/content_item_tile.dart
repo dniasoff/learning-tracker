@@ -11,6 +11,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/widgets/
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Displays a single content item in the hierarchy browser.
 ///
@@ -221,6 +222,7 @@ class _StageBreakdownSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final breakdownAsync = ref.watch(
       itemStageBreakdownProvider((
         curriculumId: curriculumId,
@@ -271,17 +273,20 @@ class _StageBreakdownSheet extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Review History',
-                style: TextStyle(fontSize: 13, color: AppTheme.brandInkMuted),
+              Text(
+                l10n.stageBreakdownReviewHistoryTitle,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.brandInkMuted,
+                ),
               ),
               const SizedBox(height: 16),
               breakdownAsync.when(
                 data: (breakdown) {
                   if (breakdown.isEmpty) {
-                    return const Text(
-                      'No completions yet.',
-                      style: TextStyle(color: AppTheme.brandInkMuted),
+                    return Text(
+                      l10n.noCompletionsYet,
+                      style: const TextStyle(color: AppTheme.brandInkMuted),
                     );
                   }
                   return FutureBuilder<Map<int, String>>(
