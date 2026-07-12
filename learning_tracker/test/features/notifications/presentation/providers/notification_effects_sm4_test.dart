@@ -50,24 +50,10 @@ class _NoopNotificationGateway implements NotificationGateway {
   @override
   Future<bool> hasPermission() => Future.value(false);
   @override
-  Future<void> scheduleDailyReminder({
-    required int hour,
-    required int minute,
-    required String body,
-  }) async {}
-  @override
   Future<void> scheduleDailyReminderForProfile({
     required int profileId,
     required int hour,
     required int minute,
-    required String title,
-    required String body,
-  }) async {}
-  @override
-  Future<void> cancelDailyReminder() async {}
-  @override
-  Future<void> scheduleBatchReminders({
-    required List<tz_lib.TZDateTime> fireTimes,
     required String title,
     required String body,
   }) async {}
@@ -78,17 +64,6 @@ class _NoopNotificationGateway implements NotificationGateway {
     required String title,
     required String body,
   }) async {}
-  @override
-  Future<void> cancelBatchReminders() async {}
-  @override
-  Future<void> scheduleStreakAlert({
-    required int hour,
-    required int minute,
-    required String body,
-    String title = 'Streak at Risk!',
-  }) async {}
-  @override
-  Future<void> cancelStreakAlert() async {}
   @override
   Future<void> scheduleStreakAlertForProfile({
     required int profileId,
