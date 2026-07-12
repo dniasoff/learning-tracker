@@ -8,7 +8,6 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/sync/initial_sync_state.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -129,25 +128,17 @@ class DashboardBody extends ConsumerWidget {
     final name = profileName ?? l10n.learner;
     final now = DateTimeFactory.nowLocal();
 
-    // §10.2 — "initial sync complete" gate.
+    // §10.2 — historical "first Firestore pull complete" gate (BUG-#35).
     //
-    // Before the first full Firestore pull finishes, the local DB may be empty
-    // or partially merged.  Running the projection on that data would produce
-    // a misleading count (artificially high overdue, or 0 that looks like
-    // "all done").  So on a *fresh* cold-start we briefly show "…" until the
-    // first pull completes.
-    //
-    // BUG-#35 (offline-first): the sync flag must NEVER be the sole gate, or it
-    // strands the tiles on "…" forever for any session that doesn't run
-    // pullOnLaunch — notably a CHILD profile / tutored session, where the flag
-    // is never written and `initialSyncCompleteProvider` stays `false`
-    // permanently.  Per the offline-first rule, the local Drift query is the
-    // source of truth and sync is informational only.  We therefore resolve the
-    // tiles as soon as the local DB query has emitted a value, regardless of the
-    // sync flag.  The flag is retained only to surface a still-loading state on
-    // the very first launch while the DB query itself is in-flight.
-    final initialSyncComplete =
-        ref.watch(initialSyncCompleteProvider).asData?.value ?? false;
+    // Before the first full Firestore pull finishes, the local DB may be
+    // empty or partially merged, so an early version of this screen gated
+    // tile rendering on a first-pull-done flag from core/sync. BUG-#35 found
+    // that gate strands the tiles on "…" forever for any session that never
+    // runs pullOnLaunch — notably a CHILD profile / tutored session, where
+    // that flag is never written. Per the offline-first rule, the local
+    // Drift query is the real source of truth and sync is informational
+    // only, so `tasksReady` below depends solely on `dailyTasksAsync`
+    // (see the PP-15 note there) — never on sync status.
 
     // Provide an empty task list while not ready so the list-grouping helpers
     // below can run without null checks.  The counts derived from this list
@@ -201,21 +192,18 @@ class DashboardBody extends ConsumerWidget {
 
     // Tasks are "ready" once the local DB query has resolved.  The local Drift
     // store is the offline-first source of truth, so a resolved query is
-    // authoritative regardless of whether a Firestore pull has run (BUG-#35:
-    // gating additionally on `initialSyncComplete` stranded the tiles on "…"
-    // forever for CHILD / tutored sessions that never call pullOnLaunch).
+    // authoritative regardless of whether a Firestore pull has run (see the
+    // §10.2 note above — BUG-#35).
     //
-    // PP-15: the previous `|| initialSyncComplete` guard made `tasksReady`
-    // true as soon as the first-launch sync flag flipped — even before the
-    // Drift query emitted — so the OVERDUE/TODAY/CHAZARA bubbles flashed
-    // real zeros for 1-2 s, which looked like "all caught up".  The fix uses
-    // ONLY `dailyTasksAsync.hasValue` so bubbles stay on "…" until the local
-    // DB query has actually returned data.  The `initialSyncComplete` variable
-    // is retained (read but not used in the condition) to document the
-    // historical decision and suppress any dead-variable lint.
+    // PP-15: an earlier version of this gate also required the first-launch
+    // sync flag to flip true, which made `tasksReady` true as soon as that
+    // flag flipped — even before the Drift query emitted — so the
+    // OVERDUE/TODAY/CHAZARA bubbles flashed real zeros for 1-2 s, which
+    // looked like "all caught up". The fix uses ONLY
+    // `dailyTasksAsync.hasValue` so bubbles stay on "…" until the local DB
+    // query has actually returned data; the sync flag plays no further part
+    // in this gate.
     final tasksReady = dailyTasksAsync.hasValue;
-    // ignore: unused_local_variable — retained for historical documentation.
-    final _ = initialSyncComplete;
     final lifetimeReady = lifetimeTotalsAsync.hasValue;
     // "All caught up" is suppressed until tasks are ready: showing it before
     // sync completes would mislead the user into thinking there's nothing to do
