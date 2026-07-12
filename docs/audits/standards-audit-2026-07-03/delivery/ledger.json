@@ -184,13 +184,19 @@
     {
       "id": "AUD-content_browsing-01",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Localize hardcoded English strings across content_browsing screens/widgets",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "9f4df4f12ff8a2ebef57e6ec1a417cd67e79f99b"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-content_browsing-01 AC1 OK: grep for the 13 literals across the 4 source files returns zero hits (exit 1); all sites route via AppLocalizations",
+        "AUD-content_browsing-01 AC2 OK: arb-parity PASS (1441 keys, all in Hebrew); 12 new keys in both app_en.arb+app_he.arb, generated dart carries them",
+        "AUD-content_browsing-01 AC3 OK: curriculum_list_screen_i18n_test.dart has 7 Locale('he') tests asserting Hebrew renders + English findsNothing; all pass"
+      ],
+      "notes": "Verified 13 sites present. Added 12 ARB keys, routed all literals via AppLocalizations. All 3 ACs met: grep zero hits, arb-parity passes, new Locale('he') tests assert new keys. Added red-first coverage for other 3 files too; fixed missing delegates in existing test. Merged --no-ff onto audit-fix/2026-07-03 (w3r0c8, mergeSha 9f4df4f12ff8a2ebef57e6ec1a417cd67e79f99b). Post-rebase gate: make audit 39/39 clean, flutter analyze clean, root make arb-parity clean (1476 English keys all in Hebrew; touchedStrings). gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 only in learning_tracker/lib/l10n/{app_en.arb,app_he.arb,app_localizations.dart,app_localizations_en.dart,app_localizations_he.dart} (shared generated l10n scaffolding touched by many sibling i18n findings); ran payload.testsToRun plus test/core/l10n/app_localizations_test.dart, test/l10n/app_localizations_coverage_test.dart, and test/tool/audit_and_arb_parity_test.dart -- 63 passed, 1 unrelated failure. That one failure (\"make audit check 37/37 -- AUD-sync-05 (SM-7) clean on the AUD-sync-05 fix sites\") is a pre-existing stale-assertion bug already on the audit-fix/2026-07-03 tip: commit e2de8628 (AUD-core-database-14, already merged, unrelated to this payload) grew make audit from 37 to 39 total checks, renumbering the SM-7 line to \"37/39\", but the test still greps stdout for the literal substring \"37/37\". Confirmed independently reproducible by running the same test in isolation against the unmodified audit-fix/2026-07-03 tip (no payload changes applied) -- identical single failure, real make audit output is \"=== audit PASSED -- all 39 greps clean ===\", and the companion AC1 test (which reintroduces then removes a real violation) passes, confirming the underlying SM-7 checker itself is correct and this payload's files are not the cause. Not a regression introduced by this change."
     },
     {
       "id": "AUD-core-widgets-01",
