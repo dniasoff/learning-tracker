@@ -23,6 +23,12 @@
 // │    (C) Any SMTP relay — implement TransactionalEmailService and bind it  │
 // │        in the Riverpod provider below.                                   │
 // │                                                                         │
+// │  GATE (AUD-core-email-02 / DNI-400): subject/body below are hardcoded   │
+// │  English string literals, not ARB keys — `make arb-parity` cannot catch │
+// │  them. Localize via lookupAppLocalizations(recipient locale) and add    │
+// │  ARB keys to app_en.arb/app_he.arb before activating a real provider.   │
+// │  Tracked by DNI-400 (see TransactionalEmail.subject/plaintextBody).     │
+// │                                                                         │
 // │  Once a provider is provisioned, delete the wake-up comment and swap    │
 // │  [LoggingTransactionalEmailService] for the real implementation.        │
 // └─────────────────────────────────────────────────────────────────────────┘
@@ -41,10 +47,20 @@ sealed class TransactionalEmail {
   /// Recipient email address.
   final String toAddress;
 
-  /// Subject line (in English; localisation deferred to the email template).
+  /// Subject line.
+  ///
+  /// Currently hardcoded English — not yet routed through ARB/
+  /// AppLocalizations. See the GATE paragraph in the WAKE-UP NOTICE above.
+  // TODO(DNI-400): localize via lookupAppLocalizations(recipient locale) +
+  // ARB keys before a real email provider is wired (AUD-core-email-02).
   String get subject;
 
   /// Plaintext body fallback (for email clients that do not render HTML).
+  ///
+  /// Currently hardcoded English — not yet routed through ARB/
+  /// AppLocalizations. See the GATE paragraph in the WAKE-UP NOTICE above.
+  // TODO(DNI-400): localize via lookupAppLocalizations(recipient locale) +
+  // ARB keys before a real email provider is wired (AUD-core-email-02).
   String get plaintextBody;
 }
 
