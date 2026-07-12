@@ -769,6 +769,7 @@
   },
   "enterParentPin": "הזינו קוד הורה",
   "enterParentPinSubtitle": "הזינו קוד בן 4 ספרות כדי לגשת להגדרות הורה.",
+  "pinEntryDefaultTitle": "הזינו קוד",
   "pinDialogSubtitleSwitchProfile": "הזינו את הקוד כדי לעבור בין פרופילים.",
   "@pinDialogSubtitleSwitchProfile": {
     "description": "PIN dialog subtitle shown specifically in the profile-switch context. Replaces the generic 'access parent settings' copy when the PIN prompt is triggered by a profile switch."
@@ -1033,6 +1034,20 @@
   "actionUseToday": "השתמש בהיום",
   "actionStartHere": "התחל כאן",
   "actionStartHereLabel": "התחל כאן",
+  "actionClear": "נקה",
+
+  "appErrorViewNoConnectionTitle": "אין חיבור",
+  "appErrorViewNoConnectionBody": "בדקו את חיבור האינטרנט ונסו שוב.",
+  "appErrorViewInvalidDataTitle": "נתונים לא תקינים",
+  "appErrorViewInvalidDataBody": "המידע שסופק אינו תקין. בדקו ונסו שוב.",
+  "appErrorViewAccessDeniedTitle": "הגישה נדחתה",
+  "appErrorViewAccessDeniedBody": "אין לכם הרשאה לצפות בתוכן זה. התחברו או פנו לתמיכה.",
+  "appErrorViewNotFoundTitle": "לא נמצא",
+  "appErrorViewNotFoundBody": "הפריט המבוקש לא נמצא.",
+  "appErrorViewGenericTitle": "משהו השתבש",
+  "appErrorViewGenericBody": "אירעה שגיאה בלתי צפויה. נסו שוב או דווחו על הבעיה.",
+  "appErrorViewReportButton": "דווח על הבעיה",
+  "appErrorViewReportedSnackbar": "תודה — תיעדנו את הבעיה.",
 
   "errorGeneric": "שגיאה: {error}",
   "@errorGeneric": {

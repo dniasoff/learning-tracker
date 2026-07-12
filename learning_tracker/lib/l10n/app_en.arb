@@ -874,6 +874,7 @@
   },
   "enterParentPin": "Enter Parent PIN",
   "enterParentPinSubtitle": "Enter your 4-digit PIN to access parent settings.",
+  "pinEntryDefaultTitle": "Enter PIN",
   "pinDialogSubtitleSwitchProfile": "Enter the PIN to switch profiles.",
   "@pinDialogSubtitleSwitchProfile": {
     "description": "PIN dialog subtitle shown specifically in the profile-switch context. Replaces the generic 'access parent settings' copy when the PIN prompt is triggered by a profile switch rather than by opening parent settings."
@@ -1159,6 +1160,20 @@
   "actionUseToday": "Use Today",
   "actionStartHere": "Start here",
   "actionStartHereLabel": "Start Here",
+  "actionClear": "Clear",
+
+  "appErrorViewNoConnectionTitle": "No connection",
+  "appErrorViewNoConnectionBody": "Check your internet connection and try again.",
+  "appErrorViewInvalidDataTitle": "Invalid data",
+  "appErrorViewInvalidDataBody": "The information provided isn't valid. Please check and try again.",
+  "appErrorViewAccessDeniedTitle": "Access denied",
+  "appErrorViewAccessDeniedBody": "You don't have permission to view this. Sign in or contact support.",
+  "appErrorViewNotFoundTitle": "Not found",
+  "appErrorViewNotFoundBody": "The requested item could not be found.",
+  "appErrorViewGenericTitle": "Something went wrong",
+  "appErrorViewGenericBody": "An unexpected error occurred. Try again or report the issue.",
+  "appErrorViewReportButton": "Report this issue",
+  "appErrorViewReportedSnackbar": "Thanks — we've logged the issue.",
 
   "errorGeneric": "Error: {error}",
   "@errorGeneric": {

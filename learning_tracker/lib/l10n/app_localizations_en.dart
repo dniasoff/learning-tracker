@@ -1689,6 +1689,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter your 4-digit PIN to access parent settings.';
 
   @override
+  String get pinEntryDefaultTitle => 'Enter PIN';
+
+  @override
   String get pinDialogSubtitleSwitchProfile =>
       'Enter the PIN to switch profiles.';
 
@@ -2336,6 +2339,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get actionStartHereLabel => 'Start Here';
+
+  @override
+  String get actionClear => 'Clear';
+
+  @override
+  String get appErrorViewNoConnectionTitle => 'No connection';
+
+  @override
+  String get appErrorViewNoConnectionBody =>
+      'Check your internet connection and try again.';
+
+  @override
+  String get appErrorViewInvalidDataTitle => 'Invalid data';
+
+  @override
+  String get appErrorViewInvalidDataBody =>
+      'The information provided isn\'t valid. Please check and try again.';
+
+  @override
+  String get appErrorViewAccessDeniedTitle => 'Access denied';
+
+  @override
+  String get appErrorViewAccessDeniedBody =>
+      'You don\'t have permission to view this. Sign in or contact support.';
+
+  @override
+  String get appErrorViewNotFoundTitle => 'Not found';
+
+  @override
+  String get appErrorViewNotFoundBody =>
+      'The requested item could not be found.';
+
+  @override
+  String get appErrorViewGenericTitle => 'Something went wrong';
+
+  @override
+  String get appErrorViewGenericBody =>
+      'An unexpected error occurred. Try again or report the issue.';
+
+  @override
+  String get appErrorViewReportButton => 'Report this issue';
+
+  @override
+  String get appErrorViewReportedSnackbar =>
+      'Thanks — we\'ve logged the issue.';
 
   @override
   String errorGeneric(String error) {

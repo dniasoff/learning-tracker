@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Reusable PIN entry widget for parent-mode authentication.
 ///
@@ -11,7 +12,7 @@ class PinEntryWidget extends StatefulWidget {
     this.errorMessage,
     this.isLockedOut = false,
     this.lockoutRemainingMinutes = 0,
-    this.title = 'Enter PIN',
+    this.title,
     super.key,
   });
 
@@ -28,7 +29,12 @@ class PinEntryWidget extends StatefulWidget {
   final int lockoutRemainingMinutes;
 
   /// Title displayed above the PIN entry.
-  final String title;
+  ///
+  /// When null, falls back to the localized
+  /// `AppLocalizations.pinEntryDefaultTitle` ("Enter PIN") — resolved in
+  /// [State.build] rather than as a field default so it comes from ARB
+  /// (AX-2) instead of a hardcoded English literal.
+  final String? title;
 
   @override
   State<PinEntryWidget> createState() => _PinEntryWidgetState();
@@ -103,6 +109,7 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final hasError = widget.errorMessage != null;
 
     return Column(
@@ -110,7 +117,7 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
       children: [
         // Title
         Text(
-          widget.title,
+          widget.title ?? l10n.pinEntryDefaultTitle,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -119,19 +126,19 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
 
         // Lockout message or PIN entry
         if (widget.isLockedOut)
-          _buildLockoutMessage(theme)
+          _buildLockoutMessage(theme, l10n)
         else
           _buildPinEntry(theme, hasError),
 
         const SizedBox(height: 16),
 
         // Error message
-        if (hasError && !widget.isLockedOut) _buildErrorMessage(theme),
+        if (hasError && !widget.isLockedOut) _buildErrorMessage(theme, l10n),
       ],
     );
   }
 
-  Widget _buildLockoutMessage(ThemeData theme) {
+  Widget _buildLockoutMessage(ThemeData theme, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -143,7 +150,7 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
           Icon(Icons.lock_clock, size: 64, color: theme.colorScheme.error),
           const SizedBox(height: 16),
           Text(
-            'Too many failed attempts',
+            l10n.parentPinLockoutTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.colorScheme.onErrorContainer,
               fontWeight: FontWeight.bold,
@@ -151,7 +158,7 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Try again in ${widget.lockoutRemainingMinutes} minute(s)',
+            l10n.parentPinLockoutBody(widget.lockoutRemainingMinutes),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onErrorContainer,
             ),
@@ -185,7 +192,7 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
     );
   }
 
-  Widget _buildErrorMessage(ThemeData theme) {
+  Widget _buildErrorMessage(ThemeData theme, AppLocalizations l10n) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -202,7 +209,7 @@ class _PinEntryWidgetState extends State<PinEntryWidget> {
           ),
         ),
         const SizedBox(width: 8),
-        TextButton(onPressed: _clearPin, child: const Text('Clear')),
+        TextButton(onPressed: _clearPin, child: Text(l10n.actionClear)),
       ],
     );
   }
