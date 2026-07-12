@@ -6670,13 +6670,13 @@
   {
    "id": "AUD-dashboard-11",
    "wave": 3,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Delete or wire up the unused ChazaraStatus/MomentumStatus domain models and their barrel",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_a74eec8f-022-41 (branch worktree-wf_a74eec8f-022-41, commit 9076b8f2567ac963160255bae42c1f6033d44877, tip of this cid's build) but the review agent was lost (quota) before opus review/merge could complete. Per merge-lane payload cid w3r1c16, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_a74eec8f-022-41 removed per payload.worktreesToRemove (`git worktree remove --force`). Branch worktree-wf_a74eec8f-022-41 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_a74eec8f-022-41` shows its sole commit (9076b8f2) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
   },
   {
    "id": "AUD-t-gamification-07",
