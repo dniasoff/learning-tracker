@@ -7210,13 +7210,17 @@
   {
    "id": "AUD-core-database-12",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix completion_events.dart docstring \u2014 natural key description omits curriculumId that the enforced index actually includes",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "0bcf4de3bd060ed27d161ed342d678da96535d12"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-12 AC1 OK: docstring L7 lists profileId,sefariaRef,stageId,trackType,curriculumId == @TableIndex L21 same 5 cols same order"
+   ],
+   "notes": "Re-verified: docstring (line 7) stated a 4-column natural key while @TableIndex (line 21) enforces 5 (adds curriculumId) - confirmed accurate, not already fixed. Updated docstring to list all 5 columns in the same order as the index; they now textually match, satisfying the sole AC."
   },
   {
    "id": "AUD-core-database-09",
