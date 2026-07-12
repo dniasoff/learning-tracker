@@ -31,7 +31,7 @@ const PREAPPROVED = {}
 for (const pa of (Array.isArray(cfg.preApproved) ? cfg.preApproved : [])) { if (pa && pa.tipSha) PREAPPROVED[pa.tipSha] = pa }
 
 const REPO = '/home/daniel/repos/learning-tracker'
-const BRANCH = 'audit-fix/2026-07-03'
+const BRANCH = 'dev'
 const AUDIT = 'docs/audits/standards-audit-2026-07-03'
 const LEDGER = AUDIT + '/delivery/ledger.json'
 const KILLLOG = AUDIT + '/delivery/kill-log-addendum.md'
@@ -493,17 +493,14 @@ const BOUND_SCHEMA = {
 }
 const blockedDetail = outcomes.blocked.map(function (id) { return id + ': ' + (F[id].note || 'see ledger') }).slice(0, 30)
 const boundary = await ga([
-  'You are the WAVE-' + WAVE + ' BOUNDARY agent (sonnet) for the standards-audit delivery engine. The closing gate CERTIFIED the wave. Main checkout ' + REPO + ' currently on ' + BRANCH + ' (verify branch; untracked TEA-session files under docs/test-artifacts/ are tolerated - never touch them; abort only on modified tracked files).',
-  'Git steps (judge by exit codes):',
-  '1. git checkout dev; git merge --ff-only ' + BRANCH + '  (dev must fast-forward; if it cannot, STOP: return red with evidence, and git checkout ' + (FINAL_WAVE ? 'dev' : BRANCH) + ' before returning).',
-  '2. git push origin dev; git push origin ' + BRANCH + '.',
-  (FINAL_WAVE
-    ? '3. FINAL WAVE cleanup: stay on dev; git branch -d ' + BRANCH + ' (merge-checked -d, never -D); git push origin --delete ' + BRANCH + '; verify git branch --list shows no audit-fix/fix/salvage branches; end state = main checkout on dev, clean.'
-    : '3. git checkout ' + BRANCH + ' (the engine continues next wave from the work branch - this is REQUIRED; end state = main checkout on ' + BRANCH + ', clean).'),
-  '4. git worktree prune; git worktree list - only the main checkout should remain; force-remove any stray engine worktrees (paths under a workflow/worktree temp root) and report them.',
-  '5. diffstat: last line of git diff --stat ' + BASE + '..' + (FINAL_WAVE ? 'dev' : BRANCH) + '.',
+  'You are the WAVE-' + WAVE + ' BOUNDARY agent (sonnet) for the standards-audit delivery engine. The closing gate CERTIFIED the wave. The engine works DIRECTLY on dev (single-branch model, no staging branch), so all merges are ALREADY on dev. Main checkout ' + REPO + ' is on dev (verify branch; untracked TEA-session files under docs/test-artifacts/ are tolerated - never touch them; abort only on modified tracked files).',
+  'Git steps (judge by exit codes). CRITICAL: dev is the ONLY branch - NEVER delete, force-push, or reset dev.',
+  '1. Verify: git branch --show-current is dev, and git status shows no modified tracked files (untracked docs/test-artifacts tolerated). If not, return red with evidence and touch nothing.',
+  '2. git push origin dev (plain push - must be a fast-forward of origin/dev; if rejected as non-fast-forward, git fetch origin and report red, NEVER force-push).',
+  '3. git worktree prune; git worktree list - only the main checkout should remain; force-remove any stray engine worktrees (paths under .claude/worktrees or a workflow temp root) and report them. Delete leftover worktree-*/salvage-* branches whose commits are already in dev (git cherry dev <branch> shows only "-" lines, OR git merge-base --is-ancestor <branch> dev) with git branch -D; if a branch has unmerged "+" commits, LEAVE it and report. NEVER delete dev.',
+  '4. diffstat: last line of git diff --stat ' + BASE + '..dev.',
   'Linear mirror (PO-enabled; NEVER let it block - on any Linear failure, note it and continue): use ToolSearch to load mcp__linear__list_teams and mcp__linear__save_issue. Find team ' + LINEAR_TEAM + '. Create ONE summary issue titled "Standards-audit delivery - Wave ' + WAVE + ' complete (2026-07-03)" with: merged=' + outcomes.merged.length + ' refuted=' + outcomes.refuted.length + ' blocked=' + outcomes.blocked.length + ', the gate verdict, the diffstat, and the merged finding ids. Then one issue per blocked finding (title "AUD blocked: <id>", description = reason) from this list: ' + JSON.stringify(blockedDetail) + '.',
-  'Return: status, devSha (dev HEAD after ff), pushedDev, branchDeleted (' + (FINAL_WAVE ? 'true expected' : 'false expected') + '), worktrees (one-line state), linear (what you created or why it failed), diffstat, notes.',
+  'Return: status, devSha (dev HEAD), pushedDev, branchDeleted (always false - dev is never deleted in the single-branch model), worktrees (one-line state), linear (what you created or why it failed), diffstat, notes.',
 ].join('\n'), { label: 'boundary:wave-' + WAVE, phase: 'Boundary', model: 'sonnet', schema: BOUND_SCHEMA }, true)
 
 return { wave: WAVE, quotaDead: false, rounds: roundNum, outcomes: outcomes, unprocessed: residue, recon: recon, gate: gate, boundary: boundary }
