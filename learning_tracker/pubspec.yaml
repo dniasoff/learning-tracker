@@ -134,6 +134,10 @@ dev_dependencies:
   geolocator_platform_interface: ^4.2.6
   geocoding_platform_interface: ^3.2.0
   path_provider_platform_interface: ^2.1.2
+  # AUD-dashboard-02: gates SharedPreferences.remove() behind a Completer in
+  # skipped_onboarding_cta_banner_dismiss_mounted_test.dart so the test can
+  # unmount the widget mid-await.
+  shared_preferences_platform_interface: ^2.4.2
   # DNI-377 (27.1): Fake Firestore for unit/integration tests that exercise
   # the sync layer without spinning up the emulator.
   fake_cloud_firestore: ^4.1.0
