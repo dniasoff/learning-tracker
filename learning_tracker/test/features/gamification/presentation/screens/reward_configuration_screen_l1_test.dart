@@ -17,6 +17,9 @@
 //  14. Cancel button (clearForm) resets form state.
 //  15. Tutor canEditRewards=false: Save Reward tap shows permission-denied snackbar.
 //  16. He-RTL smoke: locale=he → screen renders without throwing.
+//  17. SM-5 (AUD-gamification-10, AC2): a generic (non-TutorWriteException)
+//      save failure renders the form.error branch instead of hanging or
+//      throwing past the test.
 //
 // PLURALIZATION:
 //   rewardConfigPointsPreview uses ICU plural — count==1 renders the singular
@@ -123,6 +126,26 @@ class _FakeControllerWithMilestones extends _FakeController {
   Future<void> deleteMilestone(RewardMilestone milestone) async {
     deletedMilestones.add(milestone);
     _milestones.removeWhere((m) => m.id == milestone.id);
+  }
+}
+
+/// [_FakeController] variant that reproduces what the REAL controller's
+/// `AsyncValue.guard` + `_handleMutationError` do when the underlying
+/// RewardMilestoneService/DB write (or the sync push inside
+/// `_persistAndSync`) throws anything other than `TutorWriteException`
+/// (SM-5, AUD-gamification-10, AC2) -- sets `state.error` and clears
+/// `state.loading`, then returns [RewardSaveFailed]. Kept as a controller
+/// fake rather than a real throwing DB/service, consistent with this file's
+/// established pattern (Drift isolate queries don't flush inside
+/// [testWidgets] fake timers — see [_FakeControllerWithMilestones]).
+class _FakeControllerFailingSave extends _FakeController {
+  _FakeControllerFailingSave({required RewardForm initialState})
+    : super(initialState: initialState);
+
+  @override
+  Future<RewardSaveResult> saveReward() async {
+    state = state.copyWith(loading: false, error: 'simulated_generic_error');
+    return const RewardSaveFailed();
   }
 }
 
@@ -706,4 +729,33 @@ void main() {
 
     await _tearDown(tester);
   });
+
+  // ── 17. SM-5 (AUD-gamification-10, AC2): generic save failure ─────────────
+
+  testWidgets(
+    'generic save failure (not TutorWriteException) renders the form.error '
+    'branch instead of hanging or throwing past the test',
+    (tester) async {
+      _useTallViewport(tester);
+      final fake = _FakeControllerFailingSave(
+        initialState: const RewardForm(name: 'Gold Star', pointsText: '500'),
+      );
+      await tester.pumpWidget(_buildFake(fake: fake));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(find.text('Save Reward'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // form.error is now non-null: the screen renders the dedicated
+      // full-screen error Scaffold (errorGeneric, EH-5) instead of the
+      // "Reward created" success dialog, hanging, or an uncaught exception
+      // reaching the test framework.
+      expect(find.text('Reward created'), findsNothing);
+      expect(find.text('Error: simulated_generic_error'), findsOneWidget);
+
+      await _tearDown(tester);
+    },
+  );
 }

@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/gamification/presentation/screens/chil
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'reward_config_controller.g.dart';
@@ -42,6 +43,18 @@ final class RewardSaveDuplicateName extends RewardSaveResult {
 
 final class RewardSaveInvalidInput extends RewardSaveResult {
   const RewardSaveInvalidInput();
+}
+
+/// SM-5 (AUD-gamification-10): returned when [RewardConfigController.saveReward]'s
+/// underlying I/O (the milestone write or the sync push inside
+/// `_persistAndSync`) threw anything other than [TutorWriteException]. The
+/// screen doesn't switch on this result for its own feedback — `state.error`
+/// (set by [RewardConfigController._handleMutationError] before this is
+/// returned) is what drives the full-screen error UI — but keeping
+/// [RewardSaveResult] a total sealed union means the switch in
+/// `reward_configuration_screen.dart` stays exhaustive.
+final class RewardSaveFailed extends RewardSaveResult {
+  const RewardSaveFailed();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -174,29 +187,55 @@ class RewardConfigController extends _$RewardConfigController {
         ? RewardMilestone.kGlobalTrackSentinel
         : state.selectedTrackId!;
 
-    // Guard against duplicate names within the same reward ladder (Fix #21).
-    // When editing, allow the existing reward to keep its own name.
-    final currentMilestones = state.usesGlobalLadder
-        ? await svc.getGlobalMilestones()
-        : await svc.getMilestonesForTrack(trackId);
-    final isDuplicateName = currentMilestones.any(
-      (m) =>
-          m.title.trim().toLowerCase() == title.toLowerCase() &&
-          m.id != state.editingMilestoneId,
-    );
-    if (isDuplicateName) return const RewardSaveDuplicateName();
+    // SM-5 (AUD-gamification-10): the DB/network calls below can throw
+    // (a corrupted SharedPreferences write, a failed sync push) -- previously
+    // unhandled beyond the screen's own TutorWriteException-only try/catch,
+    // silently dropping the operation with no spinner and no error shown
+    // (an unhandled Future rejection). AsyncValue.guard captures any
+    // failure (with its stack trace) rather than a hand-rolled try/catch
+    // that assigns `state` directly.
+    state = state.copyWith(loading: true, error: null);
+    final guarded = await AsyncValue.guard<RewardSaveResult>(() async {
+      // Guard against duplicate names within the same reward ladder
+      // (Fix #21). When editing, allow the existing reward to keep its own
+      // name.
+      final currentMilestones = state.usesGlobalLadder
+          ? await svc.getGlobalMilestones()
+          : await svc.getMilestonesForTrack(trackId);
+      final isDuplicateName = currentMilestones.any(
+        (m) =>
+            m.title.trim().toLowerCase() == title.toLowerCase() &&
+            m.id != state.editingMilestoneId,
+      );
+      if (isDuplicateName) return const RewardSaveDuplicateName();
 
-    await svc.upsertMilestone(
-      trackId: trackId,
-      title: title,
-      thresholdPoints: pointsParsed,
-      milestoneId: state.editingMilestoneId,
-      isEnabled: true,
-      iconIndex: RewardMilestoneIcons.clampIndex(state.iconIndex),
-    );
-    await _persistAndSync();
-    clearForm();
-    return RewardSaved(title: title, wasEditing: wasEditing);
+      await svc.upsertMilestone(
+        trackId: trackId,
+        title: title,
+        thresholdPoints: pointsParsed,
+        milestoneId: state.editingMilestoneId,
+        isEnabled: true,
+        iconIndex: RewardMilestoneIcons.clampIndex(state.iconIndex),
+      );
+      await _persistAndSync();
+      return RewardSaved(title: title, wasEditing: wasEditing);
+    });
+
+    switch (guarded) {
+      case AsyncData(:final value):
+        // Always clear `loading` on the happy path first -- clearForm()
+        // does not touch loading/error, so leaving this out would strand
+        // the spinner at true forever after a successful save.
+        state = state.copyWith(loading: false);
+        if (value is RewardSaved) clearForm();
+        return value;
+      case AsyncError(:final error, :final stackTrace):
+        return _handleMutationError(error, stackTrace);
+      case AsyncLoading():
+        // Unreachable: AsyncValue.guard only ever resolves to data or error.
+        state = state.copyWith(loading: false);
+        return const RewardSaveFailed();
+    }
   }
 
   /// Toggles the `isEnabled` flag on [m] and syncs.
@@ -204,15 +243,29 @@ class RewardConfigController extends _$RewardConfigController {
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     final svc = RewardMilestoneService(db, profileId: profileId);
-    await svc.upsertMilestone(
-      trackId: m.trackId,
-      title: m.title,
-      thresholdPoints: m.thresholdPoints,
-      milestoneId: m.id,
-      isEnabled: !m.isEnabled,
-      iconIndex: RewardMilestoneIcons.clampIndex(m.iconIndex),
-    );
-    await _persistAndSync();
+
+    // SM-5 (AUD-gamification-10): see saveReward's doc comment above.
+    state = state.copyWith(loading: true, error: null);
+    final guarded = await AsyncValue.guard<void>(() async {
+      await svc.upsertMilestone(
+        trackId: m.trackId,
+        title: m.title,
+        thresholdPoints: m.thresholdPoints,
+        milestoneId: m.id,
+        isEnabled: !m.isEnabled,
+        iconIndex: RewardMilestoneIcons.clampIndex(m.iconIndex),
+      );
+      await _persistAndSync();
+    });
+
+    switch (guarded) {
+      case AsyncData():
+        state = state.copyWith(loading: false);
+      case AsyncError(:final error, :final stackTrace):
+        _handleMutationError(error, stackTrace);
+      case AsyncLoading():
+        state = state.copyWith(loading: false);
+    }
   }
 
   /// Deletes [m] from the DB, clears the form if [m] was being edited, and
@@ -221,8 +274,47 @@ class RewardConfigController extends _$RewardConfigController {
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     final svc = RewardMilestoneService(db, profileId: profileId);
-    await svc.removeMilestone(m.id);
-    await _persistAndSync();
-    if (state.editingMilestoneId == m.id) clearForm();
+
+    // SM-5 (AUD-gamification-10): see saveReward's doc comment above.
+    state = state.copyWith(loading: true, error: null);
+    final guarded = await AsyncValue.guard<void>(() async {
+      await svc.removeMilestone(m.id);
+      await _persistAndSync();
+    });
+
+    switch (guarded) {
+      case AsyncData():
+        state = state.copyWith(loading: false);
+        if (state.editingMilestoneId == m.id) clearForm();
+      case AsyncError(:final error, :final stackTrace):
+        _handleMutationError(error, stackTrace);
+      case AsyncLoading():
+        state = state.copyWith(loading: false);
+    }
+  }
+
+  /// Shared failure handling for the 3 mutation methods above (SM-5,
+  /// AUD-gamification-10).
+  ///
+  /// [TutorWriteException] is rethrown, NOT surfaced through `state.error`
+  /// -- the screen's own `on TutorWriteException catch` around every call
+  /// site already shows the permission-denied snackbar; surfacing it here
+  /// too would additionally replace the whole screen with the full-screen
+  /// error state for what is a normal, expected outcome of a restricted
+  /// tutor session. Any OTHER exception (a corrupted SharedPreferences
+  /// write, a failed sync push) sets `state.error` so the screen's dead
+  /// error branch (now wired) shows real feedback instead of a silent
+  /// no-op.
+  ///
+  /// Returns [RewardSaveFailed] so [saveReward] can use this as its
+  /// `AsyncError` case body via `return _handleMutationError(...)`; the
+  /// void-returning mutation methods simply discard the return value.
+  RewardSaveFailed _handleMutationError(Object error, StackTrace stackTrace) {
+    if (error is TutorWriteException) {
+      state = state.copyWith(loading: false);
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+    state = state.copyWith(loading: false, error: error.toString());
+    return const RewardSaveFailed();
   }
 }
