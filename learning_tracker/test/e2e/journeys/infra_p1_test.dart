@@ -67,7 +67,10 @@
 /// When [syncIdentityStatusProvider] returns mismatched and [syncStatusProvider]
 /// is degraded, BackupSyncSection renders the identity-mismatch card with
 /// l10n.backupSyncSignInToBackUp = "Sign in to back up" action button.
-/// R-IC11: localised action label is asserted; no raw engineering string leaks.
+/// R-IC11 (AUD-settings-01): localised action label is asserted; no raw
+/// engineering string leaks — fixed by building the subtitle entirely from
+/// AppLocalizations in BackupSyncSection._buildDegradedCard's isMismatch
+/// branch.
 ///
 /// ## Provider silence notes
 ///
@@ -854,71 +857,65 @@ void main() {
       // R-IC11: localised action label is asserted; raw engineering string must
       // not leak to user-facing UI.
 
-      testWidgets(
-        'skip: BUG R-IC11: SyncStatusDegraded reason leaks raw engineering '
-        'string in identity-mismatch card when pendingChanges>0 — '
-        'BackupSyncSection._buildDegradedCard subtitle uses '
-        r"'$reason ($pendingChanges queued)'"
-        ' not suppressed; correct assertion: raw engineering string absent; '
-        '"Sign in to back up" action button present',
-        skip: true, // BUG R-IC11: see test name above
-        (tester) async {
-          final identity = E2EIdentity.localBorn(
-            email: 'mismatch1113@test.com',
-            displayName: 'MismatchUser',
-          );
-          final h = E2EHarness(tester, identity: identity);
-          addTearDown(h.dispose);
+      testWidgets('R-IC11 (AUD-settings-01): identity-mismatch card with '
+          'pendingChanges>0 never leaks the raw SyncStatusDegraded engineering '
+          'reason string — subtitle is built entirely from AppLocalizations; '
+          '"Sign in to back up" action button is present', (tester) async {
+        final identity = E2EIdentity.localBorn(
+          email: 'mismatch1113@test.com',
+          displayName: 'MismatchUser',
+        );
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
 
-          final fakeGw = _FakeNotificationGateway();
+        final fakeGw = _FakeNotificationGateway();
 
-          const mismatchStatus = SyncIdentityStatus.mismatched(
-            activeAccountEmail: 'active@test.com',
-            signedInEmail: 'wrong@test.com',
-          );
+        const mismatchStatus = SyncIdentityStatus.mismatched(
+          activeAccountEmail: 'active@test.com',
+          signedInEmail: 'wrong@test.com',
+        );
 
-          await h.pumpApp(
-            path: '/dashboard',
-            extraOverrides: [
-              ..._infraSilences(h),
-              ..._notificationSilenceOverrides(fakeGw),
-              syncStatusProvider.overrideWithValue(
-                const SyncStatus.degraded(
-                  pendingChanges: 3,
-                  reason: 'permission-denied threshold reached',
-                ),
+        await h.pumpApp(
+          path: '/dashboard',
+          extraOverrides: [
+            ..._infraSilences(h),
+            ..._notificationSilenceOverrides(fakeGw),
+            syncStatusProvider.overrideWithValue(
+              const SyncStatus.degraded(
+                pendingChanges: 3,
+                reason: 'permission-denied threshold reached',
               ),
-              syncIdentityStatusProvider.overrideWithValue(mismatchStatus),
-            ],
-          );
+            ),
+            syncIdentityStatusProvider.overrideWithValue(mismatchStatus),
+          ],
+        );
 
-          await _goToSettings(h);
-          await _scrollSettingsTo(tester, 'Backup & Sync');
-          await h.pump(const Duration(milliseconds: 300));
+        await _goToSettings(h);
+        await _scrollSettingsTo(tester, 'Backup & Sync');
+        await h.pump(const Duration(milliseconds: 300));
 
-          // Card title present.
-          h.expectOnScreen('Backup & Sync', routeName: 'BackupSyncSection');
+        // Card title present.
+        h.expectOnScreen('Backup & Sync', routeName: 'BackupSyncSection');
 
-          // Identity mismatch path: action button "Sign in to back up".
-          // l10n.backupSyncSignInToBackUp = 'Sign in to back up'
-          h.expectOnScreen(
-            'Sign in to back up',
-            routeName: 'BackupSyncSection identity mismatch',
-          );
+        // Identity mismatch path: action button "Sign in to back up".
+        // l10n.backupSyncSignInToBackUp = 'Sign in to back up'
+        h.expectOnScreen(
+          'Sign in to back up',
+          routeName: 'BackupSyncSection identity mismatch',
+        );
 
-          // (R-IC11) Raw engineering reason must not be visible to the user.
-          // The mismatch card uses actionLabel-only layout; the raw reason
-          // is suppressed. We confirm the card rendered the action label,
-          // not raw exception text.
-          expect(
-            find.textContaining('permission-denied threshold'),
-            findsNothing,
-            reason:
-                'Raw engineering reason string must not leak to user-facing UI '
-                '(R-IC11)',
-          );
-        },
-      );
+        // (R-IC11) Raw engineering reason must not be visible to the user.
+        // The mismatch card uses actionLabel-only layout; the raw reason
+        // is suppressed. We confirm the card rendered the action label,
+        // not raw exception text.
+        expect(
+          find.textContaining('permission-denied threshold'),
+          findsNothing,
+          reason:
+              'Raw engineering reason string must not leak to user-facing UI '
+              '(R-IC11)',
+        );
+      });
     },
   );
 }

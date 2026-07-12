@@ -3198,6 +3198,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Some changes are waiting to sync. We\'ll retry automatically.';
 
   @override
+  String backupSyncIdentityMismatch(String signedInEmail, String activeEmail) {
+    return 'Signed in as $signedInEmail — sign in as $activeEmail to back up this account.';
+  }
+
+  @override
+  String get backupSyncIdentityMismatchNoEmail =>
+      'Signed in as the wrong account — sign in again to back up.';
+
+  @override
+  String get backupSyncUnknownAccount => 'a different account';
+
+  @override
   String get backupConnecting => 'Connecting…';
 
   @override
