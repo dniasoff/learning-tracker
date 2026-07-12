@@ -128,7 +128,7 @@ return error(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  idle,TResult Function()?  checking,TResult Function( String phase,  int completedSteps,  int totalSteps)?  restoring,TResult Function( int collectionsRestored)?  complete,TResult Function( SyncErrorCode code,  String? debugDetail)?  error,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  idle,TResult Function()?  checking,TResult Function( RestorePhase phase,  int completedSteps,  int totalSteps)?  restoring,TResult Function( int collectionsRestored)?  complete,TResult Function( SyncErrorCode code,  String? debugDetail)?  error,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case RestoreStatusIdle() when idle != null:
 return idle();case RestoreStatusChecking() when checking != null:
@@ -153,7 +153,7 @@ return error(_that.code,_that.debugDetail);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  idle,required TResult Function()  checking,required TResult Function( String phase,  int completedSteps,  int totalSteps)  restoring,required TResult Function( int collectionsRestored)  complete,required TResult Function( SyncErrorCode code,  String? debugDetail)  error,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  idle,required TResult Function()  checking,required TResult Function( RestorePhase phase,  int completedSteps,  int totalSteps)  restoring,required TResult Function( int collectionsRestored)  complete,required TResult Function( SyncErrorCode code,  String? debugDetail)  error,}) {final _that = this;
 switch (_that) {
 case RestoreStatusIdle():
 return idle();case RestoreStatusChecking():
@@ -174,7 +174,7 @@ return error(_that.code,_that.debugDetail);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  idle,TResult? Function()?  checking,TResult? Function( String phase,  int completedSteps,  int totalSteps)?  restoring,TResult? Function( int collectionsRestored)?  complete,TResult? Function( SyncErrorCode code,  String? debugDetail)?  error,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  idle,TResult? Function()?  checking,TResult? Function( RestorePhase phase,  int completedSteps,  int totalSteps)?  restoring,TResult? Function( int collectionsRestored)?  complete,TResult? Function( SyncErrorCode code,  String? debugDetail)?  error,}) {final _that = this;
 switch (_that) {
 case RestoreStatusIdle() when idle != null:
 return idle();case RestoreStatusChecking() when checking != null:
@@ -260,7 +260,7 @@ class RestoreStatusRestoring implements RestoreStatus {
   const RestoreStatusRestoring({required this.phase, required this.completedSteps, required this.totalSteps});
   
 
- final  String phase;
+ final  RestorePhase phase;
  final  int completedSteps;
  final  int totalSteps;
 
@@ -294,7 +294,7 @@ abstract mixin class $RestoreStatusRestoringCopyWith<$Res> implements $RestoreSt
   factory $RestoreStatusRestoringCopyWith(RestoreStatusRestoring value, $Res Function(RestoreStatusRestoring) _then) = _$RestoreStatusRestoringCopyWithImpl;
 @useResult
 $Res call({
- String phase, int completedSteps, int totalSteps
+ RestorePhase phase, int completedSteps, int totalSteps
 });
 
 
@@ -314,7 +314,7 @@ class _$RestoreStatusRestoringCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') $Res call({Object? phase = null,Object? completedSteps = null,Object? totalSteps = null,}) {
   return _then(RestoreStatusRestoring(
 phase: null == phase ? _self.phase : phase // ignore: cast_nullable_to_non_nullable
-as String,completedSteps: null == completedSteps ? _self.completedSteps : completedSteps // ignore: cast_nullable_to_non_nullable
+as RestorePhase,completedSteps: null == completedSteps ? _self.completedSteps : completedSteps // ignore: cast_nullable_to_non_nullable
 as int,totalSteps: null == totalSteps ? _self.totalSteps : totalSteps // ignore: cast_nullable_to_non_nullable
 as int,
   ));

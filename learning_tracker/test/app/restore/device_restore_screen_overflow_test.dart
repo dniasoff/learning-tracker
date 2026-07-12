@@ -48,6 +48,7 @@ import 'package:learning_tracker/app/restore/restore_providers.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
+import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:mocktail/mocktail.dart';
@@ -121,9 +122,15 @@ void main() {
     await expectNoOverflowAcrossDevices(
       tester,
       _screen,
+      // AUD-app-02: `phase` is now the closed RestorePhase enum (was a free
+      // text String, which let this test inject an arbitrary long sentence
+      // as a synthetic worst case). The device/text-scale matrix itself
+      // (up to 2x text scale on a 320-wide viewport, see overflow_harness.dart)
+      // already stresses layout independent of string length, so a real
+      // RestorePhase value exercises the same overflow guard.
       overrides: _statusOverride(
         const RestoreStatus.restoring(
-          phase: 'Restoring your study tracks and progress from the cloud',
+          phase: RestorePhase.pullingData,
           completedSteps: 3,
           totalSteps: 8,
         ),

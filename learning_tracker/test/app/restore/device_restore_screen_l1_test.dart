@@ -44,6 +44,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -311,7 +312,7 @@ void main() {
         await tester.pumpWidget(
           _buildHarness(
             fixedStatus: const RestoreStatus.restoring(
-              phase: 'Restoring your data...',
+              phase: RestorePhase.pullingData,
               completedSteps: 1,
               totalSteps: 3,
             ),
@@ -344,7 +345,7 @@ void main() {
         await tester.pumpWidget(
           _buildHarness(
             fixedStatus: const RestoreStatus.restoring(
-              phase: 'Loading curricula...',
+              phase: RestorePhase.loadingCurricula,
               completedSteps: 2,
               totalSteps: 4,
             ),
@@ -375,7 +376,7 @@ void main() {
         await tester.pumpWidget(
           _buildHarness(
             fixedStatus: const RestoreStatus.restoring(
-              phase: 'Working...',
+              phase: RestorePhase.importingContent,
               completedSteps: 0,
               totalSteps: 0,
             ),
@@ -524,6 +525,81 @@ void main() {
       expect(find.text('Step 1 of 3'), findsOneWidget);
       await _tearDown(tester);
     });
+
+    // AUD-app-02 / AC2: a forced restore failure under Locale('he') must
+    // render 100% ARB-sourced Hebrew text — never the raw exception text
+    // carried in RestoreStatus.error.debugDetail (EH-5). This exercises the
+    // exact defect the audit finding named: a raw e.toString() (here
+    // simulated with a realistic raw Firestore exception string) must never
+    // reach the widget tree, in the locale where the bug was reported.
+    testWidgets(
+      'he locale: forced restore failure renders only ARB-sourced Hebrew '
+      'text — raw exception text never reaches the widget tree',
+      (tester) async {
+        final db = UserDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final mockRouter = _makeRouter();
+
+        // A realistic raw exception string — exactly the shape AUD-app-02
+        // flagged (untranslated, technical, leaks SDK/Firestore internals).
+        const rawExceptionText =
+            'Exception: Data pull failed: [firebase_firestore/unavailable] '
+            'The service is currently unavailable.';
+
+        await tester.pumpWidget(
+          _buildHarness(
+            fixedStatus: const RestoreStatus.error(
+              code: SyncErrorCode.timeout,
+              debugDetail: rawExceptionText,
+            ),
+            mockRouter: mockRouter,
+            stubAppRouter: _makeAppRouter(),
+            db: db,
+            locale: const Locale('he'),
+          ),
+        );
+        await tester.pump();
+
+        // The raw, untranslated exception text must never render verbatim.
+        expect(
+          find.textContaining('firebase_firestore', findRichText: true),
+          findsNothing,
+          reason:
+              'raw exception text must never reach the UI verbatim (EH-5), '
+              'even carried via debugDetail',
+        );
+        expect(
+          find.text(rawExceptionText),
+          findsNothing,
+          reason: 'raw exception text must never reach the UI verbatim (EH-5)',
+        );
+
+        // Every visible string must be the ARB-sourced Hebrew translation.
+        expect(
+          find.text('השחזור נכשל'),
+          findsOneWidget,
+          reason: 'l10n.deviceRestoreFailed (he) must render as the headline',
+        );
+        expect(
+          find.text('השחזור נמשך זמן רב מדי. בדקו את החיבור ונסו שוב.'),
+          findsOneWidget,
+          reason:
+              'SyncErrorCode.timeout must resolve to l10n.deviceRestoreErrorTimeout (he)',
+        );
+        expect(
+          find.widgetWithText(ElevatedButton, 'נסה שוב'),
+          findsOneWidget,
+          reason: 'l10n.retry (he) must label the Retry button',
+        );
+        expect(
+          find.widgetWithText(TextButton, 'דלגו והמשיכו'),
+          findsOneWidget,
+          reason: 'l10n.skipAndContinue (he) must label the Skip button',
+        );
+
+        await _tearDown(tester);
+      },
+    );
   });
 
   // ── Retry button behaviour ─────────────────────────────────────────────────────
@@ -819,7 +895,7 @@ void main() {
         await tester.pumpWidget(
           _buildHarness(
             fixedStatus: const RestoreStatus.restoring(
-              phase: 'שחזור נתונים...',
+              phase: RestorePhase.pullingData,
               completedSteps: 1,
               totalSteps: 3,
             ),

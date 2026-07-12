@@ -20,6 +20,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
+import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
@@ -156,7 +157,7 @@ void main() {
       const idle = RestoreStatus.idle();
       const checking = RestoreStatus.checking();
       const restoring = RestoreStatus.restoring(
-        phase: 'Loading...',
+        phase: RestorePhase.loadingCurricula,
         completedSteps: 1,
         totalSteps: 3,
       );

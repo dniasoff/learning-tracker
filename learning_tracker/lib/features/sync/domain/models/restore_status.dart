@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 
 part 'restore_status.freezed.dart';
@@ -12,9 +13,14 @@ sealed class RestoreStatus with _$RestoreStatus {
   /// Checking whether this device needs a restore.
   const factory RestoreStatus.checking() = RestoreStatusChecking;
 
-  /// Restore in progress with a descriptive phase label.
+  /// Restore in progress.
+  ///
+  /// AUD-app-02 (EH-5/EH-6): [phase] is a stable, closed [RestorePhase]
+  /// value — never a free-text English sentence — so presentation resolves
+  /// it through `AppLocalizations` via an exhaustive switch (compile error
+  /// on an unmapped case, no silent English fallback).
   const factory RestoreStatus.restoring({
-    required String phase,
+    required RestorePhase phase,
     required int completedSteps,
     required int totalSteps,
   }) = RestoreStatusRestoring;
