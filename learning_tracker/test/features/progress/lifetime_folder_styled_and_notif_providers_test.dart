@@ -1601,7 +1601,7 @@ void main() {
     });
 
     test('ReminderPreferences.defaults() constructs correct values', () {
-      const prefs = ReminderPreferences.defaults();
+      final prefs = ReminderPreferences.defaults();
       expect(prefs.reminderEnabled, isTrue);
       expect(prefs.reminderHour, equals(19));
       expect(prefs.reminderMinute, equals(0));
@@ -1612,12 +1612,12 @@ void main() {
     });
 
     test('ReminderPreferences.defaults().reminderTime is 19:00', () {
-      const prefs = ReminderPreferences.defaults();
+      final prefs = ReminderPreferences.defaults();
       expect(prefs.reminderTime, equals(const TimeOfDay(hour: 19, minute: 0)));
     });
 
     test('ReminderPreferences.defaults().streakAlertTime is 21:00', () {
-      const prefs = ReminderPreferences.defaults();
+      final prefs = ReminderPreferences.defaults();
       expect(
         prefs.streakAlertTime,
         equals(const TimeOfDay(hour: 21, minute: 0)),
@@ -1625,7 +1625,7 @@ void main() {
     });
 
     test('copyWith overrides individual fields', () {
-      const prefs = ReminderPreferences.defaults();
+      final prefs = ReminderPreferences.defaults();
       final modified = prefs.copyWith(reminderEnabled: false, reminderHour: 8);
       expect(modified.reminderEnabled, isFalse);
       expect(modified.reminderHour, equals(8));
@@ -1635,13 +1635,13 @@ void main() {
     });
 
     test('equality: two defaults() instances are equal', () {
-      const a = ReminderPreferences.defaults();
-      const b = ReminderPreferences.defaults();
+      final a = ReminderPreferences.defaults();
+      final b = ReminderPreferences.defaults();
       expect(a, equals(b));
     });
 
     test('inequality: differing reminderEnabled', () {
-      const a = ReminderPreferences.defaults();
+      final a = ReminderPreferences.defaults();
       final b = a.copyWith(reminderEnabled: false);
       expect(a, isNot(equals(b)));
     });
