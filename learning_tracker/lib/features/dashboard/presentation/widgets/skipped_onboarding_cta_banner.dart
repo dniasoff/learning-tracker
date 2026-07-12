@@ -162,6 +162,7 @@ class _CtaBannerBody extends StatelessWidget {
               TextButton(
                 onPressed: () async {
                   await clearOnboardingSkipState();
+                  if (!context.mounted) return;
                   ref.invalidate(onboardingSkipStateProvider);
                 },
                 child: Text(
