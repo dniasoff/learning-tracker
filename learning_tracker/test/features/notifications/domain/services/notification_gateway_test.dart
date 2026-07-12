@@ -20,8 +20,12 @@
 ///   - per-profile streak alert (ID = profileId*1000+1, payload carries
 ///     profileId)
 ///   - cancelStreakAlertForProfile
-///   - requestPermission: returns true when no platform-specific impl
-///   - hasPermission: returns true when no platform-specific impl
+///   - requestPermission: non-mobile fallback, Android branch (permission +
+///     exact-alarm requests, granted flag threaded through), iOS branch
+///     (alert/badge/sound request, granted flag threaded through) —
+///     AUD-notifications-10
+///   - hasPermission: non-mobile fallback, Android branch
+///     (areNotificationsEnabled threaded through) — AUD-notifications-10
 ///   - _nextInstanceOfTime: scheduled time is never in the past; if the
 ///     requested hour:minute is in the past it rolls forward one day
 ///   - ID allocation helpers (unit maths, no platform)
@@ -43,6 +47,21 @@ import 'package:timezone/timezone.dart' as tz;
 // ---------------------------------------------------------------------------
 
 class MockPlugin extends Mock implements FlutterLocalNotificationsPlugin {}
+
+/// Mocks the Android platform-specific implementation returned by
+/// [FlutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation]
+/// so the Android branch of requestPermission()/hasPermission() (which is
+/// otherwise unreachable in a plain unit test — AUD-notifications-10) can be
+/// exercised.
+class MockAndroidPlugin extends Mock
+    implements AndroidFlutterLocalNotificationsPlugin {}
+
+/// Mocks the iOS platform-specific implementation returned by
+/// [FlutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation]
+/// so the iOS branch of requestPermission() (AUD-notifications-10) can be
+/// exercised.
+class MockIOSPlugin extends Mock
+    implements IOSFlutterLocalNotificationsPlugin {}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -224,6 +243,121 @@ void main() {
         expect(await gw.requestPermission(), isTrue);
       },
     );
+
+    // -----------------------------------------------------------------------
+    // Android branch (AUD-notifications-10)
+    //
+    // Stubs resolvePlatformSpecificImplementation<AndroidFlutterLocalNotif...>
+    // to return a mocked AndroidFlutterLocalNotificationsPlugin so the real
+    // POST_NOTIFICATIONS + exact-alarm request logic is exercised, not just
+    // the non-mobile fallback.
+    // -----------------------------------------------------------------------
+
+    group('Android branch', () {
+      late MockAndroidPlugin android;
+
+      setUp(() {
+        android = MockAndroidPlugin();
+        when(
+          () => plugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >(),
+        ).thenReturn(android);
+      });
+
+      test('requests POST_NOTIFICATIONS and exact-alarm permission, and '
+          'returns true when granted', () async {
+        when(
+          () => android.requestNotificationsPermission(),
+        ).thenAnswer((_) async => true);
+        when(
+          () => android.requestExactAlarmsPermission(),
+        ).thenAnswer((_) async => true);
+
+        final granted = await gw.requestPermission();
+
+        expect(granted, isTrue);
+        verify(() => android.requestNotificationsPermission()).called(1);
+        verify(() => android.requestExactAlarmsPermission()).called(1);
+      });
+
+      test('threads the granted flag through as false when POST_NOTIFICATIONS '
+          'is denied (exact-alarm is still requested, best-effort)', () async {
+        when(
+          () => android.requestNotificationsPermission(),
+        ).thenAnswer((_) async => false);
+        when(
+          () => android.requestExactAlarmsPermission(),
+        ).thenAnswer((_) async => true);
+
+        final granted = await gw.requestPermission();
+
+        expect(granted, isFalse);
+        verify(() => android.requestExactAlarmsPermission()).called(1);
+      });
+
+      test('treats a null POST_NOTIFICATIONS result as not granted', () async {
+        when(
+          () => android.requestNotificationsPermission(),
+        ).thenAnswer((_) async => null);
+        when(
+          () => android.requestExactAlarmsPermission(),
+        ).thenAnswer((_) async => null);
+
+        expect(await gw.requestPermission(), isFalse);
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // iOS branch (AUD-notifications-10)
+    // -----------------------------------------------------------------------
+
+    group('iOS branch', () {
+      late MockIOSPlugin ios;
+
+      setUp(() {
+        ios = MockIOSPlugin();
+        // Android resolves to null (unstubbed generic mocktail call) so the
+        // gateway falls through to the iOS branch.
+        when(
+          () => plugin
+              .resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin
+              >(),
+        ).thenReturn(ios);
+      });
+
+      test('requests alert/badge/sound permissions and returns true when '
+          'granted', () async {
+        when(
+          () => ios.requestPermissions(alert: true, badge: true, sound: true),
+        ).thenAnswer((_) async => true);
+
+        final granted = await gw.requestPermission();
+
+        expect(granted, isTrue);
+        verify(
+          () => ios.requestPermissions(alert: true, badge: true, sound: true),
+        ).called(1);
+      });
+
+      test('threads the granted flag through as false when denied', () async {
+        when(
+          () => ios.requestPermissions(alert: true, badge: true, sound: true),
+        ).thenAnswer((_) async => false);
+
+        expect(await gw.requestPermission(), isFalse);
+      });
+
+      test('treats a null result as not granted', () async {
+        when(
+          () => ios.requestPermissions(alert: true, badge: true, sound: true),
+        ).thenAnswer((_) async => null);
+
+        expect(await gw.requestPermission(), isFalse);
+      });
+    });
   });
 
   group('hasPermission', () {
@@ -234,6 +368,54 @@ void main() {
         expect(await gw.hasPermission(), isTrue);
       },
     );
+
+    // -----------------------------------------------------------------------
+    // Android branch (AUD-notifications-10)
+    // -----------------------------------------------------------------------
+
+    group('Android branch', () {
+      late MockAndroidPlugin android;
+
+      setUp(() {
+        android = MockAndroidPlugin();
+        when(
+          () => plugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >(),
+        ).thenReturn(android);
+      });
+
+      test(
+        'returns true when areNotificationsEnabled() reports true',
+        () async {
+          when(
+            () => android.areNotificationsEnabled(),
+          ).thenAnswer((_) async => true);
+
+          expect(await gw.hasPermission(), isTrue);
+        },
+      );
+
+      test(
+        'returns false when areNotificationsEnabled() reports false',
+        () async {
+          when(
+            () => android.areNotificationsEnabled(),
+          ).thenAnswer((_) async => false);
+
+          expect(await gw.hasPermission(), isFalse);
+        },
+      );
+
+      test('treats a null result as not granted', () async {
+        when(
+          () => android.areNotificationsEnabled(),
+        ).thenAnswer((_) async => null);
+
+        expect(await gw.hasPermission(), isFalse);
+      });
+    });
   });
 
   // -------------------------------------------------------------------------
