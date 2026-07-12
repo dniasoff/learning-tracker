@@ -44,6 +44,14 @@ import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart'
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
 
+/// AUD-notifications-02: reminderEnabledProvider is an AsyncNotifierProvider
+/// now, so exercising `overrideWith` needs a concrete notifier subclass
+/// rather than a bare value.
+class _CoverageReminderEnabled extends ReminderEnabled {
+  @override
+  Future<bool> build() async => true;
+}
+
 void main() {
   // ── curriculum_label_providers.g.dart ─────────────────────────────────────
 
@@ -605,9 +613,12 @@ void main() {
       );
     });
 
-    test('reminderEnabledProvider overrideWithValue bool', () {
-      // covers lines 92-93, 95
-      final override = reminderEnabledProvider.overrideWithValue(true);
+    test('reminderEnabledProvider overrideWith AsyncNotifier', () {
+      // AUD-notifications-02: reminderEnabledProvider is now an
+      // AsyncNotifierProvider<bool> — no overrideWithValue; use overrideWith.
+      final override = reminderEnabledProvider.overrideWith(
+        _CoverageReminderEnabled.new,
+      );
       expect(override, isNotNull);
       expect(reminderEnabledProvider.debugGetCreateSourceHash(), isNotEmpty);
     });

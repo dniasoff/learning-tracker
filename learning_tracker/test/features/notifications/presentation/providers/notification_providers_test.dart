@@ -17,12 +17,15 @@ void main() {
   const testProfileId = 0;
 
   group('ReminderTime', () {
-    test('defaults to 7:00 PM', () {
+    test('defaults to 7:00 PM', () async {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final time = container.read(reminderTimeProvider);
+      // AUD-notifications-02: reminderTimeProvider is an AsyncNotifier that
+      // genuinely awaits SharedPreferences — await `.future` for the settled
+      // value instead of reading the (removed) hardcoded synchronous default.
+      final time = await container.read(reminderTimeProvider.future);
       expect(time.hour, 19);
       expect(time.minute, 0);
     });
@@ -35,21 +38,9 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      // Listen so we detect state changes
-      final values = <TimeOfDay>[];
-      container.listen(reminderTimeProvider, (_, next) {
-        values.add(next);
-      });
-
-      // Trigger build
-      container.read(reminderTimeProvider);
-
-      // Pump microtask queue
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-
-      // The last emitted value should be the loaded one
-      expect(values.last.hour, 8);
-      expect(values.last.minute, 30);
+      final time = await container.read(reminderTimeProvider.future);
+      expect(time.hour, 8);
+      expect(time.minute, 30);
     });
 
     test('setTime persists to per-profile SharedPreferences key', () async {
@@ -78,12 +69,12 @@ void main() {
   });
 
   group('ReminderEnabled', () {
-    test('defaults to true', () {
+    test('defaults to true', () async {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(reminderEnabledProvider), isTrue);
+      expect(await container.read(reminderEnabledProvider.future), isTrue);
     });
 
     test('toggle switches state and persists to per-profile key', () async {
@@ -91,9 +82,13 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
+      // Await the settled default before toggling (toggle() flips whatever
+      // `state.value` currently holds — awaiting avoids racing the in-flight
+      // AsyncNotifier build()).
+      await container.read(reminderEnabledProvider.future);
       await container.read(reminderEnabledProvider.notifier).toggle();
 
-      expect(container.read(reminderEnabledProvider), isFalse);
+      expect(container.read(reminderEnabledProvider).value, isFalse);
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -106,12 +101,12 @@ void main() {
   });
 
   group('StreakAlertEnabled', () {
-    test('defaults to true', () {
+    test('defaults to true', () async {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(streakAlertEnabledProvider), isTrue);
+      expect(await container.read(streakAlertEnabledProvider.future), isTrue);
     });
 
     test('toggle switches state and persists to per-profile key', () async {
@@ -119,9 +114,10 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
+      await container.read(streakAlertEnabledProvider.future);
       await container.read(streakAlertEnabledProvider.notifier).toggle();
 
-      expect(container.read(streakAlertEnabledProvider), isFalse);
+      expect(container.read(streakAlertEnabledProvider).value, isFalse);
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -136,12 +132,12 @@ void main() {
   });
 
   group('StreakAlertTime', () {
-    test('defaults to 9:00 PM', () {
+    test('defaults to 9:00 PM', () async {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      final time = container.read(streakAlertTimeProvider);
+      final time = await container.read(streakAlertTimeProvider.future);
       expect(time.hour, 21);
       expect(time.minute, 0);
     });
@@ -172,12 +168,15 @@ void main() {
   });
 
   group('RewardNotificationEnabled', () {
-    test('defaults to true', () {
+    test('defaults to true', () async {
       SharedPreferences.setMockInitialValues({});
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(rewardNotificationEnabledProvider), isTrue);
+      expect(
+        await container.read(rewardNotificationEnabledProvider.future),
+        isTrue,
+      );
     });
 
     test('toggle switches state and persists to per-profile key', () async {
@@ -185,9 +184,10 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
+      await container.read(rewardNotificationEnabledProvider.future);
       await container.read(rewardNotificationEnabledProvider.notifier).toggle();
 
-      expect(container.read(rewardNotificationEnabledProvider), isFalse);
+      expect(container.read(rewardNotificationEnabledProvider).value, isFalse);
 
       final prefs = await SharedPreferences.getInstance();
       expect(

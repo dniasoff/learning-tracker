@@ -45,6 +45,49 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNotificationGateway extends Mock implements NotificationGateway {}
 
+// ── AUD-notifications-02: fixed-value AsyncNotifier overrides ──────────────
+//
+// The preference providers are now AsyncNotifiers (see notification_providers
+// .dart), which have no `overrideWithValue` — only `overrideWith(() =>
+// Notifier)`. `_pump` below flushes two extra pump()s after pumpWidget, so
+// the microtask-async build() below settles to AsyncData before assertions
+// run, matching the old overrideWithValue ergonomics.
+
+class _FixedReminderEnabled extends ReminderEnabled {
+  _FixedReminderEnabled(this._value);
+  final bool _value;
+  @override
+  Future<bool> build() async => _value;
+}
+
+class _FixedReminderTime extends ReminderTime {
+  _FixedReminderTime(this._value);
+  final TimeOfDay _value;
+  @override
+  Future<TimeOfDay> build() async => _value;
+}
+
+class _FixedStreakAlertEnabled extends StreakAlertEnabled {
+  _FixedStreakAlertEnabled(this._value);
+  final bool _value;
+  @override
+  Future<bool> build() async => _value;
+}
+
+class _FixedStreakAlertTime extends StreakAlertTime {
+  _FixedStreakAlertTime(this._value);
+  final TimeOfDay _value;
+  @override
+  Future<TimeOfDay> build() async => _value;
+}
+
+class _FixedRewardNotificationEnabled extends RewardNotificationEnabled {
+  _FixedRewardNotificationEnabled(this._value);
+  final bool _value;
+  @override
+  Future<bool> build() async => _value;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 Widget _buildApp({
@@ -61,11 +104,19 @@ Widget _buildApp({
     // tests (required by the L1 pattern for FutureProviders).
     overrides: [
       notificationServiceProvider.overrideWithValue(gateway),
-      reminderEnabledProvider.overrideWithValue(reminderEnabled),
-      reminderTimeProvider.overrideWithValue(reminderTime),
-      streakAlertEnabledProvider.overrideWithValue(streakEnabled),
-      streakAlertTimeProvider.overrideWithValue(streakTime),
-      rewardNotificationEnabledProvider.overrideWithValue(rewardEnabled),
+      reminderEnabledProvider.overrideWith(
+        () => _FixedReminderEnabled(reminderEnabled),
+      ),
+      reminderTimeProvider.overrideWith(() => _FixedReminderTime(reminderTime)),
+      streakAlertEnabledProvider.overrideWith(
+        () => _FixedStreakAlertEnabled(streakEnabled),
+      ),
+      streakAlertTimeProvider.overrideWith(
+        () => _FixedStreakAlertTime(streakTime),
+      ),
+      rewardNotificationEnabledProvider.overrideWith(
+        () => _FixedRewardNotificationEnabled(rewardEnabled),
+      ),
       // Suppress scheduling side-effects so tests stay isolated.
       reminderSyncEffectProvider.overrideWith((ref) async {}),
       streakAlertSyncEffectProvider.overrideWith((ref) async {}),

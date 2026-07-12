@@ -51,36 +51,40 @@ NotificationGateway notificationService(Ref ref) {
 /// (WS5.key-prefs) Reads/writes a per-profile namespaced SharedPrefs key
 /// by watching [activeProfileIdProvider] — rebuilds automatically on profile
 /// switch, isolating each profile's reminder toggle.
+///
+/// AUD-notifications-02 (SM-2): [build] is an [AsyncNotifier] `Future<bool>`
+/// that genuinely awaits SharedPreferences before resolving — it never emits
+/// a hardcoded `true` default first and then silently flips to the real
+/// persisted value. A prior version returned `true` synchronously from
+/// `build()` and corrected it once the load completed; any dependent
+/// FutureProvider watching the raw value bare could observe (and act on) the
+/// wrong default, and Riverpod would tear down/rebuild the dependent mid
+/// flight when the value flipped. Consumers now await
+/// `reminderEnabledProvider.future` to get the settled value directly.
 @riverpod
 class ReminderEnabled extends _$ReminderEnabled {
   @override
-  bool build() {
+  Future<bool> build() async {
     // Watch so that when the profile resolves (e.g. 0 → real id on cold start)
-    // or switches, build() is re-invoked and _loadFromPrefs runs under the
-    // correct profile id. Fixes the cold-start race where ref.read returned 0
-    // before the real profile id was available (iter10/iter11).
+    // or switches, build() is re-invoked and re-reads under the correct
+    // profile id. Fixes the cold-start race where ref.read returned 0 before
+    // the real profile id was available (iter10/iter11).
     final profileId = ref.watch(activeProfileIdProvider);
-    _loadFromPrefs(profileId);
-    return true; // synchronous default; overwritten once prefs load completes
-  }
-
-  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
-    state =
-        prefs.getBool(
+    return prefs.getBool(
           NotificationPreferencesRepository.reminderEnabledKey(profileId),
         ) ??
         true;
   }
 
   Future<void> toggle() async {
-    state = !state;
+    final next = !(state.value ?? true);
+    state = AsyncData(next);
     final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(
       NotificationPreferencesRepository.reminderEnabledKey(profileId),
-      state,
+      next,
     );
   }
 }
@@ -92,24 +96,19 @@ class ReminderEnabled extends _$ReminderEnabled {
 /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
 /// 0→real-id transition or a mid-session profile switch triggers a rebuild
 /// and re-reads the stored time from the correct per-profile key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 @riverpod
 class ReminderTime extends _$ReminderTime {
   @override
-  TimeOfDay build() {
+  Future<TimeOfDay> build() async {
     // Watch so that when the profile resolves (e.g. 0 → real id on cold start)
-    // or switches, build() is re-invoked and _loadFromPrefs runs under the
-    // correct profile id.  Matches the pattern used by [ReminderEnabled].
+    // or switches, build() is re-invoked and re-reads under the correct
+    // profile id.  Matches the pattern used by [ReminderEnabled].
     final profileId = ref.watch(activeProfileIdProvider);
-    _loadFromPrefs(profileId);
-    return const TimeOfDay(
-      hour: defaultReminderHour,
-      minute: defaultReminderMinute,
-    );
-  }
-
-  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
     final hour =
         prefs.getInt(
           NotificationPreferencesRepository.reminderHourKey(profileId),
@@ -120,11 +119,11 @@ class ReminderTime extends _$ReminderTime {
           NotificationPreferencesRepository.reminderMinuteKey(profileId),
         ) ??
         defaultReminderMinute;
-    state = TimeOfDay(hour: hour, minute: minute);
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   Future<void> setTime(TimeOfDay time) async {
-    state = time;
+    state = AsyncData(time);
     final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
@@ -141,34 +140,32 @@ class ReminderTime extends _$ReminderTime {
 /// Manages the streak alert enabled state.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 @riverpod
 class StreakAlertEnabled extends _$StreakAlertEnabled {
   @override
-  bool build() {
+  Future<bool> build() async {
     // Watch so that a cold-start profile-id change (0 → real id) or a profile
     // switch triggers a rebuild and re-reads prefs under the correct id.
     final profileId = ref.watch(activeProfileIdProvider);
-    _loadFromPrefs(profileId);
-    return true; // synchronous default; overwritten once prefs load completes
-  }
-
-  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
-    state =
-        prefs.getBool(
+    return prefs.getBool(
           NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
         ) ??
         true;
   }
 
   Future<void> toggle() async {
-    state = !state;
+    final next = !(state.value ?? true);
+    state = AsyncData(next);
     final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(
       NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
-      state,
+      next,
     );
   }
 }
@@ -180,24 +177,19 @@ class StreakAlertEnabled extends _$StreakAlertEnabled {
 /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
 /// 0→real-id transition or a mid-session profile switch triggers a rebuild
 /// and re-reads the stored time from the correct per-profile key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 @riverpod
 class StreakAlertTime extends _$StreakAlertTime {
   @override
-  TimeOfDay build() {
+  Future<TimeOfDay> build() async {
     // Watch so that when the profile resolves (e.g. 0 → real id on cold start)
-    // or switches, build() is re-invoked and _loadFromPrefs runs under the
-    // correct profile id.  Matches the pattern used by [StreakAlertEnabled].
+    // or switches, build() is re-invoked and re-reads under the correct
+    // profile id.  Matches the pattern used by [StreakAlertEnabled].
     final profileId = ref.watch(activeProfileIdProvider);
-    _loadFromPrefs(profileId);
-    return const TimeOfDay(
-      hour: defaultStreakAlertHour,
-      minute: defaultStreakAlertMinute,
-    );
-  }
-
-  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
     final hour =
         prefs.getInt(
           NotificationPreferencesRepository.streakAlertHourKey(profileId),
@@ -208,11 +200,11 @@ class StreakAlertTime extends _$StreakAlertTime {
           NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
         ) ??
         defaultStreakAlertMinute;
-    state = TimeOfDay(hour: hour, minute: minute);
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   Future<void> setTime(TimeOfDay time) async {
-    state = time;
+    state = AsyncData(time);
     final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
@@ -229,22 +221,19 @@ class StreakAlertTime extends _$StreakAlertTime {
 /// Manages the reward notification enabled state.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 @riverpod
 class RewardNotificationEnabled extends _$RewardNotificationEnabled {
   @override
-  bool build() {
+  Future<bool> build() async {
     // Watch so that a cold-start profile-id change (0 → real id) or a profile
     // switch triggers a rebuild and re-reads prefs under the correct id.
     final profileId = ref.watch(activeProfileIdProvider);
-    _loadFromPrefs(profileId);
-    return true; // synchronous default; overwritten once prefs load completes
-  }
-
-  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
-    if (!ref.mounted) return;
-    state =
-        prefs.getBool(
+    return prefs.getBool(
           NotificationPreferencesRepository.rewardNotificationEnabledKey(
             profileId,
           ),
@@ -253,12 +242,13 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
   }
 
   Future<void> toggle() async {
-    state = !state;
+    final next = !(state.value ?? true);
+    state = AsyncData(next);
     final profileId = ref.read(activeProfileIdProvider);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(
       NotificationPreferencesRepository.rewardNotificationEnabledKey(profileId),
-      state,
+      next,
     );
   }
 }
@@ -423,15 +413,27 @@ NotificationScheduler notificationScheduler(Ref ref) {
 final notificationSettingsCloudSyncEffectProvider = FutureProvider<void>((
   ref,
 ) async {
-  // Track all preference providers so any change re-runs this effect.
-  ref.watch(reminderEnabledProvider);
-  ref.watch(reminderTimeProvider);
-  ref.watch(streakAlertEnabledProvider);
-  ref.watch(streakAlertTimeProvider);
-  ref.watch(rewardNotificationEnabledProvider);
+  // AUD-notifications-02: await each AsyncNotifier's resolved value (not a
+  // bare ref.watch) so this effect isn't torn down mid-flight by their own
+  // Loading→Data transition on every cold start — mirrors reminderSyncEffect
+  // /streakAlertSyncEffect. A bare `ref.watch(reminderEnabledProvider)` here
+  // observes that first Loading→Data settle as a "changed" event and
+  // reruns/disposes this very build before it can complete (AUD-notifications-01,
+  // SM-4: guard after each await, before touching ref again).
+  await ref.watch(reminderEnabledProvider.future);
+  if (!ref.mounted) return;
+  await ref.watch(reminderTimeProvider.future);
+  if (!ref.mounted) return;
+  await ref.watch(streakAlertEnabledProvider.future);
+  if (!ref.mounted) return;
+  await ref.watch(streakAlertTimeProvider.future);
+  if (!ref.mounted) return;
+  await ref.watch(rewardNotificationEnabledProvider.future);
+  if (!ref.mounted) return;
 
   final profileId = ref.watch(activeProfileIdProvider);
   final prefs = await SharedPreferences.getInstance();
+  if (!ref.mounted) return;
   await _persistNotificationSettingsToCloud(
     ref,
     prefs: prefs,
@@ -460,10 +462,6 @@ final notificationSettingsCloudSyncEffectProvider = FutureProvider<void>((
 /// even if no UI is watching this provider at the moment.
 @Riverpod(keepAlive: true)
 Future<void> reminderSyncEffect(Ref ref) async {
-  // Watch the notifiers so any preference change re-runs this effect, but read
-  // the authoritative values from SharedPreferences below.
-  ref.watch(reminderEnabledProvider);
-  ref.watch(reminderTimeProvider);
   // Watch (but do not branch on) Sacred Time so that a window opening/closing
   // re-runs this effect and rebuilds the per-fire-time-filtered batch: when a
   // window opens the affected fire-times are dropped; when it closes they are
@@ -472,29 +470,19 @@ Future<void> reminderSyncEffect(Ref ref) async {
   final scheduler = ref.watch(notificationSchedulerProvider);
   final profileId = ref.watch(activeProfileIdProvider);
 
-  // M3 fix: the pref notifiers return defaults (enabled=true, 19:00)
-  // synchronously, then async-load the real values. Watching them schedules
-  // with DEFAULTS first, briefly scheduling reminders for a profile that has
-  // them disabled. Read the real persisted values directly so we never act on
-  // the transient default state.
-  final prefs = await SharedPreferences.getInstance();
-  final enabled =
-      prefs.getBool(
-        NotificationPreferencesRepository.reminderEnabledKey(profileId),
-      ) ??
-      true;
-  final time = TimeOfDay(
-    hour:
-        prefs.getInt(
-          NotificationPreferencesRepository.reminderHourKey(profileId),
-        ) ??
-        defaultReminderHour,
-    minute:
-        prefs.getInt(
-          NotificationPreferencesRepository.reminderMinuteKey(profileId),
-        ) ??
-        defaultReminderMinute,
-  );
+  // AUD-notifications-02: await the AsyncNotifiers' resolved values directly
+  // instead of watching the bare (formerly synchronous-default) providers and
+  // re-reading SharedPreferences by hand (the old "M3 fix" workaround).
+  // reminderEnabledProvider/reminderTimeProvider now genuinely await their
+  // persisted value before resolving, so there is no default-then-flip race
+  // to work around here.
+  final enabled = await ref.watch(reminderEnabledProvider.future);
+  // AUD-notifications-01 (SM-4): guard before touching ref again — this
+  // keepAlive effect can be invalidated (profile switch, container teardown)
+  // while the await above was in flight.
+  if (!ref.mounted) return;
+  final time = await ref.watch(reminderTimeProvider.future);
+  if (!ref.mounted) return;
 
   if (!enabled) {
     // H1 fix: cancel under the active profile's per-profile ID block.
@@ -509,6 +497,8 @@ Future<void> reminderSyncEffect(Ref ref) async {
 
   // Get daily tasks to determine counts for notification body.
   final tasks = await ref.watch(allDailyTasksProvider.future);
+  // AUD-notifications-01 (SM-4): guard again — another await just completed.
+  if (!ref.mounted) return;
 
   // D1 fix: count only today's units (non-overdue, non-review).
   // Overdue tasks (isOverdue: true) are excluded by the first condition;
@@ -554,12 +544,18 @@ Future<void> reminderSyncEffect(Ref ref) async {
   );
 }
 
-/// Provides the [StreakAlertService] instance.
+/// Provides the [StreakAlertService] instance for [profileId].
+///
+/// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
+/// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
+/// not just the active one — can construct its per-profile [StreakAlertService]
+/// through this same provider seam instead of hand-constructing a second
+/// instance. A test overriding this family for a specific inactive profileId
+/// now observably changes bootstrap's behavior for that profile.
 @riverpod
-StreakAlertService streakAlertService(Ref ref) {
+StreakAlertService streakAlertService(Ref ref, int profileId) {
   final db = ref.watch(userDatabaseProvider);
   final notifService = ref.watch(notificationServiceProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
   final analytics = ref.watch(analyticsServiceProvider);
   return StreakAlertService(
     db: db,
@@ -599,10 +595,12 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
   // (H3) Watch the reactive profile stream so a profile add/delete re-runs the
   // reconcile without a cold restart.
   final profiles = await ref.watch(profileListStreamProvider.future);
+  // AUD-notifications-01 (SM-4): this keepAlive effect can be invalidated
+  // (e.g. container teardown during navigation/tests) while the above await
+  // was in flight — guard before touching ref again.
+  if (!ref.mounted) return;
   final gateway = ref.read(notificationServiceProvider);
   final scheduler = ref.read(notificationSchedulerProvider);
-  final db = ref.read(userDatabaseProvider);
-  final analytics = ref.read(analyticsServiceProvider);
   final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
   final activeProfileId = ref.watch(activeProfileIdProvider);
 
@@ -690,12 +688,10 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
           NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
         ) ??
         true;
-    final streakService = StreakAlertService(
-      db: db,
-      notificationService: gateway,
-      profileId: profileId,
-      analytics: analytics,
-    );
+    // AUD-notifications-03 (SM-7): construct through the family provider seam
+    // (not a hand-rolled StreakAlertService(...)) so a test override reaches
+    // inactive-profile scheduling too.
+    final streakService = ref.read(streakAlertServiceProvider(profileId));
     if (!streakEnabled || sacredTimeActive) {
       await streakService.cancelAlert();
     } else {
@@ -734,9 +730,19 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
 /// even if no UI is watching this provider at the moment.
 @Riverpod(keepAlive: true)
 Future<void> streakAlertSyncEffect(Ref ref) async {
-  final enabled = ref.watch(streakAlertEnabledProvider);
-  final time = ref.watch(streakAlertTimeProvider);
-  final service = ref.watch(streakAlertServiceProvider);
+  // AUD-notifications-02: await the AsyncNotifiers' resolved values directly
+  // (mirrors reminderSyncEffect) so this effect never acts on the
+  // synchronous-default-then-flip race a hand-rolled `bool build()` used to
+  // produce — see [StreakAlertEnabled]'s doc comment.
+  final enabled = await ref.watch(streakAlertEnabledProvider.future);
+  // AUD-notifications-01 (SM-4): guard before touching ref again — this
+  // keepAlive effect can be invalidated (profile switch, container teardown)
+  // while the await above was in flight.
+  if (!ref.mounted) return;
+  final time = await ref.watch(streakAlertTimeProvider.future);
+  if (!ref.mounted) return;
+  final profileId = ref.watch(activeProfileIdProvider);
+  final service = ref.watch(streakAlertServiceProvider(profileId));
   final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
 
   if (!enabled) {
@@ -746,6 +752,8 @@ Future<void> streakAlertSyncEffect(Ref ref) async {
   if (sacredTimeActive) {
     // Story 27.14 (DNI-390): fire suppression event when sacred time blocks.
     await service.cancelAlert();
+    // AUD-notifications-01 (SM-4): guard again — another await just completed.
+    if (!ref.mounted) return;
     final analytics = ref.read(analyticsServiceProvider);
     unawaited(
       analytics.logNotificationSuppressedSacredTime(

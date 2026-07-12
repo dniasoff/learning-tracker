@@ -26,7 +26,6 @@
 
 library;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
@@ -82,23 +81,19 @@ void main() {
       final (container, notifier) = _makeContainer(startId: 0);
       addTearDown(container.dispose);
 
-      final observed = <TimeOfDay>[];
-      container.listen<TimeOfDay>(reminderTimeProvider, (_, v) {
-        observed.add(v);
-      });
-
+      // AUD-notifications-02: reminderTimeProvider is an AsyncNotifier that
+      // genuinely awaits SharedPreferences — await `.future` for the settled
+      // value at each stage instead of listen()+arbitrary-delay.
+      //
       // Cold-start read — profile=0 → no stored value → default 19:00.
-      final initial = container.read(reminderTimeProvider);
+      final initial = await container.read(reminderTimeProvider.future);
       expect(initial.hour, 19, reason: 'Cold-start default should be 19:00');
-
-      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       // Simulate profile resolving to real id.
       notifier.set(42);
-      await Future<void>.delayed(const Duration(milliseconds: 200));
 
       // After profile resolves, must show 08:30 — NOT 19:00.
-      final resolved = container.read(reminderTimeProvider);
+      final resolved = await container.read(reminderTimeProvider.future);
       expect(
         resolved.hour,
         8,
@@ -128,20 +123,12 @@ void main() {
       final (container, notifier) = _makeContainer(startId: 0);
       addTearDown(container.dispose);
 
-      final observed = <TimeOfDay>[];
-      container.listen<TimeOfDay>(streakAlertTimeProvider, (_, v) {
-        observed.add(v);
-      });
-
-      final initial = container.read(streakAlertTimeProvider);
+      final initial = await container.read(streakAlertTimeProvider.future);
       expect(initial.hour, 21, reason: 'Cold-start default should be 21:00');
 
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-
       notifier.set(7);
-      await Future<void>.delayed(const Duration(milliseconds: 200));
 
-      final resolved = container.read(streakAlertTimeProvider);
+      final resolved = await container.read(streakAlertTimeProvider.future);
       expect(
         resolved.hour,
         22,
@@ -173,27 +160,16 @@ void main() {
         final (container, notifier) = _makeContainer(startId: 1);
         addTearDown(container.dispose);
 
-        // Keep a listener active so the auto-dispose provider stays alive
-        // across the profile-switch gap.
-        final observed = <TimeOfDay>[];
-        container.listen<TimeOfDay>(reminderTimeProvider, (_, v) {
-          observed.add(v);
-        });
-
-        container.read(reminderTimeProvider);
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-
         expect(
-          container.read(reminderTimeProvider).hour,
+          (await container.read(reminderTimeProvider.future)).hour,
           19,
           reason: 'Profile 1 has no stored time → default 19:00',
         );
 
         notifier.set(2);
-        await Future<void>.delayed(const Duration(milliseconds: 200));
 
         expect(
-          container.read(reminderTimeProvider).hour,
+          (await container.read(reminderTimeProvider.future)).hour,
           6,
           reason: 'After switching to profile 2, time must be 06:00',
         );

@@ -172,21 +172,16 @@ void main() {
       final c2 = _makeContainer(_ProfileId2.new);
       addTearDown(c2.dispose);
 
-      final p1Values = <TimeOfDay>[];
-      final p2Values = <TimeOfDay>[];
-      c1.listen(reminderTimeProvider, (_, v) => p1Values.add(v));
-      c2.listen(reminderTimeProvider, (_, v) => p2Values.add(v));
+      // AUD-notifications-02: reminderTimeProvider is an AsyncNotifier that
+      // genuinely awaits SharedPreferences — await `.future` for the settled
+      // value instead of a listen()+arbitrary-delay dance.
+      final t1 = await c1.read(reminderTimeProvider.future);
+      final t2 = await c2.read(reminderTimeProvider.future);
 
-      c1.read(reminderTimeProvider);
-      c2.read(reminderTimeProvider);
-
-      // Allow the async prefs load to complete.
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-
-      expect(p1Values.last.hour, 8);
-      expect(p1Values.last.minute, 15);
-      expect(p2Values.last.hour, 20);
-      expect(p2Values.last.minute, 45);
+      expect(t1.hour, 8);
+      expect(t1.minute, 15);
+      expect(t2.hour, 20);
+      expect(t2.minute, 45);
     });
 
     test('A2. setTime for profile 1 does NOT write to profile 2 key', () async {
@@ -211,7 +206,7 @@ void main() {
       );
     });
 
-    test('A3. default time is 19:00 for any fresh profile', () {
+    test('A3. default time is 19:00 for any fresh profile', () async {
       SharedPreferences.setMockInitialValues({});
 
       for (final make in <ActiveProfileId Function()>[
@@ -221,7 +216,7 @@ void main() {
       ]) {
         final container = _makeContainer(make);
         addTearDown(container.dispose);
-        final time = container.read(reminderTimeProvider);
+        final time = await container.read(reminderTimeProvider.future);
         expect(time.hour, defaultReminderHour);
         expect(time.minute, defaultReminderMinute);
       }
@@ -245,16 +240,10 @@ void main() {
         final c2 = _makeContainer(_ProfileId2.new);
         addTearDown(c2.dispose);
 
-        final p1Values = <bool>[];
-        c1.listen(reminderEnabledProvider, (_, v) => p1Values.add(v));
-        c1.read(reminderEnabledProvider);
-
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-
         // Profile 1 loaded false from prefs.
-        expect(p1Values.last, isFalse);
+        expect(await c1.read(reminderEnabledProvider.future), isFalse);
         // Profile 2 has no stored value → remains on default true.
-        expect(c2.read(reminderEnabledProvider), isTrue);
+        expect(await c2.read(reminderEnabledProvider.future), isTrue);
       },
     );
 
@@ -263,6 +252,9 @@ void main() {
       final c1 = _makeContainer(_ProfileId1.new);
       addTearDown(c1.dispose);
 
+      // Await the settled default before toggling — avoids racing the
+      // in-flight AsyncNotifier build().
+      await c1.read(reminderEnabledProvider.future);
       await c1.read(reminderEnabledProvider.notifier).toggle();
 
       final prefs = await SharedPreferences.getInstance();
@@ -294,23 +286,19 @@ void main() {
         final c3 = _makeContainer(_ProfileId3.new);
         addTearDown(c3.dispose);
 
-        final values = <TimeOfDay>[];
-        c3.listen(streakAlertTimeProvider, (_, v) => values.add(v));
-        c3.read(streakAlertTimeProvider);
+        final time = await c3.read(streakAlertTimeProvider.future);
 
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-
-        expect(values.last.hour, 22);
-        expect(values.last.minute, 45);
+        expect(time.hour, 22);
+        expect(time.minute, 45);
       },
     );
 
-    test('C2. default streak alert time is 21:00 for fresh key', () {
+    test('C2. default streak alert time is 21:00 for fresh key', () async {
       SharedPreferences.setMockInitialValues({});
       final container = _makeContainer(_ProfileId7.new);
       addTearDown(container.dispose);
 
-      final time = container.read(streakAlertTimeProvider);
+      final time = await container.read(streakAlertTimeProvider.future);
       expect(time.hour, defaultStreakAlertHour);
       expect(time.minute, defaultStreakAlertMinute);
     });
@@ -333,14 +321,8 @@ void main() {
         final cFresh = _makeContainer(_ProfileId5.new);
         addTearDown(cFresh.dispose);
 
-        final p4Values = <bool>[];
-        c4.listen(streakAlertEnabledProvider, (_, v) => p4Values.add(v));
-        c4.read(streakAlertEnabledProvider);
-
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-
-        expect(p4Values.last, isFalse);
-        expect(cFresh.read(streakAlertEnabledProvider), isTrue);
+        expect(await c4.read(streakAlertEnabledProvider.future), isFalse);
+        expect(await cFresh.read(streakAlertEnabledProvider.future), isTrue);
       },
     );
 
@@ -349,11 +331,12 @@ void main() {
       final container = _makeContainer(_ProfileId0.new);
       addTearDown(container.dispose);
 
+      await container.read(streakAlertEnabledProvider.future);
       await container.read(streakAlertEnabledProvider.notifier).toggle();
-      expect(container.read(streakAlertEnabledProvider), isFalse);
+      expect(container.read(streakAlertEnabledProvider).value, isFalse);
 
       await container.read(streakAlertEnabledProvider.notifier).toggle();
-      expect(container.read(streakAlertEnabledProvider), isTrue);
+      expect(container.read(streakAlertEnabledProvider).value, isTrue);
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -370,7 +353,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('E. RewardNotificationEnabled — per-profile isolation', () {
-    test('E1. defaults to true for any profile', () {
+    test('E1. defaults to true for any profile', () async {
       SharedPreferences.setMockInitialValues({});
       for (final make in <ActiveProfileId Function()>[
         _ProfileId0.new,
@@ -379,7 +362,10 @@ void main() {
       ]) {
         final container = _makeContainer(make);
         addTearDown(container.dispose);
-        expect(container.read(rewardNotificationEnabledProvider), isTrue);
+        expect(
+          await container.read(rewardNotificationEnabledProvider.future),
+          isTrue,
+        );
       }
     });
 
@@ -388,9 +374,10 @@ void main() {
       final container = _makeContainer(_ProfileId10.new);
       addTearDown(container.dispose);
 
+      await container.read(rewardNotificationEnabledProvider.future);
       await container.read(rewardNotificationEnabledProvider.notifier).toggle();
 
-      expect(container.read(rewardNotificationEnabledProvider), isFalse);
+      expect(container.read(rewardNotificationEnabledProvider).value, isFalse);
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -413,13 +400,14 @@ void main() {
       final container = _makeContainer(_ProfileId0.new);
       addTearDown(container.dispose);
 
+      await container.read(rewardNotificationEnabledProvider.future);
       final notifier = container.read(
         rewardNotificationEnabledProvider.notifier,
       );
       await notifier.toggle(); // false
       await notifier.toggle(); // true again
 
-      expect(container.read(rewardNotificationEnabledProvider), isTrue);
+      expect(container.read(rewardNotificationEnabledProvider).value, isTrue);
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -618,13 +606,16 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(reminderEnabledProvider.notifier);
-      expect(container.read(reminderEnabledProvider), isTrue); // initial
+      expect(
+        await container.read(reminderEnabledProvider.future),
+        isTrue,
+      ); // initial
 
       await notifier.toggle();
-      expect(container.read(reminderEnabledProvider), isFalse);
+      expect(container.read(reminderEnabledProvider).value, isFalse);
 
       await notifier.toggle();
-      expect(container.read(reminderEnabledProvider), isTrue);
+      expect(container.read(reminderEnabledProvider).value, isTrue);
     });
 
     test('J2. setTime twice uses the last-written value', () async {
@@ -632,13 +623,16 @@ void main() {
       final container = _makeContainer(_ProfileId0.new);
       addTearDown(container.dispose);
 
+      // Await the settled default first so setTime's manual state
+      // assignments aren't racing the in-flight AsyncNotifier build().
+      await container.read(reminderTimeProvider.future);
       final notifier = container.read(reminderTimeProvider.notifier);
       await notifier.setTime(const TimeOfDay(hour: 8, minute: 0));
       await notifier.setTime(const TimeOfDay(hour: 9, minute: 30));
 
       // In-memory state reflects last write.
-      expect(container.read(reminderTimeProvider).hour, 9);
-      expect(container.read(reminderTimeProvider).minute, 30);
+      expect(container.read(reminderTimeProvider).value!.hour, 9);
+      expect(container.read(reminderTimeProvider).value!.minute, 30);
 
       // SharedPreferences also reflects the last write.
       final prefs = await SharedPreferences.getInstance();
@@ -657,12 +651,13 @@ void main() {
       final container = _makeContainer(_ProfileId0.new);
       addTearDown(container.dispose);
 
+      await container.read(streakAlertTimeProvider.future);
       final notifier = container.read(streakAlertTimeProvider.notifier);
       await notifier.setTime(const TimeOfDay(hour: 21, minute: 0));
       await notifier.setTime(const TimeOfDay(hour: 22, minute: 15));
 
-      expect(container.read(streakAlertTimeProvider).hour, 22);
-      expect(container.read(streakAlertTimeProvider).minute, 15);
+      expect(container.read(streakAlertTimeProvider).value!.hour, 22);
+      expect(container.read(streakAlertTimeProvider).value!.minute, 15);
 
       final prefs = await SharedPreferences.getInstance();
       expect(

@@ -66,6 +66,16 @@ String _$notificationServiceHash() =>
 /// (WS5.key-prefs) Reads/writes a per-profile namespaced SharedPrefs key
 /// by watching [activeProfileIdProvider] — rebuilds automatically on profile
 /// switch, isolating each profile's reminder toggle.
+///
+/// AUD-notifications-02 (SM-2): [build] is an [AsyncNotifier] `Future<bool>`
+/// that genuinely awaits SharedPreferences before resolving — it never emits
+/// a hardcoded `true` default first and then silently flips to the real
+/// persisted value. A prior version returned `true` synchronously from
+/// `build()` and corrected it once the load completed; any dependent
+/// FutureProvider watching the raw value bare could observe (and act on) the
+/// wrong default, and Riverpod would tear down/rebuild the dependent mid
+/// flight when the value flipped. Consumers now await
+/// `reminderEnabledProvider.future` to get the settled value directly.
 
 @ProviderFor(ReminderEnabled)
 final reminderEnabledProvider = ReminderEnabledProvider._();
@@ -75,13 +85,33 @@ final reminderEnabledProvider = ReminderEnabledProvider._();
 /// (WS5.key-prefs) Reads/writes a per-profile namespaced SharedPrefs key
 /// by watching [activeProfileIdProvider] — rebuilds automatically on profile
 /// switch, isolating each profile's reminder toggle.
+///
+/// AUD-notifications-02 (SM-2): [build] is an [AsyncNotifier] `Future<bool>`
+/// that genuinely awaits SharedPreferences before resolving — it never emits
+/// a hardcoded `true` default first and then silently flips to the real
+/// persisted value. A prior version returned `true` synchronously from
+/// `build()` and corrected it once the load completed; any dependent
+/// FutureProvider watching the raw value bare could observe (and act on) the
+/// wrong default, and Riverpod would tear down/rebuild the dependent mid
+/// flight when the value flipped. Consumers now await
+/// `reminderEnabledProvider.future` to get the settled value directly.
 final class ReminderEnabledProvider
-    extends $NotifierProvider<ReminderEnabled, bool> {
+    extends $AsyncNotifierProvider<ReminderEnabled, bool> {
   /// Manages the daily reminder enabled state.
   ///
   /// (WS5.key-prefs) Reads/writes a per-profile namespaced SharedPrefs key
   /// by watching [activeProfileIdProvider] — rebuilds automatically on profile
   /// switch, isolating each profile's reminder toggle.
+  ///
+  /// AUD-notifications-02 (SM-2): [build] is an [AsyncNotifier] `Future<bool>`
+  /// that genuinely awaits SharedPreferences before resolving — it never emits
+  /// a hardcoded `true` default first and then silently flips to the real
+  /// persisted value. A prior version returned `true` synchronously from
+  /// `build()` and corrected it once the load completed; any dependent
+  /// FutureProvider watching the raw value bare could observe (and act on) the
+  /// wrong default, and Riverpod would tear down/rebuild the dependent mid
+  /// flight when the value flipped. Consumers now await
+  /// `reminderEnabledProvider.future` to get the settled value directly.
   ReminderEnabledProvider._()
     : super(
         from: null,
@@ -99,35 +129,37 @@ final class ReminderEnabledProvider
   @$internal
   @override
   ReminderEnabled create() => ReminderEnabled();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(bool value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<bool>(value),
-    );
-  }
 }
 
-String _$reminderEnabledHash() => r'36f73bfff7fadc6154219fb3ccd91426d263ff39';
+String _$reminderEnabledHash() => r'160b694c254c841797f255f15baa9715abff49eb';
 
 /// Manages the daily reminder enabled state.
 ///
 /// (WS5.key-prefs) Reads/writes a per-profile namespaced SharedPrefs key
 /// by watching [activeProfileIdProvider] — rebuilds automatically on profile
 /// switch, isolating each profile's reminder toggle.
+///
+/// AUD-notifications-02 (SM-2): [build] is an [AsyncNotifier] `Future<bool>`
+/// that genuinely awaits SharedPreferences before resolving — it never emits
+/// a hardcoded `true` default first and then silently flips to the real
+/// persisted value. A prior version returned `true` synchronously from
+/// `build()` and corrected it once the load completed; any dependent
+/// FutureProvider watching the raw value bare could observe (and act on) the
+/// wrong default, and Riverpod would tear down/rebuild the dependent mid
+/// flight when the value flipped. Consumers now await
+/// `reminderEnabledProvider.future` to get the settled value directly.
 
-abstract class _$ReminderEnabled extends $Notifier<bool> {
-  bool build();
+abstract class _$ReminderEnabled extends $AsyncNotifier<bool> {
+  FutureOr<bool> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<bool, bool>;
+    final ref = this.ref as $Ref<AsyncValue<bool>, bool>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<bool, bool>,
-              bool,
+              AnyNotifier<AsyncValue<bool>, bool>,
+              AsyncValue<bool>,
               Object?,
               Object?
             >;
@@ -142,6 +174,10 @@ abstract class _$ReminderEnabled extends $Notifier<bool> {
 /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
 /// 0→real-id transition or a mid-session profile switch triggers a rebuild
 /// and re-reads the stored time from the correct per-profile key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 
 @ProviderFor(ReminderTime)
 final reminderTimeProvider = ReminderTimeProvider._();
@@ -153,8 +189,12 @@ final reminderTimeProvider = ReminderTimeProvider._();
 /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
 /// 0→real-id transition or a mid-session profile switch triggers a rebuild
 /// and re-reads the stored time from the correct per-profile key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 final class ReminderTimeProvider
-    extends $NotifierProvider<ReminderTime, TimeOfDay> {
+    extends $AsyncNotifierProvider<ReminderTime, TimeOfDay> {
   /// Manages the daily reminder time.
   ///
   /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
@@ -162,6 +202,10 @@ final class ReminderTimeProvider
   /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
   /// 0→real-id transition or a mid-session profile switch triggers a rebuild
   /// and re-reads the stored time from the correct per-profile key.
+  ///
+  /// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+  /// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+  /// instead of emitting a hardcoded default first.
   ReminderTimeProvider._()
     : super(
         from: null,
@@ -179,17 +223,9 @@ final class ReminderTimeProvider
   @$internal
   @override
   ReminderTime create() => ReminderTime();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(TimeOfDay value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<TimeOfDay>(value),
-    );
-  }
 }
 
-String _$reminderTimeHash() => r'67e64420ba80e954cb1bdcc0f46ecf9233aabe2d';
+String _$reminderTimeHash() => r'96baa67da8060b4131242e5b08b8ac98f4860d71';
 
 /// Manages the daily reminder time.
 ///
@@ -198,18 +234,22 @@ String _$reminderTimeHash() => r'67e64420ba80e954cb1bdcc0f46ecf9233aabe2d';
 /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
 /// 0→real-id transition or a mid-session profile switch triggers a rebuild
 /// and re-reads the stored time from the correct per-profile key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 
-abstract class _$ReminderTime extends $Notifier<TimeOfDay> {
-  TimeOfDay build();
+abstract class _$ReminderTime extends $AsyncNotifier<TimeOfDay> {
+  FutureOr<TimeOfDay> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<TimeOfDay, TimeOfDay>;
+    final ref = this.ref as $Ref<AsyncValue<TimeOfDay>, TimeOfDay>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<TimeOfDay, TimeOfDay>,
-              TimeOfDay,
+              AnyNotifier<AsyncValue<TimeOfDay>, TimeOfDay>,
+              AsyncValue<TimeOfDay>,
               Object?,
               Object?
             >;
@@ -220,6 +260,10 @@ abstract class _$ReminderTime extends $Notifier<TimeOfDay> {
 /// Manages the streak alert enabled state.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 
 @ProviderFor(StreakAlertEnabled)
 final streakAlertEnabledProvider = StreakAlertEnabledProvider._();
@@ -227,11 +271,19 @@ final streakAlertEnabledProvider = StreakAlertEnabledProvider._();
 /// Manages the streak alert enabled state.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 final class StreakAlertEnabledProvider
-    extends $NotifierProvider<StreakAlertEnabled, bool> {
+    extends $AsyncNotifierProvider<StreakAlertEnabled, bool> {
   /// Manages the streak alert enabled state.
   ///
   /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+  ///
+  /// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+  /// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+  /// instead of emitting a hardcoded default first.
   StreakAlertEnabledProvider._()
     : super(
         from: null,
@@ -249,34 +301,30 @@ final class StreakAlertEnabledProvider
   @$internal
   @override
   StreakAlertEnabled create() => StreakAlertEnabled();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(bool value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<bool>(value),
-    );
-  }
 }
 
 String _$streakAlertEnabledHash() =>
-    r'a4c5b0e07de04ba3c25215a0efe66898fc85be00';
+    r'5ed88c67ff82e55dea525f0689deb8a5e435bcd1';
 
 /// Manages the streak alert enabled state.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 
-abstract class _$StreakAlertEnabled extends $Notifier<bool> {
-  bool build();
+abstract class _$StreakAlertEnabled extends $AsyncNotifier<bool> {
+  FutureOr<bool> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<bool, bool>;
+    final ref = this.ref as $Ref<AsyncValue<bool>, bool>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<bool, bool>,
-              bool,
+              AnyNotifier<AsyncValue<bool>, bool>,
+              AsyncValue<bool>,
               Object?,
               Object?
             >;
@@ -291,6 +339,10 @@ abstract class _$StreakAlertEnabled extends $Notifier<bool> {
 /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
 /// 0→real-id transition or a mid-session profile switch triggers a rebuild
 /// and re-reads the stored time from the correct per-profile key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 
 @ProviderFor(StreakAlertTime)
 final streakAlertTimeProvider = StreakAlertTimeProvider._();
@@ -302,8 +354,12 @@ final streakAlertTimeProvider = StreakAlertTimeProvider._();
 /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
 /// 0→real-id transition or a mid-session profile switch triggers a rebuild
 /// and re-reads the stored time from the correct per-profile key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 final class StreakAlertTimeProvider
-    extends $NotifierProvider<StreakAlertTime, TimeOfDay> {
+    extends $AsyncNotifierProvider<StreakAlertTime, TimeOfDay> {
   /// Manages the streak alert time.
   ///
   /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
@@ -311,6 +367,10 @@ final class StreakAlertTimeProvider
   /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
   /// 0→real-id transition or a mid-session profile switch triggers a rebuild
   /// and re-reads the stored time from the correct per-profile key.
+  ///
+  /// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+  /// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+  /// instead of emitting a hardcoded default first.
   StreakAlertTimeProvider._()
     : super(
         from: null,
@@ -328,17 +388,9 @@ final class StreakAlertTimeProvider
   @$internal
   @override
   StreakAlertTime create() => StreakAlertTime();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(TimeOfDay value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<TimeOfDay>(value),
-    );
-  }
 }
 
-String _$streakAlertTimeHash() => r'a1c8b0b8c41a878b46c544f8aa9d6ee03e4222c4';
+String _$streakAlertTimeHash() => r'13e0d7cd28474cc48e3d58e502e2f1b9d38cc378';
 
 /// Manages the streak alert time.
 ///
@@ -347,18 +399,22 @@ String _$streakAlertTimeHash() => r'a1c8b0b8c41a878b46c544f8aa9d6ee03e4222c4';
 /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
 /// 0→real-id transition or a mid-session profile switch triggers a rebuild
 /// and re-reads the stored time from the correct per-profile key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 
-abstract class _$StreakAlertTime extends $Notifier<TimeOfDay> {
-  TimeOfDay build();
+abstract class _$StreakAlertTime extends $AsyncNotifier<TimeOfDay> {
+  FutureOr<TimeOfDay> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<TimeOfDay, TimeOfDay>;
+    final ref = this.ref as $Ref<AsyncValue<TimeOfDay>, TimeOfDay>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<TimeOfDay, TimeOfDay>,
-              TimeOfDay,
+              AnyNotifier<AsyncValue<TimeOfDay>, TimeOfDay>,
+              AsyncValue<TimeOfDay>,
               Object?,
               Object?
             >;
@@ -369,6 +425,10 @@ abstract class _$StreakAlertTime extends $Notifier<TimeOfDay> {
 /// Manages the reward notification enabled state.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 
 @ProviderFor(RewardNotificationEnabled)
 final rewardNotificationEnabledProvider = RewardNotificationEnabledProvider._();
@@ -376,11 +436,19 @@ final rewardNotificationEnabledProvider = RewardNotificationEnabledProvider._();
 /// Manages the reward notification enabled state.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 final class RewardNotificationEnabledProvider
-    extends $NotifierProvider<RewardNotificationEnabled, bool> {
+    extends $AsyncNotifierProvider<RewardNotificationEnabled, bool> {
   /// Manages the reward notification enabled state.
   ///
   /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+  ///
+  /// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+  /// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+  /// instead of emitting a hardcoded default first.
   RewardNotificationEnabledProvider._()
     : super(
         from: null,
@@ -398,34 +466,30 @@ final class RewardNotificationEnabledProvider
   @$internal
   @override
   RewardNotificationEnabled create() => RewardNotificationEnabled();
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(bool value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<bool>(value),
-    );
-  }
 }
 
 String _$rewardNotificationEnabledHash() =>
-    r'a22303b86b385025ffb19c0b7263426b24b05a7b';
+    r'0ae063f87c19dbab80a75c524de81f9aca07465e';
 
 /// Manages the reward notification enabled state.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// AUD-notifications-02 (SM-2): see [ReminderEnabled]'s doc comment — this
+/// [AsyncNotifier] genuinely awaits SharedPreferences before resolving
+/// instead of emitting a hardcoded default first.
 
-abstract class _$RewardNotificationEnabled extends $Notifier<bool> {
-  bool build();
+abstract class _$RewardNotificationEnabled extends $AsyncNotifier<bool> {
+  FutureOr<bool> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<bool, bool>;
+    final ref = this.ref as $Ref<AsyncValue<bool>, bool>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<bool, bool>,
-              bool,
+              AnyNotifier<AsyncValue<bool>, bool>,
+              AsyncValue<bool>,
               Object?,
               Object?
             >;
@@ -707,14 +771,28 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'd15feea3b70e6f676c213817e7b29ba1cf72fa84';
+    r'fdaaf0ac3f6331fe7eb38ccbb31290a62d8cf4c2';
 
-/// Provides the [StreakAlertService] instance.
+/// Provides the [StreakAlertService] instance for [profileId].
+///
+/// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
+/// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
+/// not just the active one — can construct its per-profile [StreakAlertService]
+/// through this same provider seam instead of hand-constructing a second
+/// instance. A test overriding this family for a specific inactive profileId
+/// now observably changes bootstrap's behavior for that profile.
 
 @ProviderFor(streakAlertService)
-final streakAlertServiceProvider = StreakAlertServiceProvider._();
+final streakAlertServiceProvider = StreakAlertServiceFamily._();
 
-/// Provides the [StreakAlertService] instance.
+/// Provides the [StreakAlertService] instance for [profileId].
+///
+/// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
+/// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
+/// not just the active one — can construct its per-profile [StreakAlertService]
+/// through this same provider seam instead of hand-constructing a second
+/// instance. A test overriding this family for a specific inactive profileId
+/// now observably changes bootstrap's behavior for that profile.
 
 final class StreakAlertServiceProvider
     extends
@@ -724,20 +802,34 @@ final class StreakAlertServiceProvider
           StreakAlertService
         >
     with $Provider<StreakAlertService> {
-  /// Provides the [StreakAlertService] instance.
-  StreakAlertServiceProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'streakAlertServiceProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+  /// Provides the [StreakAlertService] instance for [profileId].
+  ///
+  /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
+  /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
+  /// not just the active one — can construct its per-profile [StreakAlertService]
+  /// through this same provider seam instead of hand-constructing a second
+  /// instance. A test overriding this family for a specific inactive profileId
+  /// now observably changes bootstrap's behavior for that profile.
+  StreakAlertServiceProvider._({
+    required StreakAlertServiceFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'streakAlertServiceProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$streakAlertServiceHash();
+
+  @override
+  String toString() {
+    return r'streakAlertServiceProvider'
+        ''
+        '($argument)';
+  }
 
   @$internal
   @override
@@ -747,7 +839,8 @@ final class StreakAlertServiceProvider
 
   @override
   StreakAlertService create(Ref ref) {
-    return streakAlertService(ref);
+    final argument = this.argument as int;
+    return streakAlertService(ref, argument);
   }
 
   /// {@macro riverpod.override_with_value}
@@ -757,10 +850,56 @@ final class StreakAlertServiceProvider
       providerOverride: $SyncValueProvider<StreakAlertService>(value),
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    return other is StreakAlertServiceProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
 }
 
 String _$streakAlertServiceHash() =>
-    r'095dcecb6259740ab0957146fc6abde80d0f8d7a';
+    r'ab2f3dc7c951f97b7eeee2c8bad4c1bcc91b5042';
+
+/// Provides the [StreakAlertService] instance for [profileId].
+///
+/// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
+/// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
+/// not just the active one — can construct its per-profile [StreakAlertService]
+/// through this same provider seam instead of hand-constructing a second
+/// instance. A test overriding this family for a specific inactive profileId
+/// now observably changes bootstrap's behavior for that profile.
+
+final class StreakAlertServiceFamily extends $Family
+    with $FunctionalFamilyOverride<StreakAlertService, int> {
+  StreakAlertServiceFamily._()
+    : super(
+        retry: null,
+        name: r'streakAlertServiceProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Provides the [StreakAlertService] instance for [profileId].
+  ///
+  /// AUD-notifications-03 (SM-7): family-parameterized by [profileId] so
+  /// [allProfilesReminderBootstrap] — which must handle every INACTIVE profile,
+  /// not just the active one — can construct its per-profile [StreakAlertService]
+  /// through this same provider seam instead of hand-constructing a second
+  /// instance. A test overriding this family for a specific inactive profileId
+  /// now observably changes bootstrap's behavior for that profile.
+
+  StreakAlertServiceProvider call(int profileId) =>
+      StreakAlertServiceProvider._(argument: profileId, from: this);
+
+  @override
+  String toString() => r'streakAlertServiceProvider';
+}
 
 /// Schedules daily reminder notifications for every profile in the current
 /// account, using each profile's own stored notification preferences.
@@ -821,7 +960,7 @@ final class AllProfilesReminderBootstrapProvider
 }
 
 String _$allProfilesReminderBootstrapHash() =>
-    r'1b677e4d36fb8a0f0186f88c04a24bf8a2519224';
+    r'151499711b34a302a529628b96f0f2967f2c5d72';
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.
@@ -878,4 +1017,4 @@ final class StreakAlertSyncEffectProvider
 }
 
 String _$streakAlertSyncEffectHash() =>
-    r'028c42b23c60d7d010feab2502f9b09955c0b7ef';
+    r'11c2bf2a4e12459c883390a1e00f1a3aebb4d3ef';

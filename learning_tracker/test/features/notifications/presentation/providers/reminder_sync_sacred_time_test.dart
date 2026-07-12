@@ -244,45 +244,41 @@ void main() {
       },
     );
 
-    test('reminders DISABLED still cancels regardless of Sacred Time', () async {
-      SharedPreferences.setMockInitialValues({
-        NotificationPreferencesRepository.reminderEnabledKey(1): false,
-      });
-      final gateway = _RecordingNotificationGateway();
-      final container = makeContainer(
-        gateway,
-        sacredTimeActive: true,
-        tasks: [_todayTask()],
-      );
-      addTearDown(container.dispose);
+    test(
+      'reminders DISABLED still cancels regardless of Sacred Time',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          NotificationPreferencesRepository.reminderEnabledKey(1): false,
+        });
+        final gateway = _RecordingNotificationGateway();
+        final container = makeContainer(
+          gateway,
+          sacredTimeActive: true,
+          tasks: [_todayTask()],
+        );
+        addTearDown(container.dispose);
 
-      // reminderEnabledProvider returns the default `true` synchronously and
-      // then async-loads the persisted `false`. That state change invalidates
-      // this effect mid-flight, disposing the first in-flight future (Riverpod
-      // throws "disposed during loading"). The other two tests don't hit it
-      // because their loaded value equals the default → no state change. Keep
-      // the effect mounted and re-await until a build settles uninterrupted.
-      final sub = container.listen(reminderSyncEffectProvider, (_, _) {});
-      addTearDown(sub.close);
-      for (var i = 0; i < 10; i++) {
-        try {
-          await container.read(reminderSyncEffectProvider.future);
-          break;
-        } on StateError {
-          await Future<void>.delayed(Duration.zero);
-        }
-      }
+        // AUD-notifications-02: reminderEnabledProvider is now an AsyncNotifier
+        // that genuinely awaits SharedPreferences before resolving — it no
+        // longer emits a hardcoded `true` default and then flips to the
+        // persisted `false`, so reminderSyncEffect (which awaits
+        // reminderEnabledProvider.future directly) never observes an
+        // intermediate value and never gets invalidated mid-flight. The old
+        // 10-attempt "disposed during loading" retry-loop workaround this test
+        // needed is gone — a single read now settles on the first attempt.
+        await container.read(reminderSyncEffectProvider.future);
 
-      expect(
-        gateway.scheduledBatchProfiles,
-        isEmpty,
-        reason: 'Disabled reminders must never schedule a batch.',
-      );
-      expect(
-        gateway.cancelledBatchProfiles,
-        contains(1),
-        reason: 'Disabled reminders still cancel the per-profile batch.',
-      );
-    });
+        expect(
+          gateway.scheduledBatchProfiles,
+          isEmpty,
+          reason: 'Disabled reminders must never schedule a batch.',
+        );
+        expect(
+          gateway.cancelledBatchProfiles,
+          contains(1),
+          reason: 'Disabled reminders still cancel the per-profile batch.',
+        );
+      },
+    );
   });
 }
