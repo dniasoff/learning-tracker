@@ -23,6 +23,10 @@
 ///  20. Product rule: adults have no points — adult profile, controller works fine.
 ///  21. usesGlobalLadder computed property: true when tracks empty.
 ///  22. RewardSaveNoTrack — per-track ladder selected but no track chosen.
+///  23. SM-5 (AUD-gamification-10) — saveReward/toggleEnabled/deleteMilestone
+///      set state.error (and clear state.loading) when the underlying call
+///      throws anything other than TutorWriteException; a TutorWriteException
+///      is rethrown and does NOT set state.error.
 
 @Tags(['gamification', 'reward_config_controller'])
 library;
@@ -30,6 +34,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
@@ -37,6 +42,7 @@ import 'package:learning_tracker/features/gamification/presentation/providers/re
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/drift_memory.dart';
@@ -97,6 +103,59 @@ Future<void> _seedGlobalMilestone(
     thresholdPoints: thresholdPoints,
     milestoneId: id,
   );
+}
+
+// ── SM-5 error-visibility fake ──────────────────────────────────────────────
+
+/// [SyncWriteFacade] whose [pushGamificationSettingsSnapshot] always throws
+/// [error] — used to exercise the "any OTHER DB/sync failure" branch of
+/// _handleMutationError (AUD-gamification-10). All other members are unused
+/// no-ops.
+class _ThrowingSyncFacade implements SyncWriteFacade {
+  _ThrowingSyncFacade(this.error);
+  final Exception error;
+
+  @override
+  Future<void> pushGamificationSettingsSnapshot() async {
+    throw error;
+  }
+
+  @override
+  Future<void> pushUiPreferencesSnapshot() async {}
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {}
+  @override
+  Future<void> pushSettings(Map<String, dynamic> settings) async {}
+  @override
+  Future<void> pushGoal(Map<String, dynamic> goal) async {}
+  @override
+  Future<void> deleteGoal(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {}
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> items,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {}
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushStageDefinitions({
+    required int trackId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> stages,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStudyDayConfig(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -1037,5 +1096,183 @@ void main() {
       final milestones = await svc.getGlobalMilestones();
       expect(milestones.first.title, 'Padded Star');
     });
+  });
+
+  // ── 23. SM-5 — error visibility on mutation failure (AUD-gamification-10) ──
+
+  group('SM-5: error visibility on mutation failure (AUD-gamification-10)', () {
+    test('saveReward leaves state.error non-null (not an unhandled Future '
+        'rejection) when the underlying call throws anything other than '
+        'TutorWriteException', () async {
+      final c = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(inMemoryDb()),
+          activeProfileIdProvider.overrideWithValue(1),
+          syncWriteFacadeProvider.overrideWithValue(
+            _ThrowingSyncFacade(Exception('simulated_sync_failure')),
+          ),
+          achievementsOverviewProvider.overrideWith(
+            (ref) async => const AchievementsOverview(
+              rows: [],
+              unlockedCount: 0,
+              totalMilestones: 0,
+              trackFilterOptions: [],
+            ),
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      await seedProfileWithIds(
+        c.read(userDatabaseProvider),
+        accountId: 1,
+        profileId: 1,
+      );
+
+      _notifier(c).setName('Gold Star');
+      _notifier(c).setPointsText('500');
+
+      final result = await _notifier(c).saveReward();
+
+      expect(result, isA<RewardSaveFailed>());
+      expect(_state(c).error, isNotNull);
+      expect(_state(c).loading, isFalse);
+    });
+
+    test(
+      'toggleEnabled leaves state.error non-null on a generic failure',
+      () async {
+        final c = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWithValue(inMemoryDb()),
+            activeProfileIdProvider.overrideWithValue(1),
+            syncWriteFacadeProvider.overrideWithValue(
+              _ThrowingSyncFacade(Exception('simulated_sync_failure')),
+            ),
+            achievementsOverviewProvider.overrideWith(
+              (ref) async => const AchievementsOverview(
+                rows: [],
+                unlockedCount: 0,
+                totalMilestones: 0,
+                trackFilterOptions: [],
+              ),
+            ),
+          ],
+        );
+        addTearDown(c.dispose);
+        await seedProfileWithIds(
+          c.read(userDatabaseProvider),
+          accountId: 1,
+          profileId: 1,
+        );
+        await _seedGlobalMilestone(
+          c,
+          id: 'ms-toggle',
+          title: 'Toggle Me',
+          thresholdPoints: 100,
+        );
+        final milestone = (await RewardMilestoneService(
+          c.read(userDatabaseProvider),
+          profileId: 1,
+        ).getAllMilestones()).first;
+
+        await _notifier(c).toggleEnabled(milestone);
+
+        expect(_state(c).error, isNotNull);
+        expect(_state(c).loading, isFalse);
+      },
+    );
+
+    test(
+      'deleteMilestone leaves state.error non-null on a generic failure',
+      () async {
+        final c = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWithValue(inMemoryDb()),
+            activeProfileIdProvider.overrideWithValue(1),
+            syncWriteFacadeProvider.overrideWithValue(
+              _ThrowingSyncFacade(Exception('simulated_sync_failure')),
+            ),
+            achievementsOverviewProvider.overrideWith(
+              (ref) async => const AchievementsOverview(
+                rows: [],
+                unlockedCount: 0,
+                totalMilestones: 0,
+                trackFilterOptions: [],
+              ),
+            ),
+          ],
+        );
+        addTearDown(c.dispose);
+        await seedProfileWithIds(
+          c.read(userDatabaseProvider),
+          accountId: 1,
+          profileId: 1,
+        );
+        await _seedGlobalMilestone(
+          c,
+          id: 'ms-delete',
+          title: 'Delete Me',
+          thresholdPoints: 100,
+        );
+        final milestone = (await RewardMilestoneService(
+          c.read(userDatabaseProvider),
+          profileId: 1,
+        ).getAllMilestones()).first;
+
+        await _notifier(c).deleteMilestone(milestone);
+
+        expect(_state(c).error, isNotNull);
+        expect(_state(c).loading, isFalse);
+      },
+    );
+
+    test(
+      'saveReward rethrows TutorWriteException and does NOT set state.error '
+      '(the screen\'s own try/catch handles the permission-denied snackbar)',
+      () async {
+        final c = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWithValue(inMemoryDb()),
+            activeProfileIdProvider.overrideWithValue(1),
+            syncWriteFacadeProvider.overrideWithValue(
+              _ThrowingSyncFacade(
+                const TutorWriteException(
+                  'permission denied',
+                  code: 'permission-denied',
+                ),
+              ),
+            ),
+            achievementsOverviewProvider.overrideWith(
+              (ref) async => const AchievementsOverview(
+                rows: [],
+                unlockedCount: 0,
+                totalMilestones: 0,
+                trackFilterOptions: [],
+              ),
+            ),
+          ],
+        );
+        addTearDown(c.dispose);
+        await seedProfileWithIds(
+          c.read(userDatabaseProvider),
+          accountId: 1,
+          profileId: 1,
+        );
+
+        _notifier(c).setName('Gold Star');
+        _notifier(c).setPointsText('500');
+
+        await expectLater(
+          _notifier(c).saveReward(),
+          throwsA(isA<TutorWriteException>()),
+        );
+
+        // Not surfaced through form.error -- the screen's own
+        // `on TutorWriteException catch` already shows the
+        // permission-denied snackbar; the spinner must still clear.
+        expect(_state(c).error, isNull);
+        expect(_state(c).loading, isFalse);
+      },
+    );
   });
 }

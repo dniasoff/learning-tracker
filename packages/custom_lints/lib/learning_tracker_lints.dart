@@ -1,10 +1,15 @@
 /// Custom lint rules for the Learning Tracker project.
 ///
-/// Provides seventeen rules:
+/// Provides eighteen rules:
 ///   - [NoColorLiteralOutsideTheme]: warns on direct `Color(0x…)` hex-literal
 ///     constructor calls outside `lib/core/theme/`; use AppColors/AppTheme constants.
 ///   - [NoCurriculumDisplayNameBypass]: prevents access to `.displayNameEn` /
 ///     `.displayNameHe` outside the canonical `core/labels/` whitelist.
+///   - [NoDeadErrorField]: flags a Riverpod Notifier whose state has a
+///     `loading`/`error` field pair (evidenced by `copyWith(loading:,
+///     error:, ...)` usage) where the file never sets `error:` to anything
+///     other than `null` -- a declared-but-dead error field (SM-5 / EH-2,
+///     AUD-gamification-10).
 ///   - [NoEagerListInNonLazyScrollContainer]: flags a `for`/`.map()` widget
 ///     expansion fed into a non-lazy `ListView(children:)` or a scrollable
 ///     `Column` under `lib/features/**`; use `ListView.builder` instead
@@ -58,6 +63,7 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 
 import 'src/rules/no_color_literal_outside_theme.dart';
 import 'src/rules/no_curriculum_display_name_bypass.dart';
+import 'src/rules/no_dead_error_field.dart';
 import 'src/rules/no_e_to_string_in_ui.dart';
 import 'src/rules/no_eager_list_in_non_lazy_scroll_container.dart';
 import 'src/rules/no_feature_cross_import.dart';
@@ -83,6 +89,7 @@ class _LearningTrackerLintPlugin extends PluginBase {
   List<LintRule> getLintRules(CustomLintConfigs configs) => const [
         NoColorLiteralOutsideTheme(),
         NoCurriculumDisplayNameBypass(),
+        NoDeadErrorField(),
         NoEagerListInNonLazyScrollContainer(),
         NoEToStringInUi(),
         NoFeatureCrossImport(),

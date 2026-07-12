@@ -238,6 +238,11 @@ class _RewardConfigurationScreenState
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l10n.rewardConfigDuplicateName)));
+      case RewardSaveFailed():
+        // SM-5 (AUD-gamification-10): no-op here -- the controller has
+        // already set form.error, and build() above switches to the
+        // full-screen error state on the resulting rebuild.
+        break;
       case RewardSaved(:final title, :final wasEditing):
         _refreshRewards();
         await showDialog<void>(
@@ -285,10 +290,14 @@ class _RewardConfigurationScreenState
     }
 
     if (form.error != null) {
+      // EH-5 / AX-2 (AUD-gamification-10): route through AppLocalizations
+      // instead of the raw stored error string, matching the pattern used
+      // elsewhere in this feature (point_config_screen.dart,
+      // child_redemption_screen.dart, parent_pending_redemptions_screen.dart).
       return Scaffold(
         backgroundColor: _kPageBg,
         appBar: AppBar(title: Text(l10n.rewardConfigurationTitle)),
-        body: Center(child: Text(form.error!)),
+        body: Center(child: Text(l10n.errorGeneric(form.error!))),
       );
     }
 
