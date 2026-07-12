@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -129,19 +130,22 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     }
   }
 
-  /// Maps the sentinel phase strings emitted by [DeviceRestoreService] to
-  /// localized labels. Falls back to the raw [phase] string for any unknown
-  /// sentinel so unexpected phases never cause a crash.
+  /// Maps each [RestorePhase] emitted by [DeviceRestoreService] to a
+  /// localized label.
   ///
-  /// loop-iter2: DeviceRestoreService emits hard-coded English strings.
-  /// The screen is the correct place to apply localization because
-  /// [RestoreStatus] lives outside owned roots and cannot import l10n.
-  String _localizePhase(String phase, AppLocalizations l10n) {
+  /// AUD-app-02 (EH-5/EH-6): [phase] is a closed enum (not a free-text
+  /// sentinel string), and this switch is EXHAUSTIVE — no wildcard `_` arm.
+  /// Adding a new [RestorePhase] value without adding its case here is a
+  /// compile error, not a silent fallback to raw English text.
+  ///
+  /// loop-iter2: DeviceRestoreService's phase lives outside owned roots and
+  /// cannot import l10n directly, so the screen is the correct place to
+  /// apply localization.
+  String _localizePhase(RestorePhase phase, AppLocalizations l10n) {
     return switch (phase) {
-      'Restoring your data...' => l10n.deviceRestorePhaseRestoring,
-      'Loading curricula...' => l10n.deviceRestorePhaseLoadingCurricula,
-      'Importing content...' => l10n.deviceRestorePhaseImportingContent,
-      _ => phase,
+      RestorePhase.pullingData => l10n.deviceRestorePhaseRestoring,
+      RestorePhase.loadingCurricula => l10n.deviceRestorePhaseLoadingCurricula,
+      RestorePhase.importingContent => l10n.deviceRestorePhaseImportingContent,
     };
   }
 

@@ -1,14 +1,19 @@
 // Regression test: DeviceRestoreScreen must display localized phase labels
-// when the locale is Hebrew (he), not the raw English sentinel strings emitted
-// by DeviceRestoreService.
+// when the locale is Hebrew (he), not raw English text.
 //
-// Bug: DeviceRestoreService emits hard-coded English strings as the `phase`
-// field of RestoreStatus.restoring (e.g. 'Restoring your data...',
-// 'Loading curricula...', 'Importing content...'). The screen renders
-// `Text(phase)` directly so Hebrew users always see English during restore.
+// Bug: DeviceRestoreService used to emit hard-coded English strings as the
+// `phase` field of RestoreStatus.restoring (e.g. 'Restoring your data...',
+// 'Loading curricula...', 'Importing content...'), matched by string
+// equality on the screen. The screen rendered `Text(phase)` directly so
+// Hebrew users always saw English during restore, and any drift between the
+// service's literal and the screen's match arm silently fell back to raw
+// English (AUD-app-02, EH-5/EH-6).
 //
-// Fix: DeviceRestoreScreen must map known phase sentinel strings to l10n keys
-// and render the localized label instead of the raw string.
+// Fix: `phase` is now the closed [RestorePhase] enum (see
+// lib/features/sync/domain/models/restore_phase.dart), and
+// DeviceRestoreScreen._localizePhase is an EXHAUSTIVE switch (no wildcard
+// arm) mapping each value to an l10n key — an unmapped RestorePhase value
+// is a compile error, not a silent English fallback.
 //
 // RED before fix: find.text(<he_translation>) findsNothing (screen shows English).
 // GREEN after fix: find.text(<he_translation>) findsOneWidget.
@@ -29,6 +34,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -119,13 +125,13 @@ void main() {
   });
 
   group(
-    'DeviceRestoreScreen — restoring phase labels must be localized (loop-iter2)',
+    'DeviceRestoreScreen — restoring phase labels must be localized (loop-iter2, AUD-app-02)',
     () {
       // ── English baseline ───────────────────────────────────────────────────────
-      // Ensures the sentinel string maps to the correct EN l10n value.
+      // Ensures RestorePhase.pullingData maps to the correct EN l10n value.
 
       testWidgets(
-        'en locale: "Restoring your data..." maps to l10n.deviceRestorePhaseRestoring',
+        'en locale: RestorePhase.pullingData maps to l10n.deviceRestorePhaseRestoring',
         (tester) async {
           final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
@@ -133,7 +139,7 @@ void main() {
           await tester.pumpWidget(
             _buildHarness(
               fixedStatus: const RestoreStatus.restoring(
-                phase: 'Restoring your data...',
+                phase: RestorePhase.pullingData,
                 completedSteps: 0,
                 totalSteps: 3,
               ),
@@ -157,7 +163,7 @@ void main() {
       // Core defect: Hebrew users must see Hebrew text, not the English sentinel.
 
       testWidgets(
-        'he locale: "Restoring your data..." sentinel renders Hebrew translation, '
+        'he locale: RestorePhase.pullingData renders Hebrew translation, '
         'not the raw English string (SYNC-RESTORE-PHASE-01)',
         (tester) async {
           final db = UserDatabase(NativeDatabase.memory());
@@ -166,7 +172,7 @@ void main() {
           await tester.pumpWidget(
             _buildHarness(
               fixedStatus: const RestoreStatus.restoring(
-                phase: 'Restoring your data...',
+                phase: RestorePhase.pullingData,
                 completedSteps: 0,
                 totalSteps: 3,
               ),
@@ -191,7 +197,7 @@ void main() {
             find.text('מחזיר את הנתונים שלך...'),
             findsOneWidget,
             reason:
-                'DeviceRestoreScreen must map the sentinel string to '
+                'DeviceRestoreScreen must map RestorePhase.pullingData to '
                 'l10n.deviceRestorePhaseRestoring for he locale',
           );
 
@@ -200,7 +206,7 @@ void main() {
       );
 
       testWidgets(
-        'he locale: "Loading curricula..." sentinel renders Hebrew translation '
+        'he locale: RestorePhase.loadingCurricula renders Hebrew translation '
         '(SYNC-RESTORE-PHASE-02)',
         (tester) async {
           final db = UserDatabase(NativeDatabase.memory());
@@ -209,7 +215,7 @@ void main() {
           await tester.pumpWidget(
             _buildHarness(
               fixedStatus: const RestoreStatus.restoring(
-                phase: 'Loading curricula...',
+                phase: RestorePhase.loadingCurricula,
                 completedSteps: 1,
                 totalSteps: 3,
               ),
@@ -231,7 +237,7 @@ void main() {
             find.text('טוען תוכניות לימוד...'),
             findsOneWidget,
             reason:
-                'DeviceRestoreScreen must map the sentinel string to '
+                'DeviceRestoreScreen must map RestorePhase.loadingCurricula to '
                 'l10n.deviceRestorePhaseLoadingCurricula for he locale',
           );
 
@@ -240,7 +246,7 @@ void main() {
       );
 
       testWidgets(
-        'he locale: "Importing content..." sentinel renders Hebrew translation '
+        'he locale: RestorePhase.importingContent renders Hebrew translation '
         '(SYNC-RESTORE-PHASE-03)',
         (tester) async {
           final db = UserDatabase(NativeDatabase.memory());
@@ -249,7 +255,7 @@ void main() {
           await tester.pumpWidget(
             _buildHarness(
               fixedStatus: const RestoreStatus.restoring(
-                phase: 'Importing content...',
+                phase: RestorePhase.importingContent,
                 completedSteps: 2,
                 totalSteps: 3,
               ),
@@ -271,7 +277,7 @@ void main() {
             find.text('מייבא תוכן...'),
             findsOneWidget,
             reason:
-                'DeviceRestoreScreen must map the sentinel string to '
+                'DeviceRestoreScreen must map RestorePhase.importingContent to '
                 'l10n.deviceRestorePhaseImportingContent for he locale',
           );
 
@@ -279,33 +285,16 @@ void main() {
         },
       );
 
-      testWidgets(
-        'unknown phase sentinel falls back to raw string (defensive path)',
-        (tester) async {
-          final db = UserDatabase(NativeDatabase.memory());
-          addTearDown(db.close);
-
-          await tester.pumpWidget(
-            _buildHarness(
-              fixedStatus: const RestoreStatus.restoring(
-                phase: 'Some unexpected phase',
-                completedSteps: 0,
-                totalSteps: 3,
-              ),
-              mockRouter: _makeRouter(),
-              stubAppRouter: _makeAppRouter(),
-              db: db,
-              locale: const Locale('he'),
-            ),
-          );
-          await tester.pump();
-
-          // Unknown phases fall back to the raw string — no crash.
-          expect(find.text('Some unexpected phase'), findsOneWidget);
-
-          await _tearDown(tester);
-        },
-      );
+      // NOTE (AUD-app-02, test-file-not-deleted / single-case removal): the
+      // former "unknown phase sentinel falls back to raw string" test is
+      // removed, not weakened — it exercised a `phase: 'Some unexpected
+      // phase'` String value that RestorePhase (a closed enum) can no longer
+      // construct. DeviceRestoreScreen._localizePhase is now an EXHAUSTIVE
+      // switch over RestorePhase with no wildcard arm (EH-6): the silent
+      // "fall back to raw text" behaviour this test asserted has been
+      // deleted from the production code, not merely from the test, and any
+      // future RestorePhase value with no matching l10n arm is instead a
+      // **compile error** at the switch in device_restore_screen.dart.
     },
   );
 }

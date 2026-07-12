@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
+import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
@@ -163,7 +164,7 @@ class DeviceRestoreService {
       // Step 1: Pull all user data from Firestore
       _updateStatus(
         const RestoreStatus.restoring(
-          phase: 'Restoring your data...',
+          phase: RestorePhase.pullingData,
           completedSteps: 0,
           totalSteps: totalSteps,
         ),
@@ -195,7 +196,7 @@ class DeviceRestoreService {
       // content import for every restored profile.
       _updateStatus(
         const RestoreStatus.restoring(
-          phase: 'Loading curricula...',
+          phase: RestorePhase.loadingCurricula,
           completedSteps: 1,
           totalSteps: totalSteps,
         ),
@@ -208,7 +209,7 @@ class DeviceRestoreService {
       // Step 3: Re-import bundled content for active curricula
       _updateStatus(
         const RestoreStatus.restoring(
-          phase: 'Importing content...',
+          phase: RestorePhase.importingContent,
           completedSteps: 2,
           totalSteps: totalSteps,
         ),
