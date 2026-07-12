@@ -3071,13 +3071,18 @@
   {
    "id": "AUD-scheduler-07",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or wire up dead _summaryForSection / ComposedDailySchedule.summary \u2014 hardcoded-English field is never rendered",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "dbb254637280496b3abc25c26263c966a79570b9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-scheduler-07 AC1 OK: grep '.summary' lib/features/scheduler = 0 hits; field/param/builder/import deleted; grouped_daily_view reads only .groupedByCurriculum",
+    "AUD-scheduler-07 AC2 OK (inapplicable): field DELETED per finding's primary recommendation, not kept; 'If kept' conditional not triggered"
+   ],
+   "notes": "Re-verified: .summary written once, never read (GroupedDailyView reads only .groupedByCurriculum). Deleted _summaryForSection + summary field/param, updated call site, removed unused import, updated 2 stale e2e comments (R-SC2). AC1 grep now zero hits. AC2 inapplicable (field deleted, not kept)."
   },
   {
    "id": "AUD-scheduler-08",
