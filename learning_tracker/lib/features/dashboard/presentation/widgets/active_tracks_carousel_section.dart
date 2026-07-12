@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/active_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/arrow_button.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class ActiveTracksCarouselSection extends StatefulWidget {
   const ActiveTracksCarouselSection({
@@ -46,6 +47,7 @@ class _ActiveTracksCarouselSectionState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Row(
@@ -81,6 +83,7 @@ class _ActiveTracksCarouselSectionState
                   ? Icons.chevron_right_rounded
                   : Icons.chevron_left_rounded,
               isEnabled: _activeIndex > 0,
+              semanticLabel: l10n.activeTracksPreviousTrack,
               onTap: _activeIndex > 0
                   ? () {
                       _controller.previousPage(
@@ -96,6 +99,7 @@ class _ActiveTracksCarouselSectionState
                   ? Icons.chevron_left_rounded
                   : Icons.chevron_right_rounded,
               isEnabled: _activeIndex < widget.activeTracks.length - 1,
+              semanticLabel: l10n.activeTracksNextTrack,
               onTap: _activeIndex < widget.activeTracks.length - 1
                   ? () {
                       _controller.nextPage(

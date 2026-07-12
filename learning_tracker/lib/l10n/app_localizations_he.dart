@@ -70,6 +70,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get activeTracksSubtitle => 'המשיכו בצורה מעולה ביעדי הלמידה';
 
   @override
+  String get activeTracksPreviousTrack => 'המסלול הקודם';
+
+  @override
+  String get activeTracksNextTrack => 'המסלול הבא';
+
+  @override
   String get activeTrackNextTask => 'המשימה הבאה';
 
   @override

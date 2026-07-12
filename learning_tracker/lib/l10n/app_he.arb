@@ -24,6 +24,8 @@
   "activeCurricula": "תוכניות לימוד פעילות",
   "activeTracks": "מסלולים פעילים",
   "activeTracksSubtitle": "המשיכו בצורה מעולה ביעדי הלמידה",
+  "activeTracksPreviousTrack": "המסלול הקודם",
+  "activeTracksNextTrack": "המסלול הבא",
   "activeTrackNextTask": "המשימה הבאה",
   "activeTrackCurrentFocus": "מיקוד נוכחי",
   "activeTrackPaceAhead": "לפני {days} ימים",
