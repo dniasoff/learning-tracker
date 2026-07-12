@@ -46,6 +46,7 @@ import 'package:learning_tracker/features/onboarding/presentation/steps/onboardi
 import 'package:learning_tracker/features/onboarding/presentation/steps/wizard_steps.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:learning_tracker/l10n/app_localizations_he.dart';
 
 // ── Provider overrides ────────────────────────────────────────────────────────
 
@@ -67,6 +68,12 @@ const _kDelegates = [
   GlobalWidgetsLocalizations.delegate,
   GlobalCupertinoLocalizations.delegate,
 ];
+
+/// AUD-onboarding-04: locale-driven lookup for the "Hebrew locale smoke"
+/// tests below, so a regression that reintroduces a hardcoded English
+/// literal (which would render identically regardless of locale) re-breaks
+/// these tests instead of silently passing.
+final _he = AppLocalizationsHe();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -328,9 +335,14 @@ void main() {
       );
       await _settle(tester);
 
-      // Key affordances must still be findable.
-      expect(find.text('Custom schedule'), findsOneWidget);
-      expect(find.text('No formal review'), findsOneWidget);
+      // Key affordances must render in Hebrew, not the English literal
+      // (AUD-onboarding-04: these used to be hardcoded, so this smoke test
+      // passed regardless of locale — locale-driven lookups make a
+      // regression re-break it).
+      expect(find.text(_he.curriculumSettingsCustomSchedule), findsOneWidget);
+      expect(find.text(_he.wizardNoFormalReviewTitle), findsOneWidget);
+      expect(find.text('Custom schedule'), findsNothing);
+      expect(find.text('No formal review'), findsNothing);
       await _tearDown(tester);
     });
   });
@@ -700,7 +712,10 @@ void main() {
       );
       await _settle(tester);
 
-      expect(find.text('How many review rounds?'), findsOneWidget);
+      // AUD-onboarding-04: locale-driven lookup (was a hardcoded English
+      // literal that rendered under any locale, silently passing this test).
+      expect(find.text(_he.wizardHowManyReviewRounds), findsOneWidget);
+      expect(find.text('How many review rounds?'), findsNothing);
       await _tearDown(tester);
     });
   });
@@ -812,6 +827,43 @@ void main() {
       await _tearDown(tester);
     });
 
+    // AUD-onboarding-04: the day-abbreviation map used to be hardcoded
+    // English (Mon/Tue/Wed/Thu/Fri/Sun) with ONLY Shabbos routed through
+    // AppLocalizations/DomainTermLabels — a literal mixed-language label
+    // under Locale('he') (Hebrew Shabbos alongside Latin-script weekdays).
+    // All 7 days now render uniformly via _weekdayAbbrev (shared
+    // schedulerDayAbbrev* ARB keys + the Shabbos domain term).
+    testWidgets(
+      'Hebrew locale: day chips render Hebrew weekday abbreviations, not '
+      'mixed-language English/Hebrew',
+      (tester) async {
+        await tester.pumpWidget(
+          buildDirect(locale: const Locale('he'), useHebrew: true),
+        );
+        await _settle(tester);
+
+        await tester.tap(find.text(_he.schedulerWeeksLabel).first);
+        await tester.pump();
+
+        for (final day in [
+          _he.schedulerDayAbbrevSun,
+          _he.schedulerDayAbbrevMon,
+          _he.schedulerDayAbbrevTue,
+          _he.schedulerDayAbbrevWed,
+          _he.schedulerDayAbbrevThu,
+          _he.schedulerDayAbbrevFri,
+        ]) {
+          expect(find.text(day), findsWidgets);
+        }
+        // The old hardcoded English abbreviations must be entirely absent —
+        // no mixed-language row.
+        for (final day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']) {
+          expect(find.text(day), findsNothing);
+        }
+        await _tearDown(tester);
+      },
+    );
+
     testWidgets('tapping a day chip in Weeks mode adds it to selectedDays', (
       tester,
     ) async {
@@ -860,7 +912,10 @@ void main() {
       );
       await _settle(tester);
 
-      expect(find.text('Set delay for each round'), findsOneWidget);
+      // AUD-onboarding-04: locale-driven lookup (was a hardcoded English
+      // literal that rendered under any locale, silently passing this test).
+      expect(find.text(_he.wizardSetDelayForEachRound), findsOneWidget);
+      expect(find.text('Set delay for each round'), findsNothing);
       await _tearDown(tester);
     });
 
@@ -1090,7 +1145,11 @@ void main() {
         );
         await _settle(tester);
 
-        expect(find.text('Review your schedule'), findsOneWidget);
+        // AUD-onboarding-04: locale-driven lookup (was a hardcoded English
+        // literal that rendered under any locale, silently passing this
+        // test).
+        expect(find.text(_he.wizardReviewYourSchedule), findsOneWidget);
+        expect(find.text('Review your schedule'), findsNothing);
         await _tearDown(tester);
       },
     );

@@ -11,6 +11,41 @@ import 'package:learning_tracker/features/scheduler/domain/services/learning_pro
 import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// Returns the LOCALIZED short weekday abbreviation for [isoDay] (Monday=1 …
+/// Sunday=7; Saturday=6 is Shabbos).
+///
+/// Sun-Fri come from the shared scheduler day-abbreviation ARB keys (the
+/// same ones `studyDayAbbrevLabel` in `tracks/setup` uses) so the label
+/// follows the UI locale uniformly instead of the hand-typed English
+/// Mon/Tue/Wed/Thu/Fri/Sun map this replaces. Day 6 routes through the
+/// caller-supplied [shabbos] label (from [DomainTermLabels.shabbos]) so it
+/// renders "Shabbos"/"Shabbat"/"שבת" per the Ashkenazi/Sephardi/Hebrew-terms
+/// setting — matching the rest of this file's Shabbos handling.
+///
+/// A local helper (rather than importing `tracks/setup`'s version) because
+/// `features/X/` may not deep-import `features/Y/` internals (Rule 2,
+/// `no_feature_cross_import`) — only the shared ARB keys are reused.
+String _weekdayAbbrev(AppLocalizations l10n, int isoDay, String shabbos) {
+  switch (isoDay) {
+    case 1:
+      return l10n.schedulerDayAbbrevMon;
+    case 2:
+      return l10n.schedulerDayAbbrevTue;
+    case 3:
+      return l10n.schedulerDayAbbrevWed;
+    case 4:
+      return l10n.schedulerDayAbbrevThu;
+    case 5:
+      return l10n.schedulerDayAbbrevFri;
+    case 6:
+      return shabbos;
+    case 7:
+      return l10n.schedulerDayAbbrevSun;
+    default:
+      return '?';
+  }
+}
+
 /// Mutable state shared across wizard steps.
 class WizardStepData {
   int chazarahRounds = 1;
@@ -85,16 +120,17 @@ class _ChooseMethodWidget extends ConsumerWidget {
   final void Function(LearningProcessWizardResult) onComplete;
   final OnboardingStepContext ctx;
 
-  String get _questionText {
+  String _questionText(AppLocalizations l10n) {
     if (isChildMode && childName != null) {
-      return 'How does $childName review?';
+      return l10n.wizardHowDoesChildReview(childName!);
     }
-    return 'How do you review?';
+    return l10n.wizardHowDoYouReview;
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       // Scroll escape valve: this body is a fixed pile of option cards (no
@@ -108,7 +144,7 @@ class _ChooseMethodWidget extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                _questionText,
+                _questionText(l10n),
                 style: theme.textTheme.headlineSmall,
                 textAlign: TextAlign.center,
               ),
@@ -124,15 +160,15 @@ class _ChooseMethodWidget extends ConsumerWidget {
               if (presets.isNotEmpty)
                 _OptionCard(
                   icon: Icons.school,
-                  title: 'Follow a program',
-                  subtitle: '${presets.length} programs available',
+                  title: l10n.wizardFollowProgramTitle,
+                  subtitle: l10n.wizardProgramsAvailableCount(presets.length),
                   onTap: ctx.advance,
                 ),
               const SizedBox(height: 12),
               _OptionCard(
                 icon: Icons.tune,
-                title: 'Custom schedule',
-                subtitle: 'Build your own review cycle',
+                title: l10n.curriculumSettingsCustomSchedule,
+                subtitle: l10n.wizardCustomScheduleSubtitle,
                 onTap: () => onComplete(
                   LearningProcessWizardResult(
                     wizardResult: WizardResult(
@@ -145,8 +181,8 @@ class _ChooseMethodWidget extends ConsumerWidget {
               const SizedBox(height: 12),
               _OptionCard(
                 icon: Icons.play_arrow,
-                title: 'No formal review',
-                subtitle: 'Just track learning progress',
+                title: l10n.wizardNoFormalReviewTitle,
+                subtitle: l10n.wizardNoFormalReviewSubtitle,
                 onTap: () => onComplete(
                   LearningProcessWizardResult(
                     wizardResult: WizardResult(
@@ -223,6 +259,7 @@ class _SelectPresetWidgetState extends State<_SelectPresetWidget> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: Column(
@@ -232,8 +269,8 @@ class _SelectPresetWidgetState extends State<_SelectPresetWidget> {
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
             child: Text(
               widget.isChildMode && widget.childName != null
-                  ? 'What program does ${widget.childName} follow?'
-                  : 'Select a program',
+                  ? l10n.wizardWhatProgramDoesChildFollow(widget.childName!)
+                  : l10n.wizardSelectAProgram,
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
@@ -306,6 +343,7 @@ class _CustomStep1WidgetState extends State<_CustomStep1Widget> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: Padding(
@@ -314,13 +352,13 @@ class _CustomStep1WidgetState extends State<_CustomStep1Widget> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'How many review rounds?',
+              l10n.wizardHowManyReviewRounds,
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Each round reviews the material at increasing intervals',
+              l10n.wizardEachRoundIntervalsSubtitle,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -328,7 +366,7 @@ class _CustomStep1WidgetState extends State<_CustomStep1Widget> {
             ),
             const SizedBox(height: 48),
             Text(
-              '${widget.data.chazarahRounds} round${widget.data.chazarahRounds == 1 ? '' : 's'}',
+              l10n.wizardChazarahRoundsCount(widget.data.chazarahRounds),
               style: theme.textTheme.displaySmall,
               textAlign: TextAlign.center,
             ),
@@ -393,6 +431,7 @@ class _CustomStep2WidgetState extends State<_CustomStep2Widget> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       top: false,
       child: Padding(
@@ -401,13 +440,13 @@ class _CustomStep2WidgetState extends State<_CustomStep2Widget> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Set delay for each round',
+              l10n.wizardSetDelayForEachRound,
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
             Text(
-              'How long after learning before each review?',
+              l10n.wizardHowLongBeforeReview,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -473,23 +512,15 @@ class _CustomStep3Widget extends ConsumerWidget {
   final WizardStepData data;
   final void Function(LearningProcessWizardResult) onComplete;
 
-  String _formatDays(Set<int> days, String shabbos) {
-    final dayNames = {
-      1: 'Mon',
-      2: 'Tue',
-      3: 'Wed',
-      4: 'Thu',
-      5: 'Fri',
-      6: shabbos,
-      7: 'Sun',
-    };
+  String _formatDays(AppLocalizations l10n, Set<int> days, String shabbos) {
     final sorted = days.toList()..sort();
-    return sorted.map((d) => dayNames[d] ?? '?').join(', ');
+    return sorted.map((d) => _weekdayAbbrev(l10n, d, shabbos)).join(', ');
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final terms = domainTermLabels(ref);
     final shabbos = terms.shabbos(
       variant: ref.watch(currentTransliterationVariantProvider),
@@ -502,7 +533,7 @@ class _CustomStep3Widget extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Review your schedule',
+              l10n.wizardReviewYourSchedule,
               style: theme.textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
@@ -515,7 +546,7 @@ class _CustomStep3Widget extends ConsumerWidget {
                   children: [
                     Text(terms.stageLearn, style: theme.textTheme.titleMedium),
                     Text(
-                      'Daily new material',
+                      l10n.wizardDailyNewMaterial,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -528,8 +559,16 @@ class _CustomStep3Widget extends ConsumerWidget {
                       ),
                       Text(
                         data.rounds[i].useWeekly
-                            ? 'Every ${_formatDays(data.rounds[i].selectedDays, shabbos)}'
-                            : '${data.rounds[i].delayDays} ${data.rounds[i].delayDays == 1 ? 'day' : 'days'} after learning',
+                            ? l10n.wizardEveryDaysLabel(
+                                _formatDays(
+                                  l10n,
+                                  data.rounds[i].selectedDays,
+                                  shabbos,
+                                ),
+                              )
+                            : l10n.wizardRoundDelayAfterLearning(
+                                data.rounds[i].delayDays,
+                              ),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -714,6 +753,7 @@ class _RoundTimingCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final terms = domainTermLabels(ref);
     final shabbos = terms.shabbos(
       variant: ref.watch(currentTransliterationVariantProvider),
@@ -753,9 +793,7 @@ class _RoundTimingCard extends ConsumerWidget {
             if (!state.useWeekly) ...[
               Row(
                 children: [
-                  Text(
-                    '${state.delayDays} ${state.delayDays == 1 ? 'day' : 'days'} after',
-                  ),
+                  Text(l10n.wizardRoundDelayAfter(state.delayDays)),
                   Expanded(
                     child: Slider(
                       value: state.delayDays.toDouble(),
@@ -775,23 +813,15 @@ class _RoundTimingCard extends ConsumerWidget {
               Wrap(
                 spacing: 8,
                 children: [
-                  for (final entry in {
-                    7: 'Sun',
-                    1: 'Mon',
-                    2: 'Tue',
-                    3: 'Wed',
-                    4: 'Thu',
-                    5: 'Fri',
-                    6: shabbos,
-                  }.entries)
+                  for (final isoDay in const [7, 1, 2, 3, 4, 5, 6])
                     FilterChip(
-                      label: Text(entry.value),
-                      selected: state.selectedDays.contains(entry.key),
+                      label: Text(_weekdayAbbrev(l10n, isoDay, shabbos)),
+                      selected: state.selectedDays.contains(isoDay),
                       onSelected: (selected) {
                         if (selected) {
-                          state.selectedDays.add(entry.key);
+                          state.selectedDays.add(isoDay);
                         } else {
-                          state.selectedDays.remove(entry.key);
+                          state.selectedDays.remove(isoDay);
                         }
                         onChanged();
                       },

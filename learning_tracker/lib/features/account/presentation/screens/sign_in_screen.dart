@@ -402,7 +402,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   () => _keepSignedIn = value ?? false,
                                 ),
                                 onSubmit: () => _handleSignInWithEmail(l10n),
-                                validateEmail: validators.validateEmail,
+                                validateEmail: (v) =>
+                                    validators.validateEmail(v, l10n),
                                 validatePassword: (v) {
                                   if (v == null || v.isEmpty) {
                                     return l10n.authPasswordRequired;

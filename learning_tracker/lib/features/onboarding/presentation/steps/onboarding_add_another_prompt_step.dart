@@ -41,13 +41,13 @@ class OnboardingAddAnotherPromptStep extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Your track "${lastTrackLabel ?? ""}" is ready!',
+                  l10n.onboardingTrackReadyMessage(lastTrackLabel ?? ''),
                   style: theme.textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'You have $trackCount track${trackCount == 1 ? '' : 's'} set up.',
+                  l10n.onboardingTrackCountSetUp(trackCount),
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

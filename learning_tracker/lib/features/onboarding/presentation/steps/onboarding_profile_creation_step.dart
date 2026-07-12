@@ -87,7 +87,7 @@ class _OnboardingProfileCreationStepState
     if (!mounted) return;
     setState(() {
       _nameError = isDuplicate
-          ? 'A profile with this name already exists'
+          ? AppLocalizations.of(context)!.profileNameAlreadyExists
           : null;
     });
   }
@@ -119,7 +119,7 @@ class _OnboardingProfileCreationStepState
     } on DuplicateProfileNameException {
       if (mounted) {
         setState(() {
-          _nameError = 'A profile with this name already exists';
+          _nameError = AppLocalizations.of(context)!.profileNameAlreadyExists;
           _isCreatingProfile = false;
         });
       }

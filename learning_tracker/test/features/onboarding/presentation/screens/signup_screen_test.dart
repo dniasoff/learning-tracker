@@ -382,6 +382,49 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
+    testWidgets(
+      'AUD-onboarding-03: Hebrew locale validation errors render in Hebrew, '
+      'not English',
+      (tester) async {
+        await tester.pumpWidget(createTestWidget(locale: const Locale('he')));
+
+        final button = find.widgetWithText(FilledButton, 'הרשמה');
+        await tester.ensureVisible(button);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(button);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // Hebrew ARB values for the three required-field validators.
+        expect(
+          find.text('נדרש אימייל'),
+          findsOneWidget,
+          reason: 'AUD-onboarding-03: authEmailRequired must render in Hebrew',
+        );
+        expect(
+          find.text('נדרשת סיסמה'),
+          findsOneWidget,
+          reason:
+              'AUD-onboarding-03: authPasswordRequired must render in Hebrew',
+        );
+        expect(
+          find.text('נדרש שם תצוגה'),
+          findsOneWidget,
+          reason:
+              'AUD-onboarding-03: authDisplayNameRequired must render in '
+              'Hebrew',
+        );
+
+        // The old hardcoded English literals must be absent.
+        expect(find.text('Email is required'), findsNothing);
+        expect(find.text('Password is required'), findsNothing);
+        expect(find.text('Display name is required'), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+
     testWidgets('Hebrew offline mode: local-only warning card renders in Hebrew', (
       tester,
     ) async {

@@ -21,7 +21,7 @@ class OnboardingHandoffStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final name = profileName ?? 'Your child';
+    final name = profileName ?? l10n.onboardingHandoffFallbackName;
     return SafeArea(
       top: false,
       // Scroll escape valve: the body is a fixed pile of widgets, so a plain
@@ -42,13 +42,13 @@ class OnboardingHandoffStep extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  "$name's learning is all set up",
+                  l10n.onboardingHandoffAllSetUp(name),
                   style: theme.textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Hand the device to $name to start learning',
+                  l10n.onboardingHandoffDeviceHint(name),
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -56,7 +56,7 @@ class OnboardingHandoffStep extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'You can set up rewards later in Parent Mode',
+                  l10n.onboardingHandoffRewardsHint,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontStyle: FontStyle.italic,

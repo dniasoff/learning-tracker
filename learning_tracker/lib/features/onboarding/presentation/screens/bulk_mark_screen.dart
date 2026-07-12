@@ -379,9 +379,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
     if (resolved.length >= totalLeafs && totalLeafs > 0) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'You must leave at least some content unmarked to continue learning.',
+            AppLocalizations.of(context)!.bulkMarkCannotUnmarkAllError,
           ),
         ),
       );
@@ -474,8 +474,8 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 controller: _searchController,
                 autofocus: true,
                 inputFormatters: const [TrimLeadingSpaceFormatter()],
-                decoration: const InputDecoration(
-                  hintText: 'Search content...',
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context)!.bulkMarkSearchHint,
                   border: InputBorder.none,
                 ),
                 onChanged: (value) => setState(() => _searchQuery = value),
@@ -589,7 +589,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Text(
-                '${_selections.length} selection(s)',
+                l10n.selectionCount(_selections.length),
                 style: theme.textTheme.bodySmall,
                 textAlign: TextAlign.center,
               ),
@@ -673,6 +673,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
 
   Widget _buildConfirmation(ThemeData theme) {
     final itemCount = _resolvedItems?.length ?? 0;
+    final l10n = AppLocalizations.of(context)!;
 
     return SafeArea(
       top: false,
@@ -685,14 +686,17 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
               Icon(Icons.checklist, size: 64, color: theme.colorScheme.primary),
               const SizedBox(height: 24),
               Text(
-                AppLocalizations.of(context)!.bulkMarkConfirmBulkTitle,
+                l10n.bulkMarkConfirmBulkTitle,
                 style: theme.textTheme.headlineSmall,
               ),
               const SizedBox(height: 16),
-              Text('$itemCount items', style: theme.textTheme.titleMedium),
+              Text(
+                l10n.itemsCount(itemCount),
+                style: theme.textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               Text(
-                '$itemCount completion records will be created',
+                l10n.bulkMarkCompletionRecordsCount(itemCount),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

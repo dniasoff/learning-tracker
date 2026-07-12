@@ -1973,6 +1973,15 @@ class AppLocalizationsHe extends AppLocalizations {
   String get authPasswordRequired => 'נדרשת סיסמה';
 
   @override
+  String get authEmailRequired => 'נדרש אימייל';
+
+  @override
+  String get authEmailInvalid => 'הזינו כתובת אימייל תקינה';
+
+  @override
+  String get authDisplayNameRequired => 'נדרש שם תצוגה';
+
+  @override
   String get authLocalDataMissing =>
       'נתונים מקומיים של חשבון זה חסרים. התחברו לאינטרנט כדי לשחזר אותם.';
 
@@ -5344,4 +5353,166 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get programDescriptionPirkeiAvotSummer =>
       'פרק אחד של פרקי אבות בכל שבת בין פסח לראש השנה.';
+
+  @override
+  String get onboardingSetUpTrackTitle => 'הגדרת מסלול';
+
+  @override
+  String get onboardingTrackReadyTitle => '!המסלול מוכן';
+
+  @override
+  String get onboardingAllSetTitle => '!הכול מוכן';
+
+  @override
+  String onboardingTrackReadyMessage(String trackLabel) {
+    return '!המסלול שלך \"$trackLabel\" מוכן';
+  }
+
+  @override
+  String onboardingTrackCountSetUp(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'הגדרת $count מסלולים.',
+      one: 'הגדרת מסלול אחד.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get onboardingHandoffFallbackName => 'הילד/ה שלך';
+
+  @override
+  String onboardingHandoffAllSetUp(String name) {
+    return 'הלימוד של $name מוכן ומסודר';
+  }
+
+  @override
+  String onboardingHandoffDeviceHint(String name) {
+    return 'העבירו את המכשיר ל$name כדי להתחיל ללמוד';
+  }
+
+  @override
+  String get onboardingHandoffRewardsHint =>
+      'אפשר להגדיר פרסים מאוחר יותר במצב הורה';
+
+  @override
+  String get onboardingParentPinFallbackChildName => 'הילד/ה שלך';
+
+  @override
+  String get onboardingPinReenterSubtitle => 'הזינו שוב את הקוד לאישור';
+
+  @override
+  String get bulkMarkCannotUnmarkAllError =>
+      'עליכם להשאיר לפחות מעט תוכן לא מסומן כדי להמשיך ללמוד.';
+
+  @override
+  String get bulkMarkSearchHint => 'חיפוש תוכן...';
+
+  @override
+  String bulkMarkCompletionRecordsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count רשומות השלמה ייווצרו',
+      one: 'רשומת השלמה אחת תיווצר',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String wizardHowDoesChildReview(String childName) {
+    return 'איך $childName חוזר/ת על החומר?';
+  }
+
+  @override
+  String get wizardHowDoYouReview => 'איך אתם חוזרים על החומר?';
+
+  @override
+  String get wizardFollowProgramTitle => 'עקבו אחר תוכנית';
+
+  @override
+  String wizardProgramsAvailableCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count תוכניות זמינות',
+      one: 'תוכנית אחת זמינה',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get wizardCustomScheduleSubtitle => 'בנו מחזור חזרה משלכם';
+
+  @override
+  String get wizardNoFormalReviewTitle => 'ללא חזרה מסודרת';
+
+  @override
+  String get wizardNoFormalReviewSubtitle => 'רק מעקב אחר התקדמות הלימוד';
+
+  @override
+  String wizardWhatProgramDoesChildFollow(String childName) {
+    return 'באיזו תוכנית $childName משתמש/ת?';
+  }
+
+  @override
+  String get wizardSelectAProgram => 'בחרו תוכנית';
+
+  @override
+  String get wizardHowManyReviewRounds => '?כמה סבבי חזרה';
+
+  @override
+  String get wizardEachRoundIntervalsSubtitle =>
+      'כל סבב חוזר על החומר במרווחים גדלים';
+
+  @override
+  String wizardChazarahRoundsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count סבבים',
+      one: 'סבב אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get wizardSetDelayForEachRound => 'הגדירו עיכוב לכל סבב';
+
+  @override
+  String get wizardHowLongBeforeReview => '?כמה זמן אחרי הלימוד לפני כל חזרה';
+
+  @override
+  String get wizardReviewYourSchedule => 'בדקו את לוח הזמנים שלכם';
+
+  @override
+  String get wizardDailyNewMaterial => 'חומר חדש יומי';
+
+  @override
+  String wizardEveryDaysLabel(String days) {
+    return 'כל $days';
+  }
+
+  @override
+  String wizardRoundDelayAfterLearning(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days ימים אחרי הלימוד',
+      one: 'יום אחד אחרי הלימוד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String wizardRoundDelayAfter(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days ימים אחרי',
+      one: 'יום אחד אחרי',
+    );
+    return '$_temp0';
+  }
 }

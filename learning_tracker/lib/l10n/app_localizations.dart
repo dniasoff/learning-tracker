@@ -3543,6 +3543,24 @@ abstract class AppLocalizations {
   /// **'Password is required'**
   String get authPasswordRequired;
 
+  /// No description provided for @authEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required'**
+  String get authEmailRequired;
+
+  /// No description provided for @authEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get authEmailInvalid;
+
+  /// No description provided for @authDisplayNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name is required'**
+  String get authDisplayNameRequired;
+
   /// No description provided for @authLocalDataMissing.
   ///
   /// In en, this message translates to:
@@ -8969,6 +8987,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One perek of Pirkei Avot each Shabbos between Pesach and Rosh Hashana.'**
   String get programDescriptionPirkeiAvotSummer;
+
+  /// No description provided for @onboardingSetUpTrackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Up a Track'**
+  String get onboardingSetUpTrackTitle;
+
+  /// No description provided for @onboardingTrackReadyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track Ready!'**
+  String get onboardingTrackReadyTitle;
+
+  /// No description provided for @onboardingAllSetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All Set!'**
+  String get onboardingAllSetTitle;
+
+  /// No description provided for @onboardingTrackReadyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your track \"{trackLabel}\" is ready!'**
+  String onboardingTrackReadyMessage(String trackLabel);
+
+  /// No description provided for @onboardingTrackCountSetUp.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{You have 1 track set up.} other{You have {count} tracks set up.}}'**
+  String onboardingTrackCountSetUp(int count);
+
+  /// No description provided for @onboardingHandoffFallbackName.
+  ///
+  /// In en, this message translates to:
+  /// **'Your child'**
+  String get onboardingHandoffFallbackName;
+
+  /// No description provided for @onboardingHandoffAllSetUp.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s learning is all set up'**
+  String onboardingHandoffAllSetUp(String name);
+
+  /// No description provided for @onboardingHandoffDeviceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Hand the device to {name} to start learning'**
+  String onboardingHandoffDeviceHint(String name);
+
+  /// No description provided for @onboardingHandoffRewardsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can set up rewards later in Parent Mode'**
+  String get onboardingHandoffRewardsHint;
+
+  /// No description provided for @onboardingParentPinFallbackChildName.
+  ///
+  /// In en, this message translates to:
+  /// **'your child'**
+  String get onboardingParentPinFallbackChildName;
+
+  /// No description provided for @onboardingPinReenterSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-enter the PIN to confirm'**
+  String get onboardingPinReenterSubtitle;
+
+  /// No description provided for @bulkMarkCannotUnmarkAllError.
+  ///
+  /// In en, this message translates to:
+  /// **'You must leave at least some content unmarked to continue learning.'**
+  String get bulkMarkCannotUnmarkAllError;
+
+  /// No description provided for @bulkMarkSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search content...'**
+  String get bulkMarkSearchHint;
+
+  /// No description provided for @bulkMarkCompletionRecordsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 completion record will be created} other{{count} completion records will be created}}'**
+  String bulkMarkCompletionRecordsCount(int count);
+
+  /// No description provided for @wizardHowDoesChildReview.
+  ///
+  /// In en, this message translates to:
+  /// **'How does {childName} review?'**
+  String wizardHowDoesChildReview(String childName);
+
+  /// No description provided for @wizardHowDoYouReview.
+  ///
+  /// In en, this message translates to:
+  /// **'How do you review?'**
+  String get wizardHowDoYouReview;
+
+  /// No description provided for @wizardFollowProgramTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow a program'**
+  String get wizardFollowProgramTitle;
+
+  /// No description provided for @wizardProgramsAvailableCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 program available} other{{count} programs available}}'**
+  String wizardProgramsAvailableCount(int count);
+
+  /// No description provided for @wizardCustomScheduleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Build your own review cycle'**
+  String get wizardCustomScheduleSubtitle;
+
+  /// No description provided for @wizardNoFormalReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No formal review'**
+  String get wizardNoFormalReviewTitle;
+
+  /// No description provided for @wizardNoFormalReviewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Just track learning progress'**
+  String get wizardNoFormalReviewSubtitle;
+
+  /// No description provided for @wizardWhatProgramDoesChildFollow.
+  ///
+  /// In en, this message translates to:
+  /// **'What program does {childName} follow?'**
+  String wizardWhatProgramDoesChildFollow(String childName);
+
+  /// No description provided for @wizardSelectAProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a program'**
+  String get wizardSelectAProgram;
+
+  /// No description provided for @wizardHowManyReviewRounds.
+  ///
+  /// In en, this message translates to:
+  /// **'How many review rounds?'**
+  String get wizardHowManyReviewRounds;
+
+  /// No description provided for @wizardEachRoundIntervalsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Each round reviews the material at increasing intervals'**
+  String get wizardEachRoundIntervalsSubtitle;
+
+  /// No description provided for @wizardChazarahRoundsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 round} other{{count} rounds}}'**
+  String wizardChazarahRoundsCount(int count);
+
+  /// No description provided for @wizardSetDelayForEachRound.
+  ///
+  /// In en, this message translates to:
+  /// **'Set delay for each round'**
+  String get wizardSetDelayForEachRound;
+
+  /// No description provided for @wizardHowLongBeforeReview.
+  ///
+  /// In en, this message translates to:
+  /// **'How long after learning before each review?'**
+  String get wizardHowLongBeforeReview;
+
+  /// No description provided for @wizardReviewYourSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Review your schedule'**
+  String get wizardReviewYourSchedule;
+
+  /// No description provided for @wizardDailyNewMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily new material'**
+  String get wizardDailyNewMaterial;
+
+  /// No description provided for @wizardEveryDaysLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Every {days}'**
+  String wizardEveryDaysLabel(String days);
+
+  /// No description provided for @wizardRoundDelayAfterLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, one{1 day after learning} other{{days} days after learning}}'**
+  String wizardRoundDelayAfterLearning(int days);
+
+  /// No description provided for @wizardRoundDelayAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, one{1 day after} other{{days} days after}}'**
+  String wizardRoundDelayAfter(int days);
 }
 
 class _AppLocalizationsDelegate

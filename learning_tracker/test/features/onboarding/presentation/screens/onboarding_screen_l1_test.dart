@@ -39,8 +39,15 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:learning_tracker/l10n/app_localizations_he.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// AUD-onboarding-04: locale-driven lookup for the Hebrew AppBar-title
+/// assertions below, so a regression that reintroduces a hardcoded English
+/// literal (which would render identically regardless of locale) re-breaks
+/// these tests instead of silently passing.
+final _he = AppLocalizationsHe();
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -206,6 +213,15 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(Scaffold), findsOneWidget);
+
+      // AUD-onboarding-04: AppBar title and PinEntryWidget sub-header must
+      // render in Hebrew, not the English literal (both used to be
+      // hardcoded, so this smoke test previously passed regardless of
+      // locale).
+      expect(find.text(_he.setParentPinDialogTitle), findsOneWidget);
+      expect(find.text(_he.enterNewPin), findsOneWidget);
+      expect(find.text('Set Parent PIN'), findsNothing);
+      expect(find.text('Enter New PIN'), findsNothing);
 
       await _tearDown(tester);
     });
@@ -471,6 +487,21 @@ void main() {
 
       await _tearDown(tester);
     });
+
+    // AUD-onboarding-04: locale-driven lookup (was a hardcoded English
+    // literal that rendered under any locale).
+    testWidgets('HE locale: AppBar title renders in Hebrew, not English', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_rig(router: router, locale: const Locale('he')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text(_he.onboardingTrackReadyTitle), findsOneWidget);
+      expect(find.text('Track Ready!'), findsNothing);
+
+      await _tearDown(tester);
+    });
   });
 
   // ── handoff phase ─────────────────────────────────────────────────────────
@@ -634,6 +665,39 @@ void main() {
         await _tearDown(tester);
       },
     );
+
+    // AUD-onboarding-04: locale-driven lookup (was a hardcoded English
+    // literal that rendered under any locale).
+    testWidgets('HE locale: AppBar title renders in Hebrew, not English', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_rig(router: router, locale: const Locale('he')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text(_he.setupComplete), findsOneWidget);
+      expect(find.text('Setup Complete!'), findsNothing);
+      // OnboardingHandoffStep body text (AUD-onboarding-04): was hardcoded
+      // English, now resolved through l10n for the 'Yitzchak' profile name
+      // seeded by this group's prefs.
+      expect(
+        find.text(_he.onboardingHandoffAllSetUp('Yitzchak')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(_he.onboardingHandoffDeviceHint('Yitzchak')),
+        findsOneWidget,
+      );
+      expect(find.text(_he.onboardingHandoffRewardsHint), findsOneWidget);
+      expect(find.textContaining('learning is all set up'), findsNothing);
+      expect(find.textContaining('Hand the device to'), findsNothing);
+      expect(
+        find.text('You can set up rewards later in Parent Mode'),
+        findsNothing,
+      );
+
+      await _tearDown(tester);
+    });
   });
 
   // ── done phase ────────────────────────────────────────────────────────────
@@ -672,6 +736,21 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+
+      await _tearDown(tester);
+    });
+
+    // AUD-onboarding-04: locale-driven lookup (was a hardcoded English
+    // literal that rendered under any locale).
+    testWidgets('HE locale: AppBar title renders in Hebrew, not English', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_rig(router: router, locale: const Locale('he')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text(_he.onboardingAllSetTitle), findsOneWidget);
+      expect(find.text('All Set!'), findsNothing);
 
       await _tearDown(tester);
     });

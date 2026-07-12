@@ -18,6 +18,7 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Re-export the completion constant so existing callers don't break.
@@ -315,18 +316,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isCombinedProfilePhase = _phase == _ScreenPhase.profileCreation;
 
     final appBarTitle = switch (_phase) {
       _ScreenPhase.profileCreation => const SizedBox.shrink(),
-      _ScreenPhase.parentPinSetup => const AppBarTitle(text: 'Set Parent PIN'),
+      _ScreenPhase.parentPinSetup => AppBarTitle(
+        text: l10n.setParentPinDialogTitle,
+      ),
       // W6.1: intent chooser — no app-bar title (header is inside the step)
       _ScreenPhase.intentChooser => const SizedBox.shrink(),
-      _ScreenPhase.addTrack => const AppBarTitle(text: 'Set Up a Track'),
-      _ScreenPhase.addAnotherPrompt => const AppBarTitle(text: 'Track Ready!'),
-      _ScreenPhase.permissionPrompt => const AppBarTitle(text: 'Almost Done!'),
-      _ScreenPhase.handoff => const AppBarTitle(text: 'Setup Complete!'),
-      _ScreenPhase.done => const AppBarTitle(text: 'All Set!'),
+      _ScreenPhase.addTrack => AppBarTitle(
+        text: l10n.onboardingSetUpTrackTitle,
+      ),
+      _ScreenPhase.addAnotherPrompt => AppBarTitle(
+        text: l10n.onboardingTrackReadyTitle,
+      ),
+      _ScreenPhase.permissionPrompt => AppBarTitle(
+        text: l10n.permissionPromptTitleOnboarding,
+      ),
+      _ScreenPhase.handoff => AppBarTitle(text: l10n.setupComplete),
+      _ScreenPhase.done => AppBarTitle(text: l10n.onboardingAllSetTitle),
     };
 
     // Hide app bar during AddTrackFlow (it has its own progress indicator).

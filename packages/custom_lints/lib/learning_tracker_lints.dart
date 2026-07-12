@@ -48,6 +48,10 @@
 ///     intervening `mounted`/`ref.mounted` guard (SM-4, AUD-onboarding-01).
 ///   - [NoLogLessCatch]: flags a `catch` block under `lib/` that neither logs
 ///     through `AppLogger` nor rethrows (EH-3, AUD-onboarding-11).
+///   - [NoOnboardingRawStringLiteral]: flags a raw string literal passed as
+///     onboarding UI text (`Text(`/`errorText:`/`hintText:`/`label:`/etc.)
+///     under `lib/features/onboarding/presentation/**` — the AX-2 [P]
+///     literals checker (AUD-onboarding-04).
 library learning_tracker_lints;
 
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -63,6 +67,7 @@ import 'src/rules/no_hardcoded_domain_term.dart';
 import 'src/rules/no_hardcoded_error_widget_string.dart';
 import 'src/rules/no_hardcoded_text_direction.dart';
 import 'src/rules/no_log_less_catch.dart';
+import 'src/rules/no_onboarding_raw_string_literal.dart';
 import 'src/rules/no_raw_logevent.dart';
 import 'src/rules/no_raw_talker.dart';
 import 'src/rules/no_ref_after_await_without_mounted_check.dart';
@@ -87,6 +92,7 @@ class _LearningTrackerLintPlugin extends PluginBase {
         NoHardcodedErrorWidgetString(),
         NoHardcodedTextDirection(),
         NoLogLessCatch(),
+        NoOnboardingRawStringLiteral(),
         NoRawLogEvent(),
         NoRawTalker(),
         NoRefAfterAwaitWithoutMountedCheck(),
