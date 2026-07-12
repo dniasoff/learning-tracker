@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -276,8 +277,19 @@ Future<void> _persistNotificationSettingsToCloud(
   final outboxFacade = () {
     try {
       return ref.read(outboxSyncWriteFacadeProvider);
-    } catch (_) {
+    } catch (e, stackTrace) {
+      // AUD-notifications-05 (EH-3): this catches every exception from the
+      // whole outboxSyncWriteFacadeProvider dependency chain, not just the
+      // "test doesn't override this provider" case below — log it so a real
+      // production failure (as opposed to test scaffolding) leaves a
+      // diagnostic trail instead of silently disabling cloud sync of
+      // notification settings for the rest of the session.
       // Some tests build notification providers without full sync dependencies.
+      AppLogger.instance.warning(
+        event: 'notification_settings_outbox_facade_read_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
       return null;
     }
   }();
