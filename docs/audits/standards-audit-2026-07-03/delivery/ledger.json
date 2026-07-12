@@ -268,13 +268,18 @@
   {
    "id": "AUD-notifications-01",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Guard ref access after await in notification_providers.dart effect providers (SM-4)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "reopened post-migration: built-not-merged"
+   "commits": [
+    "2ca48a307facf5d6c13b3727518ff5e0ad1627e8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-notifications-01 AC1 OK: sm4_test swaps activeProfileId mid-await on real reminderSyncEffect, asserts future completes (no UnmountedRefException); PASSED",
+    "AUD-notifications-01 AC2 OK: no_ref_after_await_without_mounted_check rule registered+enabled; fire-cases (ref.watch after await) green in 146-test suite"
+   ],
+   "notes": "Added if(!ref.mounted) return; after each await preceding ref access in 3 named effects + notificationSettingsCloudSyncEffectProvider (needed by AUD-02). AC1: retry-loop deletion + new sm4 test. AC2: pre-existing lint matches; its tests pass."
   },
   {
    "id": "AUD-tracks-01",
@@ -448,13 +453,18 @@
   {
    "id": "AUD-notifications-02",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Stop returning a hardcoded default from build() in the 5 notification preference providers (SM-2)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "reopened post-migration: built-not-merged"
+   "commits": [
+    "2ca48a307facf5d6c13b3727518ff5e0ad1627e8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-notifications-02 AC1 OK: cold_start K1-K4/T1-T3 assert persisted value (false/stored time) via .future after 0->real profile resolve, never default; PASSED",
+    "AUD-notifications-02 AC2 OK: reminder_sync_sacred_time 10-attempt retry loop deleted, single await, assertions preserved, passes first attempt; PASSED"
+   ],
+   "notes": "5 preference providers converted Notifier->AsyncNotifier (genuine Future build, no sync default). M3 workaround deleted; consumers await .future. AC1: cold-start tests assert persisted value observed. AC2: retry-loop test now passes first attempt."
   },
   {
    "id": "AUD-onboarding-01",
@@ -1992,13 +2002,17 @@
   {
    "id": "AUD-notifications-07",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Use a clock-skew-safe timestamp, not client clock, for notification_settings updated_at LWW field",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "reopened post-migration: built-not-merged"
+   "commits": [
+    "2ca48a307facf5d6c13b3727518ff5e0ad1627e8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-notifications-07 AC1 OK: merger_test 2099 stale push server-stamped, later local 7:30 edit survives merge; gateway_test asserts server Timestamp; PASSED"
+   ],
+   "notes": "pushNotificationSettings now server-stamps updated_at. Red-first unit test plus new push->merge clock-skew integration test; RED/GREEN verified both ways."
   },
   {
    "id": "AUD-profiles-10",
@@ -3677,13 +3691,18 @@
   {
    "id": "AUD-notifications-05",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Log-less catch blocks in notifications swallow exceptions with no AppLogger trail (EH-3)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "reopened post-migration: built-not-merged"
+   "commits": [
+    "2ca48a307facf5d6c13b3727518ff5e0ad1627e8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-notifications-05 AC1 OK: AppLogger.warning added to all 3 catches (notification_providers ~279, notification_initializer ~48, timezone_lifecycle_observer ~63)",
+    "AUD-notifications-05 AC2 OK: no_log_less_catch rule registered+enabled over lib/; fire-cases (comment-only/empty catch) green; covers features/notifications"
+   ],
+   "notes": "AppLogger.instance.warning() added to all 3 catch blocks. AC2 satisfied by pre-existing no_log_less_catch lint covering all of lib/; its test suite passes."
   },
   {
    "id": "AUD-account-16",
@@ -4503,13 +4522,17 @@
   {
    "id": "AUD-notifications-08",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Wire up or delete the unused SharedPrefsNotificationPreferencesRepository",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "reopened post-migration: built-not-merged"
+   "commits": [
+    "2ca48a307facf5d6c13b3727518ff5e0ad1627e8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-notifications-08 AC1 OK: SharedPrefs repo deleted (98 lines, 0 callers), abstract load/save removed, static helpers kept, analyze clean"
+   ],
+   "notes": "Deleted dead SharedPrefsNotificationPreferencesRepository (0 call sites/tests) + interface's pointless abstract load()/save(). dart analyze clean."
   },
   {
    "id": "AUD-notifications-09",
@@ -4540,13 +4563,17 @@
   {
    "id": "AUD-notifications-03",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Construct StreakAlertService only through its @riverpod provider (SM-7)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "reopened post-migration: built-not-merged"
+   "commits": [
+    "2ca48a307facf5d6c13b3727518ff5e0ad1627e8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-notifications-03 AC1 OK: family_test overrides streakAlertServiceProvider(5) inactive, verifies fake.evaluate(21,0) called by real bootstrap; PASSED"
+   ],
+   "notes": "streakAlertServiceProvider -> family(profileId), used at both call sites. New test file: RED vs pre-fix hand-construction (hangs on real DB), GREEN via family override."
   },
   {
    "id": "AUD-t-notifications-01",
