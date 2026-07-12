@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
@@ -24,14 +25,11 @@ export 'package:learning_tracker/core/content/hierarchy_selection.dart';
 /// that represent "learned in the past, not today". Matches
 /// [SchedulerEngine.kBulkPriorSentinel].
 ///
-/// This constant is declared here (not in SchedulerEngine) to avoid a
-/// core→features layering violation and is the single source of truth for the
-/// expunge query in [BulkPriorCompletionService.expungePriorCompletions].
-const kBulkPriorSentinel = Duration(
-  // Milliseconds since epoch for DateTime.utc(2000, 1, 1). Used as a
-  // constant so it can be referenced without constructing a DateTime.
-  milliseconds: 946684800000,
-);
+/// Backed by core's [kBulkPriorSentinelMs] (features/ → core/ is a legal
+/// import direction; see docs/coding-standards.md Rule 1/Rule 2) — the single
+/// source of truth for the expunge query in
+/// [BulkPriorCompletionService.expungePriorCompletions].
+const kBulkPriorSentinel = Duration(milliseconds: kBulkPriorSentinelMs);
 
 /// [DateTime] representation of the bulk-prior sentinel (UTC 2000-01-01).
 final kBulkPriorSentinelDate = DateTime.utc(2000, 1, 1);
