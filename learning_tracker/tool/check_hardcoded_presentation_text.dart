@@ -57,7 +57,7 @@ const _baseline = <String>{
   'lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart:76',
   'lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart:89',
   'lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart:101',
-  'lib/features/gamification/presentation/widgets/points_display_widget.dart:95',
+  'lib/features/gamification/presentation/widgets/points_display_widget.dart:98',
   'lib/features/onboarding/presentation/screens/bulk_mark_screen.dart:776',
   'lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:66',
   'lib/features/scheduler/presentation/widgets/pace_indicator.dart:82',
