@@ -111,7 +111,10 @@ class RewardCard extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w700),
       ),
       subtitle: Text(
-        '${l10n.rewardConfigPointsThresholdLabel}: ${milestone.thresholdPoints}',
+        l10n.commonLabelWithValue(
+          l10n.rewardConfigPointsThresholdLabel,
+          '${milestone.thresholdPoints}',
+        ),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
