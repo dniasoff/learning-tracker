@@ -46,8 +46,8 @@ class TierIconBox extends StatelessWidget {
             color: isLocked ? scheme.mutedIconColor : scheme.iconFg,
           ),
           if (isLocked)
-            Positioned(
-              right: 3,
+            PositionedDirectional(
+              end: 3,
               bottom: 3,
               child: Icon(
                 Icons.lock_rounded,
