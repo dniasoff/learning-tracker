@@ -222,13 +222,18 @@
   {
    "id": "AUD-core-sync-13",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P1",
    "title": "Write server timestamps for LWW ordering fields in FirestoreGatewayImpl's push* methods (FB-2)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "commits": [
+    "dc4a8b7c"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-13 AC1 OK: emulator-style tests (firestore_gateway_impl_test.dart) push each of the 5 LWW entities with a deliberately wrong client-clock updated_at/state_changed_at and assert the persisted field is a Firestore Timestamp, not the client value; flutter test test/core/sync/ 438 tests pass",
+    "AUD-core-sync-13 AC2 OK: make audit check 28/37 (FB-2) greps firestore_gateway_impl.dart for the serverTimestamp overwrite on each push* method's LWW field and is green - verified live 2026-07-12"
+   ],
+   "notes": "GATE-REPAIR (2026-07-12, wave-2 closing-gate remediation pass): ledger correction, not new work. The fix was already delivered in commit dc4a8b7c (2026-07-11) - pushTrack/pushSettings/pushBookmark/pushGoal all overwrite their LWW field with FieldValue.serverTimestamp(); make audit check 28/37 (FB-2) is green. A prior wave-2 run left this ledger row at blocked/no-progress despite the commit landing on-branch; corrected status to merged and backfilled commits/acVerified to match reality. No code change needed for this finding."
   },
   {
    "id": "AUD-account-05",
@@ -6410,13 +6415,18 @@
   {
    "id": "AUD-core-sync-40",
    "wave": 2,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace outbox_processor.dart's raw 'sync_outbox_push_failed' literal with a LogEvents catalog constant",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "commits": [
+    "331ce080",
+    "2f5e1992"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-sync-40 AC1 OK: grep -n \"event: '\" lib/core/sync/outbox/outbox_processor.dart returns no output (exit 1) - verified live 2026-07-12"
+   ],
+   "notes": "GATE-REPAIR (2026-07-12, wave-2 closing-gate remediation pass): the finding was originally fixed in commit 331ce080 (2026-07-11), but a LATER same-day commit (bf417353, AUD-core-sync-09) added a new AppLogger.instance.warning() call site in the undecodable-payload branch that hand-typed the raw sync_outbox_push_failed literal again instead of referencing LogEvents.sync.outboxPushFailed, silently regressing this finding's AC. Fixed the regressed call site (commit 2f5e1992) to use the catalog constant (same string value, no telemetry change); grep AC now green; full outbox_processor_test.dart suite (57 tests) passes unchanged; make audit 37/37 clean."
   },
   {
    "id": "AUD-t-account-06",
