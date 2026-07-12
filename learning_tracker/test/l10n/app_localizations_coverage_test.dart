@@ -404,7 +404,10 @@ void main() {
       ignore = en.authLocalDataMissing;
       ignore = en.authEmailOfflineUnreachable;
       ignore = en.authIncorrectPassword;
+      ignore = en.authVerifyEmailTitle;
       ignore = en.authVerifyEmailBody;
+      ignore = en.authOpenEmailButton;
+      ignore = en.authSendAgainButton;
       ignore = en.authIveVerified;
       ignore = en.authVerificationEmailSentAgain;
       ignore = en.authEmailStillUnverified;
@@ -1139,7 +1142,10 @@ void main() {
       ignore = he.authLocalDataMissing;
       ignore = he.authEmailOfflineUnreachable;
       ignore = he.authIncorrectPassword;
+      ignore = he.authVerifyEmailTitle;
       ignore = he.authVerifyEmailBody;
+      ignore = he.authOpenEmailButton;
+      ignore = he.authSendAgainButton;
       ignore = he.authIveVerified;
       ignore = he.authVerificationEmailSentAgain;
       ignore = he.authEmailStillUnverified;

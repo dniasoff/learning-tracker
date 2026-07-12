@@ -44,17 +44,18 @@
 //    G1. transitions from locked → unlocked re-enables all actions
 //
 // H. Hebrew (he) smoke test
-//    H1. panel renders without overflow or exception in RTL locale
+//    H1. panel renders without overflow or exception in RTL locale, the
+//        title/Open-Email/Send-Again/Cancel labels render the Hebrew ARB
+//        strings, and the pre-fix English literals do not appear.
 //
-// HARDCODED STRING AUDIT:
-//   email_verification_confirm_panel.dart:
-//     line 139  title default: 'Confirm Your Email'          ← not from l10n
-//     line 140  verifiedLinkLabel default: "I've verified"   ← not from l10n
-//     line 242  'Open Email'                                  ← not from l10n
-//     line 286  'Send Again'                                  ← not from l10n
-//     line 320  'Cancel'                                      ← not from l10n
-//   These hardcoded English strings are reported in bugsFound as low-severity
-//   i18n gaps. Tests assert the ACTUAL strings emitted by the widget.
+// LOCALIZATION (AUD-account-05, fixed):
+//   The title (when the caller omits it — as both production callers do)
+//   and the Open Email / Send Again / Cancel labels are now drawn from
+//   AppLocalizations (l10n.authVerifyEmailTitle / l10n.authOpenEmailButton /
+//   l10n.authSendAgainButton / l10n.cancel) instead of hardcoded English
+//   literals. `verifiedLinkLabel` was already l10n-derived by its callers.
+//   The H1 test below asserts the Hebrew strings render and the old English
+//   literals no longer appear.
 //
 // PROTOCOL: no pumpAndSettle — only pump() / pump(Duration) calls.
 // Teardown: pumpWidget(SizedBox.shrink()) + pump(Duration.zero).
@@ -109,7 +110,11 @@ Widget _buildPanel({
   required Future<void> Function() onVerified,
   String bodyText = 'We sent an email to you@example.com.',
   String? email,
-  String title = 'Confirm Your Email',
+  // Nullable, no default: both real callers (email_verification_dialog.dart,
+  // upgrade_to_cloud_screen.dart) never override title, relying on the
+  // widget's own AppLocalizations fallback (AUD-account-05) — a hardcoded
+  // default here would mask that production behaviour under test.
+  String? title,
   String verifiedLinkLabel = "I've verified",
   bool actionsLocked = false,
   Locale locale = const Locale('en'),
@@ -952,14 +957,7 @@ void main() {
 
   group('H. Hebrew (he) RTL smoke test', () {
     testWidgets(
-      'H1. panel renders without overflow or exception in RTL locale',
-      // BUG: The Send-Again + Cancel Row overflows 16 px on the right under
-      // RTL layout (he locale).  The Row uses two Expanded children with a
-      // SizedBox gap but the inner icon+text rows emit a hard overflow at
-      // 1080×2340/3.0 dpr (360 logical px wide).  The correct fix is to wrap
-      // the Row children in Flexible or constrain the icon+text rows.
-      // Asserting CORRECT behaviour (no overflow) — marked skip until fixed.
-      skip: true,
+      'H1. panel renders Hebrew labels (no overflow/exception) in RTL locale',
       (tester) async {
         _setUpUrlLauncherMock();
         addTearDown(_clearUrlLauncherMock);
@@ -969,9 +967,19 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
+        final he = await AppLocalizations.delegate.load(const Locale('he'));
+
         await tester.pumpWidget(
+          // No `title:` override — mirrors both real callers
+          // (email_verification_dialog.dart, upgrade_to_cloud_screen.dart),
+          // which never pass one and rely on the widget's l10n fallback.
+          // `verifiedLinkLabel` IS caller-supplied in production (both real
+          // callers pass `l10n.authIveVerified`), so it is set explicitly
+          // here too — this test's own English default for that param is
+          // just test-harness convenience, not a production code path.
           _buildPanel(
             bodyText: 'שלחנו קישור אימות לתיבת הדואר שלך.',
+            verifiedLinkLabel: he.authIveVerified,
             locale: const Locale('he'),
             onSendAgain: () async {},
             onCancel: () {},
@@ -987,11 +995,20 @@ void main() {
         // The panel widget must be present in the tree.
         expect(find.byType(EmailVerificationConfirmPanel), findsOneWidget);
 
-        // All four action widgets must still be present.
-        expect(find.text('Open Email'), findsOneWidget);
-        expect(find.text('Send Again'), findsOneWidget);
-        expect(find.text('Cancel'), findsOneWidget);
-        expect(find.text("I've verified"), findsOneWidget);
+        // AUD-account-05: title/action labels must render the Hebrew ARB
+        // strings under locale: he.
+        expect(find.text(he.authVerifyEmailTitle), findsOneWidget);
+        expect(find.text(he.authOpenEmailButton), findsOneWidget);
+        expect(find.text(he.authSendAgainButton), findsOneWidget);
+        expect(find.text(he.cancel), findsOneWidget);
+        expect(find.text(he.authIveVerified), findsOneWidget);
+
+        // Regression guard: the pre-fix hardcoded English literals must NOT
+        // appear on a Hebrew device.
+        expect(find.text('Confirm Your Email'), findsNothing);
+        expect(find.text('Open Email'), findsNothing);
+        expect(find.text('Send Again'), findsNothing);
+        expect(find.text('Cancel'), findsNothing);
 
         await _tearDown(tester);
       },

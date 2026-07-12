@@ -2024,8 +2024,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get authVerifyEmailTitle => 'Confirm Your Email';
+
+  @override
   String get authVerifyEmailBody =>
       'We sent a verification link to your inbox. Please check your email to continue.';
+
+  @override
+  String get authOpenEmailButton => 'Open Email';
+
+  @override
+  String get authSendAgainButton => 'Send Again';
 
   @override
   String get authIveVerified => 'I\'ve verified';

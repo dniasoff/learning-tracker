@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Peach tone for the "Send Again" pill (matches email confirmation mock).
@@ -137,12 +138,17 @@ class EmailVerificationConfirmPanel extends StatefulWidget {
     required this.onCancel,
     required this.onVerified,
     this.email,
-    this.title = 'Confirm Your Email',
+    this.title,
     this.verifiedLinkLabel = "I've verified",
     this.actionsLocked = false,
   });
 
-  final String title;
+  /// Panel title. Defaults to `AppLocalizations.authVerifyEmailTitle` when
+  /// omitted (AUD-account-05: neither production caller overrides this, so
+  /// the default must route through l10n rather than a hardcoded literal —
+  /// a constructor default can't call `AppLocalizations.of(context)`,
+  /// hence the nullable field + build()-time fallback below).
+  final String? title;
   final String bodyText;
   final String? email;
   final String verifiedLinkLabel;
@@ -206,6 +212,7 @@ class _EmailVerificationConfirmPanelState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final busy = _sendingAgain || _checkingVerified || widget.actionsLocked;
 
     return Material(
@@ -226,7 +233,7 @@ class _EmailVerificationConfirmPanelState
             const _MailIllustration(),
             const SizedBox(height: 20),
             Text(
-              widget.title,
+              widget.title ?? l10n.authVerifyEmailTitle,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w800,
@@ -269,7 +276,7 @@ class _EmailVerificationConfirmPanelState
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        'Open Email',
+                        l10n.authOpenEmailButton,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -319,7 +326,7 @@ class _EmailVerificationConfirmPanelState
                               const SizedBox(width: 6),
                               Flexible(
                                 child: Text(
-                                  'Send Again',
+                                  l10n.authSendAgainButton,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context).textTheme.labelLarge
@@ -358,7 +365,7 @@ class _EmailVerificationConfirmPanelState
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            'Cancel',
+                            l10n.cancel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.labelLarge
