@@ -638,5 +638,34 @@ void main() {
         await _teardown(tester);
       },
     );
+
+    testWidgets('idle hint shows the localized Hebrew string under he locale, '
+        'not the English literal', (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          router: _defaultRouter(),
+          locationNotifier: _FakeSacredLocationNotifier(),
+          locale: const Locale('he'),
+        ),
+      );
+      await _pump(tester);
+
+      expect(
+        find.textContaining('התחילו להקליד'),
+        findsOneWidget,
+        reason:
+            'cityPickerIdleHint must render the Hebrew ARB string '
+            'under he locale',
+      );
+      expect(
+        find.textContaining('Start typing'),
+        findsNothing,
+        reason:
+            'The hardcoded English idle-hint literal must not leak '
+            'through under he locale',
+      );
+
+      await _teardown(tester);
+    });
   });
 }

@@ -2748,6 +2748,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get cityPickerIdleHint =>
+      'Start typing to search ~33,000 cities.\nType at least 2 letters.';
+
+  @override
   String get schedulerStudyLabel => 'Study';
 
   @override
