@@ -5343,6 +5343,60 @@ abstract class AppLocalizations {
   /// **'Change Level'**
   String get scopeSelectionChangeLevel;
 
+  /// AppBar title on the scope-selection screen. {curriculum} is the human-readable curriculum name.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Scope — {curriculum}'**
+  String scopeSelectionTitle(String curriculum);
+
+  /// No description provided for @scopeSelectionAllContentIncluded.
+  ///
+  /// In en, this message translates to:
+  /// **'All content is included'**
+  String get scopeSelectionAllContentIncluded;
+
+  /// No description provided for @scopeSelectionOnlySelectedTracked.
+  ///
+  /// In en, this message translates to:
+  /// **'Only selected sections are tracked'**
+  String get scopeSelectionOnlySelectedTracked;
+
+  /// No description provided for @scopeSelectionSelectScopeLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Scope Level'**
+  String get scopeSelectionSelectScopeLevel;
+
+  /// No description provided for @scopeSelectionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get scopeSelectionSummary;
+
+  /// Subtitle on a hierarchy-level tile showing how many distinct values exist at that level.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 option} other{{count} options}}'**
+  String scopeSelectionOptionsCount(int count);
+
+  /// No description provided for @scopeSelectionItemsWillBeTracked.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 item will be tracked} other{{count} items will be tracked}}'**
+  String scopeSelectionItemsWillBeTracked(int count);
+
+  /// No description provided for @scopeSelectionScopeSetEntireCurriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'Scope set to entire curriculum'**
+  String get scopeSelectionScopeSetEntireCurriculum;
+
+  /// Save-confirmation SnackBar shown after saving a subset scope. {values} is the comma-joined list of rendered selected scope values.
+  ///
+  /// In en, this message translates to:
+  /// **'Scope updated: {values}'**
+  String scopeSelectionScopeUpdated(String values);
+
   /// No description provided for @curriculumSettingsLoadingProgram.
   ///
   /// In en, this message translates to:
@@ -5390,6 +5444,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Custom schedule'**
   String get curriculumSettingsCustomSchedule;
+
+  /// AppBar title on the per-curriculum settings screen. {curriculum} is the human-readable curriculum name.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings - {curriculum}'**
+  String curriculumSettingsTitle(String curriculum);
+
+  /// No description provided for @curriculumSettingsCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get curriculumSettingsCopy;
 
   /// List tile title showing the active learning program name. {name} is the human-readable program label.
   ///

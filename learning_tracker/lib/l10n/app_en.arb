@@ -1578,6 +1578,38 @@
   "scopeSelectionTrackEntireCurriculum": "Track Entire Curriculum",
   "scopeSelectionChooseHierarchyLevel": "Choose which hierarchy level to filter by",
   "scopeSelectionChangeLevel": "Change Level",
+  "scopeSelectionTitle": "Learning Scope — {curriculum}",
+  "@scopeSelectionTitle": {
+    "description": "AppBar title on the scope-selection screen. {curriculum} is the human-readable curriculum name.",
+    "placeholders": {
+      "curriculum": { "type": "String" }
+    }
+  },
+  "scopeSelectionAllContentIncluded": "All content is included",
+  "scopeSelectionOnlySelectedTracked": "Only selected sections are tracked",
+  "scopeSelectionSelectScopeLevel": "Select Scope Level",
+  "scopeSelectionSummary": "Summary",
+  "scopeSelectionOptionsCount": "{count, plural, one{1 option} other{{count} options}}",
+  "@scopeSelectionOptionsCount": {
+    "description": "Subtitle on a hierarchy-level tile showing how many distinct values exist at that level.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "scopeSelectionItemsWillBeTracked": "{count, plural, one{1 item will be tracked} other{{count} items will be tracked}}",
+  "@scopeSelectionItemsWillBeTracked": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "scopeSelectionScopeSetEntireCurriculum": "Scope set to entire curriculum",
+  "scopeSelectionScopeUpdated": "Scope updated: {values}",
+  "@scopeSelectionScopeUpdated": {
+    "description": "Save-confirmation SnackBar shown after saving a subset scope. {values} is the comma-joined list of rendered selected scope values.",
+    "placeholders": {
+      "values": { "type": "String" }
+    }
+  },
 
   "curriculumSettingsLoadingProgram": "Loading program...",
   "curriculumSettingsProgramTitle": "Program",
@@ -1592,6 +1624,14 @@
   "curriculumSettingsDontSeeProgram": "Don't see your program?",
   "curriculumSettingsRequestProgram": "Request a new program",
   "curriculumSettingsCustomSchedule": "Custom schedule",
+  "curriculumSettingsTitle": "Settings - {curriculum}",
+  "@curriculumSettingsTitle": {
+    "description": "AppBar title on the per-curriculum settings screen. {curriculum} is the human-readable curriculum name.",
+    "placeholders": {
+      "curriculum": { "type": "String" }
+    }
+  },
+  "curriculumSettingsCopy": "Copy",
   "curriculumSettingsProgramLabel": "Program: {name}",
   "@curriculumSettingsProgramLabel": {
     "description": "List tile title showing the active learning program name. {name} is the human-readable program label.",

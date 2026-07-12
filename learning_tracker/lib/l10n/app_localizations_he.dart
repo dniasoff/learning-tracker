@@ -3026,6 +3026,54 @@ class AppLocalizationsHe extends AppLocalizations {
   String get scopeSelectionChangeLevel => 'שנה רמה';
 
   @override
+  String scopeSelectionTitle(String curriculum) {
+    return 'היקף הלימוד — $curriculum';
+  }
+
+  @override
+  String get scopeSelectionAllContentIncluded => 'כל התוכן כלול';
+
+  @override
+  String get scopeSelectionOnlySelectedTracked => 'רק הקטעים שנבחרו נעקבים';
+
+  @override
+  String get scopeSelectionSelectScopeLevel => 'בחרו רמת היקף';
+
+  @override
+  String get scopeSelectionSummary => 'סיכום';
+
+  @override
+  String scopeSelectionOptionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count אפשרויות',
+      one: 'אפשרות 1',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String scopeSelectionItemsWillBeTracked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count פריטים ייעקבו',
+      one: 'פריט אחד ייעקב',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scopeSelectionScopeSetEntireCurriculum =>
+      'ההיקף הוגדר לכל קורס הלימוד';
+
+  @override
+  String scopeSelectionScopeUpdated(String values) {
+    return 'ההיקף עודכן: $values';
+  }
+
+  @override
   String get curriculumSettingsLoadingProgram => 'טוען תוכנית...';
 
   @override
@@ -3051,6 +3099,14 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get curriculumSettingsCustomSchedule => 'לוח זמנים מותאם';
+
+  @override
+  String curriculumSettingsTitle(String curriculum) {
+    return 'הגדרות - $curriculum';
+  }
+
+  @override
+  String get curriculumSettingsCopy => 'העתק';
 
   @override
   String curriculumSettingsProgramLabel(String name) {

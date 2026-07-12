@@ -3058,6 +3058,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scopeSelectionChangeLevel => 'Change Level';
 
   @override
+  String scopeSelectionTitle(String curriculum) {
+    return 'Learning Scope — $curriculum';
+  }
+
+  @override
+  String get scopeSelectionAllContentIncluded => 'All content is included';
+
+  @override
+  String get scopeSelectionOnlySelectedTracked =>
+      'Only selected sections are tracked';
+
+  @override
+  String get scopeSelectionSelectScopeLevel => 'Select Scope Level';
+
+  @override
+  String get scopeSelectionSummary => 'Summary';
+
+  @override
+  String scopeSelectionOptionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count options',
+      one: '1 option',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String scopeSelectionItemsWillBeTracked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items will be tracked',
+      one: '1 item will be tracked',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scopeSelectionScopeSetEntireCurriculum =>
+      'Scope set to entire curriculum';
+
+  @override
+  String scopeSelectionScopeUpdated(String values) {
+    return 'Scope updated: $values';
+  }
+
+  @override
   String get curriculumSettingsLoadingProgram => 'Loading program...';
 
   @override
@@ -3083,6 +3132,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get curriculumSettingsCustomSchedule => 'Custom schedule';
+
+  @override
+  String curriculumSettingsTitle(String curriculum) {
+    return 'Settings - $curriculum';
+  }
+
+  @override
+  String get curriculumSettingsCopy => 'Copy';
 
   @override
   String curriculumSettingsProgramLabel(String name) {

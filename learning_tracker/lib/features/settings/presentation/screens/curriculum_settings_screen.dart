@@ -50,8 +50,9 @@ class _CurriculumSettingsScreenState
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
-          text:
-              'Settings - ${curriculumLabelText(ref, curriculum: _curriculum)}',
+          text: AppLocalizations.of(context)!.curriculumSettingsTitle(
+            curriculumLabelText(ref, curriculum: _curriculum),
+          ),
         ),
       ),
       body: SafeArea(
@@ -201,7 +202,7 @@ class _CurriculumSettingsScreenState
         SnackBar(
           content: Text(AppLocalizations.of(context)!.errorNoEmailApp),
           action: SnackBarAction(
-            label: 'Copy',
+            label: AppLocalizations.of(context)!.curriculumSettingsCopy,
             onPressed: () {
               Clipboard.setData(
                 const ClipboardData(text: AppConstants.supportEmail),
