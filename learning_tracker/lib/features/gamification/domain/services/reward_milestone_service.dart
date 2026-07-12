@@ -316,7 +316,12 @@ class RewardMilestoneService {
       (remote['updated_at'] ?? '').toString(),
     );
     final localUpdatedAt = await _getLocalUpdatedAt();
-    if (remoteUpdatedAt != null && !remoteUpdatedAt.isAfter(localUpdatedAt)) {
+    // AUD-gamification-05: a missing/unparseable remote 'updated_at' must NOT
+    // be treated as "unconditionally newer" -- that would unconditionally
+    // overwrite local milestones/unlocks with an ambiguous-timestamp remote
+    // payload (EH-2 LWW ordering must not silently clobber on ambiguous
+    // input). Treat null the same as "not provably newer": skip the merge.
+    if (remoteUpdatedAt == null || !remoteUpdatedAt.isAfter(localUpdatedAt)) {
       return;
     }
 

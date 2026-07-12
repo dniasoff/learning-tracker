@@ -1136,6 +1136,76 @@ void main() {
       expect((await service.getAllMilestones()).length, 1);
       expect((await service.getAllMilestones()).first.id, 'local-m');
     });
+
+    // AUD-gamification-05: a non-empty remote payload whose 'updated_at' is
+    // missing or unparseable must NOT be treated as unconditionally newer
+    // than local -- that silently clobbers local milestones/unlocks with no
+    // way to prove the remote data is actually more recent. The malformed
+    // timestamp must be treated the same as an older timestamp: skip merge,
+    // keep local data untouched.
+    test('skips merge and preserves local data when remote updated_at key is '
+        'missing entirely (non-empty payload)', () async {
+      await service.upsertMilestone(
+        trackId: 1,
+        title: 'Local',
+        thresholdPoints: 100,
+        milestoneId: 'local-m',
+      );
+
+      await service.mergeCloudPayload({
+        // No 'updated_at' key at all.
+        'milestones': [
+          {
+            'id': 'remote-should-not-land',
+            'profile_id': profileId,
+            'track_id': 1,
+            'title': 'Remote',
+            'threshold_points': 999,
+            'is_enabled': true,
+            'icon_index': 0,
+            'created_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+            'updated_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+          },
+        ],
+        'unlocks': <Map<String, dynamic>>[],
+      });
+
+      final milestones = await service.getAllMilestones();
+      expect(milestones.length, 1);
+      expect(milestones.first.id, 'local-m');
+    });
+
+    test('skips merge and preserves local data when remote updated_at is a '
+        'garbage string (non-empty payload)', () async {
+      await service.upsertMilestone(
+        trackId: 1,
+        title: 'Local',
+        thresholdPoints: 100,
+        milestoneId: 'local-m',
+      );
+
+      await service.mergeCloudPayload({
+        'updated_at': 'not-a-real-timestamp',
+        'milestones': [
+          {
+            'id': 'remote-should-not-land',
+            'profile_id': profileId,
+            'track_id': 1,
+            'title': 'Remote',
+            'threshold_points': 999,
+            'is_enabled': true,
+            'icon_index': 0,
+            'created_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+            'updated_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+          },
+        ],
+        'unlocks': <Map<String, dynamic>>[],
+      });
+
+      final milestones = await service.getAllMilestones();
+      expect(milestones.length, 1);
+      expect(milestones.first.id, 'local-m');
+    });
   });
 
   // ─── exportCloudPayload / mergeCloudPayload (extended) ───────────────────
