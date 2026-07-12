@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/parent_dashboard_aggregator.dart';
 
 import '../../../../helpers/drift_memory.dart';
@@ -116,11 +117,11 @@ void main() {
     });
 
     test('returns streak derived from streak_events', () async {
-      // W3.37: streak is derived from streak_events; seed 5 consecutive days
-      // ending today so StreakStateProvider (which uses SystemLocalDayClock)
-      // sees an active streak.
-      final today = DateTime.now().toUtc();
-      final todayUtc = DateTime.utc(today.year, today.month, today.day);
+      // AUD-dashboard-07: streak is derived from streak_events, replayed
+      // against an injected LocalDayClock (not the real wall clock), so
+      // "today" is a fixed, hermetic value. Seed 5 consecutive days ending
+      // on that fixed today so StreakStateProvider sees an active streak.
+      final todayUtc = DateTime.utc(2026, 3, 20);
       for (var i = 0; i < 5; i++) {
         final day = todayUtc.subtract(Duration(days: 4 - i));
         await db.streakEventDao.appendEvent(
@@ -133,7 +134,11 @@ void main() {
         );
       }
 
-      final aggregator = ParentDashboardAggregator(db, profileId: profileId);
+      final aggregator = ParentDashboardAggregator(
+        db,
+        profileId: profileId,
+        clock: FakeLocalDayClock(todayUtc),
+      );
       final data = await aggregator.compute(now: todayUtc);
 
       expect(data.currentStreak, 5);
