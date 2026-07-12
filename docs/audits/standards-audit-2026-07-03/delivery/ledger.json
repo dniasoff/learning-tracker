@@ -4390,13 +4390,18 @@
   {
    "id": "AUD-dashboard-05",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or wire up the orphaned dashboardModelProvider composition layer",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "3508e586e7e8ffd79cfb5fbf2b5e59cc3552bd15"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-dashboard-05 AC1 OK: grep -rn dashboardModelProvider lib/ = zero (exit 1); file deleted; DashboardModel class grep zero repo-wide",
+    "AUD-dashboard-05 AC2 OK: test file updated - dead import + AC1 existence group removed; AC2-AC4 preserved; story test 20/20 pass; no unreachable refs"
+   ],
+   "notes": "Re-verified: zero widget consumers, only the provider's own file. Deleted dashboard_model_provider.dart (143 lines) rather than migrating dashboard_screen.dart (risky async semantics). Removed dead AC1 test group only; AC2-4 preserved. 28->20 tests pass."
   },
   {
    "id": "AUD-dashboard-07",
