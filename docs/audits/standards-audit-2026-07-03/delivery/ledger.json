@@ -796,13 +796,18 @@
   {
    "id": "AUD-core-database-04",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Make SacredWindowDao's cache replace atomic \u2014 clearAll()+insertAll() must be one transaction, not the caller's fire-and-forget chain",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d2a0bca8ecd88015d387af345cc69bed65f8c6cd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-04 AC1 OK: replaceAll() wraps clear+insert in transaction() (dao.dart:24); repo uses it only, grep shows no separate clearAll/insertAll caller in lib/",
+    "AUD-core-database-04 AC2 OK: dao_test forces real UNIQUE-PK violation mid-batch, asserts table keeps PREVIOUS row (len 1); passed, discriminating"
+   ],
+   "notes": "Added SacredWindowDao.replaceAll() (one transaction); repository no longer calls clearAll()/insertAll() separately, logs via AppLogger not .ignore(). Test: real UNIQUE-PK violation mid-insertAll asserts rollback to PREVIOUS rows."
   },
   {
    "id": "AUD-core-sync-05",
@@ -3570,13 +3575,17 @@
   {
    "id": "AUD-notifications-06",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Route sacred_window_repository.dart through the sacred_time barrel instead of deep cross-feature imports (Rule 2)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d2a0bca8ecd88015d387af345cc69bed65f8c6cd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-notifications-06 AC1 OK: fixed awk flags this file's deep import (synthetic) and passes barrel; real tree not flagged (repo.dart:8); make audit 37/37"
+   ],
+   "notes": "Makefile check-15 awk bug already fixed by prior commit adc0d9e2 - re-verified it flags this file before, clean after. Populated sacred_time.dart barrel with minimal show-exports; repository now imports the barrel."
   },
   {
    "id": "AUD-notifications-05",
@@ -4391,13 +4400,17 @@
   {
    "id": "AUD-notifications-09",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Wrap SacredWindowEntries clear+insert in one transaction (DB-2)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d2a0bca8ecd88015d387af345cc69bed65f8c6cd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-notifications-09 AC1 OK: repo_test races held invalidate clear vs newer persist(B) on real DB, asserts final non-empty + location B; passed, discriminating"
+   ],
+   "notes": "Added generation-guarded serialized write chain so invalidate()/_persistToDb() writes can't interleave/stomp. New race test asserts table never empty once newer write committed; confirmed discriminating via a scratch naive-impl red run."
   },
   {
    "id": "AUD-t-notifications-02",
