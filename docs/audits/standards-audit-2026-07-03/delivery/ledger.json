@@ -7234,13 +7234,18 @@
   {
    "id": "AUD-core-database-09",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Declare PointsLedger.redemptionId as a real FK to RewardRedemptions instead of a comment-only reference",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "e9c27a7ddd965fba5595b79f5aa0d405dcb20a75"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-09 AC(FK) OK: points_balance.dart:68 .references(RewardRedemptions,#id,restrict); g.dart REFERENCES...ON DELETE RESTRICT; v34->35 TableMigration rebuild",
+    "AUD-core-database-09 AC(bogus test) OK: dao 'bogus redemptionId fails' + v34_to_v35_test; independently RED pre-fix, GREEN post-fix"
+   ],
+   "notes": "Re-verified, not drifted. Added real FK (restrict) on redemptionId; schema v34->35 rebuilds points_ledger via TableMigration, nulling pre-existing bogus refs first, foreign_key_check asserted, v34 UNIQUE index preserved. AC met: FK added + tests assert bogus insert fails."
   },
   {
    "id": "AUD-core-navigation-03",
