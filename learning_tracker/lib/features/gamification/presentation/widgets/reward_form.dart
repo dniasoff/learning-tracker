@@ -1,31 +1,38 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+
+part 'reward_form.freezed.dart';
 
 /// Immutable snapshot of the reward configuration form state.
 ///
 /// Held by [RewardConfigController] and observed by the screen
 /// to drive reactive UI updates without `setState`.
-class RewardForm {
-  const RewardForm({
-    this.name = '',
-    this.pointsText = '',
-    this.iconIndex = 0,
-    this.isGlobalReward = false,
-    this.selectedTrackId,
-    this.editingMilestoneId,
-    this.tracks = const [],
-    this.loading = false,
-    this.error,
-  });
+///
+/// AUD-gamification-22 (SM/coding-standards "Domain/state models are
+/// immutable @freezed classes ... never hand-write ==/hashCode"):
+/// previously a hand-written class with no `==`/`hashCode` override, so
+/// Riverpod's default identity-based `updateShouldNotify` always treated
+/// every `copyWith()` result — including a no-op one — as changed,
+/// defeating rebuild-skipping for every widget watching
+/// [RewardConfigController]. Converted to `@freezed` for generated
+/// value-equality; the private const constructor + getters/statics below
+/// preserve the original public API exactly (mirrors the
+/// `TutorPermissions` freezed-with-extra-getters pattern).
+@freezed
+abstract class RewardForm with _$RewardForm {
+  const RewardForm._();
 
-  final String name;
-  final String pointsText;
-  final int iconIndex;
-  final bool isGlobalReward;
-  final int? selectedTrackId;
-  final String? editingMilestoneId;
-  final List<CurriculumTrack> tracks;
-  final bool loading;
-  final String? error;
+  const factory RewardForm({
+    @Default('') String name,
+    @Default('') String pointsText,
+    @Default(0) int iconIndex,
+    @Default(false) bool isGlobalReward,
+    int? selectedTrackId,
+    String? editingMilestoneId,
+    @Default(<CurriculumTrack>[]) List<CurriculumTrack> tracks,
+    @Default(false) bool loading,
+    String? error,
+  }) = _RewardForm;
 
   /// Maximum allowed length for a reward name (GA-2).
   static const int kMaxNameLength = 50;
@@ -49,40 +56,11 @@ class RewardForm {
   /// before a submit attempt, preventing the silent-no-op UX.
   bool get canSave {
     final trimmedName = name.trim();
-    if (trimmedName.isEmpty || trimmedName.length > kMaxNameLength)
+    if (trimmedName.isEmpty || trimmedName.length > kMaxNameLength) {
       return false;
+    }
     final pts = int.tryParse(pointsText.trim()) ?? 0;
     if (pts <= 0 || pts > kMaxPointsCost) return false;
     return true;
   }
-
-  RewardForm copyWith({
-    String? name,
-    String? pointsText,
-    int? iconIndex,
-    bool? isGlobalReward,
-    Object? selectedTrackId = _sentinel,
-    Object? editingMilestoneId = _sentinel,
-    List<CurriculumTrack>? tracks,
-    bool? loading,
-    Object? error = _sentinel,
-  }) {
-    return RewardForm(
-      name: name ?? this.name,
-      pointsText: pointsText ?? this.pointsText,
-      iconIndex: iconIndex ?? this.iconIndex,
-      isGlobalReward: isGlobalReward ?? this.isGlobalReward,
-      selectedTrackId: selectedTrackId == _sentinel
-          ? this.selectedTrackId
-          : selectedTrackId as int?,
-      editingMilestoneId: editingMilestoneId == _sentinel
-          ? this.editingMilestoneId
-          : editingMilestoneId as String?,
-      tracks: tracks ?? this.tracks,
-      loading: loading ?? this.loading,
-      error: error == _sentinel ? this.error : error as String?,
-    );
-  }
 }
-
-const _sentinel = Object();
