@@ -26,10 +26,10 @@ class RewardConfigHeader extends StatelessWidget {
       color: Theme.of(context).colorScheme.surface,
       elevation: 0,
       child: Padding(
-        padding: EdgeInsets.only(
+        padding: EdgeInsetsDirectional.only(
           top: topInset + 4,
-          left: 4,
-          right: 4,
+          start: 4,
+          end: 4,
           bottom: 12,
         ),
         child: Row(
