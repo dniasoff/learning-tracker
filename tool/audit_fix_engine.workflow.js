@@ -312,7 +312,7 @@ async function runComponent(comp, roundNum, compIdx, preB) {
     log(cid + ': review HARVESTED from prior run for tip ' + tip.slice(0, 10) + ' (' + (pa.reviewedBy || 'opus') + ', approve) - straight to merge')
   } else if (fixedIds.length > 0) {
     while (true) {
-      const rev = await ga(reviewerPrompt(cid, tip, dispatchIds, JSON.stringify({ status: b.status, perFinding: b.perFinding, testsAdded: b.testsAdded, gateResults: b.gateResults })), { label: 'review:' + cid + '-r' + (reviewRounds + 1), phase: 'Review', model: 'opus', isolation: 'worktree', schema: REVIEW_SCHEMA })
+      const rev = await ga(reviewerPrompt(cid, tip, dispatchIds, JSON.stringify({ status: b.status, perFinding: b.perFinding, testsAdded: b.testsAdded, gateResults: b.gateResults })), { label: 'review:' + cid + '-r' + (reviewRounds + 1), phase: 'Review', model: 'opus', isolation: 'worktree', schema: REVIEW_SCHEMA }, true)
       if (!rev) { blocked = blocked.concat(fixedIds.filter(function (id) { return !refuted.some(function (r) { return r.id === id }) }).map(function (id) { return { id: id, note: 'review agent lost (quota)' } })); break }
       reviewRounds++
       for (const rid of rev.refutedIds) {
@@ -325,7 +325,7 @@ async function runComponent(comp, roundNum, compIdx, preB) {
         for (const id of fixedIds) if (!refuted.some(function (r) { return r.id === id })) blocked.push({ id: id, note: 'bounce cap (3 review rounds) exceeded; last findings: ' + rev.findings.slice(0, 2).join(' | ').slice(0, 180) })
         break
       }
-      const fx = await ga(fixerPrompt(cid, tip, rev.findings), { label: 'fix:' + cid + '-r' + reviewRounds, phase: 'Fix', model: 'sonnet', isolation: 'worktree', schema: FIX_SCHEMA })
+      const fx = await ga(fixerPrompt(cid, tip, rev.findings), { label: 'fix:' + cid + '-r' + reviewRounds, phase: 'Fix', model: 'sonnet', isolation: 'worktree', schema: FIX_SCHEMA }, true)
       if (!fx) { for (const id of fixedIds) if (!refuted.some(function (r) { return r.id === id })) blocked.push({ id: id, note: 'fixer agent lost (quota) after bounce' }); break }
       tip = fx.tipSha
       if (fx.worktreePath) worktrees.push(fx.worktreePath)
