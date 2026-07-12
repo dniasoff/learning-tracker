@@ -1,10 +1,19 @@
 /// Story acceptance tests for Story 26.7 (DNI-350) —
-/// dashboardModelProvider composition; centralized onTrackChanged invalidation.
+/// centralized onTrackChanged invalidation.
 ///
-/// AC1: dashboardModelProvider exists in dashboard_model_provider.dart and
-///      composes leaf providers into typed sub-models (DashboardModel,
-///      DashboardHeaderModel, DashboardTasksModel, DashboardTracksModel,
-///      DashboardLifetimeModel).
+/// AC1 (dashboardModelProvider composition) was REMOVED per AUD-dashboard-05
+///      (2026-07-03 standards audit): dashboard_model_provider.dart was a
+///      143-line composition layer that dashboard_screen.dart / dashboard_body
+///      .dart never actually consumed — they kept watching the leaf providers
+///      (dashboardActiveTracksStreamProvider, dashboardUserModeProvider,
+///      dashboardStreakProvider, activeProfileProvider, etc.) directly. The
+///      only reference to dashboardModelProvider left in the tree was this
+///      test file, so the finding's recommendation ("delete
+///      dashboard_model_provider.dart and its dedicated test") was applied:
+///      the provider file was deleted and this AC's test group was removed
+///      with it. AC2-AC4 below test the centralized onTrackChanged
+///      invalidation helper, which is real, live behavior unrelated to the
+///      dead composition layer, so they are unaffected and remain.
 /// AC2: onTrackChanged() is the single exported helper in
 ///      after_track_change_invalidation.dart; invalidateAfterTrackDataChange
 ///      is a deprecated alias.
@@ -18,7 +27,6 @@ library;
 
 import 'dart:io';
 
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_model_provider.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:test/test.dart';
 
@@ -37,57 +45,11 @@ String _src(String path) {
 // ── tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
-  // ── AC1: dashboardModelProvider composition point ──────────────────────────
-  group(
-    'Story 26.7 AC1 — dashboardModelProvider composes leaf providers',
-    tags: ['story_26_7'],
-    () {
-      test('dashboardModelProvider is importable and non-null', () {
-        expect(dashboardModelProvider, isNotNull);
-      });
-
-      test('DashboardModel class is importable', () {
-        // Instantiating DashboardModel would require live providers; the
-        // compile-time import above is sufficient to assert the class exists.
-        expect(DashboardModel, isNotNull);
-      });
-
-      test('DashboardHeaderModel class is importable', () {
-        expect(DashboardHeaderModel, isNotNull);
-      });
-
-      test('DashboardTasksModel class is importable', () {
-        expect(DashboardTasksModel, isNotNull);
-      });
-
-      test('DashboardTracksModel class is importable', () {
-        expect(DashboardTracksModel, isNotNull);
-      });
-
-      test('DashboardLifetimeModel class is importable', () {
-        expect(DashboardLifetimeModel, isNotNull);
-      });
-
-      test('dashboard_model_provider.dart exists on disk', () {
-        final candidates = [
-          File(
-            'lib/features/dashboard/presentation/providers/dashboard_model_provider.dart',
-          ),
-          File(
-            'learning_tracker/lib/features/dashboard/presentation/providers/dashboard_model_provider.dart',
-          ),
-        ];
-        final exists = candidates.any((f) => f.existsSync());
-        expect(
-          exists,
-          isTrue,
-          reason:
-              'dashboard_model_provider.dart must exist in '
-              'features/dashboard/presentation/providers/',
-        );
-      });
-    },
-  );
+  // ── AC1 (dashboardModelProvider composition) removed per AUD-dashboard-05:
+  //    dashboard_model_provider.dart was deleted as dead code — see the file
+  //    header comment above for the evidence and rationale. Its dedicated
+  //    "dashboardModelProvider composes leaf providers" group used to live
+  //    here; it was removed rather than left pointing at unreachable code.
 
   // ── AC2: onTrackChanged is the single exported helper ─────────────────────
   group(
