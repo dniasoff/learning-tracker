@@ -88,18 +88,37 @@ class ParentDashboardAggregator {
   final int _profileId;
   final StageDefinitionRepository? _stageRepository;
   final LocalDayClock _clock;
+  final StreakStateProvider Function(LocalDayClock clock)
+  _streakStateProviderFactory;
 
   /// [clock] defaults to the real system clock; inject a [FakeLocalDayClock]
   /// (or any other [LocalDayClock]) in tests so both the default `now` used
   /// by [compute] and its streak sub-computation are fully hermetic (AUD-dashboard-07).
+  ///
+  /// AUD-gamification-11 (SM-7): [streakStateProviderFactory] is injectable
+  /// so callers — and their tests — can substitute a fake
+  /// [StreakStateProvider] without also faking the whole [UserDatabase].
+  /// It's a factory (not a single instance) rather than an eagerly-built
+  /// field like [rewardMilestoneServiceProvider] because [compute] must
+  /// bind the [StreakStateProvider]'s clock to its own per-call `now`
+  /// (AUD-dashboard-07) — a single shared instance bound at construction
+  /// time would reintroduce the day-boundary race that fix closed. Defaults
+  /// to the prior ad-hoc construction (same `db`, caller-supplied clock) so
+  /// every existing positional-only call site
+  /// (`ParentDashboardAggregator(db, profileId: ...)`) is unaffected.
   ParentDashboardAggregator(
     this._db, {
     int profileId = 0,
     StageDefinitionRepository? stageRepository,
     LocalDayClock clock = const SystemLocalDayClock(),
+    StreakStateProvider Function(LocalDayClock clock)?
+    streakStateProviderFactory,
   }) : _profileId = profileId,
        _stageRepository = stageRepository,
-       _clock = clock;
+       _clock = clock,
+       _streakStateProviderFactory =
+           streakStateProviderFactory ??
+           ((c) => StreakStateProvider(db: _db, clock: c));
 
   /// Compute the full dashboard data snapshot.
   ///
@@ -112,9 +131,8 @@ class ParentDashboardAggregator {
   /// otherwise see a different "today" than the rest of the snapshot.
   Future<ParentDashboardData> compute({DateTime? now}) async {
     now ??= _clock.nowUtc().toLocal();
-    final streakProvider = StreakStateProvider(
-      db: _db,
-      clock: _InstantLocalDayClock(now),
+    final streakProvider = _streakStateProviderFactory(
+      _InstantLocalDayClock(now),
     );
     final completions = await _db.completionDao.getCompletionsByProfile(
       _profileId,

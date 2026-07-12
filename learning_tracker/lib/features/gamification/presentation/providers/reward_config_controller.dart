@@ -1,12 +1,10 @@
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
-import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -137,9 +135,7 @@ class RewardConfigController extends _$RewardConfigController {
   /// Returns all milestones for the currently selected ladder (global or
   /// per-track).
   Future<List<RewardMilestone>> milestonesForCurrentLadder() async {
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final svc = RewardMilestoneService(db, profileId: profileId);
+    final svc = ref.read(rewardMilestoneServiceProvider);
     if (state.usesGlobalLadder) return svc.getGlobalMilestones();
     final tid = state.selectedTrackId;
     if (tid == null) return const [];
@@ -180,9 +176,7 @@ class RewardConfigController extends _$RewardConfigController {
     // any callers that still reference it, but saveReward() no longer returns
     // it for a same-cost add.
 
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final svc = RewardMilestoneService(db, profileId: profileId);
+    final svc = ref.read(rewardMilestoneServiceProvider);
     final trackId = state.usesGlobalLadder
         ? RewardMilestone.kGlobalTrackSentinel
         : state.selectedTrackId!;
@@ -240,9 +234,7 @@ class RewardConfigController extends _$RewardConfigController {
 
   /// Toggles the `isEnabled` flag on [m] and syncs.
   Future<void> toggleEnabled(RewardMilestone m) async {
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final svc = RewardMilestoneService(db, profileId: profileId);
+    final svc = ref.read(rewardMilestoneServiceProvider);
 
     // SM-5 (AUD-gamification-10): see saveReward's doc comment above.
     state = state.copyWith(loading: true, error: null);
@@ -271,9 +263,7 @@ class RewardConfigController extends _$RewardConfigController {
   /// Deletes [m] from the DB, clears the form if [m] was being edited, and
   /// syncs.
   Future<void> deleteMilestone(RewardMilestone m) async {
-    final db = ref.read(userDatabaseProvider);
-    final profileId = ref.read(activeProfileIdProvider);
-    final svc = RewardMilestoneService(db, profileId: profileId);
+    final svc = ref.read(rewardMilestoneServiceProvider);
 
     // SM-5 (AUD-gamification-10): see saveReward's doc comment above.
     state = state.copyWith(loading: true, error: null);

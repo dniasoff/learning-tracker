@@ -680,7 +680,7 @@ final class DashboardStreakProvider
   }
 }
 
-String _$dashboardStreakHash() => r'0370557f7b040536a349a20b951070cb1fefa7f1';
+String _$dashboardStreakHash() => r'8faf5eea08664cfed0ebf1d82240a823ba40671e';
 
 /// Stored debitable points balance, scoped to active child profile (WS7.balance).
 ///
@@ -792,7 +792,7 @@ final class StripStockMilestonesEffectProvider
 }
 
 String _$stripStockMilestonesEffectHash() =>
-    r'8b10005765c14ffcc1d40ea9289cca867fba2360';
+    r'ecd5496ae0cb613533309e99d0a34f610b03f254';
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 ///
@@ -845,7 +845,7 @@ final class DashboardChildNextRewardProvider
 }
 
 String _$dashboardChildNextRewardHash() =>
-    r'5cb60e3eb74d7995c5aba22068d6010a6a29e28d';
+    r'50eb514c67e9dd61655959e2a7706035a16f3af4';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 
@@ -892,7 +892,7 @@ final class DashboardStreakRecoveryProvider
 }
 
 String _$dashboardStreakRecoveryHash() =>
-    r'590ec65489c6c1924a72e8c838b9220b3dca4c2d';
+    r'c3ae9a8a5eb1fec79e4dba73fb3ee7c92fa4c0a9';
 
 /// Per-curriculum pace status for the dashboard.
 ///

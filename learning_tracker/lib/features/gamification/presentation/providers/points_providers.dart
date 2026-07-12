@@ -2,14 +2,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
 /// Provider for the PointsService, scoped to active profile.
+///
+/// AUD-gamification-11 (SM-7): passes [rewardMilestoneServiceProvider]
+/// through explicitly so `PointsService` shares the single
+/// `RewardMilestoneService` instance instead of constructing its own ad hoc.
 final pointsServiceProvider = Provider<PointsService>((ref) {
   final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  return PointsService(database, profileId: profileId);
+  return PointsService(
+    database,
+    profileId: profileId,
+    rewardMilestoneService: ref.watch(rewardMilestoneServiceProvider),
+  );
 });
 
 /// Per-curriculum points total, keyed by curriculumId (P3 family pattern).

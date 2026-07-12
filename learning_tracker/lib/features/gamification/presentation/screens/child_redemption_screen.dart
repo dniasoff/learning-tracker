@@ -16,8 +16,8 @@ import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
-import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
@@ -50,7 +50,7 @@ Stream<int> childRedemptionBalance(Ref ref) {
 Future<List<RewardMilestone>> childRedemptionRewards(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final svc = RewardMilestoneService(db, profileId: profileId);
+  final svc = ref.watch(rewardMilestoneServiceProvider);
   // Gather all enabled milestones (global + per-track).
   final global = await svc.getGlobalMilestones();
   final tracks = await db.trackDao.getActiveTracksForProfile(profileId);

@@ -5,7 +5,6 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/next_reward_selector.dart';
 import 'package:learning_tracker/features/dashboard/domain/services/track_completion_service.dart';
@@ -258,12 +257,8 @@ Future<DateTime?> dashboardLastCompletion(
 /// work on every task mark.
 @riverpod
 Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
-  final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final stateProvider = StreakStateProvider(
-    db: db,
-    clock: const SystemLocalDayClock(),
-  );
+  final stateProvider = ref.watch(streakStateProvider);
   yield* stateProvider
       .watch(profileId: profileId)
       .map(
@@ -312,9 +307,7 @@ Stream<int> dashboardGlobalPoints(Ref ref) async* {
 /// milestone data.
 @riverpod
 Future<void> stripStockMilestonesEffect(Ref ref) async {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final milestoneService = RewardMilestoneService(db, profileId: profileId);
+  final milestoneService = ref.watch(rewardMilestoneServiceProvider);
 
   if (await milestoneService.stripStockTemplateMilestones()) {
     await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
@@ -341,7 +334,7 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
 
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final milestoneService = RewardMilestoneService(db, profileId: profileId);
+  final milestoneService = ref.watch(rewardMilestoneServiceProvider);
 
   final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
 
@@ -389,9 +382,7 @@ Future<StreakRecoveryInfo> dashboardStreakRecovery(Ref ref) async {
     return const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0);
   }
 
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final streakService = StreakService(db, profileId: profileId);
+  final streakService = ref.watch(streakServiceProvider);
   return streakService.getRecoveryInfo();
 }
 
