@@ -4,17 +4,15 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
-import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/my_children_section.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
@@ -240,13 +238,13 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
                   l10n.delete,
                   style: TextStyle(color: Theme.of(ctx).colorScheme.error),
                 ),
-                enabled: profileCount > 1,
-                subtitle: profileCount <= 1
-                    ? Text(l10n.mustKeepOneProfile)
-                    : null,
-                onTap: profileCount > 1
-                    ? () => Navigator.pop(ctx, 'delete')
-                    : null,
+                // AUD-profiles-04: Delete is always reachable here, matching
+                // manage_learners_screen.dart's PopupMenuItem (no enable
+                // gate). deleteProfileFlow shows its own localized
+                // last-profile confirmation (deleteProfileLastTitle/Body/
+                // Confirm) instead of this screen hard-blocking the tile —
+                // the canonical flow already supports allowLast deletes.
+                onTap: () => Navigator.pop(ctx, 'delete'),
               ),
             ],
           ),
@@ -254,149 +252,17 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       },
     );
     if (!mounted || action == null) return;
+    // AUD-profiles-04: delegate to the canonical editProfileFlow/
+    // deleteProfileFlow (profile_edit_delete_actions.dart) instead of private
+    // duplicates — matching manage_learners_screen.dart. This eliminates the
+    // hardcoded-English last-profile delete copy (a Hebrew-locale user with
+    // exactly one profile previously saw raw English) and the missing
+    // `mounted` guard after the delete's `await`.
     if (action == 'rename') {
-      await _showRenameDialog(profile);
+      await editProfileFlow(context, ref, profile);
     } else if (action == 'delete' && mounted) {
-      await _showDeleteDialog(profile);
+      await deleteProfileFlow(context, ref, profile);
     }
-  }
-
-  // ── Rename ────────────────────────────────────────────────────────────────
-
-  Future<void> _showRenameDialog(ProfileModel profile) async {
-    final profileDao = ref.read(userDatabaseProvider).profileDao;
-    final repo = ref.read(profileRepositoryProvider);
-
-    final ctrl = TextEditingController(text: profile.displayName);
-    String? err;
-    final name = await showDialog<String>(
-      context: context,
-      useRootNavigator: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, set) {
-          final l10n = AppLocalizations.of(ctx)!;
-          Future<void> check() async {
-            final n = ctrl.text.trim();
-            if (n.isEmpty) {
-              set(() => err = null);
-              return;
-            }
-            try {
-              final exists = await profileDao.profileExistsByName(
-                ref.read(currentAccountIdProvider),
-                n,
-                excludeId: profile.id,
-              );
-              set(() => err = exists ? l10n.profileNameAlreadyExists : null);
-            } catch (_) {
-              set(() => err = null);
-            }
-          }
-
-          return AlertDialog(
-            title: Text(l10n.renameProfileTitle),
-            content: TextField(
-              controller: ctrl,
-              autofocus: true,
-              textCapitalization: TextCapitalization.words,
-              inputFormatters: const [TrimLeadingSpaceFormatter()],
-              decoration: InputDecoration(
-                labelText: l10n.displayName,
-                border: const OutlineInputBorder(),
-                errorText: err,
-              ),
-              onChanged: (_) => check(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                onPressed: ctrl.text.trim().isNotEmpty && err == null
-                    ? () => Navigator.pop(ctx, ctrl.text.trim())
-                    : null,
-                child: Text(l10n.save),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-    if (name == null || name.isEmpty || !mounted) {
-      Future.delayed(const Duration(milliseconds: 300), ctrl.dispose);
-      return;
-    }
-    try {
-      await repo.updateProfile(id: profile.id, displayName: name);
-      ctrl.dispose();
-      if (mounted) ref.invalidate(profileListProvider);
-    } on DuplicateProfileNameException {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.profileNameTaken(name))));
-      }
-    }
-  }
-
-  // ── Delete ────────────────────────────────────────────────────────────────
-
-  Future<void> _showDeleteDialog(ProfileModel profile) async {
-    final repo = ref.read(profileRepositoryProvider);
-    final remaining = await repo.countProfilesForAccount(
-      ref.read(currentAccountIdProvider),
-    );
-    final isLast = remaining <= 1;
-    if (!mounted) return;
-
-    final ok = await showDialog<bool>(
-      context: context,
-      useRootNavigator: true,
-      builder: (ctx) {
-        final l10n = AppLocalizations.of(ctx)!;
-        return AlertDialog(
-          title: Text(
-            isLast ? 'Delete your only profile?' : l10n.deleteProfileTitle,
-          ),
-          content: Text(
-            isLast
-                ? 'This is your only profile. Deleting '
-                      '"${profile.displayName}" will erase every track, '
-                      'completion, and lifetime entry on this account. You '
-                      'will need to create a new profile before you can keep '
-                      'learning.'
-                : l10n.deleteProfileConfirm(profile.displayName),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(ctx).colorScheme.error,
-              ),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(isLast ? 'Delete anyway' : l10n.delete),
-            ),
-          ],
-        );
-      },
-    );
-    if (!(ok ?? false) || !mounted) return;
-
-    // Offline-first: the repository deletes locally via Drift and enqueues
-    // the cloud delete to the outbox. No connectivity check is needed here —
-    // this path was previously inconsistent with deleteProfileFlow (which had
-    // the stale online guard removed in R3-10). R-PR2 fix: removed guard.
-    await repo.deleteProfile(profile.id, allowLast: isLast);
-    final sel = ref.read(selectedProfileIdProvider) ?? -1;
-    if (sel == profile.id) {
-      ref.read(selectedProfileIdProvider.notifier).clear();
-    }
-    ref.invalidate(profileListProvider);
   }
 
   // ── Skip to Settings ──────────────────────────────────────────────────────
