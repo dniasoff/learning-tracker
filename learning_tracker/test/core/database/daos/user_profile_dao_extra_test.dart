@@ -37,6 +37,51 @@ void main() {
   });
 
   // =========================================================================
+  // AccountX.accountTier (AUD-core-database-07, EH-4)
+  // =========================================================================
+
+  group('AccountX.accountTier', () {
+    test('returns cloudBorn for a cloudBorn row', () async {
+      final now = DateTime.utc(2026, 1, 1);
+      final account = await db
+          .into(db.accounts)
+          .insertReturning(
+            AccountsCompanion.insert(
+              email: 'cloud@example.com',
+              displayName: 'Cloud',
+              tier: 'cloudBorn',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      expect(account.accountTier, UserTier.cloudBorn);
+    });
+
+    test('throws StateError (not a silent localBorn fallback) for an '
+        'unrecognized tier value — a bad migration or hand-edited row must '
+        'be loud, not silently treated as local-born everywhere accountTier '
+        'is read (sync gating, balance-row eligibility)', () async {
+      final now = DateTime.utc(2026, 1, 1);
+      // Insert directly at the Drift layer with a corrupted tier string —
+      // bypasses the UserTier enum entirely, simulating a bad migration
+      // or hand-edited row on-device.
+      final account = await db
+          .into(db.accounts)
+          .insertReturning(
+            AccountsCompanion.insert(
+              email: 'corrupt@example.com',
+              displayName: 'Corrupt',
+              tier: 'notARealTier',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+
+      expect(() => account.accountTier, throwsStateError);
+    });
+  });
+
+  // =========================================================================
   // UserProfileDao.findCloudBornByFirebaseUid
   // =========================================================================
 
