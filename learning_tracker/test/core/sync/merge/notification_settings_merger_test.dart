@@ -15,13 +15,18 @@ import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/core/sync/merge/drift_merge_store.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/notification_settings_merger.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../helpers/firestore_fake.dart';
 import '../../../helpers/test_database.dart';
+import '../../../mocks/mock_repositories.dart';
 
 class _FakeMergeStore implements MergeStore {
   final _timestamps = <String, Map<int, Map<String, DateTime?>>>{};
@@ -567,4 +572,113 @@ void main() {
       });
     },
   );
+
+  // ── AUD-notifications-07 — clock-skew push→merge integration ────────────
+  //
+  // Full push (FirestoreGatewayImpl) → pull (NotificationSettingsMerger)
+  // round trip proving the genuinely-later settings write wins over a push
+  // from a device whose local clock lied about being in the future, exactly
+  // the scenario the finding describes: "the device with the faster/wrong
+  // clock can push a stale settings change that looks 'newer' and wins over
+  // a genuinely newer change made on a correctly-clocked device, silently
+  // reverting the user's real edit".
+  group('FB-2 (AUD-notifications-07) — a fast/skewed-clock push does not '
+      'clobber a genuinely later local edit', () {
+    const uid = 'uid_clock_skew_test';
+    const profileId = 99;
+
+    test(
+      'stale push claiming a far-future updated_at loses to a genuinely '
+      'later local edit once pushNotificationSettings server-stamps it',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+
+        final auth = MockAuthRepository();
+        when(() => auth.currentUser).thenReturn(
+          const AppUser(
+            uid: uid,
+            email: 'skew@example.com',
+            displayName: 'Skew',
+            emailVerified: true,
+            providers: ['password'],
+          ),
+        );
+        final fs = createFakeFirestore(authenticatedUid: uid);
+        final gateway = FirestoreGatewayImpl(
+          firestore: fs,
+          authRepository: auth,
+        );
+
+        // 1. A device with a badly fast/skewed clock pushes a STALE
+        //    settings change, claiming (via its own client clock) that it
+        //    happened in the year 2099.
+        await gateway.pushNotificationSettings(
+          profileId: profileId,
+          data: {
+            'updated_at': DateTime.utc(2099).toIso8601String(),
+            'daily_reminder': {'enabled': false, 'hour': 6, 'minute': 0},
+            'streak_alert': {'enabled': false, 'hour': 20, 'minute': 0},
+            'reward_notifications': {'enabled': false},
+          },
+        );
+
+        // Read the pushed document back exactly as the sync pull pipeline
+        // does (fetchDocument normalises any Firestore Timestamp to an
+        // ISO-8601 string — see FirestoreGatewayImpl._normalizeRow).
+        final staleRemoteRow = await gateway.fetchDocument(
+          profileId: profileId,
+          collection: 'preferences',
+          docId: 'notification_settings',
+        );
+        expect(staleRemoteRow, isNotNull);
+
+        // 2. THIS device made its own genuinely later edit — reminders on
+        //    at 07:30 — which already settled locally (real time, after
+        //    the push above committed) before the stale row is merged in.
+        final store = _FakeMergeStore();
+        final localEditAt = DateTime.now().toUtc();
+        store._timestamps
+                .putIfAbsent('notification_settings', () => {})
+                .putIfAbsent(profileId, () => {})['preferences'] =
+            localEditAt;
+        SharedPreferences.setMockInitialValues({
+          NotificationPreferencesRepository.reminderEnabledKey(profileId): true,
+          NotificationPreferencesRepository.reminderHourKey(profileId): 7,
+          NotificationPreferencesRepository.reminderMinuteKey(profileId): 30,
+        });
+
+        // 3. Pull/merge the stale remote row into this device.
+        final merger = NotificationSettingsMerger(store: store);
+        await merger.merge(profileId: profileId, rows: [staleRemoteRow!]);
+
+        // 4. The genuinely later local edit must survive: the fast-clock
+        //    device's fabricated 2099 claim must NOT have won, because
+        //    pushNotificationSettings overwrote it with a real server
+        //    Timestamp (effectively "now", which is earlier than
+        //    localEditAt).
+        final prefs = await SharedPreferences.getInstance();
+        expect(
+          prefs.getBool(
+            NotificationPreferencesRepository.reminderEnabledKey(profileId),
+          ),
+          isTrue,
+          reason:
+              'the genuinely later local edit must not be clobbered by a '
+              'stale push whose device clock lied about the time',
+        );
+        expect(
+          prefs.getInt(
+            NotificationPreferencesRepository.reminderHourKey(profileId),
+          ),
+          7,
+        );
+        expect(
+          prefs.getInt(
+            NotificationPreferencesRepository.reminderMinuteKey(profileId),
+          ),
+          30,
+        );
+      },
+    );
+  });
 }
