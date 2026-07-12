@@ -3609,11 +3609,29 @@ abstract class AppLocalizations {
   /// **'Sign-in failed: {error}'**
   String authSignInFailedError(String error);
 
+  /// No description provided for @authVerifyEmailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Your Email'**
+  String get authVerifyEmailTitle;
+
   /// No description provided for @authVerifyEmailBody.
   ///
   /// In en, this message translates to:
   /// **'We sent a verification link to your inbox. Please check your email to continue.'**
   String get authVerifyEmailBody;
+
+  /// No description provided for @authOpenEmailButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Email'**
+  String get authOpenEmailButton;
+
+  /// No description provided for @authSendAgainButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Again'**
+  String get authSendAgainButton;
 
   /// No description provided for @authIveVerified.
   ///

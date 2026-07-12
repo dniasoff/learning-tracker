@@ -920,7 +920,10 @@
       "error": { "type": "String" }
     }
   },
+  "authVerifyEmailTitle": "אשרו את האימייל שלכם",
   "authVerifyEmailBody": "שלחנו קישור אימות לתיבה שלכם. בדקו את האימייל כדי להמשיך.",
+  "authOpenEmailButton": "פתחו אימייל",
+  "authSendAgainButton": "שלחו שוב",
   "authIveVerified": "אימתתי",
   "authVerificationEmailSentAgain": "מייל אימות נשלח שוב.",
   "authEmailStillUnverified": "האימייל עדיין לא אומת. בדקו קודם את תיבת הדואר.",

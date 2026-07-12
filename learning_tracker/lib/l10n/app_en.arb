@@ -1086,7 +1086,10 @@
       "error": { "type": "String" }
     }
   },
+  "authVerifyEmailTitle": "Confirm Your Email",
   "authVerifyEmailBody": "We sent a verification link to your inbox. Please check your email to continue.",
+  "authOpenEmailButton": "Open Email",
+  "authSendAgainButton": "Send Again",
   "authIveVerified": "I've verified",
   "authVerificationEmailSentAgain": "Verification email sent again.",
   "authEmailStillUnverified": "Email is still unverified. Check your inbox first.",

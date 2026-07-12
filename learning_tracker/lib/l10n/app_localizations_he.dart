@@ -2012,8 +2012,17 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get authVerifyEmailTitle => 'אשרו את האימייל שלכם';
+
+  @override
   String get authVerifyEmailBody =>
       'שלחנו קישור אימות לתיבה שלכם. בדקו את האימייל כדי להמשיך.';
+
+  @override
+  String get authOpenEmailButton => 'פתחו אימייל';
+
+  @override
+  String get authSendAgainButton => 'שלחו שוב';
 
   @override
   String get authIveVerified => 'אימתתי';
