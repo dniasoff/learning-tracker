@@ -213,7 +213,7 @@ final class ContentDbPathProvider
   }
 }
 
-String _$contentDbPathHash() => r'71834543374dfec8b4ff0a483970cff5bef2b7f4';
+String _$contentDbPathHash() => r'26c2d81c42aeeb1e67d6f33ecee71a46819368e9';
 
 /// Content database — read-only, bundled seed content.
 ///

@@ -60,7 +60,7 @@ final class OnboardingControllerProvider
 }
 
 String _$onboardingControllerHash() =>
-    r'55f9357f392926946f1a14a2a0114601e8d369bc';
+    r'8541dc1aad0344af7ee48f96ec12268bcb24f7c1';
 
 /// Riverpod notifier that owns the step list and current position.
 ///
