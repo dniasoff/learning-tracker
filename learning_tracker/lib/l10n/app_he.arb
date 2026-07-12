@@ -2719,6 +2719,7 @@
   },
   "schedulerStudyDaysScreenTitle": "{curriculum} • ימי לימוד",
   "trackReorderScreenTitle": "{curriculum} • סדר מחדש",
+  "learningOrderScreenTitle": "{curriculum} סדר",
   "bulkMarkScreenTitle": "סימון לימוד קודם — {curriculum}",
   "bulkMarkSelectHeading": "בחרו תוכן שכבר למדתם",
   "schedulerStudyDaysIntro": "בחרו באילו ימים יש לימוד חדש ובאילו ימים חזרה בלבד.",

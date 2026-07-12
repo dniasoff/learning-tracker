@@ -8526,6 +8526,12 @@ abstract class AppLocalizations {
   /// **'{curriculum} • Reorder'**
   String trackReorderScreenTitle(String curriculum);
 
+  /// AppBar title for the whole-curriculum learning-order screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).
+  ///
+  /// In en, this message translates to:
+  /// **'{curriculum} Order'**
+  String learningOrderScreenTitle(String curriculum);
+
   /// AppBar title for the bulk prior-completions picker screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).
   ///
   /// In en, this message translates to:

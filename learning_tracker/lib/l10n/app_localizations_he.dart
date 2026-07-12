@@ -5072,6 +5072,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String learningOrderScreenTitle(String curriculum) {
+    return '$curriculum סדר';
+  }
+
+  @override
   String bulkMarkScreenTitle(String curriculum) {
     return 'סימון לימוד קודם — $curriculum';
   }

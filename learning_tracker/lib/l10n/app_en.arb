@@ -2988,6 +2988,15 @@
       }
     }
   },
+  "learningOrderScreenTitle": "{curriculum} Order",
+  "@learningOrderScreenTitle": {
+    "description": "AppBar title for the whole-curriculum learning-order screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).",
+    "placeholders": {
+      "curriculum": {
+        "type": "String"
+      }
+    }
+  },
   "bulkMarkScreenTitle": "Mark Prior Completions — {curriculum}",
   "@bulkMarkScreenTitle": {
     "description": "AppBar title for the bulk prior-completions picker screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).",

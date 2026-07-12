@@ -47,9 +47,9 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
-          text:
-              '${curriculumLabelText(ref, curriculum: widget.curriculumId)} '
-              'Order',
+          text: AppLocalizations.of(context)!.learningOrderScreenTitle(
+            curriculumLabelText(ref, curriculum: widget.curriculumId),
+          ),
         ),
         actions: [
           if (!isRestricted)
