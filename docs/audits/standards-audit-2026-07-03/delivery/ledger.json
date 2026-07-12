@@ -375,13 +375,15 @@
   {
    "id": "AUD-app-02",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Stop showing raw e.toString() as the device-restore error message in RestoreStatus/DeviceRestoreService",
-   "commits": [],
-   "reviewRounds": 0,
+   "commits": [
+    "acd08ff67796092810342bfc04daa55b10bc0147"
+   ],
+   "reviewRounds": 1,
    "acVerified": [],
-   "notes": ""
+   "notes": "AC1 (typed code) already fixed by prior AUD-sync-01, confirmed intact. AC2/AC3 open. AC2: added Locale(he) test forcing an error, asserting only ARB Hebrew renders. AC3: phase was String w/ wildcard fallback (EH-6) - added RestorePhase enum, exhaustive switch, verified compile err on unmapped case."
   },
   {
    "id": "AUD-core-domain-01",
