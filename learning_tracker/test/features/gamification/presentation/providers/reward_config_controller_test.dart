@@ -38,6 +38,7 @@ import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_config_controller.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -918,6 +919,59 @@ void main() {
       // milestones returns an empty list.
       final milestones = await _notifier(c).milestonesForCurrentLadder();
       expect(milestones, isEmpty);
+    });
+
+    // AUD-gamification-11 (SM-7): milestonesForCurrentLadder() used to
+    // construct its own `RewardMilestoneService(db, profileId: profileId)`
+    // ad hoc — a test (or caller) could only fake the service by faking the
+    // whole `UserDatabase`, never by a single `ProviderScope` override. It
+    // must now read through the shared `rewardMilestoneServiceProvider` seam.
+    test('AUD-gamification-11: reads through an overridden '
+        'rewardMilestoneServiceProvider instead of constructing its own '
+        'RewardMilestoneService(db, profileId: ...)', () async {
+      final db = inMemoryDb();
+      addTearDown(db.close);
+      await seedProfileWithIds(db, accountId: 1, profileId: 1);
+
+      // A service scoped to a DIFFERENT profileId (999), pre-seeded with a
+      // global milestone. The active profile (1) has nothing seeded.
+      final overrideService = RewardMilestoneService(db, profileId: 999);
+      await overrideService.upsertMilestone(
+        trackId: RewardMilestone.kGlobalTrackSentinel,
+        title: 'Override Reward',
+        thresholdPoints: 42,
+        milestoneId: 'ms-override',
+      );
+
+      final c = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(db),
+          activeProfileIdProvider.overrideWithValue(1),
+          syncWriteFacadeProvider.overrideWithValue(null),
+          achievementsOverviewProvider.overrideWith(
+            (ref) async => const AchievementsOverview(
+              rows: [],
+              unlockedCount: 0,
+              totalMilestones: 0,
+              trackFilterOptions: [],
+            ),
+          ),
+          rewardMilestoneServiceProvider.overrideWithValue(overrideService),
+        ],
+      );
+      addTearDown(c.dispose);
+
+      final milestones = await _notifier(c).milestonesForCurrentLadder();
+      expect(
+        milestones.map((m) => m.id),
+        contains('ms-override'),
+        reason:
+            'the active profile (1) has no milestones seeded — a result '
+            'containing the profile-999 milestone proves '
+            'milestonesForCurrentLadder() read the OVERRIDDEN '
+            'rewardMilestoneServiceProvider rather than constructing its '
+            'own RewardMilestoneService(db, profileId: activeProfileId).',
+      );
     });
   });
 

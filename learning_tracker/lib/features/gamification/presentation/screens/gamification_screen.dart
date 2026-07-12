@@ -5,14 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
-import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_tier_card.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievements_header.dart';
@@ -21,7 +20,6 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/pro_
 import 'package:learning_tracker/features/gamification/presentation/widgets/progress_summary_card.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/track_filter_row.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/streak_calendar.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -30,9 +28,7 @@ part 'gamification_screen.g.dart';
 
 @riverpod
 Future<Set<DateTime>> streakCalendar(Ref ref) async {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final streakService = StreakService(db, profileId: profileId);
+  final streakService = ref.watch(streakServiceProvider);
   final now = DateTimeFactory.nowUtc();
   final thirtyDaysAgo = now.subtract(const Duration(days: 30));
   return streakService.getStreakCalendar(startUtc: thirtyDaysAgo, endUtc: now);

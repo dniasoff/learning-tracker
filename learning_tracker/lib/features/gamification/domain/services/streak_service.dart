@@ -12,12 +12,20 @@ import 'package:learning_tracker/features/gamification/streak/streak_state_provi
 /// [StreakReducer]. This service wraps that read path as a compatibility
 /// shim for notification/dashboard call sites.
 class StreakService {
-  StreakService(UserDatabase db, {int profileId = 0})
-    : _profileId = profileId,
-      _provider = StreakStateProvider(
-        db: db,
-        clock: const SystemLocalDayClock(),
-      );
+  /// AUD-gamification-11 (SM-7): [streakStateProvider] is injectable so
+  /// callers — and their tests — can substitute a fake [StreakStateProvider]
+  /// without also faking the whole [UserDatabase]. Defaults to the prior
+  /// ad-hoc construction (same `db`, system clock) so every existing
+  /// positional-only call site (`StreakService(db, profileId: ...)`) is
+  /// unaffected.
+  StreakService(
+    UserDatabase db, {
+    int profileId = 0,
+    StreakStateProvider? streakStateProvider,
+  }) : _profileId = profileId,
+       _provider =
+           streakStateProvider ??
+           StreakStateProvider(db: db, clock: const SystemLocalDayClock());
 
   final int _profileId;
   final StreakStateProvider _provider;

@@ -22,19 +22,27 @@ library;
 import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
+import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -165,6 +173,7 @@ ProviderContainer _makeContainer(
   UserDatabase db, {
   Map<CurriculumId, int> totalItemsMap = const {},
   int profileId = _profileId,
+  List<Override> extraOverrides = const [],
 }) {
   return ProviderContainer(
     overrides: [
@@ -175,6 +184,7 @@ ProviderContainer _makeContainer(
         scopedItemCountProvider(
           c,
         ).overrideWith((ref) => Future.value(totalItemsMap[c] ?? 0)),
+      ...extraOverrides,
     ],
   );
 }
@@ -691,6 +701,62 @@ void main() {
       expect(value.currentStreak, greaterThanOrEqualTo(0));
       expect(value.maxStreak, greaterThanOrEqualTo(0));
     });
+
+    // AUD-gamification-11 (SM-7): dashboardStreak used to construct its own
+    // `StreakStateProvider(db: db, clock: ...)` ad hoc on every rebuild —
+    // there was no way for a test (or a caller) to substitute a fake without
+    // also faking the whole `UserDatabase`. It must now read through the
+    // shared `streakStateProvider` seam.
+    test(
+      'AUD-gamification-11: reads through an overridden streakStateProvider '
+      'instead of constructing its own StreakStateProvider(db: db, ...)',
+      () async {
+        // A second database, seeded with a streak event for _profileId. `db`
+        // (the container's userDatabaseProvider override) has NO events for
+        // _profileId — so a non-zero streak can only come from the override.
+        final overrideDb = UserDatabase(NativeDatabase.memory());
+        addTearDown(overrideDb.close);
+        await _seedProfile(
+          overrideDb,
+        ); // creates learner_profiles(id=1, mode='adult') — FK for streak_events
+        final today = DateTime.now().toUtc();
+        await overrideDb.streakEventDao.appendEvent(
+          StreakEventsCompanion.insert(
+            profileId: _profileId,
+            eventType: 'completion',
+            dayUtc: DateTime.utc(today.year, today.month, today.day),
+            eventTimestamp: today,
+            clientDeviceId: const Value(null),
+          ),
+        );
+
+        final container = _makeContainer(
+          db,
+          extraOverrides: [
+            streakStateProvider.overrideWithValue(
+              StreakStateProvider(
+                db: overrideDb,
+                clock: const SystemLocalDayClock(),
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final sub = container.listen(dashboardStreakProvider, (_, __) {});
+        addTearDown(sub.close);
+
+        final value = await container.read(dashboardStreakProvider.future);
+        expect(
+          value.currentStreak,
+          greaterThanOrEqualTo(1),
+          reason:
+              '`db` has no streak events for _profileId; only the '
+              'overridden streakStateProvider (bound to overrideDb) does — '
+              'a non-zero streak proves dashboardStreak read the override.',
+        );
+      },
+    );
   });
 
   // ── dashboardStreakRecoveryProvider ───────────────────────────────────────
@@ -723,6 +789,71 @@ void main() {
         );
         // Grace period is not implemented; wasRecovered always false post-W3.20.
         expect(info.wasRecovered, isFalse);
+      },
+    );
+
+    // AUD-gamification-11 (SM-7): dashboardStreakRecovery used to construct
+    // its own `StreakService(db, profileId: profileId)` ad hoc — a test
+    // could only fake the service by faking the whole `UserDatabase`, never
+    // by a single `ProviderScope` override. It must now read through the
+    // shared `streakServiceProvider` seam.
+    test(
+      'AUD-gamification-11: reads through an overridden streakServiceProvider '
+      'instead of constructing its own StreakService(db, profileId: ...)',
+      () async {
+        await _seedChildProfile(db); // id=2, mode='child'
+
+        // A second database, seeded with a streak event for the CHILD
+        // profile. `db` (the container's userDatabaseProvider override) has
+        // no events for that profile — so a recovered currentStreak can only
+        // come from the override.
+        final overrideDb = UserDatabase(NativeDatabase.memory());
+        addTearDown(overrideDb.close);
+        await _seedProfile(overrideDb); // id=1 — creates account id=1
+        await _seedChildProfile(
+          overrideDb,
+        ); // id=2 — FK for streak_events(profile_id=2)
+        final today = DateTime.now().toUtc();
+        await overrideDb.streakEventDao.appendEvent(
+          StreakEventsCompanion.insert(
+            profileId: _childProfileId,
+            eventType: 'completion',
+            dayUtc: DateTime.utc(today.year, today.month, today.day),
+            eventTimestamp: today,
+            clientDeviceId: const Value(null),
+          ),
+        );
+
+        final container = _makeContainer(
+          db,
+          profileId: _childProfileId,
+          extraOverrides: [
+            streakServiceProvider.overrideWithValue(
+              StreakService(overrideDb, profileId: _childProfileId),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        // Pre-resolve dashboardUserModeProvider — dashboardStreakRecovery
+        // reads it synchronously via `.asData?.value`, which is null until
+        // the future has resolved at least once (same pattern as the
+        // 'returns wasRecovered=false for child' test above).
+        final mode = await container.read(dashboardUserModeProvider.future);
+        expect(mode, ProfileMode.child);
+
+        final info = await container.read(
+          dashboardStreakRecoveryProvider.future,
+        );
+        expect(
+          info.currentStreak,
+          greaterThanOrEqualTo(1),
+          reason:
+              '`db` has no streak events for the child profile; only the '
+              'overridden streakServiceProvider (bound to overrideDb) does — '
+              'a non-zero streak proves dashboardStreakRecovery read the '
+              'override.',
+        );
       },
     );
   });
@@ -1320,6 +1451,63 @@ void main() {
         dashboardChildNextRewardProvider.future,
       );
       expect(result, isNull, reason: 'adult mode → null before async gap');
+    });
+
+    // AUD-gamification-11 (SM-7): dashboardChildNextReward used to construct
+    // its own `RewardMilestoneService(db, profileId: profileId)` ad hoc — a
+    // test could only fake the service by faking the whole `UserDatabase`,
+    // never by a single `ProviderScope` override. It must now read through
+    // the shared `rewardMilestoneServiceProvider` seam.
+    test('AUD-gamification-11: reads through an overridden '
+        'rewardMilestoneServiceProvider instead of constructing its own '
+        'RewardMilestoneService(db, profileId: ...)', () async {
+      // RewardMilestoneService config is SharedPreferences-backed.
+      SharedPreferences.setMockInitialValues({});
+      await _seedChildProfile(db); // id=2, mode='child'
+
+      // A service scoped to a DIFFERENT profileId (999 — no learner_profiles
+      // row, so no points-balance FK to satisfy; getGlobalPointsForRewards
+      // reads 0 for a profile with no balance row), pre-seeded with a
+      // global milestone. The active profile (2) has no milestones seeded,
+      // so `NextRewardResult` can only come from the override.
+      final overrideService = RewardMilestoneService(db, profileId: 999);
+      await overrideService.upsertMilestone(
+        trackId: RewardMilestone.kGlobalTrackSentinel,
+        title: 'Override Reward',
+        thresholdPoints: 50,
+        milestoneId: 'ms-override',
+      );
+
+      final container = _makeContainer(
+        db,
+        profileId: _childProfileId,
+        extraOverrides: [
+          rewardMilestoneServiceProvider.overrideWithValue(overrideService),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Pre-resolve dashboardUserModeProvider — dashboardChildNextReward
+      // reads it synchronously via `.asData?.value`, which is null until
+      // the future has resolved at least once.
+      final mode = await container.read(dashboardUserModeProvider.future);
+      expect(mode, ProfileMode.child);
+
+      final result = await container.read(
+        dashboardChildNextRewardProvider.future,
+      );
+      expect(
+        result,
+        isNotNull,
+        reason:
+            'the active profile (2) has no milestones/balance seeded — a '
+            'non-null result proves dashboardChildNextReward read the '
+            'overridden rewardMilestoneServiceProvider (profile 999) '
+            'rather than constructing its own service for profile 2.',
+      );
+      expect(result!.threshold, 50);
+      expect(result.trackPoints, 0);
+      expect(result.isGlobal, isTrue);
     });
   });
 }

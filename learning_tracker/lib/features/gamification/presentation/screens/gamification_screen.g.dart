@@ -46,4 +46,4 @@ final class StreakCalendarProvider
   }
 }
 
-String _$streakCalendarHash() => r'8e6a6bac045580d984aa62d334528d99624a4929';
+String _$streakCalendarHash() => r'c815e6d2ad3f4052077ea2e07215b28e39f784e7';

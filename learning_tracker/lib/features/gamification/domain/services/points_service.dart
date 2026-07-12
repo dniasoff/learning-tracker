@@ -28,8 +28,21 @@ class PointsHistoryEntry {
 class PointsService {
   final UserDatabase _database;
   final int profileId;
+  final RewardMilestoneService _rewardMilestoneService;
 
-  PointsService(this._database, {this.profileId = 0});
+  /// AUD-gamification-11 (SM-7): [rewardMilestoneService] is injectable so
+  /// callers — and their tests — can substitute a fake
+  /// [RewardMilestoneService] without also faking the whole [UserDatabase].
+  /// Defaults to the prior ad-hoc construction (same `database`, same
+  /// `profileId`) so every existing call site
+  /// (`PointsService(db, profileId: ...)`) is unaffected.
+  PointsService(
+    this._database, {
+    this.profileId = 0,
+    RewardMilestoneService? rewardMilestoneService,
+  }) : _rewardMilestoneService =
+           rewardMilestoneService ??
+           RewardMilestoneService(_database, profileId: profileId);
 
   /// Get the configured point value for a curriculum + stage.
   ///
@@ -136,11 +149,10 @@ class PointsService {
   Future<Map<int, bool>> _rewardEligibilityByTrackId(
     List<Completion> completions,
   ) async {
-    final reward = RewardMilestoneService(_database, profileId: profileId);
     final ids = completions.map((c) => c.trackId).toSet();
     final map = <int, bool>{};
     for (final id in ids) {
-      map[id] = await reward.trackCountsTowardRewardPoints(id);
+      map[id] = await _rewardMilestoneService.trackCountsTowardRewardPoints(id);
     }
     return map;
   }
