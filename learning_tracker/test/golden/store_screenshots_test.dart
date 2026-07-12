@@ -5,17 +5,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
-import 'package:learning_tracker/features/dashboard/presentation/widgets/curriculum_summary_card.dart';
 // points_summary_widget.dart was deleted (dead-code purge, AUD-dashboard-04).
+// curriculum_summary_card.dart was deleted (dead-code purge, AUD-dashboard-03).
 // todays_tasks_widget.dart was deleted in W1.21 (dead-code purge).
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -105,71 +101,6 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
 
-      final now = DateTime.now();
-
-      final summaries = [
-        CurriculumSummary(
-          curriculumId: CurriculumId.mishnayos,
-          completionPercentage: 0.42,
-          paceStatus: const PaceStatus(
-            status: PaceStatusType.ahead,
-            daysDelta: 3,
-            delta: DateScheduleDelta(DateDelta(3)),
-            rollingAverage: 5.2,
-          ),
-          nextDueItem: 'Berachot 3:5',
-          todayTaskCount: 2,
-          lastCompletionAt: now,
-        ),
-        CurriculumSummary(
-          curriculumId: CurriculumId.bavli,
-          completionPercentage: 0.18,
-          paceStatus: const PaceStatus(
-            status: PaceStatusType.onPace,
-            daysDelta: 0,
-            delta: DateScheduleDelta(DateDelta(0)),
-            rollingAverage: 1.1,
-          ),
-          nextDueItem: 'Brachot 24a',
-          todayTaskCount: 1,
-          lastCompletionAt: now.subtract(const Duration(hours: 2)),
-        ),
-        CurriculumSummary(
-          curriculumId: CurriculumId.chumash,
-          completionPercentage: 0.65,
-          paceStatus: const PaceStatus(
-            status: PaceStatusType.ahead,
-            daysDelta: 7,
-            delta: DateScheduleDelta(DateDelta(7)),
-            rollingAverage: 8.0,
-          ),
-          nextDueItem: 'Bereishit 12:5',
-          todayTaskCount: 1,
-          lastCompletionAt: now.subtract(const Duration(hours: 5)),
-        ),
-        CurriculumSummary(
-          curriculumId: CurriculumId.mishnaBerurah,
-          completionPercentage: 0.33,
-          paceStatus: const PaceStatus(
-            status: PaceStatusType.behind,
-            daysDelta: -2,
-            delta: DateScheduleDelta(DateDelta(-2)),
-            rollingAverage: 2.3,
-          ),
-          nextDueItem: 'Siman 91:2',
-          todayTaskCount: 1,
-          lastCompletionAt: now.subtract(const Duration(days: 1)),
-        ),
-        CurriculumSummary(
-          curriculumId: CurriculumId.nach,
-          completionPercentage: 0.28,
-          paceStatus: null,
-          nextDueItem: 'Yehoshua 5:3',
-          todayTaskCount: 0,
-          lastCompletionAt: now.subtract(const Duration(days: 2)),
-        ),
-      ];
-
       await tester.pumpWidget(
         phoneApp(
           child: Scaffold(
@@ -218,16 +149,6 @@ void main() {
                       subtitle: const Text('See your lifetime achievements'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {},
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ...summaries.map(
-                    (summary) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: CurriculumSummaryCard(
-                        summary: summary,
-                        onTap: () {},
-                      ),
                     ),
                   ),
                 ],
