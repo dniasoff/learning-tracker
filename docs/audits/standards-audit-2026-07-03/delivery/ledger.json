@@ -173,13 +173,20 @@
     {
       "id": "AUD-onboarding-04",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Replace raw English string literals with AppLocalizations across onboarding screens, steps, and validators",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "bdaab5ee"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-onboarding-04 AC1 OK: make arb-parity PASS, 1465 keys en/he in sync",
+        "AUD-onboarding-04 AC2 OK: no_onboarding_raw_string_literal.dart registered; 11/11 analyzer unit test PASS (fires on Text/errorText/hintText/label)",
+        "AUD-onboarding-04 AC3 OK: wizard_steps_l1_test.dart 4 assertions now _he.<key> lookups + findsNothing English guards; passed",
+        "AUD-onboarding-04 AC4 OK: HE day-chip test asserts schedulerDayAbbrev* render + Mon..Sun absent; HE AppBar tests; e2e 26 passed"
+      ],
+      "notes": "Localized remaining sites across 7 files incl. day-abbrev mixed-language bug (new helper). ~30 new+10 reused ARB keys. AC2: new lint rule+test, 28->0 hits via scratch-run. AC3: fixed 4 bug-locking Hebrew tests+added regression. AC4: added Hebrew assertions. Commit eb7d066b (pre-rebase); rebased as bdaab5ee; merged via w3r0c7 merge commit 02620d46."
     },
     {
       "id": "AUD-content_browsing-01",
@@ -731,13 +738,18 @@
     {
       "id": "AUD-onboarding-03",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Localize auth_validators.dart's hardcoded English error messages via AppLocalizations",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "7940e84a"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-onboarding-03 AC1 OK: signup_screen_test.dart HE-locale test asserts 3 Hebrew validator strings render + English findsNothing; passed",
+        "AUD-onboarding-03 AC2 OK: auth_validators.dart:15-43 all 3 validators return l10n.* keys, zero English literals"
+      ],
+      "notes": "auth_validators.dart's 3 validators now take AppLocalizations and resolve via ARB (3 new keys, 2 reused). Updated signup/sign-in call sites + local_auth_service_test.dart. Red-first Hebrew widget test (git-stash-verified red -> green). Commit 7a26cf45 (pre-rebase); rebased as 7940e84a; merged via w3r0c7 merge commit 02620d46."
     },
     {
       "id": "AUD-t-progress-01",
