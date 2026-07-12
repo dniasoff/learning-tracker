@@ -13,13 +13,17 @@ final pointsServiceProvider = Provider<PointsService>((ref) {
 });
 
 /// Per-curriculum points total, keyed by curriculumId (P3 family pattern).
-final curriculumPointsProvider = FutureProvider.family<int, CurriculumId>((
-  ref,
-  curriculum,
-) async {
-  final service = ref.watch(pointsServiceProvider);
-  return service.getCurriculumTotal(curriculum.storageKey);
-});
+///
+/// SM-6 (docs/coding-standards.md): parameterized/family providers stay
+/// autoDispose. `CurriculumId` is a small finite enum, so the leak was
+/// bounded, but retaining every family member for the container's lifetime
+/// is still inconsistent with the rest of this feature's family providers
+/// (AUD-gamification-13).
+final curriculumPointsProvider = FutureProvider.autoDispose
+    .family<int, CurriculumId>((ref, curriculum) async {
+      final service = ref.watch(pointsServiceProvider);
+      return service.getCurriculumTotal(curriculum.storageKey);
+    });
 
 /// Global debitable points balance — reactive stream backed by watchBalance.
 ///
@@ -58,11 +62,11 @@ final curriculumBreakdownProvider = FutureProvider<Map<CurriculumId, int>>((
 });
 
 /// Points history log, optionally filtered by curriculum.
-final pointsHistoryProvider =
-    FutureProvider.family<List<PointsHistoryEntry>, CurriculumId?>((
-      ref,
-      curriculum,
-    ) async {
+///
+/// SM-6 (docs/coding-standards.md): parameterized/family providers stay
+/// autoDispose (AUD-gamification-13).
+final pointsHistoryProvider = FutureProvider.autoDispose
+    .family<List<PointsHistoryEntry>, CurriculumId?>((ref, curriculum) async {
       final service = ref.watch(pointsServiceProvider);
       return service.getPointsHistory(curriculumId: curriculum?.storageKey);
     });
