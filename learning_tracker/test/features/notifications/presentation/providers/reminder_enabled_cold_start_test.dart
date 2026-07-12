@@ -93,27 +93,19 @@ void main() {
       final (container, notifier) = _makeContainer(startId: 0);
       addTearDown(container.dispose);
 
-      // Listen for state changes.
-      final observed = <bool>[];
-      container.listen<bool>(reminderEnabledProvider, (_, v) {
-        observed.add(v);
-      });
-
+      // AUD-notifications-02: reminderEnabledProvider is an AsyncNotifier
+      // that genuinely awaits SharedPreferences — await `.future` for the
+      // settled value at each stage instead of listen()+arbitrary-delay.
+      //
       // Trigger build at cold-start id=0 — default true, no pref for id=0.
-      expect(container.read(reminderEnabledProvider), isTrue);
-
-      // Allow async _loadFromPrefs to complete for id=0 — still true.
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(await container.read(reminderEnabledProvider.future), isTrue);
 
       // Simulate the app resolving the real profile id.
       notifier.set(42);
 
-      // Give the rebuild + async load time to complete.
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-
       // After profile resolves to 42, state MUST be false (the persisted value).
       expect(
-        container.read(reminderEnabledProvider),
+        await container.read(reminderEnabledProvider.future),
         isFalse,
         reason:
             'ReminderEnabled should reload prefs under profile 42 after '
@@ -136,19 +128,12 @@ void main() {
         final (container, notifier) = _makeContainer(startId: 0);
         addTearDown(container.dispose);
 
-        final observed = <bool>[];
-        container.listen<bool>(streakAlertEnabledProvider, (_, v) {
-          observed.add(v);
-        });
-
-        expect(container.read(streakAlertEnabledProvider), isTrue);
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        expect(await container.read(streakAlertEnabledProvider.future), isTrue);
 
         notifier.set(7);
-        await Future<void>.delayed(const Duration(milliseconds: 200));
 
         expect(
-          container.read(streakAlertEnabledProvider),
+          await container.read(streakAlertEnabledProvider.future),
           isFalse,
           reason:
               'StreakAlertEnabled should reload prefs under profile 7 after '
@@ -173,19 +158,15 @@ void main() {
         final (container, notifier) = _makeContainer(startId: 0);
         addTearDown(container.dispose);
 
-        final observed = <bool>[];
-        container.listen<bool>(rewardNotificationEnabledProvider, (_, v) {
-          observed.add(v);
-        });
-
-        expect(container.read(rewardNotificationEnabledProvider), isTrue);
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        expect(
+          await container.read(rewardNotificationEnabledProvider.future),
+          isTrue,
+        );
 
         notifier.set(15);
-        await Future<void>.delayed(const Duration(milliseconds: 200));
 
         expect(
-          container.read(rewardNotificationEnabledProvider),
+          await container.read(rewardNotificationEnabledProvider.future),
           isFalse,
           reason:
               'RewardNotificationEnabled should reload prefs under profile 15 '
@@ -211,24 +192,15 @@ void main() {
         final (container, notifier) = _makeContainer(startId: 1);
         addTearDown(container.dispose);
 
-        final observed = <bool>[];
-        container.listen<bool>(reminderEnabledProvider, (_, v) {
-          observed.add(v);
-        });
-
-        container.read(reminderEnabledProvider);
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-
         // Profile 1 has no stored value → default true.
-        expect(container.read(reminderEnabledProvider), isTrue);
+        expect(await container.read(reminderEnabledProvider.future), isTrue);
 
         // Switch to profile 2.
         notifier.set(2);
-        await Future<void>.delayed(const Duration(milliseconds: 200));
 
         // After switch, must load profile 2's value (false).
         expect(
-          container.read(reminderEnabledProvider),
+          await container.read(reminderEnabledProvider.future),
           isFalse,
           reason:
               'Profile switch from 1 → 2 must reload the persisted false value '

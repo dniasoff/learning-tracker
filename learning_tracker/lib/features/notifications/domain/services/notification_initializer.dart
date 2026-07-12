@@ -1,4 +1,5 @@
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -44,9 +45,15 @@ class NotificationInitializer {
       // identifier we feed to tz.getLocation lives on .identifier.
       final info = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(info.identifier));
-    } catch (_) {
-      // Platform query failed — leave tz.local as UTC rather than crash.
-      // Reminders will fire at UTC wall-clock in this fallback.
+    } catch (e, stackTrace) {
+      // AUD-notifications-05 (EH-3): leave tz.local as UTC rather than
+      // crash (reminders fire at UTC wall-clock in this fallback), but log
+      // so a real platform-query failure leaves a diagnostic trail.
+      AppLogger.instance.warning(
+        event: 'timezone_detect_on_init_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
     }
 
     await service.initialize(onNotificationTap: _handleNotificationTap);

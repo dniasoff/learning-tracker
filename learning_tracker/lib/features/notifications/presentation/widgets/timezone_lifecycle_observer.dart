@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -59,8 +60,15 @@ class _TimezoneLifecycleObserverState
     try {
       final info = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(info.identifier));
-    } catch (_) {
-      // Timezone re-detection failed — keep existing tz.local.
+    } catch (e, stackTrace) {
+      // AUD-notifications-05 (EH-3): keep existing tz.local, but log so a
+      // real platform-query failure leaves a diagnostic trail instead of
+      // vanishing silently.
+      AppLogger.instance.warning(
+        event: 'timezone_redetect_on_resume_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
     }
 
     // 2. Invalidate Sacred Window cache so next scheduling recomputes.

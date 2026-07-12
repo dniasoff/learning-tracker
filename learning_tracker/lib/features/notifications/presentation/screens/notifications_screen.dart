@@ -14,11 +14,29 @@ class NotificationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final reminderEnabled = ref.watch(reminderEnabledProvider);
-    final reminderTime = ref.watch(reminderTimeProvider);
-    final streakAlertEnabled = ref.watch(streakAlertEnabledProvider);
-    final streakAlertTime = ref.watch(streakAlertTimeProvider);
-    final rewardEnabled = ref.watch(rewardNotificationEnabledProvider);
+    // AUD-notifications-02: the preference providers are AsyncNotifiers that
+    // genuinely await SharedPreferences before resolving (no hardcoded
+    // synchronous default). While the initial load is in flight (AsyncLoading)
+    // these fall back to the same defaults the old synchronous build() used
+    // to return first — the difference is the underlying provider state
+    // itself never lies about being settled.
+    final reminderEnabled = ref.watch(reminderEnabledProvider).value ?? true;
+    final reminderTime =
+        ref.watch(reminderTimeProvider).value ??
+        const TimeOfDay(
+          hour: defaultReminderHour,
+          minute: defaultReminderMinute,
+        );
+    final streakAlertEnabled =
+        ref.watch(streakAlertEnabledProvider).value ?? true;
+    final streakAlertTime =
+        ref.watch(streakAlertTimeProvider).value ??
+        const TimeOfDay(
+          hour: defaultStreakAlertHour,
+          minute: defaultStreakAlertMinute,
+        );
+    final rewardEnabled =
+        ref.watch(rewardNotificationEnabledProvider).value ?? true;
 
     // Activate sync effects so scheduling reacts to setting changes.
     ref.watch(reminderSyncEffectProvider);

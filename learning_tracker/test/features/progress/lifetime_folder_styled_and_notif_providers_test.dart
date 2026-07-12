@@ -1226,13 +1226,13 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    test('default state is true', () {
+    test('default state is true', () async {
       final container = ProviderContainer(
         overrides: [activeProfileIdProvider.overrideWithValue(1)],
       );
       addTearDown(container.dispose);
 
-      expect(container.read(reminderEnabledProvider), isTrue);
+      expect(await container.read(reminderEnabledProvider.future), isTrue);
     });
 
     test('toggle() flips state to false', () async {
@@ -1245,9 +1245,10 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      await container.read(reminderEnabledProvider.future);
       await container.read(reminderEnabledProvider.notifier).toggle();
 
-      expect(container.read(reminderEnabledProvider), isFalse);
+      expect(container.read(reminderEnabledProvider).value, isFalse);
     });
 
     test('toggle() persists false to SharedPreferences', () async {
@@ -1260,6 +1261,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      await container.read(reminderEnabledProvider.future);
       await container.read(reminderEnabledProvider.notifier).toggle();
 
       final prefs = await SharedPreferences.getInstance();
@@ -1279,11 +1281,15 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      // Initial default is true before async load; flip to match persisted
-      container.read(reminderEnabledProvider.notifier).state = false;
+      // AUD-notifications-02: await the genuinely persisted value (false)
+      // instead of hand-forcing `state` to fake having already loaded it —
+      // the old synchronous-default build() made that workaround necessary;
+      // the AsyncNotifier build() now genuinely resolves to the persisted
+      // value, so no fake-out is needed.
+      expect(await container.read(reminderEnabledProvider.future), isFalse);
       await container.read(reminderEnabledProvider.notifier).toggle();
 
-      expect(container.read(reminderEnabledProvider), isTrue);
+      expect(container.read(reminderEnabledProvider).value, isTrue);
     });
   });
 
@@ -1294,22 +1300,23 @@ void main() {
 
     test(
       'default state matches ReminderPreferences.defaultReminderHour/Minute',
-      () {
+      () async {
         final container = ProviderContainer(
           overrides: [activeProfileIdProvider.overrideWithValue(1)],
         );
         addTearDown(container.dispose);
 
-        final time = container.read(reminderTimeProvider);
+        final time = await container.read(reminderTimeProvider.future);
         expect(time.hour, equals(ReminderPreferences.defaultReminderHour));
         expect(time.minute, equals(ReminderPreferences.defaultReminderMinute));
       },
     );
 
     test('setTime() updates in-memory state', () async {
-      // Seed prefs with the target values so _loadFromPrefs() converges to the
-      // same TimeOfDay we are about to set, avoiding the async-load race where
-      // _loadFromPrefs() reads stale defaults and overwrites the new state.
+      // AUD-notifications-02: the AsyncNotifier build() genuinely awaits
+      // SharedPreferences, so there is no more stale-default-overwrites-the-
+      // new-state race to seed prefs around — awaiting `.future` below is
+      // enough to settle the initial load before setTime() mutates it.
       SharedPreferences.setMockInitialValues({
         NotificationPreferencesRepository.reminderHourKey(1): 8,
         NotificationPreferencesRepository.reminderMinuteKey(1): 30,
@@ -1320,10 +1327,11 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      await container.read(reminderTimeProvider.future);
       const newTime = TimeOfDay(hour: 8, minute: 30);
       await container.read(reminderTimeProvider.notifier).setTime(newTime);
 
-      expect(container.read(reminderTimeProvider), equals(newTime));
+      expect(container.read(reminderTimeProvider).value, equals(newTime));
     });
 
     test('setTime() persists hour and minute to SharedPreferences', () async {
@@ -1332,6 +1340,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      await container.read(reminderTimeProvider.future);
       const newTime = TimeOfDay(hour: 8, minute: 30);
       await container.read(reminderTimeProvider.notifier).setTime(newTime);
 
@@ -1352,13 +1361,13 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    test('default state is true', () {
+    test('default state is true', () async {
       final container = ProviderContainer(
         overrides: [activeProfileIdProvider.overrideWithValue(1)],
       );
       addTearDown(container.dispose);
 
-      expect(container.read(streakAlertEnabledProvider), isTrue);
+      expect(await container.read(streakAlertEnabledProvider.future), isTrue);
     });
 
     test('toggle() flips state to false and persists', () async {
@@ -1371,9 +1380,10 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      await container.read(streakAlertEnabledProvider.future);
       await container.read(streakAlertEnabledProvider.notifier).toggle();
 
-      expect(container.read(streakAlertEnabledProvider), isFalse);
+      expect(container.read(streakAlertEnabledProvider).value, isFalse);
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -1392,13 +1402,13 @@ void main() {
 
     test(
       'default time matches ReminderPreferences.defaultStreakAlert values',
-      () {
+      () async {
         final container = ProviderContainer(
           overrides: [activeProfileIdProvider.overrideWithValue(1)],
         );
         addTearDown(container.dispose);
 
-        final time = container.read(streakAlertTimeProvider);
+        final time = await container.read(streakAlertTimeProvider.future);
         expect(time.hour, equals(ReminderPreferences.defaultStreakAlertHour));
         expect(
           time.minute,
@@ -1408,8 +1418,8 @@ void main() {
     );
 
     test('setTime() updates state and persists', () async {
-      // Seed prefs with the target values so _loadFromPrefs() converges to the
-      // same TimeOfDay we are about to set, avoiding the async-load race.
+      // AUD-notifications-02: no more async-load race to seed prefs around —
+      // awaiting `.future` below settles the initial load deterministically.
       SharedPreferences.setMockInitialValues({
         NotificationPreferencesRepository.streakAlertHourKey(1): 22,
         NotificationPreferencesRepository.streakAlertMinuteKey(1): 15,
@@ -1420,10 +1430,11 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      await container.read(streakAlertTimeProvider.future);
       const newTime = TimeOfDay(hour: 22, minute: 15);
       await container.read(streakAlertTimeProvider.notifier).setTime(newTime);
 
-      expect(container.read(streakAlertTimeProvider), equals(newTime));
+      expect(container.read(streakAlertTimeProvider).value, equals(newTime));
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -1442,13 +1453,16 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    test('default state is true', () {
+    test('default state is true', () async {
       final container = ProviderContainer(
         overrides: [activeProfileIdProvider.overrideWithValue(1)],
       );
       addTearDown(container.dispose);
 
-      expect(container.read(rewardNotificationEnabledProvider), isTrue);
+      expect(
+        await container.read(rewardNotificationEnabledProvider.future),
+        isTrue,
+      );
     });
 
     test('toggle() flips state to false and persists', () async {
@@ -1461,9 +1475,10 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      await container.read(rewardNotificationEnabledProvider.future);
       await container.read(rewardNotificationEnabledProvider.notifier).toggle();
 
-      expect(container.read(rewardNotificationEnabledProvider), isFalse);
+      expect(container.read(rewardNotificationEnabledProvider).value, isFalse);
 
       final prefs = await SharedPreferences.getInstance();
       expect(
@@ -1494,6 +1509,7 @@ void main() {
       addTearDown(containerB.dispose);
 
       // Toggle profile 10 to false
+      await containerA.read(reminderEnabledProvider.future);
       await containerA.read(reminderEnabledProvider.notifier).toggle();
 
       // Profile 20 should remain unchanged in SharedPrefs
