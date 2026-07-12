@@ -740,13 +740,18 @@
     {
       "id": "AUD-settings-01",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Localize BackupSyncSection's identity-mismatch subtitle instead of rendering sync_orchestrator's raw English reason string",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "13a9b91024d55fb23ab398ddbe331382ab2da713"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-settings-01 AC1 OK: backup_sync_section.dart:148-172 isMismatch subtitle built from l10n getters; raw reason unused (only ST-4 branch L179).",
+        "AUD-settings-01 AC2 OK: L5 overrides mismatched under Locale('he'), asserts 'Signed in as' findsNothing + Hebrew present; passes 1/1, red-first in commit body."
+      ],
+      "notes": "Re-verified: isMismatch branch rendered raw English reason verbatim. Red-first L5 (he locale+mismatch) failed pre-fix. Fix: subtitle now built entirely from AppLocalizations via identity fields; 3 new EN+HE ARB keys. Un-skipped finding-cited e2e R-IC11 regression, now passes."
     },
     {
       "id": "AUD-tutoring-03",
