@@ -4791,6 +4791,12 @@ abstract class AppLocalizations {
   /// **'No matches for \"{query}\".'**
   String cityPickerNoMatches(String query);
 
+  /// No description provided for @cityPickerIdleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Start typing to search ~33,000 cities.\nType at least 2 letters.'**
+  String get cityPickerIdleHint;
+
   /// No description provided for @schedulerStudyLabel.
   ///
   /// In en, this message translates to:

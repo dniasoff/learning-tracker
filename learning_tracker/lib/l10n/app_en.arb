@@ -1443,6 +1443,7 @@
       }
     }
   },
+  "cityPickerIdleHint": "Start typing to search ~33,000 cities.\nType at least 2 letters.",
 
   "schedulerStudyLabel": "Study",
   "schedulerReviewOnlyLabel": "Review only",

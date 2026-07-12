@@ -2719,6 +2719,10 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get cityPickerIdleHint =>
+      'התחילו להקליד כדי לחפש כ-33,000 ערים.\nהקלידו לפחות 2 אותיות.';
+
+  @override
   String get schedulerStudyLabel => 'לימוד';
 
   @override

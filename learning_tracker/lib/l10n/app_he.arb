@@ -1280,6 +1280,7 @@
   "cityPickerTitle": "בחרו עיר",
   "cityPickerHint": "הקלד שם עיר…",
   "cityPickerNoMatches": "אין תוצאות עבור \"{query}\".",
+  "cityPickerIdleHint": "התחילו להקליד כדי לחפש כ-33,000 ערים.\nהקלידו לפחות 2 אותיות.",
 
   "schedulerStudyLabel": "לימוד",
   "schedulerReviewOnlyLabel": "חזרה בלבד",

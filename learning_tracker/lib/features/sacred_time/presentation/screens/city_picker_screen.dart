@@ -122,8 +122,7 @@ class _IdleHint extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Text(
-          'Start typing to search ~33,000 cities.\n'
-          'Type at least 2 letters.',
+          AppLocalizations.of(context)!.cityPickerIdleHint,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
