@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class CurriculumListScreen extends ConsumerWidget {
@@ -20,11 +21,12 @@ class CurriculumListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
           child: Text(
-            'Browse Content',
+            l10n.curriculumListTitle,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w800,
               fontSize: 24,
@@ -35,7 +37,7 @@ class CurriculumListScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            tooltip: 'Search curricula',
+            tooltip: l10n.curriculumListSearchTooltip,
             onPressed: () {},
           ),
         ],
@@ -51,16 +53,20 @@ class CurriculumListScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppTheme.brandOutline),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.search, color: AppTheme.brandInkMuted, size: 20),
-                SizedBox(width: 12),
+                const Icon(
+                  Icons.search,
+                  color: AppTheme.brandInkMuted,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
                 Flexible(
                   child: Text(
-                    'Search curricula...',
+                    l10n.curriculumListSearchHint,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppTheme.brandInkMuted,
                       fontSize: 15,
                     ),
@@ -72,9 +78,9 @@ class CurriculumListScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // Section header
-          const Text(
-            'CURRICULA',
-            style: TextStyle(
+          Text(
+            l10n.curriculumListSectionCurricula,
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppTheme.brandInkMuted,
@@ -94,9 +100,9 @@ class CurriculumListScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // Recent Activity section
-          const Text(
-            'RECENT ACTIVITY',
-            style: TextStyle(
+          Text(
+            l10n.curriculumListSectionRecentActivity,
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppTheme.brandInkMuted,
@@ -169,6 +175,7 @@ class _CurriculumCard extends ConsumerWidget {
     int containerCount = 0,
     bool isLoading = false,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: () {
         context.router.push(
@@ -241,7 +248,7 @@ class _CurriculumCard extends ConsumerWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '$pctDisplay Done',
+                          l10n.curriculumListPercentDone(pctDisplay),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -267,9 +274,9 @@ class _CurriculumCard extends ConsumerWidget {
                       color: AppTheme.brandGoldSoft,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'New',
-                      style: TextStyle(
+                    child: Text(
+                      l10n.curriculumListNewBadge,
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.brandGoldDeep,
@@ -327,6 +334,7 @@ class _RecentActivityPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -350,22 +358,25 @@ class _RecentActivityPlaceholder extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Start learning to see activity here',
-                  style: TextStyle(
+                  l10n.curriculumListActivityEmptyTitle,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.brandInk,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
-                  'Your recent completions will appear below',
-                  style: TextStyle(fontSize: 12, color: AppTheme.brandInkMuted),
+                  l10n.curriculumListActivityEmptySubtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.brandInkMuted,
+                  ),
                 ),
               ],
             ),

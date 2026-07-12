@@ -899,6 +899,48 @@ class AppLocalizationsHe extends AppLocalizations {
   String get contentHierarchySearchTooltip => 'חיפוש';
 
   @override
+  String get curriculumListTitle => 'עיון בתוכן';
+
+  @override
+  String get curriculumListSearchTooltip => 'חיפוש תוכניות לימוד';
+
+  @override
+  String get curriculumListSearchHint => 'חיפוש תוכניות לימוד...';
+
+  @override
+  String get curriculumListSectionCurricula => 'תוכניות לימוד';
+
+  @override
+  String get curriculumListSectionRecentActivity => 'פעילות אחרונה';
+
+  @override
+  String curriculumListPercentDone(String pctDisplay) {
+    return '$pctDisplay הושלם';
+  }
+
+  @override
+  String get curriculumListNewBadge => 'חדש';
+
+  @override
+  String get curriculumListActivityEmptyTitle =>
+      'התחל ללמוד כדי לראות פעילות כאן';
+
+  @override
+  String get curriculumListActivityEmptySubtitle =>
+      'ההשלמות האחרונות שלך יופיעו למטה';
+
+  @override
+  String get contentSearchClearTooltip => 'נקה';
+
+  @override
+  String get stageBreakdownReviewHistoryTitle => 'היסטוריית חזרות';
+
+  @override
+  String itemReviewBreakdownStageFallback(int stageId) {
+    return 'שלב $stageId';
+  }
+
+  @override
   String get noItemsAtThisLevel => 'אין פריטים ברמה זו';
 
   @override

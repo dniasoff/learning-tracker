@@ -525,6 +525,60 @@
   "@contentHierarchySearchTooltip": {
     "description": "Tooltip for the search icon button in ContentHierarchyScreen."
   },
+  "curriculumListTitle": "Browse Content",
+  "@curriculumListTitle": {
+    "description": "AUD-content_browsing-01: AppBar title for CurriculumListScreen (the curricula list landing screen)."
+  },
+  "curriculumListSearchTooltip": "Search curricula",
+  "@curriculumListSearchTooltip": {
+    "description": "AUD-content_browsing-01: tooltip for the search icon button in CurriculumListScreen's AppBar."
+  },
+  "curriculumListSearchHint": "Search curricula...",
+  "@curriculumListSearchHint": {
+    "description": "AUD-content_browsing-01: placeholder text in CurriculumListScreen's decorative search bar."
+  },
+  "curriculumListSectionCurricula": "CURRICULA",
+  "@curriculumListSectionCurricula": {
+    "description": "AUD-content_browsing-01: section header above the curriculum cards on CurriculumListScreen."
+  },
+  "curriculumListSectionRecentActivity": "RECENT ACTIVITY",
+  "@curriculumListSectionRecentActivity": {
+    "description": "AUD-content_browsing-01: section header above the recent-activity placeholder on CurriculumListScreen."
+  },
+  "curriculumListPercentDone": "{pctDisplay} Done",
+  "@curriculumListPercentDone": {
+    "description": "AUD-content_browsing-01: completion badge on a curriculum card, e.g. \"42% Done\". {pctDisplay} is a pre-formatted percentage string.",
+    "placeholders": {
+      "pctDisplay": { "type": "String" }
+    }
+  },
+  "curriculumListNewBadge": "New",
+  "@curriculumListNewBadge": {
+    "description": "AUD-content_browsing-01: badge shown on a curriculum card with no completions yet."
+  },
+  "curriculumListActivityEmptyTitle": "Start learning to see activity here",
+  "@curriculumListActivityEmptyTitle": {
+    "description": "AUD-content_browsing-01: title of the empty-state placeholder in the Recent Activity section on CurriculumListScreen."
+  },
+  "curriculumListActivityEmptySubtitle": "Your recent completions will appear below",
+  "@curriculumListActivityEmptySubtitle": {
+    "description": "AUD-content_browsing-01: subtitle of the empty-state placeholder in the Recent Activity section on CurriculumListScreen."
+  },
+  "contentSearchClearTooltip": "Clear",
+  "@contentSearchClearTooltip": {
+    "description": "AUD-content_browsing-01: tooltip for the clear (X) icon in ContentSearchScreen's search field."
+  },
+  "stageBreakdownReviewHistoryTitle": "Review History",
+  "@stageBreakdownReviewHistoryTitle": {
+    "description": "AUD-content_browsing-01: header of the per-stage completion breakdown bottom sheet opened by long-pressing a completed leaf item."
+  },
+  "itemReviewBreakdownStageFallback": "Stage {stageId}",
+  "@itemReviewBreakdownStageFallback": {
+    "description": "AUD-content_browsing-01: fallback label for a stage in the review breakdown when no stage name could be resolved.",
+    "placeholders": {
+      "stageId": { "type": "int" }
+    }
+  },
   "noItemsAtThisLevel": "No items at this level",
   "breadcrumbsRoot": "Root",
   "lifetimeMarkSavedCount": "{count, plural, one{Marked 1 lifetime selection.} other{Marked {count} lifetime selections.}}",

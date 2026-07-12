@@ -88,5 +88,52 @@ void main() {
             'R4-4: hardcoded English "Search " prefix must be absent in he locale',
       );
     });
+
+    // ── AUD-content_browsing-01 regression ─────────────────────────────────
+    //
+    // The suffix clear (X) icon's tooltip was a hard-coded English literal
+    // ('Clear'), leaking English into the Hebrew UI. This test was RED before
+    // the tooltip was routed through AppLocalizations.
+
+    testWidgets(
+      'AUD-content_browsing-01: Hebrew locale — clear icon tooltip localizes',
+      (tester) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
+              anyActiveTrackHasChazaraProvider.overrideWith((ref) => false),
+            ],
+            child: const MaterialApp(
+              locale: Locale('he'),
+              localizationsDelegates: [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: ContentSearchScreen(curriculumId: 'mishnayos'),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Enter text so the clear (X) suffix icon is shown. The screen
+        // debounces onChanged by 300ms before rebuilding.
+        await tester.enterText(find.byType(TextField), 'ברכות');
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(
+          find.byTooltip('נקה'),
+          findsOneWidget,
+          reason:
+              'AUD-content_browsing-01: the clear-icon tooltip must use '
+              'l10n so Hebrew locale shows "נקה" not the hard-coded '
+              'English "Clear"',
+        );
+        expect(find.byTooltip('Clear'), findsNothing);
+      },
+    );
   });
 }

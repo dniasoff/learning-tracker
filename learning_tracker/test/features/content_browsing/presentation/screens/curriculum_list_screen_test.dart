@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -7,6 +8,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,7 +33,16 @@ void main() {
           (ref, curriculum) async => 0.0,
         ),
       ],
-      child: const MaterialApp(home: CurriculumListScreen()),
+      child: const MaterialApp(
+        localizationsDelegates: [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: CurriculumListScreen(),
+      ),
     );
   }
 

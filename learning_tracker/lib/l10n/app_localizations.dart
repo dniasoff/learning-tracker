@@ -1641,6 +1641,78 @@ abstract class AppLocalizations {
   /// **'Search'**
   String get contentHierarchySearchTooltip;
 
+  /// AUD-content_browsing-01: AppBar title for CurriculumListScreen (the curricula list landing screen).
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Content'**
+  String get curriculumListTitle;
+
+  /// AUD-content_browsing-01: tooltip for the search icon button in CurriculumListScreen's AppBar.
+  ///
+  /// In en, this message translates to:
+  /// **'Search curricula'**
+  String get curriculumListSearchTooltip;
+
+  /// AUD-content_browsing-01: placeholder text in CurriculumListScreen's decorative search bar.
+  ///
+  /// In en, this message translates to:
+  /// **'Search curricula...'**
+  String get curriculumListSearchHint;
+
+  /// AUD-content_browsing-01: section header above the curriculum cards on CurriculumListScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'CURRICULA'**
+  String get curriculumListSectionCurricula;
+
+  /// AUD-content_browsing-01: section header above the recent-activity placeholder on CurriculumListScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'RECENT ACTIVITY'**
+  String get curriculumListSectionRecentActivity;
+
+  /// AUD-content_browsing-01: completion badge on a curriculum card, e.g. "42% Done". {pctDisplay} is a pre-formatted percentage string.
+  ///
+  /// In en, this message translates to:
+  /// **'{pctDisplay} Done'**
+  String curriculumListPercentDone(String pctDisplay);
+
+  /// AUD-content_browsing-01: badge shown on a curriculum card with no completions yet.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get curriculumListNewBadge;
+
+  /// AUD-content_browsing-01: title of the empty-state placeholder in the Recent Activity section on CurriculumListScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Start learning to see activity here'**
+  String get curriculumListActivityEmptyTitle;
+
+  /// AUD-content_browsing-01: subtitle of the empty-state placeholder in the Recent Activity section on CurriculumListScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Your recent completions will appear below'**
+  String get curriculumListActivityEmptySubtitle;
+
+  /// AUD-content_browsing-01: tooltip for the clear (X) icon in ContentSearchScreen's search field.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get contentSearchClearTooltip;
+
+  /// AUD-content_browsing-01: header of the per-stage completion breakdown bottom sheet opened by long-pressing a completed leaf item.
+  ///
+  /// In en, this message translates to:
+  /// **'Review History'**
+  String get stageBreakdownReviewHistoryTitle;
+
+  /// AUD-content_browsing-01: fallback label for a stage in the review breakdown when no stage name could be resolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage {stageId}'**
+  String itemReviewBreakdownStageFallback(int stageId);
+
   /// No description provided for @noItemsAtThisLevel.
   ///
   /// In en, this message translates to:
