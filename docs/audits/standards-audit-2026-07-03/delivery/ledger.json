@@ -1671,13 +1671,13 @@
   {
    "id": "AUD-dashboard-06",
    "wave": 3,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Guard ref.watch/ref.read after in-flight awaits in dashboard_providers.dart (SM-4)",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_7cbfdbd5-328-42 (branch worktree-wf_7cbfdbd5-328-42, commit effb223a6f3e50a930f57cbfd26f529aae9af965) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: dashboardTrackCompletionPercentage, dashboardCompletionPercentage, stripStockMilestonesEffect, and dashboardPaceStatus each called ref.watch/ref.read after an earlier await (a Drift DB read) with no ref.mounted check in between; fix mirrors the existing if (!ref.mounted) return null; guard already used by dashboardChildNextReward at every unguarded post-await ref access (dashboard_providers.dart:155,189,323,439). Red-first SM-4 regression test group added to dashboard_providers_test.dart (4 new tests, direct function-call + synchronous container disposal technique) - failed red against the unguarded code (\"Cannot use the Ref of Provider<void> after it has been disposed\"), 51/51 green after. AC2: the existing no_ref_after_await_without_mounted_check Rule-0 checker (AUD-sync-04) missed the stripStockMilestonesEffect site (await inside an `if` condition, ref-touch in the body) - closed via manual-marker scratch-run, 3 new rule unit tests added, dart test packages/custom_lints: 149/149 passed. Author-reported verification (unwitnessed by this merge lane): flutter analyze 0 issues, flutter test 51/51 (dashboard_providers_test.dart), dart test 149/149 (packages/custom_lints). Per merge-lane payload cid w3r0c9, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory was already removed from disk before this pass (tolerated); branch worktree-wf_7cbfdbd5-328-42 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_7cbfdbd5-328-42` shows all 3 commits on the branch (effb223a, 545f8b96, 369b80c0) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
   },
   {
    "id": "AUD-t-gamification-02",
@@ -3569,13 +3569,13 @@
   {
    "id": "AUD-dashboard-08",
    "wave": 3,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Remove the dead dashboardChildNextReward pipeline \u2014 result is computed but never displayed",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_7cbfdbd5-328-42 (branch worktree-wf_7cbfdbd5-328-42, commit 545f8b966946b9f583e90c6d8ea6d4fe0c857898) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: ChildPointsRewardsTabCard.nextRewardAsync was computed by dashboard_body.dart's ref.watch(dashboardChildNextRewardProvider) but never read in the card's build() - its own doc comment already admitted the value is no longer displayed (DEC-32/R4o-M1). Took the full-deletion path: removed the dead field/provider wiring, deleted dashboardChildNextReward, DashboardChildNextReward, and NextRewardSelector/next_reward_selector.dart (repo-wide grep confirmed no other consumer), updated all 3 ref.invalidate call sites (dashboard_screen.dart, reward_config_controller.dart, after_track_change_invalidation.dart), regenerated the .g.dart files, and removed the two now-subjectless test files plus the R3-12 test group. stripStockMilestonesEffect was left in place (still used by AUD-dashboard-06's fix, not named by this finding's recommendation) - noted as a candidate follow-up. AC1: grep -rn nextRewardAsync lib/ -> no matches. AC2: flutter analyze -> No issues found (no dangling ref.invalidate targets). Author-reported verification (unwitnessed by this merge lane): flutter analyze 0 issues, flutter test --concurrency=2 across dashboard_providers_test.dart, epic_26_story_26_7, child_redemption_rewards_staleness_test.dart, dashboard_screen_test.dart, dashboard_body_stats_resolve_test.dart, dashboard_body_streak_nav_test.dart, dashboard_todays_missions_heading_test.dart -> 87/87 passed. Per merge-lane payload cid w3r0c9, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory was already removed from disk before this pass (tolerated); branch worktree-wf_7cbfdbd5-328-42 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_7cbfdbd5-328-42` shows all 3 commits on the branch (effb223a, 545f8b96, 369b80c0) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
   },
   {
    "id": "AUD-dashboard-03",
@@ -5565,13 +5565,13 @@
   {
    "id": "AUD-dashboard-12",
    "wave": 3,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Remove the discarded initialSyncComplete watch in DashboardBody.build (unnecessary rebuild)",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_7cbfdbd5-328-42 (branch worktree-wf_7cbfdbd5-328-42, commit 369b80c0648cd690a62849aa8100bc6534125469, tip of this cid's build) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: DashboardBody.build watched initialSyncCompleteProvider into a local variable then immediately discarded it (`final _ = initialSyncComplete;`) behind an `// ignore: unused_local_variable` comment - a live ref.watch subscription kept alive purely to satisfy a lint suppression on a value nothing reads, causing DashboardBody (a ConsumerWidget rebuilt on every dashboard change) to re-subscribe to and rebuild on every emission for no behavioral effect. Deleted the watch, the discard statement, and the ignore comment; consolidated the historical BUG-#35/PP-15 rationale for why sync status plays no part in the tasksReady gate into accurate plain prose (the old comment had drifted out of sync with PP-15's actual behavior); removed the now-fully-unused core/sync/initial_sync_state.dart import. Hygiene/dead-code finding, no behavioral change. AC: grep -n initialSyncComplete dashboard_body.dart -> no matches; grep -n unused_local_variable dashboard_body.dart -> no matches. Author-reported verification (unwitnessed by this merge lane): flutter analyze 0 issues, and the dashboard widget test suite exercising DashboardBody.build (dashboard_todays_missions_heading_test.dart, dashboard_body_stats_resolve_test.dart, dashboard_body_streak_nav_test.dart, dashboard_tier_row_test.dart, dashboard_screen_test.dart) all passed. Per merge-lane payload cid w3r0c9, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory was already removed from disk before this pass (tolerated); branch worktree-wf_7cbfdbd5-328-42 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_7cbfdbd5-328-42` shows all 3 commits on the branch (effb223a, 545f8b96, 369b80c0) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
   },
   {
    "id": "AUD-onboarding-15",
