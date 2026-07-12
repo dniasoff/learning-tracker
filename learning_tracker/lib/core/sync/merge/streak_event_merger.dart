@@ -15,14 +15,13 @@
 /// `event_timestamp` field so pre-migration docs (if any) are still ingested.
 library;
 
-import 'package:learning_tracker/core/database/user/user_database.dart'
-    hide StreakEvent;
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 
 class StreakEventMerger implements EntityMerger {
   StreakEventMerger(UserDatabase db, {AppLogger? logger})
@@ -56,7 +55,7 @@ class StreakEventMerger implements EntityMerger {
         final decoded = _codec.decode(row);
         if (decoded != null) {
           await _log.append(
-            StreakEvent(
+            StreakLogEvent(
               profileId: decoded.profileId == 0 ? profileId : decoded.profileId,
               eventType: decoded.eventType,
               eventTimestamp: decoded.studyDate,
@@ -72,7 +71,7 @@ class StreakEventMerger implements EntityMerger {
         if (eventType == null || ts == null) continue;
 
         await _log.append(
-          StreakEvent(
+          StreakLogEvent(
             profileId: profileId,
             eventType: eventType,
             eventTimestamp: ts,

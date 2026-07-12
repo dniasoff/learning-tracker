@@ -244,8 +244,8 @@ lib/features/gamification/presentation/widgets/tier_icon_box.dart
 lib/features/gamification/presentation/widgets/tier_style.dart
 lib/features/gamification/presentation/widgets/track_filter_row.dart
 lib/features/gamification/presentation/widgets/track_tag_chip.dart
-lib/features/gamification/streak/streak_event.dart
 lib/features/gamification/streak/streak_event_log.dart
+lib/features/gamification/streak/streak_log_event.dart
 lib/features/gamification/streak/streak_reducer.dart
 lib/features/gamification/streak/streak_restorer.dart
 lib/features/gamification/streak/streak_state_provider.dart

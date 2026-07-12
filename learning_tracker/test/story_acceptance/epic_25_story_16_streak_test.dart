@@ -13,12 +13,11 @@ library;
 
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart'
-    hide StreakEvent;
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/merge/streak_event_merger.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_restorer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
@@ -88,7 +87,7 @@ void main() {
         test('appends a single event for a profile', () async {
           final log = StreakEventLog(db);
           await log.append(
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 10, 10),
@@ -106,7 +105,7 @@ void main() {
           'same (profileId, eventTimestamp, eventType) is idempotent',
           () async {
             final log = StreakEventLog(db);
-            final e = StreakEvent(
+            final e = StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 10, 10),
@@ -139,17 +138,17 @@ void main() {
       group('AC2 — StreakReducer uses LOCAL day boundaries (D16)', () {
         test('consecutive local days extend the streak', () {
           final events = [
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 8, 12),
             ),
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 9, 12),
             ),
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 10, 12),
@@ -165,12 +164,12 @@ void main() {
 
         test('multiple events on the SAME local day count as one day', () {
           final events = [
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 10, 10),
             ),
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 10, 14),
@@ -187,28 +186,28 @@ void main() {
           'a >1-day UTC gap resets currentStreak but maxStreak survives',
           () {
             final events = [
-              StreakEvent(
+              StreakLogEvent(
                 profileId: 1,
                 eventType: 'completion',
                 eventTimestamp: DateTime.utc(2026, 5, 1),
               ),
-              StreakEvent(
+              StreakLogEvent(
                 profileId: 1,
                 eventType: 'completion',
                 eventTimestamp: DateTime.utc(2026, 5, 2),
               ),
-              StreakEvent(
+              StreakLogEvent(
                 profileId: 1,
                 eventType: 'completion',
                 eventTimestamp: DateTime.utc(2026, 5, 3),
               ),
               // 4-day gap.
-              StreakEvent(
+              StreakLogEvent(
                 profileId: 1,
                 eventType: 'completion',
                 eventTimestamp: DateTime.utc(2026, 5, 8),
               ),
-              StreakEvent(
+              StreakLogEvent(
                 profileId: 1,
                 eventType: 'completion',
                 eventTimestamp: DateTime.utc(2026, 5, 9),
@@ -227,12 +226,12 @@ void main() {
           'currentStreak drops to 0 once today is >1 UTC day past last event',
           () {
             final events = [
-              StreakEvent(
+              StreakLogEvent(
                 profileId: 1,
                 eventType: 'completion',
                 eventTimestamp: DateTime.utc(2026, 5, 1),
               ),
-              StreakEvent(
+              StreakLogEvent(
                 profileId: 1,
                 eventType: 'completion',
                 eventTimestamp: DateTime.utc(2026, 5, 2),
@@ -264,12 +263,12 @@ void main() {
           }
 
           final events = [
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 12, 7),
             ),
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 12, 9),
@@ -287,7 +286,7 @@ void main() {
 
         test('empty input → zero streak', () {
           final state = const StreakReducer().reduce(
-            <StreakEvent>[],
+            <StreakLogEvent>[],
             today: DateTime.utc(2026, 5, 10),
           );
           expect(state.currentStreak, 0);
@@ -437,7 +436,7 @@ void main() {
           final trackId = await _seedTrack(db);
           // Pre-existing event from sync.
           await StreakEventLog(db).append(
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 1, 12),
@@ -500,21 +499,21 @@ void main() {
       group('AC3 — StreakStateProvider is the only read path', () {
         test('computes (current, max) end-to-end from streak_events', () async {
           await StreakEventLog(db).append(
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 8, 8),
             ),
           );
           await StreakEventLog(db).append(
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 9, 8),
             ),
           );
           await StreakEventLog(db).append(
-            StreakEvent(
+            StreakLogEvent(
               profileId: 1,
               eventType: 'completion',
               eventTimestamp: DateTime.utc(2026, 5, 10, 8),

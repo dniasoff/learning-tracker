@@ -2,13 +2,12 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart'
-    hide StreakEvent;
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/merge/merge_rules.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 
 import '../helpers/drift_memory.dart' show seedProfile;
@@ -163,19 +162,19 @@ void main() {
         // Device A: 1/1, 1/2
         // Device B: 1/3 (while A was offline)
         final union = [
-          StreakEvent(
+          StreakLogEvent(
             profileId: 1,
             eventType: 'completion',
             eventTimestamp: DateTime.utc(2026, 1, 1),
             clientDeviceId: 'A',
           ),
-          StreakEvent(
+          StreakLogEvent(
             profileId: 1,
             eventType: 'completion',
             eventTimestamp: DateTime.utc(2026, 1, 3),
             clientDeviceId: 'B',
           ),
-          StreakEvent(
+          StreakLogEvent(
             profileId: 1,
             eventType: 'completion',
             eventTimestamp: DateTime.utc(2026, 1, 2),

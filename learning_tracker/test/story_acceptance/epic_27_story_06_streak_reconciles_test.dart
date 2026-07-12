@@ -18,11 +18,10 @@
 library;
 
 import 'package:drift/drift.dart' show Value;
-import 'package:learning_tracker/core/database/user/user_database.dart'
-    hide StreakEvent;
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_restorer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
@@ -92,7 +91,7 @@ void main() {
         ];
         for (final ts in sequence) {
           await log.append(
-            StreakEvent(
+            StreakLogEvent(
               profileId: _profileId,
               eventType: 'completion',
               eventTimestamp: ts,
@@ -112,7 +111,7 @@ void main() {
               'they have distinct eventTimestamps)',
         );
         final events = rows.map(
-          (r) => StreakEvent(
+          (r) => StreakLogEvent(
             profileId: r.profileId,
             eventType: r.eventType,
             eventTimestamp: r.eventTimestamp,

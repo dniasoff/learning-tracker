@@ -7,8 +7,8 @@
 /// storage boundary.
 library;
 
-class StreakEvent {
-  const StreakEvent({
+class StreakLogEvent {
+  const StreakLogEvent({
     required this.profileId,
     required this.eventType,
     required this.eventTimestamp,
@@ -25,12 +25,12 @@ class StreakEvent {
 
   final String? clientDeviceId;
 
-  StreakEvent copyWith({
+  StreakLogEvent copyWith({
     int? profileId,
     String? eventType,
     DateTime? eventTimestamp,
     String? clientDeviceId,
-  }) => StreakEvent(
+  }) => StreakLogEvent(
     profileId: profileId ?? this.profileId,
     eventType: eventType ?? this.eventType,
     eventTimestamp: eventTimestamp ?? this.eventTimestamp,

@@ -14,10 +14,9 @@ library;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
-import 'package:learning_tracker/core/database/user/user_database.dart'
-    hide StreakEvent;
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_restorer.dart';
 
@@ -31,15 +30,15 @@ class StreakStateProvider {
   final LocalDayClock _clock;
   final StreakRestorer _restorer;
 
-  /// Returns the raw [StreakEvent] list for [profileId].
+  /// Returns the raw [StreakLogEvent] list for [profileId].
   ///
   /// Used by callers that need per-event detail (e.g. calendar heatmaps).
-  Future<Iterable<StreakEvent>> readEvents({required int profileId}) async {
+  Future<Iterable<StreakLogEvent>> readEvents({required int profileId}) async {
     final rows = await (_db.select(
       _db.streakEvents,
     )..where((t) => t.profileId.equals(profileId))).get();
     return rows.map(
-      (r) => StreakEvent(
+      (r) => StreakLogEvent(
         profileId: r.profileId,
         eventType: r.eventType,
         eventTimestamp: r.eventTimestamp,
@@ -55,7 +54,7 @@ class StreakStateProvider {
       _db.streakEvents,
     )..where((t) => t.profileId.equals(profileId))).get();
     final events = rows.map(
-      (r) => StreakEvent(
+      (r) => StreakLogEvent(
         profileId: r.profileId,
         eventType: r.eventType,
         eventTimestamp: r.eventTimestamp,
@@ -79,9 +78,9 @@ class StreakStateProvider {
     @visibleForTesting Stream<void>? rolloverTicks,
   }) {
     final controller = StreamController<StreakState>();
-    StreamSubscription<List<StreakEvent>>? eventsSub;
+    StreamSubscription<List<StreakLogEvent>>? eventsSub;
     StreamSubscription<void>? tickSub;
-    var latest = const <StreakEvent>[];
+    var latest = const <StreakLogEvent>[];
 
     // D16/D17: recompute against the CURRENT local day on every signal.
     StreakState compute() =>
@@ -104,7 +103,7 @@ class StreakStateProvider {
                 .map(
                   (rows) => rows
                       .map(
-                        (r) => StreakEvent(
+                        (r) => StreakLogEvent(
                           profileId: r.profileId,
                           eventType: r.eventType,
                           eventTimestamp: r.eventTimestamp,

@@ -7,9 +7,8 @@
 library;
 
 import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart'
-    hide StreakEvent;
-import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 
 class StreakEventLog {
   const StreakEventLog(this._db);
@@ -21,7 +20,7 @@ class StreakEventLog {
   ///
   /// Returns `true` if a row was inserted, `false` if the UNIQUE
   /// constraint dropped a duplicate.
-  Future<bool> append(StreakEvent event) async {
+  Future<bool> append(StreakLogEvent event) async {
     final ts = event.eventTimestamp.toUtc();
     final dayUtc = DateTime.utc(ts.year, ts.month, ts.day);
     final affected = await _db
