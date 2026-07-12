@@ -81,7 +81,7 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
       ),
       body: redemptionsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
+        error: (e, _) => Center(child: Text(l10n.errorGeneric(e.toString()))),
         data: (redemptions) {
           if (redemptions.isEmpty) {
             return Center(

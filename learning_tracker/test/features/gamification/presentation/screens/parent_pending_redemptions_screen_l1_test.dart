@@ -258,10 +258,65 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // The screen renders `e.toString()` directly which includes the
-      // "Exception: " prefix from Dart's Exception class.
+      // AUD-gamification-08: the screen routes the exception through
+      // l10n.errorGeneric(e.toString()), which still embeds the raw
+      // detail (matching the pattern already used elsewhere in this
+      // feature) -- so the detail substring is still findable here, just
+      // wrapped in a localized template rather than rendered bare.
       expect(find.textContaining(errorMsg), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('renders the localized errorGeneric wrapper, not the bare raw '
+        'exception text, under he locale (AUD-gamification-08)', (
+      tester,
+    ) async {
+      const errorMsg = 'db_unavailable_for_test';
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, __) => null,
+          overrides: [
+            userDatabaseProvider.overrideWithValue(db),
+            activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
+            outboxSyncWriteFacadeProvider.overrideWithValue(null),
+            pendingRedemptionsProvider.overrideWith(
+              (ref) => Stream.error(Exception(errorMsg)),
+            ),
+          ],
+          child: const MaterialApp(
+            locale: Locale('he'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ParentPendingRedemptionsScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Must NOT render the bare raw exception text as the whole error UI.
+      expect(
+        find.text(Exception(errorMsg).toString()),
+        findsNothing,
+        reason:
+            'the error branch must not render a bare, un-localized '
+            'e.toString() as the whole error message',
+      );
+      // Must render the Hebrew-localized errorGeneric wrapper instead.
+      final heL10n = await AppLocalizations.delegate.load(const Locale('he'));
+      expect(
+        find.textContaining(heL10n.errorGeneric('')),
+        findsOneWidget,
+        reason: 'the error text must be routed through l10n.errorGeneric',
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
