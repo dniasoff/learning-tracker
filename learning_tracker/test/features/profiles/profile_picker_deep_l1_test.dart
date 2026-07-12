@@ -7,7 +7,9 @@
 //
 //  D. Manage-sheet (long-press on profile tile)
 //     D1. Long-press → bottom sheet appears with Rename + Delete
-//     D2. Delete option disabled (subtitle present) when only 1 profile
+//     D2. Delete option reachable (AUD-profiles-04: no longer disabled) when
+//         only 1 profile — opens the canonical deleteProfileFlow's
+//         last-profile confirm dialog
 //     D3. Delete option enabled when >1 profiles
 //     D4. Tapping Cancel on manage sheet dismisses without action
 //
@@ -20,6 +22,8 @@
 //     F1. Tapping Delete (>1 profiles) opens delete-confirm dialog
 //     F2. Cancel on delete dialog → no deletion attempted
 //     F3. Last-profile delete dialog shows "Delete your only profile?" title
+//         (AUD-profiles-04: now exercised end-to-end via the canonical
+//         deleteProfileFlow — no longer blocked by a disabled menu tile)
 //
 //  G. ProfilePickerScreen visual structure
 //     G1. Picker title "Who is learning?" and subtitle always shown
@@ -303,14 +307,41 @@ void main() {
       },
     );
 
-    // D2 — single profile: Delete disabled, subtitle present
+    // D2 — single profile: Delete is reachable (AUD-profiles-04) and opens
+    // the canonical deleteProfileFlow's last-profile confirm dialog, instead
+    // of being hard-disabled by a private "must keep one profile" gate.
     testWidgets(
-      'D2: single profile long-press → Delete disabled, mustKeepOneProfile '
-      'subtitle shown',
+      'D2: single profile long-press → Delete tile is tappable and opens '
+      'the last-profile confirm dialog',
       (tester) async {
+        final db = UserDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final accountId = await db
+            .into(db.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                email: 't@t.com',
+                tier: 'localBorn',
+                displayName: 'Test',
+                createdAt: _epoch,
+                updatedAt: _epoch,
+              ),
+            );
+        await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: accountId,
+                displayName: 'OnlyOne',
+                mode: 'adult',
+                createdAt: _epoch,
+                updatedAt: _epoch,
+              ),
+            );
+
         final profiles = [_adult(id: 1, name: 'OnlyOne')];
         await tester.pumpWidget(
-          _buildPicker(router: router, profiles: profiles),
+          _buildPicker(router: router, profiles: profiles, db: db),
         );
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
@@ -319,8 +350,16 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 
-        // The "You must have at least one profile" subtitle must appear.
-        expect(find.text('You must have at least one profile'), findsOneWidget);
+        // No hard-blocking subtitle — the tile is a plain, tappable Delete.
+        expect(find.text('You must have at least one profile'), findsNothing);
+
+        await tester.tap(find.text('Delete'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // deleteProfileFlow's own last-profile confirm dialog opens instead.
+        // l10n.deleteProfileLastTitle = 'Delete your only profile?'
+        expect(find.text('Delete your only profile?'), findsOneWidget);
 
         await _teardown(tester);
       },
@@ -360,40 +399,54 @@ void main() {
   // ────────────────────────────────────────────────────────────────────────────
 
   group('E: Rename dialog', () {
-    // E1 — Rename dialog opens with current name pre-filled
-    testWidgets('E1: Rename opens dialog with profile name pre-filled', (
-      tester,
-    ) async {
-      final profiles = [
-        _adult(id: 1, name: 'Avi'),
-        _child(id: 2, name: 'Yosef'),
-      ];
-      await tester.pumpWidget(_buildPicker(router: router, profiles: profiles));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // Open manage sheet.
-      await tester.longPress(find.text('Avi'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // Tap Rename.
-      await tester.tap(find.text('Rename'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // The rename dialog title must appear.
-      expect(find.text('Rename Profile'), findsOneWidget);
-
-      // The text field must be pre-filled with the profile name.
-      expect(find.widgetWithText(TextField, 'Avi'), findsOneWidget);
-
-      await _teardown(tester);
-    });
-
-    // E2 — Save disabled when field is empty
+    // E1 — AUD-profiles-04: "Rename" now opens the canonical
+    // editProfileFlow's ProfileEditFormDialog (title 'Edit Learner') instead
+    // of the private rename-only dialog (title 'Rename Profile'), matching
+    // manage_learners_screen.dart. The name field is still pre-filled.
     testWidgets(
-      'E2: Rename dialog Save button disabled when field is cleared',
+      'E1: Rename opens the canonical Edit Learner dialog with profile '
+      'name pre-filled',
+      (tester) async {
+        final profiles = [
+          _adult(id: 1, name: 'Avi'),
+          _child(id: 2, name: 'Yosef'),
+        ];
+        await tester.pumpWidget(
+          _buildPicker(router: router, profiles: profiles),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // Open manage sheet.
+        await tester.longPress(find.text('Avi'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Tap Rename.
+        await tester.tap(find.text('Rename'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // l10n.profilesEditLearner = 'Edit Learner' — the canonical dialog
+        // title, not the old private 'Rename Profile'.
+        expect(find.text('Edit Learner'), findsOneWidget);
+        expect(find.text('Rename Profile'), findsNothing);
+
+        // The text field must be pre-filled with the profile name.
+        expect(find.widgetWithText(TextField, 'Avi'), findsOneWidget);
+
+        await _teardown(tester);
+      },
+    );
+
+    // E2 — AUD-profiles-04: the canonical ProfileEditFormDialog uses P2
+    // inline validation (Save always tappable; an empty name surfaces an
+    // inline error and blocks the pop) rather than disabling Save's
+    // onPressed. This replaces the old private dialog's disabled-button
+    // behavior with the canonical dialog's actual behavior.
+    testWidgets(
+      'E2: Rename (Edit Learner) dialog shows inline error and stays open '
+      'when Save is tapped with an empty name',
       (tester) async {
         final profiles = [
           _adult(id: 1, name: 'Avi'),
@@ -414,14 +467,17 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         // Clear the text field.
-        await tester.enterText(find.byType(TextField), '');
+        await tester.enterText(find.byType(TextField).first, '');
         await tester.pump();
 
-        // The Save button should be disabled (null onPressed).
-        final saveButton = tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Save'),
-        );
-        expect(saveButton.onPressed, isNull);
+        // Tap Save with an empty name.
+        await tester.tap(find.text('Save'));
+        await tester.pump();
+
+        // l10n.learnerNameRequired = 'Enter a name' — inline error shown,
+        // dialog still open (Save blocked, no pop).
+        expect(find.text('Enter a name'), findsOneWidget);
+        expect(find.text('Edit Learner'), findsOneWidget);
 
         await _teardown(tester);
       },
@@ -605,16 +661,46 @@ void main() {
       await _teardown(tester);
     });
 
-    // F3 — Last-profile delete: "Delete your only profile?" title
+    // F3 — Last-profile delete: "Delete your only profile?" title.
+    // AUD-profiles-04: previously this test could only assert the disabled
+    // menu-tile subtitle because the manage sheet hard-blocked Delete for a
+    // sole profile. Now deleteProfileFlow is reachable end-to-end (matching
+    // manage_learners_screen.dart), so this exercises the real dialog.
     testWidgets(
       'F3: last-profile long-press → Delete title is "Delete your only '
       'profile?" variant',
       (tester) async {
+        final db = UserDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final accountId = await db
+            .into(db.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                email: 't@t.com',
+                tier: 'localBorn',
+                displayName: 'Test',
+                createdAt: _epoch,
+                updatedAt: _epoch,
+              ),
+            );
+        await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: accountId,
+                displayName: 'OnlyOne',
+                mode: 'adult',
+                createdAt: _epoch,
+                updatedAt: _epoch,
+              ),
+            );
+
         final profiles = [_adult(id: 1, name: 'OnlyOne')];
         await tester.pumpWidget(
           _buildPicker(
             router: router,
             profiles: profiles,
+            db: db,
             // For a localBorn account, online check is skipped so deletion can
             // reach the dialog without needing a real connectivity provider.
             authState: const AuthState.signedIn(
@@ -630,15 +716,17 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
-        // The single-profile manage sheet shows Delete as disabled (subtitle
-        // present). We verify the subtitle text only (the full delete path
-        // requires connectivity-provider; not testing here).
         await tester.longPress(find.text('OnlyOne'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
+        await tester.tap(find.text('Delete'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
 
-        // Verify the disabled subtitle is shown — the guard prevents deletion.
-        expect(find.text('You must have at least one profile'), findsOneWidget);
+        // l10n.deleteProfileLastTitle = 'Delete your only profile?'
+        expect(find.text('Delete your only profile?'), findsOneWidget);
+        // l10n.deleteProfileLastConfirm = 'Delete anyway'
+        expect(find.text('Delete anyway'), findsOneWidget);
 
         await _teardown(tester);
       },

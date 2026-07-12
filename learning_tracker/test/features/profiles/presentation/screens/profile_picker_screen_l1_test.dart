@@ -27,6 +27,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/profile_picker_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
@@ -40,6 +41,8 @@ import 'package:mocktail/mocktail.dart';
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
 class _MockStackRouter extends Mock implements StackRouter {}
+
+class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
@@ -97,6 +100,7 @@ Widget _buildApp({
   int? selectedId,
   bool disableRetry = false,
   Locale locale = const Locale('en'),
+  ProfileRepository? repo,
 }) {
   final resolvedAuth =
       authState ??
@@ -132,6 +136,7 @@ Widget _buildApp({
       selectedProfileIdProvider.overrideWith(
         () => _FixedSelectedProfileId(selectedId),
       ),
+      if (repo != null) profileRepositoryProvider.overrideWithValue(repo),
     ],
     child: MaterialApp(
       locale: locale,
@@ -800,6 +805,67 @@ void main() {
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
+    },
+  );
+
+  // ── AUD-profiles-04: long-press delete must use the canonical
+  //    deleteProfileFlow (no private hardcoded-English dialog) ─────────────
+
+  group(
+    'AUD-profiles-04: long-press delete uses canonical deleteProfileFlow',
+    () {
+      testWidgets(
+        "Locale('he'), single profile: last-profile delete dialog renders "
+        'only localized Hebrew text — no raw-English literal',
+        (tester) async {
+          final profile = _child(id: 1, name: 'יוסף');
+          final repo = _MockProfileRepository();
+          // Exactly one profile on the account → the "last profile" branch.
+          when(
+            () => repo.countProfilesForAccount(any()),
+          ).thenAnswer((_) async => 1);
+          when(
+            () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
+          ).thenAnswer((_) async {});
+          when(
+            () => repo.getProfilesByAccount(any()),
+          ).thenAnswer((_) async => <ProfileModel>[]);
+
+          await tester.pumpWidget(
+            _buildApp(
+              router: router,
+              profiles: [profile],
+              locale: const Locale('he'),
+              repo: repo,
+            ),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          // Long-press the sole profile tile to open the manage sheet.
+          await tester.longPress(find.text('יוסף'));
+          await tester.pumpAndSettle();
+
+          // Tap the Delete entry in the manage sheet
+          // (l10n.delete, he = 'מחיקה').
+          await tester.tap(find.text('מחיקה'));
+          await tester.pumpAndSettle();
+
+          // The canonical deleteProfileFlow's last-profile dialog must render
+          // using the ARB-localized Hebrew strings...
+          expect(find.text('למחוק את הפרופיל היחיד שלך?'), findsOneWidget);
+          expect(find.text('מחק בכל זאת'), findsOneWidget);
+
+          // ...and must NEVER fall back to the private dialog's hardcoded
+          // English literals, regardless of device locale.
+          expect(find.text('Delete your only profile?'), findsNothing);
+          expect(find.text('Delete anyway'), findsNothing);
+          expect(find.textContaining('will erase every track'), findsNothing);
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(Duration.zero);
+        },
+      );
     },
   );
 }
