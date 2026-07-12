@@ -4955,6 +4955,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get tutorPinIncorrect => 'קוד שגוי. נסו שוב.';
 
   @override
+  String get tutorPinValidationMalformed =>
+      'קוד המדריך שלכם חייב להיות בדיוק 4 ספרות.';
+
+  @override
   String tutorPinLockedOut(int minutes) {
     return 'יותר מדי ניסיונות. ננעל למשך $minutes דקות.';
   }

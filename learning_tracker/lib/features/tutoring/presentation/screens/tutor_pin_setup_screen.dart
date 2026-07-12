@@ -124,13 +124,18 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
         rawPin: pin,
       );
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       final errorMessage = switch (result) {
         TutorPinSuccess() => null,
-        TutorPinValidationError(:final message) => message,
+        // AUD-tutoring-09 (EH-5): the service carries a stable code, never a
+        // pre-formatted message — resolve it through AppLocalizations/ARB.
+        TutorPinValidationError(:final code) => _validationErrorMessage(
+          code,
+          l10n,
+        ),
         // Not expected during setup — treat as generic error.
-        TutorPinIncorrect() || TutorPinLockedOut() => AppLocalizations.of(
-          context,
-        )!.tutorPinSetupSaveError,
+        TutorPinIncorrect() ||
+        TutorPinLockedOut() => l10n.tutorPinSetupSaveError,
       };
       if (errorMessage == null) {
         widget.onPinSet();
@@ -164,6 +169,19 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  /// AUD-tutoring-09 (EH-5): resolve a [TutorPinValidationCode] to a
+  /// localized, user-facing message. [TutorPinValidationError] carries a
+  /// stable code, never a pre-formatted message — this exhaustive switch is
+  /// the single place that maps each code to user-facing text.
+  String _validationErrorMessage(
+    TutorPinValidationCode code,
+    AppLocalizations l10n,
+  ) {
+    return switch (code) {
+      TutorPinValidationCode.malformedPin => l10n.tutorPinValidationMalformed,
+    };
   }
 
   @override

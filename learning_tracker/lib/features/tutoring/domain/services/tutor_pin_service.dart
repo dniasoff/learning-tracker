@@ -61,9 +61,20 @@ final class TutorPinLockedOut extends TutorPinResult {
   final int remainingMinutes;
 }
 
+/// AUD-tutoring-09 (EH-5): stable failure category for
+/// [TutorPinValidationError]. A local format-validation guard must never
+/// carry a pre-formatted human-readable message — an English sentence
+/// renders raw and un-RTL-shaped to Hebrew-locale users. Presentation
+/// resolves the user-facing string for each code through
+/// `AppLocalizations`/ARB.
+enum TutorPinValidationCode {
+  /// The supplied PIN is not exactly 4 numeric digits.
+  malformedPin,
+}
+
 final class TutorPinValidationError extends TutorPinResult {
-  const TutorPinValidationError({required this.message});
-  final String message;
+  const TutorPinValidationError({required this.code});
+  final TutorPinValidationCode code;
 }
 
 // ── TutorPinService ─────────────────────────────────────────────────────────
@@ -90,7 +101,7 @@ class TutorPinService {
     final pin = TutorPin.tryCreate(rawPin);
     if (pin == null) {
       return const TutorPinValidationError(
-        message: 'Tutor PIN must be exactly 4 numeric digits.',
+        code: TutorPinValidationCode.malformedPin,
       );
     }
     await _pinService.setTutorPin(profileId, pin.rawDigits);
@@ -109,7 +120,7 @@ class TutorPinService {
     final pin = TutorPin.tryCreate(rawPin);
     if (pin == null) {
       return const TutorPinValidationError(
-        message: 'Tutor PIN must be exactly 4 numeric digits.',
+        code: TutorPinValidationCode.malformedPin,
       );
     }
     try {

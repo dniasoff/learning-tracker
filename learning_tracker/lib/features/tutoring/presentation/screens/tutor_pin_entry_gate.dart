@@ -102,7 +102,12 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
         TutorPinLockedOut(:final remainingMinutes) => l10n.tutorPinLockedOut(
           remainingMinutes,
         ),
-        TutorPinValidationError(:final message) => message,
+        // AUD-tutoring-09 (EH-5): the service carries a stable code, never a
+        // pre-formatted message — resolve it through AppLocalizations/ARB.
+        TutorPinValidationError(:final code) => _validationErrorMessage(
+          code,
+          l10n,
+        ),
       };
       if (errorMessage == null) {
         widget.onPinVerified();
@@ -133,6 +138,19 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }
+  }
+
+  /// AUD-tutoring-09 (EH-5): resolve a [TutorPinValidationCode] to a
+  /// localized, user-facing message. [TutorPinValidationError] carries a
+  /// stable code, never a pre-formatted message — this exhaustive switch is
+  /// the single place that maps each code to user-facing text.
+  String _validationErrorMessage(
+    TutorPinValidationCode code,
+    AppLocalizations l10n,
+  ) {
+    return switch (code) {
+      TutorPinValidationCode.malformedPin => l10n.tutorPinValidationMalformed,
+    };
   }
 
   @override

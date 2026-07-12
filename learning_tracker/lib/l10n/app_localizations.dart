@@ -8364,6 +8364,12 @@ abstract class AppLocalizations {
   /// **'Incorrect PIN. Please try again.'**
   String get tutorPinIncorrect;
 
+  /// No description provided for @tutorPinValidationMalformed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Tutor PIN must be exactly 4 numeric digits.'**
+  String get tutorPinValidationMalformed;
+
   /// No description provided for @tutorPinLockedOut.
   ///
   /// In en, this message translates to:

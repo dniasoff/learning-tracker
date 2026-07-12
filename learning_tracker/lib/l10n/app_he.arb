@@ -2646,6 +2646,7 @@
   "tutorPinEntryBody": "הזינו את קוד המדריך בן 4 הספרות כדי לגשת לפרופיל זה.",
   "tutorPinForgot": "שכחתם את קוד המדריך?",
   "tutorPinIncorrect": "קוד שגוי. נסו שוב.",
+  "tutorPinValidationMalformed": "קוד המדריך שלכם חייב להיות בדיוק 4 ספרות.",
   "tutorPinLockedOut": "יותר מדי ניסיונות. ננעל למשך {minutes} דקות.",
   "@tutorPinLockedOut": {
     "placeholders": {

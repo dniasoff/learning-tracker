@@ -2934,6 +2934,7 @@
   "tutorPinEntryBody": "Enter your 4-digit Tutor PIN to access this profile.",
   "tutorPinForgot": "Forgot your Tutor PIN?",
   "tutorPinIncorrect": "Incorrect PIN. Please try again.",
+  "tutorPinValidationMalformed": "Your Tutor PIN must be exactly 4 numeric digits.",
   "tutorPinLockedOut": "Too many attempts. Locked for {minutes} minute(s).",
   "@tutorPinLockedOut": {
     "placeholders": {

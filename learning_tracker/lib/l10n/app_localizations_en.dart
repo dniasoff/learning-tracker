@@ -4999,6 +4999,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorPinIncorrect => 'Incorrect PIN. Please try again.';
 
   @override
+  String get tutorPinValidationMalformed =>
+      'Your Tutor PIN must be exactly 4 numeric digits.';
+
+  @override
   String tutorPinLockedOut(int minutes) {
     return 'Too many attempts. Locked for $minutes minute(s).';
   }
