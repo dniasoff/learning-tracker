@@ -195,13 +195,20 @@
     {
       "id": "AUD-core-widgets-01",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Route AppErrorView/ErrorDisplay/PinEntryWidget user-facing strings through AppLocalizations instead of hardcoded English",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "307dc42b55716c3158b14bc7de199e91957fffa4"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-widgets-01 AC1 OK: 0 English literals in 3 files (grep); custom_lint clean; new NoHardcodedErrorWidgetString rule fires in all 3 files (8/8 tests)",
+        "AUD-core-widgets-01 AC2 OK: make arb-parity exit0, 1443/1443 EN keys in HE; 14 new keys mirrored (grew from 1421, parity holds)",
+        "AUD-core-widgets-01 AC3 OK: 3 widget tests assert find.text(l10n.*); Locale('he') tests assert HE renders + isNot(equals(EN)) -> literal fails red; 28/28 pass",
+        "AUD-core-widgets-01 AC4 OK: 'subtitle: error.message' replaced by switch(validationCode)->ARB; ValidationErrorCode added; test asserts raw msg findsNothing"
+      ],
+      "notes": "Re-verified all evidence + remaining literals. Threaded AppLocalizations in; added 14 ARB pairs. Added ValidationErrorCode/validationCode so subtitle resolves via ARB not .message. Built scoped custom_lint checker (fires+clean proven). Red-first: reverted fix, 2 tests failed, restored, green. Merged --no-ff onto audit-fix/2026-07-03 (w3r0c11, mergeSha 307dc42b55716c3158b14bc7de199e91957fffa4). Post-rebase gate: make audit 39/39 clean, flutter analyze clean, make arb-parity clean (1464 EN keys all present in HE; touchedStrings). gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 in the 5 generated l10n files (app_en.arb, app_he.arb, app_localizations*.dart) only, from concurrent ARB-key additions by other waves; ran payload.testsToRun (app_error_view_test.dart, error_display_test.dart, pin_entry_widget_test.dart, learning_screen_test.dart, no_hardcoded_error_widget_string_test.dart) plus l10n-coverage suites (core/l10n/app_localizations_test.dart, l10n/app_localizations_coverage_test.dart, tool/audit_and_arb_parity_test.dart) -- all green except 2 failures independently reproduced as pre-existing on the unmodified audit-fix/2026-07-03 tip (confirmed by running each in isolation on tip 33f7c546a10f0bd5beff1d72f01e54686d5c9317 before this merge): (1) 'make audit check 37/37' assertion is a stale hardcoded '37/37' substring left over from wave w3r0c2 (commit d274c0d4), which grew the audit total from 37 to 39 checks without updating this unrelated test string; (2) 'make audit check 15/15 AC1' hit a 3-minute TimeoutException, reproduced identically pre-merge, caused by system CPU contention (load average ~32 on 20 cores) from ~30 concurrent sibling worktree sessions on this host, not a logic regression. Neither failure touches AUD-core-widgets-01's fix sites; both pre-date and are independent of this change."
     },
     {
       "id": "AUD-core-sync-08",
