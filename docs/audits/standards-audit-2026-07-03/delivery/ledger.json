@@ -1210,13 +1210,18 @@
   {
    "id": "AUD-dashboard-01",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Add semantic labels to the icon-only ArrowButton carousel controls (AX-3)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "reopened post-migration: built-not-merged"
+   "commits": [
+    "cee1dc35"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-dashboard-01 AC1 OK: a11y_test:119-148 tester.getSemantics on both arrows asserts non-empty/distinct/exact labels; red-first confirmed (pre-fix label empty)",
+    "AUD-dashboard-01 AC2 OK: EN+HE labels asserted on semantics tree (find.bySemanticsLabel); red-first 0 pre-fix; manual device pass un-automatable, disclosed"
+   ],
+   "notes": "Re-verified missing label. Added semanticLabel+Semantics(button:true,excludeSemantics:true) per dashboard_body F-11 pattern; new EN/HE ARB keys. AC1 met via tester.getSemantics. AC2 (device TalkBack pass) undoable headless; used disclosed semantics-tree proxy instead. Red-first captured. Commit 945f21cb (pre-rebase); rebased as cee1dc35; merged via w3r0c5 merge commit 9587ff41. Post-rebase gate: make audit 39/39 clean, flutter analyze clean. gatePolicy=overlap-tested: rebase overlapped audit-fix/2026-07-03 only in generated l10n files (app_en.arb/app_he.arb/app_localizations*.dart); ran payload.testsToRun (active_tracks_carousel_a11y_test.dart) plus app_localizations_test.dart and app_localizations_coverage_test.dart -- all 34 green. make arb-parity clean (1514 EN keys present in HE)."
   },
   {
    "id": "AUD-sacred_time-03",
