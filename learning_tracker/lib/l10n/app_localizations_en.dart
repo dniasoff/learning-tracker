@@ -1985,6 +1985,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPasswordRequired => 'Password is required';
 
   @override
+  String get authEmailRequired => 'Email is required';
+
+  @override
+  String get authEmailInvalid => 'Please enter a valid email address';
+
+  @override
+  String get authDisplayNameRequired => 'Display name is required';
+
+  @override
   String get authLocalDataMissing =>
       'This account\'s local data is missing. Connect to the internet to restore it.';
 

@@ -73,13 +73,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     super.dispose();
   }
 
-  String? _validateEmail(String? value) => validators.validateEmail(value);
+  String? _validateEmail(String? value, AppLocalizations l10n) =>
+      validators.validateEmail(value, l10n);
 
-  String? _validatePassword(String? value) =>
-      validators.validatePassword(value);
+  String? _validatePassword(String? value, AppLocalizations l10n) =>
+      validators.validatePassword(value, l10n);
 
-  String? _validateDisplayName(String? value) =>
-      validators.validateDisplayName(value);
+  String? _validateDisplayName(String? value, AppLocalizations l10n) =>
+      validators.validateDisplayName(value, l10n);
 
   /// Cloud sign-up handler — reached only from the ONLINE form (the offline
   /// branch shows an explicit "Create offline account" button that calls
@@ -608,7 +609,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                         color: AppTheme.brandInkMuted,
                                       ),
                                       textInputAction: TextInputAction.next,
-                                      validator: _validateDisplayName,
+                                      validator: (v) =>
+                                          _validateDisplayName(v, l10n),
                                     ),
                                     const SizedBox(height: 16),
                                     _buildLabel(l10n.signUpEmailAddressLabel),
@@ -622,7 +624,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                       ),
                                       keyboardType: TextInputType.emailAddress,
                                       textInputAction: TextInputAction.next,
-                                      validator: _validateEmail,
+                                      validator: (v) => _validateEmail(v, l10n),
                                     ),
                                     const SizedBox(height: 16),
                                     _buildLabel(l10n.signUpPasswordLabel),
@@ -632,7 +634,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                       hintText: l10n.signUpPasswordHint,
                                       obscureText: _obscurePassword,
                                       textInputAction: TextInputAction.done,
-                                      validator: _validatePassword,
+                                      validator: (v) =>
+                                          _validatePassword(v, l10n),
                                       onFieldSubmitted: (_) =>
                                           _signUpWithEmail(),
                                       suffixIcon: IconButton(

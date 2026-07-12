@@ -1973,6 +1973,15 @@ class AppLocalizationsHe extends AppLocalizations {
   String get authPasswordRequired => 'נדרשת סיסמה';
 
   @override
+  String get authEmailRequired => 'נדרש אימייל';
+
+  @override
+  String get authEmailInvalid => 'הזינו כתובת אימייל תקינה';
+
+  @override
+  String get authDisplayNameRequired => 'נדרש שם תצוגה';
+
+  @override
   String get authLocalDataMissing =>
       'נתונים מקומיים של חשבון זה חסרים. התחברו לאינטרנט כדי לשחזר אותם.';
 

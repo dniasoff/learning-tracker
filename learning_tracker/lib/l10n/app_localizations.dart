@@ -3543,6 +3543,24 @@ abstract class AppLocalizations {
   /// **'Password is required'**
   String get authPasswordRequired;
 
+  /// No description provided for @authEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required'**
+  String get authEmailRequired;
+
+  /// No description provided for @authEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get authEmailInvalid;
+
+  /// No description provided for @authDisplayNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name is required'**
+  String get authDisplayNameRequired;
+
   /// No description provided for @authLocalDataMissing.
   ///
   /// In en, this message translates to:

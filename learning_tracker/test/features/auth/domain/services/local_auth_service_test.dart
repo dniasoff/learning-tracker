@@ -6,10 +6,12 @@ import 'package:learning_tracker/features/account/domain/services/local_auth_ser
 import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
 import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
     as validators;
+import 'package:learning_tracker/l10n/app_localizations_en.dart';
 
 void main() {
   late UserDatabase db;
   late LocalAuthService service;
+  final l10n = AppLocalizationsEn();
 
   setUp(() {
     db = UserDatabase(NativeDatabase.memory());
@@ -123,8 +125,8 @@ void main() {
         final atFloor = 'a' * AppConstants.minLocalPasswordLength;
 
         // UI validator (client-side, synchronous).
-        expect(validators.validatePassword(belowFloor), isNotNull);
-        expect(validators.validatePassword(atFloor), isNull);
+        expect(validators.validatePassword(belowFloor, l10n), isNotNull);
+        expect(validators.validatePassword(atFloor, l10n), isNull);
 
         // LocalAuthService (domain-layer, async).
         expect(
