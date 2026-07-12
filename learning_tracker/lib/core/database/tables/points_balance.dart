@@ -63,8 +63,16 @@ class PointsLedger extends Table {
   /// Optional description (note from parent, reward title, etc.).
   TextColumn get note => text().nullable()();
 
-  /// Optional FK to [RewardRedemptions.id] for redemption-related entries.
-  IntColumn get redemptionId => integer().nullable()();
+  /// Optional FK → [RewardRedemptions.id] for redemption-related entries
+  /// (schema v35, AUD-core-database-09). `restrict` because
+  /// [RewardRedemptions] rows are never hard-deleted today — if that ever
+  /// changes, the redemption-deleting code path must first null out or
+  /// reassign any referencing ledger rows.
+  IntColumn get redemptionId => integer().nullable().references(
+    RewardRedemptions,
+    #id,
+    onDelete: KeyAction.restrict,
+  )();
 
   DateTimeColumn get createdAt => dateTime()();
 

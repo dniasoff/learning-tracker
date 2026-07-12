@@ -115,6 +115,20 @@ part 'user_database.g.dart';
 ///   as distinct in a UNIQUE index, matching the pre-existing
 ///   `learning_ledger` precedent.
 ///
+/// Schema v35 (AUD-core-database-09 - comment-only FK gap closure):
+/// - `points_ledger.redemptionId` was documented as "FK to
+///   RewardRedemptions.id" in a doc comment only - nothing at the DB layer
+///   stopped it from pointing at a nonexistent (or wrong-profile) redemption
+///   row. Declares a real `.references(RewardRedemptions, #id,
+///   onDelete: KeyAction.restrict)`. SQLite cannot ALTER TABLE an existing
+///   column to add a REFERENCES clause, so this uses the same table-rebuild
+///   recipe as v26/v34 (`TableMigration`, which also re-creates the table's
+///   `points_ledger_profile_ulid` UNIQUE index). Any pre-existing bogus
+///   `redemptionId` (pointing at a row that does not exist in
+///   `reward_redemptions`) is nulled out defensively before the rebuild -
+///   the exact gap this migration closes could already have let one in -
+///   so the rebuild's `PRAGMA foreign_key_check` never trips on stale data.
+///
 /// This database uses standard Drift migrations and holds all user-generated
 /// content: profiles, progress, configuration, streaks, and sync state.
 /// It is the only database that accepts writes at runtime.
@@ -178,7 +192,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 34;
+  int get schemaVersion => 35;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -209,6 +223,7 @@ class UserDatabase extends _$UserDatabase {
       //            (row-preserving rebuilds).
       // WS9 (v27): additive ulid columns for Wave-B points sync.
       // AUD-guardrails-01 (v33): additive composite index on goals.
+      // AUD-core-database-09 (v35): real FK on points_ledger.redemptionId.
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 25) {
           await m.createTable(pointsBalance);
@@ -513,6 +528,64 @@ class UserDatabase extends _$UserDatabase {
               ')',
             );
             await m.createIndex(rewardRedemptionsProfileUlid);
+          }
+        }
+        if (from < 35) {
+          // AUD-core-database-09: points_ledger.redemptionId was a
+          // comment-only reference to reward_redemptions.id — nothing at
+          // the DB layer stopped it from pointing at a nonexistent (or
+          // wrong-profile) redemption row. Declare a real FK.
+          // Guard: partial-schema migration paths (e.g. older upgrade
+          // tests that model only their own migration's tables, such as
+          // v27_to_v28_test / v27_to_v29_test which create points_ledger
+          // WITHOUT reward_redemptions) may not have created one or both
+          // tables yet — same pattern as the hasLedger/hasGoals/
+          // hasPointsLedger guards above. On a real device both tables are
+          // always created together (v25), so this only ever narrows what
+          // partial test fixtures exercise, never real upgrades.
+          final hasPointsLedgerV35 = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'points_ledger'",
+          ).get();
+          final hasRewardRedemptionsV35 = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'reward_redemptions'",
+          ).get();
+          if (hasPointsLedgerV35.isNotEmpty &&
+              hasRewardRedemptionsV35.isNotEmpty) {
+            await customStatement('PRAGMA foreign_keys = OFF');
+
+            // Defensive cleanup FIRST: any pre-existing bogus redemptionId
+            // (pointing at a reward_redemptions row that does not exist —
+            // exactly the gap this migration closes could already have let
+            // through) would make the rebuilt table's FK a lie the moment
+            // it is created, and would trip the foreign_key_check below.
+            // Legitimate rows (redemptionId NULL, or pointing at a real
+            // redemption) are left untouched.
+            await customStatement(
+              'UPDATE points_ledger SET redemption_id = NULL '
+              'WHERE redemption_id IS NOT NULL '
+              'AND redemption_id NOT IN (SELECT id FROM reward_redemptions)',
+            );
+
+            // SQLite cannot ALTER TABLE an existing column to add a
+            // REFERENCES clause, so this uses the same table-rebuild
+            // recipe as v26/v34: alterTable re-creates the table from its
+            // current Dart definition (now carrying the FK) and also
+            // re-creates the table's indexes/triggers (the
+            // points_ledger_profile_ulid UNIQUE index survives).
+            await m.alterTable(TableMigration(pointsLedger));
+
+            final orphans = await customSelect(
+              'PRAGMA foreign_key_check',
+            ).get();
+            assert(
+              orphans.isEmpty,
+              'v35 migration orphaned ${orphans.length} row(s): '
+              '${orphans.map((r) => r.data).toList()}',
+            );
+
+            await customStatement('PRAGMA foreign_keys = ON');
           }
         }
       },

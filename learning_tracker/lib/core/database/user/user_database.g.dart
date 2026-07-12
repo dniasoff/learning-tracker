@@ -11768,594 +11768,6 @@ class PointsBalanceCompanion extends UpdateCompanion<PointsBalanceData> {
   }
 }
 
-class $PointsLedgerTable extends PointsLedger
-    with TableInfo<$PointsLedgerTable, PointsLedgerData> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $PointsLedgerTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _profileIdMeta = const VerificationMeta(
-    'profileId',
-  );
-  @override
-  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
-    'profile_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
-    ),
-  );
-  static const VerificationMeta _entryKindMeta = const VerificationMeta(
-    'entryKind',
-  );
-  @override
-  late final GeneratedColumn<String> entryKind = GeneratedColumn<String>(
-    'entry_kind',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _deltaMeta = const VerificationMeta('delta');
-  @override
-  late final GeneratedColumn<int> delta = GeneratedColumn<int>(
-    'delta',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _noteMeta = const VerificationMeta('note');
-  @override
-  late final GeneratedColumn<String> note = GeneratedColumn<String>(
-    'note',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _redemptionIdMeta = const VerificationMeta(
-    'redemptionId',
-  );
-  @override
-  late final GeneratedColumn<int> redemptionId = GeneratedColumn<int>(
-    'redemption_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _ulidMeta = const VerificationMeta('ulid');
-  @override
-  late final GeneratedColumn<String> ulid = GeneratedColumn<String>(
-    'ulid',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _syncEnqueuedAtMeta = const VerificationMeta(
-    'syncEnqueuedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> syncEnqueuedAt =
-      GeneratedColumn<DateTime>(
-        'sync_enqueued_at',
-        aliasedName,
-        true,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: false,
-      );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    profileId,
-    entryKind,
-    delta,
-    note,
-    redemptionId,
-    createdAt,
-    ulid,
-    syncEnqueuedAt,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'points_ledger';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<PointsLedgerData> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('profile_id')) {
-      context.handle(
-        _profileIdMeta,
-        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_profileIdMeta);
-    }
-    if (data.containsKey('entry_kind')) {
-      context.handle(
-        _entryKindMeta,
-        entryKind.isAcceptableOrUnknown(data['entry_kind']!, _entryKindMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_entryKindMeta);
-    }
-    if (data.containsKey('delta')) {
-      context.handle(
-        _deltaMeta,
-        delta.isAcceptableOrUnknown(data['delta']!, _deltaMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_deltaMeta);
-    }
-    if (data.containsKey('note')) {
-      context.handle(
-        _noteMeta,
-        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
-      );
-    }
-    if (data.containsKey('redemption_id')) {
-      context.handle(
-        _redemptionIdMeta,
-        redemptionId.isAcceptableOrUnknown(
-          data['redemption_id']!,
-          _redemptionIdMeta,
-        ),
-      );
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('ulid')) {
-      context.handle(
-        _ulidMeta,
-        ulid.isAcceptableOrUnknown(data['ulid']!, _ulidMeta),
-      );
-    }
-    if (data.containsKey('sync_enqueued_at')) {
-      context.handle(
-        _syncEnqueuedAtMeta,
-        syncEnqueuedAt.isAcceptableOrUnknown(
-          data['sync_enqueued_at']!,
-          _syncEnqueuedAtMeta,
-        ),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  PointsLedgerData map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return PointsLedgerData(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      profileId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}profile_id'],
-      )!,
-      entryKind: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}entry_kind'],
-      )!,
-      delta: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}delta'],
-      )!,
-      note: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}note'],
-      ),
-      redemptionId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}redemption_id'],
-      ),
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
-      )!,
-      ulid: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}ulid'],
-      ),
-      syncEnqueuedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}sync_enqueued_at'],
-      ),
-    );
-  }
-
-  @override
-  $PointsLedgerTable createAlias(String alias) {
-    return $PointsLedgerTable(attachedDatabase, alias);
-  }
-}
-
-class PointsLedgerData extends DataClass
-    implements Insertable<PointsLedgerData> {
-  final int id;
-
-  /// FK → learner_profiles(id) CASCADE DELETE.
-  final int profileId;
-
-  /// `completion` | `redemption_debit` | `redemption_refund`
-  /// | `parent_add` | `parent_deduct`
-  final String entryKind;
-
-  /// Signed delta applied to [PointsBalance.balance].
-  /// Positive = credit; negative = debit.
-  final int delta;
-
-  /// Optional description (note from parent, reward title, etc.).
-  final String? note;
-
-  /// Optional FK to [RewardRedemptions.id] for redemption-related entries.
-  final int? redemptionId;
-  final DateTime createdAt;
-
-  /// Stable, lexicographically-sortable, cross-device id for append-only
-  /// cloud sync (schema v27, WS9 Wave-B). Nullable on existing rows; the
-  /// Wave-B sync agent backfills + populates this going forward, and uses it
-  /// as the deterministic Firestore document id for ledger entries.
-  final String? ulid;
-
-  /// D14 — set once this row has been enqueued onto the cloud-sync outbox
-  /// (or pulled FROM the cloud, in which case it is already remote).
-  ///
-  /// `null` means the row was written while no sync sink was wired (e.g. a
-  /// cloud-born account's first credit before the features layer registered
-  /// the sink) and has never been queued for push. The startup/post-wire
-  /// reconciliation re-enqueues every `null`-marker row exactly once so no
-  /// ledger entry is permanently stranded off the cloud. Local-born rows stay
-  /// `null` forever (correct — they have no cloud destination until upgrade).
-  final DateTime? syncEnqueuedAt;
-  const PointsLedgerData({
-    required this.id,
-    required this.profileId,
-    required this.entryKind,
-    required this.delta,
-    this.note,
-    this.redemptionId,
-    required this.createdAt,
-    this.ulid,
-    this.syncEnqueuedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['profile_id'] = Variable<int>(profileId);
-    map['entry_kind'] = Variable<String>(entryKind);
-    map['delta'] = Variable<int>(delta);
-    if (!nullToAbsent || note != null) {
-      map['note'] = Variable<String>(note);
-    }
-    if (!nullToAbsent || redemptionId != null) {
-      map['redemption_id'] = Variable<int>(redemptionId);
-    }
-    map['created_at'] = Variable<DateTime>(createdAt);
-    if (!nullToAbsent || ulid != null) {
-      map['ulid'] = Variable<String>(ulid);
-    }
-    if (!nullToAbsent || syncEnqueuedAt != null) {
-      map['sync_enqueued_at'] = Variable<DateTime>(syncEnqueuedAt);
-    }
-    return map;
-  }
-
-  PointsLedgerCompanion toCompanion(bool nullToAbsent) {
-    return PointsLedgerCompanion(
-      id: Value(id),
-      profileId: Value(profileId),
-      entryKind: Value(entryKind),
-      delta: Value(delta),
-      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
-      redemptionId: redemptionId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(redemptionId),
-      createdAt: Value(createdAt),
-      ulid: ulid == null && nullToAbsent ? const Value.absent() : Value(ulid),
-      syncEnqueuedAt: syncEnqueuedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(syncEnqueuedAt),
-    );
-  }
-
-  factory PointsLedgerData.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return PointsLedgerData(
-      id: serializer.fromJson<int>(json['id']),
-      profileId: serializer.fromJson<int>(json['profileId']),
-      entryKind: serializer.fromJson<String>(json['entryKind']),
-      delta: serializer.fromJson<int>(json['delta']),
-      note: serializer.fromJson<String?>(json['note']),
-      redemptionId: serializer.fromJson<int?>(json['redemptionId']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      ulid: serializer.fromJson<String?>(json['ulid']),
-      syncEnqueuedAt: serializer.fromJson<DateTime?>(json['syncEnqueuedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'profileId': serializer.toJson<int>(profileId),
-      'entryKind': serializer.toJson<String>(entryKind),
-      'delta': serializer.toJson<int>(delta),
-      'note': serializer.toJson<String?>(note),
-      'redemptionId': serializer.toJson<int?>(redemptionId),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'ulid': serializer.toJson<String?>(ulid),
-      'syncEnqueuedAt': serializer.toJson<DateTime?>(syncEnqueuedAt),
-    };
-  }
-
-  PointsLedgerData copyWith({
-    int? id,
-    int? profileId,
-    String? entryKind,
-    int? delta,
-    Value<String?> note = const Value.absent(),
-    Value<int?> redemptionId = const Value.absent(),
-    DateTime? createdAt,
-    Value<String?> ulid = const Value.absent(),
-    Value<DateTime?> syncEnqueuedAt = const Value.absent(),
-  }) => PointsLedgerData(
-    id: id ?? this.id,
-    profileId: profileId ?? this.profileId,
-    entryKind: entryKind ?? this.entryKind,
-    delta: delta ?? this.delta,
-    note: note.present ? note.value : this.note,
-    redemptionId: redemptionId.present ? redemptionId.value : this.redemptionId,
-    createdAt: createdAt ?? this.createdAt,
-    ulid: ulid.present ? ulid.value : this.ulid,
-    syncEnqueuedAt: syncEnqueuedAt.present
-        ? syncEnqueuedAt.value
-        : this.syncEnqueuedAt,
-  );
-  PointsLedgerData copyWithCompanion(PointsLedgerCompanion data) {
-    return PointsLedgerData(
-      id: data.id.present ? data.id.value : this.id,
-      profileId: data.profileId.present ? data.profileId.value : this.profileId,
-      entryKind: data.entryKind.present ? data.entryKind.value : this.entryKind,
-      delta: data.delta.present ? data.delta.value : this.delta,
-      note: data.note.present ? data.note.value : this.note,
-      redemptionId: data.redemptionId.present
-          ? data.redemptionId.value
-          : this.redemptionId,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      ulid: data.ulid.present ? data.ulid.value : this.ulid,
-      syncEnqueuedAt: data.syncEnqueuedAt.present
-          ? data.syncEnqueuedAt.value
-          : this.syncEnqueuedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('PointsLedgerData(')
-          ..write('id: $id, ')
-          ..write('profileId: $profileId, ')
-          ..write('entryKind: $entryKind, ')
-          ..write('delta: $delta, ')
-          ..write('note: $note, ')
-          ..write('redemptionId: $redemptionId, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('ulid: $ulid, ')
-          ..write('syncEnqueuedAt: $syncEnqueuedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    profileId,
-    entryKind,
-    delta,
-    note,
-    redemptionId,
-    createdAt,
-    ulid,
-    syncEnqueuedAt,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is PointsLedgerData &&
-          other.id == this.id &&
-          other.profileId == this.profileId &&
-          other.entryKind == this.entryKind &&
-          other.delta == this.delta &&
-          other.note == this.note &&
-          other.redemptionId == this.redemptionId &&
-          other.createdAt == this.createdAt &&
-          other.ulid == this.ulid &&
-          other.syncEnqueuedAt == this.syncEnqueuedAt);
-}
-
-class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
-  final Value<int> id;
-  final Value<int> profileId;
-  final Value<String> entryKind;
-  final Value<int> delta;
-  final Value<String?> note;
-  final Value<int?> redemptionId;
-  final Value<DateTime> createdAt;
-  final Value<String?> ulid;
-  final Value<DateTime?> syncEnqueuedAt;
-  const PointsLedgerCompanion({
-    this.id = const Value.absent(),
-    this.profileId = const Value.absent(),
-    this.entryKind = const Value.absent(),
-    this.delta = const Value.absent(),
-    this.note = const Value.absent(),
-    this.redemptionId = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.ulid = const Value.absent(),
-    this.syncEnqueuedAt = const Value.absent(),
-  });
-  PointsLedgerCompanion.insert({
-    this.id = const Value.absent(),
-    required int profileId,
-    required String entryKind,
-    required int delta,
-    this.note = const Value.absent(),
-    this.redemptionId = const Value.absent(),
-    required DateTime createdAt,
-    this.ulid = const Value.absent(),
-    this.syncEnqueuedAt = const Value.absent(),
-  }) : profileId = Value(profileId),
-       entryKind = Value(entryKind),
-       delta = Value(delta),
-       createdAt = Value(createdAt);
-  static Insertable<PointsLedgerData> custom({
-    Expression<int>? id,
-    Expression<int>? profileId,
-    Expression<String>? entryKind,
-    Expression<int>? delta,
-    Expression<String>? note,
-    Expression<int>? redemptionId,
-    Expression<DateTime>? createdAt,
-    Expression<String>? ulid,
-    Expression<DateTime>? syncEnqueuedAt,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (profileId != null) 'profile_id': profileId,
-      if (entryKind != null) 'entry_kind': entryKind,
-      if (delta != null) 'delta': delta,
-      if (note != null) 'note': note,
-      if (redemptionId != null) 'redemption_id': redemptionId,
-      if (createdAt != null) 'created_at': createdAt,
-      if (ulid != null) 'ulid': ulid,
-      if (syncEnqueuedAt != null) 'sync_enqueued_at': syncEnqueuedAt,
-    });
-  }
-
-  PointsLedgerCompanion copyWith({
-    Value<int>? id,
-    Value<int>? profileId,
-    Value<String>? entryKind,
-    Value<int>? delta,
-    Value<String?>? note,
-    Value<int?>? redemptionId,
-    Value<DateTime>? createdAt,
-    Value<String?>? ulid,
-    Value<DateTime?>? syncEnqueuedAt,
-  }) {
-    return PointsLedgerCompanion(
-      id: id ?? this.id,
-      profileId: profileId ?? this.profileId,
-      entryKind: entryKind ?? this.entryKind,
-      delta: delta ?? this.delta,
-      note: note ?? this.note,
-      redemptionId: redemptionId ?? this.redemptionId,
-      createdAt: createdAt ?? this.createdAt,
-      ulid: ulid ?? this.ulid,
-      syncEnqueuedAt: syncEnqueuedAt ?? this.syncEnqueuedAt,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (profileId.present) {
-      map['profile_id'] = Variable<int>(profileId.value);
-    }
-    if (entryKind.present) {
-      map['entry_kind'] = Variable<String>(entryKind.value);
-    }
-    if (delta.present) {
-      map['delta'] = Variable<int>(delta.value);
-    }
-    if (note.present) {
-      map['note'] = Variable<String>(note.value);
-    }
-    if (redemptionId.present) {
-      map['redemption_id'] = Variable<int>(redemptionId.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (ulid.present) {
-      map['ulid'] = Variable<String>(ulid.value);
-    }
-    if (syncEnqueuedAt.present) {
-      map['sync_enqueued_at'] = Variable<DateTime>(syncEnqueuedAt.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('PointsLedgerCompanion(')
-          ..write('id: $id, ')
-          ..write('profileId: $profileId, ')
-          ..write('entryKind: $entryKind, ')
-          ..write('delta: $delta, ')
-          ..write('note: $note, ')
-          ..write('redemptionId: $redemptionId, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('ulid: $ulid, ')
-          ..write('syncEnqueuedAt: $syncEnqueuedAt')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $RewardRedemptionsTable extends RewardRedemptions
     with TableInfo<$RewardRedemptionsTable, RewardRedemption> {
   @override
@@ -12926,6 +12338,601 @@ class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
   }
 }
 
+class $PointsLedgerTable extends PointsLedger
+    with TableInfo<$PointsLedgerTable, PointsLedgerData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PointsLedgerTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _entryKindMeta = const VerificationMeta(
+    'entryKind',
+  );
+  @override
+  late final GeneratedColumn<String> entryKind = GeneratedColumn<String>(
+    'entry_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deltaMeta = const VerificationMeta('delta');
+  @override
+  late final GeneratedColumn<int> delta = GeneratedColumn<int>(
+    'delta',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _redemptionIdMeta = const VerificationMeta(
+    'redemptionId',
+  );
+  @override
+  late final GeneratedColumn<int> redemptionId = GeneratedColumn<int>(
+    'redemption_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reward_redemptions (id) ON DELETE RESTRICT',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _ulidMeta = const VerificationMeta('ulid');
+  @override
+  late final GeneratedColumn<String> ulid = GeneratedColumn<String>(
+    'ulid',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncEnqueuedAtMeta = const VerificationMeta(
+    'syncEnqueuedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> syncEnqueuedAt =
+      GeneratedColumn<DateTime>(
+        'sync_enqueued_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    entryKind,
+    delta,
+    note,
+    redemptionId,
+    createdAt,
+    ulid,
+    syncEnqueuedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'points_ledger';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PointsLedgerData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
+    }
+    if (data.containsKey('entry_kind')) {
+      context.handle(
+        _entryKindMeta,
+        entryKind.isAcceptableOrUnknown(data['entry_kind']!, _entryKindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entryKindMeta);
+    }
+    if (data.containsKey('delta')) {
+      context.handle(
+        _deltaMeta,
+        delta.isAcceptableOrUnknown(data['delta']!, _deltaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deltaMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('redemption_id')) {
+      context.handle(
+        _redemptionIdMeta,
+        redemptionId.isAcceptableOrUnknown(
+          data['redemption_id']!,
+          _redemptionIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('ulid')) {
+      context.handle(
+        _ulidMeta,
+        ulid.isAcceptableOrUnknown(data['ulid']!, _ulidMeta),
+      );
+    }
+    if (data.containsKey('sync_enqueued_at')) {
+      context.handle(
+        _syncEnqueuedAtMeta,
+        syncEnqueuedAt.isAcceptableOrUnknown(
+          data['sync_enqueued_at']!,
+          _syncEnqueuedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PointsLedgerData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PointsLedgerData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
+      )!,
+      entryKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entry_kind'],
+      )!,
+      delta: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}delta'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      redemptionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}redemption_id'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      ulid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ulid'],
+      ),
+      syncEnqueuedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}sync_enqueued_at'],
+      ),
+    );
+  }
+
+  @override
+  $PointsLedgerTable createAlias(String alias) {
+    return $PointsLedgerTable(attachedDatabase, alias);
+  }
+}
+
+class PointsLedgerData extends DataClass
+    implements Insertable<PointsLedgerData> {
+  final int id;
+
+  /// FK → learner_profiles(id) CASCADE DELETE.
+  final int profileId;
+
+  /// `completion` | `redemption_debit` | `redemption_refund`
+  /// | `parent_add` | `parent_deduct`
+  final String entryKind;
+
+  /// Signed delta applied to [PointsBalance.balance].
+  /// Positive = credit; negative = debit.
+  final int delta;
+
+  /// Optional description (note from parent, reward title, etc.).
+  final String? note;
+
+  /// Optional FK → [RewardRedemptions.id] for redemption-related entries
+  /// (schema v35, AUD-core-database-09). `restrict` because
+  /// [RewardRedemptions] rows are never hard-deleted today — if that ever
+  /// changes, the redemption-deleting code path must first null out or
+  /// reassign any referencing ledger rows.
+  final int? redemptionId;
+  final DateTime createdAt;
+
+  /// Stable, lexicographically-sortable, cross-device id for append-only
+  /// cloud sync (schema v27, WS9 Wave-B). Nullable on existing rows; the
+  /// Wave-B sync agent backfills + populates this going forward, and uses it
+  /// as the deterministic Firestore document id for ledger entries.
+  final String? ulid;
+
+  /// D14 — set once this row has been enqueued onto the cloud-sync outbox
+  /// (or pulled FROM the cloud, in which case it is already remote).
+  ///
+  /// `null` means the row was written while no sync sink was wired (e.g. a
+  /// cloud-born account's first credit before the features layer registered
+  /// the sink) and has never been queued for push. The startup/post-wire
+  /// reconciliation re-enqueues every `null`-marker row exactly once so no
+  /// ledger entry is permanently stranded off the cloud. Local-born rows stay
+  /// `null` forever (correct — they have no cloud destination until upgrade).
+  final DateTime? syncEnqueuedAt;
+  const PointsLedgerData({
+    required this.id,
+    required this.profileId,
+    required this.entryKind,
+    required this.delta,
+    this.note,
+    this.redemptionId,
+    required this.createdAt,
+    this.ulid,
+    this.syncEnqueuedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
+    map['entry_kind'] = Variable<String>(entryKind);
+    map['delta'] = Variable<int>(delta);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || redemptionId != null) {
+      map['redemption_id'] = Variable<int>(redemptionId);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || ulid != null) {
+      map['ulid'] = Variable<String>(ulid);
+    }
+    if (!nullToAbsent || syncEnqueuedAt != null) {
+      map['sync_enqueued_at'] = Variable<DateTime>(syncEnqueuedAt);
+    }
+    return map;
+  }
+
+  PointsLedgerCompanion toCompanion(bool nullToAbsent) {
+    return PointsLedgerCompanion(
+      id: Value(id),
+      profileId: Value(profileId),
+      entryKind: Value(entryKind),
+      delta: Value(delta),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      redemptionId: redemptionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(redemptionId),
+      createdAt: Value(createdAt),
+      ulid: ulid == null && nullToAbsent ? const Value.absent() : Value(ulid),
+      syncEnqueuedAt: syncEnqueuedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncEnqueuedAt),
+    );
+  }
+
+  factory PointsLedgerData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PointsLedgerData(
+      id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
+      entryKind: serializer.fromJson<String>(json['entryKind']),
+      delta: serializer.fromJson<int>(json['delta']),
+      note: serializer.fromJson<String?>(json['note']),
+      redemptionId: serializer.fromJson<int?>(json['redemptionId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      ulid: serializer.fromJson<String?>(json['ulid']),
+      syncEnqueuedAt: serializer.fromJson<DateTime?>(json['syncEnqueuedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
+      'entryKind': serializer.toJson<String>(entryKind),
+      'delta': serializer.toJson<int>(delta),
+      'note': serializer.toJson<String?>(note),
+      'redemptionId': serializer.toJson<int?>(redemptionId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'ulid': serializer.toJson<String?>(ulid),
+      'syncEnqueuedAt': serializer.toJson<DateTime?>(syncEnqueuedAt),
+    };
+  }
+
+  PointsLedgerData copyWith({
+    int? id,
+    int? profileId,
+    String? entryKind,
+    int? delta,
+    Value<String?> note = const Value.absent(),
+    Value<int?> redemptionId = const Value.absent(),
+    DateTime? createdAt,
+    Value<String?> ulid = const Value.absent(),
+    Value<DateTime?> syncEnqueuedAt = const Value.absent(),
+  }) => PointsLedgerData(
+    id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
+    entryKind: entryKind ?? this.entryKind,
+    delta: delta ?? this.delta,
+    note: note.present ? note.value : this.note,
+    redemptionId: redemptionId.present ? redemptionId.value : this.redemptionId,
+    createdAt: createdAt ?? this.createdAt,
+    ulid: ulid.present ? ulid.value : this.ulid,
+    syncEnqueuedAt: syncEnqueuedAt.present
+        ? syncEnqueuedAt.value
+        : this.syncEnqueuedAt,
+  );
+  PointsLedgerData copyWithCompanion(PointsLedgerCompanion data) {
+    return PointsLedgerData(
+      id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
+      entryKind: data.entryKind.present ? data.entryKind.value : this.entryKind,
+      delta: data.delta.present ? data.delta.value : this.delta,
+      note: data.note.present ? data.note.value : this.note,
+      redemptionId: data.redemptionId.present
+          ? data.redemptionId.value
+          : this.redemptionId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      ulid: data.ulid.present ? data.ulid.value : this.ulid,
+      syncEnqueuedAt: data.syncEnqueuedAt.present
+          ? data.syncEnqueuedAt.value
+          : this.syncEnqueuedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PointsLedgerData(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('entryKind: $entryKind, ')
+          ..write('delta: $delta, ')
+          ..write('note: $note, ')
+          ..write('redemptionId: $redemptionId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('ulid: $ulid, ')
+          ..write('syncEnqueuedAt: $syncEnqueuedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    profileId,
+    entryKind,
+    delta,
+    note,
+    redemptionId,
+    createdAt,
+    ulid,
+    syncEnqueuedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PointsLedgerData &&
+          other.id == this.id &&
+          other.profileId == this.profileId &&
+          other.entryKind == this.entryKind &&
+          other.delta == this.delta &&
+          other.note == this.note &&
+          other.redemptionId == this.redemptionId &&
+          other.createdAt == this.createdAt &&
+          other.ulid == this.ulid &&
+          other.syncEnqueuedAt == this.syncEnqueuedAt);
+}
+
+class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
+  final Value<int> id;
+  final Value<int> profileId;
+  final Value<String> entryKind;
+  final Value<int> delta;
+  final Value<String?> note;
+  final Value<int?> redemptionId;
+  final Value<DateTime> createdAt;
+  final Value<String?> ulid;
+  final Value<DateTime?> syncEnqueuedAt;
+  const PointsLedgerCompanion({
+    this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
+    this.entryKind = const Value.absent(),
+    this.delta = const Value.absent(),
+    this.note = const Value.absent(),
+    this.redemptionId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.ulid = const Value.absent(),
+    this.syncEnqueuedAt = const Value.absent(),
+  });
+  PointsLedgerCompanion.insert({
+    this.id = const Value.absent(),
+    required int profileId,
+    required String entryKind,
+    required int delta,
+    this.note = const Value.absent(),
+    this.redemptionId = const Value.absent(),
+    required DateTime createdAt,
+    this.ulid = const Value.absent(),
+    this.syncEnqueuedAt = const Value.absent(),
+  }) : profileId = Value(profileId),
+       entryKind = Value(entryKind),
+       delta = Value(delta),
+       createdAt = Value(createdAt);
+  static Insertable<PointsLedgerData> custom({
+    Expression<int>? id,
+    Expression<int>? profileId,
+    Expression<String>? entryKind,
+    Expression<int>? delta,
+    Expression<String>? note,
+    Expression<int>? redemptionId,
+    Expression<DateTime>? createdAt,
+    Expression<String>? ulid,
+    Expression<DateTime>? syncEnqueuedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
+      if (entryKind != null) 'entry_kind': entryKind,
+      if (delta != null) 'delta': delta,
+      if (note != null) 'note': note,
+      if (redemptionId != null) 'redemption_id': redemptionId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (ulid != null) 'ulid': ulid,
+      if (syncEnqueuedAt != null) 'sync_enqueued_at': syncEnqueuedAt,
+    });
+  }
+
+  PointsLedgerCompanion copyWith({
+    Value<int>? id,
+    Value<int>? profileId,
+    Value<String>? entryKind,
+    Value<int>? delta,
+    Value<String?>? note,
+    Value<int?>? redemptionId,
+    Value<DateTime>? createdAt,
+    Value<String?>? ulid,
+    Value<DateTime?>? syncEnqueuedAt,
+  }) {
+    return PointsLedgerCompanion(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      entryKind: entryKind ?? this.entryKind,
+      delta: delta ?? this.delta,
+      note: note ?? this.note,
+      redemptionId: redemptionId ?? this.redemptionId,
+      createdAt: createdAt ?? this.createdAt,
+      ulid: ulid ?? this.ulid,
+      syncEnqueuedAt: syncEnqueuedAt ?? this.syncEnqueuedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
+    }
+    if (entryKind.present) {
+      map['entry_kind'] = Variable<String>(entryKind.value);
+    }
+    if (delta.present) {
+      map['delta'] = Variable<int>(delta.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (redemptionId.present) {
+      map['redemption_id'] = Variable<int>(redemptionId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (ulid.present) {
+      map['ulid'] = Variable<String>(ulid.value);
+    }
+    if (syncEnqueuedAt.present) {
+      map['sync_enqueued_at'] = Variable<DateTime>(syncEnqueuedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PointsLedgerCompanion(')
+          ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
+          ..write('entryKind: $entryKind, ')
+          ..write('delta: $delta, ')
+          ..write('note: $note, ')
+          ..write('redemptionId: $redemptionId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('ulid: $ulid, ')
+          ..write('syncEnqueuedAt: $syncEnqueuedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class CompletionsViewData extends DataClass {
   final int id;
   final int profileId;
@@ -13235,9 +13242,9 @@ abstract class _$UserDatabase extends GeneratedDatabase {
       $PriorCompletionImportsTable(this);
   late final $SyncKvTable syncKv = $SyncKvTable(this);
   late final $PointsBalanceTable pointsBalance = $PointsBalanceTable(this);
-  late final $PointsLedgerTable pointsLedger = $PointsLedgerTable(this);
   late final $RewardRedemptionsTable rewardRedemptions =
       $RewardRedemptionsTable(this);
+  late final $PointsLedgerTable pointsLedger = $PointsLedgerTable(this);
   late final $CompletionsViewView completionsView = $CompletionsViewView(this);
   late final Index completionEventsNaturalKey = Index(
     'completion_events_natural_key',
@@ -13349,8 +13356,8 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     priorCompletionImports,
     syncKv,
     pointsBalance,
-    pointsLedger,
     rewardRedemptions,
+    pointsLedger,
     completionsView,
     completionEventsNaturalKey,
     learningLedgerProfileCreated,
@@ -13461,14 +13468,14 @@ abstract class _$UserDatabase extends GeneratedDatabase {
         'learner_profiles',
         limitUpdateKind: UpdateKind.delete,
       ),
-      result: [TableUpdate('points_ledger', kind: UpdateKind.delete)],
+      result: [TableUpdate('reward_redemptions', kind: UpdateKind.delete)],
     ),
     WritePropagation(
       on: TableUpdateQuery.onTableName(
         'learner_profiles',
         limitUpdateKind: UpdateKind.delete,
       ),
-      result: [TableUpdate('reward_redemptions', kind: UpdateKind.delete)],
+      result: [TableUpdate('points_ledger', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -14118,27 +14125,6 @@ final class $$LearnerProfilesTableReferences
     );
   }
 
-  static MultiTypedResultKey<$PointsLedgerTable, List<PointsLedgerData>>
-  _pointsLedgerRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
-    db.pointsLedger,
-    aliasName: $_aliasNameGenerator(
-      db.learnerProfiles.id,
-      db.pointsLedger.profileId,
-    ),
-  );
-
-  $$PointsLedgerTableProcessedTableManager get pointsLedgerRefs {
-    final manager = $$PointsLedgerTableTableManager(
-      $_db,
-      $_db.pointsLedger,
-    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_pointsLedgerRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
   static MultiTypedResultKey<$RewardRedemptionsTable, List<RewardRedemption>>
   _rewardRedemptionsRefsTable(_$UserDatabase db) =>
       MultiTypedResultKey.fromTable(
@@ -14158,6 +14144,27 @@ final class $$LearnerProfilesTableReferences
     final cache = $_typedResult.readTableOrNull(
       _rewardRedemptionsRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$PointsLedgerTable, List<PointsLedgerData>>
+  _pointsLedgerRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
+    db.pointsLedger,
+    aliasName: $_aliasNameGenerator(
+      db.learnerProfiles.id,
+      db.pointsLedger.profileId,
+    ),
+  );
+
+  $$PointsLedgerTableProcessedTableManager get pointsLedgerRefs {
+    final manager = $$PointsLedgerTableTableManager(
+      $_db,
+      $_db.pointsLedger,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pointsLedgerRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -14497,31 +14504,6 @@ class $$LearnerProfilesTableFilterComposer
     return f(composer);
   }
 
-  Expression<bool> pointsLedgerRefs(
-    Expression<bool> Function($$PointsLedgerTableFilterComposer f) f,
-  ) {
-    final $$PointsLedgerTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.pointsLedger,
-      getReferencedColumn: (t) => t.profileId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$PointsLedgerTableFilterComposer(
-            $db: $db,
-            $table: $db.pointsLedger,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
   Expression<bool> rewardRedemptionsRefs(
     Expression<bool> Function($$RewardRedemptionsTableFilterComposer f) f,
   ) {
@@ -14538,6 +14520,31 @@ class $$LearnerProfilesTableFilterComposer
           }) => $$RewardRedemptionsTableFilterComposer(
             $db: $db,
             $table: $db.rewardRedemptions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> pointsLedgerRefs(
+    Expression<bool> Function($$PointsLedgerTableFilterComposer f) f,
+  ) {
+    final $$PointsLedgerTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pointsLedger,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PointsLedgerTableFilterComposer(
+            $db: $db,
+            $table: $db.pointsLedger,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -14954,31 +14961,6 @@ class $$LearnerProfilesTableAnnotationComposer
     return f(composer);
   }
 
-  Expression<T> pointsLedgerRefs<T extends Object>(
-    Expression<T> Function($$PointsLedgerTableAnnotationComposer a) f,
-  ) {
-    final $$PointsLedgerTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.pointsLedger,
-      getReferencedColumn: (t) => t.profileId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$PointsLedgerTableAnnotationComposer(
-            $db: $db,
-            $table: $db.pointsLedger,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
   Expression<T> rewardRedemptionsRefs<T extends Object>(
     Expression<T> Function($$RewardRedemptionsTableAnnotationComposer a) f,
   ) {
@@ -15002,6 +14984,31 @@ class $$LearnerProfilesTableAnnotationComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<T> pointsLedgerRefs<T extends Object>(
+    Expression<T> Function($$PointsLedgerTableAnnotationComposer a) f,
+  ) {
+    final $$PointsLedgerTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pointsLedger,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PointsLedgerTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pointsLedger,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -15031,8 +15038,8 @@ class $$LearnerProfilesTableTableManager
             bool streakEventsRefs,
             bool priorCompletionImportsRefs,
             bool pointsBalanceRefs,
-            bool pointsLedgerRefs,
             bool rewardRedemptionsRefs,
+            bool pointsLedgerRefs,
           })
         > {
   $$LearnerProfilesTableTableManager(
@@ -15121,8 +15128,8 @@ class $$LearnerProfilesTableTableManager
                 streakEventsRefs = false,
                 priorCompletionImportsRefs = false,
                 pointsBalanceRefs = false,
-                pointsLedgerRefs = false,
                 rewardRedemptionsRefs = false,
+                pointsLedgerRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -15137,8 +15144,8 @@ class $$LearnerProfilesTableTableManager
                     if (streakEventsRefs) db.streakEvents,
                     if (priorCompletionImportsRefs) db.priorCompletionImports,
                     if (pointsBalanceRefs) db.pointsBalance,
-                    if (pointsLedgerRefs) db.pointsLedger,
                     if (rewardRedemptionsRefs) db.rewardRedemptions,
+                    if (pointsLedgerRefs) db.pointsLedger,
                   ],
                   addJoins:
                       <
@@ -15386,27 +15393,6 @@ class $$LearnerProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
-                      if (pointsLedgerRefs)
-                        await $_getPrefetchedData<
-                          LearnerProfile,
-                          $LearnerProfilesTable,
-                          PointsLedgerData
-                        >(
-                          currentTable: table,
-                          referencedTable: $$LearnerProfilesTableReferences
-                              ._pointsLedgerRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$LearnerProfilesTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).pointsLedgerRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.profileId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
                       if (rewardRedemptionsRefs)
                         await $_getPrefetchedData<
                           LearnerProfile,
@@ -15422,6 +15408,27 @@ class $$LearnerProfilesTableTableManager
                                 table,
                                 p0,
                               ).rewardRedemptionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (pointsLedgerRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          PointsLedgerData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._pointsLedgerRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pointsLedgerRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.profileId == item.id,
@@ -15460,8 +15467,8 @@ typedef $$LearnerProfilesTableProcessedTableManager =
         bool streakEventsRefs,
         bool priorCompletionImportsRefs,
         bool pointsBalanceRefs,
-        bool pointsLedgerRefs,
         bool rewardRedemptionsRefs,
+        bool pointsLedgerRefs,
       })
     >;
 typedef $$CurriculumTracksTableCreateCompanionBuilder =
@@ -23354,400 +23361,6 @@ typedef $$PointsBalanceTableProcessedTableManager =
       PointsBalanceData,
       PrefetchHooks Function({bool profileId})
     >;
-typedef $$PointsLedgerTableCreateCompanionBuilder =
-    PointsLedgerCompanion Function({
-      Value<int> id,
-      required int profileId,
-      required String entryKind,
-      required int delta,
-      Value<String?> note,
-      Value<int?> redemptionId,
-      required DateTime createdAt,
-      Value<String?> ulid,
-      Value<DateTime?> syncEnqueuedAt,
-    });
-typedef $$PointsLedgerTableUpdateCompanionBuilder =
-    PointsLedgerCompanion Function({
-      Value<int> id,
-      Value<int> profileId,
-      Value<String> entryKind,
-      Value<int> delta,
-      Value<String?> note,
-      Value<int?> redemptionId,
-      Value<DateTime> createdAt,
-      Value<String?> ulid,
-      Value<DateTime?> syncEnqueuedAt,
-    });
-
-final class $$PointsLedgerTableReferences
-    extends
-        BaseReferences<_$UserDatabase, $PointsLedgerTable, PointsLedgerData> {
-  $$PointsLedgerTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
-      db.learnerProfiles.createAlias(
-        $_aliasNameGenerator(db.pointsLedger.profileId, db.learnerProfiles.id),
-      );
-
-  $$LearnerProfilesTableProcessedTableManager get profileId {
-    final $_column = $_itemColumn<int>('profile_id')!;
-
-    final manager = $$LearnerProfilesTableTableManager(
-      $_db,
-      $_db.learnerProfiles,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
-}
-
-class $$PointsLedgerTableFilterComposer
-    extends Composer<_$UserDatabase, $PointsLedgerTable> {
-  $$PointsLedgerTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get entryKind => $composableBuilder(
-    column: $table.entryKind,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get delta => $composableBuilder(
-    column: $table.delta,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get note => $composableBuilder(
-    column: $table.note,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get redemptionId => $composableBuilder(
-    column: $table.redemptionId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get ulid => $composableBuilder(
-    column: $table.ulid,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get syncEnqueuedAt => $composableBuilder(
-    column: $table.syncEnqueuedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  $$LearnerProfilesTableFilterComposer get profileId {
-    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.learnerProfiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$LearnerProfilesTableFilterComposer(
-            $db: $db,
-            $table: $db.learnerProfiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$PointsLedgerTableOrderingComposer
-    extends Composer<_$UserDatabase, $PointsLedgerTable> {
-  $$PointsLedgerTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get entryKind => $composableBuilder(
-    column: $table.entryKind,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get delta => $composableBuilder(
-    column: $table.delta,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get note => $composableBuilder(
-    column: $table.note,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get redemptionId => $composableBuilder(
-    column: $table.redemptionId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get ulid => $composableBuilder(
-    column: $table.ulid,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get syncEnqueuedAt => $composableBuilder(
-    column: $table.syncEnqueuedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  $$LearnerProfilesTableOrderingComposer get profileId {
-    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.learnerProfiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$LearnerProfilesTableOrderingComposer(
-            $db: $db,
-            $table: $db.learnerProfiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$PointsLedgerTableAnnotationComposer
-    extends Composer<_$UserDatabase, $PointsLedgerTable> {
-  $$PointsLedgerTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get entryKind =>
-      $composableBuilder(column: $table.entryKind, builder: (column) => column);
-
-  GeneratedColumn<int> get delta =>
-      $composableBuilder(column: $table.delta, builder: (column) => column);
-
-  GeneratedColumn<String> get note =>
-      $composableBuilder(column: $table.note, builder: (column) => column);
-
-  GeneratedColumn<int> get redemptionId => $composableBuilder(
-    column: $table.redemptionId,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<String> get ulid =>
-      $composableBuilder(column: $table.ulid, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get syncEnqueuedAt => $composableBuilder(
-    column: $table.syncEnqueuedAt,
-    builder: (column) => column,
-  );
-
-  $$LearnerProfilesTableAnnotationComposer get profileId {
-    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.profileId,
-      referencedTable: $db.learnerProfiles,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$LearnerProfilesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.learnerProfiles,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-}
-
-class $$PointsLedgerTableTableManager
-    extends
-        RootTableManager<
-          _$UserDatabase,
-          $PointsLedgerTable,
-          PointsLedgerData,
-          $$PointsLedgerTableFilterComposer,
-          $$PointsLedgerTableOrderingComposer,
-          $$PointsLedgerTableAnnotationComposer,
-          $$PointsLedgerTableCreateCompanionBuilder,
-          $$PointsLedgerTableUpdateCompanionBuilder,
-          (PointsLedgerData, $$PointsLedgerTableReferences),
-          PointsLedgerData,
-          PrefetchHooks Function({bool profileId})
-        > {
-  $$PointsLedgerTableTableManager(_$UserDatabase db, $PointsLedgerTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$PointsLedgerTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$PointsLedgerTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$PointsLedgerTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<int> profileId = const Value.absent(),
-                Value<String> entryKind = const Value.absent(),
-                Value<int> delta = const Value.absent(),
-                Value<String?> note = const Value.absent(),
-                Value<int?> redemptionId = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<String?> ulid = const Value.absent(),
-                Value<DateTime?> syncEnqueuedAt = const Value.absent(),
-              }) => PointsLedgerCompanion(
-                id: id,
-                profileId: profileId,
-                entryKind: entryKind,
-                delta: delta,
-                note: note,
-                redemptionId: redemptionId,
-                createdAt: createdAt,
-                ulid: ulid,
-                syncEnqueuedAt: syncEnqueuedAt,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required int profileId,
-                required String entryKind,
-                required int delta,
-                Value<String?> note = const Value.absent(),
-                Value<int?> redemptionId = const Value.absent(),
-                required DateTime createdAt,
-                Value<String?> ulid = const Value.absent(),
-                Value<DateTime?> syncEnqueuedAt = const Value.absent(),
-              }) => PointsLedgerCompanion.insert(
-                id: id,
-                profileId: profileId,
-                entryKind: entryKind,
-                delta: delta,
-                note: note,
-                redemptionId: redemptionId,
-                createdAt: createdAt,
-                ulid: ulid,
-                syncEnqueuedAt: syncEnqueuedAt,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable(table),
-                  $$PointsLedgerTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({profileId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (profileId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.profileId,
-                                referencedTable: $$PointsLedgerTableReferences
-                                    ._profileIdTable(db),
-                                referencedColumn: $$PointsLedgerTableReferences
-                                    ._profileIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
-
-                    return state;
-                  },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$PointsLedgerTableProcessedTableManager =
-    ProcessedTableManager<
-      _$UserDatabase,
-      $PointsLedgerTable,
-      PointsLedgerData,
-      $$PointsLedgerTableFilterComposer,
-      $$PointsLedgerTableOrderingComposer,
-      $$PointsLedgerTableAnnotationComposer,
-      $$PointsLedgerTableCreateCompanionBuilder,
-      $$PointsLedgerTableUpdateCompanionBuilder,
-      (PointsLedgerData, $$PointsLedgerTableReferences),
-      PointsLedgerData,
-      PrefetchHooks Function({bool profileId})
-    >;
 typedef $$RewardRedemptionsTableCreateCompanionBuilder =
     RewardRedemptionsCompanion Function({
       Value<int> id,
@@ -23805,6 +23418,27 @@ final class $$RewardRedemptionsTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$PointsLedgerTable, List<PointsLedgerData>>
+  _pointsLedgerRefsTable(_$UserDatabase db) => MultiTypedResultKey.fromTable(
+    db.pointsLedger,
+    aliasName: $_aliasNameGenerator(
+      db.rewardRedemptions.id,
+      db.pointsLedger.redemptionId,
+    ),
+  );
+
+  $$PointsLedgerTableProcessedTableManager get pointsLedgerRefs {
+    final manager = $$PointsLedgerTableTableManager(
+      $_db,
+      $_db.pointsLedger,
+    ).filter((f) => f.redemptionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pointsLedgerRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -23879,6 +23513,31 @@ class $$RewardRedemptionsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> pointsLedgerRefs(
+    Expression<bool> Function($$PointsLedgerTableFilterComposer f) f,
+  ) {
+    final $$PointsLedgerTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pointsLedger,
+      getReferencedColumn: (t) => t.redemptionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PointsLedgerTableFilterComposer(
+            $db: $db,
+            $table: $db.pointsLedger,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -24014,6 +23673,31 @@ class $$RewardRedemptionsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> pointsLedgerRefs<T extends Object>(
+    Expression<T> Function($$PointsLedgerTableAnnotationComposer a) f,
+  ) {
+    final $$PointsLedgerTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pointsLedger,
+      getReferencedColumn: (t) => t.redemptionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PointsLedgerTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pointsLedger,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$RewardRedemptionsTableTableManager
@@ -24029,7 +23713,7 @@ class $$RewardRedemptionsTableTableManager
           $$RewardRedemptionsTableUpdateCompanionBuilder,
           (RewardRedemption, $$RewardRedemptionsTableReferences),
           RewardRedemption,
-          PrefetchHooks Function({bool profileId})
+          PrefetchHooks Function({bool profileId, bool pointsLedgerRefs})
         > {
   $$RewardRedemptionsTableTableManager(
     _$UserDatabase db,
@@ -24099,7 +23783,505 @@ class $$RewardRedemptionsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({profileId = false}) {
+          prefetchHooksCallback:
+              ({profileId = false, pointsLedgerRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (pointsLedgerRefs) db.pointsLedger,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (profileId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.profileId,
+                                    referencedTable:
+                                        $$RewardRedemptionsTableReferences
+                                            ._profileIdTable(db),
+                                    referencedColumn:
+                                        $$RewardRedemptionsTableReferences
+                                            ._profileIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (pointsLedgerRefs)
+                        await $_getPrefetchedData<
+                          RewardRedemption,
+                          $RewardRedemptionsTable,
+                          PointsLedgerData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RewardRedemptionsTableReferences
+                              ._pointsLedgerRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RewardRedemptionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pointsLedgerRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.redemptionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$RewardRedemptionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$UserDatabase,
+      $RewardRedemptionsTable,
+      RewardRedemption,
+      $$RewardRedemptionsTableFilterComposer,
+      $$RewardRedemptionsTableOrderingComposer,
+      $$RewardRedemptionsTableAnnotationComposer,
+      $$RewardRedemptionsTableCreateCompanionBuilder,
+      $$RewardRedemptionsTableUpdateCompanionBuilder,
+      (RewardRedemption, $$RewardRedemptionsTableReferences),
+      RewardRedemption,
+      PrefetchHooks Function({bool profileId, bool pointsLedgerRefs})
+    >;
+typedef $$PointsLedgerTableCreateCompanionBuilder =
+    PointsLedgerCompanion Function({
+      Value<int> id,
+      required int profileId,
+      required String entryKind,
+      required int delta,
+      Value<String?> note,
+      Value<int?> redemptionId,
+      required DateTime createdAt,
+      Value<String?> ulid,
+      Value<DateTime?> syncEnqueuedAt,
+    });
+typedef $$PointsLedgerTableUpdateCompanionBuilder =
+    PointsLedgerCompanion Function({
+      Value<int> id,
+      Value<int> profileId,
+      Value<String> entryKind,
+      Value<int> delta,
+      Value<String?> note,
+      Value<int?> redemptionId,
+      Value<DateTime> createdAt,
+      Value<String?> ulid,
+      Value<DateTime?> syncEnqueuedAt,
+    });
+
+final class $$PointsLedgerTableReferences
+    extends
+        BaseReferences<_$UserDatabase, $PointsLedgerTable, PointsLedgerData> {
+  $$PointsLedgerTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(db.pointsLedger.profileId, db.learnerProfiles.id),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $RewardRedemptionsTable _redemptionIdTable(_$UserDatabase db) =>
+      db.rewardRedemptions.createAlias(
+        $_aliasNameGenerator(
+          db.pointsLedger.redemptionId,
+          db.rewardRedemptions.id,
+        ),
+      );
+
+  $$RewardRedemptionsTableProcessedTableManager? get redemptionId {
+    final $_column = $_itemColumn<int>('redemption_id');
+    if ($_column == null) return null;
+    final manager = $$RewardRedemptionsTableTableManager(
+      $_db,
+      $_db.rewardRedemptions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_redemptionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PointsLedgerTableFilterComposer
+    extends Composer<_$UserDatabase, $PointsLedgerTable> {
+  $$PointsLedgerTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get entryKind => $composableBuilder(
+    column: $table.entryKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get delta => $composableBuilder(
+    column: $table.delta,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get ulid => $composableBuilder(
+    column: $table.ulid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get syncEnqueuedAt => $composableBuilder(
+    column: $table.syncEnqueuedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RewardRedemptionsTableFilterComposer get redemptionId {
+    final $$RewardRedemptionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.redemptionId,
+      referencedTable: $db.rewardRedemptions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RewardRedemptionsTableFilterComposer(
+            $db: $db,
+            $table: $db.rewardRedemptions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointsLedgerTableOrderingComposer
+    extends Composer<_$UserDatabase, $PointsLedgerTable> {
+  $$PointsLedgerTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get entryKind => $composableBuilder(
+    column: $table.entryKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get delta => $composableBuilder(
+    column: $table.delta,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get ulid => $composableBuilder(
+    column: $table.ulid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get syncEnqueuedAt => $composableBuilder(
+    column: $table.syncEnqueuedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RewardRedemptionsTableOrderingComposer get redemptionId {
+    final $$RewardRedemptionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.redemptionId,
+      referencedTable: $db.rewardRedemptions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RewardRedemptionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.rewardRedemptions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointsLedgerTableAnnotationComposer
+    extends Composer<_$UserDatabase, $PointsLedgerTable> {
+  $$PointsLedgerTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get entryKind =>
+      $composableBuilder(column: $table.entryKind, builder: (column) => column);
+
+  GeneratedColumn<int> get delta =>
+      $composableBuilder(column: $table.delta, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get ulid =>
+      $composableBuilder(column: $table.ulid, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncEnqueuedAt => $composableBuilder(
+    column: $table.syncEnqueuedAt,
+    builder: (column) => column,
+  );
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RewardRedemptionsTableAnnotationComposer get redemptionId {
+    final $$RewardRedemptionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.redemptionId,
+          referencedTable: $db.rewardRedemptions,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$RewardRedemptionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.rewardRedemptions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$PointsLedgerTableTableManager
+    extends
+        RootTableManager<
+          _$UserDatabase,
+          $PointsLedgerTable,
+          PointsLedgerData,
+          $$PointsLedgerTableFilterComposer,
+          $$PointsLedgerTableOrderingComposer,
+          $$PointsLedgerTableAnnotationComposer,
+          $$PointsLedgerTableCreateCompanionBuilder,
+          $$PointsLedgerTableUpdateCompanionBuilder,
+          (PointsLedgerData, $$PointsLedgerTableReferences),
+          PointsLedgerData,
+          PrefetchHooks Function({bool profileId, bool redemptionId})
+        > {
+  $$PointsLedgerTableTableManager(_$UserDatabase db, $PointsLedgerTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PointsLedgerTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PointsLedgerTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PointsLedgerTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
+                Value<String> entryKind = const Value.absent(),
+                Value<int> delta = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<int?> redemptionId = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> ulid = const Value.absent(),
+                Value<DateTime?> syncEnqueuedAt = const Value.absent(),
+              }) => PointsLedgerCompanion(
+                id: id,
+                profileId: profileId,
+                entryKind: entryKind,
+                delta: delta,
+                note: note,
+                redemptionId: redemptionId,
+                createdAt: createdAt,
+                ulid: ulid,
+                syncEnqueuedAt: syncEnqueuedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int profileId,
+                required String entryKind,
+                required int delta,
+                Value<String?> note = const Value.absent(),
+                Value<int?> redemptionId = const Value.absent(),
+                required DateTime createdAt,
+                Value<String?> ulid = const Value.absent(),
+                Value<DateTime?> syncEnqueuedAt = const Value.absent(),
+              }) => PointsLedgerCompanion.insert(
+                id: id,
+                profileId: profileId,
+                entryKind: entryKind,
+                delta: delta,
+                note: note,
+                redemptionId: redemptionId,
+                createdAt: createdAt,
+                ulid: ulid,
+                syncEnqueuedAt: syncEnqueuedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PointsLedgerTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({profileId = false, redemptionId = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [],
@@ -24124,13 +24306,24 @@ class $$RewardRedemptionsTableTableManager
                           state.withJoin(
                                 currentTable: table,
                                 currentColumn: table.profileId,
-                                referencedTable:
-                                    $$RewardRedemptionsTableReferences
-                                        ._profileIdTable(db),
-                                referencedColumn:
-                                    $$RewardRedemptionsTableReferences
-                                        ._profileIdTable(db)
-                                        .id,
+                                referencedTable: $$PointsLedgerTableReferences
+                                    ._profileIdTable(db),
+                                referencedColumn: $$PointsLedgerTableReferences
+                                    ._profileIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+                    if (redemptionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.redemptionId,
+                                referencedTable: $$PointsLedgerTableReferences
+                                    ._redemptionIdTable(db),
+                                referencedColumn: $$PointsLedgerTableReferences
+                                    ._redemptionIdTable(db)
+                                    .id,
                               )
                               as T;
                     }
@@ -24146,19 +24339,19 @@ class $$RewardRedemptionsTableTableManager
       );
 }
 
-typedef $$RewardRedemptionsTableProcessedTableManager =
+typedef $$PointsLedgerTableProcessedTableManager =
     ProcessedTableManager<
       _$UserDatabase,
-      $RewardRedemptionsTable,
-      RewardRedemption,
-      $$RewardRedemptionsTableFilterComposer,
-      $$RewardRedemptionsTableOrderingComposer,
-      $$RewardRedemptionsTableAnnotationComposer,
-      $$RewardRedemptionsTableCreateCompanionBuilder,
-      $$RewardRedemptionsTableUpdateCompanionBuilder,
-      (RewardRedemption, $$RewardRedemptionsTableReferences),
-      RewardRedemption,
-      PrefetchHooks Function({bool profileId})
+      $PointsLedgerTable,
+      PointsLedgerData,
+      $$PointsLedgerTableFilterComposer,
+      $$PointsLedgerTableOrderingComposer,
+      $$PointsLedgerTableAnnotationComposer,
+      $$PointsLedgerTableCreateCompanionBuilder,
+      $$PointsLedgerTableUpdateCompanionBuilder,
+      (PointsLedgerData, $$PointsLedgerTableReferences),
+      PointsLedgerData,
+      PrefetchHooks Function({bool profileId, bool redemptionId})
     >;
 
 class $UserDatabaseManager {
@@ -24211,8 +24404,8 @@ class $UserDatabaseManager {
       $$SyncKvTableTableManager(_db, _db.syncKv);
   $$PointsBalanceTableTableManager get pointsBalance =>
       $$PointsBalanceTableTableManager(_db, _db.pointsBalance);
-  $$PointsLedgerTableTableManager get pointsLedger =>
-      $$PointsLedgerTableTableManager(_db, _db.pointsLedger);
   $$RewardRedemptionsTableTableManager get rewardRedemptions =>
       $$RewardRedemptionsTableTableManager(_db, _db.rewardRedemptions);
+  $$PointsLedgerTableTableManager get pointsLedger =>
+      $$PointsLedgerTableTableManager(_db, _db.pointsLedger);
 }
