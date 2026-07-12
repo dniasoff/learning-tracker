@@ -2282,13 +2282,18 @@
   {
    "id": "AUD-notifications-04",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete the dead pre-per-profile notification scheduling API in NotificationGateway/NotificationScheduler",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "e4f4042e9a1ba9064659dd3f4abeec47e079b150"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-notifications-04 AC1 OK: call-anchored grep of lib/ = zero refs to the 9 legacy methods; ID constants gone (only _plugin.cancel + *ForProfile remain)",
+    "AUD-notifications-04 AC2 OK: gateway_test 1415->933 keeps full *ForProfile+rollover(561-637); service_test deleted (initialize subsumed by gateway_test 136-228)"
+   ],
+   "notes": "Verified zero callers for all 9 legacy methods; deleted them + ID constants. scheduleReminder() kept, rewired to *ForProfile. Fixed 9 cascading test files. Deleted notification_service_test.dart (reason in commit). Restored lost _nextInstanceOfTime coverage. AC1/AC2 verified."
   },
   {
    "id": "AUD-progress-04",
@@ -7689,13 +7694,18 @@
   {
    "id": "AUD-notifications-10",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Add Android/iOS branch coverage for NotificationGateway.requestPermission()/hasPermission()",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "e4f4042e9a1ba9064659dd3f4abeec47e079b150"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-notifications-10 Android AC OK: gateway_test:268-308 asserts requestNotificationsPermission+requestExactAlarmsPermission called and true/false/null threaded",
+    "AUD-notifications-10 iOS AC OK: gateway_test:330-358 asserts requestPermissions(alert/badge/sound:true) called and true/false/null threaded"
+   ],
+   "notes": "Confirmed Android/iOS branches untestable before fix. Added MockAndroidPlugin/MockIOSPlugin + 9 tests asserting both permission calls made and granted flag threads true/false/null on Android+iOS. Bonus hasPermission() coverage (named in title)."
   },
   {
    "id": "AUD-notifications-11",
