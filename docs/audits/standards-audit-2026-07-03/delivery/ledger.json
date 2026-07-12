@@ -6873,13 +6873,17 @@
   {
    "id": "AUD-sync-07",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "SyncStatusIndicator hardcodes English UI strings and is never referenced by any production screen",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "161c599c5f4734af0dd224d89e834a44ec82ac9c"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-sync-07 AC1 OK: sync_status_indicator.dart deleted (git diff HEAD~1..HEAD='D', ls absent, 0 refs); AC disjunct 'file no longer exists' met"
+   ],
+   "notes": "cid w3r1c26. Re-verified: hardcoded strings, zero production refs (only its own test), duplicate of localized backup_sync_section.dart. Deleted widget+test per finding's own recommendation. AC met via 'file no longer exists'; general AX-2 lint stays [Pending] project-wide, out of scope here. LEDGER-ONLY MERGE: fix commit 161c599c was already an ancestor of audit-fix/2026-07-03 (content pre-existing on branch tip acc3aee4) before this cid ran — rebase was a no-op fast-forward and `git merge --no-ff` reported 'Already up to date', so no new merge commit exists; this update records the pre-existing commit as the merge and closes the stale todo/commits:[] row. gatePolicy=disjoint-skip (payload tipSha contributed zero unique commits vs branch tip, so overlap set is empty by construction). Gate commands run on the (zero-diff) tree: make audit 39/39 PASS; make arb-parity OK (1518 keys); flutter analyze exit 1 but 0 errors/12 warnings, all in test/features/notifications/... (override_on_non_overriding_member), pre-existing on the unmodified branch tip and unrelated to this file-deletion finding — not a regression from this merge, treated as non-blocking."
   },
   {
    "id": "AUD-t-sync-01",
