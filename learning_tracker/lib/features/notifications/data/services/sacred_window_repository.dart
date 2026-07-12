@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/sacred_window_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/domain/services/zmanim_window_service.dart';
@@ -164,6 +167,19 @@ class SacredWindowRepository {
         )
         .toList();
 
-    dao.clearAll().then((_) => dao.insertAll(companions)).ignore();
+    // AUD-core-database-04: clear+insert is atomic (one transaction inside
+    // [SacredWindowDao.replaceAll]) so a mid-write failure can never leave
+    // the table empty or partially written. This is still fire-and-forget
+    // (callers of [getWindows]/[isWindowActive] stay synchronous) but a
+    // failure is now logged instead of silently discarded.
+    unawaited(
+      dao.replaceAll(companions).catchError((Object e, StackTrace st) {
+        AppLogger.instance.error(
+          event: 'sacred_window_persist_failed',
+          exception: e,
+          stackTrace: st,
+        );
+      }),
+    );
   }
 }
