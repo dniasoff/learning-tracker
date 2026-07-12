@@ -104,7 +104,8 @@ class ChildRedemptionScreen extends ConsumerWidget {
           Expanded(
             child: rewardsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text(e.toString())),
+              error: (e, _) =>
+                  Center(child: Text(l10n.errorGeneric(e.toString()))),
               data: (rewards) {
                 if (rewards.isEmpty) {
                   return Center(

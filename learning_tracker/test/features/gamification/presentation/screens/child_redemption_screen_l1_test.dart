@@ -560,6 +560,71 @@ void main() {
     });
   });
 
+  // ── AUD-gamification-08: error state routes through AppLocalizations ───────
+
+  group('ChildRedemptionScreen — error state (AUD-gamification-08)', () {
+    testWidgets('renders the localized errorGeneric wrapper, not the bare raw '
+        'exception text, under he locale', (tester) async {
+      const rawDetail = 'db_unavailable_for_test';
+      final database = inMemoryDb();
+      addTearDown(database.close);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, __) => null,
+          overrides: [
+            childRedemptionBalanceProvider.overrideWith(
+              (ref) => Stream.value(0),
+            ),
+            childRedemptionRewardsProvider.overrideWith(
+              (ref) =>
+                  Future<List<RewardMilestone>>.error(Exception(rawDetail)),
+            ),
+            userDatabaseProvider.overrideWithValue(database),
+            activeProfileIdProvider.overrideWithValue(_profileId),
+            outboxSyncWriteFacadeProvider.overrideWithValue(null),
+            activeTutoredProfileSelectionProvider.overrideWith(
+              _NoTutorSession.new,
+            ),
+          ],
+          child: const MaterialApp(
+            locale: Locale('he'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ChildRedemptionScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Must NOT render the bare raw exception text as the entire error UI.
+      expect(
+        find.text(Exception(rawDetail).toString()),
+        findsNothing,
+        reason:
+            'the error branch must not render a bare, un-localized '
+            'e.toString() as the whole error message',
+      );
+      // Must render the Hebrew-localized errorGeneric wrapper around the
+      // detail (matching the sanctioned pattern already used elsewhere in
+      // this feature, e.g. point_config_screen.dart).
+      final heL10n = await AppLocalizations.delegate.load(const Locale('he'));
+      expect(
+        find.textContaining(heL10n.errorGeneric('')),
+        findsOneWidget,
+        reason: 'the error text must be routed through l10n.errorGeneric',
+      );
+
+      await _tearDown(tester);
+    });
+  });
+
   // ── R3-7 tutor-session guard ──────────────────────────────────────────────
 
   group('ChildRedemptionScreen — R3-7 tutor session guard (UI)', () {
