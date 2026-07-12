@@ -41,6 +41,9 @@ class ChazaraInlineSetup extends ConsumerStatefulWidget {
 }
 
 /// Built-in preset templates expressed as round delays in days.
+///
+/// [label] is a fixed lookup key resolved to a localized title via
+/// [_ChazaraInlineSetupState._presetTitle] — never rendered directly.
 class _ChazaraPreset {
   const _ChazaraPreset({required this.label, required this.delays});
   final String label;
@@ -49,10 +52,10 @@ class _ChazaraPreset {
 
 class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
   static const List<_ChazaraPreset> _presets = [
-    _ChazaraPreset(label: 'Learn Only', delays: []),
-    _ChazaraPreset(label: '1 day', delays: [1]),
-    _ChazaraPreset(label: '1 + 7 days', delays: [1, 7]),
-    _ChazaraPreset(label: '1 + 7 + 30 days', delays: [1, 7, 30]),
+    _ChazaraPreset(label: 'learnOnly', delays: []),
+    _ChazaraPreset(label: 'oneDay', delays: [1]),
+    _ChazaraPreset(label: 'week', delays: [1, 7]),
+    _ChazaraPreset(label: 'month', delays: [1, 7, 30]),
   ];
 
   /// Index of selected preset, or -1 for "Custom".
@@ -195,8 +198,8 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
                             SizedBox(
                               width: cardWidth,
                               child: ReviewPresetCard(
-                                title: _presets[i].label,
-                                subtitle: _presetDescription(i),
+                                title: _presetTitle(l10n, i),
+                                subtitle: _presetDescription(l10n, i),
                                 icon: _presetIcon(i),
                                 isSelected: _selectedPresetIndex == i,
                                 onTap: () => _selectPreset(i),
@@ -333,12 +336,22 @@ class _ChazaraInlineSetupState extends ConsumerState<ChazaraInlineSetup> {
     );
   }
 
-  String _presetDescription(int index) {
-    return switch (index) {
-      0 => 'No scheduled reviews.',
-      1 => 'Review next morning.',
-      2 => 'The recommended starter.',
-      3 => 'Full mastery cycle.',
+  String _presetTitle(AppLocalizations l10n, int index) {
+    return switch (_presets[index].label) {
+      'learnOnly' => l10n.chazaraPresetLearnOnlyTitle,
+      'oneDay' => l10n.chazaraPresetOneDayTitle,
+      'week' => l10n.chazaraPresetWeekTitle,
+      'month' => l10n.chazaraPresetMonthTitle,
+      _ => '',
+    };
+  }
+
+  String _presetDescription(AppLocalizations l10n, int index) {
+    return switch (_presets[index].label) {
+      'learnOnly' => l10n.chazaraPresetLearnOnlyDescription,
+      'oneDay' => l10n.chazaraPresetOneDayDescription,
+      'week' => l10n.chazaraPresetWeekDescription,
+      'month' => l10n.chazaraPresetMonthDescription,
       _ => '',
     };
   }

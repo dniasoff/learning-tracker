@@ -551,6 +551,12 @@
   "scopeGlossPurityRitual": "טהרות ודיני טומאה",
   "scopeGlossCoreFocus": "מיקוד בנושא מרכזי",
   "scopeShowContentsTooltip": "הצגת התוכן",
+  "scopeLevelFallbackLabel": "רמה {level}",
+  "@scopeLevelFallbackLabel": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
   "startingPositionSectionLabel": "חלק",
   "trackNameRequired": "נא להזין שם",
   "learnEntireCurriculumCta": "רוצה ללמוד את הכול!",
@@ -1314,6 +1320,13 @@
       "itemLabel": { "type": "String" }
     }
   },
+  "startingPositionBackToListTooltip": "חזרה לרשימת {containerLabel}",
+  "@startingPositionBackToListTooltip": {
+    "placeholders": {
+      "containerLabel": { "type": "String" }
+    }
+  },
+  "startingPositionItemFallbackLabel": "פריט",
   "searchFieldHint": "חיפוש ⁦{label}⁩…",
   "@searchFieldHint": {
     "placeholders": {
@@ -1882,6 +1895,7 @@
   },
 
   "startingPositionTargetDate": "תאריך יעד",
+  "calendarNoLocalEntryFound": "לא נמצאה רשומת לוח שנה מקומית לתאריך זה.",
 
   "goalPaceOrDeadlineTitle": "מה הקצב או המועד שלך?",
   "goalPaceOrDeadlineSubtitle": "הגדר יעד.",
@@ -1927,6 +1941,15 @@
     }
   },
   "chazaraAddNew": "הוסף",
+
+  "chazaraPresetLearnOnlyTitle": "לימוד בלבד",
+  "chazaraPresetLearnOnlyDescription": "ללא חזרות מתוזמנות.",
+  "chazaraPresetOneDayTitle": "יום אחד",
+  "chazaraPresetOneDayDescription": "חזרה למחרת בבוקר.",
+  "chazaraPresetWeekTitle": "1 + 7 ימים",
+  "chazaraPresetWeekDescription": "נקודת ההתחלה המומלצת.",
+  "chazaraPresetMonthTitle": "1 + 7 + 30 ימים",
+  "chazaraPresetMonthDescription": "מחזור שליטה מלא.",
 
   "termChazara": "חזרה",
   "termBubbleChazara": "חזרה",

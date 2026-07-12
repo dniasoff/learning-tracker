@@ -77,7 +77,7 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
     final levels = CurriculumLabels.levels(widget.curriculumId);
     return level <= levels.length
         ? levels[level - 1].inLanguage(useHebrew: useHebrew, variant: variant)
-        : 'Level $level';
+        : AppLocalizations.of(context)!.scopeLevelFallbackLabel(level);
   }
 
   /// Filters [allItems] to those matching the current breadcrumb path.

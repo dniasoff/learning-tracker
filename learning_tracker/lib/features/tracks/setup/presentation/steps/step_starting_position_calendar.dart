@@ -423,7 +423,7 @@ class _StartingPositionCalendarModeState
       );
     }
     return Text(
-      'No local calendar entry found for this date.',
+      AppLocalizations.of(context)!.calendarNoLocalEntryFound,
       textAlign: TextAlign.center,
       style: theme.textTheme.bodySmall?.copyWith(
         color: Theme.of(context).colorScheme.error,

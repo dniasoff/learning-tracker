@@ -1146,6 +1146,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get scopeShowContentsTooltip => 'הצגת התוכן';
 
   @override
+  String scopeLevelFallbackLabel(int level) {
+    return 'רמה $level';
+  }
+
+  @override
   String get startingPositionSectionLabel => 'חלק';
 
   @override
@@ -2822,6 +2827,14 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String startingPositionBackToListTooltip(String containerLabel) {
+    return 'חזרה לרשימת $containerLabel';
+  }
+
+  @override
+  String get startingPositionItemFallbackLabel => 'פריט';
+
+  @override
   String searchFieldHint(String label) {
     return 'חיפוש ⁦$label⁩…';
   }
@@ -3869,6 +3882,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get startingPositionTargetDate => 'תאריך יעד';
 
   @override
+  String get calendarNoLocalEntryFound =>
+      'לא נמצאה רשומת לוח שנה מקומית לתאריך זה.';
+
+  @override
   String get goalPaceOrDeadlineTitle => 'מה הקצב או המועד שלך?';
 
   @override
@@ -3926,6 +3943,30 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get chazaraAddNew => 'הוסף';
+
+  @override
+  String get chazaraPresetLearnOnlyTitle => 'לימוד בלבד';
+
+  @override
+  String get chazaraPresetLearnOnlyDescription => 'ללא חזרות מתוזמנות.';
+
+  @override
+  String get chazaraPresetOneDayTitle => 'יום אחד';
+
+  @override
+  String get chazaraPresetOneDayDescription => 'חזרה למחרת בבוקר.';
+
+  @override
+  String get chazaraPresetWeekTitle => '1 + 7 ימים';
+
+  @override
+  String get chazaraPresetWeekDescription => 'נקודת ההתחלה המומלצת.';
+
+  @override
+  String get chazaraPresetMonthTitle => '1 + 7 + 30 ימים';
+
+  @override
+  String get chazaraPresetMonthDescription => 'מחזור שליטה מלא.';
 
   @override
   String get termChazara => 'חזרה';
