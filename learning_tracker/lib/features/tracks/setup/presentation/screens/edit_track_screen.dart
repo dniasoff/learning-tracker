@@ -34,13 +34,16 @@ import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_s
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// R1-(5): pure validation helper — returns a non-null, non-empty error
-/// message when [name] is blank or whitespace-only, else null. Extracted so the
-/// blank-name guard in [_EditTrackScreenState._save] is unit-testable; the
-/// screen surfaces the localized [AppLocalizations.trackEditNameRequired] when
-/// this returns non-null.
-String? validateTrackName(String name) =>
-    name.trim().isEmpty ? 'Track name cannot be empty.' : null;
+/// R1-(5): pure validation helper — returns `true` when [name] is valid
+/// (non-blank after trimming), `false` when blank or whitespace-only.
+/// Extracted so the blank-name guard in [_EditTrackScreenState._save] is
+/// unit-testable; the screen surfaces the localized
+/// [AppLocalizations.trackEditNameRequired] when this returns `false`.
+///
+/// AUD-tracks-24: returns a bool rather than a natural-language message —
+/// a validator returning hardcoded English text invites a future bug where
+/// that string is displayed directly, bypassing localization.
+bool validateTrackName(String name) => name.trim().isNotEmpty;
 
 /// R1-(5): pure helper — the number of days marked `'study'` (as opposed to
 /// `'review'`) in a study-day map. Used by [_EditTrackScreenState._save] to warn
@@ -186,7 +189,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     // Block save when the Track Name is empty or whitespace-only. Surface an
     // inline error and abort before the save-confirm dialog so the user can
     // never proceed with a blank name.
-    if (validateTrackName(_nameController.text) != null) {
+    if (!validateTrackName(_nameController.text)) {
       setState(() => _nameError = l10n.trackEditNameRequired);
       return;
     }
