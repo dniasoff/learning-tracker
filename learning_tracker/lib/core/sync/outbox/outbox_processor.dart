@@ -330,7 +330,7 @@ class OutboxProcessor {
         } catch (e) {
           undecodableKeys.add(row.entityKey);
           AppLogger.instance.warning(
-            event: 'sync_outbox_push_failed',
+            event: LogEvents.sync.outboxPushFailed,
             fields: {
               'kind': OutboxEntityKind.completion,
               'entity_key': row.entityKey,
