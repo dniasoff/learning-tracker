@@ -1,9 +1,17 @@
-import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
-
-/// Repository interface for reading and writing [ReminderPreferences].
+/// Holds the SharedPreferences key constants and per-profile namespacing
+/// helpers for the notification preference providers.
 ///
 /// All key constants and defaults are encapsulated here (previously scattered
 /// as private constants at the top of `notification_providers.dart`).
+///
+/// AUD-notifications-08: this used to also declare abstract `load()`/`save()`
+/// methods, implemented by the now-deleted
+/// `SharedPrefsNotificationPreferencesRepository`. Every one of the 5
+/// preference providers in `notification_providers.dart` reads/writes
+/// SharedPreferences key-by-key inline via the static helpers below, never
+/// through that repository — it had zero call sites and zero test coverage,
+/// so it was deleted (along with the abstract methods) rather than wired up,
+/// keeping only the static key helpers that are actually used.
 abstract class NotificationPreferencesRepository {
   /// Base SharedPreferences key fragments — never used directly as keys.
   /// Always call [keyForProfile] to get the per-profile namespaced key.
@@ -74,12 +82,4 @@ abstract class NotificationPreferencesRepository {
 
   static String notificationSettingsUpdatedAtMsKey(int profileId) =>
       keyForProfile(_notificationSettingsUpdatedAtMsBase, profileId);
-
-  /// Loads the current preferences from persistent storage.
-  ///
-  /// Returns [ReminderPreferences.defaults] when nothing has been stored yet.
-  Future<ReminderPreferences> load();
-
-  /// Persists [prefs] to storage.
-  Future<void> save(ReminderPreferences prefs);
 }
