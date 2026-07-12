@@ -15,6 +15,7 @@ library;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
@@ -571,6 +572,37 @@ void main() {
       final milestones = await service.getAllMilestones();
       expect(milestones, isEmpty);
     });
+
+    // AUD-gamification-06: a JSON-decode failure must not be swallowed
+    // silently -- it must be logged via AppLogger so a corrupted-storage
+    // event that later exports an empty snapshot to the cloud (overwriting
+    // every other device's rewards) leaves a diagnostic trail.
+    test(
+      'logs the decode failure via AppLogger when prefs value is invalid JSON',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'reward_milestones_config_v1_$profileId',
+          'not-json',
+        );
+
+        await service.getAllMilestones();
+
+        final history = AppLogger.instance.talker.history
+            .map((e) => e.generateTextMessage())
+            .toList();
+        expect(
+          history.any(
+            (m) => m.contains('reward_milestone_service getAllMilestones'),
+          ),
+          isTrue,
+          reason:
+              'Expected the swallowed JSON-decode failure in getAllMilestones '
+              'to be logged via AppLogger instead of silently returning an '
+              'empty list with no diagnostic trail. Talker history: $history',
+        );
+      },
+    );
   });
 
   // ─── getAllUnlocks edge cases ──────────────────────────────────────────────
@@ -600,6 +632,33 @@ void main() {
         expect(unlocks, isEmpty);
       },
     );
+
+    // AUD-gamification-06: same log-else-swallow requirement as
+    // getAllMilestones above.
+    test('logs the decode failure via AppLogger when unlock prefs value is '
+        'invalid JSON', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'reward_milestones_unlocks_v1_$profileId',
+        'bad json',
+      );
+
+      await service.getAllUnlocks();
+
+      final history = AppLogger.instance.talker.history
+          .map((e) => e.generateTextMessage())
+          .toList();
+      expect(
+        history.any(
+          (m) => m.contains('reward_milestone_service getAllUnlocks'),
+        ),
+        isTrue,
+        reason:
+            'Expected the swallowed JSON-decode failure in getAllUnlocks '
+            'to be logged via AppLogger instead of silently returning an '
+            'empty list with no diagnostic trail. Talker history: $history',
+      );
+    });
   });
 
   // ─── getGlobalMilestones / getMilestonesForTrack ──────────────────────────
@@ -1135,6 +1194,76 @@ void main() {
       // Local milestone must still be present.
       expect((await service.getAllMilestones()).length, 1);
       expect((await service.getAllMilestones()).first.id, 'local-m');
+    });
+
+    // AUD-gamification-05: a non-empty remote payload whose 'updated_at' is
+    // missing or unparseable must NOT be treated as unconditionally newer
+    // than local -- that silently clobbers local milestones/unlocks with no
+    // way to prove the remote data is actually more recent. The malformed
+    // timestamp must be treated the same as an older timestamp: skip merge,
+    // keep local data untouched.
+    test('skips merge and preserves local data when remote updated_at key is '
+        'missing entirely (non-empty payload)', () async {
+      await service.upsertMilestone(
+        trackId: 1,
+        title: 'Local',
+        thresholdPoints: 100,
+        milestoneId: 'local-m',
+      );
+
+      await service.mergeCloudPayload({
+        // No 'updated_at' key at all.
+        'milestones': [
+          {
+            'id': 'remote-should-not-land',
+            'profile_id': profileId,
+            'track_id': 1,
+            'title': 'Remote',
+            'threshold_points': 999,
+            'is_enabled': true,
+            'icon_index': 0,
+            'created_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+            'updated_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+          },
+        ],
+        'unlocks': <Map<String, dynamic>>[],
+      });
+
+      final milestones = await service.getAllMilestones();
+      expect(milestones.length, 1);
+      expect(milestones.first.id, 'local-m');
+    });
+
+    test('skips merge and preserves local data when remote updated_at is a '
+        'garbage string (non-empty payload)', () async {
+      await service.upsertMilestone(
+        trackId: 1,
+        title: 'Local',
+        thresholdPoints: 100,
+        milestoneId: 'local-m',
+      );
+
+      await service.mergeCloudPayload({
+        'updated_at': 'not-a-real-timestamp',
+        'milestones': [
+          {
+            'id': 'remote-should-not-land',
+            'profile_id': profileId,
+            'track_id': 1,
+            'title': 'Remote',
+            'threshold_points': 999,
+            'is_enabled': true,
+            'icon_index': 0,
+            'created_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+            'updated_at': DateTime.utc(2026, 5, 1).toIso8601String(),
+          },
+        ],
+        'unlocks': <Map<String, dynamic>>[],
+      });
+
+      final milestones = await service.getAllMilestones();
+      expect(milestones.length, 1);
+      expect(milestones.first.id, 'local-m');
     });
   });
 

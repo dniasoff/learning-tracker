@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -86,7 +87,17 @@ class RewardMilestoneService {
           .map(RewardMilestone.fromJson)
           .where((m) => m.profileId == profileId)
           .toList();
-    } catch (_) {
+    } catch (e, st) {
+      // AUD-gamification-06: a corrupt/unreadable config must not be
+      // indistinguishable from "genuinely empty" -- this empty fallback
+      // flows straight into exportCloudPayload() and can overwrite every
+      // other synced device's real reward list with silence as to why.
+      AppLogger.instance.error(
+        event: 'reward_milestone_service getAllMilestones decode failed',
+        fields: {'profileId': profileId, 'key': _configKey},
+        exception: e,
+        stackTrace: st,
+      );
       return const [];
     }
   }
@@ -109,7 +120,14 @@ class RewardMilestoneService {
           .where((u) => u.profileId == profileId)
           .toList()
         ..sort((a, b) => b.unlockedAt.compareTo(a.unlockedAt));
-    } catch (_) {
+    } catch (e, st) {
+      // AUD-gamification-06: see getAllMilestones's catch above.
+      AppLogger.instance.error(
+        event: 'reward_milestone_service getAllUnlocks decode failed',
+        fields: {'profileId': profileId, 'key': _unlockKey},
+        exception: e,
+        stackTrace: st,
+      );
       return const [];
     }
   }
@@ -316,7 +334,12 @@ class RewardMilestoneService {
       (remote['updated_at'] ?? '').toString(),
     );
     final localUpdatedAt = await _getLocalUpdatedAt();
-    if (remoteUpdatedAt != null && !remoteUpdatedAt.isAfter(localUpdatedAt)) {
+    // AUD-gamification-05: a missing/unparseable remote 'updated_at' must NOT
+    // be treated as "unconditionally newer" -- that would unconditionally
+    // overwrite local milestones/unlocks with an ambiguous-timestamp remote
+    // payload (EH-2 LWW ordering must not silently clobber on ambiguous
+    // input). Treat null the same as "not provably newer": skip the merge.
+    if (remoteUpdatedAt == null || !remoteUpdatedAt.isAfter(localUpdatedAt)) {
       return;
     }
 
@@ -358,9 +381,9 @@ class RewardMilestoneService {
       _unlockKey,
       jsonEncode(unlocks.map((u) => u.toJson()).toList()),
     );
-    final stamp =
-        (remoteUpdatedAt ?? DateTimeFactory.nowUtc()).millisecondsSinceEpoch;
-    await prefs.setInt(_updatedAtMsKey, stamp);
+    // remoteUpdatedAt is guaranteed non-null here: the AUD-gamification-05
+    // guard above already returns early when it is null.
+    await prefs.setInt(_updatedAtMsKey, remoteUpdatedAt.millisecondsSinceEpoch);
     await stripStockTemplateMilestones();
   }
 
@@ -399,5 +422,66 @@ class RewardMilestoneService {
     final rng = Random();
     final stamp = DateTimeFactory.nowUtc().millisecondsSinceEpoch;
     return 'rm_${profileId}_${stamp}_${rng.nextInt(1 << 20)}';
+  }
+}
+
+/// Stable, non-localizable identifier for a milestone's visual "tier"
+/// (AUD-gamification-07).
+///
+/// Historically, [TierStyle.forTitle] (now [TierStyle.forTier]) keyed its
+/// visual styling directly off the milestone's raw English display title --
+/// a fragile coupling where a future rename, typo fix, or localization of
+/// one of [RewardMilestoneService.defaultMilestoneLadder]'s titles would
+/// silently fall through to the generic default style, with no exception,
+/// log, or test failure. [classify] performs that title match exactly once,
+/// against the SAME canonical ladder
+/// [RewardMilestoneService.stripStockTemplateMilestones] already matches
+/// against (so the two can no longer independently drift out of sync --
+/// Evans: re-derived invariant), and every other call site works with this
+/// enum instead of raw text.
+enum RewardTier {
+  bronze,
+  silver,
+  gold,
+  platinum,
+  premium,
+  diamond,
+  elite,
+  legend,
+
+  /// A parent-configured custom reward, or a stock title that no longer
+  /// matches the ladder -- rendered with the neutral default style. Never
+  /// silently confused with a real tier: this is its own named value.
+  custom;
+
+  /// Positional order MUST match
+  /// [RewardMilestoneService.defaultMilestoneLadder].
+  static const List<RewardTier> _ladderOrder = [
+    bronze,
+    silver,
+    gold,
+    platinum,
+    premium,
+    diamond,
+    elite,
+    legend,
+  ];
+
+  /// Classifies a milestone [title] against the canonical stock ladder.
+  ///
+  /// Matches on trimmed title only -- mirroring exactly what the
+  /// title-keyed switch this replaces did (threshold is intentionally NOT
+  /// part of the match, so this is not a stricter/behavior-changing check
+  /// than before). Returns [custom] when nothing matches, e.g. any
+  /// parent-configured reward title under the spend economy (DEC-32).
+  static RewardTier classify(String title) {
+    final trimmed = title.trim();
+    const ladder = RewardMilestoneService.defaultMilestoneLadder;
+    for (var i = 0; i < ladder.length; i++) {
+      if (ladder[i].title == trimmed) {
+        return _ladderOrder[i];
+      }
+    }
+    return RewardTier.custom;
   }
 }

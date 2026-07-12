@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart'
+    show RewardTier;
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/locked_achievement_shell.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/tier_icon_box.dart';
@@ -67,7 +69,10 @@ class AchievementTierCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = TierStyle.forTitle(row.milestone.title, row.isLegendTier);
+    final scheme = TierStyle.forTier(
+      RewardTier.classify(row.milestone.title),
+      row.isLegendTier,
+    );
 
     final cardContent = Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
