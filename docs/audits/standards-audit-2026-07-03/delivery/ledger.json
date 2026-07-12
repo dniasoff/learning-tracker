@@ -226,14 +226,13 @@
    "severity": "P1",
    "title": "Write server timestamps for LWW ordering fields in FirestoreGatewayImpl's push* methods (FB-2)",
    "commits": [
-    "dc4a8b7c"
+    "c2d4fba8bf6fcb62c64aabc2e099642278b223c3"
    ],
    "reviewRounds": 1,
    "acVerified": [
-    "AUD-core-sync-13 AC1 OK: emulator-style tests (firestore_gateway_impl_test.dart) push each of the 5 LWW entities with a deliberately wrong client-clock updated_at/state_changed_at and assert the persisted field is a Firestore Timestamp, not the client value; flutter test test/core/sync/ 438 tests pass",
-    "AUD-core-sync-13 AC2 OK: make audit check 28/37 (FB-2) greps firestore_gateway_impl.dart for the serverTimestamp overwrite on each push* method's LWW field and is green - verified live 2026-07-12"
+    "AC2: pushRewardRedemption server-stamps updated_at (firestore_gateway_impl.dart:1250) - orchestrator-verified, red-first test, make audit check 28"
    ],
-   "notes": "GATE-REPAIR (2026-07-12, wave-2 closing-gate remediation pass): ledger correction, not new work. The fix was already delivered in commit dc4a8b7c (2026-07-11) - pushTrack/pushSettings/pushBookmark/pushGoal all overwrite their LWW field with FieldValue.serverTimestamp(); make audit check 28/37 (FB-2) is green. A prior wave-2 run left this ledger row at blocked/no-progress despite the commit landing on-branch; corrected status to merged and backfilled commits/acVerified to match reality. No code change needed for this finding."
+   "notes": "AC2 delivered after 100%% audit caught the skip"
   },
   {
    "id": "AUD-account-05",
