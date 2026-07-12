@@ -698,6 +698,12 @@
   "scopeGlossPurityRitual": "Purity & Ritual Law",
   "scopeGlossCoreFocus": "Core section focus",
   "scopeShowContentsTooltip": "Show contents",
+  "scopeLevelFallbackLabel": "Level {level}",
+  "@scopeLevelFallbackLabel": {
+    "placeholders": {
+      "level": { "type": "int" }
+    }
+  },
   "startingPositionSectionLabel": "Section",
   "trackNameRequired": "Please enter a name",
   "learnEntireCurriculumCta": "I want to learn everything!",
@@ -1522,6 +1528,13 @@
       "itemLabel": { "type": "String" }
     }
   },
+  "startingPositionBackToListTooltip": "Back to {containerLabel} list",
+  "@startingPositionBackToListTooltip": {
+    "placeholders": {
+      "containerLabel": { "type": "String" }
+    }
+  },
+  "startingPositionItemFallbackLabel": "Item",
   "searchFieldHint": "Search ⁦{label}⁩…",
   "@searchFieldHint": {
     "placeholders": {
@@ -2149,6 +2162,7 @@
   },
 
   "startingPositionTargetDate": "TARGET DATE",
+  "calendarNoLocalEntryFound": "No local calendar entry found for this date.",
 
   "goalPaceOrDeadlineTitle": "What's your pace or deadline?",
   "goalPaceOrDeadlineSubtitle": "Set a goal.",
@@ -2194,6 +2208,15 @@
     }
   },
   "chazaraAddNew": "ADD NEW",
+
+  "chazaraPresetLearnOnlyTitle": "Learn Only",
+  "chazaraPresetLearnOnlyDescription": "No scheduled reviews.",
+  "chazaraPresetOneDayTitle": "1 day",
+  "chazaraPresetOneDayDescription": "Review next morning.",
+  "chazaraPresetWeekTitle": "1 + 7 days",
+  "chazaraPresetWeekDescription": "The recommended starter.",
+  "chazaraPresetMonthTitle": "1 + 7 + 30 days",
+  "chazaraPresetMonthDescription": "Full mastery cycle.",
 
   "termChazara": "Chazara",
   "termBubbleChazara": "CHAZARA",

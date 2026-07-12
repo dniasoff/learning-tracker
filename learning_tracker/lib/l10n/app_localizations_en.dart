@@ -1152,6 +1152,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scopeShowContentsTooltip => 'Show contents';
 
   @override
+  String scopeLevelFallbackLabel(int level) {
+    return 'Level $level';
+  }
+
+  @override
   String get startingPositionSectionLabel => 'Section';
 
   @override
@@ -2854,6 +2859,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String startingPositionBackToListTooltip(String containerLabel) {
+    return 'Back to $containerLabel list';
+  }
+
+  @override
+  String get startingPositionItemFallbackLabel => 'Item';
+
+  @override
   String searchFieldHint(String label) {
     return 'Search ⁦$label⁩…';
   }
@@ -3911,6 +3924,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get startingPositionTargetDate => 'TARGET DATE';
 
   @override
+  String get calendarNoLocalEntryFound =>
+      'No local calendar entry found for this date.';
+
+  @override
   String get goalPaceOrDeadlineTitle => 'What\'s your pace or deadline?';
 
   @override
@@ -3969,6 +3986,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chazaraAddNew => 'ADD NEW';
+
+  @override
+  String get chazaraPresetLearnOnlyTitle => 'Learn Only';
+
+  @override
+  String get chazaraPresetLearnOnlyDescription => 'No scheduled reviews.';
+
+  @override
+  String get chazaraPresetOneDayTitle => '1 day';
+
+  @override
+  String get chazaraPresetOneDayDescription => 'Review next morning.';
+
+  @override
+  String get chazaraPresetWeekTitle => '1 + 7 days';
+
+  @override
+  String get chazaraPresetWeekDescription => 'The recommended starter.';
+
+  @override
+  String get chazaraPresetMonthTitle => '1 + 7 + 30 days';
+
+  @override
+  String get chazaraPresetMonthDescription => 'Full mastery cycle.';
 
   @override
   String get termChazara => 'Chazara';

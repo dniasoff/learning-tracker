@@ -2067,6 +2067,12 @@ abstract class AppLocalizations {
   /// **'Show contents'**
   String get scopeShowContentsTooltip;
 
+  /// No description provided for @scopeLevelFallbackLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level {level}'**
+  String scopeLevelFallbackLabel(int level);
+
   /// No description provided for @startingPositionSectionLabel.
   ///
   /// In en, this message translates to:
@@ -4983,6 +4989,18 @@ abstract class AppLocalizations {
   /// **'Select the {itemLabel} you are currently up to.'**
   String startingPositionSelectInstruction(String itemLabel);
 
+  /// No description provided for @startingPositionBackToListTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to {containerLabel} list'**
+  String startingPositionBackToListTooltip(String containerLabel);
+
+  /// No description provided for @startingPositionItemFallbackLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Item'**
+  String get startingPositionItemFallbackLabel;
+
   /// No description provided for @searchFieldHint.
   ///
   /// In en, this message translates to:
@@ -6675,6 +6693,12 @@ abstract class AppLocalizations {
   /// **'TARGET DATE'**
   String get startingPositionTargetDate;
 
+  /// No description provided for @calendarNoLocalEntryFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No local calendar entry found for this date.'**
+  String get calendarNoLocalEntryFound;
+
   /// No description provided for @goalPaceOrDeadlineTitle.
   ///
   /// In en, this message translates to:
@@ -6770,6 +6794,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'ADD NEW'**
   String get chazaraAddNew;
+
+  /// No description provided for @chazaraPresetLearnOnlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn Only'**
+  String get chazaraPresetLearnOnlyTitle;
+
+  /// No description provided for @chazaraPresetLearnOnlyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No scheduled reviews.'**
+  String get chazaraPresetLearnOnlyDescription;
+
+  /// No description provided for @chazaraPresetOneDayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'1 day'**
+  String get chazaraPresetOneDayTitle;
+
+  /// No description provided for @chazaraPresetOneDayDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Review next morning.'**
+  String get chazaraPresetOneDayDescription;
+
+  /// No description provided for @chazaraPresetWeekTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'1 + 7 days'**
+  String get chazaraPresetWeekTitle;
+
+  /// No description provided for @chazaraPresetWeekDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The recommended starter.'**
+  String get chazaraPresetWeekDescription;
+
+  /// No description provided for @chazaraPresetMonthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'1 + 7 + 30 days'**
+  String get chazaraPresetMonthTitle;
+
+  /// No description provided for @chazaraPresetMonthDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Full mastery cycle.'**
+  String get chazaraPresetMonthDescription;
 
   /// No description provided for @termChazara.
   ///

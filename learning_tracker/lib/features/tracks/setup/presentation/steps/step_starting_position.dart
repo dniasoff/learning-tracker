@@ -167,7 +167,7 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
             widget.curriculumId,
             _leafLevelIndex!,
           ).inLanguage(useHebrew: useHebrewTerms, variant: variant)
-        : 'Item';
+        : l10n.startingPositionItemFallbackLabel;
 
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
@@ -234,7 +234,9 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
                     onPressed: _clearSelection,
-                    tooltip: 'Back to $containerLabel list',
+                    tooltip: l10n.startingPositionBackToListTooltip(
+                      containerLabel,
+                    ),
                   ),
                   CurriculumLabel.item(
                     _selectedContainer!,
