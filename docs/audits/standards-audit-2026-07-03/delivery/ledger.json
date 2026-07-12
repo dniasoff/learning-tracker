@@ -718,13 +718,18 @@
     {
       "id": "AUD-settings-02",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Localize the hardcoded English strings in ScopeSelectionScreen and CurriculumSettingsScreen",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "990559da4f06ed5a8b64864b071cc0d27ada836a"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-settings-02 AC1 OK: 11 new keys added identically to app_en.arb + app_he.arb; make arb-parity -> OK 1440 keys all present in Hebrew",
+        "AUD-settings-02 AC2 OK: he-locale test renders both screens, asserts no 2+ Latin run in Text; 7/7 pass; reverting screens to base -> 0/7 (genuine red-first)"
+      ],
+      "notes": "Re-verified, not already fixed. Localized hardcoded strings in both screens via 9 new ARB keys (EN+HE) + ICU plurals; regenerated app_localizations*.dart. AC1 arb-parity and AC2 no-Latin-fragments Locale('he') widget test both satisfied; red-first via git-stash confirmed genuine failures pre-fix."
     },
     {
       "id": "AUD-settings-01",
