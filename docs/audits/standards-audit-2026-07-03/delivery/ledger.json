@@ -672,13 +672,19 @@
     {
       "id": "AUD-tracks-02",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Localize the hardcoded English 'Order' app-bar suffix in LearningOrderScreen",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "3a35473c7a121479342b5ef88e1e1c3313971e07"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-tracks-02 AC1 OK: screen.dart:50-52 uses AppLocalizations learningOrderScreenTitle; grep shows no raw 'Order' literal in lib/",
+        "AUD-tracks-02 AC2 OK: key present once in app_en.arb and app_he.arb; make arb-parity PASS (1429 EN keys all in HE)",
+        "AUD-tracks-02 AC3 OK: new test pumps screen under Locale('he'), reads real AppBarTitle.text, asserts isNot(contains('Order')); 9/9 pass"
+      ],
+      "notes": "Re-verified raw 'Order' concat still present. Red test under Locale('he') reproduced defect ('משניות Order'). Fixed via new learningOrderScreenTitle ARB key + AppLocalizations. All 3 ACs verified: no raw literal, arb-parity full, he-locale test passes."
     },
     {
       "id": "AUD-onboarding-06",
