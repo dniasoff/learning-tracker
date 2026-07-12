@@ -48,23 +48,4 @@ class CalendarCycleDao extends DatabaseAccessor<ContentDatabase>
             )
             ..orderBy([(t) => OrderingTerm.asc(t.dateKey)]))
           .get();
-
-  // ── Legacy method names kept for backward compatibility ──────────────
-
-  /// Deprecated: use [getEntry] instead.
-  Future<CalendarCycle?> getCycleForProgramAndDate(
-    String programKey,
-    String dateKey,
-  ) => getEntry(programKey, dateKey);
-
-  /// Deprecated: use [getEntriesForDate] instead.
-  Future<List<CalendarCycle>> getCyclesForDate(String dateKey) =>
-      getEntriesForDate(dateKey);
-
-  /// Deprecated: use [getEntriesForRange] instead.
-  Future<List<CalendarCycle>> getCyclesForDateRange(
-    String programKey,
-    String startDate,
-    String endDate,
-  ) => getEntriesForRange(programKey, startDate, endDate);
 }

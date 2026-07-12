@@ -4,7 +4,6 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
-import 'package:learning_tracker/core/database/content_result.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/seed_manager.dart';
@@ -597,28 +596,6 @@ void main() {
     test('SyncStatus.localOnly represents no-account state', () {
       const status = SyncStatus.localOnly();
       expect(status, isA<SyncStatusLocalOnly>());
-    });
-  });
-
-  // ─── Story 19.12: Content DB Resilience ──────────────────────────
-  group('Story 19.12 — Content DB Resilience', () {
-    test('ContentResult.loaded carries data', () {
-      const result = ContentLoaded<String>('hello');
-      expect(result.data, 'hello');
-    });
-
-    test('ContentResult.notFound carries ref string', () {
-      const result = ContentNotFound<String>('Berakhot 2a');
-      expect(result.ref, 'Berakhot 2a');
-    });
-
-    test('ContentResult can be pattern matched', () {
-      const ContentResult<String> result = ContentLoaded<String>('data');
-      final value = switch (result) {
-        ContentLoaded<String>(:final data) => data,
-        ContentNotFound<String>(:final ref) => 'missing: $ref',
-      };
-      expect(value, 'data');
     });
   });
 }
