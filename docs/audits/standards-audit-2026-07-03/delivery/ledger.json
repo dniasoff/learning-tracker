@@ -5839,13 +5839,18 @@
   {
    "id": "AUD-progress-12",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Localize the hardcoded 'Curriculum settings' tooltip in curriculum_progress_screen.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "70df5ada5b53dfbe6c74111ff7dd3e916ed081f6"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-progress-12 AC1 OK: make arb-parity exit 0 (1430 EN keys in HE); curriculumProgressSettingsTooltip present in app_en.arb + app_he.arb (genuine HE translation)",
+    "AUD-progress-12 AC2 OK: curriculum_progress_screen.dart:76 `tooltip: l10n.curriculumProgressSettingsTooltip,` (l10n=AppLocalizations.of(context)! L41), not a literal"
+   ],
+   "notes": "Confirmed hardcoded 'Curriculum settings' tooltip at curriculum_progress_screen.dart:76. Added ARB key curriculumProgressSettingsTooltip (EN+HE), regenerated l10n via gen-l10n, switched tooltip: to l10n getter. Red-first test added, confirmed failing pre-fix, passing post-fix. Both ACs met."
   },
   {
    "id": "AUD-tracks-18",
