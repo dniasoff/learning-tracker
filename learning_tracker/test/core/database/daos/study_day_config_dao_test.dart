@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/dao_invariant_error.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
 import '../../../helpers/drift_memory.dart';
@@ -86,15 +87,20 @@ void main() {
         },
       );
 
-      test(
-        'seedDefaultsForTrack throws StateError when track not found',
-        () async {
-          expect(
-            () => db.studyDayConfigDao.seedDefaultsForTrack(trackId: 9999),
-            throwsA(isA<StateError>()),
-          );
-        },
-      );
+      test('seedDefaultsForTrack throws a typed DaoInvariantError with a '
+          'stable code, not a raw English message, when track not found '
+          '(AUD-core-database-14, EH-5)', () async {
+        expect(
+          () => db.studyDayConfigDao.seedDefaultsForTrack(trackId: 9999),
+          throwsA(
+            isA<DaoInvariantError>().having(
+              (e) => e.code,
+              'code',
+              DaoErrorCode.studyDayTrackNotFound,
+            ),
+          ),
+        );
+      });
     });
 
     group('getConfigsByCurriculumAndProfile / watch', () {

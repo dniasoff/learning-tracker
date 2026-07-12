@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/daos/dao_invariant_error.dart';
 import 'package:learning_tracker/core/database/tables/learning_ledger.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -27,10 +28,9 @@ class LearningLedgerDao extends DatabaseAccessor<UserDatabase>
     // ulid must be present for the dedup to have triggered — look the row
     // up by (profileId, ulid) and return its id.
     if (!entry.ulid.present) {
-      throw StateError(
-        'INSERT OR IGNORE collided but the companion has no ulid set — '
-        'cannot resolve the existing row id',
-      );
+      // AUD-core-database-14 (EH-5): stable code, not a pre-formatted
+      // English message.
+      throw DaoInvariantError(DaoErrorCode.ledgerInsertCollisionUnresolvable);
     }
     final row =
         await (select(learningLedger)

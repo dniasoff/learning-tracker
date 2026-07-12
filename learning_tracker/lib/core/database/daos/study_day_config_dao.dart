@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/daos/dao_invariant_error.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/tables/study_day_configs.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -243,9 +244,9 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
       curriculumTracks,
     )..where((t) => t.id.equals(trackId))).getSingleOrNull();
     if (track == null) {
-      throw StateError(
-        'Cannot seed study day defaults: curriculum_tracks row $trackId not found',
-      );
+      // AUD-core-database-14 (EH-5): stable code, not a pre-formatted
+      // English message. trackId carried as debugDetail for logs only.
+      throw DaoInvariantError(DaoErrorCode.studyDayTrackNotFound, trackId);
     }
     await seedDefaults(
       profileId: track.profileId,

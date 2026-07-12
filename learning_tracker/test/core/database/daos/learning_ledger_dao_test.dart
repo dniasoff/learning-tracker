@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' hide isNotNull, isNull;
+import 'package:drift/native.dart';
+import 'package:learning_tracker/core/database/daos/dao_invariant_error.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:test/test.dart';
 
@@ -58,6 +62,82 @@ void main() {
         );
 
         expect(id, greaterThan(0));
+      });
+
+      test('throws a typed DaoInvariantError with a stable code, not a raw '
+          'English message, when INSERT OR IGNORE collides and the '
+          'companion carries no ulid to resolve the existing row '
+          '(AUD-core-database-14, EH-5)', () async {
+        // sqlite's last_insert_rowid() (what Drift's runInsert reports as
+        // the "new" id) is connection-scoped and only updates on a
+        // genuinely successful insert — so reproducing the "collided,
+        // newId==0" branch honestly requires the colliding attempt to be
+        // the FIRST insert ever made on ITS OWN connection, against a row
+        // that already exists in the file from a prior connection/session
+        // (exactly the real-world shape: two app sessions sharing one
+        // on-disk DB — not achievable with a single shared in-memory `db`,
+        // where the id-1 row from setUp() already makes
+        // last_insert_rowid() nonzero).
+        final tempDir = await Directory.systemTemp.createTemp(
+          'learning_ledger_dao_collision_test_',
+        );
+        final dbFile = File('${tempDir.path}/collision_test.sqlite');
+        try {
+          final firstConn = UserDatabase(NativeDatabase(dbFile));
+          await seedProfile(firstConn);
+          final firstId = await firstConn.learningLedgerDao.insertEntry(
+            LearningLedgerCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishna',
+              entryScope: 'masechta',
+              unitIdentifier: 'Berakhot',
+              unitDisplayNameHe: 'ברכות',
+              unitDisplayNameEn: 'Berakhot',
+              trackType: 'personal',
+              completedAt: DateTime.utc(2026, 3, 1),
+              completionNumber: 1,
+              markedBy: 1,
+            ),
+          );
+          await firstConn.close();
+
+          // Fresh connection to the SAME file — its own
+          // last_insert_rowid() starts at 0. Re-inserting the same
+          // primary key id with no ulid collides (ignored, newId stays
+          // 0), and with no ulid present insertEntry cannot resolve which
+          // existing row the collision was against.
+          final secondConn = UserDatabase(NativeDatabase(dbFile));
+          try {
+            await expectLater(
+              secondConn.learningLedgerDao.insertEntry(
+                LearningLedgerCompanion(
+                  id: Value(firstId),
+                  profileId: const Value(1),
+                  curriculumId: const Value('mishna'),
+                  entryScope: const Value('masechta'),
+                  unitIdentifier: const Value('Berakhot'),
+                  unitDisplayNameHe: const Value('ברכות'),
+                  unitDisplayNameEn: const Value('Berakhot'),
+                  trackType: const Value('personal'),
+                  completedAt: Value(DateTime.utc(2026, 3, 1)),
+                  completionNumber: const Value(1),
+                  markedBy: const Value(1),
+                ),
+              ),
+              throwsA(
+                isA<DaoInvariantError>().having(
+                  (e) => e.code,
+                  'code',
+                  DaoErrorCode.ledgerInsertCollisionUnresolvable,
+                ),
+              ),
+            );
+          } finally {
+            await secondConn.close();
+          }
+        } finally {
+          if (tempDir.existsSync()) await tempDir.delete(recursive: true);
+        }
       });
 
       test('auto-sets createdAt when not provided', () async {

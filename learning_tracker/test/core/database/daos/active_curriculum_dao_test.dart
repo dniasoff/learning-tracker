@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/dao_invariant_error.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
@@ -42,19 +43,24 @@ void main() {
       },
     );
 
-    test(
-      'attempting to deactivate the last curriculum throws an error',
-      () async {
-        // Activate only Mishnayos
-        await database.activeCurriculumDao.activate(CurriculumId.mishnayos);
+    test('attempting to deactivate the last curriculum throws a typed '
+        'DaoInvariantError with a stable code, not a raw English message '
+        '(AUD-core-database-14, EH-5)', () async {
+      // Activate only Mishnayos
+      await database.activeCurriculumDao.activate(CurriculumId.mishnayos);
 
-        // Try to deactivate it
-        expect(
-          () => database.activeCurriculumDao.deactivate(CurriculumId.mishnayos),
-          throwsA(isA<StateError>()),
-        );
-      },
-    );
+      // Try to deactivate it
+      expect(
+        () => database.activeCurriculumDao.deactivate(CurriculumId.mishnayos),
+        throwsA(
+          isA<DaoInvariantError>().having(
+            (e) => e.code,
+            'code',
+            DaoErrorCode.lastActiveCurriculum,
+          ),
+        ),
+      );
+    });
 
     test('isActive returns true for active curriculum', () async {
       await database.activeCurriculumDao.activate(CurriculumId.bavli);

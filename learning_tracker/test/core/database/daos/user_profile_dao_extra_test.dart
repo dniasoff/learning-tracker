@@ -2,6 +2,7 @@
 // UserTierX.fromDb, and findByTier (uncovered lines 21-24 and 54-62).
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/dao_invariant_error.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -31,9 +32,22 @@ void main() {
       expect(UserTierX.fromDb('localBorn'), UserTier.localBorn);
     });
 
-    test('throws StateError for unknown value', () {
-      expect(() => UserTierX.fromDb('unknown'), throwsStateError);
-    });
+    test(
+      'throws a typed DaoInvariantError with a stable code, not a raw '
+      'English message, for an unknown value (AUD-core-database-14, EH-5)',
+      () {
+        expect(
+          () => UserTierX.fromDb('unknown'),
+          throwsA(
+            isA<DaoInvariantError>().having(
+              (e) => e.code,
+              'code',
+              DaoErrorCode.unknownAccountTier,
+            ),
+          ),
+        );
+      },
+    );
   });
 
   // =========================================================================
@@ -77,7 +91,16 @@ void main() {
             ),
           );
 
-      expect(() => account.accountTier, throwsStateError);
+      expect(
+        () => account.accountTier,
+        throwsA(
+          isA<DaoInvariantError>().having(
+            (e) => e.code,
+            'code',
+            DaoErrorCode.unknownAccountTier,
+          ),
+        ),
+      );
     });
   });
 
