@@ -9,7 +9,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/curriculum_summary_card.dart';
-import 'package:learning_tracker/features/dashboard/presentation/widgets/points_summary_widget.dart';
+// points_summary_widget.dart was deleted (dead-code purge, AUD-dashboard-04).
 // todays_tasks_widget.dart was deleted in W1.21 (dead-code purge).
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
@@ -193,11 +193,7 @@ void main() {
                     maxStreak: 42,
                     userMode: ProfileMode.child,
                   ),
-                  const SizedBox(height: 12),
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
-                    child: PointsSummaryWidget(totalPoints: 1247),
-                  ),
+                  // PointsSummaryWidget removed (dead code, AUD-dashboard-04).
                   // TodaysTasksWidget removed (widget deleted W1.21)
                   const SizedBox(height: 12),
                   FilledButton.icon(
