@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/points_balance_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -522,5 +523,62 @@ void main() {
         reason: 'balance must reflect exactly one credit, not two',
       );
     });
+  });
+
+  group('PointsLedger.redemptionId FK (AUD-core-database-09)', () {
+    test(
+      'inserting a PointsLedger row with a bogus redemptionId fails',
+      () async {
+        // No reward_redemptions row with id 999999 exists on this profile
+        // (or at all) — before schema v35 this comment-only "FK" let the
+        // insert through silently.
+        await expectLater(
+          db
+              .into(db.pointsLedger)
+              .insert(
+                PointsLedgerCompanion.insert(
+                  profileId: 1,
+                  entryKind: 'redemption_debit',
+                  delta: -5,
+                  redemptionId: const Value(999999),
+                  createdAt: DateTime.utc(2026, 7, 12),
+                ),
+              ),
+          throwsException,
+          reason:
+              'redemptionId now carries a real FK to reward_redemptions.id '
+              '— a bogus id must be rejected at the DB layer',
+        );
+      },
+    );
+
+    test(
+      'inserting a PointsLedger row with a real redemptionId succeeds',
+      () async {
+        final redemption = await db.pointsBalanceDao.createRedemption(
+          profileId: 1,
+          rewardTitle: 'Ice cream',
+          iconIndex: 0,
+          pointsCost: 0,
+        );
+        expect(redemption, isNotNull);
+
+        // Confirms the FK does not reject legitimate references — only
+        // bogus ones — matching production usage in
+        // PointsBalanceDao.createRedemption/declineRedemption.
+        final id = await db
+            .into(db.pointsLedger)
+            .insert(
+              PointsLedgerCompanion.insert(
+                profileId: 1,
+                entryKind: 'redemption_debit',
+                delta: -5,
+                redemptionId: Value(redemption!.id),
+                createdAt: DateTime.utc(2026, 7, 12),
+              ),
+            );
+        expect(id, greaterThan(0));
+      },
+    );
   });
 }
