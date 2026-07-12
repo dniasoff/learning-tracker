@@ -160,9 +160,9 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
-          text:
-              'Learning Scope — '
-              '${curriculumLabelText(ref, curriculum: widget.curriculumId)}',
+          text: AppLocalizations.of(context)!.scopeSelectionTitle(
+            curriculumLabelText(ref, curriculum: widget.curriculumId),
+          ),
         ),
         actions: [
           TextButton(
@@ -207,8 +207,10 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
           ),
           subtitle: Text(
             _selectAll
-                ? 'All content is included'
-                : 'Only selected sections are tracked',
+                ? AppLocalizations.of(context)!.scopeSelectionAllContentIncluded
+                : AppLocalizations.of(
+                    context,
+                  )!.scopeSelectionOnlySelectedTracked,
           ),
           value: _selectAll,
           onChanged: (value) {
@@ -227,9 +229,9 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
           // Level selection
           if (_selectedLevel == null) ...[
             ListTile(
-              title: const Text(
-                'Select Scope Level',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              title: Text(
+                AppLocalizations.of(context)!.scopeSelectionSelectScopeLevel,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
                 AppLocalizations.of(
@@ -242,7 +244,9 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
               ListTile(
                 title: Text(_labelForLevel(level)),
                 subtitle: Text(
-                  '${_getDistinctValuesAtLevel(allItems, level).length} options',
+                  AppLocalizations.of(context)!.scopeSelectionOptionsCount(
+                    _getDistinctValuesAtLevel(allItems, level).length,
+                  ),
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
@@ -287,16 +291,18 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
         if (_selectedValues.isNotEmpty) ...[
           const Divider(height: 32),
           ListTile(
-            title: const Text(
-              'Summary',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            title: Text(
+              AppLocalizations.of(context)!.scopeSelectionSummary,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             subtitle: Text(_renderSelectedValues()),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              '${_countLeafItems(allItems)} items will be tracked',
+              AppLocalizations.of(
+                context,
+              )!.scopeSelectionItemsWillBeTracked(_countLeafItems(allItems)),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
@@ -414,19 +420,17 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
 
     if (mounted) {
       // Render values BEFORE pop() while `ref` is still valid; the
-      // "Scope updated:" frame is structural English, but the VALUES honour
-      // Hebrew Terms + nusach.
+      // "Scope updated:" frame is localized, and the VALUES honour Hebrew
+      // Terms + nusach.
       final renderedValues = _renderSelectedValues();
+      final localizations = AppLocalizations.of(context)!;
+      final message = _selectAll
+          ? localizations.scopeSelectionScopeSetEntireCurriculum
+          : localizations.scopeSelectionScopeUpdated(renderedValues);
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _selectAll
-                ? 'Scope set to entire curriculum'
-                : 'Scope updated: $renderedValues',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }

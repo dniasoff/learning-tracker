@@ -1402,6 +1402,38 @@
   "scopeSelectionTrackEntireCurriculum": "עקוב אחר כל קורס הלימוד",
   "scopeSelectionChooseHierarchyLevel": "בחרו לפי איזה רמת היררכיה לסנן",
   "scopeSelectionChangeLevel": "שנה רמה",
+  "scopeSelectionTitle": "היקף הלימוד — {curriculum}",
+  "@scopeSelectionTitle": {
+    "description": "AppBar title on the scope-selection screen. {curriculum} is the human-readable curriculum name.",
+    "placeholders": {
+      "curriculum": { "type": "String" }
+    }
+  },
+  "scopeSelectionAllContentIncluded": "כל התוכן כלול",
+  "scopeSelectionOnlySelectedTracked": "רק הקטעים שנבחרו נעקבים",
+  "scopeSelectionSelectScopeLevel": "בחרו רמת היקף",
+  "scopeSelectionSummary": "סיכום",
+  "scopeSelectionOptionsCount": "{count, plural, one{אפשרות 1} other{{count} אפשרויות}}",
+  "@scopeSelectionOptionsCount": {
+    "description": "Subtitle on a hierarchy-level tile showing how many distinct values exist at that level.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "scopeSelectionItemsWillBeTracked": "{count, plural, one{פריט אחד ייעקב} other{{count} פריטים ייעקבו}}",
+  "@scopeSelectionItemsWillBeTracked": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "scopeSelectionScopeSetEntireCurriculum": "ההיקף הוגדר לכל קורס הלימוד",
+  "scopeSelectionScopeUpdated": "ההיקף עודכן: {values}",
+  "@scopeSelectionScopeUpdated": {
+    "description": "Save-confirmation SnackBar shown after saving a subset scope. {values} is the comma-joined list of rendered selected scope values.",
+    "placeholders": {
+      "values": { "type": "String" }
+    }
+  },
 
   "curriculumSettingsLoadingProgram": "טוען תוכנית...",
   "curriculumSettingsProgramTitle": "תוכנית",
@@ -1416,6 +1448,14 @@
   "curriculumSettingsDontSeeProgram": "לא רואים את התוכנית שלכם?",
   "curriculumSettingsRequestProgram": "בקשו תוכנית חדשה",
   "curriculumSettingsCustomSchedule": "לוח זמנים מותאם",
+  "curriculumSettingsTitle": "הגדרות - {curriculum}",
+  "@curriculumSettingsTitle": {
+    "description": "AppBar title on the per-curriculum settings screen. {curriculum} is the human-readable curriculum name.",
+    "placeholders": {
+      "curriculum": { "type": "String" }
+    }
+  },
+  "curriculumSettingsCopy": "העתק",
   "curriculumSettingsProgramLabel": "תוכנית: {name}",
   "@curriculumSettingsProgramLabel": {
     "description": "List tile title showing the active learning program name. {name} is the human-readable program label.",
