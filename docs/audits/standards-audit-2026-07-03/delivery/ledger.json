@@ -7283,13 +7283,18 @@
   {
    "id": "AUD-core-email-02",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Localize TransactionalEmail subject/body strings before wiring a real email provider",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d88686e4e180abf86561aa54bfeb9d96138888f4"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-email-02 AC1 OK: get_issue DNI-400 is a real Backlog ticket that explicitly gates cutover ('Do not wire...until this is closed'); not fabricated.",
+    "AUD-core-email-02 AC2 OK: future-conditional 'Once implemented' AC deferred by finding design; substance captured in DNI-400 ACs (recipient-locale, ARB x5, HE test)."
+   ],
+   "notes": "Evidence re-verified unchanged. P3/deferred-scope: filed real Linear ticket DNI-400 (verified via API) gating provider cutover on localized templates, AC mirrors finding's AC2. Extended WAKE-UP NOTICE + TODO(DNI-400) on getters. No behavior change."
   },
   {
    "id": "AUD-core-ids-02",
