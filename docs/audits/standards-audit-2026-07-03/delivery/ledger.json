@@ -533,13 +533,20 @@
   {
    "id": "AUD-core-database-05",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Wrap TrackLearningOrderDao.upsertOrder's per-row insert loop and its repository call sites in one transaction/batch",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d274c0d48bd542249755a3c11e4bbd83d5ef17e8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-05 AC1 OK: upsertOrder is now `await batch((b){for(...) b.insert(...)})`, single batch, no awaited per-row loop",
+    "AUD-core-database-05 AC2 OK: save/save/reset each wrap order-write+stampReorderAt in _database.transaction() (repo_impl.dart)",
+    "AUD-core-database-05 AC3 OK: SQLite trigger fault-injection tests assert zero rows on mid-batch fail + rollback on stamp fail; pass",
+    "AUD-core-database-05 AC4 OK: check_db_dao_loop_writes.dart added (audit 38/39); fixture-flip test proves exit1 on reverted loop, exit0 clean"
+   ],
+   "notes": "Confirmed matches evidence. upsertOrder now one db.batch() (DB-3); save/reset wrap order-write+stampReorderAt in db.transaction() (DB-2). Red-first via real SQLite trigger fault-injection. Scoped Rule-0 checker (audit check 38) + fixture-flip test. Commit 474d4e51."
   },
   {
    "id": "AUD-core-database-03",
@@ -4900,13 +4907,18 @@
   {
    "id": "AUD-core-database-07",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Stop catching StateError (an Error subtype) in user_profile_dao.dart's AccountX.accountTier getter",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d274c0d48bd542249755a3c11e4bbd83d5ef17e8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-07 AC1 OK: accountTier is now `=> UserTierX.fromDb(tier)`, on-StateError handler removed (user_profile_dao.dart)",
+    "AUD-core-database-07 AC2 OK: test inserts tier='notARealTier' and asserts throwsA(DaoInvariantError), not silent localBorn; passes"
+   ],
+   "notes": "Confirmed matched evidence. Removed silent `on StateError -> localBorn` swallow in AccountX.accountTier; error now propagates. Red-first test: unrecognized tier row now throws. Commit 6b0438a1."
   },
   {
    "id": "AUD-core-sync-21",
@@ -5956,13 +5968,18 @@
   {
    "id": "AUD-core-database-14",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace human-readable English StateError messages with stable codes in the DAO layer",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d274c0d48bd542249755a3c11e4bbd83d5ef17e8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-14 AC1 OK: 4 named sites throw DaoInvariantError(code) via new dao_invariant_error.dart",
+    "AUD-core-database-14 AC2 OK: check_dao_stateerror_messages.dart added (audit 39/39); fixture-flip test proves exit1 on reverted StateError"
+   ],
+   "notes": "Confirmed all 4 named sites (5th, archiveByProfile, unnamed/out-of-scope, untouched). Added DaoErrorCode+DaoInvariantError; sites throw it not English text. Red-first assertions per site. Scoped Rule-0 checker (audit check 39) + fixture-flip test. Commit 2c2e69f9."
   },
   {
    "id": "AUD-t-cross-58",
