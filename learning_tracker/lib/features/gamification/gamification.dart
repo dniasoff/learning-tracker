@@ -3,5 +3,25 @@
 // Import this barrel (features/gamification/gamification.dart) from outside
 // this feature. Do NOT import deep paths directly.
 //
-// Populated in Wave 5 (W5.x) — gamification domain and streak cleanup.
+// AUD-gamification-18: this file previously declared itself the feature's
+// public surface but exported nothing — every external caller (dashboard,
+// learning, notifications, sync, content_browsing) reached into
+// features/gamification/** via deep imports instead. Populated with the
+// symbols those callers actually use, per Rule 2 of coding-standards.md
+// (the Y.dart barrel is the only sanctioned re-export file per feature).
 library gamification;
+
+// ── Domain models ──────────────────────────────────────────────────────
+export 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
+export 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+
+// ── Domain services ─────────────────────────────────────────────────────
+export 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
+export 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
+
+// ── Presentation widgets ────────────────────────────────────────────────
+export 'package:learning_tracker/features/gamification/presentation/widgets/achievement_unlock_celebration.dart';
+export 'package:learning_tracker/features/gamification/presentation/widgets/gamification_route_push_guard.dart';
+
+// ── Streak read path ────────────────────────────────────────────────────
+export 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
