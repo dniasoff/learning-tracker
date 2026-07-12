@@ -71,6 +71,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep up the great work on your learning goals';
 
   @override
+  String get activeTracksPreviousTrack => 'Previous track';
+
+  @override
+  String get activeTracksNextTrack => 'Next track';
+
+  @override
   String get activeTrackNextTask => 'NEXT TASK';
 
   @override

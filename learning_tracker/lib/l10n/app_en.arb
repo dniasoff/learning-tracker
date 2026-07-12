@@ -24,6 +24,14 @@
   "activeCurricula": "Active Curricula",
   "activeTracks": "Active tracks",
   "activeTracksSubtitle": "Keep up the great work on your learning goals",
+  "activeTracksPreviousTrack": "Previous track",
+  "@activeTracksPreviousTrack": {
+    "description": "Accessibility label (AX-3) for the icon-only carousel control on the Dashboard's Active Tracks section that pages back to the previous track."
+  },
+  "activeTracksNextTrack": "Next track",
+  "@activeTracksNextTrack": {
+    "description": "Accessibility label (AX-3) for the icon-only carousel control on the Dashboard's Active Tracks section that pages forward to the next track."
+  },
   "activeTrackNextTask": "NEXT TASK",
   "activeTrackCurrentFocus": "CURRENT FOCUS",
   "activeTrackPaceAhead": "Ahead {days}d",

@@ -212,6 +212,18 @@ abstract class AppLocalizations {
   /// **'Keep up the great work on your learning goals'**
   String get activeTracksSubtitle;
 
+  /// Accessibility label (AX-3) for the icon-only carousel control on the Dashboard's Active Tracks section that pages back to the previous track.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous track'**
+  String get activeTracksPreviousTrack;
+
+  /// Accessibility label (AX-3) for the icon-only carousel control on the Dashboard's Active Tracks section that pages forward to the next track.
+  ///
+  /// In en, this message translates to:
+  /// **'Next track'**
+  String get activeTracksNextTrack;
+
   /// No description provided for @activeTrackNextTask.
   ///
   /// In en, this message translates to:
