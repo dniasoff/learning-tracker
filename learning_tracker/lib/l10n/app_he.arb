@@ -1968,6 +1968,7 @@
       "error": { "type": "String" }
     }
   },
+  "curriculumProgressSettingsTooltip": "הגדרות קורס הלימוד",
 
   "tierLensRecentActivity": "פעילות אחרונה",
   "@tierLensRecentActivity": {

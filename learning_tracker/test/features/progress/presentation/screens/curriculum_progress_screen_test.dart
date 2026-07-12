@@ -611,4 +611,62 @@ void main() {
       );
     },
   );
+
+  // AUD-progress-12 regression: the settings-gear IconButton's `tooltip:`
+  // parameter was a hard-coded English literal ('Curriculum settings'),
+  // so a Hebrew-locale user long-pressing the gear saw English in an
+  // otherwise fully-Hebrew screen. It must come from the
+  // `curriculumProgressSettingsTooltip` ARB key instead.
+  testWidgets('AUD-progress-12: settings gear tooltip comes from l10n, not a '
+      'hard-coded literal', (tester) async {
+    final repo = _FakeContentRepository(leaves);
+    final router = _RecordingRouter([]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userDatabaseProvider.overrideWith((ref) => db),
+          contentRepositoryProvider.overrideWithValue(repo),
+          activeProfileIdProvider.overrideWith(
+            () => _ProfileIdOverride(_profileId),
+          ),
+          useHebrewTermsProvider.overrideWith(
+            () => _UseHebrewTermsOverride(useHebrew: false),
+          ),
+          stageDefinitionRepositoryProvider.overrideWith((ref, c) => stageRepo),
+        ],
+        child: MaterialApp(
+          locale: const Locale('he'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: StackRouterScope(
+            controller: router,
+            stateHash: 0,
+            child: const CurriculumProgressScreen(curriculumId: _curriculumKey),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Under the he locale the settings gear tooltip must render the
+    // Hebrew ARB value, not the English literal. A hard-coded English
+    // literal would fail this assertion.
+    expect(
+      find.byTooltip('הגדרות קורס הלימוד'),
+      findsOneWidget,
+      reason:
+          'AUD-progress-12: the settings gear tooltip must come from the '
+          'curriculumProgressSettingsTooltip ARB key so Hebrew-locale '
+          'users see a localized tooltip, not the English literal '
+          '"Curriculum settings".',
+    );
+    expect(
+      find.byTooltip('Curriculum settings'),
+      findsNothing,
+      reason:
+          'AUD-progress-12: the English literal tooltip must not appear '
+          'when locale is he.',
+    );
+  });
 }

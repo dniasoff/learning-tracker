@@ -6945,6 +6945,12 @@ abstract class AppLocalizations {
   /// **'Failed to load progress: {error}'**
   String curriculumProgressLoadFailed(String error);
 
+  /// Tooltip for the settings gear IconButton in CurriculumProgressScreen's AppBar, which navigates to CurriculumSettingsRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Curriculum settings'**
+  String get curriculumProgressSettingsTooltip;
+
   /// Lens label for the engagement tier (live-only completions) — Recent Activity screen and Progress hub tile.
   ///
   /// In en, this message translates to:

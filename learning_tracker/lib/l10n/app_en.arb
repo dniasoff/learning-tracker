@@ -2253,6 +2253,10 @@
       "error": { "type": "String" }
     }
   },
+  "curriculumProgressSettingsTooltip": "Curriculum settings",
+  "@curriculumProgressSettingsTooltip": {
+    "description": "Tooltip for the settings gear IconButton in CurriculumProgressScreen's AppBar, which navigates to CurriculumSettingsRoute."
+  },
 
   "tierLensRecentActivity": "Recent Activity",
   "@tierLensRecentActivity": {
