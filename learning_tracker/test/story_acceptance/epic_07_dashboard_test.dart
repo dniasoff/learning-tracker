@@ -4,7 +4,6 @@ library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, tearDown, test;
 import 'package:learning_tracker/core/database/daos/completion_dao.dart'
@@ -14,12 +13,11 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/features/dashboard/presentation/widgets/curriculum_summary_card.dart';
 // points_summary_widget.dart was deleted (dead-code purge, AUD-dashboard-04).
+// curriculum_summary_card.dart was deleted (dead-code purge, AUD-dashboard-03).
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/delta_value.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
@@ -459,48 +457,6 @@ void main() {
     );
 
     // --- Widget tests ---
-
-    testWidgets(
-      'CurriculumSummaryCard renders name, percentage, and pace indicator',
-      (tester) async {
-        var tapped = false;
-        await tester.pumpWidget(
-          ProviderScope(
-            child: MaterialApp(
-              home: Scaffold(
-                body: CurriculumSummaryCard(
-                  summary: CurriculumSummary(
-                    curriculumId: CurriculumId.mishnayos,
-                    completionPercentage: 0.75,
-                    paceStatus: const PaceStatus(
-                      status: PaceStatusType.ahead,
-                      daysDelta: 3,
-                      delta: DateScheduleDelta(DateDelta(3)),
-                      rollingAverage: 2.0,
-                    ),
-                    nextDueItem: 'Berachos 1:1',
-                    todayTaskCount: 5,
-                    lastCompletionAt: DateTime.utc(2026, 3, 16),
-                  ),
-                  onTap: () => tapped = true,
-                ),
-              ),
-            ),
-          ),
-        );
-
-        // Allow the core/preferences Hebrew-terms async load to propagate.
-        await tester.pumpAndSettle();
-
-        expect(find.text('משניות'), findsOneWidget);
-        expect(find.text('75% complete'), findsOneWidget);
-        expect(find.text('Next: Berachos 1:1'), findsOneWidget);
-        expect(find.byIcon(Icons.trending_up), findsOneWidget);
-
-        await tester.tap(find.byType(CurriculumSummaryCard));
-        expect(tapped, isTrue);
-      },
-    );
 
     testWidgets('StreakWidget displays animated variant in child mode', (
       tester,
