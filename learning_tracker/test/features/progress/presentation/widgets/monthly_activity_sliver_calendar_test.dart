@@ -21,6 +21,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // ── Fixture helpers ───────────────────────────────────────────────────────────
 
@@ -65,6 +66,8 @@ List<MonthlyActivityRollup> _tenYearsFixture() =>
 // ── Widget wrapper ────────────────────────────────────────────────────────────
 
 Widget _wrap(Widget child) => MaterialApp(
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
   home: Scaffold(body: SizedBox(height: 600, child: child)),
 );
 

@@ -2704,6 +2704,25 @@
   "@recentActivityEmptyState": {
     "description": "Empty-state message shown in the Recent Activity charts when the selected time-range/curriculum filter yields no live completions (charts would otherwise be blank/zeroed)."
   },
+  "monthlyActivityCalendarNoData": "No activity data",
+  "@monthlyActivityCalendarNoData": {
+    "description": "AUD-progress-11: empty-state fallback shown by MonthlyActivitySliverCalendar when it is given no rollup rows."
+  },
+  "monthlyActivityCalendarMonthHeader": "{month}  —  {activeDays, plural, =1{1 active day} other{{activeDays} active days}}",
+  "@monthlyActivityCalendarMonthHeader": {
+    "description": "AUD-progress-11: sticky month header in MonthlyActivitySliverCalendar. {month} is the already-localized month/year label (e.g. 'May 2026'); ICU plural on {activeDays} avoids '1 days'.",
+    "placeholders": {
+      "month": { "type": "String" },
+      "activeDays": { "type": "int" }
+    }
+  },
+  "monthlyActivityCalendarCompletionsCount": "{count, plural, =1{1 completion} other{{count} completions}}",
+  "@monthlyActivityCalendarCompletionsCount": {
+    "description": "AUD-progress-11: completions-count phrase on the compact summary card in MonthlyActivitySliverCalendar. ICU plural avoids '1 completions'.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
 
   "redeemScreenTitle": "Redeem Prizes",
   "redeemScreenBalance": "Your Balance",
