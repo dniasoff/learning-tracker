@@ -217,6 +217,14 @@
   "ctaAddLearningTrack": "Add a learning track",
   "ctaCreateProfileFirst": "Create a learner profile first, then add a track.",
   "commonDismiss": "Dismiss",
+  "commonLabelWithValue": "{label}: {value}",
+  "@commonLabelWithValue": {
+    "description": "Generic 'label: value' composition used where a localized label is paired with a value (e.g. a points count) instead of concatenating raw strings in code.",
+    "placeholders": {
+      "label": {"type": "String"},
+      "value": {"type": "String"}
+    }
+  },
   "alreadyHaveAccount": "Already have an account?",
   "whatsYourName": "What's your name?",
   "adult": "Adult",

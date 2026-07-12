@@ -834,6 +834,12 @@ abstract class AppLocalizations {
   /// **'Dismiss'**
   String get commonDismiss;
 
+  /// Generic 'label: value' composition used where a localized label is paired with a value (e.g. a points count) instead of concatenating raw strings in code.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}: {value}'**
+  String commonLabelWithValue(String label, String value);
+
   /// No description provided for @alreadyHaveAccount.
   ///
   /// In en, this message translates to:

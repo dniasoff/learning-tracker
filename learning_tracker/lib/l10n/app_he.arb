@@ -211,6 +211,13 @@
   "ctaAddLearningTrack": "הוסיפו מסלול לימוד",
   "ctaCreateProfileFirst": "צרו תחילה פרופיל לומד, ואז הוסיפו מסלול.",
   "commonDismiss": "סגירה",
+  "commonLabelWithValue": "{label}: {value}",
+  "@commonLabelWithValue": {
+    "placeholders": {
+      "label": {"type": "String"},
+      "value": {"type": "String"}
+    }
+  },
   "alreadyHaveAccount": "כבר יש לך חשבון?",
   "whatsYourName": "מה השם שלך?",
   "adult": "מבוגר",

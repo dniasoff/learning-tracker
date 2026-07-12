@@ -22,6 +22,7 @@ class PointsDisplayWidget extends ConsumerWidget {
 
     final globalPoints = ref.watch(globalPointsProvider);
     final breakdown = ref.watch(curriculumBreakdownProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return globalPoints.when(
       data: (total) => Column(
@@ -46,8 +47,10 @@ class PointsDisplayWidget extends ConsumerWidget {
                   .map(
                     (e) => Chip(
                       label: Text(
-                        '${curriculumLabelText(ref, curriculum: e.key)}: '
-                        '${e.value}',
+                        l10n.commonLabelWithValue(
+                          curriculumLabelText(ref, curriculum: e.key),
+                          '${e.value}',
+                        ),
                       ),
                     ),
                   )

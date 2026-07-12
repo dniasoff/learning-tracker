@@ -418,6 +418,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get commonDismiss => 'סגירה';
 
   @override
+  String commonLabelWithValue(String label, String value) {
+    return '$label: $value';
+  }
+
+  @override
   String get alreadyHaveAccount => 'כבר יש לך חשבון?';
 
   @override
