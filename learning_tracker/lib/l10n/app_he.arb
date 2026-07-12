@@ -1297,6 +1297,11 @@
   "schedulerPickDeadlineFirst": "בחרו דד-ליין קודם.",
   "schedulerDaysLabel": "ימים",
   "schedulerWeeksLabel": "שבועות",
+  "schedulerHebrewDatePickerTitle": "בחר תאריך עברי",
+  "schedulerHebrewYearLabel": "שנה עברית",
+  "schedulerHebrewMonthFieldLabel": "חודש",
+  "schedulerHebrewDayFieldLabel": "יום",
+  "schedulerHebrewDateEnglishPreview": "אנגלי: {date}",
 
   "profilesEditLabel": "ערוך",
   "profilesDeleteLabel": "מחק",

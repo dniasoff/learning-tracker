@@ -2767,6 +2767,23 @@ class AppLocalizationsHe extends AppLocalizations {
   String get schedulerWeeksLabel => 'שבועות';
 
   @override
+  String get schedulerHebrewDatePickerTitle => 'בחר תאריך עברי';
+
+  @override
+  String get schedulerHebrewYearLabel => 'שנה עברית';
+
+  @override
+  String get schedulerHebrewMonthFieldLabel => 'חודש';
+
+  @override
+  String get schedulerHebrewDayFieldLabel => 'יום';
+
+  @override
+  String schedulerHebrewDateEnglishPreview(String date) {
+    return 'אנגלי: $date';
+  }
+
+  @override
   String get profilesEditLabel => 'ערוך';
 
   @override

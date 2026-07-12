@@ -4887,6 +4887,36 @@ abstract class AppLocalizations {
   /// **'Weeks'**
   String get schedulerWeeksLabel;
 
+  /// Dialog title for the Hebrew date picker opened from the goal-deadline field when the Hebrew-date toggle is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Hebrew date'**
+  String get schedulerHebrewDatePickerTitle;
+
+  /// Label above the year stepper in the Hebrew date picker dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Hebrew year'**
+  String get schedulerHebrewYearLabel;
+
+  /// Floating label on the month dropdown field in the Hebrew date picker dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get schedulerHebrewMonthFieldLabel;
+
+  /// Floating label on the day dropdown field in the Hebrew date picker dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get schedulerHebrewDayFieldLabel;
+
+  /// Preview line in the Hebrew date picker dialog showing the equivalent Gregorian (civil) date for the currently selected Hebrew date. {date} is a pre-formatted, locale-aware date string.
+  ///
+  /// In en, this message translates to:
+  /// **'English: {date}'**
+  String schedulerHebrewDateEnglishPreview(String date);
+
   /// No description provided for @profilesEditLabel.
   ///
   /// In en, this message translates to:

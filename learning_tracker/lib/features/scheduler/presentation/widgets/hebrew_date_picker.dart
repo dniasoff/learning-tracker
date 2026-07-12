@@ -105,6 +105,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final media = MediaQuery.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final months = _getMonths();
     final maxDay = _daysInMonth();
     final effectiveDay = _hebrewDay > maxDay ? maxDay : _hebrewDay;
@@ -147,7 +148,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Select Hebrew date',
+                        l10n.schedulerHebrewDatePickerTitle,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: AppTheme.brandInk,
@@ -173,7 +174,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                 const SizedBox(height: 8),
                 // Year
                 Text(
-                  'Hebrew year',
+                  l10n.schedulerHebrewYearLabel,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppTheme.brandInkMuted,
                     fontWeight: FontWeight.w700,
@@ -243,7 +244,9 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                         value: months.contains(_hebrewMonth)
                             ? _hebrewMonth
                             : months.first,
-                        decoration: _fieldDecoration('Month'),
+                        decoration: _fieldDecoration(
+                          l10n.schedulerHebrewMonthFieldLabel,
+                        ),
                         items: months.map((m) {
                           final name = HebrewCalendarUtils.getHebrewMonthName(
                             m,
@@ -273,7 +276,9 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                       child: DropdownButtonFormField<int>(
                         // ignore: deprecated_member_use
                         value: effectiveDay,
-                        decoration: _fieldDecoration('Day'),
+                        decoration: _fieldDecoration(
+                          l10n.schedulerHebrewDayFieldLabel,
+                        ),
                         items: List.generate(
                           maxDay,
                           (i) => DropdownMenuItem(
@@ -318,7 +323,14 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'English: ${HebrewCalendarUtils.formatEnglishDate(gregorian, locale: Localizations.localeOf(context).toString())}',
+                          l10n.schedulerHebrewDateEnglishPreview(
+                            HebrewCalendarUtils.formatEnglishDate(
+                              gregorian,
+                              locale: Localizations.localeOf(
+                                context,
+                              ).toString(),
+                            ),
+                          ),
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: AppTheme.brandInk,
                             fontWeight: FontWeight.w600,

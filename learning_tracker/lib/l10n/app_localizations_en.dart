@@ -2796,6 +2796,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schedulerWeeksLabel => 'Weeks';
 
   @override
+  String get schedulerHebrewDatePickerTitle => 'Select Hebrew date';
+
+  @override
+  String get schedulerHebrewYearLabel => 'Hebrew year';
+
+  @override
+  String get schedulerHebrewMonthFieldLabel => 'Month';
+
+  @override
+  String get schedulerHebrewDayFieldLabel => 'Day';
+
+  @override
+  String schedulerHebrewDateEnglishPreview(String date) {
+    return 'English: $date';
+  }
+
+  @override
   String get profilesEditLabel => 'Edit';
 
   @override

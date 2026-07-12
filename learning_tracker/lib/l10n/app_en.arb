@@ -1460,6 +1460,31 @@
   "schedulerPickDeadlineFirst": "Pick a deadline first.",
   "schedulerDaysLabel": "Days",
   "schedulerWeeksLabel": "Weeks",
+  "schedulerHebrewDatePickerTitle": "Select Hebrew date",
+  "@schedulerHebrewDatePickerTitle": {
+    "description": "Dialog title for the Hebrew date picker opened from the goal-deadline field when the Hebrew-date toggle is on."
+  },
+  "schedulerHebrewYearLabel": "Hebrew year",
+  "@schedulerHebrewYearLabel": {
+    "description": "Label above the year stepper in the Hebrew date picker dialog."
+  },
+  "schedulerHebrewMonthFieldLabel": "Month",
+  "@schedulerHebrewMonthFieldLabel": {
+    "description": "Floating label on the month dropdown field in the Hebrew date picker dialog."
+  },
+  "schedulerHebrewDayFieldLabel": "Day",
+  "@schedulerHebrewDayFieldLabel": {
+    "description": "Floating label on the day dropdown field in the Hebrew date picker dialog."
+  },
+  "schedulerHebrewDateEnglishPreview": "English: {date}",
+  "@schedulerHebrewDateEnglishPreview": {
+    "description": "Preview line in the Hebrew date picker dialog showing the equivalent Gregorian (civil) date for the currently selected Hebrew date. {date} is a pre-formatted, locale-aware date string.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
 
   "profilesEditLabel": "Edit",
   "profilesDeleteLabel": "Delete",
