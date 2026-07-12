@@ -1,3 +1,4 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -11,64 +12,50 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/stage_defi
     as domain_stage;
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
 
-/// Aggregated analytics data for the parent dashboard.
-class ParentDashboardData {
-  final List<ParentCurriculumSummary> curricula;
-  final int globalPoints;
-  final int currentStreak;
-  final int maxStreak;
-  final List<RecentCompletion> recentCompletions;
-  final EngagementMetrics engagement;
+part 'parent_dashboard_aggregator.freezed.dart';
 
-  const ParentDashboardData({
-    required this.curricula,
-    required this.globalPoints,
-    required this.currentStreak,
-    required this.maxStreak,
-    required this.recentCompletions,
-    required this.engagement,
-  });
+/// Aggregated analytics data for the parent dashboard.
+@freezed
+abstract class ParentDashboardData with _$ParentDashboardData {
+  const factory ParentDashboardData({
+    required List<ParentCurriculumSummary> curricula,
+    required int globalPoints,
+    required int currentStreak,
+    required int maxStreak,
+    required List<RecentCompletion> recentCompletions,
+    required EngagementMetrics engagement,
+  }) = _ParentDashboardData;
 }
 
 /// Per-curriculum summary for the parent dashboard.
-class ParentCurriculumSummary {
-  final CurriculumId curriculum;
-  final double completionPercentage;
-  final PaceStatusType paceStatus;
-  final int points;
-
-  const ParentCurriculumSummary({
-    required this.curriculum,
-    required this.completionPercentage,
-    required this.paceStatus,
-    required this.points,
-  });
+@freezed
+abstract class ParentCurriculumSummary with _$ParentCurriculumSummary {
+  const factory ParentCurriculumSummary({
+    required CurriculumId curriculum,
+    required double completionPercentage,
+    required PaceStatusType paceStatus,
+    required int points,
+  }) = _ParentCurriculumSummary;
 }
 
 /// A recent completion event for display.
-class RecentCompletion {
-  final String sefariaRef;
-  final String curriculumId;
-  final DateTime completedAt;
-  final int points;
-
-  const RecentCompletion({
-    required this.sefariaRef,
-    required this.curriculumId,
-    required this.completedAt,
-    required this.points,
-  });
+@freezed
+abstract class RecentCompletion with _$RecentCompletion {
+  const factory RecentCompletion({
+    required String sefariaRef,
+    required String curriculumId,
+    required DateTime completedAt,
+    required int points,
+  }) = _RecentCompletion;
 }
 
 /// Engagement metrics for the parent dashboard.
-class EngagementMetrics {
-  final int daysActiveThisWeek;
-  final double averageDailyCompletions;
-
-  const EngagementMetrics({
-    required this.daysActiveThisWeek,
-    required this.averageDailyCompletions,
-  });
+@freezed
+abstract class EngagementMetrics with _$EngagementMetrics {
+  const factory EngagementMetrics({
+    required int daysActiveThisWeek,
+    required double averageDailyCompletions,
+  }) = _EngagementMetrics;
 }
 
 /// A [LocalDayClock] fixed to a single instant.
