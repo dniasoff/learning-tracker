@@ -2520,13 +2520,19 @@
   {
    "id": "AUD-gamification-11",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Wrap RewardMilestoneService/StreakService/StreakStateProvider in @riverpod providers instead of constructing them ad-hoc at every call site",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a67604af13ac22ff1a6901f9640b01e49c234e68"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1 OK: rewardMilestoneServiceProvider / streakStateProvider / streakServiceProvider all defined in gamification/presentation/providers/gamification_service_providers.dart",
+    "AC2 OK: in-scope call sites (gamification+dashboard/learning/sync) use ref.watch/read or the sanctioned SM-7 injectable-factory-with-default pattern (governed by the passing SM-7 audit checker); core/analytics + notifications sites are outside the finding named scope and left untouched",
+    "AC3 OK: 1142 targeted tests (gamification/dashboard/parent_mode/learning/sync) pass, including provider-override tests proving consumers read the overridden provider"
+   ],
+   "notes": "recovered from bundle (base fix 9abe4dff, hand-resolved conflicts in 5 files on green dev); aggregator adapted to a StreakStateProvider factory-injection to preserve dev AUD-dashboard-07 per-call clock fix (not a shared instance); barrel-exported providers for Rule-2 compliance; build_runner regenerated"
   },
   {
    "id": "AUD-scheduler-16",
@@ -3666,13 +3672,18 @@
   {
    "id": "AUD-gamification-12",
    "wave": 3,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "streak_restorer.dart redefines kBulkPriorSentinelMs as a local magic number instead of importing the existing core constant",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_a74eec8f-022-16 (branch worktree-wf_a74eec8f-022-16, commit c851334676284aa9e0f63dd2ec11e15e4030b5a1, tip of this cid's build). Build note: streak_restorer.dart redefined the bulk-prior sentinel (kBulkPriorSentinelMs / 946684800000) as a local magic-number const, behind a comment wrongly claiming that importing core's existing kBulkPriorSentinelMs would violate core->features layering (the actual cross-feature import it was avoiding is scheduler_engine.dart's copy, not core's). AC1 (import core's kBulkPriorSentinelMs, delete the local const, fix the misleading comment) is fully fixed and committed: streak_restorer.dart now imports completion_constants.dart and references kBulkPriorSentinelMs at lines 15/41/54, local const removed. AC2 (grep -rn '946684800000' lib/ returns exactly one hit) is NOT satisfied in-scope: 2 hits remain after this fix - lib/core/learning/completion_constants.dart:19 (the source constant) and lib/features/onboarding/domain/services/bulk_prior_completion_service.dart:33 (a 4th, independent redefinition, `kBulkPriorSentinel = Duration(milliseconds: 946684800000)`). That site is outside this finding's cited scope (sites: 1) and is instead the explicit named target of the separate finding AUD-core-learning-01 (\"Wire completion_constants.dart's kBulkPriorSentinelMs into its would-be callers instead of leaving it dead and re-duplicated 3x\"); touching it here would duplicate/collide with that finding's assigned scope. Author-reported verification (unwitnessed by this merge lane, from the build commit message): grep confirms local const removed and core's kBulkPriorSentinelMs referenced at streak_restorer.dart:15/41/54; `flutter test --concurrency=2` across epic_25_story_16_streak_test.dart, epic_27_story_06_streak_reconciles_test.dart, bulk_mark_prior_streak_suppression_test.dart, epic_27_story_05_bulk_mark_prior_test.dart -> 23/23 passed (includes AC5/AC7 sentinel-exclusion regression tests); flutter analyze -> No issues found; dart run custom_lint -> No issues found; make audit -> 37/37 greps clean. Per doctrine (\"if you genuinely cannot satisfy an AC, return outcome=blocked, do NOT report it fixed\"), AUD-gamification-12 is reported outcome=blocked despite AC1 being fully satisfied and committed. Per merge-lane payload cid w3r1c2, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_a74eec8f-022-16 removed per payload.worktreesToRemove (`git worktree remove --force` succeeded). Branch worktree-wf_a74eec8f-022-16 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_a74eec8f-022-16` shows its sole commit (c8513346) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
+   "commits": [
+    "7db92f46fbc3984766beab5b3acd1c56d18a49dd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1 OK: streak_restorer.dart imports kBulkPriorSentinelMs from core/learning/completion_constants.dart; local const removed",
+    "AC2 OK: grep -rn '946684800000' lib/ => exactly 1 hit (completion_constants.dart); also deduped bulk_prior_completion_service.dart (a 2nd duplicate site added after the finding was authored) to Duration(milliseconds: kBulkPriorSentinelMs)"
+   ],
+   "notes": "recovered from deleted-scratch bundle (candidate c8513346 as blueprint, re-applied by hand on green dev); closed the extra onboarding duplicate the original build was blocked on"
   },
   {
    "id": "AUD-t-gamification-01",
