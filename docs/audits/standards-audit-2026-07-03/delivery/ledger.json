@@ -1190,13 +1190,13 @@
     {
       "id": "AUD-dashboard-01",
       "wave": 3,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Add semantic labels to the icon-only ArrowButton carousel controls (AX-3)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_99373b08-163-11 (branch worktree-wf_99373b08-163-11, commit 945f21cb49a67e0d1329eef64aa9e565e01a21c7) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: gave ArrowButton (used only by ActiveTracksCarouselSection) a required semanticLabel and wrapped its content in Semantics(label:, button: true, enabled: isEnabled, excludeSemantics: true), mirroring the existing streak-chip pattern in dashboard_body.dart (F-11); the two call sites in active_tracks_carousel_section.dart now pass new ARB-sourced labels l10n.activeTracksPreviousTrack / .activeTracksNextTrack (EN \"Previous track\"/\"Next track\", HE \"\u05d4\u05de\u05e1\u05dc\u05d5\u05dc \u05d4\u05e7\u05d5\u05d3\u05dd\"/\"\u05d4\u05de\u05e1\u05dc\u05d5\u05dc \u05d4\u05d1\u05d0\"), added key-for-key to app_en.arb/app_he.arb and regenerated via flutter gen-l10n. Red-first test active_tracks_carousel_a11y_test.dart added (EN test via tester.getSemantics per AC1, HE test for AC2), confirmed failing pre-fix (\"Found 0 widgets with a semantics label named \\\"\u05d4\u05de\u05e1\u05dc\u05d5\u05dc \u05d4\u05e7\u05d5\u05d3\u05dd\\\"\"), green after. Author-reported verification (unwitnessed by this merge lane): flutter analyze / custom_lint clean, make arb-parity clean (1431 keys), make audit 37/37 clean, flutter test on the touched dashboard widget tests all green. AC2's literal on-device TalkBack/VoiceOver pass was not run (no device in this headless worktree); disclosed by the author as a manual QA follow-up. Per merge-lane payload cid w3r0c9, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory was already removed from disk before this pass (tolerated); branch worktree-wf_99373b08-163-11 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_99373b08-163-11` shows commit 945f21cb as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
     },
     {
       "id": "AUD-sacred_time-03",
