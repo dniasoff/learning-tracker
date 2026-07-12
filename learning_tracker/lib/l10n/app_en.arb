@@ -3207,5 +3207,101 @@
   "programDescriptionPerekYomi": "One Mishnah perek per day.",
   "programDescriptionSeferHaMitzvot": "Daily study of the Rambam's Sefer HaMitzvot.",
   "programDescriptionShemiratHaLashon": "Daily study of the Chofetz Chaim's Shemirat HaLashon (companion to Chofetz Chaim Yomi).",
-  "programDescriptionPirkeiAvotSummer": "One perek of Pirkei Avot each Shabbos between Pesach and Rosh Hashana."
+  "programDescriptionPirkeiAvotSummer": "One perek of Pirkei Avot each Shabbos between Pesach and Rosh Hashana.",
+
+  "onboardingSetUpTrackTitle": "Set Up a Track",
+  "onboardingTrackReadyTitle": "Track Ready!",
+  "onboardingAllSetTitle": "All Set!",
+  "onboardingTrackReadyMessage": "Your track \"{trackLabel}\" is ready!",
+  "@onboardingTrackReadyMessage": {
+    "placeholders": {
+      "trackLabel": { "type": "String" }
+    }
+  },
+  "onboardingTrackCountSetUp": "{count, plural, one{You have 1 track set up.} other{You have {count} tracks set up.}}",
+  "@onboardingTrackCountSetUp": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "onboardingHandoffFallbackName": "Your child",
+  "onboardingHandoffAllSetUp": "{name}'s learning is all set up",
+  "@onboardingHandoffAllSetUp": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "onboardingHandoffDeviceHint": "Hand the device to {name} to start learning",
+  "@onboardingHandoffDeviceHint": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "onboardingHandoffRewardsHint": "You can set up rewards later in Parent Mode",
+  "onboardingParentPinFallbackChildName": "your child",
+  "onboardingPinReenterSubtitle": "Re-enter the PIN to confirm",
+
+  "bulkMarkCannotUnmarkAllError": "You must leave at least some content unmarked to continue learning.",
+  "bulkMarkSearchHint": "Search content...",
+  "bulkMarkCompletionRecordsCount": "{count, plural, one{1 completion record will be created} other{{count} completion records will be created}}",
+  "@bulkMarkCompletionRecordsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "wizardHowDoesChildReview": "How does {childName} review?",
+  "@wizardHowDoesChildReview": {
+    "placeholders": {
+      "childName": { "type": "String" }
+    }
+  },
+  "wizardHowDoYouReview": "How do you review?",
+  "wizardFollowProgramTitle": "Follow a program",
+  "wizardProgramsAvailableCount": "{count, plural, one{1 program available} other{{count} programs available}}",
+  "@wizardProgramsAvailableCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "wizardCustomScheduleSubtitle": "Build your own review cycle",
+  "wizardNoFormalReviewTitle": "No formal review",
+  "wizardNoFormalReviewSubtitle": "Just track learning progress",
+  "wizardWhatProgramDoesChildFollow": "What program does {childName} follow?",
+  "@wizardWhatProgramDoesChildFollow": {
+    "placeholders": {
+      "childName": { "type": "String" }
+    }
+  },
+  "wizardSelectAProgram": "Select a program",
+  "wizardHowManyReviewRounds": "How many review rounds?",
+  "wizardEachRoundIntervalsSubtitle": "Each round reviews the material at increasing intervals",
+  "wizardChazarahRoundsCount": "{count, plural, one{1 round} other{{count} rounds}}",
+  "@wizardChazarahRoundsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "wizardSetDelayForEachRound": "Set delay for each round",
+  "wizardHowLongBeforeReview": "How long after learning before each review?",
+  "wizardReviewYourSchedule": "Review your schedule",
+  "wizardDailyNewMaterial": "Daily new material",
+  "wizardEveryDaysLabel": "Every {days}",
+  "@wizardEveryDaysLabel": {
+    "placeholders": {
+      "days": { "type": "String" }
+    }
+  },
+  "wizardRoundDelayAfterLearning": "{days, plural, one{1 day after learning} other{{days} days after learning}}",
+  "@wizardRoundDelayAfterLearning": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "wizardRoundDelayAfter": "{days, plural, one{1 day after} other{{days} days after}}",
+  "@wizardRoundDelayAfter": {
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  }
 }

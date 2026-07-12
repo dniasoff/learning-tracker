@@ -88,14 +88,13 @@ class _OnboardingParentPinStepState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final childName = widget.childName.isNotEmpty
         ? widget.childName
-        : 'your child';
+        : l10n.onboardingParentPinFallbackChildName;
     final subtitle = switch (_pinStep) {
-      PinStep.confirmPin => 'Re-enter the PIN to confirm',
-      PinStep.enterPin =>
-        'Set a 4-digit PIN to access parent controls for $childName. '
-            'The PIN is stored only on this device.',
+      PinStep.confirmPin => l10n.onboardingPinReenterSubtitle,
+      PinStep.enterPin => l10n.setParentPinDialogSubtitle(childName),
     };
 
     return SafeArea(
@@ -122,8 +121,8 @@ class _OnboardingParentPinStepState
                 const SizedBox(height: 32),
                 PinEntryWidget(
                   title: switch (_pinStep) {
-                    PinStep.confirmPin => 'Confirm PIN',
-                    PinStep.enterPin => 'Enter New PIN',
+                    PinStep.confirmPin => l10n.tutorPinSetupConfirmLabel,
+                    PinStep.enterPin => l10n.enterNewPin,
                   },
                   errorMessage: _pinError,
                   onPinComplete: switch (_pinStep) {

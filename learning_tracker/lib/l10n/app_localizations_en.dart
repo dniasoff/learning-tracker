@@ -5404,4 +5404,167 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get programDescriptionPirkeiAvotSummer =>
       'One perek of Pirkei Avot each Shabbos between Pesach and Rosh Hashana.';
+
+  @override
+  String get onboardingSetUpTrackTitle => 'Set Up a Track';
+
+  @override
+  String get onboardingTrackReadyTitle => 'Track Ready!';
+
+  @override
+  String get onboardingAllSetTitle => 'All Set!';
+
+  @override
+  String onboardingTrackReadyMessage(String trackLabel) {
+    return 'Your track \"$trackLabel\" is ready!';
+  }
+
+  @override
+  String onboardingTrackCountSetUp(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'You have $count tracks set up.',
+      one: 'You have 1 track set up.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get onboardingHandoffFallbackName => 'Your child';
+
+  @override
+  String onboardingHandoffAllSetUp(String name) {
+    return '$name\'s learning is all set up';
+  }
+
+  @override
+  String onboardingHandoffDeviceHint(String name) {
+    return 'Hand the device to $name to start learning';
+  }
+
+  @override
+  String get onboardingHandoffRewardsHint =>
+      'You can set up rewards later in Parent Mode';
+
+  @override
+  String get onboardingParentPinFallbackChildName => 'your child';
+
+  @override
+  String get onboardingPinReenterSubtitle => 'Re-enter the PIN to confirm';
+
+  @override
+  String get bulkMarkCannotUnmarkAllError =>
+      'You must leave at least some content unmarked to continue learning.';
+
+  @override
+  String get bulkMarkSearchHint => 'Search content...';
+
+  @override
+  String bulkMarkCompletionRecordsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count completion records will be created',
+      one: '1 completion record will be created',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String wizardHowDoesChildReview(String childName) {
+    return 'How does $childName review?';
+  }
+
+  @override
+  String get wizardHowDoYouReview => 'How do you review?';
+
+  @override
+  String get wizardFollowProgramTitle => 'Follow a program';
+
+  @override
+  String wizardProgramsAvailableCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count programs available',
+      one: '1 program available',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get wizardCustomScheduleSubtitle => 'Build your own review cycle';
+
+  @override
+  String get wizardNoFormalReviewTitle => 'No formal review';
+
+  @override
+  String get wizardNoFormalReviewSubtitle => 'Just track learning progress';
+
+  @override
+  String wizardWhatProgramDoesChildFollow(String childName) {
+    return 'What program does $childName follow?';
+  }
+
+  @override
+  String get wizardSelectAProgram => 'Select a program';
+
+  @override
+  String get wizardHowManyReviewRounds => 'How many review rounds?';
+
+  @override
+  String get wizardEachRoundIntervalsSubtitle =>
+      'Each round reviews the material at increasing intervals';
+
+  @override
+  String wizardChazarahRoundsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rounds',
+      one: '1 round',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get wizardSetDelayForEachRound => 'Set delay for each round';
+
+  @override
+  String get wizardHowLongBeforeReview =>
+      'How long after learning before each review?';
+
+  @override
+  String get wizardReviewYourSchedule => 'Review your schedule';
+
+  @override
+  String get wizardDailyNewMaterial => 'Daily new material';
+
+  @override
+  String wizardEveryDaysLabel(String days) {
+    return 'Every $days';
+  }
+
+  @override
+  String wizardRoundDelayAfterLearning(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days after learning',
+      one: '1 day after learning',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String wizardRoundDelayAfter(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days after',
+      one: '1 day after',
+    );
+    return '$_temp0';
+  }
 }

@@ -808,7 +808,10 @@ void main() {
 
       // Confirmation phase
       expect(find.text('Confirm Bulk Mark'), findsOneWidget);
-      expect(find.text('1 items'), findsOneWidget);
+      // AUD-onboarding-04: itemCount now renders via the shared itemsCount()
+      // ICU plural (l10n) instead of a hand-built "$itemCount items" literal,
+      // so a single item correctly reads "1 Item" (not the old "1 items").
+      expect(find.text('1 Item'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Confirm'), findsOneWidget);
       expect(find.widgetWithText(OutlinedButton, 'Back'), findsOneWidget);
 
