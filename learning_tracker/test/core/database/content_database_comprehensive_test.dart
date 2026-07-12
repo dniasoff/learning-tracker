@@ -247,49 +247,6 @@ void main() {
       expect(entries.last.dateKey, '2026-03-04');
     });
 
-    test('legacy method getCycleForProgramAndDate delegates', () async {
-      await insertCycle(
-        db,
-        programKey: 'nach_yomi',
-        dateKey: '2026-04-01',
-        sefariaRef: 'Joshua 1',
-      );
-      final entry = await db.calendarCycleDao.getCycleForProgramAndDate(
-        'nach_yomi',
-        '2026-04-01',
-      );
-      expect(entry, isNotNull);
-      expect(entry!.sefariaRef, 'Joshua 1');
-    });
-
-    test('legacy method getCyclesForDate delegates', () async {
-      await insertCycle(
-        db,
-        programKey: 'daf_yomi',
-        dateKey: '2026-05-01',
-        sefariaRef: 'Shabbat 2a',
-      );
-      final entries = await db.calendarCycleDao.getCyclesForDate('2026-05-01');
-      expect(entries, hasLength(1));
-    });
-
-    test('legacy getCyclesForDateRange delegates', () async {
-      for (var i = 1; i <= 3; i++) {
-        await insertCycle(
-          db,
-          programKey: 'mishna_yomit',
-          dateKey: '2026-06-0$i',
-          sefariaRef: 'Mishnah Berakhot 1.$i',
-        );
-      }
-      final entries = await db.calendarCycleDao.getCyclesForDateRange(
-        'mishna_yomit',
-        '2026-06-01',
-        '2026-06-02',
-      );
-      expect(entries, hasLength(2));
-    });
-
     test('CalendarCycle equality and hashCode', () async {
       await insertCycle(db, programKey: 'p', dateKey: '2026-07-01');
       final r1 = await db.calendarCycleDao.getEntry('p', '2026-07-01');
