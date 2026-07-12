@@ -4668,6 +4668,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get acceptInviteGenericError => 'לא ניתן לאשר את ההזמנה. נסו שוב.';
 
   @override
+  String get acceptInvitePreconditionError =>
+      'לא ניתן עוד לאשר הזמנה זו. ייתכן שפג תוקפה או שכבר נעשה בה שימוש.';
+
+  @override
   String get unexpectedError => 'אירעה שגיאה בלתי צפויה.';
 
   @override
@@ -4698,6 +4702,10 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get declineInviteGenericError => 'לא ניתן לדחות את ההזמנה. נסו שוב.';
+
+  @override
+  String get declineInvitePreconditionError =>
+      'לא ניתן עוד לדחות הזמנה זו. ייתכן שפג תוקפה או שכבר נעשה בה שימוש.';
 
   @override
   String get inviteTutorAppBarTitle => 'הזמנת מדריך';
@@ -4945,6 +4953,10 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get tutorPinIncorrect => 'קוד שגוי. נסו שוב.';
+
+  @override
+  String get tutorPinValidationMalformed =>
+      'קוד המדריך שלכם חייב להיות בדיוק 4 ספרות.';
 
   @override
   String tutorPinLockedOut(int minutes) {

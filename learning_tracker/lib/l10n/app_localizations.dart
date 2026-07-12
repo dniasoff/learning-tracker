@@ -7848,6 +7848,12 @@ abstract class AppLocalizations {
   /// **'Unable to accept invite. Please try again.'**
   String get acceptInviteGenericError;
 
+  /// No description provided for @acceptInvitePreconditionError.
+  ///
+  /// In en, this message translates to:
+  /// **'This invite can no longer be accepted. It may have expired or already been used.'**
+  String get acceptInvitePreconditionError;
+
   /// No description provided for @unexpectedError.
   ///
   /// In en, this message translates to:
@@ -7907,6 +7913,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to decline invite. Please try again.'**
   String get declineInviteGenericError;
+
+  /// No description provided for @declineInvitePreconditionError.
+  ///
+  /// In en, this message translates to:
+  /// **'This invite can no longer be declined. It may have expired or already been used.'**
+  String get declineInvitePreconditionError;
 
   /// No description provided for @inviteTutorAppBarTitle.
   ///
@@ -8351,6 +8363,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Incorrect PIN. Please try again.'**
   String get tutorPinIncorrect;
+
+  /// No description provided for @tutorPinValidationMalformed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Tutor PIN must be exactly 4 numeric digits.'**
+  String get tutorPinValidationMalformed;
 
   /// No description provided for @tutorPinLockedOut.
   ///

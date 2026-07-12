@@ -85,7 +85,38 @@ final class TutorGrantFailure extends TutorGrantResult {
   final String? code;
 }
 
+/// AUD-tutoring-02 (EH-5): stable failure category for
+/// [TutorGrantPreconditionError]. A local precondition guard must never carry
+/// a pre-formatted human-readable message baked with the grant id/state — an
+/// English sentence renders raw and un-RTL-shaped to Hebrew-locale users.
+/// Presentation resolves the user-facing string for each code through
+/// `AppLocalizations`/ARB.
+enum TutorGrantPreconditionCode {
+  /// [InviteTutorUseCase]: the supplied tutor email is not validly shaped.
+  invalidTutorEmail,
+
+  /// [AcceptTutorInviteUseCase]: the grant is not in a state that can be
+  /// accepted (e.g. expired, already accepted/declined/revoked).
+  cannotAccept,
+
+  /// [DeclineTutorInviteUseCase]: the grant is not in a state that can be
+  /// declined.
+  cannotDecline,
+
+  /// [RescindTutorInviteUseCase]: the grant is not pending, so the parent
+  /// cannot rescind it.
+  cannotRescind,
+
+  /// [RevokeTutorGrantUseCase]: the grant is not active, so the parent
+  /// cannot revoke it.
+  cannotRevoke,
+
+  /// [ResignTutorGrantUseCase]: the grant is not active, so the tutor
+  /// cannot resign from it.
+  cannotResign,
+}
+
 final class TutorGrantPreconditionError extends TutorGrantResult {
-  const TutorGrantPreconditionError({required this.message});
-  final String message;
+  const TutorGrantPreconditionError({required this.code});
+  final TutorGrantPreconditionCode code;
 }

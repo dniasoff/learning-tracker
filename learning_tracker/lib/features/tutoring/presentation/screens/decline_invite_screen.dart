@@ -138,10 +138,13 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
               context,
             )!.declineInviteGenericError;
           });
-        case TutorGrantPreconditionError(:final message):
+        case TutorGrantPreconditionError(:final code):
           setState(() {
             _step = _DeclineStep.error;
-            _errorMessage = message;
+            _errorMessage = _preconditionErrorMessage(
+              code,
+              AppLocalizations.of(context)!,
+            );
           });
       }
     } catch (e) {
@@ -154,6 +157,25 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
         });
       }
     }
+  }
+
+  /// AUD-tutoring-02 (EH-5): resolve a [TutorGrantPreconditionCode] to a
+  /// localized, user-facing message. [TutorGrantPreconditionError] carries a
+  /// stable code, never a pre-formatted message — this exhaustive switch is
+  /// the single place that maps each code to user-facing text.
+  String _preconditionErrorMessage(
+    TutorGrantPreconditionCode code,
+    AppLocalizations l10n,
+  ) {
+    return switch (code) {
+      TutorGrantPreconditionCode.cannotDecline =>
+        l10n.declineInvitePreconditionError,
+      TutorGrantPreconditionCode.invalidTutorEmail ||
+      TutorGrantPreconditionCode.cannotAccept ||
+      TutorGrantPreconditionCode.cannotRescind ||
+      TutorGrantPreconditionCode.cannotRevoke ||
+      TutorGrantPreconditionCode.cannotResign => l10n.declineInviteGenericError,
+    };
   }
 
   @override

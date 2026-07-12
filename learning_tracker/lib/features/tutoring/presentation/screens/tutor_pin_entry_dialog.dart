@@ -82,13 +82,31 @@ class _TutorPinVerificationDialogState
           _digits = '';
           _busy = false;
         });
-      case TutorPinValidationError(:final message):
+      case TutorPinValidationError(:final code):
+        // AUD-tutoring-09 (EH-5): the service carries a stable code, never a
+        // pre-formatted message — resolve it through AppLocalizations/ARB.
         setState(() {
           _digits = '';
-          _errorMessage = message;
+          _errorMessage = _validationErrorMessage(
+            code,
+            AppLocalizations.of(context)!,
+          );
           _busy = false;
         });
     }
+  }
+
+  /// AUD-tutoring-09 (EH-5): resolve a [TutorPinValidationCode] to a
+  /// localized, user-facing message. [TutorPinValidationError] carries a
+  /// stable code, never a pre-formatted message — this exhaustive switch is
+  /// the single place that maps each code to user-facing text.
+  String _validationErrorMessage(
+    TutorPinValidationCode code,
+    AppLocalizations l10n,
+  ) {
+    return switch (code) {
+      TutorPinValidationCode.malformedPin => l10n.tutorPinValidationMalformed,
+    };
   }
 
   void _appendDigit(String d) {

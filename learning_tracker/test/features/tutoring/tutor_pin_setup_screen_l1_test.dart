@@ -493,13 +493,16 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.resetPhysicalSize);
 
-        const validationMessage = 'Custom validation error';
-
+        // AC3 (AUD-tutoring-09): force the validation-error branch by having
+        // the (stub) service return TutorPinValidationError as it would for
+        // a malformed pin — the screen must resolve the stable code via
+        // AppLocalizations/ARB, never render a raw/hand-written message.
         await tester.pumpWidget(
           _buildHarness(
             stubService: _StubTutorPinService(
-              setResult: (_, __) async =>
-                  const TutorPinValidationError(message: validationMessage),
+              setResult: (_, __) async => const TutorPinValidationError(
+                code: TutorPinValidationCode.malformedPin,
+              ),
             ),
             onPinSet: () {},
           ),
@@ -514,9 +517,11 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         expect(
-          find.text(validationMessage),
+          find.text('Your Tutor PIN must be exactly 4 numeric digits.'),
           findsOneWidget,
-          reason: 'TutorPinValidationError.message must be shown as error text',
+          reason:
+              'TutorPinValidationError must resolve to the localized '
+              'tutorPinValidationMalformed string, not a raw message',
         );
         // Resets to step 1.
         expect(find.text('Create your Tutor PIN'), findsOneWidget);

@@ -679,12 +679,15 @@ void main() {
     );
 
     testWidgets(
-      'C5. TutorPinValidationError → shows the custom error message; stays open',
+      'C5. TutorPinValidationError → shows the localized malformed-PIN '
+      'error; stays open',
       (tester) async {
         setViewSize(tester);
         final mockService = _MockTutorPinService();
         final resultHolder = <Future<bool>>[];
 
+        // AUD-tutoring-09 (EH-5): the service carries a stable code, never a
+        // pre-formatted message — the dialog resolves it via l10n.
         when(
           () => mockService.verifyTutorPin(
             profileId: any<int>(named: 'profileId'),
@@ -692,7 +695,7 @@ void main() {
           ),
         ).thenAnswer(
           (_) async => const TutorPinValidationError(
-            message: 'Tutor PIN storage unavailable',
+            code: TutorPinValidationCode.malformedPin,
           ),
         );
 
@@ -709,10 +712,11 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         expect(
-          find.text('Tutor PIN storage unavailable'),
+          find.text('Your Tutor PIN must be exactly 4 numeric digits.'),
           findsAtLeastNWidgets(1),
           reason:
-              'C5: TutorPinValidationError.message must appear as error text',
+              'C5: TutorPinValidationError must resolve to the localized '
+              'tutorPinValidationMalformed string, not a raw message',
         );
         expect(find.text('Enter your Tutor PIN'), findsOneWidget);
         await _teardown(tester);

@@ -907,43 +907,51 @@ void main() {
       },
     );
 
-    testWidgets('TutorPinValidationError: shows the custom error message', (
-      tester,
-    ) async {
-      setViewSize(tester);
-      final mockService = _MockTutorPinService();
+    testWidgets(
+      'TutorPinValidationError: shows the localized malformed-PIN error',
+      (tester) async {
+        setViewSize(tester);
+        final mockService = _MockTutorPinService();
 
-      when(
-        () => mockService.verifyTutorPin(
-          profileId: any(named: 'profileId'),
-          rawPin: any(named: 'rawPin'),
-        ),
-      ).thenAnswer(
-        (_) async =>
-            const TutorPinValidationError(message: 'Custom validation msg'),
-      );
+        // AC3 (AUD-tutoring-09): force the validation-error branch by having
+        // the (mocked) service return TutorPinValidationError as it would
+        // for a malformed pin — the gate must resolve the stable code via
+        // AppLocalizations/ARB, never render a raw/hand-written message.
+        when(
+          () => mockService.verifyTutorPin(
+            profileId: any(named: 'profileId'),
+            rawPin: any(named: 'rawPin'),
+          ),
+        ).thenAnswer(
+          (_) async => const TutorPinValidationError(
+            code: TutorPinValidationCode.malformedPin,
+          ),
+        );
 
-      await tester.pumpWidget(
-        _buildHarness(
-          pinIsSet: const AsyncValue.data(true),
-          mockService: mockService,
-          onPinVerified: () {},
-          onCancel: () {},
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+        await tester.pumpWidget(
+          _buildHarness(
+            pinIsSet: const AsyncValue.data(true),
+            mockService: mockService,
+            onPinVerified: () {},
+            onCancel: () {},
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
-      await _enterPin(tester, '0000');
-      await tester.pump(const Duration(seconds: 1));
+        await _enterPin(tester, '0000');
+        await tester.pump(const Duration(seconds: 1));
 
-      expect(
-        find.text('Custom validation msg'),
-        findsAtLeastNWidgets(1),
-        reason: 'TutorPinValidationError.message must appear as error text',
-      );
-      await _teardown(tester);
-    });
+        expect(
+          find.text('Your Tutor PIN must be exactly 4 numeric digits.'),
+          findsAtLeastNWidgets(1),
+          reason:
+              'TutorPinValidationError must resolve to the localized '
+              'tutorPinValidationMalformed string, not a raw message',
+        );
+        await _teardown(tester);
+      },
+    );
   });
 
   // ── Lockout after N attempts ───────────────────────────────────────────────

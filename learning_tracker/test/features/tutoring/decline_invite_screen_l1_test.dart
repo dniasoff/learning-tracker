@@ -488,11 +488,12 @@ void main() {
 
   group('TutorGrantPreconditionError path', () {
     testWidgets('shows error heading and precondition message', (tester) async {
+      // AUD-tutoring-02 (EH-5): the use case carries a stable code, never a
+      // pre-formatted message baked with the grant id/state — the screen
+      // resolves it to the localized declineInvitePreconditionError string.
       when(() => mockUseCase.call(grant: any(named: 'grant'))).thenAnswer(
         (_) async => const TutorGrantPreconditionError(
-          message:
-              'Grant grant-pending-1 is not in a state that can be declined '
-              '(current state: declined).',
+          code: TutorGrantPreconditionCode.cannotDecline,
         ),
       );
 
@@ -506,12 +507,59 @@ void main() {
 
       expect(find.text('Could not decline invite'), findsOneWidget);
       expect(
-        find.textContaining('is not in a state that can be declined'),
+        find.text(
+          'This invite can no longer be declined. It may have expired or '
+          'already been used.',
+        ),
         findsOneWidget,
       );
 
       await _tearDown(tester);
     });
+
+    testWidgets(
+      'renders the Hebrew-localized TutorGrantPreconditionError string '
+      'under Locale(he)',
+      (tester) async {
+        // AC3 (AUD-tutoring-02): a Locale('he') variant confirms the Hebrew
+        // string renders — not the raw/hardcoded English precondition text.
+        when(() => mockUseCase.call(grant: any(named: 'grant'))).thenAnswer(
+          (_) async => const TutorGrantPreconditionError(
+            code: TutorGrantPreconditionCode.cannotDecline,
+          ),
+        );
+
+        await tester.pumpWidget(
+          _buildApp(
+            router: router,
+            useCase: mockUseCase,
+            grant: _pendingGrant(),
+            locale: const Locale('he'),
+          ),
+        );
+        await _pump(tester);
+
+        // declineInviteAppBarTitle and declineInviteConfirm share the same
+        // Hebrew string ("דחיית הזמנה") — scope the tap to the FilledButton
+        // (there is exactly one on the confirm step) to disambiguate from
+        // the AppBar title Text with the same content.
+        await tester.tap(find.widgetWithText(FilledButton, 'דחיית הזמנה'));
+        await _pump(tester);
+
+        expect(
+          find.text(
+            'לא ניתן עוד לדחות הזמנה זו. ייתכן שפג תוקפה או שכבר נעשה בה '
+            'שימוש.',
+          ),
+          findsOneWidget,
+          reason:
+              'declineInvitePreconditionError must resolve to the Hebrew '
+              'ARB string under Locale(he), never the raw English message',
+        );
+
+        await _tearDown(tester);
+      },
+    );
   });
 
   // ── 7. Unhandled exception → generic error ────────────────────────────────────
