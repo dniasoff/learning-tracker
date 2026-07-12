@@ -5447,13 +5447,17 @@
   {
    "id": "AUD-gamification-20",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Rename the domain StreakEvent so it stops colliding with Drift's generated StreakEvent row class",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "62868c8c0379466498f2830ce88758ed22fba3d8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1: grep 'class StreakEvent ' lib/ now -> 1 match (user_database.g.dart:8899, Drift). Domain class renamed to StreakLogEvent. Other StreakEvent* names are distinct pre-existing classes."
+   ],
+   "notes": "recovered from deleted-scratch bundle (built in prior wave-3 run, re-recovered on green dev; codegen regenerated where needed)"
   },
   {
    "id": "AUD-t-notifications-07",
@@ -6761,13 +6765,19 @@
   {
    "id": "AUD-notifications-12",
    "wave": 3,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace hardcoded hex Color literals with AppColors tokens in notifications UI",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_a74eec8f-022-59 (branch worktree-wf_a74eec8f-022-59, commit 1ca7143baf1e293fbf15c138d9cf64b5900fd261, tip of this cid's build) but the review agent was lost (quota) before opus review/merge could complete. Per merge-lane payload cid w3r1c22, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_a74eec8f-022-59 removed per payload.worktreesToRemove (`git worktree remove --force`). Branch worktree-wf_a74eec8f-022-59 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_a74eec8f-022-59` shows its sole commit (1ca7143b) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
+   "commits": [
+    "9d75700bb7d2411acdd2b129fd744472883e145a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1 (zero no_color_literal_outside_theme hits): scratch-run w/ temp custom_lint marker -- 2263-line real scan, other rules fired, zero matches for our rule; marker reverted.",
+    "Evidence check: grep 'Color(0x' on both evidence files returns zero hits.",
+    "Gates green: make audit 40/40; flutter analyze clean; flutter test notifications = +182 passed."
+   ],
+   "notes": "recovered from deleted-scratch bundle (built in prior wave-3 run, re-recovered on green dev; codegen regenerated where needed)"
   },
   {
    "id": "AUD-t-notifications-04",
@@ -7706,13 +7716,18 @@
   {
    "id": "AUD-gamification-22",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "RewardForm is a hand-written state class with no @freezed/== override, so Riverpod can never skip a rebuild on it",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "01f09699b08f5ea593945133a0bc5e1278468e2a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1 (equality unit test): added reward_form_test.dart, 5 tests incl. two non-const identical-field instances == and equal hashCode; targeted flutter test 94/94 pass.",
+    "AC2 (analyze/build_runner clean): build_runner build 0 errors; flutter analyze 'No issues found!'; make audit 40/40; dart run custom_lint 'No issues found!'."
+   ],
+   "notes": "recovered from deleted-scratch bundle (built in prior wave-3 run, re-recovered on green dev; codegen regenerated where needed)"
   },
   {
    "id": "AUD-gamification-15",
@@ -7829,13 +7844,17 @@
   {
    "id": "AUD-notifications-11",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Convert ReminderPreferences to @freezed instead of hand-rolled ==/hashCode/copyWith",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "f0dbe885adbd8d9347e0e03005a9d62040fbda73"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1 freezed file generates + tests pass unmodified: build_runner regenerated the file (byte-identical); deep test file confirmed unmodified via git diff; 263/263 tests pass."
+   ],
+   "notes": "recovered from deleted-scratch bundle (built in prior wave-3 run, re-recovered on green dev; codegen regenerated where needed)"
   },
   {
    "id": "AUD-t-notifications-05",
@@ -7976,13 +7995,18 @@
   {
    "id": "AUD-profiles-19",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace hardcoded English fallback strings in TutoredChildrenSection's error snackbars",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a0ead477d8ef7c0ad3a552835bee8faab0633eb9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1: no `?.<key> ?? '<literal>'` remains in tutored_children_section.dart; both sites now use `AppLocalizations.of(context)!.<key>` (lines 638, 653), grep-verified.",
+    "AC2: added make audit check 41/41 (grep for the idiom, scoped to lib/features/profiles/). Red-first verified: reintroduced pattern -> exit 2; restored fix -> exit 0, '41 greps clean'."
+   ],
+   "notes": "recovered from deleted-scratch bundle (built in prior wave-3 run, re-recovered on green dev; codegen regenerated where needed)"
   },
   {
    "id": "AUD-profiles-23",
