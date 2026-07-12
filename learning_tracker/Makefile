@@ -274,7 +274,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 40 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 41 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -692,7 +692,7 @@ audit: lint-rules-test ## Run all 40 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/dao_stateerror_messages_check.$$$$.log; \
 	fi; \
-	echo "40/40 — AX-2: no hardcoded literal passed to Text()/TextSpan(text:) under lib/features/**/presentation/** (AUD-account-05)"; \
+	echo "40/41 — AX-2: no hardcoded literal passed to Text()/TextSpan(text:) under lib/features/**/presentation/** (AUD-account-05)"; \
 	if ! dart run tool/check_hardcoded_presentation_text.dart > /tmp/ax2_hardcoded_text_check.$$$$.log 2>&1; then \
 	  cat /tmp/ax2_hardcoded_text_check.$$$$.log; \
 	  rm -f /tmp/ax2_hardcoded_text_check.$$$$.log; \
@@ -700,9 +700,18 @@ audit: lint-rules-test ## Run all 40 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/ax2_hardcoded_text_check.$$$$.log; \
 	fi; \
+	echo "41/41 — AX-2: no AppLocalizations.of(context)?.<key> ?? '<literal>' null-coalescing hardcoded-string fallback in lib/features/profiles/ presentation (AUD-profiles-19)"; \
+	for f in $$(grep -rlE "AppLocalizations\.of\(context\)\?\." lib/features/profiles --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"); do \
+	  if grep -Pzoq "AppLocalizations\.of\(context\)\?\.[A-Za-z0-9_]+\s*\?\?\s*\n?\s*'[^']*'" "$$f"; then \
+	    echo "  $$f: AppLocalizations.of(context)?.<key> ?? '<literal>' null-coalescing fallback — drop the ?? (use AppLocalizations.of(context)!) or route the fallback through a second ARB key:"; \
+	    grep -Pzo "AppLocalizations\.of\(context\)\?\.[A-Za-z0-9_]+\s*\?\?\s*\n?\s*'[^']*'" "$$f" | tr '\0' '\n' | sed 's/^/    /'; \
+	    FAIL=1; \
+	  fi; \
+	done; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 40 greps clean ==="; \
+	  echo "=== audit PASSED — all 41 greps clean ==="; \
 	fi

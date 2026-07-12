@@ -635,8 +635,7 @@ class _TutoredChildRow extends ConsumerWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  AppLocalizations.of(context)?.tutoredEntryPermissionDenied ??
-                      'Access denied — the grant may have been revoked.',
+                  AppLocalizations.of(context)!.tutoredEntryPermissionDenied,
                 ),
               ),
             );
@@ -651,10 +650,7 @@ class _TutoredChildRow extends ConsumerWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                  AppLocalizations.of(context)?.tutoredEntryError ??
-                      'Could not load talmid data. Please try again.',
-                ),
+                content: Text(AppLocalizations.of(context)!.tutoredEntryError),
               ),
             );
           }
