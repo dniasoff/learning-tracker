@@ -1034,6 +1034,41 @@ void main() {
         );
       },
     );
+
+    test(
+      'pushRewardRedemption overwrites updated_at (the field '
+      'RewardRedemptionMerger compares) with a server Timestamp',
+      () async {
+        final fs = createFakeFirestore(authenticatedUid: _uid);
+        await _gw(fs).pushRewardRedemption(
+          profileId: _profileId,
+          data: {
+            'ulid': 'REDEMPTION_LWW',
+            'status': 'pending',
+            'updated_at': clientClockValue,
+          },
+        );
+        final snap = await _subcollection(
+          fs,
+          _uid,
+          _profileId,
+          'reward_redemptions',
+        );
+        final raw = snap.docs.first.data()['updated_at'];
+        expect(
+          raw,
+          isA<Timestamp>(),
+          reason:
+              'updated_at must be a server Timestamp, not the '
+              'client-supplied ISO string',
+        );
+        expect(
+          (raw as Timestamp).toDate().toUtc(),
+          isNot(equals(DateTime.utc(2000, 1, 1))),
+          reason: 'the persisted value must not be the client-clock value',
+        );
+      },
+    );
   });
 
   // ── 3. Internal-key stripping ─────────────────────────────────────────────

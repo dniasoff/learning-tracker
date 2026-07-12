@@ -1247,6 +1247,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     await _guardPermission(
       () => ref.set({
         ..._stripInternalKeys(data),
+        // FB-2 (AUD-core-sync-13): RewardRedemptionMerger compares this
+        // document's `updated_at` for cross-device LWW — overwrite the
+        // caller's client-clock value with a server timestamp so a
+        // fast/skewed local clock can never make a stale redemption write
+        // silently beat a genuinely newer one from another device.
+        'updated_at': FieldValue.serverTimestamp(),
         'synced_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true)),
       collection: 'reward_redemptions',
