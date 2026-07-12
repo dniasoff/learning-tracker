@@ -1212,13 +1212,19 @@
     {
       "id": "AUD-sacred_time-02",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Localize CityPickerScreen's hardcoded English idle-hint text (_IdleHint)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "54848aaed190b62d9eb87c768ec72bc38b77216e"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-sacred_time-02 AC1 OK: cityPickerIdleHint in app_en.arb:1446 + app_he.arb:1283, used at city_picker_screen.dart:125 via AppLocalizations; generated getters present",
+        "AUD-sacred_time-02 AC2 OK: make arb-parity -> 'arb_parity_check OK, 1430 English keys all present in Hebrew'",
+        "AUD-sacred_time-02 AC3 OK: new he-locale test city_picker_screen_l1_test.dart:642 asserts Hebrew present + 'Start typing' findsNothing; run 20/20"
+      ],
+      "notes": "Re-verified: hardcoded English literal at line 125, no ARB key existed. Added cityPickerIdleHint to both ARBs, wired via AppLocalizations. Red-first: new he-locale test failed first (19 pass/1 fail) against unfixed widget, then fix applied, reran green (20/20). All 3 ACs verified directly."
     },
     {
       "id": "AUD-guardrails-03",
