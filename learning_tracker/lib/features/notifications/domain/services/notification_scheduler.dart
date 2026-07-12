@@ -55,7 +55,15 @@ class NotificationScheduler {
       fromDay: null,
     );
 
-    await service.scheduleBatchReminders(
+    // (AUD-notifications-04) Routed through the profile-0 block of the
+    // *ForProfile gateway API — the non-profile scheduleBatchReminders /
+    // cancelBatchReminders / cancelDailyReminder methods this used to call
+    // were deleted as dead code (WS5.per-profile's *ForProfile equivalents
+    // are the sole production call sites; see scheduleReminderForProfile
+    // below). Profile 0's ID block is numerically identical to the old
+    // singleton IDs (dailyReminderIdForProfile(0) == 0, etc.).
+    await service.scheduleBatchRemindersForProfile(
+      profileId: 0,
       fireTimes: fireTimes,
       title: title,
       body: body,
@@ -117,50 +125,6 @@ class NotificationScheduler {
         notificationType: 'daily_reminder',
       ),
     );
-  }
-
-  /// Legacy schedule method — kept for backwards compatibility with existing
-  /// providers and tests. Delegates to [scheduleReminder] with a generic body
-  /// that does NOT support locale.
-  ///
-  /// Prefer [scheduleReminder] for new call sites.
-  Future<void> schedule({
-    required TimeOfDay time,
-    required int taskCount,
-    required int curriculumCount,
-    SacredLocation? location,
-    bool inIsrael = false,
-  }) async {
-    final body =
-        'You have $taskCount '
-        'task${taskCount == 1 ? '' : 's'} across '
-        '$curriculumCount curricul${curriculumCount == 1 ? 'um' : 'a'} today';
-    await scheduleReminder(
-      time: time,
-      title: 'Learning Reminder',
-      body: body,
-      location: location,
-      inIsrael: inIsrael,
-    );
-  }
-
-  /// Schedule cancelled due to sacred time — fire suppression event.
-  ///
-  /// Fires [AnalyticsEvent.notificationSuppressedSacredTime] (Story 27.14).
-  Future<void> cancelForSacredTime() async {
-    await service.cancelBatchReminders();
-    await service.cancelDailyReminder();
-    unawaited(
-      _analytics.logNotificationSuppressedSacredTime(
-        notificationType: 'daily_reminder',
-      ),
-    );
-  }
-
-  /// Cancel all daily reminder notifications (legacy + batch).
-  Future<void> cancel() async {
-    await service.cancelDailyReminder();
-    await service.cancelBatchReminders();
   }
 
   /// Visible-for-testing: builds and returns the filtered list of

@@ -144,16 +144,6 @@ class _FakeNotificationGateway extends Fake implements NotificationGateway {
   Future<bool> requestPermission() async => permissionGranted;
 
   @override
-  Future<void> scheduleDailyReminder({
-    required int hour,
-    required int minute,
-    required String body,
-  }) async {}
-
-  @override
-  Future<void> cancelDailyReminder() async {}
-
-  @override
   Future<void> cancelStreakAlertForProfile(int profileId) async {}
 }
 

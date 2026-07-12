@@ -57,16 +57,17 @@ void main() {
         sacredWindowRepository: repository,
       );
 
+      // (AUD-notifications-04) scheduleReminder() now routes through the
+      // profile-0 block of the *ForProfile gateway API — the non-profile
+      // scheduleBatchReminders() it used to call was deleted as dead code.
       when(
-        () => mockService.scheduleBatchReminders(
+        () => mockService.scheduleBatchRemindersForProfile(
+          profileId: any(named: 'profileId'),
           fireTimes: any(named: 'fireTimes'),
           title: any(named: 'title'),
           body: any(named: 'body'),
         ),
       ).thenAnswer((_) async {});
-
-      when(() => mockService.cancelBatchReminders()).thenAnswer((_) async {});
-      when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
     });
 
     test('AC5 — Erev Shabbos, 19:30 EDT reminder → fire on Friday suppressed '
@@ -200,37 +201,36 @@ void main() {
       );
     });
 
-    test(
-      'scheduleReminder — calls scheduleBatchReminders with filtered list',
-      () async {
-        final location = SacredLocation(
-          latitude: lakewoodLat,
-          longitude: lakewoodLong,
-          source: SacredLocationSource.detected,
-          fixedAt: DateTime.utc(2026, 5, 1),
-        );
+    test('scheduleReminder — calls scheduleBatchRemindersForProfile with '
+        'filtered list', () async {
+      final location = SacredLocation(
+        latitude: lakewoodLat,
+        longitude: lakewoodLong,
+        source: SacredLocationSource.detected,
+        fixedAt: DateTime.utc(2026, 5, 1),
+      );
 
-        await scheduler.scheduleReminder(
-          time: const TimeOfDay(hour: 20, minute: 0),
-          title: 'Learning Reminder',
-          body: 'You have 3 tasks today',
-          location: location,
-          inIsrael: false,
-        );
+      await scheduler.scheduleReminder(
+        time: const TimeOfDay(hour: 20, minute: 0),
+        title: 'Learning Reminder',
+        body: 'You have 3 tasks today',
+        location: location,
+        inIsrael: false,
+      );
 
-        final captured = verify(
-          () => mockService.scheduleBatchReminders(
-            fireTimes: captureAny(named: 'fireTimes'),
-            title: any(named: 'title'),
-            body: any(named: 'body'),
-          ),
-        ).captured;
+      final captured = verify(
+        () => mockService.scheduleBatchRemindersForProfile(
+          profileId: 0,
+          fireTimes: captureAny(named: 'fireTimes'),
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+        ),
+      ).captured;
 
-        final fireTimes = captured.first as List<tz_lib.TZDateTime>;
-        // Should be ≤14 (may be fewer if some fall in Shabbos).
-        expect(fireTimes.length, lessThanOrEqualTo(14));
-      },
-    );
+      final fireTimes = captured.first as List<tz_lib.TZDateTime>;
+      // Should be ≤14 (may be fewer if some fall in Shabbos).
+      expect(fireTimes.length, lessThanOrEqualTo(14));
+    });
 
     test('SacredWindowRepository.invalidate clears cache', () {
       final location = SacredLocation(
