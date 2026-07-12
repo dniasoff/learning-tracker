@@ -3510,13 +3510,19 @@
   {
    "id": "AUD-dashboard-04",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or wire up dead widgets DashboardTaskItem and PointsSummaryWidget",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "c897bcde1a12030bff6d7af14398ced6b89ae8a9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-dashboard-04 AC1 OK: grep -rn both class names in lib/ returns no matches (exit 1); both widget source files deleted",
+    "AUD-dashboard-04 AC2 OK: orphaned refs removed same commit \u2014 store_screenshots_test.dart (usage+golden regen) & epic_07_dashboard_test.dart (import+testWidgets case)",
+    "AUD-dashboard-04 dead-code confirmed at base: DashboardTaskItem 0 call sites; PointsSummaryWidget only in the 2 edited test files"
+   ],
+   "notes": "Deleted DashboardTaskItem (0 call sites in lib/) and PointsSummaryWidget (superseded by DashboardLevelPointsCard) plus orphaned refs in store_screenshots_test.dart / epic_07_dashboard_test.dart; regenerated golden. grep for both class names in lib/ now returns no matches (AC met)."
   },
   {
    "id": "AUD-gamification-12",
