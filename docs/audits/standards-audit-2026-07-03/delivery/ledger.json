@@ -669,13 +669,17 @@
     {
       "id": "AUD-dashboard-02",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Guard ref.invalidate with a mounted check in SkippedOnboardingCtaBanner's dismiss handler",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "d3c8a1e111b6eda24ab7714feb898b18d3ef877e"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-dashboard-02 AC1 OK: test unmounts banner mid-await, asserts no exception; red-first verified (StateError at banner:165 w/o guard), green with line-165 guard"
+      ],
+      "notes": "Confirmed live: ref.invalidate after await with no mounted guard at line 165. Red test failed pre-fix with StateError from ConsumerStatefulElement._assertNotDisposed (confirms verify pass's correction). Added if(!context.mounted) return; matching line-146 pattern; test green."
     },
     {
       "id": "AUD-t-learning-01",
