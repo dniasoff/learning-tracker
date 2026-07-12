@@ -1,5 +1,5 @@
 /// `StreakReducer` — pure function that turns a sequence of
-/// [StreakEvent]s into the derived state `(currentStreak, maxStreak)`.
+/// [StreakLogEvent]s into the derived state `(currentStreak, maxStreak)`.
 ///
 /// Rules (Story 25.16 + D16 — LOCAL day boundaries, matching the rest of the
 /// app: `LocalDayClock`, the scheduler, and the streak-calendar feed which all
@@ -16,7 +16,7 @@
 library;
 
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 
 class StreakState {
   const StreakState({
@@ -50,7 +50,7 @@ class StreakReducer {
   /// pin a fixed UTC offset deterministically without depending on the host
   /// machine's timezone (the D16 regression contrasts local vs UTC bucketing).
   StreakState reduce(
-    Iterable<StreakEvent> events, {
+    Iterable<StreakLogEvent> events, {
     required DateTime today,
     DateTime Function(DateTime)? dayOf,
   }) {

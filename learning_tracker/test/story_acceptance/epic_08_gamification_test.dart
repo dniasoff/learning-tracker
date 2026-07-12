@@ -3,15 +3,14 @@
 library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
-import 'package:learning_tracker/core/database/user/user_database.dart'
-    hide StreakEvent;
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:test/test.dart';
 
@@ -184,7 +183,11 @@ void main() {
     // (post-DNI-337). Old `StreakService.recordCompletion` semantics
     // (incl. grace period) are gone; the reducer is UTC-day only.
     Future<void> recordOn(DateTime utc) => log.append(
-      StreakEvent(profileId: 1, eventType: 'completion', eventTimestamp: utc),
+      StreakLogEvent(
+        profileId: 1,
+        eventType: 'completion',
+        eventTimestamp: utc,
+      ),
     );
 
     test('three consecutive UTC days → streak=3 (no grace)', () async {

@@ -10,10 +10,9 @@
 /// Idempotent: re-running on a non-empty log is a no-op.
 library;
 
-import 'package:learning_tracker/core/database/user/user_database.dart'
-    hide StreakEvent;
-import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 
 class StreakRestorer {
   StreakRestorer(this._db) : _log = StreakEventLog(_db);
@@ -63,7 +62,7 @@ class StreakRestorer {
 
     for (final ts in firstPerDay.values) {
       await _log.append(
-        StreakEvent(
+        StreakLogEvent(
           profileId: profileId,
           eventType: 'completion',
           eventTimestamp: ts,

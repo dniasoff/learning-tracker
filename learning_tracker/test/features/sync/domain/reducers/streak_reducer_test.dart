@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 
 void main() {
   const reducer = StreakReducer();
   const profileId = 1;
 
-  /// Build a UTC [StreakEvent] of type `completion` on [day] (2026-based).
-  StreakEvent completion(DateTime day) => StreakEvent(
+  /// Build a UTC [StreakLogEvent] of type `completion` on [day] (2026-based).
+  StreakLogEvent completion(DateTime day) => StreakLogEvent(
     profileId: profileId,
     eventType: 'completion',
     eventTimestamp: DateTime.utc(day.year, day.month, day.day, 12),
@@ -68,12 +68,12 @@ void main() {
       '6 — multiple completions on the same day count as one streak day',
       () {
         final events = [
-          StreakEvent(
+          StreakLogEvent(
             profileId: profileId,
             eventType: 'completion',
             eventTimestamp: DateTime.utc(today.year, today.month, today.day, 8),
           ),
-          StreakEvent(
+          StreakLogEvent(
             profileId: profileId,
             eventType: 'completion',
             eventTimestamp: DateTime.utc(
@@ -92,7 +92,7 @@ void main() {
 
     test('7 — non-completion events are ignored', () {
       final events = [
-        StreakEvent(
+        StreakLogEvent(
           profileId: profileId,
           eventType: 'day_boundary',
           eventTimestamp: DateTime.utc(today.year, today.month, today.day, 0),
@@ -136,12 +136,12 @@ void main() {
         }
 
         final events = [
-          StreakEvent(
+          StreakLogEvent(
             profileId: profileId,
             eventType: 'completion',
             eventTimestamp: DateTime.utc(2026, 5, 12, 7), // Mon 23:00 PT
           ),
-          StreakEvent(
+          StreakLogEvent(
             profileId: profileId,
             eventType: 'completion',
             eventTimestamp: DateTime.utc(2026, 5, 12, 9), // Tue 01:00 PT
