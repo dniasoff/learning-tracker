@@ -145,5 +145,78 @@ void main() {
         },
       );
     });
+
+    // AUD-core-database-04: [clearAll] + [insertAll] must be atomic. The old
+    // caller pattern (`dao.clearAll().then((_) => dao.insertAll(...))`) ran
+    // them as two independent, unawaited statements — if the second step
+    // failed (or the process died) partway through, the table was left
+    // fully empty instead of holding the previous, still-valid rows.
+    // [replaceAll] wraps both steps in one `transaction()` so either both
+    // apply or neither does.
+    group('replaceAll', () {
+      test('clears and inserts atomically on the happy path', () async {
+        await db.sacredWindowDao.insertAll([makeRow(kind: 'shabbos')]);
+
+        await db.sacredWindowDao.replaceAll([
+          makeRow(kind: 'yomKippur'),
+          makeRow(kind: 'yomTov'),
+        ]);
+
+        final rows = await db.sacredWindowDao.getAll();
+        expect(rows, hasLength(2));
+        expect(rows.map((r) => r.kind).toSet(), {'yomKippur', 'yomTov'});
+      });
+
+      test('rolls back to the PREVIOUS rows when insertAll throws mid-write '
+          '(no empty-table window, no partial write)', () async {
+        // Seed the "previous", already-committed cache generation.
+        await db.sacredWindowDao.insertAll([makeRow(kind: 'shabbos')]);
+        final before = await db.sacredWindowDao.getAll();
+        expect(before, hasLength(1));
+
+        // The replacement batch has two rows sharing the same explicit
+        // primary key — the second insert inside the batch throws a
+        // genuine UNIQUE-constraint violation, reproducing a real
+        // mid-write insertAll failure (not a mocked/injected one).
+        final collidingEntries = [
+          SacredWindowEntriesCompanion.insert(
+            id: const Value(999),
+            startUtc: DateTime.utc(2026, 7, 1),
+            endUtc: DateTime.utc(2026, 7, 2),
+            kind: 'yomTov',
+            lat: const Value(31.7683),
+            lng: const Value(35.2137),
+            inIsrael: true,
+          ),
+          SacredWindowEntriesCompanion.insert(
+            id: const Value(999), // duplicate PK -> insertAll throws here
+            startUtc: DateTime.utc(2026, 7, 3),
+            endUtc: DateTime.utc(2026, 7, 4),
+            kind: 'yomKippur',
+            lat: const Value(31.7683),
+            lng: const Value(35.2137),
+            inIsrael: true,
+          ),
+        ];
+
+        await expectLater(
+          db.sacredWindowDao.replaceAll(collidingEntries),
+          throwsA(anything),
+        );
+
+        final after = await db.sacredWindowDao.getAll();
+        expect(
+          after,
+          hasLength(1),
+          reason:
+              'replaceAll must roll back atomically: a failure partway '
+              'through insertAll must restore the table to the PREVIOUS '
+              'committed rows, never leave it empty or partially written '
+              'with rows from the failed batch.',
+        );
+        expect(after.first.kind, equals(before.first.kind));
+        expect(after.first.id, equals(before.first.id));
+      });
+    });
   });
 }
