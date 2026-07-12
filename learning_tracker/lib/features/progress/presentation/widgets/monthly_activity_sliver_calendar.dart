@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Pure-Dart companion value object for the Drift-generated
 /// [MonthlyActivityRollup] row class.
@@ -103,7 +104,11 @@ class _MonthlyActivitySliverCalendarState
   @override
   Widget build(BuildContext context) {
     if (widget.rollups.isEmpty) {
-      return const Center(child: Text('No activity data'));
+      return Center(
+        child: Text(
+          AppLocalizations.of(context)!.monthlyActivityCalendarNoData,
+        ),
+      );
     }
 
     // Build the list of slivers: for each month we emit a header sliver and
@@ -190,8 +195,12 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
           children: [
             Expanded(
               child: Text(
-                '$monthLabel  —  ${rollup.activeDays} active '
-                '${rollup.activeDays == 1 ? 'day' : 'days'}',
+                AppLocalizations.of(
+                  context,
+                )!.monthlyActivityCalendarMonthHeader(
+                  monthLabel,
+                  rollup.activeDays,
+                ),
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -255,8 +264,9 @@ class _CompactSummaryCard extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            '${rollup.totalCompletions} '
-            '${rollup.totalCompletions == 1 ? 'completion' : 'completions'}',
+            AppLocalizations.of(
+              context,
+            )!.monthlyActivityCalendarCompletionsCount(rollup.totalCompletions),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

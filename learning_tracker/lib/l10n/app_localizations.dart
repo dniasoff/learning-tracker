@@ -7479,6 +7479,24 @@ abstract class AppLocalizations {
   /// **'No learning activity in this range yet.'**
   String get recentActivityEmptyState;
 
+  /// AUD-progress-11: empty-state fallback shown by MonthlyActivitySliverCalendar when it is given no rollup rows.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity data'**
+  String get monthlyActivityCalendarNoData;
+
+  /// AUD-progress-11: sticky month header in MonthlyActivitySliverCalendar. {month} is the already-localized month/year label (e.g. 'May 2026'); ICU plural on {activeDays} avoids '1 days'.
+  ///
+  /// In en, this message translates to:
+  /// **'{month}  —  {activeDays, plural, =1{1 active day} other{{activeDays} active days}}'**
+  String monthlyActivityCalendarMonthHeader(String month, int activeDays);
+
+  /// AUD-progress-11: completions-count phrase on the compact summary card in MonthlyActivitySliverCalendar. ICU plural avoids '1 completions'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 completion} other{{count} completions}}'**
+  String monthlyActivityCalendarCompletionsCount(int count);
+
   /// No description provided for @redeemScreenTitle.
   ///
   /// In en, this message translates to:

@@ -4450,6 +4450,33 @@ class AppLocalizationsHe extends AppLocalizations {
   String get recentActivityEmptyState => 'אין עדיין פעילות לימוד בטווח הזה.';
 
   @override
+  String get monthlyActivityCalendarNoData => 'אין נתוני פעילות';
+
+  @override
+  String monthlyActivityCalendarMonthHeader(String month, int activeDays) {
+    String _temp0 = intl.Intl.pluralLogic(
+      activeDays,
+      locale: localeName,
+      other: '$activeDays ימים פעילים',
+      two: 'יומיים פעילים',
+      one: 'יום פעיל אחד',
+    );
+    return '$month  —  $_temp0';
+  }
+
+  @override
+  String monthlyActivityCalendarCompletionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count השלמות',
+      two: 'שתי השלמות',
+      one: 'השלמה אחת',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get redeemScreenTitle => 'מימוש פרסים';
 
   @override
