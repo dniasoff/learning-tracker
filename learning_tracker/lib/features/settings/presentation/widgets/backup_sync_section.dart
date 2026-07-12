@@ -146,12 +146,27 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
     final l10nLocal = AppLocalizations.of(context)!;
     final identity = ref.watch(syncIdentityStatusProvider);
     if (identity.isMismatch) {
+      // AUD-settings-01 (EH-5): sync_orchestrator's `reason` for an identity
+      // mismatch is a hand-built English sentence — it must never reach the
+      // UI. Build the subtitle entirely from AppLocalizations, using the
+      // structured fields on `identity` instead; `reason` stays unused here
+      // (it remains a log-only/debug value on the orchestrator side).
+      final activeEmail = identity.activeAccountEmail;
+      final localizedMismatchReason = activeEmail != null
+          ? l10nLocal.backupSyncIdentityMismatch(
+              identity.signedInEmail ?? l10nLocal.backupSyncUnknownAccount,
+              activeEmail,
+            )
+          : l10nLocal.backupSyncIdentityMismatchNoEmail;
       return _buildCloudStatusCard(
         theme,
         icon: Icons.person_off_rounded,
         subtitle: pendingChanges > 0
-            ? '$reason ($pendingChanges queued)'
-            : reason,
+            ? l10nLocal.backupSyncPaused(
+                pendingChanges,
+                localizedMismatchReason,
+              )
+            : l10nLocal.backupSyncPausedNoCount(localizedMismatchReason),
         actionLabel: l10nLocal.backupSyncSignInToBackUp,
         onTap: () => context.pushRoute(const SignInRoute()),
       );

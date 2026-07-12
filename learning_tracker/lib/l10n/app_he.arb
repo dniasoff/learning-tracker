@@ -1498,6 +1498,15 @@
   "backupSyncTapToRetry": "הקש לניסיון חוזר",
   "backupSyncCloudUnavailable": "הגיבוי בענן אינו זמין כרגע.",
   "backupSyncOutboxStuck": "חלק מהשינויים ממתינים לסנכרון. ננסה שוב באופן אוטומטי.",
+  "backupSyncIdentityMismatch": "מחוברים בתור {signedInEmail} — התחברו בתור {activeEmail} כדי לגבות חשבון זה.",
+  "@backupSyncIdentityMismatch": {
+    "placeholders": {
+      "signedInEmail": { "type": "String" },
+      "activeEmail": { "type": "String" }
+    }
+  },
+  "backupSyncIdentityMismatchNoEmail": "מחוברים לחשבון השגוי — התחברו מחדש כדי לגבות.",
+  "backupSyncUnknownAccount": "חשבון אחר",
   "backupConnecting": "מתחבר…",
   "backupOffline": "לא מקוון",
   "backupSyncPaused": "סנכרון מושהה — {count} ממתינים. {reason}",

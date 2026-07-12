@@ -12,6 +12,14 @@
 // attempts" reason string is passed verbatim into the Hebrew template, leaking
 // English into the Hebrew UI.
 //
+// AUD-settings-01: the identity-mismatch branch of _buildDegradedCard has its
+// own separate leak — when `syncIdentityStatusProvider` reports a mismatch,
+// the card renders sync_orchestrator's hand-built English sentence
+// ("Signed in as x@... — sign in as y@... to back up this account.")
+// verbatim as the subtitle, bypassing AppLocalizations entirely. This is
+// invisible to L1-L4 because _buildHarness hardcodes
+// `SyncIdentityStatus.matched()` in every test.
+//
 // ROOT CAUSE: BackupSyncSection passes SyncStatus.message (or degraded reason)
 // directly into the l10n template placeholders without mapping to a friendly
 // localized string first.
@@ -22,12 +30,18 @@
 //   - For SyncStatusDegraded with a stuck-outbox reason: suppress the raw
 //     English reason string; show a localized fallback that does not expose
 //     internal outbox detail.
+//   - For SyncStatusDegraded with an identity mismatch: build the subtitle
+//     entirely from AppLocalizations (never the raw orchestrator reason
+//     string), so a Hebrew-locale user never sees an English sentence.
 //
 // TESTS:
 //   L1. Error state: raw exception class name NOT rendered.
 //   L2. Error state: renders a user-friendly sync-related message.
 //   L3. Degraded (stuck outbox) state: raw "row(s) stuck" NOT rendered.
 //   L4. Degraded (stuck outbox) state: renders a user-friendly message.
+//   L5. Degraded (identity mismatch) state, under Hebrew locale: raw English
+//       "Signed in as" reason fragment NOT rendered; localized Hebrew
+//       fallback IS rendered.
 
 @Tags(['l1', 'settings', 'backup_sync'])
 library;
@@ -62,7 +76,11 @@ const _kCloudUser = AuthState.signedIn(
   tier: Tier.cloudBorn,
 );
 
-Widget _buildHarness({required SyncStatus syncStatus}) {
+Widget _buildHarness({
+  required SyncStatus syncStatus,
+  SyncIdentityStatus identityStatus = const SyncIdentityStatus.matched(),
+  Locale? locale,
+}) {
   final mockRouter = _MockStackRouter();
   when(() => mockRouter.push(any())).thenAnswer((_) async => null);
   when(() => mockRouter.navigate(any())).thenAnswer((_) async {});
@@ -72,11 +90,10 @@ Widget _buildHarness({required SyncStatus syncStatus}) {
     overrides: [
       authStateProvider.overrideWithValue(_kCloudUser),
       syncStatusProvider.overrideWith((_) => syncStatus),
-      syncIdentityStatusProvider.overrideWithValue(
-        const SyncIdentityStatus.matched(),
-      ),
+      syncIdentityStatusProvider.overrideWithValue(identityStatus),
     ],
     child: MaterialApp(
+      locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -248,4 +265,67 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
   });
+
+  // -------------------------------------------------------------------------
+  // L5. Degraded (identity mismatch) state under Hebrew locale must NOT
+  // expose the raw English orchestrator sentence.
+  // -------------------------------------------------------------------------
+  testWidgets(
+    'L5. Degraded identity-mismatch state under Hebrew locale: raw English '
+    '"Signed in as" reason is not rendered; localized Hebrew text is',
+    (tester) async {
+      await _pump(
+        tester,
+        _buildHarness(
+          syncStatus: const SyncStatus.degraded(
+            pendingChanges: 2,
+            // The exact raw sentence sync_orchestrator.dart builds for an
+            // identity mismatch (see _skipPullOnIdentityMismatch /
+            // _recomputeOutboxStatus). If the widget ever falls back to
+            // rendering this verbatim, L5 must catch it.
+            reason:
+                'Signed in as wrong@test.com — sign in as '
+                'active@test.com to back up this account.',
+          ),
+          identityStatus: const SyncIdentityStatus.mismatched(
+            activeAccountEmail: 'active@test.com',
+            signedInEmail: 'wrong@test.com',
+          ),
+          locale: const Locale('he'),
+        ),
+      );
+
+      expect(
+        find.textContaining('Signed in as'),
+        findsNothing,
+        reason:
+            'The raw English identity-mismatch reason built by '
+            'sync_orchestrator must not be rendered under a Hebrew locale — '
+            'it leaks English into the Hebrew UI (AUD-settings-01)',
+      );
+      expect(
+        find.textContaining('back up this account'),
+        findsNothing,
+        reason:
+            'No fragment of the raw English orchestrator sentence may leak '
+            'through, even if only part of it is reused verbatim',
+      );
+
+      // A localized Hebrew message must still be visible so the user
+      // understands sync is paused and can act on it.
+      final hebrewText = find.textContaining(
+        RegExp('[֐-׿]'), // any Hebrew-block character
+      );
+      expect(
+        hebrewText,
+        findsWidgets,
+        reason:
+            'A localized Hebrew message must replace the raw English '
+            'identity-mismatch reason',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
 }

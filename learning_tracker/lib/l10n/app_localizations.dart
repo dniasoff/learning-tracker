@@ -5541,6 +5541,24 @@ abstract class AppLocalizations {
   /// **'Some changes are waiting to sync. We\'ll retry automatically.'**
   String get backupSyncOutboxStuck;
 
+  /// Localized identity-mismatch degraded reason, replacing sync_orchestrator's hand-built English sentence so it never renders raw in non-English UIs (AUD-settings-01). Shown when the device's signed-in Firebase account differs from the active in-app account.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as {signedInEmail} — sign in as {activeEmail} to back up this account.'**
+  String backupSyncIdentityMismatch(String signedInEmail, String activeEmail);
+
+  /// Fallback identity-mismatch reason when the active account has no known email (AUD-settings-01).
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as the wrong account — sign in again to back up.'**
+  String get backupSyncIdentityMismatchNoEmail;
+
+  /// Localized fallback used in place of the signed-in email when it is unknown, interpolated into backupSyncIdentityMismatch (AUD-settings-01).
+  ///
+  /// In en, this message translates to:
+  /// **'a different account'**
+  String get backupSyncUnknownAccount;
+
   /// No description provided for @backupConnecting.
   ///
   /// In en, this message translates to:

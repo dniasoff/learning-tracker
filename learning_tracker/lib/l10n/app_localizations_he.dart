@@ -3164,6 +3164,18 @@ class AppLocalizationsHe extends AppLocalizations {
       'חלק מהשינויים ממתינים לסנכרון. ננסה שוב באופן אוטומטי.';
 
   @override
+  String backupSyncIdentityMismatch(String signedInEmail, String activeEmail) {
+    return 'מחוברים בתור $signedInEmail — התחברו בתור $activeEmail כדי לגבות חשבון זה.';
+  }
+
+  @override
+  String get backupSyncIdentityMismatchNoEmail =>
+      'מחוברים לחשבון השגוי — התחברו מחדש כדי לגבות.';
+
+  @override
+  String get backupSyncUnknownAccount => 'חשבון אחר';
+
+  @override
   String get backupConnecting => 'מתחבר…';
 
   @override
