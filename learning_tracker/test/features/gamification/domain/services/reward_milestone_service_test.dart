@@ -15,6 +15,7 @@ library;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
@@ -571,6 +572,37 @@ void main() {
       final milestones = await service.getAllMilestones();
       expect(milestones, isEmpty);
     });
+
+    // AUD-gamification-06: a JSON-decode failure must not be swallowed
+    // silently -- it must be logged via AppLogger so a corrupted-storage
+    // event that later exports an empty snapshot to the cloud (overwriting
+    // every other device's rewards) leaves a diagnostic trail.
+    test(
+      'logs the decode failure via AppLogger when prefs value is invalid JSON',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'reward_milestones_config_v1_$profileId',
+          'not-json',
+        );
+
+        await service.getAllMilestones();
+
+        final history = AppLogger.instance.talker.history
+            .map((e) => e.generateTextMessage())
+            .toList();
+        expect(
+          history.any(
+            (m) => m.contains('reward_milestone_service getAllMilestones'),
+          ),
+          isTrue,
+          reason:
+              'Expected the swallowed JSON-decode failure in getAllMilestones '
+              'to be logged via AppLogger instead of silently returning an '
+              'empty list with no diagnostic trail. Talker history: $history',
+        );
+      },
+    );
   });
 
   // ─── getAllUnlocks edge cases ──────────────────────────────────────────────
@@ -600,6 +632,33 @@ void main() {
         expect(unlocks, isEmpty);
       },
     );
+
+    // AUD-gamification-06: same log-else-swallow requirement as
+    // getAllMilestones above.
+    test('logs the decode failure via AppLogger when unlock prefs value is '
+        'invalid JSON', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        'reward_milestones_unlocks_v1_$profileId',
+        'bad json',
+      );
+
+      await service.getAllUnlocks();
+
+      final history = AppLogger.instance.talker.history
+          .map((e) => e.generateTextMessage())
+          .toList();
+      expect(
+        history.any(
+          (m) => m.contains('reward_milestone_service getAllUnlocks'),
+        ),
+        isTrue,
+        reason:
+            'Expected the swallowed JSON-decode failure in getAllUnlocks '
+            'to be logged via AppLogger instead of silently returning an '
+            'empty list with no diagnostic trail. Talker history: $history',
+      );
+    });
   });
 
   // ─── getGlobalMilestones / getMilestonesForTrack ──────────────────────────

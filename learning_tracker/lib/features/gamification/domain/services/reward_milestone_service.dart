@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -86,7 +87,17 @@ class RewardMilestoneService {
           .map(RewardMilestone.fromJson)
           .where((m) => m.profileId == profileId)
           .toList();
-    } catch (_) {
+    } catch (e, st) {
+      // AUD-gamification-06: a corrupt/unreadable config must not be
+      // indistinguishable from "genuinely empty" -- this empty fallback
+      // flows straight into exportCloudPayload() and can overwrite every
+      // other synced device's real reward list with silence as to why.
+      AppLogger.instance.error(
+        event: 'reward_milestone_service getAllMilestones decode failed',
+        fields: {'profileId': profileId, 'key': _configKey},
+        exception: e,
+        stackTrace: st,
+      );
       return const [];
     }
   }
@@ -109,7 +120,14 @@ class RewardMilestoneService {
           .where((u) => u.profileId == profileId)
           .toList()
         ..sort((a, b) => b.unlockedAt.compareTo(a.unlockedAt));
-    } catch (_) {
+    } catch (e, st) {
+      // AUD-gamification-06: see getAllMilestones's catch above.
+      AppLogger.instance.error(
+        event: 'reward_milestone_service getAllUnlocks decode failed',
+        fields: {'profileId': profileId, 'key': _unlockKey},
+        exception: e,
+        stackTrace: st,
+      );
       return const [];
     }
   }
@@ -363,9 +381,9 @@ class RewardMilestoneService {
       _unlockKey,
       jsonEncode(unlocks.map((u) => u.toJson()).toList()),
     );
-    final stamp =
-        (remoteUpdatedAt ?? DateTimeFactory.nowUtc()).millisecondsSinceEpoch;
-    await prefs.setInt(_updatedAtMsKey, stamp);
+    // remoteUpdatedAt is guaranteed non-null here: the AUD-gamification-05
+    // guard above already returns early when it is null.
+    await prefs.setInt(_updatedAtMsKey, remoteUpdatedAt.millisecondsSinceEpoch);
     await stripStockTemplateMilestones();
   }
 
