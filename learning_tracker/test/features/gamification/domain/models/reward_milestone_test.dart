@@ -99,6 +99,21 @@ void main() {
     test('kGlobalTrackSentinel is 0', () {
       expect(RewardMilestone.kGlobalTrackSentinel, 0);
     });
+
+    test('value equality: two instances with identical fields are ==', () {
+      // Regression for AUD-gamification-14: RewardMilestone must be a value
+      // object (generated ==/hashCode via @freezed), not identity-compared.
+      final a = base();
+      final b = base();
+      expect(a, equals(b));
+      expect(a.hashCode, equals(b.hashCode));
+    });
+
+    test('value equality: differing a field breaks equality', () {
+      final a = base();
+      final b = a.copyWith(title: 'Different');
+      expect(a, isNot(equals(b)));
+    });
   });
 
   // ── RewardMilestone.copyWith ──────────────────────────────────────────────
@@ -258,6 +273,15 @@ void main() {
       expect(r.thresholdPoints, 0);
       expect(r.pointsAtUnlock, 0);
       expect(r.title, '');
+    });
+
+    test('value equality: two instances with identical fields are ==', () {
+      // Regression for AUD-gamification-14: RewardUnlockRecord must be a
+      // value object (generated ==/hashCode via @freezed), not identity-compared.
+      final a = baseUnlock();
+      final b = baseUnlock();
+      expect(a, equals(b));
+      expect(a.hashCode, equals(b.hashCode));
     });
   });
 

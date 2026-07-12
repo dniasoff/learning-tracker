@@ -1,69 +1,41 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
-class RewardMilestone {
+part 'reward_milestone.freezed.dart';
+
+@freezed
+abstract class RewardMilestone with _$RewardMilestone {
   /// Stored as [trackId] for milestones that use [PointsService.getGlobalTotal].
   ///
   /// Real curriculum tracks use positive DB ids (auto-increment from 1).
   static const int kGlobalTrackSentinel = 0;
 
-  const RewardMilestone({
-    required this.id,
-    required this.profileId,
-    required this.trackId,
-    required this.title,
-    required this.thresholdPoints,
-    required this.isEnabled,
-    required this.createdAt,
-    required this.updatedAt,
-    this.iconIndex = 0,
-  });
+  const RewardMilestone._();
 
-  final String id;
-  final int profileId;
-  final int trackId;
-  final String title;
+  const factory RewardMilestone({
+    required String id,
+    required int profileId,
+    required int trackId,
+    required String title,
 
-  /// Cost in points for the child to redeem this reward (WS7.reward-price).
-  ///
-  /// Stored under the `threshold_points` JSON key for backward compatibility
-  /// with existing cloud payloads. In the spend-economy (DEC-32), this is
-  /// the price the child pays to redeem — not a cumulative auto-unlock threshold.
-  final int thresholdPoints;
+    /// Cost in points for the child to redeem this reward (WS7.reward-price).
+    ///
+    /// Stored under the `threshold_points` JSON key for backward
+    /// compatibility with existing cloud payloads. In the spend-economy
+    /// (DEC-32), this is the price the child pays to redeem — not a
+    /// cumulative auto-unlock threshold.
+    required int thresholdPoints,
+    required bool isEnabled,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+
+    /// Parent-selected reward icon; index into [RewardMilestoneIcons.choices].
+    /// Synced in `reward_settings`.
+    @Default(0) int iconIndex,
+  }) = _RewardMilestone;
 
   /// Alias for [thresholdPoints]; the cost in points to redeem this reward.
   int get pointsCost => thresholdPoints;
-
-  final bool isEnabled;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
-  /// Parent-selected reward icon; index into [RewardMilestoneIcons.choices].
-  /// Synced in `reward_settings`.
-  final int iconIndex;
-
-  RewardMilestone copyWith({
-    String? id,
-    int? profileId,
-    int? trackId,
-    String? title,
-    int? thresholdPoints,
-    bool? isEnabled,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    int? iconIndex,
-  }) {
-    return RewardMilestone(
-      id: id ?? this.id,
-      profileId: profileId ?? this.profileId,
-      trackId: trackId ?? this.trackId,
-      title: title ?? this.title,
-      thresholdPoints: thresholdPoints ?? this.thresholdPoints,
-      isEnabled: isEnabled ?? this.isEnabled,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      iconIndex: iconIndex ?? this.iconIndex,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -104,24 +76,19 @@ class RewardMilestone {
   }
 }
 
-class RewardUnlockRecord {
-  const RewardUnlockRecord({
-    required this.milestoneId,
-    required this.profileId,
-    required this.trackId,
-    required this.title,
-    required this.thresholdPoints,
-    required this.pointsAtUnlock,
-    required this.unlockedAt,
-  });
+@freezed
+abstract class RewardUnlockRecord with _$RewardUnlockRecord {
+  const RewardUnlockRecord._();
 
-  final String milestoneId;
-  final int profileId;
-  final int trackId;
-  final String title;
-  final int thresholdPoints;
-  final int pointsAtUnlock;
-  final DateTime unlockedAt;
+  const factory RewardUnlockRecord({
+    required String milestoneId,
+    required int profileId,
+    required int trackId,
+    required String title,
+    required int thresholdPoints,
+    required int pointsAtUnlock,
+    required DateTime unlockedAt,
+  }) = _RewardUnlockRecord;
 
   Map<String, dynamic> toJson() {
     return {
