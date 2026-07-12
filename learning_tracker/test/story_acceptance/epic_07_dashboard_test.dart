@@ -15,7 +15,7 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/curriculum_summary_card.dart';
-import 'package:learning_tracker/features/dashboard/presentation/widgets/points_summary_widget.dart';
+// points_summary_widget.dart was deleted (dead-code purge, AUD-dashboard-04).
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
@@ -548,19 +548,10 @@ void main() {
       expect(find.text('(best: 14)'), findsOneWidget);
     });
 
-    testWidgets('PointsSummaryWidget is visible and shows points', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: PointsSummaryWidget(totalPoints: 250)),
-        ),
-      );
-
-      expect(find.text('250 pts'), findsOneWidget);
-      expect(find.byIcon(Icons.star), findsOneWidget);
-    });
-
+    // PointsSummaryWidget was deleted as dead code (AUD-dashboard-04): it had
+    // zero call sites in lib/, was superseded by DashboardLevelPointsCard
+    // (wired into dashboard_body.dart), and this test only gave false
+    // confidence that "points summary" was exercised in the shipping app.
     test(
       'TodaysTasksWidget shows task count and start button',
       skip: 'TodaysTasksWidget removed in Wave 3 refactor',
