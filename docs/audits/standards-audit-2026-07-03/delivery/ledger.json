@@ -1710,13 +1710,18 @@
     {
       "id": "AUD-gamification-07",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Replace TierStyle.forTitle's hardcoded-English-string switch with a stable tier identifier",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "0fb27958"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-gamification-07 AC1 OK: forTitle->forTier(RewardTier); classify() is single title-match off canonical ladder (tier_style.dart:44)",
+        "AUD-gamification-07 AC2 OK: new tier_style_test.dart asserts 7 tiers classify + distinct styles, legend override, custom/default"
+      ],
+      "notes": "Confirmed title-string-keyed switch duplicating defaultMilestoneLadder. Added RewardTier enum + classify() sourced from the canonical ladder; renamed forTitle->forTier(RewardTier,bool). Pure refactor, no behavior change (392 tests green). Created named test file per AC2, 20 tests. Commit dc887239 (pre-rebase); merged as 0fb27958."
     },
     {
       "id": "AUD-t-progress-02",
@@ -4342,24 +4347,34 @@
     {
       "id": "AUD-gamification-06",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Log RewardMilestoneService.getAllMilestones/getAllUnlocks JSON-decode failures instead of silently returning an empty list that can later overwrite cloud data",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "9381382e"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-gamification-06 AC1 OK: both catch(e,st) call AppLogger.instance.error before empty fallback (rms.dart:95 and :125)",
+        "AUD-gamification-06 AC2 OK: 2 tests seed invalid JSON, assert talker.history has the event; red-first confirmed pre-fix"
+      ],
+      "notes": "Confirmed both catch(_) in getAllMilestones/getAllUnlocks swallowed decode errors. Red-first: 2 tests (spy on AppLogger.instance.talker.history) failed pre-fix. Now catch(e,st) + AppLogger.instance.error(event, fields, exception, stackTrace) before empty fallback. Commit 745f308b (pre-rebase); merged as 9381382e."
     },
     {
       "id": "AUD-gamification-05",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Fix mergeCloudPayload treating a non-empty remote payload with a missing/unparseable updated_at as unconditionally newer than local",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a265db76"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-gamification-05 AC1 OK: guard now `remoteUpdatedAt == null || !isAfter(...)` at rms.dart:342; 2 green tests keep local 'local-m' on missing/garbage updated_at",
+        "AUD-gamification-05 AC2 OK: 2 mergeCloudPayload tests; red-first reproduced by reverting lib to merge-base (Actual 'remote-should-not-land'), green after fix"
+      ],
+      "notes": "Confirmed live bug. Red-first: 2 tests (missing/garbage remote updated_at) failed pre-fix. Fixed guard to `remoteUpdatedAt == null || !isAfter(...)` so ambiguous timestamp skips merge instead of overwriting local. Also fixed the resulting dead-code analyze warning. Commit 51e22b62 (pre-rebase); merged as a265db76."
     },
     {
       "id": "AUD-gamification-08",
@@ -7441,13 +7456,18 @@
     {
       "id": "AUD-gamification-23",
       "wave": 3,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "TierStyle's ~80 hardcoded hex colors bypass the theme system and never adapt to dark mode",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "41043e43"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-gamification-23 AC1 OK: golden renders 14 rows light+dark; I viewed both PNGs, cards legible on own opaque bg in dark",
+        "AUD-gamification-23 AC2 OK: goldens pin both light+dark; intentional (self-contained opaque cardBg), no TierStyle change"
+      ],
+      "notes": "SUSPECTED/fork AC. Built golden test, 14 rows x light+dark theme, actually viewed both PNGs. Cards paint their own opaque background so contrast is theme-independent; all legible in both. Documented CONFIRMED INTENTIONAL review in file header, no TierStyle change. Commit 9f4e0cd9 (pre-rebase); merged as 41043e43."
     },
     {
       "id": "AUD-gamification-22",
