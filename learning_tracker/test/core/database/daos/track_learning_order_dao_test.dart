@@ -68,6 +68,45 @@ void main() {
         final rows = await db.trackLearningOrderDao.getByTrack(trackId);
         expect(rows, isEmpty);
       });
+
+      test('is all-or-nothing: a failure partway through leaves zero new rows '
+          '(AUD-core-database-05, DB-2/DB-3)', () async {
+        // A genuine SQLite failure injected via a trigger on a poison
+        // sefariaRef value — not a fake/mocked exception — so this proves
+        // real atomicity of whatever write strategy upsertOrder uses. If
+        // upsertOrder is an awaited per-row loop (the pre-fix shape), the
+        // two refs preceding the poison ref are already committed
+        // individually before the loop reaches — and throws on — the
+        // third; this assertion catches that.
+        await db.customStatement('''
+            CREATE TRIGGER poison_track_learning_order
+            BEFORE INSERT ON track_learning_order
+            WHEN NEW.sefaria_ref = 'BOOM'
+            BEGIN
+              SELECT RAISE(ABORT, 'injected failure for atomicity test');
+            END;
+          ''');
+
+        await expectLater(
+          db.trackLearningOrderDao.upsertOrder(trackId, [
+            'Berakhot 2a',
+            'Berakhot 2b',
+            'BOOM',
+            'Berakhot 3a',
+          ]),
+          throwsA(anything),
+        );
+
+        final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+        expect(
+          rows,
+          isEmpty,
+          reason:
+              'a failure partway through upsertOrder must leave zero rows '
+              'written — a per-row awaited loop instead leaves the refs '
+              'before the failing one committed',
+        );
+      });
     });
 
     group('getByTrack', () {

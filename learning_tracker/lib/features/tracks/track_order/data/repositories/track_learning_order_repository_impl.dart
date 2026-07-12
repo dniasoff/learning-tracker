@@ -121,10 +121,16 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
     List<LearningOrderItem> items,
   ) async {
     final refs = items.map((i) => i.sefariaRef).toList();
-    await _database.trackLearningOrderDao.upsertOrder(trackId, refs);
-    // Reorder-amnesty: stamp lastReorderAt so the projection clears overdue
-    // items that were scheduled before this reorder (architecture §10.1).
-    await _database.trackDao.stampReorderAt(trackId);
+    // AUD-core-database-05 (DB-2): the order write and the reorder-amnesty
+    // stamp must commit or roll back together — a crash/error between the
+    // two would otherwise leave a stale lastReorderAt (or vice versa),
+    // breaking the reorder-amnesty logic documented at architecture §10.1.
+    await _database.transaction(() async {
+      await _database.trackLearningOrderDao.upsertOrder(trackId, refs);
+      // Reorder-amnesty: stamp lastReorderAt so the projection clears
+      // overdue items that were scheduled before this reorder.
+      await _database.trackDao.stampReorderAt(trackId);
+    });
   }
 
   @override
@@ -133,16 +139,22 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
     List<LearningOrderItem> items,
   ) async {
     final refs = items.map((i) => i.sefariaRef).toList();
-    await _database.trackLearningOrderDao.upsertOrder(trackId, refs);
-    // Reorder-amnesty: stamp lastReorderAt so the projection clears overdue
-    // items scheduled before this reorder (architecture §10.1).
-    await _database.trackDao.stampReorderAt(trackId);
+    // AUD-core-database-05 (DB-2): see saveSedarimOrder above.
+    await _database.transaction(() async {
+      await _database.trackLearningOrderDao.upsertOrder(trackId, refs);
+      // Reorder-amnesty: stamp lastReorderAt so the projection clears
+      // overdue items scheduled before this reorder.
+      await _database.trackDao.stampReorderAt(trackId);
+    });
   }
 
   @override
   Future<void> resetToDefault(int trackId) async {
-    await _database.trackLearningOrderDao.deleteByTrack(trackId);
-    // Reorder-amnesty: reset-to-default is a content-order change.
-    await _database.trackDao.stampReorderAt(trackId);
+    // AUD-core-database-05 (DB-2): see saveSedarimOrder above.
+    await _database.transaction(() async {
+      await _database.trackLearningOrderDao.deleteByTrack(trackId);
+      // Reorder-amnesty: reset-to-default is a content-order change.
+      await _database.trackDao.stampReorderAt(trackId);
+    });
   }
 }

@@ -427,6 +427,76 @@ void main() {
     });
   });
 
+  // ─── DB-2 atomicity (AUD-core-database-05) ─────────────────────────────────
+
+  group('reorder-write + stampReorderAt atomicity (AUD-core-database-05)', () {
+    test('saveSedarimOrder rolls back the order write when the stampReorderAt '
+        'update fails, leaving the pre-reorder order intact', () async {
+      final repo = _makeRepo(db, [
+        _seder('Zeraim', sortOrder: 0),
+        _seder('Moed', sortOrder: 1),
+      ]);
+
+      // Seed a pre-existing order — this is what must survive a failed
+      // reorder attempt untouched.
+      await db.trackLearningOrderDao.upsertOrder(trackId, ['Zeraim']);
+
+      // Inject a genuine SQLite failure on the SECOND write of the pair
+      // (stampReorderAt's UPDATE) via a real trigger — not a fake/mocked
+      // exception — so this exercises the actual transaction boundary.
+      await db.customStatement('''
+          CREATE TRIGGER poison_curriculum_tracks_stamp
+          BEFORE UPDATE ON curriculum_tracks
+          WHEN NEW.id = $trackId
+          BEGIN
+            SELECT RAISE(ABORT, 'injected failure for atomicity test');
+          END;
+        ''');
+
+      await expectLater(
+        repo.saveSedarimOrder(trackId, [_item('Moed', 0), _item('Zeraim', 1)]),
+        throwsA(anything),
+      );
+
+      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      expect(
+        rows.map((r) => r.sefariaRef).toList(),
+        ['Zeraim'],
+        reason:
+            'a failed stampReorderAt must roll back the order write too — '
+            'the pre-reorder order (["Zeraim"]) must be exactly what is '
+            'still stored, not the new (possibly partial) order and not '
+            'an empty table',
+      );
+    });
+
+    test('resetToDefault rolls back deleteByTrack when the stampReorderAt '
+        'update fails, leaving the pre-reset order intact', () async {
+      final repo = _makeRepo(db, []);
+      await db.trackLearningOrderDao.upsertOrder(trackId, ['Zeraim']);
+
+      await db.customStatement('''
+          CREATE TRIGGER poison_curriculum_tracks_reset
+          BEFORE UPDATE ON curriculum_tracks
+          WHEN NEW.id = $trackId
+          BEGIN
+            SELECT RAISE(ABORT, 'injected failure for atomicity test');
+          END;
+        ''');
+
+      await expectLater(repo.resetToDefault(trackId), throwsA(anything));
+
+      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      expect(
+        rows.map((r) => r.sefariaRef).toList(),
+        ['Zeraim'],
+        reason:
+            'a failed stampReorderAt must roll back the deleteByTrack too '
+            '— the pre-reset row must still be present',
+      );
+    });
+  });
+
   // ─── resetToDefault ────────────────────────────────────────────────────────
 
   group('resetToDefault', () {

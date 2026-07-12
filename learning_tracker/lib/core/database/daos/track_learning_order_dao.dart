@@ -15,20 +15,34 @@ class TrackLearningOrderDao extends DatabaseAccessor<UserDatabase>
             ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
           .get();
 
+  /// Upserts [refs] as the ordered learning-order rows for [trackId].
+  ///
+  /// AUD-core-database-05 (DB-2/DB-3): issues a single `batch()` instead of
+  /// an awaited per-row loop. A per-row loop re-prepares the same statement
+  /// N times (write amplification) and, more importantly, is NOT atomic — a
+  /// crash or thrown error partway through a reorder of dozens/hundreds of
+  /// refs left a half-old/half-new `sortOrder` sequence with no error
+  /// surfaced anywhere. `batch()` runs every insert in one round trip inside
+  /// its own transaction (or the caller's enclosing `transaction()`, if any
+  /// — see [DatabaseConnectionUser.batch]), so a failure on any row rolls
+  /// back the whole set.
   Future<void> upsertOrder(int trackId, List<String> refs) async {
-    for (var i = 0; i < refs.length; i++) {
-      await into(trackLearningOrder).insert(
-        TrackLearningOrderCompanion.insert(
-          trackId: trackId,
-          sefariaRef: refs[i],
-          sortOrder: i,
-        ),
-        onConflict: DoUpdate(
-          (_) => TrackLearningOrderCompanion(sortOrder: Value(i)),
-          target: [trackLearningOrder.trackId, trackLearningOrder.sefariaRef],
-        ),
-      );
-    }
+    await batch((b) {
+      for (var i = 0; i < refs.length; i++) {
+        b.insert(
+          trackLearningOrder,
+          TrackLearningOrderCompanion.insert(
+            trackId: trackId,
+            sefariaRef: refs[i],
+            sortOrder: i,
+          ),
+          onConflict: DoUpdate(
+            (_) => TrackLearningOrderCompanion(sortOrder: Value(i)),
+            target: [trackLearningOrder.trackId, trackLearningOrder.sefariaRef],
+          ),
+        );
+      }
+    });
   }
 
   Future<void> deleteByTrack(int trackId) => (delete(
