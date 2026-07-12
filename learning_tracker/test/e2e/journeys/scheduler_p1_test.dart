@@ -926,10 +926,9 @@ void main() {
     // term labels rendered.
     //
     // R-SC1: HebrewDatePicker has hardcoded English strings.
-    // R-SC2: _summaryForSection has 3 hardcoded English template strings
-    //   ("N tasks today", "N today tasks", "N missed/overdue tasks",
-    //   "N chazara tasks") — these render in English even in he locale.
-    //   Confirmed gap; document but keep test passing.
+    // R-SC2 (resolved by AUD-scheduler-07): the never-rendered
+    //   ComposedDailySchedule.summary field and its unlocalized
+    //   _summaryForSection() builder were dead code and have been deleted.
     //
     // Key assertions:
     //   • SchedulerScreen renders (Daily Tasks header visible — hardcoded
@@ -983,8 +982,8 @@ void main() {
         h.expectOnScreen('Daily Tasks');
         h.expectOnScreen('Berakhot.2a');
 
-        // R-SC2: section summary strings are hardcoded English; assert they
-        // are present and the screen does not crash.
+        // R-SC2 (resolved): no section summary string exists anymore to
+        // assert against; just confirm the goal card renders without crash.
         h.expectOnScreen("TODAY'S GOAL");
       },
     );
