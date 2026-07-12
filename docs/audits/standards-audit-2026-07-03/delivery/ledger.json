@@ -7554,13 +7554,17 @@
   {
    "id": "AUD-gamification-13",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Add .autoDispose to points_providers.dart's family providers",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "f14998a5c1b84f5069e8f1b211e3efda651a565a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-gamification-13 AC1 OK: both .family providers now .autoDispose - curriculumPointsProvider L22, pointsHistoryProvider L68; only two family providers in the file"
+   ],
+   "notes": "Confirmed both family providers lacked .autoDispose (verified vs Riverpod 3.2.1 source). Red-first test via ProviderContainer.exists() failed pre-fix (state retained after last listener closed); added .autoDispose to both, test now 2/2 pass."
   },
   {
    "id": "AUD-gamification-14",
