@@ -84,3 +84,14 @@ finding, appended as it happens.
 - **Logged by:** wave-2 ledger reconciliation agent (sonnet), 2026-07-11.
 - **Reopened (2026-07-11):** per the action-required note above, this row was reopened to `todo` (bulk note: "wave-2 gate fail (undelivered or regression: CF-import/stale-codegen)", alongside 12 sibling wave-2 ids) rather than the `skipped-refuted` disposition standing uncertified. A fresh wave-2 engine pass against the reopened set did not refute or merge this id — its outcome places it in `blocked`. Ledger row updated to `status: blocked`; `skipped-refuted` no longer applies. The duplicated ternary is still present verbatim in all 3 cited files as of this update. Left for a future harvest/relaunch pass to actually extract the shared `causeSuffix` helper.
 - **Logged by:** wave-2 ledger reconciliation agent (sonnet), 2026-07-11.
+
+---
+
+## AUD-dashboard-13 — Rename one of the two top-level CurriculumSummary classes (AG-4 duplicate)
+
+- **Wave:** 3
+- **Severity:** P3
+- **Register evidence:** two top-level `CurriculumSummary` classes existed under `lib/` — dashboard's `parent_dashboard_aggregator.dart` and scheduler's `cross_curriculum_aggregator.dart` — an AG-4 duplicate-public-top-level-name violation.
+- **Delivery disposition:** `skipped-refuted` (merge-lane w3r1c7, 2026-07-12).
+- **Basis — already fixed in code, independently confirmed:** commit `a3619891` ("fix(AUD-repo-01): de-dupe 7 duplicate public type names, land AG-4 audit gate", an ancestor of this branch's current HEAD, landed after this finding's register checkpoint `4018a91c`) renamed dashboard's `parent_dashboard_aggregator.dart` `CurriculumSummary` → `ParentCurriculumSummary` as part of a 7-name de-dupe sweep, resolving the collision with scheduler's `cross_curriculum_aggregator.dart` `CurriculumSummary` (the definition `CurriculumSummaryCard` and `dashboard_providers.dart` actually consume) — exactly this finding's recommendation. That same commit also landed the AG-4 Rule-0 grep checker itself (`learning_tracker/Makefile`, "24/25 — No duplicate public top-level type names across lib/ (AG-4)"). Independently re-verified against the current tree: `grep -rn "class CurriculumSummary" learning_tracker/lib/` returns exactly one hit (`cross_curriculum_aggregator.dart:5`); `grep -rl ParentCurriculumSummary learning_tracker/lib/` confirms the rename landed in `parent_dashboard_aggregator.dart` (+`.freezed.dart`); re-ran the AG-4 checker's own grep/awk pipeline against the current tree and it reports no duplicates (AG-4 clean). Self-evidencing already-fixed-in-code basis, matching the `AUD-core-sync-30` disposition pattern above (not an evidence-gap one).
+- **Logged by:** merge-lane w3r1c7 agent (sonnet), 2026-07-12.

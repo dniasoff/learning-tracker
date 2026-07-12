@@ -7476,13 +7476,13 @@
   {
    "id": "AUD-dashboard-13",
    "wave": 3,
-   "status": "todo",
+   "status": "skipped-refuted",
    "severity": "P3",
    "title": "Rename one of the two top-level CurriculumSummary classes (AG-4 duplicate)",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "skipped-refuted (merge-lane w3r1c7, 2026-07-12). Already fixed in code, independently confirmed: commit a3619891 (fix(AUD-repo-01): de-dupe 7 duplicate public type names, land AG-4 audit gate; an ancestor of this branch's current HEAD, landed after this finding's register checkpoint 4018a91c) renamed dashboard's parent_dashboard_aggregator.dart CurriculumSummary -> ParentCurriculumSummary, resolving the AG-4 duplicate-name collision with scheduler's cross_curriculum_aggregator.dart CurriculumSummary (the class CurriculumSummaryCard and dashboard_providers.dart actually consume) -- exactly this finding's recommendation. Independently re-verified against the current tree: `grep -rn \"class CurriculumSummary\" learning_tracker/lib/` returns exactly one hit (cross_curriculum_aggregator.dart:5); `grep -rl ParentCurriculumSummary learning_tracker/lib/` confirms the rename landed in parent_dashboard_aggregator.dart (+.freezed.dart). a3619891 also landed the AG-4 Rule-0 grep checker itself (learning_tracker/Makefile, \"24/25 -- No duplicate public top-level type names across lib/ (AG-4)\"); independently re-ran that check's grep/awk pipeline against the current tree -> no duplicates found, AG-4 clean. Self-evidencing already-fixed-in-code basis (contrast the evidence-gap entries in kill-log-addendum.md) -- matches the AUD-core-sync-30 disposition pattern."
   },
   {
    "id": "AUD-dashboard-09",
