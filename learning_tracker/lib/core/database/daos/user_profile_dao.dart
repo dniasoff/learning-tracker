@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/daos/dao_invariant_error.dart';
 import 'package:learning_tracker/core/database/tables/accounts.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
@@ -21,25 +22,30 @@ extension UserTierX on UserTier {
   bool get isCloud => this == UserTier.cloudBorn;
   bool get isLocal => this == UserTier.localBorn;
 
+  // AUD-core-database-14 (EH-5): stable code, not a pre-formatted English
+  // message. value carried as debugDetail for logs only.
   static UserTier fromDb(String value) => switch (value) {
     'cloudBorn' => UserTier.cloudBorn,
     'localBorn' => UserTier.localBorn,
-    _ => throw StateError('Unknown tier: $value'),
+    _ => throw DaoInvariantError(DaoErrorCode.unknownAccountTier, value),
   };
 }
 
 /// Typed [UserTier] accessor for Drift-generated [Account] row.
-///
-/// Falls back to [UserTier.localBorn] for any unrecognised value.
 extension AccountX on Account {
   /// Typed account tier parsed from the [tier] storage key.
-  UserTier get accountTier {
-    try {
-      return UserTierX.fromDb(tier);
-    } on StateError {
-      return UserTier.localBorn;
-    }
-  }
+  ///
+  /// AUD-core-database-07 (EH-4): does NOT catch [UserTierX.fromDb]'s
+  /// [DaoInvariantError] for an unrecognized value. That error is a
+  /// programming-error signal (local DB corruption or a missed enum-value
+  /// migration), not normal control flow — swallowing it and silently
+  /// returning
+  /// [UserTier.localBorn] previously made a `cloudBorn` account whose
+  /// stored `tier` string ever drifted (bad migration, hand-edited row,
+  /// future enum rename) silently behave as local-born everywhere
+  /// accountTier is read (sync gating, balance-row eligibility per "Adults
+  /// never have balance rows"), with nothing logged. Let it propagate.
+  UserTier get accountTier => UserTierX.fromDb(tier);
 }
 
 /// DAO for the accounts table (was: user_profiles table).

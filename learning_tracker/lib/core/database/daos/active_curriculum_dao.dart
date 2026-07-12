@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/base_dao.dart';
+import 'package:learning_tracker/core/database/daos/dao_invariant_error.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/tables/curriculum_tracks.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -99,17 +100,18 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
   /// Deactivate a curriculum for a specific profile.
   ///
   /// Delegates to [TrackDao.deleteTrackAndData] for each track belonging to
-  /// the (profile, curriculum) pair. Throws [StateError] if this is the last
-  /// active curriculum.
+  /// the (profile, curriculum) pair. Throws [DaoInvariantError] (code
+  /// [DaoErrorCode.lastActiveCurriculum]) if this is the last active
+  /// curriculum.
   Future<void> deactivateByProfile(
     CurriculumId curriculum,
     int profileId,
   ) async {
     final activeForProfile = await getActiveCurriculaByProfile(profileId);
     if (activeForProfile.length <= 1) {
-      throw StateError(
-        'Cannot deactivate the last active curriculum for this profile',
-      );
+      // AUD-core-database-14 (EH-5): stable code, not a pre-formatted
+      // English message.
+      throw DaoInvariantError(DaoErrorCode.lastActiveCurriculum);
     }
 
     final tracks =
