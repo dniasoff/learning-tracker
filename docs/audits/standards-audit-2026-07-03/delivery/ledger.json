@@ -5502,13 +5502,17 @@
   {
    "id": "AUD-core-database-10",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete or wire up dead code kept alive only by its own tests: ContentResult and CalendarCycleDao's legacy methods",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "62336ab50121707160c3ec7bcd876eb6cb11f46d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-10 AC1 OK: repo-wide grep for all 6 symbols returns zero dart matches; content_result.dart + 3 alias methods + stale import all deleted"
+   ],
+   "notes": "Re-verified: zero production callers for ContentResult trio and the 3 legacy CalendarCycleDao methods, only test-only usage. Deleted content_result.dart, the 3 legacy methods, and their keep-alive tests. Post-fix grep is empty; real DAO paths remain tested."
   },
   {
    "id": "AUD-docs-37",
