@@ -197,10 +197,13 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
               context,
             )!.acceptInviteGenericError;
           });
-        case TutorGrantPreconditionError(:final message):
+        case TutorGrantPreconditionError(:final code):
           setState(() {
             _step = _AcceptStep.error;
-            _errorMessage = message;
+            _errorMessage = _preconditionErrorMessage(
+              code,
+              AppLocalizations.of(context)!,
+            );
           });
       }
     } catch (e) {
@@ -213,6 +216,25 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
         });
       }
     }
+  }
+
+  /// AUD-tutoring-02 (EH-5): resolve a [TutorGrantPreconditionCode] to a
+  /// localized, user-facing message. [TutorGrantPreconditionError] carries a
+  /// stable code, never a pre-formatted message — this exhaustive switch is
+  /// the single place that maps each code to user-facing text.
+  String _preconditionErrorMessage(
+    TutorGrantPreconditionCode code,
+    AppLocalizations l10n,
+  ) {
+    return switch (code) {
+      TutorGrantPreconditionCode.cannotAccept =>
+        l10n.acceptInvitePreconditionError,
+      TutorGrantPreconditionCode.invalidTutorEmail ||
+      TutorGrantPreconditionCode.cannotDecline ||
+      TutorGrantPreconditionCode.cannotRescind ||
+      TutorGrantPreconditionCode.cannotRevoke ||
+      TutorGrantPreconditionCode.cannotResign => l10n.acceptInviteGenericError,
+    };
   }
 
   /// Build a minimal stub grant from the raw token for the use-case call.

@@ -606,9 +606,12 @@ void main() {
     testWidgets('renders error heading for TutorGrantPreconditionError', (
       tester,
     ) async {
+      // AUD-tutoring-02 (EH-5): the use case carries a stable code, never a
+      // pre-formatted message — the screen resolves it to the localized
+      // acceptInvitePreconditionError string, not raw English.
       when(() => mockUseCase(grant: any(named: 'grant'))).thenAnswer(
         (_) async => const TutorGrantPreconditionError(
-          message: 'Invite has already expired.',
+          code: TutorGrantPreconditionCode.cannotAccept,
         ),
       );
 
@@ -628,10 +631,59 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       expect(find.text('Could not accept invite'), findsOneWidget);
-      expect(find.text('Invite has already expired.'), findsOneWidget);
+      expect(
+        find.text(
+          'This invite can no longer be accepted. It may have expired or '
+          'already been used.',
+        ),
+        findsOneWidget,
+      );
 
       await _tearDown(tester);
     });
+
+    testWidgets(
+      'renders the Hebrew-localized TutorGrantPreconditionError string '
+      'under Locale(he)',
+      (tester) async {
+        // AC3 (AUD-tutoring-02): a Locale('he') variant confirms the Hebrew
+        // string renders — not the raw/hardcoded English precondition text.
+        when(() => mockUseCase(grant: any(named: 'grant'))).thenAnswer(
+          (_) async => const TutorGrantPreconditionError(
+            code: TutorGrantPreconditionCode.cannotAccept,
+          ),
+        );
+
+        final pinService = _StubTutorPinService(hasPinResult: true);
+        await tester.pumpWidget(
+          _buildHarness(
+            token: 'test-token',
+            useCase: mockUseCase,
+            pinService: pinService,
+            router: mockRouter,
+            locale: const Locale('he'),
+          ),
+        );
+        await _pump(tester);
+
+        await tester.tap(find.text('אישור הזמנה'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          find.text(
+            'לא ניתן עוד לאשר הזמנה זו. ייתכן שפג תוקפה או שכבר נעשה בה '
+            'שימוש.',
+          ),
+          findsOneWidget,
+          reason:
+              'acceptInvitePreconditionError must resolve to the Hebrew '
+              'ARB string under Locale(he), never the raw English message',
+        );
+
+        await _tearDown(tester);
+      },
+    );
 
     testWidgets('renders l10n generic error when use case throws', (
       tester,
@@ -717,8 +769,10 @@ void main() {
           _,
         ) async {
           // Replicate the use-case guard: expired grant cannot be accepted.
+          // AUD-tutoring-02 (EH-5): a stable code, never a grant-id/state
+          // interpolated message.
           return const TutorGrantPreconditionError(
-            message: 'Grant expired-id is not in a state that can be accepted',
+            code: TutorGrantPreconditionCode.cannotAccept,
           );
         });
 
@@ -739,8 +793,13 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
 
         expect(find.text('Could not accept invite'), findsOneWidget);
+        // AUD-tutoring-02: the localized generic-precondition string, never
+        // the raw grant-id/state text the use case used to interpolate.
         expect(
-          find.textContaining('not in a state that can be accepted'),
+          find.text(
+            'This invite can no longer be accepted. It may have expired or '
+            'already been used.',
+          ),
           findsOneWidget,
         );
 
@@ -756,7 +815,7 @@ void main() {
           _,
         ) async {
           return const TutorGrantPreconditionError(
-            message: 'Grant active-id is not in a state that can be accepted',
+            code: TutorGrantPreconditionCode.cannotAccept,
           );
         });
 

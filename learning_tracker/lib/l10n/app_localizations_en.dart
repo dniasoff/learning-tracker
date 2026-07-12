@@ -4708,6 +4708,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unable to accept invite. Please try again.';
 
   @override
+  String get acceptInvitePreconditionError =>
+      'This invite can no longer be accepted. It may have expired or already been used.';
+
+  @override
   String get unexpectedError => 'An unexpected error occurred.';
 
   @override
@@ -4739,6 +4743,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get declineInviteGenericError =>
       'Unable to decline invite. Please try again.';
+
+  @override
+  String get declineInvitePreconditionError =>
+      'This invite can no longer be declined. It may have expired or already been used.';
 
   @override
   String get inviteTutorAppBarTitle => 'Invite a Tutor';

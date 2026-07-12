@@ -158,8 +158,13 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
               message: message,
             ),
           );
-        case TutorGrantPreconditionError(:final message):
-          setState(() => _errorMessage = message);
+        case TutorGrantPreconditionError(:final code):
+          setState(
+            () => _errorMessage = _preconditionErrorMessage(
+              code,
+              AppLocalizations.of(context)!,
+            ),
+          );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -184,6 +189,25 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
     return isAuthError
         ? l10n.inviteTutorErrorUnauthenticated
         : l10n.inviteTutorErrorGeneric;
+  }
+
+  /// AUD-tutoring-02 (EH-5): resolve a [TutorGrantPreconditionCode] to a
+  /// localized, user-facing message. [TutorGrantPreconditionError] carries a
+  /// stable code, never a pre-formatted message — this exhaustive switch is
+  /// the single place that maps each code to user-facing text.
+  String _preconditionErrorMessage(
+    TutorGrantPreconditionCode code,
+    AppLocalizations l10n,
+  ) {
+    return switch (code) {
+      TutorGrantPreconditionCode.invalidTutorEmail =>
+        l10n.inviteTutorInvalidEmail,
+      TutorGrantPreconditionCode.cannotAccept ||
+      TutorGrantPreconditionCode.cannotDecline ||
+      TutorGrantPreconditionCode.cannotRescind ||
+      TutorGrantPreconditionCode.cannotRevoke ||
+      TutorGrantPreconditionCode.cannotResign => l10n.inviteTutorErrorGeneric,
+    };
   }
 
   @override

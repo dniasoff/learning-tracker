@@ -2513,6 +2513,7 @@
   "acceptInviteSuccessBody": "כעת יש לכם גישת מדריך לפרופיל הלמידה של הילד. פתחו את בורר הפרופילים כדי לעבור לפרופיל המודרך.",
   "acceptInviteErrorHeading": "לא ניתן לאשר את ההזמנה",
   "acceptInviteGenericError": "לא ניתן לאשר את ההזמנה. נסו שוב.",
+  "acceptInvitePreconditionError": "לא ניתן עוד לאשר הזמנה זו. ייתכן שפג תוקפה או שכבר נעשה בה שימוש.",
   "unexpectedError": "אירעה שגיאה בלתי צפויה.",
 
   "declineInviteAppBarTitle": "דחיית הזמנה",
@@ -2524,6 +2525,7 @@
   "declineInviteSuccessBody": "דחיתם את הזמנת המדריך. ההורה קיבל הודעה.",
   "declineInviteErrorHeading": "לא ניתן לדחות את ההזמנה",
   "declineInviteGenericError": "לא ניתן לדחות את ההזמנה. נסו שוב.",
+  "declineInvitePreconditionError": "לא ניתן עוד לדחות הזמנה זו. ייתכן שפג תוקפה או שכבר נעשה בה שימוש.",
 
   "inviteTutorAppBarTitle": "הזמנת מדריך",
   "inviteTutorHeading": "הזמנת מדריך",

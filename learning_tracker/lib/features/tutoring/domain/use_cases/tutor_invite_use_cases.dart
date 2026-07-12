@@ -42,7 +42,7 @@ class InviteTutorUseCase {
     final email = tutorEmail.trim().toLowerCase();
     if (email.isEmpty || !email.contains('@')) {
       return const TutorGrantPreconditionError(
-        message: 'A valid tutor email address is required.',
+        code: TutorGrantPreconditionCode.invalidTutorEmail,
       );
     }
     final result = await _repository.inviteTutor(
@@ -74,10 +74,8 @@ class AcceptTutorInviteUseCase {
 
   Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canAccept) {
-      return TutorGrantPreconditionError(
-        message:
-            'Grant ${grant.grantId} is not in a state that can be accepted '
-            '(current state: ${grant.grantState.rawState.toJson()}).',
+      return const TutorGrantPreconditionError(
+        code: TutorGrantPreconditionCode.cannotAccept,
       );
     }
     final result = await _repository.acceptInvite(grantId: grant.grantId);
@@ -103,10 +101,8 @@ class DeclineTutorInviteUseCase {
 
   Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canDecline) {
-      return TutorGrantPreconditionError(
-        message:
-            'Grant ${grant.grantId} is not in a state that can be declined '
-            '(current state: ${grant.grantState.rawState.toJson()}).',
+      return const TutorGrantPreconditionError(
+        code: TutorGrantPreconditionCode.cannotDecline,
       );
     }
     final result = await _repository.declineInvite(grantId: grant.grantId);
@@ -132,12 +128,8 @@ class RescindTutorInviteUseCase {
 
   Future<TutorGrantResult> call({required TutorGrant grant}) async {
     if (!grant.canRescind) {
-      return TutorGrantPreconditionError(
-        message:
-            'Grant ${grant.grantId} cannot be rescinded '
-            '(current state: ${grant.grantState.rawState.toJson()}). '
-            'Only pending grants can be rescinded. '
-            'Use revokeGrant for active grants.',
+      return const TutorGrantPreconditionError(
+        code: TutorGrantPreconditionCode.cannotRescind,
       );
     }
     final result = await _repository.rescindInvite(grantId: grant.grantId);

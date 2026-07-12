@@ -669,34 +669,79 @@ void main() {
       },
     );
 
-    testWidgets('TutorGrantPreconditionError: shows inline error message', (
-      tester,
-    ) async {
-      when(
-        () => mockUseCase(
-          tutorEmail: any(named: 'tutorEmail'),
-          childProfileId: any(named: 'childProfileId'),
-          childName: any(named: 'childName'),
-          parentName: any(named: 'parentName'),
-        ),
-      ).thenAnswer(
-        (_) async => const TutorGrantPreconditionError(
-          message: 'A pending invite already exists.',
-        ),
-      );
+    testWidgets(
+      'TutorGrantPreconditionError(cannotRevoke): shows generic localized '
+      'error, not a raw/hardcoded English string',
+      (tester) async {
+        when(
+          () => mockUseCase(
+            tutorEmail: any(named: 'tutorEmail'),
+            childProfileId: any(named: 'childProfileId'),
+            childName: any(named: 'childName'),
+            parentName: any(named: 'parentName'),
+          ),
+        ).thenAnswer(
+          (_) async => const TutorGrantPreconditionError(
+            // AUD-tutoring-02 (EH-5): the domain layer carries a stable code,
+            // never a pre-formatted message — the screen resolves it via
+            // l10n. This use case can only realistically emit
+            // `invalidTutorEmail`, but the screen's switch is exhaustive over
+            // the full enum (EH-6) — this exercises the generic-fallback arm
+            // for every other code.
+            code: TutorGrantPreconditionCode.cannotRevoke,
+          ),
+        );
 
-      await _pumpScreen(tester, useCase: mockUseCase);
-      await tester.enterText(find.byType(TextFormField), 'dup@example.com');
-      await tester.pump();
-      await tester.tap(find.byType(FilledButton));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+        await _pumpScreen(tester, useCase: mockUseCase);
+        await tester.enterText(find.byType(TextFormField), 'dup@example.com');
+        await tester.pump();
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('A pending invite already exists.'), findsOneWidget);
-      expect(find.text('Share link (backup delivery)'), findsNothing);
+        expect(
+          find.text("Couldn't send the invitation. Please try again."),
+          findsOneWidget,
+        );
+        expect(find.text('Share link (backup delivery)'), findsNothing);
 
-      await _tearDown(tester);
-    });
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'TutorGrantPreconditionError(invalidTutorEmail): shows the same '
+      'localized message as client-side email validation',
+      (tester) async {
+        when(
+          () => mockUseCase(
+            tutorEmail: any(named: 'tutorEmail'),
+            childProfileId: any(named: 'childProfileId'),
+            childName: any(named: 'childName'),
+            parentName: any(named: 'parentName'),
+          ),
+        ).thenAnswer(
+          (_) async => const TutorGrantPreconditionError(
+            code: TutorGrantPreconditionCode.invalidTutorEmail,
+          ),
+        );
+
+        await _pumpScreen(tester, useCase: mockUseCase);
+        await tester.enterText(find.byType(TextFormField), 'dup@example.com');
+        await tester.pump();
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.text('Please enter a valid email address.'),
+          findsOneWidget,
+        );
+        expect(find.text('Share link (backup delivery)'), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
 
     testWidgets('error message clears on next successful send', (tester) async {
       // First call fails

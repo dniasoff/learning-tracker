@@ -2801,6 +2801,7 @@
   "acceptInviteSuccessBody": "You now have tutor access to this child's learning profile. Open the Profile Picker to switch to the tutored profile.",
   "acceptInviteErrorHeading": "Could not accept invite",
   "acceptInviteGenericError": "Unable to accept invite. Please try again.",
+  "acceptInvitePreconditionError": "This invite can no longer be accepted. It may have expired or already been used.",
   "unexpectedError": "An unexpected error occurred.",
 
   "declineInviteAppBarTitle": "Decline Invite",
@@ -2812,6 +2813,7 @@
   "declineInviteSuccessBody": "You have declined this tutor invite. The parent has been notified.",
   "declineInviteErrorHeading": "Could not decline invite",
   "declineInviteGenericError": "Unable to decline invite. Please try again.",
+  "declineInvitePreconditionError": "This invite can no longer be declined. It may have expired or already been used.",
 
   "inviteTutorAppBarTitle": "Invite a Tutor",
   "inviteTutorHeading": "Invite a Tutor",
