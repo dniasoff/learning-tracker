@@ -2,8 +2,6 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart'
-    show DateTimeFactory;
 import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
@@ -73,6 +71,27 @@ class EngagementMetrics {
   });
 }
 
+/// A [LocalDayClock] fixed to a single instant.
+///
+/// Used by [ParentDashboardAggregator.compute] to derive the streak
+/// sub-computation's "today" from its own `now` argument, so the whole
+/// snapshot — including streak — is determined by one instant instead of
+/// two independent clock reads (AUD-dashboard-07).
+class _InstantLocalDayClock implements LocalDayClock {
+  const _InstantLocalDayClock(this._instant);
+
+  final DateTime _instant;
+
+  @override
+  DateTime nowUtc() => _instant.toUtc();
+
+  @override
+  DateTime today() {
+    final local = _instant.toLocal();
+    return DateTime(local.year, local.month, local.day);
+  }
+}
+
 /// Read-only aggregator that computes parent dashboard analytics from existing data.
 ///
 /// Scoped to a single profile so the parent view always reflects the
@@ -81,29 +100,39 @@ class ParentDashboardAggregator {
   final UserDatabase _db;
   final int _profileId;
   final StageDefinitionRepository? _stageRepository;
-  late final StreakStateProvider _streakProvider;
+  final LocalDayClock _clock;
 
+  /// [clock] defaults to the real system clock; inject a [FakeLocalDayClock]
+  /// (or any other [LocalDayClock]) in tests so both the default `now` used
+  /// by [compute] and its streak sub-computation are fully hermetic (AUD-dashboard-07).
   ParentDashboardAggregator(
     this._db, {
     int profileId = 0,
     StageDefinitionRepository? stageRepository,
+    LocalDayClock clock = const SystemLocalDayClock(),
   }) : _profileId = profileId,
-       _stageRepository = stageRepository {
-    _streakProvider = StreakStateProvider(
-      db: _db,
-      clock: const SystemLocalDayClock(),
-    );
-  }
+       _stageRepository = stageRepository,
+       _clock = clock;
 
   /// Compute the full dashboard data snapshot.
   ///
-  /// [now] defaults to the current time; pass explicitly for testability.
+  /// [now] defaults to [clock]'s current instant; pass explicitly for
+  /// testability. The streak sub-computation derives its "today" from this
+  /// same [now] (via a clock fixed to it), rather than reading [_clock]
+  /// independently a second time inside `StreakStateProvider` — so a single
+  /// [now] value fully determines the entire snapshot, including streak,
+  /// closing the day-boundary race where an independent clock read could
+  /// otherwise see a different "today" than the rest of the snapshot.
   Future<ParentDashboardData> compute({DateTime? now}) async {
-    now ??= DateTimeFactory.nowLocal();
+    now ??= _clock.nowUtc().toLocal();
+    final streakProvider = StreakStateProvider(
+      db: _db,
+      clock: _InstantLocalDayClock(now),
+    );
     final completions = await _db.completionDao.getCompletionsByProfile(
       _profileId,
     );
-    final streak = await _streakProvider.read(profileId: _profileId);
+    final streak = await streakProvider.read(profileId: _profileId);
     final activeCurriculaKeys = await _db.activeCurriculumDao
         .getActiveCurriculaByProfile(_profileId);
 
