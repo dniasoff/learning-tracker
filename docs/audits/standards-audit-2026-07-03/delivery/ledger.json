@@ -6708,13 +6708,13 @@
   {
    "id": "AUD-notifications-12",
    "wave": 3,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Replace hardcoded hex Color literals with AppColors tokens in notifications UI",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_a74eec8f-022-59 (branch worktree-wf_a74eec8f-022-59, commit 1ca7143baf1e293fbf15c138d9cf64b5900fd261, tip of this cid's build) but the review agent was lost (quota) before opus review/merge could complete. Per merge-lane payload cid w3r1c22, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_a74eec8f-022-59 removed per payload.worktreesToRemove (`git worktree remove --force`). Branch worktree-wf_a74eec8f-022-59 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_a74eec8f-022-59` shows its sole commit (1ca7143b) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
   },
   {
    "id": "AUD-t-notifications-04",
