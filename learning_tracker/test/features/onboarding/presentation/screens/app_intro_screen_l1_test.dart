@@ -468,5 +468,34 @@ void main() {
         await _tearDown(tester);
       },
     );
+
+    testWidgets(
+      'mishna page (he) illustration chips are Hebrew, not the English '
+      '"…yos" literal',
+      (tester) async {
+        await tester.pumpWidget(
+          _rig(router: router, locale: const Locale('he')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 900));
+
+        final he = await AppLocalizations.delegate.load(const Locale('he'));
+
+        // Tap the CTA rather than swipe: PageController.nextPage() advances
+        // in logical page order regardless of text direction, unlike a raw
+        // drag whose sign flips under RTL (see _advanceToLastPageViaCta).
+        await tester.tap(find.text(he.introContinueJourney));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600)); // page 1 → 2
+
+        expect(find.text(he.introMishnaReviewChip), findsOneWidget);
+        expect(find.text(he.introMishnaWordFragmentChip), findsOneWidget);
+
+        // The pre-fix English literal must NOT appear in a Hebrew locale.
+        expect(find.text('…yos'), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
   });
 }
