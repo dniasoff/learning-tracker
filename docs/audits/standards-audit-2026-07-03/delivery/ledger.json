@@ -6769,13 +6769,18 @@
   {
    "id": "AUD-progress-11",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Localize MonthlyActivitySliverCalendar's hardcoded English strings",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "51befd9a6fe844bfce1a66c76790e8ed2c757ed2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-progress-11 AC1 OK: 3 sites now use AppLocalizations ICU getters (calendar.dart:108/197/266); only leftover quoted Text is Text('$dayNumber'):366, a pure numeral",
+    "AUD-progress-11 AC(arb-parity) OK: make arb-parity green, 1517 EN keys all in HE; 3 keys added key-for-key, EN =1/other + HE one/two/other"
+   ],
+   "notes": "Confirmed 3 sites (lines 106/193/258) pre-fix. Added ICU-plural ARB keys, wired widget to AppLocalizations. Red test failed 3/4 pre-fix, all 4 pass post-fix. Updated spike test's _wrap with delegates. Left non-evidenced numeral Text('$dayNumber') alone: no English words, no lint flags it. Merge-lane cid w3r1c24: rebased tipSha 45a257b1 onto audit-fix/2026-07-03 (rebasedSha 3401c934), no conflicts. gatePolicy=overlap-tested: rebase overlapped branch tip in the 5 generated l10n files (app_en.arb, app_he.arb, app_localizations*.dart) only, from concurrent ARB-key additions by other waves. Post-rebase gate: make audit 39/39 clean; flutter analyze exit 1 but 0 errors/12 warnings, all in unrelated test/features/notifications/presentation/providers/{notification_effects_sm4_test.dart,streak_alert_service_family_test.dart} (override_on_non_overriding_member), reproduced identically on the unmodified branch tip pre-merge, matching documented non-blocking precedent for cid w3r1c26; make arb-parity OK (1521 EN keys all in HE); flutter test --concurrency=2 on payload.testsToRun plus l10n/arb-parity overlap suites (core/l10n/app_localizations_test.dart, l10n/b1_vocab_keys_present_test.dart, l10n/tier_counter_pluralization_test.dart, l10n/app_localizations_coverage_test.dart, tool/audit_and_arb_parity_test.dart): 180 run, 1 failure -- 'make audit check 37/37 -- AUD-sync-05 (SM-7)' asserting a stale hardcoded '37/37' substring that no longer matches now that make audit has grown to 39 total checks (this check is now labeled 37/39); reproduced identically on the unmodified audit-fix/2026-07-03 tip before this merge (confirmed by isolated re-run), unrelated to this finding's l10n/calendar fix sites, matching extensively documented non-blocking precedent already in this ledger (e.g. w3r0c11, w1r0c4, w1r0c10). Merged --no-ff onto audit-fix/2026-07-03: mergeSha 51befd9a6fe844bfce1a66c76790e8ed2c757ed2."
   },
   {
    "id": "AUD-scheduler-22",
