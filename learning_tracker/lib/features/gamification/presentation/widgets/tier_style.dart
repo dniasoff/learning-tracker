@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart'
+    show RewardTier;
 
 /// Immutable visual style descriptor for an achievement tier card.
 /// Encapsulates all colours needed to render a single tier consistently.
@@ -33,10 +35,13 @@ class TierStyle {
   final Color tagFg;
   final Color lockIconColor;
 
-  /// Returns the [TierStyle] appropriate for the given milestone [title].
-  /// [isLegend] overrides the title-based lookup for the legend tier.
-  static TierStyle forTitle(String title, bool isLegend) {
-    final t = title.trim();
+  /// Returns the [TierStyle] appropriate for the given [tier].
+  ///
+  /// [tier] is a stable, non-localizable key (AUD-gamification-07) --
+  /// callers derive it via [RewardTier.classify] rather than passing the
+  /// milestone's raw display title directly. [isLegend] overrides the
+  /// tier-based lookup for the legend tier.
+  static TierStyle forTier(RewardTier tier, bool isLegend) {
     if (isLegend) {
       return TierStyle(
         cardBg: Colors.transparent,
@@ -53,8 +58,8 @@ class TierStyle {
         lockIconColor: Colors.white70,
       );
     }
-    switch (t) {
-      case 'Bronze Star':
+    switch (tier) {
+      case RewardTier.bronze:
         return const TierStyle(
           cardBg: Color(0xFFF5E6D3),
           borderColor: Color(0xFFE8D5C4),
@@ -69,7 +74,7 @@ class TierStyle {
           tagFg: Color(0xFFBF360C),
           lockIconColor: Color(0xFF5D4037),
         );
-      case 'Silver Star':
+      case RewardTier.silver:
         return const TierStyle(
           cardBg: Colors.white,
           borderColor: Color(0xFFECEFF1),
@@ -84,7 +89,7 @@ class TierStyle {
           tagFg: Color(0xFF455A64),
           lockIconColor: Color(0xFF607D8B),
         );
-      case 'Gold Star':
+      case RewardTier.gold:
         return const TierStyle(
           cardBg: Color(0xFFFFF9E6),
           borderColor: Color(0xFFFFECB3),
@@ -99,7 +104,7 @@ class TierStyle {
           tagFg: Color(0xFFE65100),
           lockIconColor: Color(0xFFF9A825),
         );
-      case 'Platinum Star':
+      case RewardTier.platinum:
         return const TierStyle(
           cardBg: Color(0xFFFAFCFF),
           borderColor: Color(0xFFBBDEFB),
@@ -114,7 +119,7 @@ class TierStyle {
           tagFg: Color(0xFF0277BD),
           lockIconColor: Color(0xFF5C6BC0),
         );
-      case 'Premium Star':
+      case RewardTier.premium:
         return const TierStyle(
           cardBg: Color(0xFFF3E5F5),
           borderColor: Color(0xFFE1BEE7),
@@ -129,7 +134,7 @@ class TierStyle {
           tagFg: Color(0xFF4A148C),
           lockIconColor: Color(0xFF6A1B9A),
         );
-      case 'Diamond Star':
+      case RewardTier.diamond:
         return const TierStyle(
           cardBg: Color(0xFFE0F7FF),
           borderColor: Color(0xFF80DEEA),
@@ -144,7 +149,7 @@ class TierStyle {
           tagFg: Color(0xFF00838F),
           lockIconColor: AppColors.chartTeal,
         );
-      case 'Elite Star':
+      case RewardTier.elite:
         return const TierStyle(
           cardBg: Color(0xFFFCE4EC),
           borderColor: Color(0xFFF8BBD0),
@@ -159,7 +164,8 @@ class TierStyle {
           tagFg: Color(0xFFAD1457),
           lockIconColor: Color(0xFFC2185B),
         );
-      default:
+      case RewardTier.legend:
+      case RewardTier.custom:
         return const TierStyle(
           cardBg: Colors.white,
           borderColor: Color(0xFFE0E0E0),
