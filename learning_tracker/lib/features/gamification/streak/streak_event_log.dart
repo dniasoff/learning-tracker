@@ -1,7 +1,7 @@
 /// `StreakEventLog` — thin wrapper over the `streak_events` table.
 ///
 /// The single mutation method is [append]. Idempotency is enforced by
-/// the UNIQUE `(profileId, eventTimestamp, eventType)` index on
+/// the UNIQUE `(profileId, dayUtc, eventType)` index on
 /// `streak_events` (Story 25.2 / DNI-323): duplicate appends are
 /// silently swallowed via `InsertMode.insertOrIgnore`.
 library;
