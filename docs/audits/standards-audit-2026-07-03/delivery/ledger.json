@@ -988,24 +988,34 @@
   {
    "id": "AUD-t-cross-02",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Replace the always-passing FirestoreGatewayImpl permission-denied conversion test with a real assertion",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "9a4d1aae4a770b7a14e60b04c9f08dd6ab0d3e1f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-02 AC1 OK: _DenyGetQuery.get() throws real FirebaseException(permission-denied); asserts throwsA(isA<FirestorePermissionDeniedException>()), no catch-all",
+    "AUD-t-cross-02 AC2 OK: I broke e.code to 'permission-denied-BROKEN' -> RED ('not an instance of'); reverted"
+   ],
+   "notes": "Confirmed group 9 test was catch-all-pass (untestable). Replaced with _PermissionDeniedOnGetFirestore proxy chain throwing real FirebaseException at Query.get(); asserts typed exception only. Red-first: broke code-check sentinel, saw red, reverted. gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (merge-base == dev HEAD; rebase was a no-op), so payload.testsToRun was not re-run here; make audit (50/50 clean) and flutter analyze (no issues) both passed post-rebase; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-t-cross-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Add a real >500-item chunk-boundary test for pushCompletionsBatch — the existing H3 partial-commit 'regression test' never calls it",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "9a4d1aae4a770b7a14e60b04c9f08dd6ab0d3e1f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-01 AC1 OK: test:1326 drives 501 items thru real pushCompletionsBatch via failOnCall:2 proxy; asserts committed==500 chunk1 keys + _count==500",
+    "AUD-t-cross-01 AC2 OK: I moved pushed.addAll before commit try/catch -> RED (501 vs 500, 'longer than expected'); reverted"
+   ],
+   "notes": "Confirmed group 5 max was 10 items. Added 501-item chunk-boundary test via _FailingOnNthBatchFirestore proxy (chunk1 real-commits, chunk2 fails); asserts committed==chunk1 keys. Red-first: swapped addAll/commit order, saw red, reverted. gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (merge-base == dev HEAD; rebase was a no-op), so payload.testsToRun was not re-run here; make audit (50/50 clean) and flutter analyze (no issues) both passed post-rebase; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-account-02",
