@@ -204,7 +204,7 @@ Shows all 9 curricula with Hebrew names. User taps ONE to advance.
 | `tanach` | תנ"ך | No |
 | `mishna_berurah` | משנה ברורה | Yes |
 | `mussar` | מוסר | Yes |
-| `torah` | תורה | No |
+| `mishneh_torah` | משנה תורה | Yes |
 
 **Side effect:** Starts loading bundled content into DB in background (invisible to user). No separate "importing" screen.
 
