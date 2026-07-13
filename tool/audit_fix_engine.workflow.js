@@ -32,6 +32,16 @@ for (const pa of (Array.isArray(cfg.preApproved) ? cfg.preApproved : [])) { if (
 
 const REPO = '/home/daniel/repos/learning-tracker'
 const BRANCH = 'dev'
+// Partial-wave (chunk) mode: when a wave is delivered in chunks, the reconcile
+// and closing gate must scope to THIS run's manifest ids only, not the whole
+// wave (the other chunks are intentionally pending and must not be touched or
+// counted against this chunk). Set cfg.partialWave + cfg.chunkLabel.
+const PARTIAL = !!cfg.partialWave
+const MIDS = cfg.manifest.map(function (m) { return m.id })
+const CHUNK_LABEL = cfg.chunkLabel || ('wave-' + WAVE)
+const SCOPE_NOTE = PARTIAL
+  ? ' IMPORTANT - PARTIAL/CHUNK MODE: this run delivers only a CHUNK of wave-' + WAVE + ' (' + CHUNK_LABEL + '). Scope EVERYTHING to exactly these manifest ids: [' + MIDS.join(', ') + ']. Other wave-' + WAVE + ' rows are intentionally pending in later chunks - do NOT touch them, do NOT mark them blocked, do NOT count them against this chunk, and do NOT treat their todo state as a failure.'
+  : ''
 const AUDIT = 'docs/audits/standards-audit-2026-07-03'
 const LEDGER = AUDIT + '/delivery/ledger.json'
 const KILLLOG = AUDIT + '/delivery/kill-log-addendum.md'
@@ -427,7 +437,8 @@ const RECON_SCHEMA = {
 const recon = await ga([
   'You are the wave-' + WAVE + ' ledger reconciliation agent (sonnet) for the standards-audit delivery engine, operating the main checkout at ' + REPO + ' on branch ' + BRANCH + ' (verify branch first; no modified tracked files except the ledger itself; untracked files from the concurrent TEA session are tolerated - never touch them).',
   'Engine outcome (in-memory truth): merged=' + JSON.stringify(outcomes.merged) + ' refuted=' + JSON.stringify(outcomes.refuted) + ' blocked=' + JSON.stringify(outcomes.blocked) + ' unprocessed=' + JSON.stringify(residue) + ' (unprocessed reason: ' + residueReason + ').',
-  'Steps: 1) Read ' + LEDGER + '; every wave-' + WAVE + ' row must be in a terminal state matching the engine outcome. Rows the merge lane already updated should agree - flag any mismatch. 2) Unprocessed ids: set status=blocked, notes="not attempted: ' + residueReason + '". 3) Verify kill-log addendum entries exist for every skipped-refuted row (add missing ones). 4) jq-validate, commit "ledger(wave-' + WAVE + '): reconcile - <counts>" with trailer Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>, and report the final counts for wave-' + WAVE + ' rows.',
+  SCOPE_NOTE,
+  'Steps: 1) Read ' + LEDGER + '; every ' + (PARTIAL ? "manifest id in THIS chunk's scope list above" : 'wave-' + WAVE + ' row') + ' must be in a terminal state matching the engine outcome. Rows the merge lane already updated should agree - flag any mismatch. 2) Unprocessed ids (only ids from the engine outcome unprocessed list above): set status=blocked, notes="not attempted: ' + residueReason + '". 3) Verify kill-log addendum entries exist for every skipped-refuted row (add missing ones). 4) jq-validate, commit "ledger(' + CHUNK_LABEL + '): reconcile - <counts>" with trailer Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>, and report the final counts.',
   'Return: status (green if ledger consistent), merged, refuted, blocked (final wave-' + WAVE + ' counts from the LEDGER, not from memory), notes.',
 ].join('\n'), { label: 'reconcile:wave-' + WAVE, phase: 'Reconcile', model: 'sonnet', schema: RECON_SCHEMA }, true)
 
@@ -450,10 +461,11 @@ const GATE_SCHEMA = {
 function gatePrompt(attempt) {
   return [
     'You are the WAVE-' + WAVE + ' CLOSING GATE (opus) for the standards-audit delivery engine' + (attempt > 1 ? ' - RE-CERTIFICATION attempt ' + attempt + ' after repairs' : '') + '. Wave ' + WAVE + ' claims done. You certify it or fail it; a wrong pass poisons everything after it. Operate the main checkout at ' + REPO + ' on ' + BRANCH + ' (verify branch; no modified tracked files; untracked files from the concurrent TEA session under docs/test-artifacts/ are tolerated, not residue - never touch them).',
+    SCOPE_NOTE,
     'Independently, judging only by exit codes and file evidence:',
     '1. Full gate suite: cd learning_tracker && make audit; flutter analyze; make ci (the learning_tracker ci target ONLY - the root Makefile ci runs a write-mode formatter and is BANNED); root make arb-parity' + (CUSTOM_LINT ? '; cd learning_tracker && dart run custom_lint' : ' (custom_lint still known-broken this wave - not in the set)') + '. If the wave touched codegen-adjacent files (check git log for .g.dart or build_runner mentions since the wave started): dart run build_runner build --delete-conflicting-outputs then git diff --exit-code on generated files.',
-    '2. Ledger reconcile: every wave-' + WAVE + ' row in ' + LEDGER + ' must be merged, skipped-refuted, or GENUINELY-blocked. A blocked row is ACCEPTABLE only if its notes describe a real external blocker (missing infra/credential/emulator, a product decision beyond the AC, or a register-vs-reality contradiction) WITH an escalation. A blocked row whose notes contain "not attempted", "no-progress", "loop end", "quota", "merge lane", or any wording meaning the engine simply did not finish the work = FAIL (that work is deliverable and must be delivered, never swept under blocked). Any todo/building row = fail. Report each fail-worthy blocked id in reasons.',
-    '3. Sample re-verification: sort merged wave-' + WAVE + ' ids, take every 10th (minimum 3): for each, re-verify its acceptance_criteria against the ACTUAL tree (read the finding JSON under ' + AUDIT + '/delivery/findings/). A merged finding with an unmet AC is fake-done = fail.',
+    '2. Ledger reconcile: every ' + (PARTIAL ? "row in THIS chunk's scope list (the manifest ids above)" : 'wave-' + WAVE + ' row') + ' in ' + LEDGER + ' must be merged, skipped-refuted, or GENUINELY-blocked. A blocked row is ACCEPTABLE only if its notes describe a real external blocker (missing infra/credential/emulator, a product decision beyond the AC, or a register-vs-reality contradiction) WITH an escalation. A blocked row whose notes contain "not attempted", "no-progress", "loop end", "quota", "merge lane", or any wording meaning the engine simply did not finish the work = FAIL (that work is deliverable and must be delivered, never swept under blocked). Any todo/building row AMONG THE SCOPED IDS = fail' + (PARTIAL ? ' (other wave-' + WAVE + ' rows outside this chunk are EXPECTED to be todo - they belong to later chunks and are NOT failures)' : '') + '. Report each fail-worthy blocked id in reasons.',
+    '3. Sample re-verification: sort the merged ids ' + (PARTIAL ? "from THIS chunk's scope" : 'in wave-' + WAVE) + ', take every 10th (minimum 3): for each, re-verify its acceptance_criteria against the ACTUAL tree (read the finding JSON under ' + AUDIT + '/delivery/findings/). A merged finding with an unmet AC is fake-done = fail.',
     '4. Residue check: git worktree list shows only the main checkout (report strays); git branch --list shows no unexpected fix/salvage branches.',
     '5. TQ-7 spot check: git diff ' + BASE + '..HEAD -- learning_tracker/test | grep for removed expect( lines; deletions need weaken-ok tags or justified commit messages.',
     'Return: verdict certify|fail, reasons (empty on certify; precise and actionable on fail), gateResults (per-gate PASS/FAIL strings), sampledIds, notes.',
@@ -499,7 +511,7 @@ const boundary = await ga([
   '2. git push origin dev (plain push - must be a fast-forward of origin/dev; if rejected as non-fast-forward, git fetch origin and report red, NEVER force-push).',
   '3. git worktree prune; git worktree list - only the main checkout should remain; force-remove any stray engine worktrees (paths under .claude/worktrees or a workflow temp root) and report them. Delete leftover worktree-*/salvage-* branches whose commits are already in dev (git cherry dev <branch> shows only "-" lines, OR git merge-base --is-ancestor <branch> dev) with git branch -D; if a branch has unmerged "+" commits, LEAVE it and report. NEVER delete dev.',
   '4. diffstat: last line of git diff --stat ' + BASE + '..dev.',
-  'Linear mirror (PO-enabled; NEVER let it block - on any Linear failure, note it and continue): use ToolSearch to load mcp__linear__list_teams and mcp__linear__save_issue. Find team ' + LINEAR_TEAM + '. Create ONE summary issue titled "Standards-audit delivery - Wave ' + WAVE + ' complete (2026-07-03)" with: merged=' + outcomes.merged.length + ' refuted=' + outcomes.refuted.length + ' blocked=' + outcomes.blocked.length + ', the gate verdict, the diffstat, and the merged finding ids. Then one issue per blocked finding (title "AUD blocked: <id>", description = reason) from this list: ' + JSON.stringify(blockedDetail) + '.',
+  'Linear mirror (PO-enabled; NEVER let it block - on any Linear failure, note it and continue): use ToolSearch to load mcp__linear__list_teams and mcp__linear__save_issue. Find team ' + LINEAR_TEAM + '. Create ONE summary issue titled "Standards-audit delivery - ' + (PARTIAL ? CHUNK_LABEL + ' merged' : 'Wave ' + WAVE + ' complete') + ' (2026-07-03)" with: merged=' + outcomes.merged.length + ' refuted=' + outcomes.refuted.length + ' blocked=' + outcomes.blocked.length + ', the gate verdict, the diffstat, and the merged finding ids' + (PARTIAL ? ' (this is one chunk of wave-' + WAVE + '; the wave is not yet complete)' : '') + '. Then one issue per blocked finding (title "AUD blocked: <id>", description = reason) from this list: ' + JSON.stringify(blockedDetail) + '.',
   'Return: status, devSha (dev HEAD), pushedDev, branchDeleted (always false - dev is never deleted in the single-branch model), worktrees (one-line state), linear (what you created or why it failed), diffstat, notes.',
 ].join('\n'), { label: 'boundary:wave-' + WAVE, phase: 'Boundary', model: 'sonnet', schema: BOUND_SCHEMA }, true)
 
