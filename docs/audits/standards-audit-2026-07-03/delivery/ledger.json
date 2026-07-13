@@ -6610,13 +6610,18 @@
   {
    "id": "AUD-t-auth-05",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "auth_state_test.dart triplicates the same AuthState assertions across parallel groups",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "bfa23b861a4dd8b248627c58eeb938a053ef8f0b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-auth-05 AC1 OK: only 4 groups remain; single AuthState group covers ctor/predicate/copyWith/displayIdentifier, equality group covers ==/hashCode only. No overlap.",
+    "AUD-t-auth-05 AC2 OK: flutter test 20/20 green; each deleted assertion traced to canonical group incl 2 folded facts (L106 tier==null, L181 currentUser). 18 facts kept."
+   ],
+   "notes": "No drift since 4018a91c. 5 groups asserted overlapping AuthState behavior. Folded 2 unique facts into canonical AuthState group, deleted 4 duplicate groups (also signedOut, beyond the 3 named, to satisfy AC1's whole-file wording). 392->287 lines, 24->20 tests, same 18 facts covered."
   },
   {
    "id": "AUD-content_browsing-09",
