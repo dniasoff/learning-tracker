@@ -2624,13 +2624,19 @@
     {
       "id": "AUD-docs-09",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Fix testing-guide.md's copy-paste test examples — they import AppDatabase/CompletionsCompanion/UserMode, all deleted in the schema-v1 rebuild",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "5d3ea9a200b8f0f5eca57bc775d93d04f0fcfbd6"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-09 AC1 OK: all doc code blocks (Unit/Mock/Widget/Story/Integration + infra) reconstructed into scratch tests; flutter test 8/8 passed vs current lib/",
+        "AUD-docs-09 AC2 OK: dart_test.yaml grep -cE epic=20/story=97 match doc's 20/97; createTestDatabase() snippet matches test/helpers/test_database.dart:12-14 exactly",
+        "AUD-docs-09 stale-sweep OK: no AppDatabase/CompletionsCompanion/UserMode/TrackType/getAllCompletions/streakDao usages left; insertCompletion is a local helper only"
+      ],
+      "notes": "Confirmed evidence current. Rewrote all 4 examples + Test Infra snippets vs current API surface. Also fixed getAllCompletions()/streakDao/missing l10n wiring in named sections. Tags refreshed 14/62->20/97 vs dart_test.yaml. Blocks spot-run via scratch files (9/9 passed), deleted pre-commit."
     },
     {
       "id": "AUD-docs-20",
