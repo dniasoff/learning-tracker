@@ -3312,13 +3312,19 @@
   {
    "id": "AUD-t-cross-05",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Add a test for OutboxSyncWriteFacade's onEnqueueDrain chain — write_tee_status_update_test.dart only unit-tests recordDrainAttempt() in isolation",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "67020cd27dd47382256fb9b7eb224f2652af79c6"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-05 AC1 OK: new group added to sync_providers_test.dart, path mirrors lib/features/sync/presentation/providers/sync_providers.dart",
+    "AUD-t-cross-05 AC2 OK: reads REAL outboxSyncWriteFacadeProvider, facade.pushSettings->real onEnqueueDrain->verify recordDrainAttempt().called; body never calls it",
+    "AUD-t-cross-05 red-first CONFIRMED: reviewer removed prod recordDrainAttempt -> both new tests failed 'no calls at all'; file restored pristine"
+   ],
+   "notes": "Prod wiring already correct, but no test hit real enqueue->onEnqueueDrain->recordDrainAttempt. Added 2 tests via outboxSyncWriteFacadeProvider+mocks asserting recordDrainAttempt fires w/o direct call. Red-first: broke closure, tests failed; reverted, pass. No prod change."
   },
   {
    "id": "AUD-tracks-10",
