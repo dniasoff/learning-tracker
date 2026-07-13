@@ -70,6 +70,7 @@ import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
+import 'package:learning_tracker/core/utils/gematriya.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
@@ -761,16 +762,14 @@ void main() {
   // ── Extra: Gematriya correctness ─────────────────────────────────────────────
 
   test('Gematriya.forNumber special cases: 15=טו, 16=טז', () {
-    // Import via the widget test indirectly by exercising through multi-segment
-    // rendering. Here we test the utility directly.
-    // These are the conventional substitutions to avoid divine name spellings.
-    // We confirm they don't appear via the widget tree in a separate test (C1).
-    // Direct assertion for completeness:
-    expect(_gematriya(15), equals('טו'));
-    expect(_gematriya(16), equals('טז'));
-    expect(_gematriya(1), equals('א'));
-    expect(_gematriya(2), equals('ב'));
-    expect(_gematriya(400), equals('ת'));
+    // Calls the real Gematriya.forNumber directly (not a local copy) so a
+    // regression in the 15/16 divine-name-avoidance substitution is caught
+    // here, not just indirectly via widget rendering (see C1).
+    expect(Gematriya.forNumber(15), equals('טו'));
+    expect(Gematriya.forNumber(16), equals('טז'));
+    expect(Gematriya.forNumber(1), equals('א'));
+    expect(Gematriya.forNumber(2), equals('ב'));
+    expect(Gematriya.forNumber(400), equals('ת'));
   });
 
   // ── Extra: TutoredProfileSelection equality + tutorOwnProfileId ──────────────
@@ -794,38 +793,4 @@ void main() {
     final c = a.copyWith(canEditGoals: false);
     expect(a, isNot(equals(c)));
   });
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/// Thin wrapper so the Gematriya import can live in lib/ without
-/// importing the class directly here (test only needs forNumber).
-String _gematriya(int n) {
-  // Inline the same table from Gematriya to keep the test self-contained and
-  // avoid importing a lib/ class that could pull in unwanted transitive deps.
-  // The values are the canonical gematriya mappings.
-  final table = {
-    1: 'א',
-    2: 'ב',
-    3: 'ג',
-    4: 'ד',
-    5: 'ה',
-    6: 'ו',
-    7: 'ז',
-    8: 'ח',
-    9: 'ט',
-    10: 'י',
-    11: 'יא',
-    12: 'יב',
-    13: 'יג',
-    14: 'יד',
-    15: 'טו',
-    16: 'טז',
-    17: 'יז',
-    18: 'יח',
-    19: 'יט',
-    20: 'כ',
-    400: 'ת',
-  };
-  return table[n] ?? '?';
 }
