@@ -6,12 +6,12 @@ description: Scenario and spec set for Epic 22 — recovery from out-of-sync sta
 date: 2026-04-19
 epic: 22
 linear: https://linear.app/dniasoff/issue/DNI-255
-status: backlog
+status: superseded
 ---
 
 # Evolution Scenarios — Catch-up & Amnesty (Epic 22)
 
-> ⚠️ **Status — 2026-04-19:** Every file under `docs/scenarios/evolution/` is a design artifact for **Epic 22** (DNI-255) — Catch-up & Amnesty System. Epic 22 is **backlog**; 22 stories are planned across 14 groups. Data primitives referenced in these docs **do not yet exist** in code:
+> ⚠️ **Status — 2026-04-19 (superseded 2026-05-19, see banner above):** Every file under `docs/scenarios/evolution/` was a design artifact for **Epic 22** (DNI-255) — Catch-up & Amnesty System. Epic 22 is **Canceled** in Linear (all 22 stories Canceled); the design was assessed as over-scoped and is not being implemented. Data primitives referenced in these docs were **never implemented** in code:
 >
 > - `item_amnesty` table
 > - `track_action_log` table
@@ -19,7 +19,7 @@ status: backlog
 > - `cycle_tag` field
 > - Pause state (distinct from Archive)
 >
-> Use these docs as the implementation-ready spec when Epic 22 work starts. Do not treat any of them as documentation of existing behavior.
+> These docs are retained for historical reference only. Do not treat any of them as an implementation-ready spec or as documentation of existing behavior — see `docs/planning/overdue-refactor-architecture.md` for the current approach.
 
 ## Structure
 
@@ -44,4 +44,4 @@ status: backlog
 
 - **Catch-up & Amnesty design doc** — [`../../planning/catchup-and-amnesty-scenarios.md`](../../planning/catchup-and-amnesty-scenarios.md)
 - **Linear epic** — [DNI-255 — Epic 22: Catch-up & Amnesty System](https://linear.app/dniasoff/issue/DNI-255)
-- **Epic status summary** — [`../../linear-status.md`](../../linear-status.md#epic-22--catch-up--amnesty-system-dni-255--backlog-design-complete)
+- **Epic status summary** — [`../../linear-status.md`](../../linear-status.md#epic-22--catch-up--amnesty-system-dni-255)
