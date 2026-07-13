@@ -9,9 +9,25 @@ import 'package:learning_tracker/features/account/domain/services/password_hashe
 
 /// Thrown when the email is already in use by an existing Firebase
 /// account. UI layer must enter the guided merge flow — see v2 §4.3.
+///
+/// The raw email is stored in [email] for callers that need it, but it is
+/// NOT included in [message] or [toString] — those paths are safe to pass
+/// to loggers. Mirrors [DuplicateEmailException]'s log-safety split
+/// (AUD-t-auth-03).
 class EmailCollisionException extends ConflictException {
-  const EmailCollisionException(this.email) : super('$email is already in use');
+  const EmailCollisionException(this.email) : super('Email already in use');
+
+  /// The conflicting email address.
+  ///
+  /// Do NOT log this field directly. Use [redactedEmail] for log contexts.
   final String email;
+
+  /// A log-safe representation of the email: "***@<domain>".
+  String get redactedEmail {
+    final atIndex = email.indexOf('@');
+    if (atIndex < 0) return '***';
+    return '***${email.substring(atIndex)}';
+  }
 }
 
 /// Thrown when the password supplied for the upgrade does not match

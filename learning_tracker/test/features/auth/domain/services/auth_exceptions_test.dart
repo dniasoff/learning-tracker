@@ -79,15 +79,29 @@ void main() {
   // =========================================================================
 
   group('EmailCollisionException', () {
-    test('toString contains email', () {
+    // AUD-t-auth-03: this group previously asserted toString() DID contain
+    // the raw email — the opposite of the sibling DuplicateEmailException
+    // group above — which locked in inconsistent PII redaction between the
+    // two sibling exception types. Corrected to assert the same log-safety
+    // property as DuplicateEmailException (not a weakening: the new
+    // assertion is strictly stricter than the one it replaces).
+    test('toString contains class name but NOT raw email (log-safe)', () {
+      // The raw email is intentionally excluded from toString() for logger
+      // safety — callers that need it read ex.email directly.
       const ex = EmailCollisionException('charlie@example.com');
-      expect(ex.toString(), contains('charlie@example.com'));
       expect(ex.toString(), contains('EmailCollisionException'));
+      expect(ex.toString(), isNot(contains('charlie@example.com')));
     });
 
     test('exposes email field', () {
       const ex = EmailCollisionException('user@domain.com');
       expect(ex.email, 'user@domain.com');
+    });
+
+    test('redactedEmail exposes a log-safe form of the email', () {
+      const ex = EmailCollisionException('user@domain.com');
+      expect(ex.redactedEmail, '***@domain.com');
+      expect(ex.toString(), isNot(contains('user@domain.com')));
     });
 
     test('is an Exception', () {
