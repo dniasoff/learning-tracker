@@ -78,6 +78,9 @@ class _StubSelectedProfileId extends SelectedProfileId {
 
 final _kNow = DateTime.utc(2026, 1, 1);
 
+Future<AppLocalizations> _l10n() async =>
+    AppLocalizations.delegate.load(const Locale('en'));
+
 /// A cloud account row in the device registry (NO matching row in userDb).
 DeviceAccountsCompanion _cloudAccountEntry({
   String accountId = 'acc-cloud-missing',
@@ -226,13 +229,12 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
+    final l10n = await _l10n();
+
     // REGRESSION GUARD: A SnackBar with the "local data missing" message
     // must be shown — the user is told why nothing happened.
     expect(
-      find.text(
-        'This account\'s local data is missing. '
-        'Connect to the internet to restore it.',
-      ),
+      find.text(l10n.authLocalDataMissing),
       findsOneWidget,
       reason:
           'Silent fail: no error shown when cloud local data is missing '
@@ -269,13 +271,12 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
+    final l10n = await _l10n();
+
     // REGRESSION GUARD: A SnackBar with the "local data missing" message
     // must be shown.
     expect(
-      find.text(
-        'This account\'s local data is missing. '
-        'Connect to the internet to restore it.',
-      ),
+      find.text(l10n.authLocalDataMissing),
       findsOneWidget,
       reason:
           'Silent fail: no error shown when local-born local data is missing',
