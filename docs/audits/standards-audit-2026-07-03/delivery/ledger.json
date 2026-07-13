@@ -2822,13 +2822,21 @@
     {
       "id": "AUD-docs-05",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Correct learning_tracker/CLAUDE.md's false custom-lint enforcement claims",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "842b9f983ba495acc77d618866e2ee741a842a55"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-05 AC1 OK: Makefile:277 'audit: lint-rules-test' depends only on lint-rules-test, never runs custom_lint (separate lint target line 266)",
+        "AUD-docs-05 AC1 OK: R1/R2 warn-only (checks 14/15,15/15 no FAIL=1), R3/R4/R5 hard gates (checks 1-3,4,8,22 set FAIL=1) per Makefile",
+        "AUD-docs-05 AC1 OK: custom_lint-non-functional claim matches coding-standards.md lines 775-828; cross-ref link+anchor resolve",
+        "AUD-docs-05 AC1 OK: all 4 named lint rules exist in packages/custom_lints/lib/src/rules/ (feature_cross_import, firebase_outside_core, raw_talker, curriculum bypass)",
+        "AUD-docs-05 AC1 OK: 'make audit' re-run PASS exit 0, 43/43 clean; R1/R2 WARN output confirms wording"
+      ],
+      "notes": "Re-verified: make audit depends only on lint-rules-test, never runs custom_lint; CLI is non-functional per coding-standards.md. Rewrote CLAUDE.md's 5 false 'Enforced by' lines to name the real make audit grep per rule (warn-only R1-2, hard-gate R3-5); fixed 'Local enforcement' section too. Merged --no-ff onto dev (w4r1c4, mergeSha 7f215b5f8fbcd72446f7b0d1f2b29571be41d31e). Post-rebase gate: make audit PASSED (43/43 clean), flutter analyze clean (No issues found!). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (only learning_tracker/CLAUDE.md changed since merge-base 5636ccbdac4fe38a26fda1a151e02fc221f35427, no overlap with dev's concurrently-landed changes), so no additional flutter test run performed; the wave-closing full make ci is the integration gate. touchedStrings=false, arb-parity not run."
     },
     {
       "id": "AUD-docs-02",
