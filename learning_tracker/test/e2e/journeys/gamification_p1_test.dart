@@ -32,7 +32,7 @@ import 'dart:convert';
 import 'package:auto_route/auto_route.dart' show PageRouteInfo;
 import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:flutter/material.dart'
-    show Icons, Offset, SingleChildScrollView, Switch, TextField;
+    show Icons, InkWell, Offset, SingleChildScrollView, Switch, TextField;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
@@ -506,6 +506,35 @@ void main() {
           thresholdPoints: 300,
         );
 
+        // Seed one active track + stage definition so PointConfigScreen
+        // renders a real curriculum card with a live increment control
+        // (AUD-t-cross-07) instead of falling into the "no active tracks"
+        // empty state, where canEdit has nothing to gate and a regression
+        // could hide.
+        final pointConfigTrackId = await h.db
+            .into(h.db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: profileId,
+                curriculumId: CurriculumId.mishnayos.storageKey,
+                stateChangedAt: DateTimeFactory.nowUtc(),
+                activatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+        await h.db
+            .into(h.db.stageDefinitions)
+            .insert(
+              StageDefinitionsCompanion.insert(
+                profileId: profileId,
+                curriculumId: CurriculumId.mishnayos.storageKey,
+                trackId: pointConfigTrackId,
+                stageOrder: 1,
+                stageName: 'Learn',
+                updatedAt: Value(DateTimeFactory.nowUtc()),
+              ),
+              mode: InsertMode.insertOrIgnore,
+            );
+
         h.markPinAuthenticated();
 
         // ── Part 1: RewardConfigurationScreen ──
@@ -551,11 +580,37 @@ void main() {
         await h.pump();
 
         h.expectOnScreen('Point Settings', routeName: 'PointConfigScreen');
-        // The screen may show "no active curricula" but the Save button
-        // and increment/decrement buttons are all disabled. Just assert
-        // the screen loads without crashing.
-        // (The screen shows "No active tracks" if no tracks are seeded —
-        //  that is the correct empty-state behaviour.)
+        // A track+stage was seeded above so the curriculum card (and its
+        // "+" increment control) actually renders instead of the empty
+        // state -- otherwise there would be nothing here for canEdit to
+        // gate (AUD-t-cross-07).
+        h.expectOnScreen('ACTIVE');
+
+        // ── Explicit disabled-state assertion on the increment control ──
+        final incrementIconFinder = find.byIcon(Icons.add);
+        expect(incrementIconFinder, findsOneWidget);
+        final incrementInkWellFinder = find.ancestor(
+          of: incrementIconFinder,
+          matching: find.byType(InkWell),
+        );
+        expect(incrementInkWellFinder, findsOneWidget);
+        final incrementInkWell = tester.widget<InkWell>(incrementInkWellFinder);
+        expect(
+          incrementInkWell.onTap,
+          isNull,
+          reason:
+              'PointConfigScreen "+" increment control must be disabled '
+              '(onTap == null) when the active tutor session has '
+              'canEditPoints=false',
+        );
+
+        // Tapping a disabled InkWell is a no-op, but drive the Save button
+        // too -- with no pending edits and canEdit=false it must route to
+        // the same permission-denied path Part 1 already exercises, never
+        // silently "succeed".
+        await h.tapWidget(find.text('Save All Changes'));
+        await h.pump(const Duration(milliseconds: 300));
+        h.expectOnScreen("You don't have permission to make this edit");
       });
     },
   );
