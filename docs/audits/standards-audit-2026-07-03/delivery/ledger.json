@@ -2635,13 +2635,13 @@
     {
       "id": "AUD-docs-20",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Update docs/qa/legacy auth scenarios and docs/planning upgrade-flow UX specs for the credential-less offline-account redesign",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_9a0b2338-66d-24 (branch worktree-wf_9a0b2338-66d-24, commit 8537c4c3ba7be6633477b715e1f6b14a474f5758, tip of this cid's build) but the review agent was lost (quota) before opus review/merge could complete. Built fix added dated (2026-07-13) staleness banners to docs/qa/legacy/{01-product-overview,02-auth-and-accounts,03-onboarding,13-settings}.md and docs/planning/ux-upgrade-flow-{spec,visual}.md flagging the password-based local-born account narrative (argon2id hash, password-confirm upgrade step) as superseded by the 2026-06-14 credential-less offline-account redesign, and marked the two docs/index.md links to the planning docs as partially superseded; none of this landed on dev. Per merge-lane payload cid w4r1c13, MODE=ledger-only: nothing merged onto dev this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_9a0b2338-66d-24 removed per payload.worktreesToRemove (`git worktree remove --force`). testsToRun for a future resume: none (docs-only change; the built commit reported `make audit` PASSED, 43/43 greps clean, but this was not independently re-verified here since nothing merged)."
     },
     {
       "id": "AUD-docs-22",
