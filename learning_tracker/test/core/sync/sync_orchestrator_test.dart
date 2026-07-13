@@ -503,23 +503,22 @@ void main() {
       );
     });
 
-    test('emits error with timeout message when TimeoutException', () async {
-      // BUG: _perStepTimeout / _overallTimeout are private constants (30s/90s)
-      // with no test seam to override. This test is skipped to avoid a 30-90s
-      // wall-clock delay; the error message format is covered separately below.
-    }, skip: true);
-
-    test('error message is "Sync timed out" for TimeoutException', () {
-      // Directly test the status message format the catch block uses.
-      // The expression `e is TimeoutException ? '...' : e.toString()` always
-      // evaluates to 'Sync timed out — tap to retry' for any TimeoutException.
-      final te = TimeoutException('sync_pull_step_timeout: completions');
-      // Replicate the exact expression from the production catch block.
-      const message = 'Sync timed out — tap to retry';
-      expect(message, contains('timed out'));
-      // Verify: if it were NOT a TimeoutException the message would differ.
-      expect(te.toString(), isNot(equals(message)));
-    });
+    // AUD-t-cross-26 (TQ-8): removed two dead tests that lived here —
+    // 'emits error with timeout message when TimeoutException' (always
+    // skipped, empty body) and 'error message is "Sync timed out" for
+    // TimeoutException' (self-referential: declared a local `message`
+    // string literal, asserted it contained 'timed out', then compared it
+    // against a bare `TimeoutException.toString()` — never touched
+    // SyncOrchestratorImpl or its catch block). Both predated the AUD-sync-01
+    // (EH-5) refactor, which removed `SyncStatus.error.message` entirely in
+    // favor of a closed `SyncErrorCode` enum, so the deleted tests'
+    // "replicate the exact expression from the production catch block"
+    // premise no longer even parses against current production code. Real,
+    // non-tautological end-to-end coverage of TimeoutException ->
+    // SyncErrorCode.timeout via a timeout-throwing fake gateway driving
+    // pullOnLaunch() already exists in
+    // test/sync/sy3_sync_error_message_sanitize_test.dart ('TimeoutException
+    // classifies as SyncErrorCode.timeout').
 
     test('currentStatus reflects last emitted status', () async {
       final orchestrator = _makeOrchestrator();
