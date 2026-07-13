@@ -267,13 +267,27 @@ void main() {
       expect(result, isEmpty);
     });
 
-    test('matches by English display name', () async {
-      // Run-6: search matches the rendered leaf-segment name, not displayNameEn.
-      // For Mishnayos in Ashkenazi mode 'Berakhot' renders as 'Berakhos', so
-      // the query must use the rendered form.
+    test('matches by rendered (Ashkenazi) leaf-segment name', () async {
+      // Run-6: search also matches the rendered leaf-segment name, so the
+      // Ashkenazi transliteration the UI actually displays ('Berakhos' for
+      // Mishnayos's Zeraim > Berakhot) resolves even though it differs from
+      // the raw displayNameEn ('Berakhot').
       final result = await repo.search(
         curriculumId: CurriculumId.mishnayos,
         query: 'Berakhos',
+      );
+
+      expect(result.any((i) => i.sefariaRef == 'Berakhot'), isTrue);
+    });
+
+    test('also matches raw (un-transliterated) displayNameEn', () async {
+      // AUD-t-content_browsing-02: a query in the Sephardic/standard
+      // spelling ('Berakhot') must resolve too, since that is the raw
+      // displayNameEn shipped in the bundled data and some users type it
+      // even though the UI renders the Ashkenazi form ('Berakhos').
+      final result = await repo.search(
+        curriculumId: CurriculumId.mishnayos,
+        query: 'Berakhot',
       );
 
       expect(result.any((i) => i.sefariaRef == 'Berakhot'), isTrue);

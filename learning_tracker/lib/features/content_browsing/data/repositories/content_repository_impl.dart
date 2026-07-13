@@ -37,6 +37,15 @@ class ContentRepositoryImpl implements ContentRepository {
   /// descendant to match a search for the ancestor's name.
   final _leafEnCache = <String, List<String>>{};
 
+  /// Cache of raw (un-rendered) English names (lowercased), keyed by
+  /// curriculum storage key. This is [ContentItem.displayNameEn] as shipped
+  /// in the bundled JSON — the Sephardic/standard spelling (e.g. "Berakhot")
+  /// rather than [_leafEnCache]'s Ashkenazi-transliterated rendering (e.g.
+  /// "Berakhos"). Searched alongside [_leafEnCache] so a query typed in
+  /// either transliteration dialect resolves, regardless of which spelling
+  /// the UI happens to display (AUD-t-content_browsing-02).
+  final _rawEnCache = <String, List<String>>{};
+
   @override
   Future<List<ContentItem>> getContentForCurriculum(
     CurriculumId curriculumId,
@@ -189,13 +198,24 @@ class ContentRepositoryImpl implements ContentRepository {
           )
           .toList();
     }
+    if (!_rawEnCache.containsKey(key)) {
+      // Raw (un-transliterated) English name straight from the bundled
+      // data, so a query in the Sephardic/standard spelling (e.g.
+      // "Berakhot") still matches when the UI is rendering the Ashkenazi
+      // spelling ("Berakhos") via _leafEnCache above.
+      _rawEnCache[key] = items
+          .map((item) => item.displayNameEn.toLowerCase())
+          .toList();
+    }
     final strippedHeNames = _strippedHeCache[key]!;
     final leafEnNames = _leafEnCache[key]!;
+    final rawEnNames = _rawEnCache[key]!;
 
     final results = <ContentItem>[];
     for (var i = 0; i < items.length; i++) {
       if (strippedHeNames[i].contains(normalizedQuery) ||
-          leafEnNames[i].contains(normalizedQuery)) {
+          leafEnNames[i].contains(normalizedQuery) ||
+          rawEnNames[i].contains(normalizedQuery)) {
         results.add(items[i]);
       }
     }
