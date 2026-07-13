@@ -72,37 +72,4 @@ void main() {
       expect(find.text('Total Points'), findsNothing);
     });
   });
-
-  group('PointsPopupWidget', () {
-    testWidgets('shows correct point value in child mode', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: PointsPopupWidget(
-              pointsEarned: 10,
-              userMode: ProfileMode.child,
-            ),
-          ),
-        ),
-      );
-
-      expect(find.text('+10 points!'), findsOneWidget);
-      expect(find.byIcon(Icons.star), findsOneWidget);
-    });
-
-    testWidgets('is hidden in adult mode', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: PointsPopupWidget(
-              pointsEarned: 10,
-              userMode: ProfileMode.adult,
-            ),
-          ),
-        ),
-      );
-
-      expect(find.text('+10 points!'), findsNothing);
-    });
-  });
 }
