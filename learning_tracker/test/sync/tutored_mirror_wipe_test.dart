@@ -19,6 +19,7 @@ import 'package:learning_tracker/core/sync/tutored_mirror_wipe_service.dart';
 import 'package:learning_tracker/core/sync/tutored_pull_service.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
+import '../helpers/no_op_firestore_gateway.dart';
 import '../helpers/test_database.dart';
 
 // ---------------------------------------------------------------------------
@@ -278,32 +279,16 @@ class _NoOpDispatcher implements MergeDispatcher {
   }) async => MergeOutcome.continueNext;
 }
 
-/// Gateway that throws [FirestorePermissionDeniedException] on every
-/// child-page fetch — simulates a revoked grant.
-class _RevokedGateway implements FirestoreGateway {
-  @override
-  Future<FirestorePage> fetchChildPage({
-    required String parentUid,
-    required String remoteProfileId,
-    required String collection,
-    required int pageSize,
-    Map<String, dynamic>? cursor,
-  }) async => throw const FirestorePermissionDeniedException(
-    'permission-denied',
-    collection: 'completions',
-  );
-
-  @override
-  Future<Map<String, dynamic>?> fetchChildDocument({
-    required String parentUid,
-    required String remoteProfileId,
-    required String collection,
-    required String docId,
-  }) async => throw const FirestorePermissionDeniedException(
-    'permission-denied',
-    collection: 'completions',
-  );
-
+/// Shared base for [_RevokedGateway] and [_ErrorGateway] (AUD-t-cross-19):
+/// both fakes model the same pull-only [TutoredPullService] surface, where
+/// every method other than the two child-scoped fetches is either a genuine
+/// no-op (this test's pull path never calls it — [NoOpFirestoreGateway]
+/// throws if it's wrong about that) or, for the four "own-data" fetch
+/// methods below, a guard that fails loudly if [TutoredPullService] ever
+/// strays onto the tutor's own-profile path while pulling a tutored mirror.
+/// Only `fetchChildPage`/`fetchChildDocument` differ between the two
+/// subclasses — see each for its distinct failure mode.
+abstract class _PullGuardGateway extends NoOpFirestoreGateway {
   // Own-data stubs — should not be called.
   @override
   Future<FirestorePage> fetchPage({
@@ -326,174 +311,54 @@ class _RevokedGateway implements FirestoreGateway {
     required int profileId,
     required String collection,
   }) async => throw StateError('must not call own-data path');
+}
+
+/// Gateway that throws [FirestorePermissionDeniedException] on every
+/// child-page fetch — simulates a revoked grant.
+class _RevokedGateway extends _PullGuardGateway {
   @override
-  Future<List<Map<String, dynamic>>> fetchAuditLogEntries({
-    required String grantId,
-    String? startTimestamp,
-    String? endTimestamp,
-    String? actionFilter,
-  }) async => const [];
-  @override
-  Future<void> pushCompletion({
-    required int profileId,
-    required Map<String, dynamic> data,
-    String? docId,
-  }) async {}
-  @override
-  Future<List<String>> pushCompletionsBatch({
-    required int profileId,
-    required List<({String entityKey, Map<String, dynamic> payload})> items,
-  }) async => const [];
-  @override
-  Future<void> pushStreak({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushTrack({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushLearningOrder({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushBookmark({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushNotificationSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushGamificationSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushLearnerProfile({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
-  @override
-  Future<void> pushGoal({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> deleteGoal({
-    required int profileId,
-    required String firestoreId,
-  }) async {}
-  @override
-  Future<void> pushUiPreferences({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
-  @override
-  Future<void> pushCurriculumImportMetadata({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> deleteUserData(String uid) async {}
-  @override
-  Future<void> pushDiagnosticLog({
-    required String uid,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushAccountUserProfile({
-    required String uid,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Stream<ListenerSnapshot> listenToCollection({
-    required int profileId,
-    required String collection,
-    required String orderField,
-    int limit = 500,
-  }) => const Stream.empty();
-  @override
-  Stream<ListenerSnapshot> listenToTutorGrants({int limit = 500}) =>
-      const Stream.empty();
-  @override
-  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
-      const Stream.empty();
-  @override
-  Stream<ListenerSnapshot> listenToChildCollection({
+  Future<FirestorePage> fetchChildPage({
     required String parentUid,
     required String remoteProfileId,
     required String collection,
-    required String orderField,
-    int limit = 500,
-  }) => const Stream.empty();
+    required int pageSize,
+    Map<String, dynamic>? cursor,
+  }) async => throw const FirestorePermissionDeniedException(
+    'permission-denied',
+    collection: 'completions',
+  );
+
   @override
-  Stream<Map<String, dynamic>?> listenToChildDocument({
+  Future<Map<String, dynamic>?> fetchChildDocument({
     required String parentUid,
     required String remoteProfileId,
     required String collection,
     required String docId,
-  }) => const Stream.empty();
+  }) async => throw const FirestorePermissionDeniedException(
+    'permission-denied',
+    collection: 'completions',
+  );
+}
+
+/// Gateway that throws a generic (non-permission-denied) error on every
+/// child-page fetch — the pull must NOT treat this as a revocation.
+class _ErrorGateway extends _PullGuardGateway {
   @override
-  Stream<Map<String, dynamic>?> listenToDocument({
-    required int profileId,
+  Future<FirestorePage> fetchChildPage({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required int pageSize,
+    Map<String, dynamic>? cursor,
+  }) async => throw Exception('network error');
+
+  @override
+  Future<Map<String, dynamic>?> fetchChildDocument({
+    required String parentUid,
+    required String remoteProfileId,
     required String collection,
     required String docId,
-  }) => const Stream.empty();
-  @override
-  Future<void> pushLedgerEntry({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushLedgerEntriesBatch({
-    required int profileId,
-    required List<Map<String, dynamic>> entries,
-  }) async {}
-  @override
-  Future<void> pushProfileProgram({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> removeProfileProgramAssignment({
-    required int profileId,
-    required String curriculumStorageKey,
-  }) async {}
-  @override
-  Future<void> pushStageDefinition({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushStudyDayConfig({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushPointsLedgerEntry({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushRewardRedemption({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
+  }) async => throw Exception('network error');
 }
 
 // ---------------------------------------------------------------------------
@@ -878,214 +743,4 @@ void main() {
       });
     });
   });
-}
-
-/// Gateway that throws a generic (non-permission) exception.
-class _ErrorGateway implements FirestoreGateway {
-  @override
-  Future<FirestorePage> fetchChildPage({
-    required String parentUid,
-    required String remoteProfileId,
-    required String collection,
-    required int pageSize,
-    Map<String, dynamic>? cursor,
-  }) async => throw Exception('network error');
-
-  @override
-  Future<Map<String, dynamic>?> fetchChildDocument({
-    required String parentUid,
-    required String remoteProfileId,
-    required String collection,
-    required String docId,
-  }) async => throw Exception('network error');
-
-  @override
-  Future<FirestorePage> fetchPage({
-    required int profileId,
-    required String collection,
-    required int pageSize,
-    Map<String, dynamic>? cursor,
-  }) async => throw StateError('own-data');
-  @override
-  Future<Map<String, dynamic>?> fetchDocument({
-    required int profileId,
-    required String collection,
-    required String docId,
-  }) async => throw StateError('own-data');
-  @override
-  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async =>
-      throw StateError('own-data');
-  @override
-  Future<List<Map<String, dynamic>>> fetchAll({
-    required int profileId,
-    required String collection,
-  }) async => throw StateError('own-data');
-  @override
-  Future<List<Map<String, dynamic>>> fetchAuditLogEntries({
-    required String grantId,
-    String? startTimestamp,
-    String? endTimestamp,
-    String? actionFilter,
-  }) async => const [];
-  @override
-  Future<void> pushCompletion({
-    required int profileId,
-    required Map<String, dynamic> data,
-    String? docId,
-  }) async {}
-  @override
-  Future<List<String>> pushCompletionsBatch({
-    required int profileId,
-    required List<({String entityKey, Map<String, dynamic> payload})> items,
-  }) async => const [];
-  @override
-  Future<void> pushStreak({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushTrack({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushLearningOrder({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushBookmark({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushNotificationSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushGamificationSettings({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushLearnerProfile({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
-  @override
-  Future<void> pushGoal({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> deleteGoal({
-    required int profileId,
-    required String firestoreId,
-  }) async {}
-  @override
-  Future<void> pushUiPreferences({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
-  @override
-  Future<void> pushCurriculumImportMetadata({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> deleteUserData(String uid) async {}
-  @override
-  Future<void> pushDiagnosticLog({
-    required String uid,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushAccountUserProfile({
-    required String uid,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Stream<ListenerSnapshot> listenToCollection({
-    required int profileId,
-    required String collection,
-    required String orderField,
-    int limit = 500,
-  }) => const Stream.empty();
-  @override
-  Stream<ListenerSnapshot> listenToTutorGrants({int limit = 500}) =>
-      const Stream.empty();
-  @override
-  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
-      const Stream.empty();
-  @override
-  Stream<ListenerSnapshot> listenToChildCollection({
-    required String parentUid,
-    required String remoteProfileId,
-    required String collection,
-    required String orderField,
-    int limit = 500,
-  }) => const Stream.empty();
-  @override
-  Stream<Map<String, dynamic>?> listenToChildDocument({
-    required String parentUid,
-    required String remoteProfileId,
-    required String collection,
-    required String docId,
-  }) => const Stream.empty();
-  @override
-  Stream<Map<String, dynamic>?> listenToDocument({
-    required int profileId,
-    required String collection,
-    required String docId,
-  }) => const Stream.empty();
-  @override
-  Future<void> pushLedgerEntry({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushLedgerEntriesBatch({
-    required int profileId,
-    required List<Map<String, dynamic>> entries,
-  }) async {}
-  @override
-  Future<void> pushProfileProgram({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> removeProfileProgramAssignment({
-    required int profileId,
-    required String curriculumStorageKey,
-  }) async {}
-  @override
-  Future<void> pushStageDefinition({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushStudyDayConfig({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushPointsLedgerEntry({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
-  @override
-  Future<void> pushRewardRedemption({
-    required int profileId,
-    required Map<String, dynamic> data,
-  }) async {}
 }
