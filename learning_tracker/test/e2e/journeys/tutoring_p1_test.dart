@@ -63,6 +63,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../fakes/e2e_fakes.dart';
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Fakes / Stubs ─────────────────────────────────────────────────────────────
@@ -356,14 +357,6 @@ List<Override> _baseSilencesNoIncoming(E2EHarness h) => [
   pendingTutorInvitesProvider.overrideWith((ref) => Future.value([])),
 ];
 
-/// Navigate to [route] and pump frames for the async guard chain.
-Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {
-  unawaited(h.router.push(route));
-  await h.pump();
-  await h.pump(const Duration(milliseconds: 500));
-  await h.pump();
-}
-
 /// Navigate to [route] and pump until all animations settle.
 Future<void> _navigateToSettle(
   E2EHarness h,
@@ -586,7 +579,7 @@ void main() {
               ),
             );
 
-        await _navigateTo(h, const ManageTutorsRoute());
+        await navigateTo(h, const ManageTutorsRoute());
         await tester.pump(const Duration(milliseconds: 300));
 
         // ManageTutorsScreen shows the child name and pending tutor email.
@@ -669,7 +662,7 @@ void main() {
           ],
         );
 
-        await _navigateTo(h, const ManageGrantsRoute());
+        await navigateTo(h, const ManageGrantsRoute());
         await tester.pump(const Duration(milliseconds: 300));
 
         // ManageGrantsScreen shows the talmid name and Resign button.
@@ -777,7 +770,7 @@ void main() {
           ],
         );
 
-        await _navigateTo(
+        await navigateTo(
           h,
           TutorAuditLogRoute(
             grantId: 'grant-audit-1009',
@@ -871,7 +864,7 @@ void main() {
           ],
         );
 
-        await _navigateTo(
+        await navigateTo(
           h,
           TutorAuditLogRoute(
             grantId: 'grant-smoke-1009',
@@ -1289,7 +1282,7 @@ void main() {
           ],
         );
 
-        await _navigateTo(h, const ManageGrantsRoute());
+        await navigateTo(h, const ManageGrantsRoute());
         await tester.pump(const Duration(milliseconds: 300));
 
         // ManageGrantsScreen renders offline with the mirrored talmid visible.

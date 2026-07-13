@@ -64,42 +64,21 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/providers/registry_provider.dart'
     show deviceRegistryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
-    show connectivityStreamProvider, debugSetLastKnownOnline;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
-    show pendingTutorInvitesProvider;
+    show debugSetLastKnownOnline;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/// Silences SacredTimeSettingsCard timer (required on Settings screens).
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
-
-/// Silences connectivity plugin timers (debounce + recovery probe).
-Override _connectivityOnlineOverride() =>
-    connectivityStreamProvider.overrideWith((ref) => Stream.value(true));
-
-/// Silences _PendingInvitesSection — active tutor grants.
-Override _incomingGrantsEmptyOverride() =>
-    incomingTutorGrantsProvider.overrideWith((ref) => Future.value([]));
-
-/// Silences _PendingInvitesSection — pending tutor invitations.
-Override _pendingInvitesEmptyOverride() =>
-    pendingTutorInvitesProvider.overrideWith((ref) => Future.value([]));
 
 /// Standard silence overrides for tests that land on or navigate through
 /// SettingsScreen (needed for E2E-1207 which navigates to Settings).
 List<Override> _settingsSilences(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _connectivityOnlineOverride(),
-  _incomingGrantsEmptyOverride(),
-  _pendingInvitesEmptyOverride(),
+  sacredWindowNullOverride(),
+  connectivityOnlineOverride(),
+  incomingGrantsEmptyOverride(),
+  pendingInvitesEmptyOverride(),
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -172,7 +151,7 @@ void main() {
             // Provide the in-memory registry with 2 seeded accounts.
             deviceRegistryProvider.overrideWithValue(registry),
             // Silence connectivity plugin timers.
-            _connectivityOnlineOverride(),
+            connectivityOnlineOverride(),
           ],
         );
 
@@ -211,7 +190,7 @@ void main() {
           path: '/account-picker',
           extraOverrides: [
             deviceRegistryProvider.overrideWithValue(registry),
-            _connectivityOnlineOverride(),
+            connectivityOnlineOverride(),
           ],
         );
 
@@ -519,7 +498,7 @@ void main() {
 
         await h.pumpApp(
           path: '/dashboard',
-          // _settingsSilences already includes _connectivityOnlineOverride().
+          // _settingsSilences already includes connectivityOnlineOverride().
           extraOverrides: _settingsSilences(h),
         );
 
@@ -564,7 +543,7 @@ void main() {
 
         await h.pumpApp(
           path: '/dashboard',
-          // _settingsSilences already includes _connectivityOnlineOverride().
+          // _settingsSilences already includes connectivityOnlineOverride().
           extraOverrides: _settingsSilences(h),
         );
 

@@ -28,7 +28,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart'
     show StreakRecoveryInfo;
@@ -42,26 +41,8 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/presenta
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
-
-// ── Factories ──────────────────────────────────────────────────────────────────
-
-/// Minimal [CurriculumTrack] stub — same factory pattern as dashboard_p0_test.
-CurriculumTrack _stubTrack({
-  required int id,
-  required int profileId,
-  required CurriculumId curriculum,
-}) {
-  final now = DateTimeFactory.nowUtc();
-  return CurriculumTrack(
-    id: id,
-    profileId: profileId,
-    curriculumId: curriculum.storageKey,
-    state: 'active',
-    stateChangedAt: now,
-    activatedAt: now,
-  );
-}
 
 // ── Override helpers ───────────────────────────────────────────────────────────
 
@@ -194,7 +175,7 @@ void main() {
           addTearDown(h.dispose);
 
           const trackId = 1;
-          final stub = _stubTrack(
+          final stub = stubTrack(
             id: trackId,
             profileId: 1,
             curriculum: CurriculumId.mishnayos,
@@ -269,7 +250,7 @@ void main() {
         addTearDown(h.dispose);
 
         const trackId = 1;
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: trackId,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,

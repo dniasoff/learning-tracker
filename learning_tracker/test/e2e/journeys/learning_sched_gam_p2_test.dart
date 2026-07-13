@@ -17,9 +17,6 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'dart:async' show unawaited;
-
-import 'package:auto_route/auto_route.dart' show PageRouteInfo;
 import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:flutter/material.dart' show Locale, Offset, RefreshIndicator;
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -40,17 +37,14 @@ import 'package:learning_tracker/features/gamification/presentation/screens/chil
     show childRedemptionBalanceProvider, childRedemptionRewardsProvider;
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart'
     show streakCalendarProvider;
-import 'package:learning_tracker/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart'
-    show pendingRedemptionsProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
-    show activeTracksProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../fakes/e2e_fakes.dart';
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
@@ -122,26 +116,6 @@ Future<void> _seedPoints(
       );
 }
 
-/// One-shot (non-reactive) override for [pendingRedemptionsProvider].
-Override _pendingRedemptionsOneShotOverride() {
-  return pendingRedemptionsProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(
-      db.pointsBalanceDao.getPendingRedemptions(profileId),
-    );
-  });
-}
-
-/// One-shot (non-reactive) override for [activeTracksProvider].
-Override _activeTracksOneShotOverride() {
-  return activeTracksProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(db.trackDao.getActiveTracksForProfile(profileId));
-  });
-}
-
 /// One-shot override for [childRedemptionBalanceProvider] (StreamProvider).
 Override _childRedemptionBalanceOneShotOverride() {
   return childRedemptionBalanceProvider.overrideWith((ref) {
@@ -149,14 +123,6 @@ Override _childRedemptionBalanceOneShotOverride() {
     final profileId = ref.watch(activeProfileIdProvider);
     return Stream.fromFuture(db.pointsBalanceDao.getBalance(profileId));
   });
-}
-
-/// Navigates to [route] by fire-and-forget router push + frame pumps.
-Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {
-  unawaited(h.router.push(route));
-  await h.pump();
-  await h.pump(const Duration(milliseconds: 500));
-  await h.pump();
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -334,9 +300,9 @@ void main() {
             streakCalendarProvider.overrideWith((ref) async => <DateTime>{}),
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
-            _activeTracksOneShotOverride(),
+            activeTracksOneShotOverride(),
             _childRedemptionBalanceOneShotOverride(),
-            _pendingRedemptionsOneShotOverride(),
+            pendingRedemptionsOneShotOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => NullTutoredSelection(),
             ),
@@ -348,7 +314,7 @@ void main() {
         await _seedPoints(h.db, profileId: profileId, balance: 0);
 
         // Navigate to GamificationScreen.
-        await _navigateTo(h, const GamificationRoute());
+        await navigateTo(h, const GamificationRoute());
         await tester.pump(const Duration(milliseconds: 500));
         await tester.pump();
 
@@ -424,9 +390,9 @@ void main() {
             streakCalendarProvider.overrideWith((ref) async => <DateTime>{}),
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
-            _activeTracksOneShotOverride(),
+            activeTracksOneShotOverride(),
             _childRedemptionBalanceOneShotOverride(),
-            _pendingRedemptionsOneShotOverride(),
+            pendingRedemptionsOneShotOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => NullTutoredSelection(),
             ),
@@ -488,7 +454,7 @@ void main() {
         await _seedPoints(h.db, profileId: profileId, balance: 0);
 
         // Navigate to GamificationScreen.
-        await _navigateTo(h, const GamificationRoute());
+        await navigateTo(h, const GamificationRoute());
         await tester.pump(const Duration(milliseconds: 800));
         await tester.pumpAndSettle(const Duration(milliseconds: 500));
 
@@ -557,9 +523,9 @@ void main() {
             // Keep Hebrew terms on (matches he locale intent).
             useHebrewTermsProvider.overrideWithValue(true),
             effectiveUseHebrewTermsProvider.overrideWithValue(true),
-            _activeTracksOneShotOverride(),
+            activeTracksOneShotOverride(),
             _childRedemptionBalanceOneShotOverride(),
-            _pendingRedemptionsOneShotOverride(),
+            pendingRedemptionsOneShotOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => NullTutoredSelection(),
             ),
@@ -570,7 +536,7 @@ void main() {
         final profileId = identity.profileId;
         await _seedPoints(h.db, profileId: profileId, balance: 0);
 
-        await _navigateTo(h, const GamificationRoute());
+        await navigateTo(h, const GamificationRoute());
         await tester.pump(const Duration(milliseconds: 500));
         await tester.pump();
 
@@ -603,7 +569,7 @@ void main() {
         extraOverrides: [
           ...h.dashboardSilenceOverrides,
           _childRedemptionBalanceOneShotOverride(),
-          _activeTracksOneShotOverride(),
+          activeTracksOneShotOverride(),
           useHebrewTermsProvider.overrideWithValue(true),
           effectiveUseHebrewTermsProvider.overrideWithValue(true),
           // Empty rewards list — no assets needed.
@@ -620,7 +586,7 @@ void main() {
       final profileId = identity.profileId;
       await _seedPoints(h.db, profileId: profileId, balance: 0);
 
-      await _navigateTo(h, const ChildRedemptionRoute());
+      await navigateTo(h, const ChildRedemptionRoute());
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
 
@@ -648,8 +614,8 @@ void main() {
           locale: const Locale('he'),
           extraOverrides: [
             ...h.dashboardSilenceOverrides,
-            _pendingRedemptionsOneShotOverride(),
-            _activeTracksOneShotOverride(),
+            pendingRedemptionsOneShotOverride(),
+            activeTracksOneShotOverride(),
             useHebrewTermsProvider.overrideWithValue(true),
             effectiveUseHebrewTermsProvider.overrideWithValue(true),
             activeTutoredProfileSelectionProvider.overrideWith(
@@ -658,7 +624,7 @@ void main() {
           ],
         );
 
-        await _navigateTo(h, const ParentPendingRedemptionsRoute());
+        await navigateTo(h, const ParentPendingRedemptionsRoute());
         await tester.pump(const Duration(milliseconds: 500));
         await tester.pump();
 

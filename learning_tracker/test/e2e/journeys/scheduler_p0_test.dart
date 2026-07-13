@@ -37,6 +37,7 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
@@ -61,24 +62,6 @@ DailyTask _makeTask({
   trackLabel: 'Test Track',
   estimatedEffortMinutes: 5,
 );
-
-/// Creates a stub [CurriculumTrack].
-CurriculumTrack _stubTrack({
-  required int id,
-  required int profileId,
-  required CurriculumId curriculum,
-  DateTime? activatedAt,
-}) {
-  final now = activatedAt ?? DateTimeFactory.nowUtc();
-  return CurriculumTrack(
-    id: id,
-    profileId: profileId,
-    curriculumId: curriculum.storageKey,
-    state: 'active',
-    stateChangedAt: now,
-    activatedAt: now,
-  );
-}
 
 /// Provider overrides that silence dashboard providers and inject a fixed
 /// task list into [allDailyTasksProvider]. Required for Scheduler tests that
@@ -300,7 +283,7 @@ void main() {
         // harness test we verify the screen renders correctly by pumping
         // /settings/tracks and navigating to TrackDetail → Set Goal.
 
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -377,7 +360,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.bavli,
@@ -484,7 +467,7 @@ void main() {
         // account+profile rows are auto-incremented starting from 1 inside
         // _seedIdentity, which runs inside pumpApp — profileId is unavailable
         // here because the stub must be created before pumpApp is called).
-        final stubTrack = _stubTrack(
+        final trackStub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -494,7 +477,7 @@ void main() {
           path: '/settings/tracks',
           extraOverrides: [
             activeTracksProvider.overrideWith(
-              (ref) => Stream.value([stubTrack]),
+              (ref) => Stream.value([trackStub]),
             ),
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),

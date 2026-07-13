@@ -47,8 +47,6 @@ import 'package:learning_tracker/features/profiles/presentation/providers/parent
     show parentPinAuthenticatedProfileIdProvider;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart'
     show studyDayConfigsProvider;
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart'
@@ -66,12 +64,11 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
         ActiveTutoredProfileSelection,
         activeTutorPermissionsProvider,
         activeTutoredProfileSelectionProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
     show pendingTutorInvitesProvider;
 
 import '../fakes/e2e_fakes.dart';
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Fakes ─────────────────────────────────────────────────────────────────────
@@ -87,29 +84,13 @@ class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
 
 // ── Shared silence overrides ─────────────────────────────────────────────────
 
-/// Silences SacredTimeSettingsCard's repeating timer.
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
-
-/// Silences connectivity plugin timers.
-Override _connectivityOnlineOverride() =>
-    connectivityStreamProvider.overrideWith((ref) => Stream.value(true));
-
-/// Silences _PendingInvitesSection — no active grants.
-Override _incomingGrantsEmptyOverride() =>
-    incomingTutorGrantsProvider.overrideWith((ref) => Future.value([]));
-
-/// Silences _PendingInvitesSection — no pending invitations.
-Override _pendingInvitesEmptyOverride() =>
-    pendingTutorInvitesProvider.overrideWith((ref) => Future.value([]));
-
 /// Standard silence overrides for all Settings tests.
 List<Override> _settingsSilences(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _connectivityOnlineOverride(),
-  _incomingGrantsEmptyOverride(),
-  _pendingInvitesEmptyOverride(),
+  sacredWindowNullOverride(),
+  connectivityOnlineOverride(),
+  incomingGrantsEmptyOverride(),
+  pendingInvitesEmptyOverride(),
 ];
 
 /// Silence overrides for E2E-921: same as [_settingsSilences] but omits the
@@ -117,9 +98,9 @@ List<Override> _settingsSilences(E2EHarness h) => [
 /// non-empty override without triggering a "provider overridden twice" error.
 List<Override> _settingsSilencesNoPendingInvites(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _connectivityOnlineOverride(),
-  _incomingGrantsEmptyOverride(),
+  sacredWindowNullOverride(),
+  connectivityOnlineOverride(),
+  incomingGrantsEmptyOverride(),
   // pendingTutorInvitesProvider is intentionally NOT overridden here.
 ];
 
@@ -128,9 +109,9 @@ List<Override> _settingsSilencesNoPendingInvites(E2EHarness h) => [
 /// offline connectivity override without a "provider overridden twice" error.
 List<Override> _settingsSilencesNoConnectivity(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _incomingGrantsEmptyOverride(),
-  _pendingInvitesEmptyOverride(),
+  sacredWindowNullOverride(),
+  incomingGrantsEmptyOverride(),
+  pendingInvitesEmptyOverride(),
   // connectivityStreamProvider is intentionally NOT overridden here.
 ];
 

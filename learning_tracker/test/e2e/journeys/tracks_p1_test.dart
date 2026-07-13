@@ -31,7 +31,6 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart'
         effectiveUseHebrewTermsProvider,
         useHebrewDateProvider,
         useHebrewTermsProvider;
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
@@ -48,25 +47,10 @@ import 'package:learning_tracker/features/tracks/track_order/presentation/provid
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
-
-CurriculumTrack _stubTrack({
-  required int id,
-  required int profileId,
-  required CurriculumId curriculum,
-}) {
-  final now = DateTimeFactory.nowUtc();
-  return CurriculumTrack(
-    id: id,
-    profileId: profileId,
-    curriculumId: curriculum.storageKey,
-    state: 'active',
-    stateChangedAt: now,
-    activatedAt: now,
-  );
-}
 
 /// Inserts a [CurriculumTrack] row into [db] and returns the auto-generated id.
 Future<int> _insertTrack(UserDatabase db, CurriculumTrack stub) async {
@@ -154,7 +138,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -214,7 +198,7 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      final stub = _stubTrack(
+      final stub = stubTrack(
         id: 1,
         profileId: 1,
         curriculum: CurriculumId.mishnayos,
@@ -294,7 +278,7 @@ void main() {
         addTearDown(h.dispose);
 
         const trackId = 1;
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: trackId,
           profileId: 1,
           curriculum: CurriculumId.bavli,
@@ -376,7 +360,7 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      final stub = _stubTrack(
+      final stub = stubTrack(
         id: 1,
         profileId: 1,
         curriculum: CurriculumId.mishnayos,
@@ -495,7 +479,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -570,7 +554,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -639,7 +623,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,

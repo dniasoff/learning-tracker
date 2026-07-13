@@ -30,7 +30,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
@@ -42,27 +41,11 @@ import 'package:learning_tracker/features/progress/presentation/providers/journe
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 
+import '../harness/e2e_common_overrides.dart' show stubTrack;
 import '../harness/e2e_harness.dart';
 import '../helpers/e2e_overrides.dart' show EmptyContentRepository;
 
 // ── Shared test data ──────────────────────────────────────────────────────────
-
-/// Creates a stub [CurriculumTrack] for one curriculum.
-CurriculumTrack _stubTrack({
-  required int id,
-  required int profileId,
-  required CurriculumId curriculum,
-}) {
-  final now = DateTimeFactory.nowUtc();
-  return CurriculumTrack(
-    id: id,
-    profileId: profileId,
-    curriculumId: curriculum.storageKey,
-    state: 'active',
-    stateChangedAt: now,
-    activatedAt: now,
-  );
-}
 
 /// Zero-value [LifetimeTotals] stub.
 const _zeroLifetimeTotals = LifetimeTotals(
@@ -132,7 +115,7 @@ List<Override> _progressWithContentOverrides(E2EHarness h) => [
   ),
   dashboardActiveTracksStreamProvider.overrideWith(
     (ref) => Stream.value(<CurriculumTrack>[
-      _stubTrack(id: 1, profileId: 1, curriculum: CurriculumId.mishnayos),
+      stubTrack(id: 1, profileId: 1, curriculum: CurriculumId.mishnayos),
     ]),
   ),
   dashboardStreakProvider.overrideWith(
@@ -243,7 +226,7 @@ void main() {
             ),
             dashboardActiveTracksStreamProvider.overrideWith(
               (ref) => Stream.value(<CurriculumTrack>[
-                _stubTrack(
+                stubTrack(
                   id: 1,
                   profileId: 1,
                   curriculum: CurriculumId.mishnayos,

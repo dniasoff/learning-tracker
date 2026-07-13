@@ -55,40 +55,17 @@ import 'package:learning_tracker/app/router/app_router.dart'
     show ParentSettingsRoute, UpgradeToCloudRoute;
 import 'package:learning_tracker/app/router/router_provider.dart'
     show routerProvider;
-import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
-    show connectivityStreamProvider;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart'
     show CurriculumLifetimeSummary;
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart'
     show lifetimeSummariesProvider;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
-    show pendingTutorInvitesProvider;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Shared silence overrides ─────────────────────────────────────────────────
-
-/// Silences SacredTimeSettingsCard's 30-second repeating timer.
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
-
-/// Silences connectivity plugin timers (debounce + recovery probe).
-Override _connectivitySilenceOverride() =>
-    connectivityStreamProvider.overrideWith((ref) => Stream.value(true));
-
-/// Silences _PendingInvitesSection — incoming tutor grants (active ones).
-Override _incomingGrantsEmptyOverride() =>
-    incomingTutorGrantsProvider.overrideWith((ref) => Future.value([]));
-
-/// Silences _PendingInvitesSection — pending tutor invitations.
-Override _pendingInvitesEmptyOverride() =>
-    pendingTutorInvitesProvider.overrideWith((ref) => Future.value([]));
 
 /// Standard silence overrides for SettingsScreen tests.
 ///
@@ -96,10 +73,10 @@ Override _pendingInvitesEmptyOverride() =>
 /// plus the Settings-specific overrides above.
 List<Override> _settingsSilences(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _connectivitySilenceOverride(),
-  _incomingGrantsEmptyOverride(),
-  _pendingInvitesEmptyOverride(),
+  sacredWindowNullOverride(),
+  connectivityOnlineOverride(),
+  incomingGrantsEmptyOverride(),
+  pendingInvitesEmptyOverride(),
 ];
 
 /// Navigates to the Settings tab and pumps to let async providers settle.

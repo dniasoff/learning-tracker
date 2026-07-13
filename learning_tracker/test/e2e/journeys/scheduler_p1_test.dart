@@ -50,6 +50,7 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
     show activeTutorPermissionsProvider;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
@@ -74,24 +75,6 @@ DailyTask _makeTask({
   trackLabel: 'Test Track',
   estimatedEffortMinutes: 5,
 );
-
-/// Creates a stub [CurriculumTrack].
-CurriculumTrack _stubTrack({
-  required int id,
-  required int profileId,
-  required CurriculumId curriculum,
-  DateTime? activatedAt,
-}) {
-  final now = activatedAt ?? DateTimeFactory.nowUtc();
-  return CurriculumTrack(
-    id: id,
-    profileId: profileId,
-    curriculumId: curriculum.storageKey,
-    state: 'active',
-    stateChangedAt: now,
-    activatedAt: now,
-  );
-}
 
 /// Provider overrides that silence dashboard providers and inject a fixed
 /// task list into [allDailyTasksProvider].
@@ -223,7 +206,7 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      final stub = _stubTrack(
+      final stub = stubTrack(
         id: 1,
         profileId: 1,
         curriculum: CurriculumId.mishnayos,
@@ -348,7 +331,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -445,7 +428,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stubTrack = _stubTrack(
+        final trackStub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -455,7 +438,7 @@ void main() {
           path: '/settings/tracks',
           extraOverrides: [
             activeTracksProvider.overrideWith(
-              (ref) => Stream.value([stubTrack]),
+              (ref) => Stream.value([trackStub]),
             ),
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
@@ -550,7 +533,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stubTrack = _stubTrack(
+        final trackStub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -563,7 +546,7 @@ void main() {
           path: '/settings/tracks',
           extraOverrides: [
             activeTracksProvider.overrideWith(
-              (ref) => Stream.value([stubTrack]),
+              (ref) => Stream.value([trackStub]),
             ),
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
@@ -675,7 +658,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stubTrack = _stubTrack(
+        final trackStub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -694,7 +677,7 @@ void main() {
           path: '/settings/tracks',
           extraOverrides: [
             activeTracksProvider.overrideWith(
-              (ref) => Stream.value([stubTrack]),
+              (ref) => Stream.value([trackStub]),
             ),
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),

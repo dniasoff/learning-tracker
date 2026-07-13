@@ -98,8 +98,6 @@ import 'package:learning_tracker/core/sync/sync_identity_status.dart'
     show SyncIdentityStatus;
 import 'package:learning_tracker/core/utils/date_utils.dart'
     show DateTimeFactory;
-import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
-    show connectivityStreamProvider;
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
     show NotificationPreferencesRepository;
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart'
@@ -116,17 +114,12 @@ import 'package:learning_tracker/features/sacred_time/domain/models/sacred_locat
     show SacredLocation, SacredLocationSource;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart'
     show InIsraelNotifier, inIsraelProvider, locationServiceProvider;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
     show SyncStatus;
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
-    show pendingTutorInvitesProvider;
 import 'package:shared_preferences/shared_preferences.dart'
     show SharedPreferences;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Stubs ─────────────────────────────────────────────────────────────────────
@@ -170,14 +163,6 @@ class _FixedInIsraelNotifier extends InIsraelNotifier {
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-/// Silences SacredTimeSettingsCard's repeating timer.
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
-
-/// Silences AppShell's connectivity Timer.periodic.
-Override _connectivityOnlineOverride() =>
-    connectivityStreamProvider.overrideWith((ref) => Stream.value(true));
-
 /// Silences the heavy notification sync-effect providers.
 ///
 /// IMPORTANT: does NOT include [connectivityStreamProvider] — that override is
@@ -197,12 +182,12 @@ List<Override> _notificationSilenceOverrides(NotificationGateway fakeGw) => [
 /// (needed whenever SettingsScreen is navigated to).
 List<Override> _infraSilences(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _connectivityOnlineOverride(),
+  sacredWindowNullOverride(),
+  connectivityOnlineOverride(),
   // _PendingInvitesSection in SettingsScreen watches these two providers.
   // Override to empty so they don't try to hit Firestore in headless tests.
-  incomingTutorGrantsProvider.overrideWith((ref) => Future.value([])),
-  pendingTutorInvitesProvider.overrideWith((ref) => Future.value([])),
+  incomingGrantsEmptyOverride(),
+  pendingInvitesEmptyOverride(),
 ];
 
 // ── Scroll helper for Settings ─────────────────────────────────────────────

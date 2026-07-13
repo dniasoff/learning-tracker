@@ -19,7 +19,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
@@ -27,27 +26,10 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutorPermissionsProvider;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Factories ─────────────────────────────────────────────────────────────────
-
-/// Builds a [CurriculumTrack] value for use in provider overrides and as the
-/// seeded DB row.
-CurriculumTrack _stubTrack({
-  required int id,
-  required int profileId,
-  required CurriculumId curriculum,
-}) {
-  final now = DateTimeFactory.nowUtc();
-  return CurriculumTrack(
-    id: id,
-    profileId: profileId,
-    curriculumId: curriculum.storageKey,
-    state: 'active',
-    stateChangedAt: now,
-    activatedAt: now,
-  );
-}
 
 /// Inserts a [CurriculumTrack] row into [db] and returns the seeded row.
 ///
@@ -206,7 +188,7 @@ void main() {
 
         // Create a stub track for Mishnayos that the hub and wizard will see.
         // profileId=1 because harness seeds account(1)+profile(1) in pumpApp.
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -276,7 +258,7 @@ void main() {
         addTearDown(h.dispose);
 
         // profileId=1 is safe because harness seeds account(1)+profile(1).
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -316,7 +298,7 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      final stub = _stubTrack(
+      final stub = stubTrack(
         id: 1,
         profileId: 1,
         curriculum: CurriculumId.mishnayos,
@@ -360,12 +342,12 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stubMishnayos = _stubTrack(
+        final stubMishnayos = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
         );
-        final stubBavli = _stubTrack(
+        final stubBavli = stubTrack(
           id: 2,
           profileId: 1,
           curriculum: CurriculumId.bavli,
@@ -438,12 +420,12 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      final stubMishnayos = _stubTrack(
+      final stubMishnayos = stubTrack(
         id: 1,
         profileId: 1,
         curriculum: CurriculumId.mishnayos,
       );
-      final stubBavli = _stubTrack(
+      final stubBavli = stubTrack(
         id: 2,
         profileId: 1,
         curriculum: CurriculumId.bavli,
@@ -509,7 +491,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final stub = _stubTrack(
+        final stub = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,

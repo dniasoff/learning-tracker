@@ -26,10 +26,8 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'dart:async' show unawaited;
 import 'dart:convert';
 
-import 'package:auto_route/auto_route.dart' show PageRouteInfo;
 import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:flutter/material.dart'
     show Icons, InkWell, Offset, SingleChildScrollView, Switch, TextField;
@@ -50,19 +48,16 @@ import 'package:learning_tracker/features/gamification/presentation/screens/chil
     show childRedemptionBalanceProvider, childRedemptionRewardsProvider;
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart'
     show streakCalendarProvider;
-import 'package:learning_tracker/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart'
-    show pendingRedemptionsProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider;
-import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
-    show activeTracksProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../fakes/e2e_fakes.dart';
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -142,27 +137,6 @@ Future<List<RewardMilestone>> _loadMilestones(int profileId) async {
 /// Silence overrides required when landing on /dashboard.
 List<Override> _dashboardSilence(E2EHarness h) => h.dashboardSilenceOverrides;
 
-/// One-shot (non-reactive) override for [pendingRedemptionsProvider] to avoid
-/// Drift cleanup timer leaks (R-GA-stream).
-Override _pendingRedemptionsOneShotOverride() {
-  return pendingRedemptionsProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(
-      db.pointsBalanceDao.getPendingRedemptions(profileId),
-    );
-  });
-}
-
-/// One-shot (non-reactive) override for [activeTracksProvider].
-Override _activeTracksOneShotOverride() {
-  return activeTracksProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(db.trackDao.getActiveTracksForProfile(profileId));
-  });
-}
-
 /// One-shot override for [childRedemptionBalanceProvider] (StreamProvider).
 Override _childRedemptionBalanceOneShotOverride() {
   return childRedemptionBalanceProvider.overrideWith((ref) {
@@ -179,14 +153,6 @@ Override _activeProfileBalanceOneShotOverride() {
     final profileId = ref.watch(activeProfileIdProvider);
     return Stream.fromFuture(db.pointsBalanceDao.getBalance(profileId));
   });
-}
-
-/// Navigates to [route] by fire-and-forget router push + frame pumps.
-Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {
-  unawaited(h.router.push(route));
-  await h.pump();
-  await h.pump(const Duration(milliseconds: 500));
-  await h.pump();
 }
 
 /// Fixed-value notifier for [ActiveTutoredProfileSelection] — active session.
@@ -237,7 +203,7 @@ void main() {
         );
 
         h.markPinAuthenticated();
-        await _navigateTo(h, const RewardConfigurationRoute());
+        await navigateTo(h, const RewardConfigurationRoute());
 
         // Wait for bootstrap() to run (it's deferred to postFrameCallback).
         await h.pump(const Duration(milliseconds: 500));
@@ -339,7 +305,7 @@ void main() {
         );
 
         h.markPinAuthenticated();
-        await _navigateTo(h, const RewardConfigurationRoute());
+        await navigateTo(h, const RewardConfigurationRoute());
         await h.pump(const Duration(milliseconds: 500));
         await h.pump();
 
@@ -400,7 +366,7 @@ void main() {
           path: '/dashboard',
           extraOverrides: [
             ..._dashboardSilence(h),
-            _activeTracksOneShotOverride(),
+            activeTracksOneShotOverride(),
             _childRedemptionBalanceOneShotOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => NullTutoredSelection(),
@@ -420,7 +386,7 @@ void main() {
         );
 
         h.markPinAuthenticated();
-        await _navigateTo(h, const RewardConfigurationRoute());
+        await navigateTo(h, const RewardConfigurationRoute());
         await h.pump(const Duration(milliseconds: 500));
         await h.pump();
 
@@ -492,7 +458,7 @@ void main() {
           path: '/dashboard',
           extraOverrides: [
             ..._dashboardSilence(h),
-            _activeTracksOneShotOverride(),
+            activeTracksOneShotOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => _FixedTutoredSelection(tutoredSelection),
             ),
@@ -538,7 +504,7 @@ void main() {
         h.markPinAuthenticated();
 
         // ── Part 1: RewardConfigurationScreen ──
-        await _navigateTo(h, const RewardConfigurationRoute());
+        await navigateTo(h, const RewardConfigurationRoute());
         await h.pump(const Duration(milliseconds: 500));
         await h.pump();
 
@@ -575,7 +541,7 @@ void main() {
         h.expectOnScreen("You don't have permission to make this edit");
 
         // ── Part 2: PointConfigScreen ──
-        await _navigateTo(h, const PointConfigRoute());
+        await navigateTo(h, const PointConfigRoute());
         await h.pump(const Duration(milliseconds: 500));
         await h.pump();
 
@@ -643,7 +609,7 @@ void main() {
           extraOverrides: [
             ..._dashboardSilence(h),
             _childRedemptionBalanceOneShotOverride(),
-            _activeTracksOneShotOverride(),
+            activeTracksOneShotOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => _FixedTutoredSelection(tutoredSelection),
             ),
@@ -671,7 +637,7 @@ void main() {
         final profileId = identity.profileId;
         await _seedPoints(h.db, profileId: profileId, balance: 500);
 
-        await _navigateTo(h, const ChildRedemptionRoute());
+        await navigateTo(h, const ChildRedemptionRoute());
         await h.pump(const Duration(milliseconds: 500));
         await h.pump();
 
@@ -777,7 +743,7 @@ void main() {
           ],
         );
 
-        await _navigateTo(h, const GamificationRoute());
+        await navigateTo(h, const GamificationRoute());
         await h.pump(const Duration(milliseconds: 500));
         await h.pump();
 
@@ -837,7 +803,7 @@ void main() {
             path: '/dashboard',
             extraOverrides: [
               ..._dashboardSilence(h),
-              _pendingRedemptionsOneShotOverride(),
+              pendingRedemptionsOneShotOverride(),
               _activeProfileBalanceOneShotOverride(),
               activeTutoredProfileSelectionProvider.overrideWith(
                 () => NullTutoredSelection(),
@@ -850,7 +816,7 @@ void main() {
           await _seedPoints(h.db, profileId: profileId, balance: 100);
 
           h.markPinAuthenticated();
-          await _navigateTo(h, const ParentSettingsRoute());
+          await navigateTo(h, const ParentSettingsRoute());
           await h.pump(const Duration(milliseconds: 500));
           await h.pump();
 
@@ -913,7 +879,7 @@ void main() {
           extraOverrides: [
             ..._dashboardSilence(h),
             _childRedemptionBalanceOneShotOverride(),
-            _activeTracksOneShotOverride(),
+            activeTracksOneShotOverride(),
             // Force offline: no network, no sync facade.
             connectivityStreamProvider.overrideWith(
               (ref) => Stream.value(false),
@@ -938,7 +904,7 @@ void main() {
         );
 
         // Navigate to ChildRedemptionScreen — reward is visible despite offline.
-        await _navigateTo(h, const ChildRedemptionRoute());
+        await navigateTo(h, const ChildRedemptionRoute());
         await h.pump(const Duration(milliseconds: 500));
         await h.pump();
 

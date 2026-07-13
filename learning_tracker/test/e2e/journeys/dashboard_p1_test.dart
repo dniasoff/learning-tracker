@@ -15,100 +15,32 @@
 library;
 
 import 'package:flutter/material.dart' show Key, RefreshIndicator, Scrollable;
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider;
-import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart'
+    show
+        anyActiveTrackHasChazaraProvider,
+        dashboardHasProgramEnrollmentProvider,
+        trackHasChazaraProvider;
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart'
     show onboardingSkipStateProvider;
-import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart'
-    show StreakRecoveryInfo;
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart'
     show
         ParentPinAuthenticatedProfileId,
         parentPinAuthenticatedProfileIdProvider;
-import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart'
+    show DailyTask, DailyTaskPriority;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
     show TutoredProfileSelection;
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart'
     show TutorPermissions;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show ActiveTutoredProfileSelection, activeTutoredProfileSelectionProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
-
-// ── Factories ─────────────────────────────────────────────────────────────────
-
-/// Minimal [CurriculumTrack] stub — matches the factory in dashboard_p0_test.
-CurriculumTrack _stubTrack({
-  required int id,
-  required int profileId,
-  required CurriculumId curriculum,
-}) {
-  final now = DateTimeFactory.nowUtc();
-  return CurriculumTrack(
-    id: id,
-    profileId: profileId,
-    curriculumId: curriculum.storageKey,
-    state: 'active',
-    stateChangedAt: now,
-    activatedAt: now,
-  );
-}
-
-/// Standard zero lifetime-totals stub.
-const _zeroLifetimeTotals = LifetimeTotals(
-  learnedSections: 0,
-  totalSections: 0,
-  totalCurricula: 9,
-);
-
-/// Override set for a dashboard WITH active tracks.
-///
-/// Replaces the track stream with [tracks] and injects [tasks].
-/// Does NOT include [effectiveUseHebrewTermsProvider] — callers add that if
-/// needed.
-List<Override> _dashboardActiveTracksOverrides(
-  E2EHarness h, {
-  required List<CurriculumTrack> tracks,
-  required List<DailyTask> tasks,
-  LifetimeTotals totals = _zeroLifetimeTotals,
-}) {
-  return [
-    dashboardActiveCurriculaStreamProvider.overrideWith(
-      (ref) => Stream.value(<CurriculumId>[]),
-    ),
-    dashboardStreakProvider.overrideWith(
-      (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-    ),
-    dashboardStreakRecoveryProvider.overrideWith(
-      (ref) => Future.value(
-        const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
-      ),
-    ),
-    dashboardActiveTracksStreamProvider.overrideWith(
-      (ref) => Stream.value(tracks),
-    ),
-    allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
-    lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-      (ref, profileId) => Future.value(totals),
-    ),
-    lifetimeSummariesProvider.overrideWith(
-      (ref, profileId) => Future.value([]),
-    ),
-    trackDualProgressMetricsProvider.overrideWith(
-      (ref, profileId) => Future.value([]),
-    ),
-  ];
-}
 
 // ── Fixed-value notifier stubs ────────────────────────────────────────────────
 
@@ -282,11 +214,11 @@ void main() {
         path: '/dashboard',
         extraOverrides: [
           effectiveUseHebrewTermsProvider.overrideWithValue(false),
-          ..._dashboardActiveTracksOverrides(
+          ...dashboardActiveTracksOverrides(
             h,
             // profileId 1: Drift always assigns id=1 for the first insert.
             tracks: [
-              _stubTrack(
+              stubTrack(
                 id: 1,
                 profileId: 1,
                 curriculum: CurriculumId.mishnayos,
@@ -389,7 +321,7 @@ void main() {
           // AppShell watches incomingTutorGrantsProvider when hasActiveTutoredProfiles
           // is true (revocation-reconciliation side-effect). Override it to avoid
           // the Firebase Functions call that is unavailable in the headless harness.
-          incomingTutorGrantsProvider.overrideWith((ref) => Future.value([])),
+          incomingGrantsEmptyOverride(),
         ],
       );
 
@@ -545,11 +477,11 @@ void main() {
             path: '/dashboard',
             extraOverrides: [
               effectiveUseHebrewTermsProvider.overrideWithValue(false),
-              ..._dashboardActiveTracksOverrides(
+              ...dashboardActiveTracksOverrides(
                 h,
                 // Drift auto-assigns id=1 for the first insert.
                 tracks: [
-                  _stubTrack(
+                  stubTrack(
                     id: 1,
                     profileId: 1,
                     curriculum: CurriculumId.mishnayos,
@@ -616,11 +548,11 @@ void main() {
           path: '/dashboard',
           extraOverrides: [
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
-            ..._dashboardActiveTracksOverrides(
+            ...dashboardActiveTracksOverrides(
               h,
               // Drift auto-assigns id=1 for the first insert.
               tracks: [
-                _stubTrack(
+                stubTrack(
                   id: 1,
                   profileId: 1,
                   curriculum: CurriculumId.mishnayos,

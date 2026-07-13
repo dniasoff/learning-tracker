@@ -81,51 +81,28 @@ import 'package:learning_tracker/app/router/app_router.dart'
     show ParentSettingsRoute;
 import 'package:learning_tracker/app/router/router_provider.dart'
     show routerProvider;
-import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
-    show connectivityStreamProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show profileListStreamProvider;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart'
     show RestoreStatus;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
     show activeTutoredProfileSelectionProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
-    show pendingTutorInvitesProvider;
 
 import '../fakes/e2e_fakes.dart';
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/// Silences the 30-second repeating timer in SacredTimeLockOverlay.
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
-
-/// Silences the incoming-tutor-grants FutureProvider (avoids CF network calls).
-Override _incomingGrantsEmpty() =>
-    incomingTutorGrantsProvider.overrideWith((ref) => Future.value([]));
-
-/// Silences the pending-tutor-invites provider.
-Override _pendingInvitesEmpty() =>
-    pendingTutorInvitesProvider.overrideWith((ref) => Future.value([]));
-
-/// Silences the AppShell connectivity timer (offline-debounce + recovery-probe).
-Override _connectivityOnline() =>
-    connectivityStreamProvider.overrideWith((ref) => Stream.value(true));
-
 /// Silence overrides needed for shell-mounted tests (tabs, dashboard, etc.).
 List<Override> _fullSilenceOverrides(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _incomingGrantsEmpty(),
-  _pendingInvitesEmpty(),
-  _connectivityOnline(),
+  sacredWindowNullOverride(),
+  incomingGrantsEmptyOverride(),
+  pendingInvitesEmptyOverride(),
+  connectivityOnlineOverride(),
 ];
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
@@ -169,7 +146,7 @@ void main() {
         await h.pumpApp(
           path: '/restore',
           extraOverrides: [
-            _sacredWindowNullOverride(),
+            sacredWindowNullOverride(),
             ...h.dashboardSilenceOverrides,
             // Null service triggers SY-2 blank-screen escape in initState.
             deviceRestoreServiceProvider.overrideWithValue(null),

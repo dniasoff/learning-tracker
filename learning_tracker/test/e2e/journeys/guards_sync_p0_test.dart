@@ -73,28 +73,11 @@ import 'package:learning_tracker/features/gamification/presentation/screens/gami
     show streakCalendarProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show profileListStreamProvider;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
-    show pendingTutorInvitesProvider;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-/// Silences the 30-second repeating timer in SacredTimeLockOverlay.
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
-
-/// Silences the incoming-tutor-grants FutureProvider (avoids CF network calls).
-Override _incomingGrantsEmpty() =>
-    incomingTutorGrantsProvider.overrideWith((ref) => Future.value([]));
-
-/// Silences the pending-tutor-invites provider.
-Override _pendingInvitesEmpty() =>
-    pendingTutorInvitesProvider.overrideWith((ref) => Future.value([]));
 
 /// Static offline connectivity override.
 Override _offlineOverride() =>
@@ -108,9 +91,9 @@ Override _offlineOverride() =>
 /// sacred-window timer and tutor grant providers.
 List<Override> _fullSilenceOverrides(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _incomingGrantsEmpty(),
-  _pendingInvitesEmpty(),
+  sacredWindowNullOverride(),
+  incomingGrantsEmptyOverride(),
+  pendingInvitesEmptyOverride(),
 ];
 
 /// Silence overrides for routes that do NOT pass through the shell
@@ -397,9 +380,9 @@ void main() {
           path: '/gamification',
           extraOverrides: [
             ..._nonShellStreakSilences(),
-            _sacredWindowNullOverride(),
-            _incomingGrantsEmpty(),
-            _pendingInvitesEmpty(),
+            sacredWindowNullOverride(),
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
             // GamificationScreen watches these providers — override to prevent
             // DB reads + timers. achievementsOverviewProvider is autoDispose
             // FutureProvider; streakCalendarProvider is @riverpod autoDispose.
@@ -513,7 +496,7 @@ void main() {
             // subscribe Drift reactive streams that leave cleanup timers behind.
             // h.dashboardSilenceOverrides is the canonical silence set.
             ...h.dashboardSilenceOverrides,
-            _sacredWindowNullOverride(),
+            sacredWindowNullOverride(),
             // Silence profileListStreamProvider: no identity → harness does NOT
             // override this provider, so any widget that reads it (e.g. AppShell
             // rendered under the /invite route) would open a Drift reactive
@@ -523,12 +506,10 @@ void main() {
             profileListStreamProvider.overrideWith((ref) => Stream.value([])),
             // Silence grant providers so _initialize's async grant lookup
             // resolves immediately without network.
-            incomingTutorGrantsProvider.overrideWith((ref) => Future.value([])),
-            pendingTutorInvitesProvider.overrideWith((ref) => Future.value([])),
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
             // Online so SignInScreen shows email/password form (not offline CTA).
-            connectivityStreamProvider.overrideWith(
-              (ref) => Stream.value(true),
-            ),
+            connectivityOnlineOverride(),
           ],
         );
 

@@ -85,8 +85,6 @@ import 'package:learning_tracker/features/sacred_time/domain/models/city.dart'
     show City;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart'
     show citySearchProvider;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart'
     show RestoreStatus;
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart'
@@ -94,6 +92,7 @@ import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dar
 import 'package:shared_preferences/shared_preferences.dart'
     show SharedPreferences;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Stubs ─────────────────────────────────────────────────────────────────────
@@ -112,11 +111,6 @@ class _FakeNotificationGateway extends Fake implements NotificationGateway {
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
-
-/// Silences the 30-second repeating timer in [SacredTimeLockOverlay] /
-/// [CurrentSacredWindow].
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
 
 /// Silences the heavy notification sync-effect providers that require a fully-
 /// wired [NotificationScheduler] and access the OS notification channel.
@@ -190,7 +184,7 @@ void main() {
       await h.pumpApp(
         path: '/sacred-time/city',
         extraOverrides: [
-          _sacredWindowNullOverride(),
+          sacredWindowNullOverride(),
           ...h.dashboardSilenceOverrides,
           // Stub citySearch to return our two fake cities for any 2+ char
           // query, bypassing the bundled SQLite asset.
@@ -286,7 +280,7 @@ void main() {
       await h.pumpApp(
         path: '/notifications',
         extraOverrides: [
-          _sacredWindowNullOverride(),
+          sacredWindowNullOverride(),
           ..._notificationSilenceOverrides(fakeGw),
           // dashboardSilenceOverrides suppresses Drift-backed streak +
           // curricula StreamProviders that, when disposed during ProviderScope
@@ -391,7 +385,7 @@ void main() {
         await h.pumpApp(
           path: '/restore',
           extraOverrides: [
-            _sacredWindowNullOverride(),
+            sacredWindowNullOverride(),
             ...h.dashboardSilenceOverrides,
             // null service → initState null-path → _navigateToApp called.
             deviceRestoreServiceProvider.overrideWithValue(null),
@@ -444,7 +438,7 @@ void main() {
         await h.pumpApp(
           path: '/restore',
           extraOverrides: [
-            _sacredWindowNullOverride(),
+            sacredWindowNullOverride(),
             ...h.dashboardSilenceOverrides,
             deviceRestoreServiceProvider.overrideWithValue(null),
             restoreStatusProvider.overrideWithValue(errorStatus),

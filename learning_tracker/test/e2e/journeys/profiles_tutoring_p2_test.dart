@@ -40,7 +40,6 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -55,26 +54,16 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 import '../fakes/e2e_fakes.dart';
+// AUD-t-cross-20's ../helpers/e2e_overrides.dart already shares
+// sacredWindowNullOverride/connectivitySilenceOverride/incomingGrantsEmptyOverride/
+// pendingInvitesEmptyOverride for this file; only pull stubTrack (AUD-t-cross-21's
+// non-overlapping addition) from e2e_common_overrides.dart to avoid an
+// ambiguous_import on the names both modules define.
+import '../harness/e2e_common_overrides.dart' show stubTrack;
 import '../harness/e2e_harness.dart';
 import '../helpers/e2e_overrides.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
-
-CurriculumTrack _stubTrack({
-  required int id,
-  required int profileId,
-  CurriculumId curriculum = CurriculumId.mishnayos,
-}) {
-  final now = DateTimeFactory.nowUtc();
-  return CurriculumTrack(
-    id: id,
-    profileId: profileId,
-    curriculumId: curriculum.storageKey,
-    state: 'active',
-    stateChangedAt: now,
-    activatedAt: now,
-  );
-}
 
 /// Inserts a [CurriculumTrack] row into [db].
 Future<void> _insertTrack(UserDatabase db, CurriculumTrack stub) async {
@@ -160,7 +149,7 @@ void main() {
       // Use profileId=1 — the harness always assigns the first seeded profile
       // id=1 via auto-increment.  We cannot access identity.profileId before
       // pumpApp resolves it (the DB seed happens inside _seedIdentity).
-      final stub = _stubTrack(id: 1, profileId: 1);
+      final stub = stubTrack(id: 1, profileId: 1);
 
       // Fake tutored session so the amber bar renders.
       const tutoredSession = TutoredProfileSelection(

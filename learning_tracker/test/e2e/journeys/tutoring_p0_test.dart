@@ -68,6 +68,7 @@ import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pi
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 import '../fakes/e2e_fakes.dart';
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Fakes / Stubs ─────────────────────────────────────────────────────────────
@@ -309,14 +310,6 @@ List<Override> _nonDashboardStreakSilences() => [
     (ref) => Stream.value(const []),
   ),
 ];
-
-/// Navigate to [route] and pump frames for the async guard chain.
-Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {
-  unawaited(h.router.push(route));
-  await h.pump();
-  await h.pump(const Duration(milliseconds: 500));
-  await h.pump();
-}
 
 /// Navigate to [route] and pump until all animations settle.
 ///
@@ -655,7 +648,7 @@ void main() {
             ],
           );
 
-          await _navigateTo(h, const ManageGrantsRoute());
+          await navigateTo(h, const ManageGrantsRoute());
           await tester.pump(const Duration(milliseconds: 300));
 
           h.expectOnScreen('My Tutoring Grants');
@@ -736,7 +729,7 @@ void main() {
             ),
           );
 
-      await _navigateTo(h, const ManageTutorsRoute());
+      await navigateTo(h, const ManageTutorsRoute());
       await tester.pump(const Duration(milliseconds: 300));
 
       // ManageTutorsScreen shows the child's name as a section header.

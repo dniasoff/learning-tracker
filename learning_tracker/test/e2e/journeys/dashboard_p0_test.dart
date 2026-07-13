@@ -13,9 +13,7 @@
 library;
 
 import 'package:flutter/material.dart' show Scrollable;
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider;
@@ -24,35 +22,15 @@ import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart'
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
     show connectivityStreamProvider;
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart'
-    show StreakRecoveryInfo;
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Factories ────────────────────────────────────────────────────────────────
-
-/// Creates a stub [CurriculumTrack] that can be injected via
-/// [dashboardActiveTracksStreamProvider] without DB round-trips.
-CurriculumTrack _stubTrack({
-  required int id,
-  required int profileId,
-  required CurriculumId curriculum,
-}) {
-  final now = DateTimeFactory.nowUtc();
-  return CurriculumTrack(
-    id: id,
-    profileId: profileId,
-    curriculumId: curriculum.storageKey,
-    state: 'active',
-    stateChangedAt: now,
-    activatedAt: now,
-  );
-}
 
 /// Minimal [DailyTask] for a self-paced track.
 DailyTask _minimalTask({
@@ -77,71 +55,6 @@ DailyTask _minimalTask({
   );
 }
 
-/// Standard LifetimeTotals stub with zero data.
-const _zeroLifetimeTotals = LifetimeTotals(
-  learnedSections: 0,
-  totalSections: 0,
-  totalCurricula: 9,
-);
-
-/// Overrides for the dashboard WITH active tracks (non-empty track stream).
-///
-/// Includes ALL silence overrides needed by DashboardScreen, including the
-/// streak + curricula providers from [E2EHarness.dashboardSilenceOverrides]
-/// EXCEPT the track stream — which we replace here with [tracks].
-///
-/// Do NOT combine with [E2EHarness.dashboardSilenceOverrides] because that
-/// already overrides `dashboardActiveTracksStreamProvider` with an empty list,
-/// which would create a duplicate override (Riverpod assertion error).
-List<Override> _dashboardActiveTracksOverrides(
-  E2EHarness h, {
-  required List<CurriculumTrack> tracks,
-  required List<DailyTask> tasks,
-  LifetimeTotals totals = _zeroLifetimeTotals,
-}) {
-  // dashboardSilenceOverrides includes:
-  //   dashboardActiveCurriculaStreamProvider → []
-  //   dashboardActiveTracksStreamProvider    → []   ← we replace this
-  //   dashboardStreakProvider                → 0/0
-  //   dashboardStreakRecoveryProvider        → not recovered
-  //
-  // We replace the track stream with the supplied [tracks] list, so we
-  // spread the silence overrides FIRST then override the track stream again.
-  // BUT Riverpod asserts on duplicate overrides!  So instead we manually
-  // list the non-track silence overrides and add our own track stream.
-  return [
-    // Non-track silence overrides (from dashboardSilenceOverrides minus the
-    // track stream):
-    dashboardActiveCurriculaStreamProvider.overrideWith(
-      (ref) => Stream.value(<CurriculumId>[]),
-    ),
-    dashboardStreakProvider.overrideWith(
-      (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-    ),
-    dashboardStreakRecoveryProvider.overrideWith(
-      (ref) => Future.value(
-        const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
-      ),
-    ),
-    // Inject the active tracks to display.
-    dashboardActiveTracksStreamProvider.overrideWith(
-      (ref) => Stream.value(tracks),
-    ),
-    // Task list (bypasses the full projection engine).
-    allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
-    // Lifetime providers (carousel track cards consume these).
-    lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-      (ref, profileId) => Future.value(totals),
-    ),
-    lifetimeSummariesProvider.overrideWith(
-      (ref, profileId) => Future.value([]),
-    ),
-    trackDualProgressMetricsProvider.overrideWith(
-      (ref, profileId) => Future.value([]),
-    ),
-  ];
-}
-
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -162,7 +75,7 @@ void main() {
         addTearDown(h.dispose);
 
         // Inject one stub track and one task — bypassing DB and projection.
-        final track = _stubTrack(
+        final track = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -175,7 +88,7 @@ void main() {
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
-            ..._dashboardActiveTracksOverrides(
+            ...dashboardActiveTracksOverrides(
               h,
               tracks: [track],
               tasks: [task],
@@ -207,7 +120,7 @@ void main() {
       final h = E2EHarness(tester, identity: identity);
       addTearDown(h.dispose);
 
-      final track = _stubTrack(
+      final track = stubTrack(
         id: 1,
         profileId: 1,
         curriculum: CurriculumId.mishnayos,
@@ -217,7 +130,7 @@ void main() {
       await h.pumpApp(
         path: '/dashboard',
         extraOverrides: [
-          ..._dashboardActiveTracksOverrides(h, tracks: [track], tasks: [task]),
+          ...dashboardActiveTracksOverrides(h, tracks: [track], tasks: [task]),
         ],
       );
 
@@ -303,7 +216,7 @@ void main() {
         addTearDown(h.dispose);
 
         // Inject one stub track but an empty task list → all caught up.
-        final track = _stubTrack(
+        final track = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -311,7 +224,7 @@ void main() {
 
         await h.pumpApp(
           path: '/dashboard',
-          extraOverrides: _dashboardActiveTracksOverrides(
+          extraOverrides: dashboardActiveTracksOverrides(
             h,
             tracks: [track],
             tasks: const [],
@@ -343,12 +256,12 @@ void main() {
         addTearDown(h.dispose);
 
         // Two stub tracks → two carousel pages.
-        final track1 = _stubTrack(
+        final track1 = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
         );
-        final track2 = _stubTrack(
+        final track2 = stubTrack(
           id: 2,
           profileId: 1,
           curriculum: CurriculumId.chumash,
@@ -369,7 +282,7 @@ void main() {
             // Force English curriculum labels regardless of device locale so
             // the carousel shows "Mishnayos" (not "משניות").
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
-            ..._dashboardActiveTracksOverrides(
+            ...dashboardActiveTracksOverrides(
               h,
               tracks: [track1, track2],
               tasks: [task1, task2],
@@ -527,7 +440,7 @@ void main() {
         addTearDown(h.dispose);
 
         // Inject a stub track to simulate local Drift data available offline.
-        final track = _stubTrack(
+        final track = stubTrack(
           id: 1,
           profileId: 1,
           curriculum: CurriculumId.mishnayos,
@@ -543,7 +456,7 @@ void main() {
             connectivityStreamProvider.overrideWith(
               (ref) => Stream.value(false),
             ),
-            ..._dashboardActiveTracksOverrides(
+            ...dashboardActiveTracksOverrides(
               h,
               tracks: [track],
               tasks: [task],

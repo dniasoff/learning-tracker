@@ -26,9 +26,6 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'dart:async' show unawaited;
-
-import 'package:auto_route/auto_route.dart' show PageRouteInfo;
 import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:flutter/material.dart' show Icons, TextField;
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -36,14 +33,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart'
-    show pendingRedemptionsProvider;
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
-    show activeTracksProvider;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -137,54 +129,6 @@ Future<int> _seedPendingRedemption(
 /// Standard silence overrides for dashboard heavy providers.
 List<Override> _dashboardSilence(E2EHarness h) => h.dashboardSilenceOverrides;
 
-/// One-shot (non-reactive) override for [pendingRedemptionsProvider].
-///
-/// Replaces the Drift reactive `watchPendingRedemptions` stream with a
-/// `Stream.fromFuture` backed by `getPendingRedemptions` (one-shot query).
-/// This avoids the Drift cleanup timer that would otherwise leave a pending
-/// timer after ProviderScope disposal (R-GA-stream). The provider still
-/// responds correctly to `ref.invalidate` — each invalidation re-runs the
-/// factory and emits the current DB state, so the card disappears after
-/// fulfil/decline.
-Override _pendingRedemptionsOneShotOverride() {
-  return pendingRedemptionsProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(
-      db.pointsBalanceDao.getPendingRedemptions(profileId),
-    );
-  });
-}
-
-/// One-shot (non-reactive) override for [activeTracksProvider].
-///
-/// Replaces the Drift reactive stream with a `Stream.fromFuture` backed by
-/// `getActiveTracksForProfile` (one-shot query). Prevents the Drift cleanup
-/// timer from leaking when PointConfigScreen (which uses _pointConfigData
-/// Provider watching activeTracksProvider) is disposed (R-GA-stream).
-/// The factory runs lazily — not until PointConfigScreen is built — so data
-/// seeded between pumpApp and the navigation is visible.
-Override _activeTracksOneShotOverride() {
-  return activeTracksProvider.overrideWith((ref) {
-    final db = ref.watch(userDatabaseProvider);
-    final profileId = ref.watch(activeProfileIdProvider);
-    return Stream.fromFuture(db.trackDao.getActiveTracksForProfile(profileId));
-  });
-}
-
-/// Navigates to [route] by firing [router.push] without awaiting and then
-/// pumping frames so the async guard chain can complete.
-///
-/// In [testWidgets] every async continuation (guard DB reads, Riverpod future
-/// providers) needs the Flutter engine to process frames. Awaiting the push
-/// future directly stalls forever — instead fire-and-forget and pump.
-Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {
-  unawaited(h.router.push(route));
-  await h.pump();
-  await h.pump(const Duration(milliseconds: 500));
-  await h.pump();
-}
-
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -226,7 +170,7 @@ void main() {
 
         h.markPinAuthenticated();
 
-        await _navigateTo(h, const RewardConfigurationRoute());
+        await navigateTo(h, const RewardConfigurationRoute());
 
         h.expectOnScreen(
           'Reward Configuration',
@@ -257,7 +201,7 @@ void main() {
         await h.pump(const Duration(milliseconds: 300));
 
         // Navigate to ChildRedemptionScreen and verify the new reward.
-        await _navigateTo(h, const ChildRedemptionRoute());
+        await navigateTo(h, const ChildRedemptionRoute());
         h.expectOnScreen('Redeem Prizes', routeName: 'ChildRedemptionScreen');
         h.expectOnScreen('Golden Trophy');
       });
@@ -287,7 +231,7 @@ void main() {
         path: '/dashboard',
         extraOverrides: [
           ..._dashboardSilence(h),
-          _pendingRedemptionsOneShotOverride(),
+          pendingRedemptionsOneShotOverride(),
         ],
       );
 
@@ -306,7 +250,7 @@ void main() {
       h.markPinAuthenticated();
 
       // ── Navigate to ParentPendingRedemptionsScreen ─────────────────────
-      await _navigateTo(h, const ParentPendingRedemptionsRoute());
+      await navigateTo(h, const ParentPendingRedemptionsRoute());
 
       h.expectOnScreen(
         'Pending Prizes',
@@ -356,7 +300,7 @@ void main() {
         path: '/dashboard',
         extraOverrides: [
           ..._dashboardSilence(h),
-          _pendingRedemptionsOneShotOverride(),
+          pendingRedemptionsOneShotOverride(),
         ],
       );
 
@@ -373,7 +317,7 @@ void main() {
       h.markPinAuthenticated();
 
       // ── Navigate ───────────────────────────────────────────────────────
-      await _navigateTo(h, const ParentPendingRedemptionsRoute());
+      await navigateTo(h, const ParentPendingRedemptionsRoute());
 
       h.expectOnScreen('Pending Prizes');
       h.expectOnScreen('Bronze Coin');
@@ -429,7 +373,7 @@ void main() {
         path: '/dashboard',
         extraOverrides: [
           ..._dashboardSilence(h),
-          _activeTracksOneShotOverride(),
+          activeTracksOneShotOverride(),
         ],
       );
 
@@ -452,7 +396,7 @@ void main() {
       h.markPinAuthenticated();
 
       // ── Navigate to PointConfigScreen ───────────────────────────────────
-      await _navigateTo(h, const PointConfigRoute());
+      await navigateTo(h, const PointConfigRoute());
       // Extra pump for the async _pointConfigDataProvider to resolve.
       await h.pump(const Duration(milliseconds: 500));
 

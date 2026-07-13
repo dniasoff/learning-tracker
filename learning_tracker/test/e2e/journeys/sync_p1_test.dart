@@ -81,39 +81,22 @@ import 'package:learning_tracker/features/learning/data/completion_writer.dart'
     show CompletionWriter;
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart'
     show CompletionCommand;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart'
     show SyncErrorCode;
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
     show SyncStatus;
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
-    show pendingTutorInvitesProvider;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Shared silence helpers ───────────────────────────────────────────────────
 
-/// Silences SacredTimeLockOverlay 30-second repeating timer.
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
-
-/// Silences incoming tutor-grant FutureProvider (avoids CF network calls).
-Override _incomingGrantsEmpty() =>
-    incomingTutorGrantsProvider.overrideWith((ref) => Future.value([]));
-
-/// Silences pending tutor-invites provider.
-Override _pendingInvitesEmpty() =>
-    pendingTutorInvitesProvider.overrideWith((ref) => Future.value([]));
-
 /// Standard silence overrides for sync tests that land on /dashboard.
 List<Override> _syncSilences(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _incomingGrantsEmpty(),
-  _pendingInvitesEmpty(),
+  sacredWindowNullOverride(),
+  incomingGrantsEmptyOverride(),
+  pendingInvitesEmptyOverride(),
 ];
 
 /// Silence overrides that omit connectivityStreamProvider so the test can
@@ -121,9 +104,9 @@ List<Override> _syncSilences(E2EHarness h) => [
 /// error.
 List<Override> _syncSilencesNoConnectivity(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _incomingGrantsEmpty(),
-  _pendingInvitesEmpty(),
+  sacredWindowNullOverride(),
+  incomingGrantsEmptyOverride(),
+  pendingInvitesEmptyOverride(),
   // connectivityStreamProvider intentionally NOT overridden here.
 ];
 

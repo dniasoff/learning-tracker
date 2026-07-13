@@ -86,16 +86,11 @@ import 'package:learning_tracker/core/sync/sync_identity_status.dart'
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart'
     show SignInController, SignInError, SignInState, signInControllerProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
-    show connectivityStreamProvider, debugSetLastKnownOnline;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
+    show debugSetLastKnownOnline;
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
     show SyncStatus;
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
-    show pendingTutorInvitesProvider;
 
+import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Stubs ─────────────────────────────────────────────────────────────────────
@@ -118,30 +113,14 @@ class _WatchdogTimeoutSignInController extends SignInController {
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-/// Silences SacredTimeSettingsCard's 30-second repeating timer.
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
-
-/// Silences connectivity plugin timers (debounce + recovery probe).
-Override _connectivityOnlineOverride() =>
-    connectivityStreamProvider.overrideWith((ref) => Stream.value(true));
-
-/// Silences _PendingInvitesSection — active tutor grants.
-Override _incomingGrantsEmptyOverride() =>
-    incomingTutorGrantsProvider.overrideWith((ref) => Future.value([]));
-
-/// Silences _PendingInvitesSection — pending tutor invitations.
-Override _pendingInvitesEmptyOverride() =>
-    pendingTutorInvitesProvider.overrideWith((ref) => Future.value([]));
-
 /// Standard silence overrides for tests that navigate through AppShell or land
 /// on SettingsScreen.
 List<Override> _shellSilences(E2EHarness h) => [
   ...h.dashboardSilenceOverrides,
-  _sacredWindowNullOverride(),
-  _connectivityOnlineOverride(),
-  _incomingGrantsEmptyOverride(),
-  _pendingInvitesEmptyOverride(),
+  sacredWindowNullOverride(),
+  connectivityOnlineOverride(),
+  incomingGrantsEmptyOverride(),
+  pendingInvitesEmptyOverride(),
 ];
 
 /// Navigate from dashboard to SettingsScreen and scroll to BackupSyncSection.
@@ -239,7 +218,7 @@ void main() {
         await h.pumpApp(
           path: '/sign-in',
           extraOverrides: [
-            _connectivityOnlineOverride(),
+            connectivityOnlineOverride(),
             // Seed the controller in the post-watchdog error state.
             signInControllerProvider.overrideWith(
               () => _WatchdogTimeoutSignInController(timeoutMessage),
@@ -284,7 +263,7 @@ void main() {
           await h.pumpApp(
             path: '/sign-in',
             extraOverrides: [
-              _connectivityOnlineOverride(),
+              connectivityOnlineOverride(),
               signInControllerProvider.overrideWith(
                 () => _WatchdogTimeoutSignInController(timeoutMessage),
               ),
