@@ -6594,13 +6594,18 @@
   {
    "id": "AUD-t-account-05",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Move sign-in/account-picker test cleanup into addTearDown so a failed assertion doesn't leak the ProviderContainer/Drift DB",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "8176f48dbf1737a7ce0dc7837d33e49cd1a90376"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-account-05 AC1 OK: addTearDown(registry.close) l208 + addTearDown(_tearDownContainer) l232 after creation; l1 test addTearDown(_tearDown) after _buildFixture",
+    "AUD-t-account-05 AC2 OK: probe with injected mid-test expect(1,2) failed yet teardown probe printed DB CLOSED - addTearDown fires post-failure, DBs closed"
+   ],
+   "notes": "Cleanup now registered via addTearDown right after resource creation, not as last statement. AC2 verified via a temporary deliberately-failing expect() + print probe (reverted before commit). Fixed a real flutter_test timer-invariant interaction discovered during the fix. Commit 8176f48d (merged via ab788470)."
   },
   {
    "id": "AUD-t-auth-05",
@@ -7856,24 +7861,32 @@
   {
    "id": "AUD-t-account-04",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Assert account_picker_local_data_missing_test.dart's expected SnackBar text via the l10n getter, not a hardcoded English literal",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "9849cc4344d48ff2dea1416dd00e48f6a63f796a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-account-04 AC OK: C1(l237)/C2(l279) assert find.text(l10n.authLocalDataMissing); literal removed; app_en.arb:1086 matches so behavior preserved"
+   ],
+   "notes": "account_picker_local_data_missing_test.dart C1/C2 now assert find.text(l10n.authLocalDataMissing) via a loaded AppLocalizations, instead of a hardcoded English literal. Both tests verified passing. Commit 9849cc43 (merged via ab788470)."
   },
   {
    "id": "AUD-t-account-08",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Seed fixed timestamps in sign_in_google_signout_throws_test.dart instead of DateTime.now() in device-account fixtures",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "558c080ee36ced25e882c31df40d5734fac5f7ec"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-account-08 AC OK: grep -c DateTime.now()=0; all 4 sites use _kNow=DateTime.utc(2026,1,1)"
+   ],
+   "notes": "sign_in_google_signout_throws_test.dart's 4 DateTime.now() sites replaced with fixed final _kNow = DateTime.utc(2026,1,1), matching sibling files. grep confirms zero DateTime.now() remain. Commit 558c080e (merged via ab788470)."
   },
   {
    "id": "AUD-t-auth-04",
