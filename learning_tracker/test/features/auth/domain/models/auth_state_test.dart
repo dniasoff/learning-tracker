@@ -103,6 +103,7 @@ void main() {
       const state = AuthState.signedOut();
       expect(state.sessionStatus, SessionStatus.signedOut);
       expect(state.currentUser, isNull);
+      expect(state.tier, isNull);
     });
 
     test('AuthState.signedIn sets sessionStatus=signedIn', () {
@@ -177,6 +178,7 @@ void main() {
       expect(updated.sessionStatus, SessionStatus.signedOut);
       // Other fields preserved
       expect(updated.tier, UserTier.localBorn);
+      expect(updated.currentUser, testUser);
     });
 
     test('copyWith with clearUser=true nulls out currentUser', () {
@@ -195,113 +197,6 @@ void main() {
       );
       final cleared = state.copyWith(clearTier: true);
       expect(cleared.tier, isNull);
-    });
-  });
-
-  group('AuthState.initializing', () {
-    test('has sessionStatus=initializing and null user/tier', () {
-      const state = AuthState.initializing();
-      expect(state.sessionStatus, SessionStatus.initializing);
-      expect(state.currentUser, isNull);
-      expect(state.tier, isNull);
-      expect(state.isInitializing, isTrue);
-      expect(state.isSignedIn, isFalse);
-    });
-  });
-
-  group('AuthState.signedOut', () {
-    test('has sessionStatus=signedOut and null user/tier', () {
-      const state = AuthState.signedOut();
-      expect(state.sessionStatus, SessionStatus.signedOut);
-      expect(state.currentUser, isNull);
-      expect(state.tier, isNull);
-      expect(state.isSignedIn, isFalse);
-    });
-  });
-
-  group('AuthState.displayIdentifier', () {
-    const authUser = AuthUser(
-      profileId: 1,
-      email: 'a@b.com',
-      displayName: 'Alice',
-    );
-
-    test('returns displayName when non-empty', () {
-      const state = AuthState.signedIn(
-        user: authUser,
-        tier: UserTier.cloudBorn,
-      );
-      expect(state.displayIdentifier, 'Alice');
-    });
-
-    test('returns email when displayName is empty', () {
-      const emptyNameUser = AuthUser(
-        profileId: 1,
-        email: 'a@b.com',
-        displayName: '',
-      );
-      const state = AuthState.signedIn(
-        user: emptyNameUser,
-        tier: UserTier.cloudBorn,
-      );
-      expect(state.displayIdentifier, 'a@b.com');
-    });
-
-    test("returns 'anon' when signed out", () {
-      const state = AuthState.signedOut();
-      expect(state.displayIdentifier, 'anon');
-    });
-  });
-
-  group('AuthState.copyWith', () {
-    const authUser = AuthUser(
-      profileId: 1,
-      email: 'a@b.com',
-      displayName: 'Alice',
-    );
-
-    test('returns copy with updated sessionStatus', () {
-      const state = AuthState.signedIn(
-        user: authUser,
-        tier: UserTier.cloudBorn,
-      );
-      final copy = state.copyWith(sessionStatus: SessionStatus.signedOut);
-      expect(copy.sessionStatus, SessionStatus.signedOut);
-      expect(copy.currentUser, authUser);
-    });
-
-    test('clears user when clearUser=true', () {
-      const state = AuthState.signedIn(
-        user: authUser,
-        tier: UserTier.cloudBorn,
-      );
-      final copy = state.copyWith(clearUser: true);
-      expect(copy.currentUser, isNull);
-    });
-
-    test('clears tier when clearTier=true', () {
-      const state = AuthState.signedIn(
-        user: authUser,
-        tier: UserTier.cloudBorn,
-      );
-      final copy = state.copyWith(clearTier: true);
-      expect(copy.tier, isNull);
-    });
-
-    test('is cloudBorn / localBorn correctly', () {
-      const cloud = AuthState.signedIn(
-        user: authUser,
-        tier: UserTier.cloudBorn,
-      );
-      expect(cloud.isCloudBorn, isTrue);
-      expect(cloud.isLocalBorn, isFalse);
-
-      const local = AuthState.signedIn(
-        user: authUser,
-        tier: UserTier.localBorn,
-      );
-      expect(local.isLocalBorn, isTrue);
-      expect(local.isCloudBorn, isFalse);
     });
   });
 
