@@ -4,6 +4,17 @@
 > This document covers FR75, FR88-FR94, FR102-FR105, NFR29-NFR35, and the
 > hard-tier auth model defined in `architecture-offline-v2.md`.
 
+> ⚠️ **Local-born scenarios stale -- 2026-07-13.** Per the 2026-06-14 product decision,
+> offline/local-born accounts are now **credential-less** (no email, no password, no
+> account-level name) -- created via an explicit "no internet, create an offline
+> account?" prompt and re-entered through the **Account Picker**, not email/password
+> sign-in. This supersedes the "Hard-Tier Auth Model" section below and every
+> local-born scenario in this document that assumes a password (including AUTH-06,
+> AUTH-07, AUTH-08, AUTH-10, AUTH-15 through AUTH-18, AUTH-20, AUTH-24). Cloud-born
+> scenarios (Firebase email/password or Google) are unaffected. Current behavior:
+> `signup_screen.dart`. Design record: `../../planning/loop-progress.md`, "ONBOARDING
+> REWORK" entries (2026-06-14 to 2026-06-15).
+
 ---
 
 ## 1. Context: What & Why
