@@ -4451,13 +4451,18 @@
   {
    "id": "AUD-t-cross-18",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete the dead test/firestore-rules/ Jest suite, superseded by functions/test/firestore_rules.test.mjs",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d672a0cf33708018fe8eeb3f737496898a6339b3"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-18 AC1 OK: git ls-files 0 tracked under test/firestore-rules/; diff deletes all 4 files incl package-lock.json (4602L) + test.js (791L)",
+    "AUD-t-cross-18 AC2 OK: architecture.md:577, dev-guide.md:87, deploy-guide.md:51 updated to .mjs; test-options.md:31 already correct; api-contracts.md:108 fixed"
+   ],
+   "notes": "Re-verified evidence (no drift): deprecation comment, describe(), package.json name confirmed; suite unwired from CI/Makefile; firestore.rules has no such top-level blocks. Deleted test/firestore-rules/ (4 files). Updated 4 docs to canonical .mjs suite; test-options.md already accurate."
   },
   {
    "id": "AUD-guardrails-12",
