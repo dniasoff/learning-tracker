@@ -2289,13 +2289,13 @@
     {
       "id": "AUD-docs-15",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Regenerate architecture.md's Feature Dependency Graph — 5 fabricated/renamed nodes, 3 missing features, 2 reversed edges",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
     },
     {
       "id": "AUD-t-settings-02",
@@ -2420,24 +2420,24 @@
     {
       "id": "AUD-docs-16",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Regenerate index.md/project-overview.md/source-tree-analysis.md's DB-schema, feature-list and file-count inventory — frozen before the Epic 24-27 rebuild",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
     },
     {
       "id": "AUD-docs-06",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Correct sprint-status.yaml's false 'done' marking on 10 Epic-19 stories — confirmed unimplemented cleanup in story 19-10",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
     },
     {
       "id": "AUD-core-navigation-02",
@@ -2660,13 +2660,13 @@
     {
       "id": "AUD-docs-22",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Update or disclaim docs/scenarios/stitch-prompts/{03-mode-selection,04-curriculum-selection,06-dashboard}.md — describe a product IA the shipped app doesn't have",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
     },
     {
       "id": "AUD-docs-03",
@@ -2860,13 +2860,13 @@
     {
       "id": "AUD-docs-02",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Add SR-2/SR-3/SR-4/SR-5 + TQ-9 ruleCoverage pending hardening tests to firestore_rules.test.mjs",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
     },
     {
       "id": "AUD-guardrails-11",
@@ -2882,13 +2882,13 @@
     {
       "id": "AUD-docs-07",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Document the tutor-mode Firestore/Functions surface in docs/api-contracts.md and fix the stale 'indexes.json is empty' claim",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
     },
     {
       "id": "AUD-docs-14",
@@ -3473,13 +3473,13 @@
     {
       "id": "AUD-docs-21",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Update linear-status.md — Epics 25-27 marked 'all Backlog' despite dozens of implemented, non-skipped story-acceptance tests",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
     },
     {
       "id": "AUD-docs-18",
@@ -6795,13 +6795,13 @@
     {
       "id": "AUD-docs-23",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Add `_codec.dart` to coding-standards.md's File Naming Conventions table — 15 files use it, no documented suffix fits",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
     },
     {
       "id": "AUD-core-sync-32",
