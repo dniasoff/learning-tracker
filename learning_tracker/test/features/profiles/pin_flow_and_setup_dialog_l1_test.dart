@@ -1572,4 +1572,343 @@ void main() {
       },
     );
   });
+
+  // ── H. Typed PinFlowError rendering — AUD-profiles-09 / AUD-profiles-20 ───
+  //
+  // PinFlowState.error is now a closed enum (PinFlowError) resolved through
+  // an EXHAUSTIVE switch in pin_flow_screen.dart (no default/fallback arm).
+  // This group drives EVERY PinFlowController error path and asserts the
+  // ACTUAL Locale('he') rendered text (not just non-null), per
+  // AUD-profiles-09's acceptance criteria:
+  //   - incorrectPin is already driven+asserted in he-locale by B4-he above
+  //     (kept, not duplicated here).
+  //   - pinsDoNotMatch, noActiveProfile, invalidPinFormat, unexpected are
+  //     driven here.
+  //
+  // It also proves the AUD-profiles-20 fix: an ArgumentError with a
+  // non-String .message (which the old `e.message as String?` cast would
+  // have thrown a TypeError on) is read null-safely and does not crash the
+  // flow, at BOTH unchecked-cast sites named in the finding:
+  //   - pin_flow_controller.dart (via PinFlowScreen, H5/H6)
+  //   - parent_pin_setup_dialog.dart (via showParentPinSetupDialog, H7/H8)
+  group(
+    'H. Typed PinFlowError rendering (AUD-profiles-09/AUD-profiles-20)',
+    () {
+      late _MockPinService ps;
+      late _MockStackRouter router;
+      late _MockAppRouter appRouter;
+
+      setUp(() {
+        ps = _MockPinService();
+        router = _MockStackRouter();
+        appRouter = _MockAppRouter();
+        _stubRouter(router);
+      });
+
+      void setViewSize(WidgetTester tester) {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+      }
+
+      testWidgets(
+        'H2: setup mode — PIN mismatch renders Hebrew "הקודים אינם תואמים" '
+        '(no English leak)',
+        (tester) async {
+          setViewSize(tester);
+          await tester.pumpWidget(
+            _buildScreen(
+              PinFlowMode.setup,
+              pinService: ps,
+              router: router,
+              appRouter: appRouter,
+              locale: const Locale('he'),
+            ),
+          );
+          await tester.pump(const Duration(seconds: 1));
+
+          // enterNew
+          await _enterPin(tester, '1234');
+          await tester.pump(const Duration(seconds: 1));
+          // confirm with a different PIN → mismatch
+          await _enterPin(tester, '5678');
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(
+            find.textContaining('הקודים אינם תואמים'),
+            findsAtLeastNWidgets(1),
+            reason: 'PIN mismatch must show the localized Hebrew error',
+          );
+          expect(
+            find.textContaining('match'),
+            findsNothing,
+            reason: 'no raw English error may leak in Hebrew locale',
+          );
+          verifyNever(() => ps.setProfilePin(any(), any()));
+          await _teardown(tester);
+        },
+      );
+
+      testWidgets(
+        'H3: verify mode — no active profile renders Hebrew "אין פרופיל פעיל" '
+        '(no English leak)',
+        (tester) async {
+          setViewSize(tester);
+          await tester.pumpWidget(
+            _buildScreen(
+              PinFlowMode.verify,
+              pinService: ps,
+              router: router,
+              appRouter: appRouter,
+              profileId: null,
+              locale: const Locale('he'),
+            ),
+          );
+          await tester.pump(const Duration(seconds: 1));
+
+          await _enterPin(tester, '1234');
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(
+            find.textContaining('אין פרופיל פעיל'),
+            findsAtLeastNWidgets(1),
+            reason:
+                'missing active profile must show the localized Hebrew error',
+          );
+          expect(
+            find.textContaining('active profile'),
+            findsNothing,
+            reason: 'no raw English error may leak in Hebrew locale',
+          );
+          verifyNever(() => ps.verifyProfilePin(any(), any()));
+          await _teardown(tester);
+        },
+      );
+
+      testWidgets('H4: setup mode — InvalidPinFormatException renders Hebrew '
+          '"יש להזין קוד בן 4 ספרות" (no English leak)', (tester) async {
+        setViewSize(tester);
+        when(
+          () => ps.setProfilePin(_kProfileId, '1234'),
+        ).thenThrow(const InvalidPinFormatException());
+
+        await tester.pumpWidget(
+          _buildScreen(
+            PinFlowMode.setup,
+            pinService: ps,
+            router: router,
+            appRouter: appRouter,
+            locale: const Locale('he'),
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        // enterNew then matching confirm — triggers the setProfilePin call
+        // that throws InvalidPinFormatException.
+        await _enterPin(tester, '1234');
+        await tester.pump(const Duration(seconds: 1));
+        await _enterPin(tester, '1234');
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.textContaining('יש להזין קוד בן 4 ספרות'),
+          findsAtLeastNWidgets(1),
+          reason:
+              'InvalidPinFormatException must resolve to the localized '
+              'Hebrew error, never the exception\'s English dev message',
+        );
+        expect(
+          find.textContaining('numeric'),
+          findsNothing,
+          reason:
+              'the raw English exception message ("...numeric digits") must '
+              'never leak to the UI in Hebrew locale',
+        );
+        await _teardown(tester);
+      });
+
+      testWidgets(
+        'H5: setup mode — ArgumentError.value(42, "pin", 99) (non-String '
+        '.message) does not crash and renders Hebrew "שמירת הקוד נכשלה"',
+        (tester) async {
+          // AUD-profiles-20 regression reproducer: message=99 is an int, so the
+          // OLD `e.message as String?` cast at pin_flow_controller.dart would
+          // have thrown an unhandled TypeError here instead of being caught.
+          setViewSize(tester);
+          when(
+            () => ps.setProfilePin(_kProfileId, '1234'),
+          ).thenThrow(ArgumentError.value(42, 'pin', 99));
+
+          await tester.pumpWidget(
+            _buildScreen(
+              PinFlowMode.setup,
+              pinService: ps,
+              router: router,
+              appRouter: appRouter,
+              locale: const Locale('he'),
+            ),
+          );
+          await tester.pump(const Duration(seconds: 1));
+
+          await _enterPin(tester, '1234');
+          await tester.pump(const Duration(seconds: 1));
+          await _enterPin(tester, '1234');
+          // No crash: pumping settles normally instead of the test harness
+          // reporting an unhandled exception.
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(
+            find.textContaining('שמירת הקוד נכשלה'),
+            findsAtLeastNWidgets(1),
+            reason:
+                'an unexpected ArgumentError must fall back to the generic '
+                'localized "failed to save" error, not crash or leak raw text',
+          );
+          expect(find.textContaining('Failed to save'), findsNothing);
+          await _teardown(tester);
+        },
+      );
+
+      testWidgets(
+        'H6: setup mode — ArgumentError.value(42, "pin") (literal AC case, '
+        'message omitted) does not crash',
+        (tester) async {
+          // Literal case named in AUD-profiles-20's acceptance criterion. Its
+          // own verify-pass correction notes this 2-arg form leaves .message
+          // null (not a non-String value), so it would NOT have reproduced the
+          // TypeError under the old unchecked cast — H5 above is the actual
+          // crash reproducer. This test proves the exact AC text still works
+          // end-to-end without crashing, complementing H5.
+          setViewSize(tester);
+          when(
+            () => ps.setProfilePin(_kProfileId, '1234'),
+          ).thenThrow(ArgumentError.value(42, 'pin'));
+
+          await tester.pumpWidget(
+            _buildScreen(
+              PinFlowMode.setup,
+              pinService: ps,
+              router: router,
+              appRouter: appRouter,
+            ),
+          );
+          await tester.pump(const Duration(seconds: 1));
+
+          await _enterPin(tester, '1234');
+          await tester.pump(const Duration(seconds: 1));
+          await _enterPin(tester, '1234');
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(
+            find.textContaining('Failed to save PIN'),
+            findsAtLeastNWidgets(1),
+            reason: 'must fall back gracefully with no crash',
+          );
+          await _teardown(tester);
+        },
+      );
+
+      /// Minimal harness for [showParentPinSetupDialog] (mirrors group D's
+      /// buildDialogHarness, scoped locally here for the ArgumentError tests).
+      Widget buildDialogHarness(_MockPinService pinService) {
+        return ProviderScope(
+          retry: (_, __) => null,
+          overrides: [pinServiceProvider.overrideWithValue(pinService)],
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Consumer(
+              builder: (ctx, ref, _) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => showParentPinSetupDialog(
+                      ctx,
+                      ref,
+                      profileId: _kProfileId,
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      testWidgets(
+        'H7: ParentPinSetupDialog — ArgumentError.value(42, "pin", 99) '
+        '(non-String .message) does not crash',
+        (tester) async {
+          // AUD-profiles-20 regression reproducer for the SECOND unchecked-cast
+          // site (parent_pin_setup_dialog.dart). message=99 is an int; the OLD
+          // `e.message as String?` cast would have thrown here.
+          setViewSize(tester);
+          final dialogPs = _MockPinService();
+          when(
+            () => dialogPs.setProfilePin(_kProfileId, '1234'),
+          ).thenThrow(ArgumentError.value(42, 'pin', 99));
+
+          await tester.pumpWidget(buildDialogHarness(dialogPs));
+          await tester.pump(const Duration(seconds: 1));
+
+          await tester.tap(find.text('open'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+
+          await _enterPin(tester, '1234');
+          await tester.pump(const Duration(seconds: 1));
+          await _enterPin(tester, '1234');
+          // No crash: pumping settles normally.
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(
+            find.textContaining('Failed to save PIN'),
+            findsAtLeastNWidgets(1),
+            reason:
+                'dialog must fall back to a generic localized error, not '
+                'crash on the non-String ArgumentError.message',
+          );
+          // Dialog stays open (not a success path) — title still visible.
+          expect(find.text('Set Parent PIN'), findsAtLeastNWidgets(1));
+          await _teardown(tester);
+        },
+      );
+
+      testWidgets(
+        'H8: ParentPinSetupDialog — ArgumentError.value(42, "pin") (literal AC '
+        'case) does not crash',
+        (tester) async {
+          setViewSize(tester);
+          final dialogPs = _MockPinService();
+          when(
+            () => dialogPs.setProfilePin(_kProfileId, '1234'),
+          ).thenThrow(ArgumentError.value(42, 'pin'));
+
+          await tester.pumpWidget(buildDialogHarness(dialogPs));
+          await tester.pump(const Duration(seconds: 1));
+
+          await tester.tap(find.text('open'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+
+          await _enterPin(tester, '1234');
+          await tester.pump(const Duration(seconds: 1));
+          await _enterPin(tester, '1234');
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(
+            find.textContaining('Failed to save PIN'),
+            findsAtLeastNWidgets(1),
+            reason: 'must fall back gracefully with no crash',
+          );
+          await _teardown(tester);
+        },
+      );
+    },
+  );
 }

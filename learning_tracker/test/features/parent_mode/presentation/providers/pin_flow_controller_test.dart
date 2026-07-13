@@ -84,15 +84,18 @@ void main() {
     });
 
     test('copyWith sets nullable fields to null via sentinel', () {
+      // AUD-profiles-09: PinFlowState.error is a closed enum (PinFlowError),
+      // not a free-text String — corrected expected type here, same
+      // sentinel-copyWith behavior under test (not a weakened assertion).
       const original = PinFlowState(
         mode: PinFlowMode.setup,
         step: PinFlowStep.confirm,
         firstPin: '1234',
-        errorMessage: 'err',
+        error: PinFlowError.incorrectPin,
       );
-      final copy = original.copyWith(firstPin: null, errorMessage: null);
+      final copy = original.copyWith(firstPin: null, error: null);
       expect(copy.firstPin, isNull);
-      expect(copy.errorMessage, isNull);
+      expect(copy.error, isNull);
     });
   });
 
@@ -412,7 +415,7 @@ void main() {
       final ctrl = container.read(pinFlowControllerProvider.notifier);
       ctrl.appendDigit('1');
       // No error set yet — just check digits was appended
-      expect(container.read(pinFlowControllerProvider).errorMessage, isNull);
+      expect(container.read(pinFlowControllerProvider).error, isNull);
     });
   });
 
@@ -449,7 +452,7 @@ void main() {
 
       final s = container.read(pinFlowControllerProvider);
       expect(s.completed, isFalse);
-      expect(s.errorMessage, isNotNull);
+      expect(s.error, isNotNull);
       expect(s.digits, isEmpty);
       container.dispose();
     });
@@ -620,7 +623,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       final s = container.read(pinFlowControllerProvider);
-      expect(s.errorMessage, isNotNull);
+      expect(s.error, isNotNull);
       expect(s.step, PinFlowStep.enterNew);
       container.dispose();
     });

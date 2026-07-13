@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_flow_machine.dart'
     show PinFlowMode, PinFlowStep;
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
@@ -13,6 +14,44 @@ export 'package:learning_tracker/features/profiles/domain/services/pin_flow_mach
 part 'pin_flow_controller.g.dart';
 
 // ---------------------------------------------------------------------------
+// PinFlowError
+// ---------------------------------------------------------------------------
+
+/// Closed set of user-facing error conditions the PIN flow can surface.
+///
+/// AUD-profiles-09 (EH-5/AX-2): replaces the previous free-text
+/// `errorMessage: String?` field on [PinFlowState]. The old field carried raw
+/// English sentinels (e.g. `'Incorrect PIN'`) that [PinFlowScreen] mapped back
+/// to ARB strings via exact string matching with a silent fallback arm — a
+/// coupling that had already drifted undetected once (a case matched a string
+/// this controller never actually produced). Every value here MUST be
+/// resolved to localized text via an EXHAUSTIVE switch in the presentation
+/// layer (compiler-enforced, no default/fallback arm) so a new value here is
+/// a compile error everywhere it isn't handled, not a silent raw-text leak.
+enum PinFlowError {
+  /// The entered PIN did not match the stored hash.
+  incorrectPin,
+
+  /// The confirm-step PIN did not match the first entry.
+  pinsDoNotMatch,
+
+  /// No profile was selected/active when the flow needed one.
+  noActiveProfile,
+
+  /// [PinService] rejected the PIN as not exactly 4 numeric digits
+  /// ([InvalidPinFormatException]). Not reachable via the keypad today (which
+  /// only ever emits 4 numeric digits) but mapped explicitly rather than
+  /// falling through, per the exhaustive-switch contract above.
+  invalidPinFormat,
+
+  /// Any other exception surfaced while saving/verifying a PIN — e.g. a stray
+  /// [ArgumentError] (AUD-profiles-20's defensive catch). Kept distinct from
+  /// [invalidPinFormat] because it is not an expected/typed PinService
+  /// failure, just a "something unexpected happened, don't crash" fallback.
+  unexpected,
+}
+
+// ---------------------------------------------------------------------------
 // PinFlowState
 // ---------------------------------------------------------------------------
 
@@ -23,7 +62,7 @@ class PinFlowState {
     required this.step,
     this.digits = '',
     this.firstPin,
-    this.errorMessage,
+    this.error,
     this.busy = false,
     this.lockedOut = false,
     this.lockoutMinutes = 0,
@@ -39,8 +78,10 @@ class PinFlowState {
   /// The PIN entered in the first step of setup/change (held for confirm).
   final String? firstPin;
 
-  /// Non-null when the last action produced an error.
-  final String? errorMessage;
+  /// Non-null when the last action produced an error. A closed enum
+  /// (AUD-profiles-09) — presentation resolves it to text via
+  /// `AppLocalizations` through an exhaustive switch; never free text.
+  final PinFlowError? error;
 
   /// True while an async operation (bcrypt verify/hash) is in flight.
   final bool busy;
@@ -59,7 +100,7 @@ class PinFlowState {
     PinFlowStep? step,
     String? digits,
     Object? firstPin = _sentinel,
-    Object? errorMessage = _sentinel,
+    Object? error = _sentinel,
     bool? busy,
     bool? lockedOut,
     int? lockoutMinutes,
@@ -70,9 +111,7 @@ class PinFlowState {
       step: step ?? this.step,
       digits: digits ?? this.digits,
       firstPin: firstPin == _sentinel ? this.firstPin : firstPin as String?,
-      errorMessage: errorMessage == _sentinel
-          ? this.errorMessage
-          : errorMessage as String?,
+      error: error == _sentinel ? this.error : error as PinFlowError?,
       busy: busy ?? this.busy,
       lockedOut: lockedOut ?? this.lockedOut,
       lockoutMinutes: lockoutMinutes ?? this.lockoutMinutes,
@@ -158,7 +197,7 @@ class PinFlowController extends _$PinFlowController {
   void appendDigit(String d) {
     if (state.busy || state.lockedOut) return;
     if (state.digits.length >= 4) return;
-    state = state.copyWith(digits: state.digits + d, errorMessage: null);
+    state = state.copyWith(digits: state.digits + d, error: null);
     if (state.digits.length == 4) {
       _onFourDigits();
     }
@@ -170,7 +209,7 @@ class PinFlowController extends _$PinFlowController {
     if (state.digits.isEmpty) return;
     state = state.copyWith(
       digits: state.digits.substring(0, state.digits.length - 1),
-      errorMessage: null,
+      error: null,
     );
   }
 
@@ -224,7 +263,7 @@ class PinFlowController extends _$PinFlowController {
     // Confirm step: validate match then persist.
     if (pin != state.firstPin) {
       state = state.copyWith(
-        errorMessage: _pinsDoNotMatch(),
+        error: _pinsDoNotMatch(),
         step: PinFlowStep.enterNew,
         firstPin: null,
         digits: '',
@@ -234,7 +273,7 @@ class PinFlowController extends _$PinFlowController {
 
     if (profileId == null) {
       state = state.copyWith(
-        errorMessage: _noActiveProfile(),
+        error: _noActiveProfile(),
         step: PinFlowStep.enterNew,
         firstPin: null,
         digits: '',
@@ -242,7 +281,7 @@ class PinFlowController extends _$PinFlowController {
       return;
     }
 
-    state = state.copyWith(busy: true, errorMessage: null);
+    state = state.copyWith(busy: true, error: null);
     try {
       await pinService.setProfilePin(profileId, pin);
       // Clear digits immediately so the completion frame shows an empty
@@ -253,16 +292,35 @@ class PinFlowController extends _$PinFlowController {
         step: PinFlowStep.done,
         digits: '',
       );
-    } on InvalidPinFormatException catch (e) {
-      // AUD-onboarding-16: PinService now throws a typed
-      // InvalidPinFormatException instead of ArgumentError (whose
-      // Object?-typed .message required an unsafe cast here). This call
-      // site's own l10n resolution of PIN-service errors is tracked
-      // separately (AUD-profiles-09/AUD-profiles-20) — kept behavior-neutral
-      // (same message text) pending that fix.
+    } on InvalidPinFormatException {
+      // AUD-profiles-09: PinService's typed validation failure (see
+      // AUD-onboarding-16) maps to a closed PinFlowError; the screen resolves
+      // the user-facing text via AppLocalizations through an exhaustive
+      // switch — the exception's dev-facing .message is never surfaced.
       state = state.copyWith(
         busy: false,
-        errorMessage: e.message,
+        error: PinFlowError.invalidPinFormat,
+        step: PinFlowStep.enterNew,
+        firstPin: null,
+        digits: '',
+      );
+    } on ArgumentError catch (e, st) {
+      // AUD-profiles-20: ArgumentError.message is typed Object? (dynamic),
+      // not String — reading it with an unchecked `as String?` cast (the
+      // previous code here) would throw a TypeError the moment any caller
+      // constructed one with a non-String message (e.g.
+      // ArgumentError.value(42, 'pin', 99)). Read it null-safely via
+      // `?.toString()` purely for diagnostics; the user-facing state is the
+      // typed, generic PinFlowError.unexpected — never the raw message.
+      AppLogger.instance.warning(
+        event: 'pin_flow_setup_unexpected_argument_error',
+        fields: {'detail': e.message?.toString() ?? 'no message'},
+        exception: e,
+        stackTrace: st,
+      );
+      state = state.copyWith(
+        busy: false,
+        error: PinFlowError.unexpected,
         step: PinFlowStep.enterNew,
         firstPin: null,
         digits: '',
@@ -278,13 +336,13 @@ class PinFlowController extends _$PinFlowController {
     PinService pinService,
   ) async {
     if (profileId == null) {
-      state = state.copyWith(errorMessage: _noActiveProfile(), digits: '');
+      state = state.copyWith(error: _noActiveProfile(), digits: '');
       return;
     }
 
     switch (state.step) {
       case PinFlowStep.verifyCurrent:
-        state = state.copyWith(busy: true, errorMessage: null);
+        state = state.copyWith(busy: true, error: null);
         try {
           final ok = await pinService.verifyProfilePin(profileId, pin);
           if (ok) {
@@ -296,7 +354,7 @@ class PinFlowController extends _$PinFlowController {
           } else {
             state = state.copyWith(
               busy: false,
-              errorMessage: _incorrectPin(),
+              error: _incorrectPin(),
               digits: '',
             );
           }
@@ -319,14 +377,14 @@ class PinFlowController extends _$PinFlowController {
       case PinFlowStep.confirm:
         if (pin != state.firstPin) {
           state = state.copyWith(
-            errorMessage: _pinsDoNotMatch(),
+            error: _pinsDoNotMatch(),
             step: PinFlowStep.enterNew,
             firstPin: null,
             digits: '',
           );
           return;
         }
-        state = state.copyWith(busy: true, errorMessage: null);
+        state = state.copyWith(busy: true, error: null);
         await pinService.setProfilePin(profileId, pin);
         // Clear digits so the completion frame shows an empty keypad while
         // maybePop() is in-flight (same fix as _handleSetup).
@@ -350,11 +408,11 @@ class PinFlowController extends _$PinFlowController {
     PinService pinService,
   ) async {
     if (profileId == null) {
-      state = state.copyWith(errorMessage: _noActiveProfile(), digits: '');
+      state = state.copyWith(error: _noActiveProfile(), digits: '');
       return;
     }
 
-    state = state.copyWith(busy: true, errorMessage: null);
+    state = state.copyWith(busy: true, error: null);
     try {
       final ok = await pinService.verifyProfilePin(profileId, pin);
       if (ok) {
@@ -367,11 +425,7 @@ class PinFlowController extends _$PinFlowController {
           digits: '',
         );
       } else {
-        state = state.copyWith(
-          busy: false,
-          errorMessage: _incorrectPin(),
-          digits: '',
-        );
+        state = state.copyWith(busy: false, error: _incorrectPin(), digits: '');
       }
     } on PinLockoutException catch (e) {
       state = state.copyWith(
@@ -384,12 +438,15 @@ class PinFlowController extends _$PinFlowController {
   }
 
   // ------------------------------------------------------------------
-  // Localisation-free fallbacks (controller cannot access BuildContext).
-  // The screen passes the l10n values; here we just provide safe defaults
-  // that tests can observe without needing a widget tree.
+  // Error-code selectors (AUD-profiles-09).
+  //
+  // The controller has no BuildContext, so it can only select a typed
+  // PinFlowError — never localized text. PinFlowScreen (which has
+  // AppLocalizations) resolves each code to text via an exhaustive switch.
+  // Tests can assert on these codes directly without needing a widget tree.
   // ------------------------------------------------------------------
 
-  String _incorrectPin() => 'Incorrect PIN';
-  String _pinsDoNotMatch() => 'PINs do not match';
-  String _noActiveProfile() => 'No active profile';
+  PinFlowError _incorrectPin() => PinFlowError.incorrectPin;
+  PinFlowError _pinsDoNotMatch() => PinFlowError.pinsDoNotMatch;
+  PinFlowError _noActiveProfile() => PinFlowError.noActiveProfile;
 }
