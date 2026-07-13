@@ -7850,13 +7850,17 @@
   {
    "id": "AUD-t-account-07",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace magic_link_service_test.dart's 20 fixed-delay waits with a deterministic completion signal",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "be00ea7f8d12da763ce711fb786321d3f62accd7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-account-07 AC1 OK: grep=0 fixed-ms Future.delayed, 20 pumpEventQueue() sites (deterministic drain, precedent sync_providers_test.dart); 27 tests pass 4x"
+   ],
+   "notes": "Re-verified: 20 fixed Future.delayed(50ms) sites confirmed, matching register. Listener is fire-and-forget. Replaced all 20 with pumpEventQueue() (deterministic, no wall-clock), precedented in sync_providers_test.dart. AC check: 0 fixed-ms delays remain, 20 pumpEventQueue() sites."
   },
   {
    "id": "AUD-t-account-04",
