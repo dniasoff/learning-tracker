@@ -13,236 +13,434 @@
 // Fix (rapid-tap): _switching flag in _AccountTileState blocks concurrent taps;
 // onTap is null while _switching is true.
 //
-// Test strategy: we test the ordering logic in isolation using the same sort
-// algorithm as the fix, and verify the _switching guard behavior via a minimal
-// widget replica.
-
+// AUD-t-account-03 (Feathers seam): this suite previously exercised
+// hand-copied replicas of the sort comparator and the tap guard, so it never
+// touched account_picker_screen.dart at all — a regression that reintroduced
+// either bug in the REAL code would have kept this suite green. It now pumps
+// the real [AccountPickerScreen] / `_AccountTile` and drives both assertions
+// through production code:
+//   - Ordering: seeds real accounts via the device registry, overrides
+//     [accountDbFileNameProvider] to select the "active" one, and asserts the
+//     rendered tile order (top-to-bottom) produced by AccountPickerScreen.build.
+//   - Tap guard: taps the real `_AccountTile`'s InkWell twice in quick
+//     succession. The re-entrancy window is held open by a slow-resolving
+//     fake [InternetConnectionChecker.hasConnection] — the first real await
+//     point inside `_AccountTileState._onTap` for a cloud account with no
+//     valid session — so the guard's `_switching` state is genuinely
+//     in-flight (not a synthetic delay) when the second tap lands.
 @Tags(['account', 'account_picker', 'an4'])
 library;
 
 import 'dart:async';
 
+import 'package:auto_route/auto_route.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
+import 'package:learning_tracker/features/account/presentation/screens/account_picker_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
+    show SelectedProfileId, selectedProfileIdProvider;
+import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-// ── Minimal replica of the AN-4 guard ────────────────────────────────────────
+// ── Mocks ────────────────────────────────────────────────────────────────────
 
-/// Replica of the _AccountTileState._switching guard behavior.
-class _TapGuardWidget extends StatefulWidget {
-  const _TapGuardWidget({required this.onTap});
-  final Future<void> Function() onTap;
+class _MockAuthRepository extends Mock implements AuthRepository {}
+
+class _MockStackRouter extends Mock implements StackRouter {}
+
+class _MockInternetConnectionChecker extends Mock
+    implements InternetConnectionChecker {}
+
+class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
+// ── Stub notifiers ────────────────────────────────────────────────────────────
+
+/// AuthStateNotifier that starts at a known state without touching Firebase.
+class _StubAuthStateNotifier extends AuthStateNotifier {
+  _StubAuthStateNotifier(this._initial);
+  final AuthState _initial;
 
   @override
-  State<_TapGuardWidget> createState() => _TapGuardWidgetState();
+  AuthState build() => _initial;
 }
 
-class _TapGuardWidgetState extends State<_TapGuardWidget> {
-  bool _switching = false;
+/// SelectedProfileId that stays at null without touching the sync facade.
+class _StubSelectedProfileId extends SelectedProfileId {
+  @override
+  int? build() => null;
+}
 
-  Future<void> _onTapGuarded() async {
-    if (_switching) return;
-    setState(() => _switching = true);
-    try {
-      await widget.onTap();
-    } finally {
-      if (mounted) setState(() => _switching = false);
-    }
-  }
+/// AccountDbFileName that starts pinned at a given "active" account's DB
+/// file — lets the ordering test control which seeded account is active
+/// without touching real SharedPreferences/session-persistence plumbing.
+class _StubAccountDbFileName extends AccountDbFileName {
+  _StubAccountDbFileName(this._initial);
+  final String _initial;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _switching ? null : _onTapGuarded,
-      child: Text(_switching ? 'switching' : 'idle'),
-    );
-  }
+  String build() => _initial;
 }
 
-// ── Minimal replica of the AN-4 ordering logic ───────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-/// Replicates the sort algorithm from the AN-4 fix in AccountPickerScreen:
-/// active account (dbFileName == activeDbFileName) first, then remaining
-/// accounts sorted by dbFileName alphabetically (stable creation order proxy).
-List<String> _sortedAccountDbFileNames({
-  required List<String> accountDbFileNames,
+DeviceAccountsCompanion _localAccount({
+  required String accountId,
+  required String email,
+  required String displayName,
+  required String dbFileName,
+  required DateTime lastUsedAt,
+}) => DeviceAccountsCompanion.insert(
+  accountId: accountId,
+  email: email,
+  displayName: displayName,
+  tier: 'localBorn',
+  dbFileName: dbFileName,
+  createdAt: lastUsedAt,
+  lastUsedAt: lastUsedAt,
+);
+
+DeviceAccountsCompanion _cloudAccount({
+  String accountId = 'acc-cloud-1',
+  String email = 'cloud@example.test',
+  String displayName = 'Cloud User',
+  String dbFileName = 'user_acc_cloud1.db',
+  String firebaseUid = 'fb-uid-1',
+}) => DeviceAccountsCompanion.insert(
+  accountId: accountId,
+  email: email,
+  displayName: displayName,
+  tier: 'cloudBorn',
+  firebaseUid: Value(firebaseUid),
+  dbFileName: dbFileName,
+  createdAt: DateTime.utc(2026),
+  lastUsedAt: DateTime.utc(2026),
+);
+
+Future<void> _seedCloudUserDbRow(
+  UserDatabase userDb, {
+  required String email,
+  required String displayName,
+  required String firebaseUid,
+}) async {
+  final now = DateTime.utc(2026);
+  await userDb
+      .into(userDb.accounts)
+      .insert(
+        AccountsCompanion.insert(
+          email: email,
+          tier: 'cloudBorn',
+          firebaseUid: Value(firebaseUid),
+          displayName: displayName,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+}
+
+// ── App wrapper ──────────────────────────────────────────────────────────────
+
+Widget _buildApp({
+  required DeviceRegistryDatabase registry,
+  required UserDatabase userDb,
+  required _MockAuthRepository auth,
+  required _MockStackRouter router,
   required String activeDbFileName,
+  InternetConnectionChecker? connectivity,
 }) {
-  return [
-    ...accountDbFileNames.where((fn) => fn == activeDbFileName),
-    ...accountDbFileNames.where((fn) => fn != activeDbFileName).toList()
-      ..sort(),
-  ];
+  return ProviderScope(
+    retry: (_, __) => null,
+    overrides: [
+      deviceRegistryProvider.overrideWithValue(registry),
+      authRepositoryProvider.overrideWithValue(auth),
+      userDatabaseProvider.overrideWith((ref) => userDb),
+      syncOrchestratorProvider.overrideWithValue(null),
+      accountDbFileNameProvider.overrideWith(
+        () => _StubAccountDbFileName(activeDbFileName),
+      ),
+      if (connectivity != null)
+        internetConnectionCheckerProvider.overrideWithValue(connectivity),
+      authStateProvider.overrideWith(
+        () => _StubAuthStateNotifier(const AuthState.signedOut()),
+      ),
+      selectedProfileIdProvider.overrideWith(() => _StubSelectedProfileId()),
+    ],
+    child: MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: StackRouterScope(
+        controller: router,
+        stateHash: 0,
+        child: const AccountPickerScreen(),
+      ),
+    ),
+  );
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// ── Tests ────────────────────────────────────────────────────────────────────
 
 void main() {
-  group('AN-4 regression — AccountPicker ordering and tap guard', () {
-    // ── Ordering ─────────────────────────────────────────────────────────────
-    test(
-      'active account is always pinned at position 0 regardless of alphabetical '
-      'order (AN-4 deterministic ordering)',
-      () {
-        const accounts = ['user_acc_z.db', 'user_acc_a.db', 'user_acc_m.db'];
+  setUpAll(() {
+    registerFallbackValue(_FakePageRouteInfo());
+  });
 
-        // Active is 'z' — it should be first even though 'a' < 'z'.
-        final sorted = _sortedAccountDbFileNames(
-          accountDbFileNames: accounts,
-          activeDbFileName: 'user_acc_z.db',
-        );
-        expect(
-          sorted.first,
-          equals('user_acc_z.db'),
-          reason: 'AN-4: active account must be pinned first',
-        );
-        expect(
-          sorted,
-          equals(['user_acc_z.db', 'user_acc_a.db', 'user_acc_m.db']),
-          reason: 'AN-4: remaining accounts sorted alphabetically',
-        );
-      },
+  late DeviceRegistryDatabase registry;
+  late UserDatabase userDb;
+  late _MockAuthRepository auth;
+  late _MockStackRouter router;
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    registry = DeviceRegistryDatabase(NativeDatabase.memory());
+    userDb = UserDatabase(NativeDatabase.memory());
+    auth = _MockAuthRepository();
+    router = _MockStackRouter();
+
+    when(() => auth.currentUser).thenReturn(null);
+    when(
+      () => auth.onAuthStateChanged(),
+    ).thenAnswer((_) => Stream.value(auth.currentUser));
+    when(() => router.push(any<PageRouteInfo>())).thenAnswer((_) async => null);
+    when(
+      () => router.replaceAll(any<List<PageRouteInfo>>()),
+    ).thenAnswer((_) async {});
+  });
+
+  tearDown(() async {
+    await registry.close();
+    await userDb.close();
+  });
+
+  // ── Ordering ───────────────────────────────────────────────────────────────
+
+  testWidgets('AN-4: active account is pinned first through the real '
+      'AccountPickerScreen.build sort, remaining accounts alphabetical by '
+      'dbFileName — even when a non-active account was most recently used', (
+    tester,
+  ) async {
+    // lastUsedAt intentionally makes 'Alpha' the most-recently-used
+    // account while 'Zeta' (alphabetically last) is the ACTIVE one. The
+    // pre-AN-4 bug sorted by lastUsedAt DESC, which would have put Alpha
+    // first; the fix must pin Zeta first regardless.
+    await registry.addAccount(
+      _localAccount(
+        accountId: 'acc-z',
+        email: 'zeta@test.local',
+        displayName: 'Zeta',
+        dbFileName: 'user_acc_z.db',
+        lastUsedAt: DateTime.utc(2026, 1, 1),
+      ),
+    );
+    await registry.addAccount(
+      _localAccount(
+        accountId: 'acc-a',
+        email: 'alpha@test.local',
+        displayName: 'Alpha',
+        dbFileName: 'user_acc_a.db',
+        lastUsedAt: DateTime.utc(2026, 1, 3), // most recently used
+      ),
+    );
+    await registry.addAccount(
+      _localAccount(
+        accountId: 'acc-m',
+        email: 'mike@test.local',
+        displayName: 'Mike',
+        dbFileName: 'user_acc_m.db',
+        lastUsedAt: DateTime.utc(2026, 1, 2),
+      ),
     );
 
-    test(
-      'ordering is stable when active account is already alphabetically first',
-      () {
-        const accounts = ['user_acc_a.db', 'user_acc_b.db', 'user_acc_c.db'];
-
-        final sorted = _sortedAccountDbFileNames(
-          accountDbFileNames: accounts,
-          activeDbFileName: 'user_acc_a.db',
-        );
-        expect(
-          sorted,
-          equals(['user_acc_a.db', 'user_acc_b.db', 'user_acc_c.db']),
-          reason: 'Sorted list is correct when active is alphabetically first',
-        );
-      },
+    await tester.pumpWidget(
+      _buildApp(
+        registry: registry,
+        userDb: userDb,
+        auth: auth,
+        router: router,
+        activeDbFileName: 'user_acc_z.db',
+      ),
     );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-    test('AN-4: ordering does NOT change when a non-active account has a later '
-        'lastUsedAt (old lastUsedAt sort would have reordered the list)', () {
-      // Simulate: active=A, last-used-desc order would be [B, A, C].
-      // The fix always puts A first regardless.
-      const activeDb = 'user_acc_a_001.db';
-      final accounts = [
-        'user_acc_b_002.db', // most recently used (non-active)
-        'user_acc_a_001.db', // active
-        'user_acc_c_003.db',
-      ];
+    expect(find.text('Zeta'), findsOneWidget);
+    expect(find.text('Alpha'), findsOneWidget);
+    expect(find.text('Mike'), findsOneWidget);
 
-      final sorted = _sortedAccountDbFileNames(
-        accountDbFileNames: accounts,
-        activeDbFileName: activeDb,
-      );
-      // Active first, then B and C in alphabetical order.
-      expect(
-        sorted.first,
-        equals(activeDb),
-        reason:
-            'AN-4: active must be first even if another was more recently used',
-      );
-    });
+    final zetaY = tester.getTopLeft(find.text('Zeta')).dy;
+    final alphaY = tester.getTopLeft(find.text('Alpha')).dy;
+    final mikeY = tester.getTopLeft(find.text('Mike')).dy;
 
-    // ── Tap guard ─────────────────────────────────────────────────────────────
-    testWidgets(
-      // AN-4: Before fix there was no guard; rapid double-tap launched two
-      // concurrent switches. After fix, the second tap is silently dropped.
-      'AN-4: double-tap is silently dropped while first tap is in progress',
-      (tester) async {
-        // We use a Completer to manually control when the "switch" completes.
-        // This avoids relying on fake_async timer resolution.
-        final firstCompleter = Completer<void>();
-        var tapCount = 0;
-
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: _TapGuardWidget(
-                onTap: () async {
-                  tapCount++;
-                  if (tapCount == 1) {
-                    await firstCompleter.future;
-                  }
-                },
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-
-        // Shows "idle" initially.
-        expect(find.text('idle'), findsOneWidget);
-
-        // First tap — starts the operation.
-        await tester.tap(find.text('idle'));
-        await tester.pump(); // Allow setState(_switching=true) to flush.
-
-        // Shows "switching" while in progress.
-        expect(find.text('switching'), findsOneWidget);
-        expect(tapCount, equals(1));
-
-        // Second tap during in-flight switch — onTap is null (guard active).
-        // The tap should be silently dropped.
-        await tester.tap(find.text('switching'), warnIfMissed: false);
-        await tester.pump();
-
-        // tapCount should still be 1 (second tap dropped).
-        expect(
-          tapCount,
-          equals(1),
-          reason: 'AN-4: second tap must be dropped while first is in flight',
-        );
-
-        // Complete the first switch.
-        firstCompleter.complete();
-        await tester.pumpAndSettle();
-
-        // Guard resets — back to idle.
-        expect(find.text('idle'), findsOneWidget);
-        expect(tapCount, equals(1), reason: 'Only one switch ran');
-      },
+    expect(
+      zetaY,
+      lessThan(alphaY),
+      reason:
+          'AN-4: the active account (Zeta) must render first even though '
+          'Alpha is both alphabetically earlier and more recently used',
     );
-
-    testWidgets(
-      'after switch completes, subsequent tap is accepted (guard resets)',
-      (tester) async {
-        var tapCount = 0;
-        final completer = Completer<void>();
-
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: _TapGuardWidget(
-                onTap: () async {
-                  tapCount++;
-                  if (tapCount == 1) await completer.future;
-                },
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-
-        // First tap.
-        await tester.tap(find.text('idle'));
-        await tester.pump();
-        expect(tapCount, equals(1));
-
-        // Complete the first switch.
-        completer.complete();
-        await tester.pumpAndSettle();
-
-        // Guard is reset — second tap should succeed.
-        await tester.tap(find.text('idle'));
-        await tester.pumpAndSettle();
-
-        expect(
-          tapCount,
-          equals(2),
-          reason: 'Guard must reset after switch completes',
-        );
-      },
+    expect(
+      zetaY,
+      lessThan(mikeY),
+      reason: 'AN-4: the active account must render before Mike too',
+    );
+    expect(
+      alphaY,
+      lessThan(mikeY),
+      reason:
+          'AN-4: non-active accounts fall back to alphabetical dbFileName '
+          'order (Alpha before Mike), NOT lastUsedAt order',
     );
   });
+
+  // ── Tap guard ─────────────────────────────────────────────────────────────
+
+  testWidgets(
+    'AN-4: double-tapping a real _AccountTile drops the second tap while the '
+    'first switch is genuinely in flight',
+    (tester) async {
+      await registry.addAccount(_cloudAccount(firebaseUid: 'fb-uid-1'));
+      await _seedCloudUserDbRow(
+        userDb,
+        email: 'cloud@example.test',
+        displayName: 'Cloud User',
+        firebaseUid: 'fb-uid-1',
+      );
+
+      // No live Firebase session -> hasValidSession == false -> _onTap's
+      // first await is `internetConnectionCheckerProvider.hasConnection`.
+      // Hold it open with an uncompleted Completer so `_switching` is
+      // genuinely true (not a synthetic timer) when the 2nd tap arrives.
+      when(() => auth.currentUser).thenReturn(null);
+      final checker = _MockInternetConnectionChecker();
+      final gate = Completer<bool>();
+      when(() => checker.hasConnection).thenAnswer((_) => gate.future);
+
+      await tester.pumpWidget(
+        _buildApp(
+          registry: registry,
+          userDb: userDb,
+          auth: auth,
+          router: router,
+          activeDbFileName: 'learning_tracker',
+          connectivity: checker,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Cloud User'), findsOneWidget);
+
+      // First tap: starts the switch; _switching flips true synchronously
+      // (before the connectivity await), then the real _onTap suspends on
+      // `checker.hasConnection`.
+      await tester.tap(find.text('Cloud User'));
+      await tester.pump();
+
+      // Exactly one real switch attempt has reached the connectivity check.
+      verify(() => checker.hasConnection).called(1);
+
+      // Second tap while the guard is active: _AccountTile's InkWell.onTap
+      // is null (guarded), so the tap has nothing to hit.
+      await tester.tap(find.text('Cloud User'), warnIfMissed: false);
+      await tester.pump();
+
+      // REGRESSION GUARD: the dropped tap must NOT have started a second
+      // switch attempt — no NEW call into the real _onTap's connectivity
+      // check since the first `verify` above (which already consumed that
+      // one matching invocation).
+      verifyNever(() => checker.hasConnection);
+
+      // Release the first switch (offline -> local-data activation path).
+      gate.complete(false);
+      await tester.pumpAndSettle();
+
+      // Exactly one navigation occurred, from the single switch that ran.
+      final calls = verify(
+        () => router.replaceAll(captureAny<List<PageRouteInfo>>()),
+      ).captured;
+      expect(
+        calls,
+        hasLength(1),
+        reason:
+            'AN-4: the dropped second tap must never trigger a second '
+            'account switch / navigation',
+      );
+      final routes = (calls.single as List).cast<PageRouteInfo>();
+      expect(routes.any((r) => r is AppShellRoute), isTrue);
+    },
+  );
+
+  testWidgets(
+    'AN-4: after a real switch completes, a subsequent tap on the same '
+    'tile is accepted (guard resets)',
+    (tester) async {
+      await registry.addAccount(_cloudAccount(firebaseUid: 'fb-uid-1'));
+      await _seedCloudUserDbRow(
+        userDb,
+        email: 'cloud@example.test',
+        displayName: 'Cloud User',
+        firebaseUid: 'fb-uid-1',
+      );
+
+      when(() => auth.currentUser).thenReturn(null);
+      final checker = _MockInternetConnectionChecker();
+      when(() => checker.hasConnection).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(
+        _buildApp(
+          registry: registry,
+          userDb: userDb,
+          auth: auth,
+          router: router,
+          activeDbFileName: 'learning_tracker',
+          connectivity: checker,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // First tap — completes fully (guard sets then resets).
+      await tester.tap(find.text('Cloud User'));
+      await tester.pumpAndSettle();
+
+      // Second tap, after the guard has reset — must be accepted and run
+      // another real switch.
+      await tester.tap(find.text('Cloud User'));
+      await tester.pumpAndSettle();
+
+      verify(() => checker.hasConnection).called(2);
+      final calls = verify(
+        () => router.replaceAll(captureAny<List<PageRouteInfo>>()),
+      ).captured;
+      expect(
+        calls,
+        hasLength(2),
+        reason:
+            'AN-4: guard must reset after the first switch completes, '
+            'allowing a genuine second switch',
+      );
+    },
+  );
 }
