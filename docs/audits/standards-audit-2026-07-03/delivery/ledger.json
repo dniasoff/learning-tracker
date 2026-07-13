@@ -3752,13 +3752,18 @@
     {
       "id": "AUD-t-cross-25",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Fix migration_test.dart and hebrew_migration_test.dart to exercise UserDatabase's real onUpgrade",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "81eff312c87a35533b7c163e27a184c888c382e5"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-25 AC1 OK: both fake migration-version titles renamed; onUpgrade earliest guard is from<25 (user_database.dart:228), no from<16/24 step",
+        "AUD-t-cross-25 AC2 OK: I corrupted stageNameMap['Learn'] -> 2/9 hebrew tests red, reverted clean; drives real resolveStoredStageName via DB round-trip"
+      ],
+      "notes": "Re-verified: onUpgrade guard is from<25, no from<16/24 step; titles false, SQL helper disconnected. Real Hebrew prod code exists (resolveStoredStageName+stageNameMap). Renamed titles, deleted helper, rebuilt via DB round-trip. Red-first: corrupted stageNameMap -> 2/9 red, reverted, 9/9 green."
     },
     {
       "id": "AUD-core-domain-03",
