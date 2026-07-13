@@ -1700,13 +1700,18 @@
   {
    "id": "AUD-dashboard-06",
    "wave": 3,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Guard ref.watch/ref.read after in-flight awaits in dashboard_providers.dart (SM-4)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_7cbfdbd5-328-42 (branch worktree-wf_7cbfdbd5-328-42, commit effb223a6f3e50a930f57cbfd26f529aae9af965) but the review agent was lost to quota exhaustion before opus review/merge could complete. Build note: dashboardTrackCompletionPercentage, dashboardCompletionPercentage, stripStockMilestonesEffect, and dashboardPaceStatus each called ref.watch/ref.read after an earlier await (a Drift DB read) with no ref.mounted check in between; fix mirrors the existing if (!ref.mounted) return null; guard already used by dashboardChildNextReward at every unguarded post-await ref access (dashboard_providers.dart:155,189,323,439). Red-first SM-4 regression test group added to dashboard_providers_test.dart (4 new tests, direct function-call + synchronous container disposal technique) - failed red against the unguarded code (\"Cannot use the Ref of Provider<void> after it has been disposed\"), 51/51 green after. AC2: the existing no_ref_after_await_without_mounted_check Rule-0 checker (AUD-sync-04) missed the stripStockMilestonesEffect site (await inside an `if` condition, ref-touch in the body) - closed via manual-marker scratch-run, 3 new rule unit tests added, dart test packages/custom_lints: 149/149 passed. Author-reported verification (unwitnessed by this merge lane): flutter analyze 0 issues, flutter test 51/51 (dashboard_providers_test.dart), dart test 149/149 (packages/custom_lints). Per merge-lane payload cid w3r0c9, MODE=ledger-only: nothing merged onto audit-fix/2026-07-03 this cid. Worktree directory was already removed from disk before this pass (tolerated); branch worktree-wf_7cbfdbd5-328-42 is left in place because `git cherry audit-fix/2026-07-03 worktree-wf_7cbfdbd5-328-42` shows all 3 commits on the branch (effb223a, 545f8b96, 369b80c0) as `+` (not patch-equivalent to anything on audit-fix/2026-07-03) -- left for a future harvest pass rather than deleted."
+   "commits": [
+    "9abb0319d853eaf47bf16a630ad2d9698974e3d4"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-dashboard-06 AC1 OK: 4 tests dispose real container mid-await, assert mounted==false + completes; RED vs pre-fix (UnmountedRefException), GREEN 54/54",
+    "AUD-dashboard-06 AC2 OK: no_ref_after_await checker registered (lints.dart:105), run by make audit lint-rules-test; 4 fixtures fire+pass-clean 174/174"
+   ],
+   "notes": "Re-verified live. Added ref.mounted guards to 4 functions mirroring dashboardChildNextReward. AC1: 4 new RED-then-GREEN tests via direct-call + sync container.dispose() mid-await. AC2: pre-existing custom_lint rule (AUD-sync-04) covers this; extended its tests w/ 4 fixtures proving fire/pass-clean."
   },
   {
    "id": "AUD-t-gamification-02",
