@@ -9103,13 +9103,18 @@
   {
    "id": "AUD-docs-33",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Move shipped hard-tier auth refactor out of README.md's Roadmap section",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "544266636f0d0f0b308ee119cbcd946451c14536"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-docs-33 AC1 OK: removed line = Epic 23, shipped 2026-04-15 (architecture-design.md:25; architecture.md:491 present-tense localBorn->cloudBorn)",
+    "AUD-docs-33 AC1 OK: remaining items unshipped - iOS (default Flutter scaffold), curricula (ongoing), Epic 20 (linear-status.md:48 'Todo all 12 Canceled')"
+   ],
+   "notes": "Confirmed still-open: V1_OUT_OF_SCOPE.md:331 marks Epic 23 shipped/canonical; architecture.md:495 describes it as current. README.md Roadmap listed it as future. Removed the line; remaining items confirmed genuinely unshipped."
   },
   {
    "id": "AUD-docs-25",
