@@ -9064,13 +9064,17 @@
   {
    "id": "AUD-gamification-16",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete PointsPopupWidget or give it a real call site",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "7f8cc6f1935f65dfffe073b2b69aa1c668c43ad0"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-gamification-16 AC1 OK: class+test group deleted; repo grep 'PointsPopupWidget' exit 1 (0 refs); sibling PointsDisplayWidget intact @gamification_screen.dart:275"
+   ],
+   "notes": "Re-verified only ref was its own test. No completion call site exposes a points delta to wire to, so took deletion branch. Deleted class+test group; sibling PointsDisplayWidget untouched. Post-fix grep -> exit 1."
   },
   {
    "id": "AUD-gamification-19",
