@@ -5,6 +5,18 @@
 **Created:** 2026-04-13
 **FRs Covered:** FR5, FR81, FR85, FR86, FR87, FR95, FR96, FR102, FR103, FR104, FR105
 
+> ⚠️ **Local-born scenarios stale -- 2026-07-13.** Per the 2026-06-14 product decision,
+> offline/local-born accounts are now **credential-less** (no email, no password, no
+> account-level name) -- created via an explicit "no internet, create an offline
+> account?" prompt and re-entered through the **Account Picker**, not email/password
+> sign-in. Every local-born scenario in this document that assumes a password no
+> longer applies as written (including SET-13, SET-18, SET-20, SET-23, SET-25 through
+> SET-29); the "Local-born has no cloud operations" note above still holds
+> conceptually. Cloud-born scenarios (SET-21, SET-22, SET-24) are unaffected. Current
+> behavior: `signup_screen.dart` and `upgrade_to_cloud_service.dart`. Design record:
+> `../../planning/loop-progress.md`, "ONBOARDING REWORK" entries (2026-06-14 to
+> 2026-06-15).
+
 ---
 
 ## Prerequisites

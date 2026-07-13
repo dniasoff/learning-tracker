@@ -5,6 +5,18 @@
 **Author:** Mary (Business Analyst) with Daniel
 **Scope:** Complete flow, state, and copy specification for the local-born → cloud-born upgrade flow defined in `architecture-offline-v2.md` §4.3. Visual design (wireframes, component choices, spacing, iconography) is explicitly out of scope here — handed off to the UX designer agent.
 
+> ⚠️ **Superseded mechanism — 2026-07-13.** This spec's core step (§5.2 "Confirm
+> password" — re-authenticate by verifying the existing local password) assumed
+> local-born accounts have a password to verify. Per the 2026-06-14 product decision,
+> offline/local-born accounts are now **credential-less**, so there is no password to
+> confirm. The shipped upgrade flow instead does "full sign-in at conversion": the
+> Upgrade screen collects a brand-new email + password directly (no password-verify
+> step), per `UpgradeToCloudService.upgradeWithNewCredentials()`
+> (`../../learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart`).
+> Treat this doc as a historical record of the pre-credential-less design; for the
+> shipped design record see `loop-progress.md`, "ONBOARDING REWORK ... Phase 2b
+> CONVERT-COMPLETION" (2026-06-15).
+
 ---
 
 ## 1. What This Spec Covers

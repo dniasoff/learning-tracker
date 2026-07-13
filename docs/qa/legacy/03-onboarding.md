@@ -12,6 +12,16 @@
 
 **Relevant FRs:** FR75-FR81, FR106-FR109, FR110-FR113
 
+> ⚠️ **Local-born precondition stale -- 2026-07-13.** "local-born (airplane mode
+> signup)" above and OB-03's precondition assume the password-based local-born
+> account described in `02-auth-and-accounts.md`. Per the 2026-06-14 product
+> decision, offline/local-born accounts are now **credential-less** -- precede OB-03
+> with a credential-less offline-account creation (explicit "create an offline
+> account?" prompt, no email/password), not the old email/password local-born
+> signup. The onboarding flow itself (mode selection through dashboard) is
+> unaffected. Design record: `../../planning/loop-progress.md`, "ONBOARDING REWORK"
+> entries (2026-06-14 to 2026-06-15).
+
 ---
 
 ## What This Tests and Why It Matters

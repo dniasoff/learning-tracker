@@ -13,6 +13,19 @@ This document completes the remaining design work for the local → cloud upgrad
 
 This is *not* a pixel-polish deliverable. A visual designer still needs a pass for typography, spacing tokens, and motion curves before production handoff. What's here is enough to unblock engineering (20.9) and to give the visual designer a non-moving target when they pick it up.
 
+> ⚠️ **Superseded mechanism — 2026-07-13.** This wireframe set follows
+> `ux-upgrade-flow-spec.md`'s original design, where W-02 ("Confirm password")
+> re-verifies an existing local password before upgrading. Per the 2026-06-14 product
+> decision, offline/local-born accounts are now **credential-less**, so there is no
+> local password to verify — W-02, W-10 ("Forgot password dead-end"), and the related
+> Q1/Q7/Q9 resolutions below no longer apply as designed. The shipped flow instead
+> collects a brand-new email + password directly at conversion, per
+> `UpgradeToCloudService.upgradeWithNewCredentials()`
+> (`../../learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart`).
+> Treat this doc as a historical wireframe record of the pre-credential-less design;
+> for the shipped design record see `loop-progress.md`, "ONBOARDING REWORK ... Phase
+> 2b CONVERT-COMPLETION" (2026-06-15).
+
 ---
 
 ## 1. Wireframe Inventory
