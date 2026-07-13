@@ -3,6 +3,18 @@
 /// Fully self-contained — sets up all binding / platform-channel mocks
 /// in-file so this file passes when run in isolation:
 ///   flutter test test/features/account/data/services/magic_link_service_test.dart
+///
+/// [MagicLinkService.initialize] hands [_handleIncomingLink] to
+/// `uriLinkStream.listen(...)` as a fire-and-forget `onData` callback, so
+/// there is no `Future` the test can `await` directly after
+/// [_FakeAppLinksPlatform.emit]. Every `emit(...)` below is therefore
+/// followed by `await pumpEventQueue()` (AUD-t-account-07 / TQ-6) rather
+/// than a fixed-millisecond `Future.delayed`: it deterministically drains
+/// the event queue until the listener's async chain (SharedPreferences +
+/// mocked AuthRepository awaits) has settled, instead of guessing a sleep
+/// duration that a slow/contended CI runner could outrun. Same pattern
+/// already used in test/features/sync/presentation/providers/
+/// sync_providers_test.dart.
 library;
 
 import 'dart:async';
@@ -253,7 +265,7 @@ void main() {
       await service.initialize();
 
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       expect(signedInUsers, hasLength(1));
       expect(signedInUsers.first.email, 'user@example.com');
@@ -282,7 +294,7 @@ void main() {
       await service.initialize();
 
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       verify(() => mockAuth.updateDisplayName('New Name')).called(1);
 
@@ -312,7 +324,7 @@ void main() {
         final service = _buildService(mockAuth);
         await service.initialize();
         fakePlatform.emit(uri);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         final prefs = await SharedPreferences.getInstance();
         expect(prefs.getString(kMagicLinkPendingEmail), isNull);
@@ -338,7 +350,7 @@ void main() {
       final service = _buildService(mockAuth);
       await service.initialize();
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(kMagicLinkPendingEmail), isNull);
@@ -369,7 +381,7 @@ void main() {
         );
         await service.initialize();
         fakePlatform.emit(uri);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         expect(callbackCount, 0);
 
@@ -392,7 +404,7 @@ void main() {
       );
       await service.initialize();
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       expect(callbackCount, 0);
       verifyNever(
@@ -419,7 +431,7 @@ void main() {
       );
       await service.initialize();
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       expect(callbackCount, 0);
 
@@ -430,7 +442,7 @@ void main() {
       final service = _buildService(mockAuth);
       await service.initialize();
       fakePlatform.emitError(Exception('channel error'));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
       // Service still alive — dispose should not throw.
       await service.dispose();
     });
@@ -456,7 +468,7 @@ void main() {
       final service = _buildService(mockAuth);
       await service.initialize();
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       verify(() => mockAuth.checkActionCode('verify-abc')).called(1);
       verify(() => mockAuth.applyActionCode('verify-abc')).called(1);
@@ -484,7 +496,7 @@ void main() {
       final service = _buildService(mockAuth);
       await service.initialize();
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       expect(capturedPrefsValue, 'oob-stored');
 
@@ -501,7 +513,7 @@ void main() {
       final service = _buildService(mockAuth);
       await service.initialize();
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(kPendingVerifyEmailOobCode), isNull);
@@ -519,7 +531,7 @@ void main() {
       final service = _buildService(mockAuth);
       await service.initialize();
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString(kPendingVerifyEmailOobCode), isNull);
@@ -536,7 +548,7 @@ void main() {
       final service = _buildService(mockAuth);
       await service.initialize();
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       verifyNever(() => mockAuth.applyActionCode(any<String>()));
       verifyNever(() => mockAuth.reloadCurrentUser());
@@ -571,7 +583,7 @@ void main() {
         final service = _buildService(mockAuth);
         await service.initialize();
         fakePlatform.emit(plain);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         verify(
           () => mockAuth.signInWithEmailLink(
@@ -607,7 +619,7 @@ void main() {
         final service = _buildService(mockAuth);
         await service.initialize();
         fakePlatform.emit(outer);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         verify(
           () => mockAuth.signInWithEmailLink(
@@ -639,7 +651,7 @@ void main() {
       final service = _buildService(mockAuth);
       await service.initialize();
       fakePlatform.emit(outer);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       verify(
         () =>
@@ -678,7 +690,7 @@ void main() {
         );
         await service.initialize();
         fakePlatform.emit(outer);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         expect(signedIn, hasLength(1));
 
@@ -701,7 +713,7 @@ void main() {
         final service = _buildService(mockAuth);
         await service.initialize();
         fakePlatform.emit(nonAuthUri);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
         // Completed without hanging.
         await service.dispose();
       },
@@ -726,7 +738,7 @@ void main() {
         final service = _buildService(mockAuth);
         await service.initialize();
         fakePlatform.emit(malformed);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         // No crash: the service reached link-processing and asked whether the
         // (un-unwrapped) URL is a sign-in link, rather than throwing.
@@ -782,7 +794,7 @@ void main() {
       final service = _buildService(mockAuth);
       await service.initialize();
       fakePlatform.emit(uri);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       // oobCode should still be cleared in the catch block (best-effort cleanup).
       // The service stores and then handles — we just ensure it doesn't crash.
