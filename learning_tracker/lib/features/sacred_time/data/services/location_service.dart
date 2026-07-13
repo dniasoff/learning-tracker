@@ -70,7 +70,7 @@ class LocationService {
           countryCode: iso,
         ),
       );
-    } on Object catch (e) {
+    } on Exception catch (e) {
       return LocationFetchError(e.toString());
     }
   }
@@ -83,7 +83,7 @@ class LocationService {
       if (placemarks.isEmpty) return null;
       final iso = placemarks.first.isoCountryCode;
       return (iso == null || iso.isEmpty) ? null : iso.toUpperCase();
-    } on Object {
+    } on Exception {
       return null;
     }
   }
