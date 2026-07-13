@@ -2874,13 +2874,19 @@
     {
       "id": "AUD-docs-14",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Refresh stale audit-check/ARB-key/test-file counts in docs/development-guide.md",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "4697fddd0c4e8045cb04493707c40552bfaf2b49"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-14 AC1 OK: doc says '43 greps'; Makefile audit target has 43 numbered checks (1..43, final 43/43); make audit printed 'all 43 greps clean'",
+        "AUD-docs-14 AC2 OK: doc line 42 says '1538 keys'; app_en.arb non-@ key count=1538 (JSON parse); arb-parity confirms 1538 English keys",
+        "AUD-docs-14 AC3 OK: doc line 72 says '851 files'; find test -name '*_test.dart' | wc -l = 851"
+      ],
+      "notes": "Live-verified: audit=43 checks (not 13), arb=1538 keys (not ~468), test files=851 (not 359), firebase_auth confined to core/auth/ only. Updated dev-guide.md lines 42,70,72,94,107; all 3 ACs re-checked post-edit."
     },
     {
       "id": "AUD-docs-13",
