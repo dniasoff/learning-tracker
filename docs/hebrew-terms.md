@@ -151,6 +151,9 @@ The audit (2026-05-18) found the implementation has diverged from this spec:
 5. **Broken enforcement.** The `make audit` layering grep targets a symbol name
    (`hebrewTermsScriptProvider`) that does not exist; the real provider
    (`useHebrewTermsProvider`) is unguarded. The grep must be corrected.
+   — **FIXED** (prior wave): Makefile check 7 now greps for
+   `useHebrewTermsProvider` (the real symbol) instead of the nonexistent
+   `hebrewTermsScriptProvider`; the layering boundary is enforced.
 6. **Stage names frozen.** Existing stage labels do not re-render on a setting
    change (§8) — only newly-created defaults are affected. Must be fixed.
    — **FIXED** (A4): `StageBreakdownRow` converted to `ConsumerWidget`; calls
