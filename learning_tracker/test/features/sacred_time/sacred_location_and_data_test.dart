@@ -195,6 +195,11 @@ enum _GeoScenario {
   permissionWhileInUse,
   success,
   error,
+  // A genuine programming-bug scenario (e.g. a plugin-level type mismatch),
+  // distinct from `error` (an ordinary Exception the service is expected to
+  // catch and convert to LocationFetchError). getCurrentPosition() throws a
+  // StateError for this scenario — see AUD-sacred_time-06.
+  programmingError,
 }
 
 class _FakeGeolocatorPlatform extends Fake
@@ -224,6 +229,8 @@ class _FakeGeolocatorPlatform extends Fake
         return LocationPermission.whileInUse;
       case _GeoScenario.error:
         return LocationPermission.whileInUse;
+      case _GeoScenario.programmingError:
+        return LocationPermission.whileInUse;
     }
   }
 
@@ -245,6 +252,11 @@ class _FakeGeolocatorPlatform extends Fake
   }) async {
     if (scenario == _GeoScenario.error) {
       throw Exception('GPS hardware failure');
+    }
+    if (scenario == _GeoScenario.programmingError) {
+      // Simulates a genuine programming bug (e.g. a plugin-level type
+      // mismatch) — an Error subtype, not an Exception.
+      throw StateError('unexpected null position field');
     }
     return position!;
   }
@@ -291,8 +303,16 @@ class _FakeGeocodingPlatform extends Fake
     implements GeocodingPlatform {
   final List<geo.Placemark>? placemarks;
   final bool shouldThrow;
+  // Distinct from [shouldThrow]: simulates a genuine programming bug (an
+  // Error subtype) rather than the ordinary Exception the service is
+  // expected to catch and convert to a null countryCode.
+  final bool shouldThrowProgrammingError;
 
-  _FakeGeocodingPlatform({this.placemarks, this.shouldThrow = false});
+  _FakeGeocodingPlatform({
+    this.placemarks,
+    this.shouldThrow = false,
+    this.shouldThrowProgrammingError = false,
+  });
 
   @override
   Future<List<geo.Placemark>> placemarkFromCoordinates(
@@ -300,6 +320,9 @@ class _FakeGeocodingPlatform extends Fake
     double longitude, {
     String? localeIdentifier,
   }) async {
+    if (shouldThrowProgrammingError) {
+      throw StateError('unexpected placemark field shape');
+    }
     if (shouldThrow) throw Exception('geocoding unavailable');
     return placemarks ?? const [];
   }
@@ -558,6 +581,25 @@ void main() {
       },
     );
 
+    // AUD-sacred_time-06 (EH-4): the outer `on Object catch (e)` at
+    // location_service.dart:73 must not swallow programming errors
+    // (Error subtypes) into LocationFetchError — only ordinary Exceptions
+    // are the service's business to handle. A StateError thrown from
+    // Geolocator.getCurrentPosition (e.g. a plugin-level type mismatch)
+    // must propagate to the caller instead.
+    test('detectCurrent → propagates a thrown Error (not LocationFetchError) '
+        'when GPS surfaces a programming bug', () async {
+      GeolocatorPlatform.instance = _FakeGeolocatorPlatform(
+        _GeoScenario.programmingError,
+      );
+      GeocodingPlatform.instance = _FakeGeocodingPlatform();
+
+      await expectLater(
+        const LocationService().detectCurrent(),
+        throwsA(isA<StateError>()),
+      );
+    });
+
     test(
       'detectCurrent → Success with correct lat/lng and IL country code',
       () async {
@@ -650,6 +692,42 @@ void main() {
         expect(success.location.countryCode, isNull);
       },
     );
+
+    // AUD-sacred_time-06 (EH-4): the inner `on Object` at
+    // location_service.dart:86 must not swallow programming errors into a
+    // silent null countryCode — only ordinary Exceptions are best-effort
+    // "geocoding unavailable" cases. A StateError thrown from
+    // geo.placemarkFromCoordinates must propagate all the way out of
+    // detectCurrent (through both the inner AND outer try/catch), not be
+    // downgraded to a null countryCode nor caught by the outer clause and
+    // turned into LocationFetchError.
+    test('detectCurrent → propagates a thrown Error (not swallowed to null '
+        'countryCode) when geocoding surfaces a programming bug', () async {
+      final fakePosition = Position(
+        latitude: 40.0,
+        longitude: -75.0,
+        timestamp: DateTime.utc(2026, 5, 1),
+        accuracy: 10.0,
+        altitude: 0.0,
+        altitudeAccuracy: 0.0,
+        heading: 0.0,
+        headingAccuracy: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0,
+      );
+      GeolocatorPlatform.instance = _FakeGeolocatorPlatform(
+        _GeoScenario.success,
+        position: fakePosition,
+      );
+      GeocodingPlatform.instance = _FakeGeocodingPlatform(
+        shouldThrowProgrammingError: true,
+      );
+
+      await expectLater(
+        const LocationService().detectCurrent(),
+        throwsA(isA<StateError>()),
+      );
+    });
 
     test('detectCurrent normalises country code to upper-case', () async {
       final fakePosition = Position(
