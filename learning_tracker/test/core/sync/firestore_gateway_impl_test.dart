@@ -12,11 +12,13 @@
 ///     (FakeFirebaseFirestore is always "offline-safe")
 library;
 
-// AUD-core-sync-20: group 17's permission-denied test proxies implement
-// cloud_firestore's `@sealed`-annotated CollectionReference/DocumentReference
-// to intercept a `set()`/`commit()` call at the exact I/O point (see the
-// class docs below) — a deliberate, narrow, test-only exception to the
-// "don't implement sealed classes" guidance.
+// AUD-core-sync-20 / AUD-t-cross-01 / AUD-t-cross-02: several groups'
+// deterministic-failure test proxies implement cloud_firestore's `@sealed`
+// -annotated CollectionReference/DocumentReference/Query/WriteBatch to
+// intercept a `set()`/`commit()`/`get()` call at the exact I/O point (see
+// the class docs below, near the bottom of this file) — a deliberate,
+// narrow, test-only exception to the "don't implement sealed classes"
+// guidance.
 // ignore_for_file: subtype_of_sealed_class
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -1321,6 +1323,46 @@ void main() {
       },
     );
 
+    test('pushCompletionsBatch chunks at the 500-op WriteBatch limit and — '
+        'when chunk 2 fails — reports SyncPushException.committed as exactly '
+        "chunk 1's entityKeys (AUD-t-cross-01)", () async {
+      // 501 items forces exactly two chunks: [0, 500) and [500, 501).
+      // The proxy lets chunk 1's WriteBatch commit for real against the
+      // fake (so we can assert the rows genuinely landed) and makes
+      // chunk 2's commit throw — driving the real pushCompletionsBatch
+      // chunk loop, not a hand-constructed exception.
+      final real = createFakeFirestore(authenticatedUid: _uid);
+      final proxy = _FailingOnNthBatchFirestore(real, failOnCall: 2);
+      final gw = FirestoreGatewayImpl(
+        firestore: proxy,
+        authRepository: _StubAuth(_uid),
+      );
+
+      final items = List.generate(
+        501,
+        (i) => (
+          entityKey: 'k$i',
+          payload: _completionPayload(sefariaRef: 'Item $i'),
+        ),
+      );
+      final chunk1Keys = items.take(500).map((e) => e.entityKey).toList();
+
+      await expectLater(
+        gw.pushCompletionsBatch(profileId: _profileId, items: items),
+        throwsA(
+          isA<SyncPushException>().having(
+            (e) => e.committed,
+            'committed',
+            equals(chunk1Keys),
+          ),
+        ),
+      );
+
+      // Chunk 1 genuinely committed server-side (H3: already-landed rows
+      // are never re-pushed or dead-lettered); chunk 2 never did.
+      expect(await _count(real, _uid, _profileId, 'completions'), equals(500));
+    });
+
     test(
       'pushCompletionsBatch is idempotent — re-pushing same items = same doc count',
       () async {
@@ -2121,40 +2163,26 @@ void main() {
   // ── 9. Permission-denied conversion ─────────────────────────────────────────
 
   group('9. Permission-denied → FirestorePermissionDeniedException', () {
-    test('fetchPage converts PERMISSION_DENIED FirebaseException to '
-        'FirestorePermissionDeniedException', () async {
-      // Use strict rules so that the real firestore.rules can reject writes.
-      // Under the fake with strict rules, any doc outside the user's own
-      // namespace is denied. We need to produce a permission-denied read.
-      // Easiest: use strictRules + a different uid so the security rules
-      // deny the read under the user's own path.
-      //
-      // However, fake_firebase_security_rules doesn't support `resource`
-      // comparisons in the way the real Firestore does.
-      // Instead, we test the guard indirectly: the gateway catches only
-      // `permission-denied` code and wraps it. We verify the conversion
-      // by checking the FirestorePermissionDeniedException type in a real
-      // scenario where strict rules are activated and the request is denied.
-      //
-      // If strict rules happen to allow the read in this env (e.g. the fake
-      // doesn't enforce rules fully), we skip the check with a guard.
-      try {
-        final fs = createFakeFirestore(
-          authenticatedUid: 'other_uid',
-          strictRules: true,
-        );
-        await _gw(fs, uid: _uid).fetchPage(
+    test('fetchPage converts a permission-denied FirebaseException from the '
+        'underlying Query.get() to FirestorePermissionDeniedException — and '
+        'ONLY that (AUD-t-cross-02)', () async {
+      // _PermissionDeniedOnGetFirestore deterministically throws a real
+      // FirebaseException(code: 'permission-denied') at the exact
+      // Query.get() I/O point fetchPage calls (mirroring the group 17
+      // write-path proxies), rather than relying on strictRules maybe
+      // denying the read — see the proxy's doc comment for why the old
+      // strict-rules approach could not fail red on a broken conversion.
+      final real = createFakeFirestore(authenticatedUid: _uid);
+      final proxy = _PermissionDeniedOnGetFirestore(real);
+
+      await expectLater(
+        _gw(proxy).fetchPage(
           profileId: _profileId,
           collection: 'completions',
           pageSize: 10,
-        );
-        // If we get here, strict rules didn't deny — skip the assertion.
-        // This is acceptable: the fake may be permissive in CI.
-      } on FirestorePermissionDeniedException {
-        // Pass — the correct exception was thrown.
-      } on Exception {
-        // Other exception — acceptable, the fake may surface it differently.
-      }
+        ),
+        throwsA(isA<FirestorePermissionDeniedException>()),
+      );
     });
   });
 
@@ -2763,5 +2791,181 @@ class _PermissionDeniedBatch implements WriteBatch {
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
     'Unhandled WriteBatch member in test proxy: ${invocation.memberName}',
+  );
+}
+
+// ── Chunk-boundary failure simulation helper (group 5, AUD-t-cross-01) ──────
+//
+// Unlike the permission-denied proxies above (which never let a batch
+// genuinely commit), this proxy lets every batch EXCEPT the [failOnCall]-th
+// commit for real against the wrapped delegate — so a test can prove that
+// entityKeys reported as `committed` on [SyncPushException] correspond to
+// chunks that truly landed server-side, while a later chunk's underlying
+// commit failure is deterministically simulated.
+
+/// Delegates every [FirebaseFirestore] member to [_delegate] except
+/// [collection] (path navigation, unaffected) and [batch]: the
+/// [failOnCall]-th call (1-indexed) to [batch] returns a [_FailingBatch]
+/// whose `commit()` throws instead of landing; every other call returns the
+/// delegate's own real batch, which commits normally.
+class _FailingOnNthBatchFirestore implements FirebaseFirestore {
+  _FailingOnNthBatchFirestore(this._delegate, {required this.failOnCall});
+  final FirebaseFirestore _delegate;
+  final int failOnCall;
+  int _batchCalls = 0;
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String collectionPath) =>
+      _delegate.collection(collectionPath);
+
+  @override
+  WriteBatch batch() {
+    _batchCalls++;
+    final real = _delegate.batch();
+    return _batchCalls == failOnCall ? _FailingBatch(real) : real;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled FirebaseFirestore member in test proxy: '
+    '${invocation.memberName}',
+  );
+}
+
+/// Wraps a real [WriteBatch]; [set] forwards to the delegate so the batch
+/// would otherwise genuinely be ready to commit, but [commit] throws a
+/// simulated write failure INSTEAD of ever calling the delegate's commit —
+/// this chunk must never land, simulating "the underlying commit for this
+/// chunk failed" (e.g. a transient network error on chunk 2 of a >500-item
+/// push).
+class _FailingBatch implements WriteBatch {
+  _FailingBatch(this._delegate);
+  final WriteBatch _delegate;
+
+  @override
+  WriteBatch set<T extends Object?>(
+    DocumentReference<T> document,
+    T data, [
+    SetOptions? options,
+  ]) {
+    _delegate.set(document, data, options);
+    return this;
+  }
+
+  @override
+  Future<void> commit() async {
+    throw Exception('simulated chunk write failure (test)');
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled WriteBatch member in test proxy: ${invocation.memberName}',
+  );
+}
+
+// ── Permission-denied-on-read simulation helper (group 9, AUD-t-cross-02) ──
+//
+// Group 9's `fetchPage` conversion test previously relied on
+// `createFakeFirestore(strictRules: true)` maybe-denying a cross-user read,
+// with a catch-all fallback that treated every outcome (deny, some other
+// exception, or no denial at all) as a pass. This proxy instead
+// deterministically simulates a real Firestore PERMISSION_DENIED at the
+// exact `Query.get()` I/O point `fetchPage` calls, mirroring the
+// `_PermissionDeniedOnSetFirestore`/`_PermissionDeniedOnBatchCommitFirestore`
+// pattern above but for the read path.
+
+/// Delegates every [FirebaseFirestore] member to [_delegate] except
+/// [collection], which is wrapped so a `.orderBy().limit()...get()` chain
+/// reached from it simulates a denied read.
+class _PermissionDeniedOnGetFirestore implements FirebaseFirestore {
+  _PermissionDeniedOnGetFirestore(this._delegate);
+  final FirebaseFirestore _delegate;
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String collectionPath) =>
+      _DenyGetCollectionReference(_delegate.collection(collectionPath));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled FirebaseFirestore member in test proxy: '
+    '${invocation.memberName}',
+  );
+}
+
+/// Wraps a real [CollectionReference]. [orderBy] returns a [_DenyGetQuery]
+/// so further query-shaping (`.limit()`, etc.) and the eventual `.get()`
+/// all simulate a denied read; [doc] returns a [_DenyGetDocumentReference]
+/// so path navigation through nested subcollections (`_learnerProfileDoc`'s
+/// `.doc(uid).collection('learner_profiles').doc(profileId)...`) keeps the
+/// interception live no matter how deep the target collection is nested.
+class _DenyGetCollectionReference
+    implements CollectionReference<Map<String, dynamic>> {
+  _DenyGetCollectionReference(this._delegate);
+  final CollectionReference<Map<String, dynamic>> _delegate;
+
+  @override
+  Query<Map<String, dynamic>> orderBy(
+    Object field, {
+    bool descending = false,
+  }) => _DenyGetQuery(_delegate.orderBy(field, descending: descending));
+
+  @override
+  DocumentReference<Map<String, dynamic>> doc([String? path]) =>
+      _DenyGetDocumentReference(_delegate.doc(path));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled CollectionReference member in test proxy: '
+    '${invocation.memberName}',
+  );
+}
+
+/// Wraps a real [DocumentReference] purely for path navigation; [collection]
+/// returns another [_DenyGetCollectionReference] so the wrapper threads
+/// through arbitrarily deep `.doc().collection()` chains until the target
+/// collection's `.orderBy()...get()` is reached.
+class _DenyGetDocumentReference
+    implements DocumentReference<Map<String, dynamic>> {
+  _DenyGetDocumentReference(this._delegate);
+  final DocumentReference<Map<String, dynamic>> _delegate;
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String collectionPath) =>
+      _DenyGetCollectionReference(_delegate.collection(collectionPath));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled DocumentReference member in test proxy: '
+    '${invocation.memberName}',
+  );
+}
+
+/// Wraps a real [Query]; query-shaping calls (`limit`, `startAfter`) chain
+/// through to further [_DenyGetQuery] wrappers, and [get] throws a
+/// simulated PERMISSION_DENIED [FirebaseException] instead of reading.
+class _DenyGetQuery implements Query<Map<String, dynamic>> {
+  _DenyGetQuery(this._delegate);
+  final Query<Map<String, dynamic>> _delegate;
+
+  @override
+  Query<Map<String, dynamic>> limit(int limit) =>
+      _DenyGetQuery(_delegate.limit(limit));
+
+  @override
+  Query<Map<String, dynamic>> startAfter(Iterable<Object?> values) =>
+      _DenyGetQuery(_delegate.startAfter(values));
+
+  @override
+  Future<QuerySnapshot<Map<String, dynamic>>> get([GetOptions? options]) async {
+    throw FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'permission-denied',
+      message: 'simulated PERMISSION_DENIED (test)',
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled Query member in test proxy: ${invocation.memberName}',
   );
 }
