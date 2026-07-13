@@ -35,6 +35,7 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/achi
 import 'package:learning_tracker/features/gamification/presentation/widgets/points_display_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/progress_summary_card.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/track_tag_chip.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -669,4 +670,62 @@ void main() {
       );
     },
   );
+
+  // ── AUD-gamification-02: badge must not overlap title under RTL ─────────────
+
+  testWidgets('AUD-gamification-02: TrackTagChip badge does not overlap the '
+      'milestone title under Locale(he)', (tester) async {
+    final l10n = await AppLocalizations.delegate.load(const Locale('he'));
+    // A long, direction-aware title -- long enough that if the badge
+    // were still pinned with a plain Positioned(right:0) (direction-
+    // unaware), it would sit directly on top of the title's first line,
+    // since both anchor to the same physical corner under RTL.
+    final rowVm = _row(
+      milestoneTitle: 'כוכב ברונזה למצטיינים בלימוד',
+      trackPoints: 50,
+      isUnlocked: false,
+      isNextUp: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('he'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: AchievementTierCard(
+            l10n: l10n,
+            row: rowVm,
+            trackTag: 'Mishnayos',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final chipRect = tester.getRect(find.byType(TrackTagChip));
+    final titleRect = tester.getRect(find.text(rowVm.milestone.title).first);
+
+    final overlaps =
+        chipRect.left < titleRect.right &&
+        chipRect.right > titleRect.left &&
+        chipRect.top < titleRect.bottom &&
+        chipRect.bottom > titleRect.top;
+
+    expect(
+      overlaps,
+      isFalse,
+      reason:
+          'TrackTagChip (badge) rect $chipRect overlaps the milestone '
+          'title rect $titleRect under Hebrew RTL -- the badge must use '
+          'PositionedDirectional(end:) instead of Positioned(right:) so '
+          'it stays clear of the direction-aware title in both locales '
+          '(AUD-gamification-02).',
+    );
+  });
 }

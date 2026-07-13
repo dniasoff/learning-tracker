@@ -424,8 +424,14 @@ class _HeroHeader extends StatelessWidget {
                 ],
               ),
             ),
-            Positioned(
-              right: -36,
+            // AUD-gamification-02: PositionedDirectional(end:) for
+            // consistency with achievement_tier_card.dart's badge fix --
+            // these are decorative-only (IgnorePointer, low opacity), so the
+            // physical-vs-logical corner doesn't change appearance today,
+            // but keeps this file free of the Positioned(right:) pattern
+            // the app's AX-1 rule bans.
+            PositionedDirectional(
+              end: -36,
               bottom: -40,
               child: IgnorePointer(
                 child: Opacity(
@@ -441,8 +447,8 @@ class _HeroHeader extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(
-              right: 40,
+            PositionedDirectional(
+              end: 40,
               bottom: -56,
               child: IgnorePointer(
                 child: Opacity(

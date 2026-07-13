@@ -110,9 +110,15 @@ class AchievementTierCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Positioned(
+                    // AUD-gamification-02: PositionedDirectional(end:) so the
+                    // badge stays clear of the topStart-aligned title in
+                    // both LTR and RTL -- a plain Positioned(right:) pins
+                    // the badge to the physical right in RTL too, where the
+                    // title (topStart flips to physically right-aligned)
+                    // also renders, overlapping it.
+                    PositionedDirectional(
                       top: 0,
-                      right: 0,
+                      end: 0,
                       child: TrackTagChip(label: trackTag, scheme: scheme),
                     ),
                   ],
