@@ -33,6 +33,7 @@ import 'package:mocktail/mocktail.dart';
 
 import '../helpers/drift_memory.dart';
 import '../helpers/firestore_fake.dart';
+import '../mocks/mock_repositories.dart';
 
 // ---------------------------------------------------------------------------
 // Stub AuthRepository
@@ -41,77 +42,22 @@ import '../helpers/firestore_fake.dart';
 const _uid = 'uid_curriculum_docid_test';
 const _profileId = 1;
 
-class _StubAuthRepository implements AuthRepository {
-  const _StubAuthRepository(this._uid);
-  final String _uid;
-
-  @override
-  AppUser? get currentUser => AppUser(
-    uid: _uid,
-    email: 'test@example.com',
-    displayName: 'Test User',
-    emailVerified: true,
-    providers: const ['password'],
+/// A [MockAuthRepository] stubbed with [currentUser] fixed to [uid]
+/// (AUD-t-cross-19). Replaces the former hand-rolled `_StubAuthRepository`
+/// (28 throw-`UnimplementedError` overrides this test never called) —
+/// [FirestoreGatewayImpl] only ever reads `authRepository.currentUser`.
+AuthRepository _stubAuthRepository(String uid) {
+  final repo = MockAuthRepository();
+  when(() => repo.currentUser).thenReturn(
+    AppUser(
+      uid: uid,
+      email: 'test@example.com',
+      displayName: 'Test User',
+      emailVerified: true,
+      providers: const ['password'],
+    ),
   );
-
-  @override
-  Stream<AppUser?> onAuthStateChanged() => Stream.value(currentUser);
-
-  @override
-  Future<void> signInWithEmail(String e, String p) =>
-      throw UnimplementedError();
-  @override
-  Future<void> signInWithGoogle() => throw UnimplementedError();
-  @override
-  Future<AppUser?> reauthWithGoogleSilently() => throw UnimplementedError();
-  @override
-  Future<void> signUp(String e, String p, String n) =>
-      throw UnimplementedError();
-  @override
-  Future<void> sendEmailVerification() => throw UnimplementedError();
-  @override
-  Future<void> sendSignInLinkToEmail(String e) => throw UnimplementedError();
-  @override
-  Future<AppUser?> signInWithEmailLink(String e, String l) =>
-      throw UnimplementedError();
-  @override
-  bool isSignInWithEmailLink(String l) => throw UnimplementedError();
-  @override
-  Future<void> sendPasswordResetEmail(String e) => throw UnimplementedError();
-  @override
-  Future<void> signOut() => throw UnimplementedError();
-  @override
-  Future<void> deleteAccount() => throw UnimplementedError();
-  @override
-  Future<void> changePassword(String p) => throw UnimplementedError();
-  @override
-  Future<void> reauthenticateWithEmail(String e, String p) =>
-      throw UnimplementedError();
-  @override
-  Future<void> reauthenticateWithGoogle() => throw UnimplementedError();
-  @override
-  Future<void> linkGoogleProvider() => throw UnimplementedError();
-  @override
-  Future<void> linkEmailProvider(String e, String p) =>
-      throw UnimplementedError();
-  @override
-  List<String> getLinkedProviders() => throw UnimplementedError();
-  @override
-  Future<AppUser?> reloadCurrentUser() => throw UnimplementedError();
-  @override
-  Future<void> checkActionCode(String c) => throw UnimplementedError();
-  @override
-  Future<void> applyActionCode(String c) => throw UnimplementedError();
-  @override
-  Future<String> createUserAccount(String e, String p) =>
-      throw UnimplementedError();
-  @override
-  Future<AppUser?> signInAndGetUser(String e, String p) =>
-      throw UnimplementedError();
-  @override
-  Future<void> updateDisplayName(String n) => throw UnimplementedError();
-  @override
-  Future<void> deleteCurrentFirebaseUser() => throw UnimplementedError();
+  return repo;
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +164,7 @@ void main() {
         final fs = createFakeFirestore(authenticatedUid: _uid);
         final gateway = FirestoreGatewayImpl(
           firestore: fs,
-          authRepository: const _StubAuthRepository(_uid),
+          authRepository: _stubAuthRepository(_uid),
         );
 
         await gateway.pushCompletion(
@@ -251,7 +197,7 @@ void main() {
         final fs = createFakeFirestore(authenticatedUid: _uid);
         final gateway = FirestoreGatewayImpl(
           firestore: fs,
-          authRepository: const _StubAuthRepository(_uid),
+          authRepository: _stubAuthRepository(_uid),
         );
 
         await gateway.pushCompletionsBatch(
@@ -287,7 +233,7 @@ void main() {
         final fs = createFakeFirestore(authenticatedUid: _uid);
         final gateway = FirestoreGatewayImpl(
           firestore: fs,
-          authRepository: const _StubAuthRepository(_uid),
+          authRepository: _stubAuthRepository(_uid),
         );
 
         final payload = _payload(
@@ -311,7 +257,7 @@ void main() {
         final fs = createFakeFirestore(authenticatedUid: _uid);
         final gateway = FirestoreGatewayImpl(
           firestore: fs,
-          authRepository: const _StubAuthRepository(_uid),
+          authRepository: _stubAuthRepository(_uid),
         );
 
         final payload = _payload(
@@ -347,7 +293,7 @@ void main() {
         await _seedTrack(db, curriculumId: 'daf_yomi');
 
         final fs = createFakeFirestore(authenticatedUid: _uid);
-        const authRepo = _StubAuthRepository(_uid);
+        final authRepo = _stubAuthRepository(_uid);
         final gateway = FirestoreGatewayImpl(
           firestore: fs,
           authRepository: authRepo,
