@@ -406,6 +406,66 @@ void main() {
         ),
       );
     });
+
+    test('a single subscription sees the mapped user on sign-in then null on '
+        'sign-out (end-to-end sequencing through the gateway)', () async {
+      // Unlike the two single-emission cases above, this proves the
+      // *same* subscription tracks both transitions the gateway stream
+      // pushes as a result of separate signInWithEmail/signOut calls —
+      // formerly covered by the standalone auth_integration_test.dart
+      // (folded in here per AUD-t-auth-04; that file re-derived this
+      // exact scenario in a second file with no other collaborator
+      // wired in, so it wasn't a real integration test).
+      final authStateController = StreamController<AuthGatewayUser?>();
+      addTearDown(authStateController.close);
+
+      final fakeUser = _sampleUser(
+        uid: 'test-uid-123',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        emailVerified: true,
+      );
+
+      when(
+        () => mockAuth.signInWithEmailAndPassword(
+          email: 'test@example.com',
+          password: 'password123',
+        ),
+      ).thenAnswer((_) async {
+        authStateController.add(fakeUser);
+      });
+
+      when(() => mockGoogle.signOut()).thenAnswer((_) async {});
+      when(() => mockAuth.signOut()).thenAnswer((_) async {
+        authStateController.add(null);
+      });
+
+      when(
+        () => mockAuth.authStateChanges(),
+      ).thenAnswer((_) => authStateController.stream);
+
+      final authStates = <AppUser?>[];
+      final subscription = repository.onAuthStateChanged().listen(
+        authStates.add,
+      );
+      addTearDown(subscription.cancel);
+
+      // Step 1 — sign in
+      await repository.signInWithEmail('test@example.com', 'password123');
+      await Future<void>.delayed(Duration.zero);
+
+      expect(authStates, contains(isA<AppUser>()));
+      final signedIn = authStates.whereType<AppUser>().first;
+      expect(signedIn.uid, 'test-uid-123');
+      expect(signedIn.email, 'test@example.com');
+      expect(signedIn.emailVerified, isTrue);
+
+      // Step 2 — sign out
+      await repository.signOut();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(authStates.last, isNull);
+    });
   });
 
   group('currentUser', () {
