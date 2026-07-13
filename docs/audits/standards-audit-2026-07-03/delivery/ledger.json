@@ -7031,13 +7031,13 @@
   {
    "id": "AUD-t-content_browsing-07",
    "wave": 4,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Replace the 'accepts any exception' navigation assertion in hierarchy_navigation_test.dart and curriculum_list_screen_test.dart with real router verification",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_3790fe1b-00e-57 (branch worktree-wf_3790fe1b-00e-57, commit aebc1d8a2581bd0b7747c2257f6ca84f89c2bceb, tip of this cid's build) but the review agent was lost (quota) before opus review/merge could complete. Built commit aebc1d8a ('test(content_browsing): AUD-t-content_browsing-07 - assert specific route push instead of any-exception') targets learning_tracker/test/features/content_browsing/integration/hierarchy_navigation_test.dart ('navigates from curriculum list -> seder -> masechta -> perek -> mishna') and learning_tracker/test/features/content_browsing/presentation/screens/curriculum_list_screen_test.dart ('navigates to content hierarchy when curriculum tapped'); none of this landed on dev. Per merge-lane payload cid w4r1c26, MODE=ledger-only: nothing merged onto dev this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_3790fe1b-00e-57 removed per payload.worktreesToRemove (`git worktree remove --force`); branch worktree-wf_3790fe1b-00e-57 retained (unmerged patch at aebc1d8a per git-cherry, not deleted) for a future resume. testsToRun for a future resume: learning_tracker/test/features/content_browsing/integration/hierarchy_navigation_test.dart ('navigates from curriculum list -> seder -> masechta -> perek -> mishna'); learning_tracker/test/features/content_browsing/presentation/screens/curriculum_list_screen_test.dart ('navigates to content hierarchy when curriculum tapped')."
   },
   {
    "id": "AUD-t-content_browsing-06",
