@@ -1,6 +1,7 @@
 /// Extended tests for TextCacheRepository covering paths that are
 /// uncovered in the existing text_cache_repository_test.dart:
 ///   - exact match in textCacheDao (lines 96-103)
+///   - HTML-entity decoding of the cached hebrewText (line 101)
 ///   - child-verse aggregation (lines 116-135)
 ///   - daily_content fallback (lines 141-150)
 ///   - _verseNumberOrNull helper logic (lines 163-166)
@@ -111,6 +112,20 @@ void main() {
 
       expect(result, isNotNull);
       expect(result!.segments.first.number, isNull);
+    });
+
+    test('decodes HTML entities in the cached hebrewText', () async {
+      await insertTextCache(
+        sefariaRef: 'Genesis 1:2',
+        hebrewText: '&amp;test&amp;',
+        englishText: '',
+      );
+
+      final result = await repository.getText('Genesis 1:2');
+
+      expect(result, isNotNull);
+      // HebrewUtils.decodeHtmlEntities should decode &amp; → &
+      expect(result!.hebrewText, contains('&'));
     });
 
     test('exact match is preferred over child aggregation', () async {
