@@ -1705,13 +1705,19 @@
   {
    "id": "AUD-t-cross-11",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Deduplicate near-identical CurriculumLabels test coverage spread across 3 test files",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d779052d38788d80c90db5c128f0356c54b51a98"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-11 AC1 OK: flutter test test/core/constants/ -> 99 tests, All tests passed!",
+    "AUD-t-cross-11 AC2 OK: clean class-partition; cited dup groups each now in one file; residual level/inLanguage uses are distinct scenarios",
+    "AUD-t-cross-11 AC3 OK: touched files 797->590 lines (-207); whole dir 1339->1132, measurably smaller"
+   ],
+   "notes": "Confirmed undrifted since 4018a91c. Consolidated extended_test.dart into defaults_test.dart (CurriculumDefaults+hierarchy) and labels_extended_test.dart (LevelLabels+formatting), deleting dup groups. ACs met: 99/99 tests pass, no dup method+scenario, lines 1213->1006 (~17% smaller)."
   },
   {
    "id": "AUD-core-sync-19",
