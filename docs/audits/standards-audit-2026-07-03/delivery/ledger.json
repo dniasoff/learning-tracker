@@ -6067,13 +6067,20 @@
     {
       "id": "AUD-docs-24",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Backfill or formally waive verification evidence on epic-21 'done' stories — 16 files ship an all-unchecked task list and an empty Dev Agent Record",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "be90ea23187e072ef8c33db3d97992d1abda9cab"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-24 AC1 OK: checker exists + in make audit (44/44); fired exit 1 on non-baselined done+unchecked-only, empty-record-only, and both; clean case exit 0",
+        "AUD-docs-24 AC1 OK: Status:review in scope — plain 'Status: review' fixture fired exit 1",
+        "AUD-docs-24 AC2 OK: ratchet fires on any NEW non-baselined file (probe exit 1) so make audit fails/blocks merge; --report shows the 17 baselined files, 0 new",
+        "AUD-docs-24 baseline honest: --report lists 17 files each genuinely matching; 16-1 documented (annotated skips + populated 43-line record)"
+      ],
+      "notes": "Re-verified 16 files still match. Shipped check_story_dod.dart, ratchet checker in make audit (44/44): fails on Status: done/review + unchecked task or empty Dev Agent Record outside baseline (16 files + 1 more). Fire-then-clean demoed + 5-test suite. AG-9 doc updated. Both ACs met."
     },
     {
       "id": "AUD-t-story-acceptance-48",
