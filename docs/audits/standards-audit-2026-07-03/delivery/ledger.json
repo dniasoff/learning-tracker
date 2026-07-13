@@ -455,13 +455,18 @@
   {
    "id": "AUD-gamification-02",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Fix physical Positioned(right:) badge on AchievementTierCard so it doesn't overlap the title in Hebrew RTL",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a9fde50bde19ef57f3c39e87e07704cb30d75ac0"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-gamification-02 AC1 OK: achievement_tier_card.dart:115 badge uses PositionedDirectional(end:0) not Positioned(right:0)",
+    "AUD-gamification-02 AC2 OK: gamification_screen_l1_test.dart:676 asserts chipRect/titleRect no-overlap under Locale('he'); passes"
+   ],
+   "notes": "Confirmed via real overlap assertion (chip rect intersected title rect under he). Replaced Positioned(right:) with PositionedDirectional(end:) on badge + 2 decorative circles. Red-first widget test failed pre-fix with overlapping Rects, passes now. Commit e50a0f10."
   },
   {
    "id": "AUD-notifications-02",
@@ -1021,24 +1026,36 @@
   {
    "id": "AUD-gamification-03",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Stop achievementsOverviewProvider and _pointConfigDataProvider writing to Drift/SharedPreferences and pushing to Firestore from inside FutureProvider build",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "6b0f6ecc7feb5069bf439c0c38a6088d099571ea"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-gamification-03 AC1 OK: achievementsOverviewProvider build no longer strips/pushes; GamificationMaintenanceController does, from GamificationScreen.initState",
+    "AUD-gamification-03 AC2 OK: pointConfigDataProvider build no longer seeds; PointConfigMaintenanceController seeds, from PointConfigScreen.initState",
+    "AUD-gamification-03 AC3 OK: two purity tests watch each provider twice, assert no strip/seed writes AND pushCount==0; pass"
+   ],
+   "notes": "Confirmed: both providers wrote DB/SharedPrefs + pushed sync inside build. Moved writes into 2 new maintenance Notifiers invoked once from each screen's initState. Red-first purity tests (watch twice, assert 0 mutations) failed pre-fix, pass now. Commit 77a06e12."
   },
   {
    "id": "AUD-gamification-01",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Add ref.mounted/context.mounted guards after awaits in RewardConfigController and the pending-redemptions fulfil/decline handlers",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "f35a35df391640f02189720846f6f752e9b9dd99"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-gamification-01 AC1 OK: ref.mounted checks after every direct await in reward_config_controller.dart (L151,227,271,296); inner awaits wrapped in AsyncValue.guard",
+    "AUD-gamification-01 AC2 OK: parent_pending_redemptions _fulfil/_decline now run ref.invalidate INSIDE if(context.mounted), not before (L146-151,169-174)",
+    "AUD-gamification-01 AC3 OK: reward_config_controller_test.dart:1394 disposes container mid gated-push, expectLater(future,completes); in 426/426 pass"
+   ],
+   "notes": "Confirmed: zero ref.mounted checks; invalidate ran before mounted check. Added ref.mounted guards in _persistAndSync + before each mutation's result switch; reordered screen's check. Red-first test (dispose mid-await) failed pre-fix with disposed-Ref error, passes now. Commit d159a450."
   },
   {
    "id": "AUD-learning-01",
@@ -6044,13 +6061,18 @@
   {
    "id": "AUD-gamification-21",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace hardcoded Color(0x...) literals with theme/AppColors tokens across gamification presentation widgets",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "524a35cd1a5df3e958eb14471c81896ba093d294"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-gamification-21 AC1 OK: grep finds 0 Color(0x...) literals under lib/features/gamification (excl generated); values extracted to AppColors",
+    "AUD-gamification-21 AC2 OK: dart-test Rule-0 checker EMPIRICALLY fires on planted violation (exit1), clean now; custom_lint N/A per AUD-guardrails-03"
+   ],
+   "notes": "Found 126 Color(0x...) occurrences (100 values) across 14 files, incl. uncited tier_style.dart (~83), all in AC scope. Extracted to AppColors (5 reused, 96 new). Added dart-test Rule-0 checker (custom_lint blocked, AUD-guardrails-03). Red-first via git-stash proved 126 violations. Commit 58d764b9."
   },
   {
    "id": "AUD-core-preferences-05",
@@ -7725,13 +7747,13 @@
   {
    "id": "AUD-gamification-17",
    "wave": 3,
-   "status": "todo",
+   "status": "skipped-refuted",
    "severity": "P3",
    "title": "Delete or wire up the unreachable form.error branch in reward_configuration_screen.dart",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "Already fixed by prior AUD-gamification-10 commit (ancestor of start HEAD): _handleMutationError sets state.error on generic failures; error Scaffold reachable, proven by existing passing test reward_configuration_screen_l1_test.dart:735-760. AUD-10's notes name this as duplicate. No code change."
   },
   {
    "id": "AUD-gamification-13",

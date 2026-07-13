@@ -95,3 +95,13 @@ finding, appended as it happens.
 - **Delivery disposition:** `skipped-refuted` (merge-lane w3r1c7, 2026-07-12).
 - **Basis — already fixed in code, independently confirmed:** commit `a3619891` ("fix(AUD-repo-01): de-dupe 7 duplicate public type names, land AG-4 audit gate", an ancestor of this branch's current HEAD, landed after this finding's register checkpoint `4018a91c`) renamed dashboard's `parent_dashboard_aggregator.dart` `CurriculumSummary` → `ParentCurriculumSummary` as part of a 7-name de-dupe sweep, resolving the collision with scheduler's `cross_curriculum_aggregator.dart` `CurriculumSummary` (the definition `CurriculumSummaryCard` and `dashboard_providers.dart` actually consume) — exactly this finding's recommendation. That same commit also landed the AG-4 Rule-0 grep checker itself (`learning_tracker/Makefile`, "24/25 — No duplicate public top-level type names across lib/ (AG-4)"). Independently re-verified against the current tree: `grep -rn "class CurriculumSummary" learning_tracker/lib/` returns exactly one hit (`cross_curriculum_aggregator.dart:5`); `grep -rl ParentCurriculumSummary learning_tracker/lib/` confirms the rename landed in `parent_dashboard_aggregator.dart` (+`.freezed.dart`); re-ran the AG-4 checker's own grep/awk pipeline against the current tree and it reports no duplicates (AG-4 clean). Self-evidencing already-fixed-in-code basis, matching the `AUD-core-sync-30` disposition pattern above (not an evidence-gap one).
 - **Logged by:** merge-lane w3r1c7 agent (sonnet), 2026-07-12.
+
+---
+
+## AUD-gamification-17 — Delete or wire up the unreachable form.error branch in reward_configuration_screen.dart
+
+- **Wave:** 3
+- **Severity:** P3
+- **Delivery disposition:** `skipped-refuted` (merge-lane w3r2c1, 2026-07-13).
+- **Basis — already fixed in code, independently confirmed:** the prior `AUD-gamification-10` fix (an ancestor of this finding's start `HEAD`) made `_handleMutationError` set `state.error` on generic failures, making the error `Scaffold` branch reachable — proven by the existing passing test `reward_configuration_screen_l1_test.dart:735-760`. `AUD-gamification-10`'s own ledger notes name `AUD-gamification-17` as a duplicate of the defect it fixed. No code change required for this id.
+- **Logged by:** merge-lane w3r2c1 agent (sonnet), 2026-07-13.
