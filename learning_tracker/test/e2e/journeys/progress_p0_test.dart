@@ -32,10 +32,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart'
@@ -52,59 +49,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
 
 import '../harness/e2e_harness.dart';
-
-// ── Stub implementations ──────────────────────────────────────────────────────
-
-/// Minimal [ContentRepository] stub that returns an empty list for all
-/// curricula.  Prevents the real asset-backed implementation from trying to
-/// load JSON bundles in a headless test environment.
-///
-/// Journey E2E-808 relies on [curriculumProgressProvider] which calls the
-/// content repository under the hood (R-PG8 mitigation).
-class _EmptyContentRepository implements ContentRepository {
-  const _EmptyContentRepository();
-
-  @override
-  Future<List<ContentItem>> getContentForCurriculum(CurriculumId _) async =>
-      const [];
-
-  @override
-  Future<CurriculumHierarchyConfig> getHierarchyConfig(
-    CurriculumId curriculumId,
-  ) async => CurriculumHierarchyConfig(
-    curriculumId: curriculumId.storageKey,
-    levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
-    totalItems: 0,
-  );
-
-  @override
-  Future<List<ContentItem>> filterByLevel({
-    required CurriculumId curriculumId,
-    String? level1,
-    String? level2,
-    String? level3,
-    String? level4,
-  }) async => const [];
-
-  @override
-  Future<List<ContentItem>> getScopedContent({
-    required CurriculumId curriculumId,
-    required int scopeLevel,
-    required List<String> scopeValues,
-  }) async => const [];
-
-  @override
-  Future<List<ContentItem>> search({
-    required CurriculumId curriculumId,
-    required String query,
-  }) async => const [];
-
-  @override
-  Future<ContentItem?> getContentByRef({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) async => null;
-}
+import '../helpers/e2e_overrides.dart' show EmptyContentRepository;
 
 // ── Shared test data ──────────────────────────────────────────────────────────
 
@@ -249,7 +194,7 @@ List<Override> _progressWithContentOverrides(E2EHarness h) => [
     (ref, pid) => Future.value(<CurriculumLifetimeSummary>[]),
   ),
   // Content repository — no real asset files in headless env (R-PG8)
-  contentRepositoryProvider.overrideWithValue(const _EmptyContentRepository()),
+  contentRepositoryProvider.overrideWithValue(const EmptyContentRepository()),
 ];
 
 /// Additional overrides for [_progressWithContentOverrides] that silence the
@@ -310,7 +255,7 @@ void main() {
 
   group('E2E-802 — Progress hub with live completions — adult', () {
     // Risks: R-PG8 — lifetimeDataProvider reads contentRepository; mitigated
-    // by overriding with _EmptyContentRepository.
+    // by overriding with EmptyContentRepository.
 
     testWidgets(
       'ProgressScreen renders engagement/achievement/lifetime tiles when one '

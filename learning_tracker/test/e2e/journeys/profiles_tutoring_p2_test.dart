@@ -35,7 +35,6 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:auto_route/auto_route.dart' show PageRouteInfo;
 import 'package:flutter/material.dart' show Key, ListTile, TextField, ValueKey;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -45,28 +44,19 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart'
     show effectiveUseHebrewTermsProvider, useHebrewTermsProvider;
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
-    show connectivityStreamProvider;
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
-    show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart'
     show trackDualProgressMetricsProvider;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
     show TutoredProfileSelection;
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
-    show pendingTutorInvitesProvider;
 
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
+import '../helpers/e2e_overrides.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
 
@@ -112,24 +102,11 @@ class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
 }
 
 // ── Common override helpers ────────────────────────────────────────────────────
-
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
-
-Override _connectivityOnlineOverride() =>
-    connectivityStreamProvider.overrideWith((ref) => Stream.value(true));
-
-Override _incomingGrantsEmptyOverride() =>
-    incomingTutorGrantsProvider.overrideWith((ref) => Future.value([]));
-
-Override _pendingInvitesEmptyOverride() =>
-    pendingTutorInvitesProvider.overrideWith((ref) => Future.value([]));
-
-Override _pendingRedemptionsZeroOverride() =>
-    pendingRedemptionsCountProvider.overrideWith((ref) => Stream.value(0));
-
-Override _pointsBalanceZeroOverride() =>
-    activeProfilePointsBalanceProvider.overrideWith((ref) => Stream.value(0));
+//
+// sacredWindowNullOverride, connectivitySilenceOverride,
+// incomingGrantsEmptyOverride, pendingInvitesEmptyOverride,
+// pendingRedemptionsZeroOverride and pointsBalanceZeroOverride are shared
+// via ../helpers/e2e_overrides.dart (AUD-t-cross-20).
 
 /// Standard track-hub overrides: stream of [tracks] + English labels.
 List<Override> _trackHubOverrides(List<CurriculumTrack> tracks) => [
@@ -148,14 +125,6 @@ List<Override> _trackDetailSilenceOverrides() => [
     (ref, trackId) => Future.value(0.0),
   ),
 ];
-
-/// Fire-and-forget router push + settle frames.
-Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {
-  unawaited(h.router.push(route));
-  await h.pump();
-  await h.pump(const Duration(milliseconds: 500));
-  await h.pump();
-}
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
@@ -206,12 +175,12 @@ void main() {
         path: '/dashboard',
         extraOverrides: [
           ...h.dashboardSilenceOverrides,
-          _sacredWindowNullOverride(),
-          _connectivityOnlineOverride(),
-          _incomingGrantsEmptyOverride(),
-          _pendingInvitesEmptyOverride(),
-          _pendingRedemptionsZeroOverride(),
-          _pointsBalanceZeroOverride(),
+          sacredWindowNullOverride(),
+          connectivitySilenceOverride(),
+          incomingGrantsEmptyOverride(),
+          pendingInvitesEmptyOverride(),
+          pendingRedemptionsZeroOverride(),
+          pointsBalanceZeroOverride(),
           ..._trackHubOverrides([stub]),
           ..._trackDetailSilenceOverrides(),
           // Inject read-only tutor permissions directly.
@@ -239,7 +208,7 @@ void main() {
       );
 
       // Navigate from dashboard to the track hub, then into TrackDetailScreen.
-      await _navigateTo(h, TrackManagementHubRoute());
+      await navigateTo(h, TrackManagementHubRoute());
       await tester.pump(const Duration(milliseconds: 300));
 
       // TrackManagementHubScreen shows the track card.
@@ -347,12 +316,12 @@ void main() {
           path: '/dashboard',
           extraOverrides: [
             ...h.dashboardSilenceOverrides,
-            _sacredWindowNullOverride(),
-            _connectivityOnlineOverride(),
-            _incomingGrantsEmptyOverride(),
-            _pendingInvitesEmptyOverride(),
-            _pendingRedemptionsZeroOverride(),
-            _pointsBalanceZeroOverride(),
+            sacredWindowNullOverride(),
+            connectivitySilenceOverride(),
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
+            pendingRedemptionsZeroOverride(),
+            pointsBalanceZeroOverride(),
             // No active tutor session so the normal shell renders.
             activeTutoredProfileSelectionProvider.overrideWith(
               () => NullTutoredSelection(),
@@ -440,12 +409,12 @@ void main() {
           path: '/dashboard',
           extraOverrides: [
             ...h.dashboardSilenceOverrides,
-            _sacredWindowNullOverride(),
-            _connectivityOnlineOverride(),
-            _incomingGrantsEmptyOverride(),
-            _pendingInvitesEmptyOverride(),
-            _pendingRedemptionsZeroOverride(),
-            _pointsBalanceZeroOverride(),
+            sacredWindowNullOverride(),
+            connectivitySilenceOverride(),
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
+            pendingRedemptionsZeroOverride(),
+            pointsBalanceZeroOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => NullTutoredSelection(),
             ),
