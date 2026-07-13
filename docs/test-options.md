@@ -127,8 +127,6 @@ Layers 9 and 10 are **not** in CI — they need a physical device / emulator.
     screenshots, Firestore REST assertions.
   - `journey_01_signup_profile.py` — proven reference journey: first-run →
     signup → create profile → assert it landed in Firestore.
-  - `night_runner.py` — continuous soak loop; self-cleans each iteration
-    (deletes its test account/data/token).
   - `README.md` — prereqs + lessons.
 - **Critical prereq — App Check:** Firestore **enforces App Check
   (Play Integrity)**. A sideloaded build can't attest, so **all cloud ops are
