@@ -3034,13 +3034,18 @@
     {
       "id": "AUD-t-cross-23",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Extract the duplicated router/guard mock harness out of 4 test/app/restore/*_test.dart files into one shared helper",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "3a88d0db1cd419972d065fae8ff1dbc8f49df2e2"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-23 AC1 OK: restore_test_harness.dart defines _MockStackRouter(L36) _MockRestoreGuard(L38) _StubAppRouter(L43) + buildRestoreHarness(L89)",
+        "AUD-t-cross-23 AC2 OK: all 4 files import restore_test_harness.dart; grep 'class _MockStackRouter' test/app/restore/ = exactly 1 hit (harness:36)"
+      ],
+      "notes": "Re-verified: 4 live hits before fix. Extracted dup mocks/harness into restore_test_harness.dart; mocks stay file-private (Dart privacy is per-file), exposed via public factories. All 4 files import it. Post-fix grep = exactly 1 hit (AC2). 30/30 tests pass unchanged."
     },
     {
       "id": "AUD-t-cross-22",
