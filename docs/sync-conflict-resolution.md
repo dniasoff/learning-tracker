@@ -26,9 +26,21 @@ last-write-wins (LWW) by timestamp for mutable documents.
 > collection pulls) on Device B, Device B's local DB contains every
 > `completion_event` that Device A has written, and vice versa.
 >
-> For mutable documents, after a bidirectional pull the device with the
-> strictly newer timestamp wins. If both timestamps are equal the remote row
-> is silently dropped (the LWW rule is `remoteTimestamp > localTimestamp`).
+> For mutable documents, after a bidirectional pull the tie-break is decided
+> by `DriftMergeStore.remoteIsNewer`
+> (`lib/core/sync/merge/drift_merge_store.dart:113-152`), a 3-tier rule keyed
+> on `DriftMergeStore.clockSkewTieBreakWindow` (±5 s):
+>
+> 1. **Outside the ±5 s clock-skew window:** strict `remoteUpdatedAt >
+>    localUpdatedAt` wins; an exact tie stays local.
+> 2. **Inside the window, with both sides carrying a Firestore `synced_at`
+>    server timestamp that differ:** the later `synced_at` decides — the
+>    authoritative ordering for two already-pushed writes.
+> 3. **Inside the window, otherwise** (a `synced_at` is missing on one side —
+>    typically a fresh, un-pushed local edit — or both `synced_at` values are
+>    equal): compare `updated_at` directly and keep the strictly newer side.
+>    If `updated_at` is also exactly equal, remote wins, so two devices that
+>    wrote the same value at the same instant converge instead of bouncing.
 
 ---
 
