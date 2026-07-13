@@ -3780,13 +3780,18 @@
   {
    "id": "AUD-t-account-02",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace sign_in_context_reset_test.dart's source-text-matching 'wiring' assertions with real call-chain verification",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "64eae8a640f90a4a4457dac38c38e3030649eeab"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-account-02 AC1 OK: grep readAsString|dart:io|File(|.readAs in the test file = no matches; source-grep group fully replaced by end-to-end drives",
+    "AUD-t-account-02 AC2 OK: commented out sign_in_controller.dart:452 reset -> target file +6 -1, only _navigateAfterSignIn funnel test red; restored -> 7/7 green"
+   ],
+   "notes": "Confirmed valid: 4 tests grepped source text. Replaced with 4 testWidgets driving the real call chain, asserting real provider state cleared. AC1: grep confirms no readAsStringSync/File remain. AC2: commented out the reset call in _navigateAfterSignIn, reran, got real red; restored, reran green."
   },
   {
    "id": "AUD-dashboard-08",
