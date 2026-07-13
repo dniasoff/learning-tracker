@@ -40,23 +40,38 @@
 /// internally, so the fake below records via *ForProfile overrides and the
 /// zero-count case now drives cancelForProfile(0) — the real call
 /// reminderSyncEffect's D2 fix makes in production.
+///
+/// AUD-t-cross-09: O8-b and O8-d used to hand-duplicate the D1/D2 guard logic
+/// (calling `scheduler.cancelForProfile(0)` directly, or re-typing the
+/// today-only filter inline) instead of exercising the actual
+/// [reminderSyncEffect] provider — a mutation that deleted or inverted the
+/// real guards in notification_providers.dart would still leave this file
+/// green. Both sub-tests now build a real [ProviderContainer] (mirroring
+/// reminder_sync_sacred_time_test.dart), override [allDailyTasksProvider] and
+/// [notificationSchedulerProvider], and read [reminderSyncEffectProvider] so
+/// the guards actually inside production code are what's exercised.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
+import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:mocktail/mocktail.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz_lib;
 
 // ---------------------------------------------------------------------------
-// Fakes and mocks
+// Fakes
 // ---------------------------------------------------------------------------
-
-class MockNotificationGateway extends Mock implements NotificationGateway {}
 
 /// Records all `scheduleBatchRemindersForProfile` calls so tests can assert
 /// on the body string passed without touching the OS notification stack.
@@ -122,17 +137,76 @@ class _RecordingNotificationGateway implements NotificationGateway {
   Future<void> cancelStreakAlertForProfile(int profileId) async {}
 }
 
+/// Fixes the active profile to 0 — the profile-0 block the doc comment above
+/// (AUD-notifications-04) documents `reminderSyncEffect`'s D2 guard as
+/// driving in production.
+class _ProfileId0 extends ActiveProfileId {
+  @override
+  int build() => 0;
+}
+
 // ---------------------------------------------------------------------------
-// Body-string helpers — mirrors the logic in notification_providers.dart:317-320
+// Body-string helper — mirrors the logic in notification_providers.dart:317-320
 // ---------------------------------------------------------------------------
 
 /// Builds the expected notification body for [taskCount] tasks across
 /// [curriculumCount] curricula, matching the current template in
 /// notification_providers.dart.
+///
+/// Used only by O8-a/O8-c, which test the [NotificationScheduler]/
+/// [NotificationGateway] boundary directly (not the D1/D2 guards inside
+/// [reminderSyncEffect] — those are covered by O8-b/O8-d via a real
+/// [ProviderContainer], see below).
 String _buildBody(int taskCount, int curriculumCount) {
   return 'You have $taskCount '
       'task${taskCount == 1 ? '' : 's'} across '
       '$curriculumCount curricul${curriculumCount == 1 ? 'um' : 'a'} today';
+}
+
+/// Builds a synthetic [DailyTask] as [reminderSyncEffect] would see it via
+/// `allDailyTasksProvider`.
+DailyTask _makeTask({
+  required DailyTaskPriority priority,
+  required bool isOverdue,
+  required CurriculumId curriculumId,
+  String? refSuffix,
+}) {
+  final suffix = refSuffix ?? priority.name;
+  return DailyTask(
+    curriculumId: curriculumId,
+    contentItemSefariaRef: 'ref-$suffix-${curriculumId.name}',
+    stageOrder: 1,
+    stageDefinitionId: 1,
+    priority: priority,
+    isOverdue: isOverdue,
+    reason: 'test',
+    stageName: 'Test Stage',
+    trackId: 1,
+    trackLabel: 'Test Track',
+  );
+}
+
+/// Builds a [ProviderContainer] wired so `reminderSyncEffectProvider` can be
+/// read directly: [allDailyTasksProvider] returns [tasks], the notification
+/// gateway is [gateway] (via a real [NotificationScheduler]), Sacred Time is
+/// forced inactive, and the active profile is fixed to 0.
+///
+/// Mirrors reminder_sync_sacred_time_test.dart's `makeContainer` helper.
+ProviderContainer _makeContainer(
+  _RecordingNotificationGateway gateway, {
+  required List<DailyTask> tasks,
+}) {
+  final scheduler = NotificationScheduler(service: gateway);
+  return ProviderContainer(
+    overrides: [
+      activeProfileIdProvider.overrideWith(_ProfileId0.new),
+      currentAppLocaleProvider.overrideWithValue(const Locale('en')),
+      outboxSyncWriteFacadeProvider.overrideWithValue(null),
+      notificationSchedulerProvider.overrideWithValue(scheduler),
+      isSacredTimeActiveProvider.overrideWithValue(false),
+      allDailyTasksProvider.overrideWith((ref) async => tasks),
+    ],
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -140,12 +214,11 @@ String _buildBody(int taskCount, int curriculumCount) {
 // ---------------------------------------------------------------------------
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUpAll(() {
     tz.initializeTimeZones();
     tz_lib.setLocalLocation(tz_lib.getLocation('UTC'));
-
-    registerFallbackValue(<tz_lib.TZDateTime>[]);
-    registerFallbackValue(const TimeOfDay(hour: 19, minute: 0));
   });
 
   // ── O8 — REAL characterisation tests (Wave 4 un-skips) ──────────────────
@@ -158,12 +231,10 @@ void main() {
   //      scheduler.cancel() is called, NOT scheduleBatchReminders("0 tasks").
   //   3. A re-anchor triggers an immediate reschedule to the new count.
   //
-  // Current defect D2: the reminder fires "0 tasks today" when count == 0.
-  // Current defect D1: the body includes overdue + review, not just today's
-  //   items (requires Wave 2 projection to distinguish them).
-  //
-  // O8 tests D2 directly (it is a pure logic bug in notification_providers.dart).
-  // O8 tests D1 as a comment/stub — fixing D1 requires the Wave 2 projection.
+  // O8-a/O8-c exercise the NotificationScheduler/NotificationGateway boundary
+  // directly. O8-b/O8-d exercise the actual reminderSyncEffect provider
+  // through a real ProviderContainer (AUD-t-cross-09) so the D1/D2 guards
+  // inside notification_providers.dart are what's under test.
 
   group('O8 — notifications track the projection', () {
     late _RecordingNotificationGateway notifService;
@@ -179,10 +250,6 @@ void main() {
     // Verifies that the body string built for the notification exactly reflects
     // the task count passed to it.  This is a UNIT TEST of the body-building
     // logic — it does not exercise the full provider chain.
-    //
-    // After Wave 2 the "task count" will be the PROJECTION's output (overdue +
-    // today's units from the pure schedule function).  For now, we test the
-    // body template against a fixed task count.
     test('O8-a: body count matches task count', () async {
       // Given: 5 tasks across 2 curricula.
       const taskCount = 5;
@@ -215,50 +282,66 @@ void main() {
       );
     });
 
-    // ── O8-b: zero count → cancel, not "0 tasks" reminder ──────────────────
+    // ── O8-b: zero count → reminderSyncEffect cancels, not "0 tasks" ────────
     //
-    // Current defect D2 (§8):
-    //   reminderSyncEffect calls scheduler.scheduleReminder() even when
-    //   taskCount == 0, producing "You have 0 tasks across 0 curricula today".
-    //   The correct behaviour: call scheduler.cancel() instead.
-    //
-    // This test asserts the CORRECT behaviour.  It will be RED against the
-    // current code (which fires the 0-task reminder).
-    //
-    // Wave 4 fix: add a guard in reminderSyncEffect (or NotificationScheduler):
-    //   if (taskCount == 0) { await scheduler.cancelForProfile(profileId); return; }
-    test('O8-b: when task count is zero, reminder is cancelled (not fired with '
-        '"0 tasks")', () async {
-      // Simulates what reminderSyncEffect SHOULD do when tasks is empty.
-      //
-      // The production code path today (buggy):
-      //   taskCount = 0
-      //   body = "You have 0 tasks across 0 curricula today"
-      //   scheduler.scheduleReminder(body: body)  ← fires a 0-count reminder
-      //
-      // The corrected path (H1 fix — the real production call is per-profile):
-      //   if (taskCount == 0) { scheduler.cancelForProfile(profileId); return; }
+    // AUD-t-cross-09: drives the REAL reminderSyncEffect provider (not a
+    // hand-called scheduler.cancelForProfile(0)) with a task list that
+    // collapses to taskCount == 0 after the today-only filter. If the D2
+    // guard ("if (taskCount == 0) { await scheduler.cancelForProfile(...) }")
+    // in notification_providers.dart were deleted, reminderSyncEffect would
+    // instead call scheduleReminderForProfile with a "You have 0 tasks..."
+    // body, and the first expectation below would fail.
+    test('O8-b: when task count is zero, reminderSyncEffect cancels the '
+        'reminder (not fired with "0 tasks")', () async {
+      SharedPreferences.setMockInitialValues({});
+      final gateway = _RecordingNotificationGateway();
 
-      // When taskCount == 0 the scheduler must be cancelled.
-      // We call scheduler.cancelForProfile(0) directly to show the EXPECTED
-      // call — the same one reminderSyncEffect makes in production; the
-      // actual test is that no scheduleBatchRemindersForProfile call is made.
-      await scheduler.cancelForProfile(0);
+      // Every task is excluded by the today-only filter: one overdue
+      // program task (isOverdue: true) and one scheduledChazara review
+      // task — taskCount collapses to 0 inside reminderSyncEffect.
+      final container = _makeContainer(
+        gateway,
+        tasks: [
+          _makeTask(
+            priority: DailyTaskPriority.overdueProgram,
+            isOverdue: true,
+            curriculumId: CurriculumId.bavli,
+          ),
+          _makeTask(
+            priority: DailyTaskPriority.scheduledChazara,
+            isOverdue: false,
+            curriculumId: CurriculumId.mishnayos,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
 
-      // scheduleReminder must NOT have been called (no 0-task notification).
+      await container.read(reminderSyncEffectProvider.future);
+
+      // scheduleReminderForProfile must NOT have been called (no 0-task
+      // notification).
       expect(
-        notifService.scheduledBatches,
+        gateway.scheduledBatches,
         isEmpty,
         reason:
             'O8-b: zero task count must cancel the reminder, not schedule '
-            '"0 tasks today". D2 bug: current code fires the 0-count body.',
+            '"0 tasks today". D2 bug: current code would fire the '
+            '0-count body if the guard were removed.',
       );
       expect(
-        notifService.cancelBatchCount,
+        gateway.cancelBatchCount,
         greaterThanOrEqualTo(1),
         reason:
             'O8-b: cancelling must call cancelBatchRemindersForProfile at '
             'least once.',
+      );
+      expect(
+        gateway.cancelDailyCount,
+        greaterThanOrEqualTo(1),
+        reason:
+            'O8-b: cancelling must call cancelDailyReminderForProfile at '
+            'least once (NotificationScheduler.cancelForProfile drives '
+            'both).',
       );
     });
 
@@ -343,152 +426,99 @@ void main() {
 
     // ── O8-d: body count is today-only (D1 fix — Wave 4) ───────────────────
     //
-    // D1 fix (§8 of overdue-refactor-architecture.md):
-    //   The body count must be TODAY's units only — tasks where isOverdue is
-    //   false AND priority is not overdueChazara / scheduledChazara.
-    //
-    // This test constructs a synthetic task list that mirrors what
-    // allDailyTasksProvider returns (overdue + today + review tasks), applies
-    // the same filter that notification_providers.dart now applies (Wave 4
-    // D1 fix), and asserts the body reflects only the today-only count.
-    //
-    // Wave 2 projection is already shipped — the projection provides the mix
-    // of overdueProgram, todayProgram, overdueChazara, and scheduledChazara
-    // tasks.  This test validates the filter here at the notification layer.
-    test(
-      'O8-d: body count is today-only (excludes overdue and review tasks)',
-      () async {
-        // Build a synthetic mix of tasks:
-        //   • 1 overdueProgram task  (isOverdue: true,  bavli)      — EXCLUDED
-        //   • 2 todayProgram tasks   (isOverdue: false, bavli × 2)  — INCLUDED
-        //   • 1 overdueChazara task  (isOverdue: false, bavli)      — EXCLUDED
-        //   • 1 scheduledChazara task (isOverdue: false, mishnayos) — EXCLUDED
-        //   • 1 newLearning task     (isOverdue: false, tanach)     — INCLUDED
-        //
-        // Today-only count = todayProgram (2) + newLearning (1) = 3 tasks.
-        // Unique curricula in today-only = bavli + tanach = 2.
+    // AUD-t-cross-09: drives the REAL reminderSyncEffect provider with a
+    // synthetic mix of tasks (overdue + today + review) so the D1 today-only
+    // filter actually inside notification_providers.dart is what's under
+    // test, not a hand-retyped copy of it. If that filter stopped excluding
+    // scheduledChazara (or started excluding a valid today task), the body
+    // assertion below would fail.
+    test('O8-d: reminderSyncEffect body count is today-only (excludes overdue '
+        'and review tasks)', () async {
+      SharedPreferences.setMockInitialValues({});
+      final gateway = _RecordingNotificationGateway();
 
-        DailyTask makeTask({
-          required DailyTaskPriority priority,
-          required bool isOverdue,
-          required CurriculumId curriculumId,
-          String? refSuffix,
-        }) {
-          final suffix = refSuffix ?? priority.name;
-          return DailyTask(
-            curriculumId: curriculumId,
-            contentItemSefariaRef: 'ref-$suffix-${curriculumId.name}',
-            stageOrder: 1,
-            stageDefinitionId: 1,
-            priority: priority,
-            isOverdue: isOverdue,
-            reason: 'test',
-            stageName: 'Test Stage',
-            trackId: 1,
-            trackLabel: 'Test Track',
-          );
-        }
+      // Build a synthetic mix of tasks:
+      //   • 1 overdueProgram task  (isOverdue: true,  bavli)      — EXCLUDED
+      //   • 2 todayProgram tasks   (isOverdue: false, bavli × 2)  — INCLUDED
+      //   • 1 overdueChazara task  (isOverdue: true,  bavli)      — EXCLUDED
+      //   • 1 scheduledChazara task (isOverdue: false, mishnayos) — EXCLUDED
+      //   • 1 newLearning task     (isOverdue: false, tanach)     — INCLUDED
+      //
+      // Today-only count = todayProgram (2) + newLearning (1) = 3 tasks,
+      // across 2 unique curricula (bavli + tanach).
+      final allTasks = <DailyTask>[
+        _makeTask(
+          priority: DailyTaskPriority.overdueProgram,
+          isOverdue: true,
+          curriculumId: CurriculumId.bavli,
+        ),
+        _makeTask(
+          priority: DailyTaskPriority.todayProgram,
+          isOverdue: false,
+          curriculumId: CurriculumId.bavli,
+          refSuffix: 'todayProgram-1',
+        ),
+        _makeTask(
+          priority: DailyTaskPriority.todayProgram,
+          isOverdue: false,
+          curriculumId: CurriculumId.bavli,
+          refSuffix: 'todayProgram-2',
+        ),
+        // overdueChazara tasks have isOverdue: true in production
+        // (scheduler_engine.dart:238) — mirrored here (F-M4 fix).
+        _makeTask(
+          priority: DailyTaskPriority.overdueChazara,
+          isOverdue: true,
+          curriculumId: CurriculumId.bavli,
+        ),
+        _makeTask(
+          priority: DailyTaskPriority.scheduledChazara,
+          isOverdue: false,
+          curriculumId: CurriculumId.mishnayos,
+        ),
+        _makeTask(
+          priority: DailyTaskPriority.newLearning,
+          isOverdue: false,
+          curriculumId: CurriculumId.tanach,
+        ),
+      ];
 
-        final allTasks = <DailyTask>[
-          // Excluded: overdue program task.
-          makeTask(
-            priority: DailyTaskPriority.overdueProgram,
-            isOverdue: true,
-            curriculumId: CurriculumId.bavli,
-          ),
-          // Included: two today-program tasks, both bavli.
-          makeTask(
-            priority: DailyTaskPriority.todayProgram,
-            isOverdue: false,
-            curriculumId: CurriculumId.bavli,
-            refSuffix: 'todayProgram-1',
-          ),
-          makeTask(
-            priority: DailyTaskPriority.todayProgram,
-            isOverdue: false,
-            curriculumId: CurriculumId.bavli,
-            refSuffix: 'todayProgram-2',
-          ),
-          // Excluded: review tasks (overdueChazara + scheduledChazara).
-          // overdueChazara tasks have isOverdue: true in production
-          // (scheduler_engine.dart:238) — mirrored here (F-M4 fix).
-          makeTask(
-            priority: DailyTaskPriority.overdueChazara,
-            isOverdue: true,
-            curriculumId: CurriculumId.bavli,
-          ),
-          makeTask(
-            priority: DailyTaskPriority.scheduledChazara,
-            isOverdue: false,
-            curriculumId: CurriculumId.mishnayos,
-          ),
-          // Included: new-learning task, different curriculum.
-          makeTask(
-            priority: DailyTaskPriority.newLearning,
-            isOverdue: false,
-            curriculumId: CurriculumId.tanach,
-          ),
-        ];
+      final container = _makeContainer(gateway, tasks: allTasks);
+      addTearDown(container.dispose);
 
-        // Apply the same filter as notification_providers.dart (D1 fix, F-M4).
-        // overdueChazara is already excluded by !t.isOverdue (isOverdue: true
-        // in production); only scheduledChazara needs an explicit check.
-        final todayTasks = allTasks
-            .where(
-              (t) =>
-                  !t.isOverdue &&
-                  t.priority != DailyTaskPriority.scheduledChazara,
-            )
-            .toList();
+      await container.read(reminderSyncEffectProvider.future);
 
-        final taskCount = todayTasks.length;
-        final curriculumCount = todayTasks
-            .map((t) => t.curriculumId)
-            .toSet()
-            .length;
+      expect(
+        gateway.scheduledBatches,
+        hasLength(1),
+        reason:
+            'O8-d: a non-zero today-only count must schedule exactly one '
+            'batch.',
+      );
 
-        // today-only: 2 todayProgram (bavli) + 1 newLearning (tanach) = 3 tasks,
-        // 2 unique curricula (bavli + tanach).
-        expect(
-          taskCount,
-          3,
-          reason:
-              'O8-d: today-only count must be 3 (2 todayProgram + 1 newLearning); '
-              'overdue (1) and review (2) tasks must be excluded.',
-        );
-        expect(
-          curriculumCount,
-          2,
-          reason:
-              'O8-d: curriculum count must be 2 (bavli + tanach); '
-              'mishnayos only appears in the review row and must be excluded.',
-        );
+      // Compare against the REAL localized template (not a hand-rolled
+      // copy) so the assertion tracks production wording.
+      final expectedBody = lookupAppLocalizations(
+        const Locale('en'),
+      ).notificationReminderBody(3, 2);
+      expect(
+        expectedBody,
+        'You have 3 tasks across 2 curricula today',
+        reason:
+            'sanity check: the localized template for (3, 2) must read as '
+            'expected — guards against this test silently drifting.',
+      );
 
-        // The body built from the filtered count must match the template.
-        final body = _buildBody(taskCount, curriculumCount);
-        expect(
-          body,
-          'You have 3 tasks across 2 curricula today',
-          reason:
-              'O8-d: body must encode the today-only count, not the total '
-              'allDailyTasksProvider length (which would be 6).',
-        );
-
-        // Verify that scheduleReminder called with this body records it correctly.
-        await scheduler.scheduleReminder(
-          time: const TimeOfDay(hour: 19, minute: 0),
-          title: 'Learning Reminder',
-          body: body,
-          location: null,
-          inIsrael: false,
-        );
-        expect(
-          notifService.scheduledBatches.single.body,
-          body,
-          reason:
-              'O8-d: the scheduled batch body must reflect today-only count.',
-        );
-      },
-    );
+      expect(
+        gateway.scheduledBatches.single.body,
+        expectedBody,
+        reason:
+            'O8-d: the scheduled body must encode the today-only count '
+            '(3 tasks, 2 curricula) produced by reminderSyncEffect\'s own '
+            'D1 filter, not the raw allDailyTasksProvider length (6 tasks, '
+            '3 curricula) — overdue (1) and review (2) rows must be '
+            'excluded.',
+      );
+    });
   });
 }
