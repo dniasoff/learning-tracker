@@ -286,7 +286,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 49 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 50 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -785,9 +785,16 @@ audit: lint-rules-test ## Run all 49 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/gen_feature_graph_check.$$$$.log; \
 	fi; \
+	echo "50/50 — AG-8 doc-lint: no leaked tool-call framing artifacts (</content>, </invoke>) in committed docs/ (AUD-docs-36)"; \
+	if grep -rnE "^</(content|invoke)>$$" ../docs/ | grep -q .; then \
+	  echo "  A stray XML-ish tool-call closing tag was committed verbatim — an unstripped"; \
+	  echo "  Write/Edit tool-call content boundary leaked into a tracked doc; delete the line(s):"; \
+	  grep -rnE "^</(content|invoke)>$$" ../docs/; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 49 greps clean ==="; \
+	  echo "=== audit PASSED — all 50 greps clean ==="; \
 	fi
