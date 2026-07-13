@@ -7907,13 +7907,18 @@
   {
    "id": "AUD-t-auth-03",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "auth_exceptions_test.dart locks in inconsistent PII redaction between sibling exception types",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "974a235f46d1739888db1f6f4d262945be2763ce"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-auth-03 AC1 OK: ctor super('Email already in use'), no $email; redactedEmail getter='***@domain'; toString has no email; tests green",
+    "AUD-t-auth-03 AC2 OK: group asserts contains(className)+isNot(contains(email)), same log-safety as DuplicateEmailException; 16/16 green"
+   ],
+   "notes": "Re-verified: raw email still in message/toString; test still asserted the opposite of sibling group. Not already fixed. Added email/redactedEmail split mirroring DuplicateEmailException; kept .email for callers. Updated test group + added redactedEmail test. ACs verified in diff."
   },
   {
    "id": "AUD-dashboard-13",
