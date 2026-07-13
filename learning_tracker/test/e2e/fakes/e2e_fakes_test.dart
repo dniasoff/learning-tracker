@@ -95,6 +95,54 @@ void main() {
       expect(result, equals([zeraimPeah]));
     });
 
+    test('filters by level3 — narrows below level1/level2', () async {
+      final chapter1 = _item(
+        level1: 'Seder Zeraim',
+        level2: 'Berachot',
+        level3: 'Perek 1',
+        sefariaRef: 'Mishnah_Berachot.1.1',
+      );
+      final chapter2 = _item(
+        level1: 'Seder Zeraim',
+        level2: 'Berachot',
+        level3: 'Perek 2',
+        sefariaRef: 'Mishnah_Berachot.2.1',
+      );
+      final level3Repo = FakeContentRepository([chapter1, chapter2]);
+
+      final result = await level3Repo.filterByLevel(
+        curriculumId: CurriculumId.mishnayos,
+        level3: 'Perek 1',
+      );
+
+      expect(result, equals([chapter1]));
+    });
+
+    test('filters by level4 — narrows below level1/level2/level3', () async {
+      final mishna1 = _item(
+        level1: 'Seder Zeraim',
+        level2: 'Berachot',
+        level3: 'Perek 1',
+        level4: 'Mishna 1',
+        sefariaRef: 'Mishnah_Berachot.1.1',
+      );
+      final mishna2 = _item(
+        level1: 'Seder Zeraim',
+        level2: 'Berachot',
+        level3: 'Perek 1',
+        level4: 'Mishna 2',
+        sefariaRef: 'Mishnah_Berachot.1.2',
+      );
+      final level4Repo = FakeContentRepository([mishna1, mishna2]);
+
+      final result = await level4Repo.filterByLevel(
+        curriculumId: CurriculumId.mishnayos,
+        level4: 'Mishna 2',
+      );
+
+      expect(result, equals([mishna2]));
+    });
+
     test('a level value that matches nothing returns an empty list (proves the '
         'filter is actually applied, not a pass-through)', () async {
       final result = await repo.filterByLevel(
