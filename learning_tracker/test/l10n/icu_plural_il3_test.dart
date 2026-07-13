@@ -11,26 +11,9 @@
 // The test deliberately reads the ARB JSON directly so it catches the fix
 // at the source (and fails before regeneration if the ARB is wrong), rather
 // than testing the generated Dart which is committed alongside the ARB.
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
-Map<String, dynamic> _loadArb(String locale) {
-  // Tests run from the package root (learning_tracker/).
-  final candidates = [
-    File('lib/l10n/app_$locale.arb'),
-    File('../lib/l10n/app_$locale.arb'),
-  ];
-  final file = candidates.firstWhere(
-    (f) => f.existsSync(),
-    orElse: () => throw TestFailure(
-      'Could not locate lib/l10n/app_$locale.arb. '
-      'Run tests from the learning_tracker project root.',
-    ),
-  );
-  return json.decode(file.readAsStringSync()) as Map<String, dynamic>;
-}
+import '../helpers/arb_loader.dart';
 
 bool _hasIcuPlural(String value) {
   // A minimal check: value contains "plural," inside ICU braces.
@@ -42,8 +25,8 @@ void main() {
   late final Map<String, dynamic> heArb;
 
   setUpAll(() {
-    enArb = _loadArb('en');
-    heArb = _loadArb('he');
+    enArb = loadArb('en');
+    heArb = loadArb('he');
   });
 
   // ── IL-3 keys that MUST use ICU plural ────────────────────────────────────

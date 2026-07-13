@@ -12,31 +12,17 @@
 // copy and guard against a regression back to learner wording. The separate
 // learner picker (profilePickerSubtitle) is asserted unchanged so the fix did
 // not bleed across surfaces.
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
-Map<String, dynamic> _loadArb(String locale) {
-  final candidates = [
-    File('lib/l10n/app_$locale.arb'),
-    File('../lib/l10n/app_$locale.arb'),
-  ];
-  final file = candidates.firstWhere(
-    (f) => f.existsSync(),
-    orElse: () =>
-        throw TestFailure('Could not locate lib/l10n/app_$locale.arb.'),
-  );
-  return json.decode(file.readAsStringSync()) as Map<String, dynamic>;
-}
+import '../helpers/arb_loader.dart';
 
 void main() {
   late final Map<String, dynamic> enArb;
   late final Map<String, dynamic> heArb;
 
   setUpAll(() {
-    enArb = _loadArb('en');
-    heArb = _loadArb('he');
+    enArb = loadArb('en');
+    heArb = loadArb('he');
   });
 
   group('Account picker subtitle describes accounts, not learners', () {

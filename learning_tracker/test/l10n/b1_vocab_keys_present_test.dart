@@ -9,10 +9,9 @@
 /// wrong value. This test pins the ARB-side contract.
 library;
 
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
+
+import '../helpers/arb_loader.dart';
 
 /// Vocabulary keys added by Task #13 (Vocabulary sweep). The list is the
 /// authoritative source — adding a new B1-vocab key requires updating
@@ -67,24 +66,14 @@ const _b1VocabKeys = <String>[
   'recentActivityLiveOnlyDisclaimer',
 ];
 
-Map<String, dynamic> _loadArb(String locale) {
-  final file = File('lib/l10n/app_$locale.arb');
-  expect(
-    file.existsSync(),
-    isTrue,
-    reason: 'ARB file for locale "$locale" must exist at ${file.path}',
-  );
-  return json.decode(file.readAsStringSync()) as Map<String, dynamic>;
-}
-
 void main() {
   group('B1-tier vocabulary keys (Task #13) — present in both ARBs', () {
     late final Map<String, dynamic> enArb;
     late final Map<String, dynamic> heArb;
 
     setUpAll(() {
-      enArb = _loadArb('en');
-      heArb = _loadArb('he');
+      enArb = loadArb('en');
+      heArb = loadArb('he');
     });
 
     for (final key in _b1VocabKeys) {
@@ -130,8 +119,8 @@ void main() {
     late final Map<String, dynamic> heArb;
 
     setUpAll(() {
-      enArb = _loadArb('en');
-      heArb = _loadArb('he');
+      enArb = loadArb('en');
+      heArb = loadArb('he');
     });
 
     for (final key in _b1VocabKeys) {
