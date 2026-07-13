@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 
 const Color _kNavy = AppTheme.brandBlueDeep;
-const Color _kFieldFill = Color(0xFFF2F4F8);
-const Color _kMutedLabel = Color(0xFF6B7280);
+const Color _kFieldFill = AppColors.gamifFieldFillLight;
+const Color _kMutedLabel = AppColors.gamifMutedLabelGrey;
 
 /// Two-segment toggle for choosing between per-track and total-points reward
 /// ladders.

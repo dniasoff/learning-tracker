@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
@@ -108,6 +109,58 @@ Future<void> _seedGlobalMilestone(
 
 AchievementRowVm _rowForThreshold(AchievementsOverview o, int threshold) =>
     o.rows.firstWhere((r) => r.milestone.thresholdPoints == threshold);
+
+// ── SM-2 purity fake (AUD-gamification-03) ──────────────────────────────────
+
+/// [SyncWriteFacade] that counts [pushGamificationSettingsSnapshot] calls
+/// instead of performing any real push — used to prove
+/// [achievementsOverviewProvider]'s build never triggers a sync push as a
+/// side effect of being watched/rebuilt.
+class _CountingSyncFacade implements SyncWriteFacade {
+  int pushCount = 0;
+
+  @override
+  Future<void> pushGamificationSettingsSnapshot() async {
+    pushCount++;
+  }
+
+  @override
+  Future<void> pushUiPreferencesSnapshot() async {}
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {}
+  @override
+  Future<void> pushSettings(Map<String, dynamic> settings) async {}
+  @override
+  Future<void> pushGoal(Map<String, dynamic> goal) async {}
+  @override
+  Future<void> deleteGoal(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {}
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> items,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {}
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushStageDefinitions({
+    required int trackId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> stages,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStudyDayConfig(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
+}
 
 void main() {
   setUp(() {
@@ -235,5 +288,64 @@ void main() {
       expect(overview.unlockedCount, 2);
       expect(overview.rows.where((r) => r.isNextUp), isEmpty);
     });
+  });
+
+  // ── SM-2: build is pure (AUD-gamification-03) ───────────────────────────────
+
+  group('SM-2: build performs no writes/sync-pushes (AUD-gamification-03)', () {
+    test(
+      'watching achievementsOverviewProvider twice (rebuild via invalidate) '
+      'neither strips a legacy stock-template milestone from the DB nor '
+      'pushes a sync snapshot -- that is now GamificationMaintenanceController\'s '
+      'job, invoked explicitly, never a side effect of this read provider',
+      () async {
+        final counting = _CountingSyncFacade();
+        final db = inMemoryDb();
+        final c = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWithValue(db),
+            activeProfileIdProvider.overrideWithValue(1),
+            syncWriteFacadeProvider.overrideWithValue(counting),
+          ],
+        );
+        addTearDown(c.dispose);
+        await seedProfileWithIds(db, accountId: 1, profileId: 1);
+
+        // A legacy stock-template-ladder entry (exact title + threshold from
+        // RewardMilestoneService.defaultMilestoneLadder) -- this is exactly
+        // what stripStockTemplateMilestones() removes.
+        await _seedGlobalMilestone(
+          c,
+          id: 'legacy-bronze',
+          title: 'Bronze Star',
+          thresholdPoints: 500,
+        );
+
+        // First watch.
+        await c.read(achievementsOverviewProvider.future);
+        // Force a rebuild (second watch) -- a mutating build would strip/push
+        // again here, growing the counters.
+        c.invalidate(achievementsOverviewProvider);
+        await c.read(achievementsOverviewProvider.future);
+
+        final svc = RewardMilestoneService(db, profileId: 1);
+        final remaining = await svc.getAllMilestones();
+        expect(
+          remaining.any((m) => m.title == 'Bronze Star'),
+          isTrue,
+          reason:
+              'the legacy stock-template milestone must still be present -- '
+              'a pure achievementsOverviewProvider build must never call '
+              'stripStockTemplateMilestones() as a side effect of being watched',
+        );
+        expect(
+          counting.pushCount,
+          0,
+          reason:
+              'a pure achievementsOverviewProvider build must never push a '
+              'sync snapshot as a side effect of being watched/rebuilt',
+        );
+      },
+    );
   });
 }

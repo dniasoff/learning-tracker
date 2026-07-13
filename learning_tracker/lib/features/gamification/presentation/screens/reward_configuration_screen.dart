@@ -20,7 +20,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 const Color _kNavy = AppTheme.brandBlueDeep;
 const Color _kOrange = AppTheme.brandWarning;
 const Color _kPageBg = AppColors.surfaceF4b;
-const Color _kPreviewBg = Color(0xFFEEF3FA);
+const Color _kPreviewBg = AppColors.gamifSoftBlueCardBg;
 const Color _kMutedLabel = AppTheme.brandInkMuted;
 
 @RoutePage()
@@ -358,7 +358,7 @@ class _RewardConfigurationScreenState
                       borderRadius: BorderRadius.circular(22),
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x1200218D),
+                          color: AppColors.gamifCardShadowNavySoft,
                           blurRadius: 20,
                           offset: Offset(0, 8),
                         ),

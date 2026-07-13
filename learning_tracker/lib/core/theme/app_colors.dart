@@ -426,4 +426,108 @@ abstract final class AppColors {
 
   /// Device-level OS toggle inactive track colour.
   static const Color notifDeviceToggleInactiveTrack = Color(0xFFE0E4ED);
+
+  // ---------------------------------------------------------------------------
+  // Gamification feature (AUD-gamification-21) -- achievement tier palette
+  // (TierStyle.forTier's bronze/silver/gold/platinum/premium/diamond/elite/
+  // custom tiers), reward/points-config screens, the unlock-celebration party
+  // dialog, and shared field-fill/label tones. Centralised here so no
+  // lib/features/gamification/**/*.dart file embeds a raw Color(0x...) literal.
+  // ---------------------------------------------------------------------------
+
+  static const Color gamifChildRewardsCardBlueTop = Color(0xFF1E52D4);
+  static const Color gamifSoftBlueCardBg = Color(0xFFEEF3FA);
+  static const Color gamifInkCharcoal = Color(0xFF37474F);
+  static const Color gamifFieldFillLight = Color(0xFFF2F4F8);
+  static const Color gamifMutedLabelGrey = Color(0xFF6B7280);
+  static const Color gamifTierLockedIconGrey = Color(0xFFB0BEC5);
+  static const Color gamifLegendGradientEnd = Color(0xFF4A148C);
+  static const Color gamifInkSlateDark = Color(0xFF455A64);
+  static const Color gamifPointConfigScreenBg = Color(0xFFF8F9FB);
+  static const Color gamifPointConfigOrangeAccent = Color(0xFFF5A623);
+  static const Color gamifPointConfigActiveBadgeBg = Color(0xFFFFE4D1);
+  static const Color gamifPointConfigActiveBadgeInk = Color(0xFF5C4033);
+  static const Color gamifPointConfigHebrewSubtitleBlue = Color(0xFF5B9BD5);
+  static const Color gamifPointConfigHeroBlueTop = Color(0xFF002D9C);
+  static const Color gamifPointConfigHeroBlueBottom = Color(0xFF001F6E);
+  static const Color gamifPointConfigChipUnselectedBg = Color(0xFFE8EBF0);
+  static const Color gamifCardShadowNavySoft = Color(0x1200218D);
+  static const Color gamifLegendGradientStart = Color(0xFF1A237E);
+  static const Color gamifLegendCardShadow = Color(0x441A237E);
+  static const Color gamifPartyColorCoral = Color(0xFFFF6B6B);
+  static const Color gamifPartyColorYellow = Color(0xFFFFD93D);
+  static const Color gamifPartyColorPink = Color(0xFFFF9FF3);
+  static const Color gamifPartyColorOrange = Color(0xFFFFA502);
+  static const Color gamifPartyColorPurple = Color(0xFF5F27CD);
+  static const Color gamifUnlockCardGradientCream = Color(0xFFFFF4E0);
+  static const Color gamifUnlockCardGradientPink = Color(0xFFFFE0F0);
+  static const Color gamifUnlockCardShadow = Color(0x4D0038A8);
+  static const Color gamifLockedShellInkDeepest = Color(0xFF263238);
+  static const Color gamifProTipCardBg = Color(0xFFFFEFD5);
+  static const Color gamifProTipBorder = Color(0xFFFFCC80);
+  static const Color gamifProTipShadow = Color(0x14000000);
+  static const Color gamifProTipTitleText = Color(0xFF212121);
+  static const Color gamifTrackFilterChipUnselected = Color(0xFFE0E4E8);
+  static const Color gamifTrackFilterChipShadow = Color(0x220038A8);
+  static const Color gamifTierBronzeCardBg = Color(0xFFF5E6D3);
+  static const Color gamifTierBronzeBorder = Color(0xFFE8D5C4);
+  static const Color gamifTierBronzeIconAccent = Color(0xFF8D6E63);
+  static const Color gamifTierBronzeDeepAccent = Color(0xFF6D4C41);
+  static const Color gamifTierBronzeTitle = Color(0xFF4E342E);
+  static const Color gamifTierBronzeSoftAccent = Color(0xFFFFE0B2);
+  static const Color gamifTierBronzeTagFg = Color(0xFFBF360C);
+  static const Color gamifTierBronzeLockIcon = Color(0xFF5D4037);
+  static const Color gamifTierSilverBorder = Color(0xFFECEFF1);
+  static const Color gamifTierSilverBarBg = Color(0xFFE8ECEF);
+  static const Color gamifTierSilverBarFill = Color(0xFF546E7A);
+  static const Color gamifTierSilverTagBg = Color(0xFFCFD8DC);
+  static const Color gamifTierSilverLockIcon = Color(0xFF607D8B);
+  static const Color gamifTierGoldCardBg = Color(0xFFFFF9E6);
+  static const Color gamifTierGoldBorder = Color(0xFFFFECB3);
+  static const Color gamifTierGoldIconBg = Color(0xFFFFC400);
+  static const Color gamifTierGoldTitle = Color(0xFFF57F17);
+  static const Color gamifTierGoldMutedIcon = Color(0xFFFFB300);
+  static const Color gamifTierGoldBarBg = Color(0xFFFFE082);
+  static const Color gamifTierGoldBarFill = Color(0xFFFF8F00);
+  static const Color gamifTierGoldTagBg = Color(0xFFFFF3C4);
+  static const Color gamifTierGoldLockIcon = Color(0xFFF9A825);
+  static const Color gamifTierPlatinumCardBg = Color(0xFFFAFCFF);
+  static const Color gamifTierPlatinumSoftAccent = Color(0xFFBBDEFB);
+  static const Color gamifTierPlatinumIconBg = Color(0xFFE3F2FD);
+  static const Color gamifTierPlatinumIconFg = Color(0xFF42A5F5);
+  static const Color gamifTierPlatinumMidAccent = Color(0xFF64B5F6);
+  static const Color gamifTierPlatinumTitle = Color(0xFF1565C0);
+  static const Color gamifTierPlatinumBarFill = Color(0xFF2196F3);
+  static const Color gamifTierPlatinumTagBg = Color(0xFFE1F5FE);
+  static const Color gamifTierPlatinumTagFg = Color(0xFF0277BD);
+  static const Color gamifTierPlatinumLockIcon = Color(0xFF5C6BC0);
+  static const Color gamifTierPremiumCardBg = Color(0xFFF3E5F5);
+  static const Color gamifTierPremiumSoftAccent = Color(0xFFE1BEE7);
+  static const Color gamifTierPremiumIconBg = Color(0xFFEDE7F6);
+  static const Color gamifTierPremiumIconFg = Color(0xFF7E57C2);
+  static const Color gamifTierPremiumIconBorder = Color(0xFFB39DDB);
+  static const Color gamifTierPremiumTitle = Color(0xFF4527A0);
+  static const Color gamifTierPremiumMutedIcon = Color(0xFF9575CD);
+  static const Color gamifTierPremiumBarBg = Color(0xFFCE93D8);
+  static const Color gamifTierPremiumBarFill = Color(0xFF7B1FA2);
+  static const Color gamifTierPremiumLockIcon = Color(0xFF6A1B9A);
+  static const Color gamifTierDiamondCardBg = Color(0xFFE0F7FF);
+  static const Color gamifTierDiamondSoftAccent = Color(0xFF80DEEA);
+  static const Color gamifTierDiamondIconBg = Color(0xFFE0F7FA);
+  static const Color gamifTierDiamondIconFg = Color(0xFF00BCD4);
+  static const Color gamifTierDiamondIconBorder = Color(0xFF4DD0E1);
+  static const Color gamifTierDiamondTitle = Color(0xFF006064);
+  static const Color gamifTierDiamondAccent = Color(0xFF00ACC1);
+  static const Color gamifTierDiamondTagBg = Color(0xFFB2EBF2);
+  static const Color gamifTierDiamondTagFg = Color(0xFF00838F);
+  static const Color gamifTierEliteCardBg = Color(0xFFFCE4EC);
+  static const Color gamifTierEliteSoftAccent = Color(0xFFF8BBD0);
+  static const Color gamifTierEliteIconFg = Color(0xFFEC407A);
+  static const Color gamifTierEliteIconBorder = Color(0xFFF48FB1);
+  static const Color gamifTierEliteDeepAccent = Color(0xFFAD1457);
+  static const Color gamifTierEliteMutedIcon = Color(0xFFF06292);
+  static const Color gamifTierEliteBarFill = Color(0xFFE91E63);
+  static const Color gamifTierEliteLockIcon = Color(0xFFC2185B);
+  static const Color gamifTierCustomBorder = Color(0xFFE0E0E0);
+  static const Color gamifTierCustomIconBg = Color(0xFFF5F5F5);
 }

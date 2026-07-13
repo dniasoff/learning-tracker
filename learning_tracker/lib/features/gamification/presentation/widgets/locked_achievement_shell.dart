@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Blur + lock overlay applied around a milestone card when the learner
@@ -55,8 +56,8 @@ class LockedAchievementShell extends StatelessWidget {
                         Icons.lock_rounded,
                         size: 32,
                         color: lightBlur
-                            ? const Color(0xFF455A64)
-                            : const Color(0xFF37474F),
+                            ? AppColors.gamifInkSlateDark
+                            : AppColors.gamifInkCharcoal,
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -64,7 +65,7 @@ class LockedAchievementShell extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF263238),
+                          color: AppColors.gamifLockedShellInkDeepest,
                           height: 1.25,
                         ),
                       ),

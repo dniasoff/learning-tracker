@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -26,7 +27,7 @@ class ProgressSummaryCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x330038A8),
+            color: AppColors.navItemSelectedShadow,
             blurRadius: 16,
             offset: Offset(0, 8),
           ),
@@ -46,7 +47,7 @@ class ProgressSummaryCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: const BoxDecoration(
-                color: Color(0xFFE53935),
+                color: AppColors.statusErrorCardText,
                 shape: BoxShape.circle,
               ),
               child: const Icon(

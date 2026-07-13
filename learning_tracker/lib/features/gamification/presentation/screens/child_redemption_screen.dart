@@ -240,14 +240,16 @@ class _BalanceCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF1E52D4), // kChildRewardsCardBlueTop
+            AppColors.gamifChildRewardsCardBlueTop, // kChildRewardsCardBlueTop
             AppColors.blueLight,
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E52D4).withValues(alpha: 0.22),
+            color: AppColors.gamifChildRewardsCardBlueTop.withValues(
+              alpha: 0.22,
+            ),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
@@ -330,7 +332,7 @@ class _RewardCard extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: const BoxDecoration(
-                color: Color(0xFFEEF3FA),
+                color: AppColors.gamifSoftBlueCardBg,
                 shape: BoxShape.circle,
               ),
               child: Icon(

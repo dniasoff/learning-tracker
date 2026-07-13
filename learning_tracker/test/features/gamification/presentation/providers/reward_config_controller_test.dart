@@ -27,9 +27,15 @@
 ///      set state.error (and clear state.loading) when the underlying call
 ///      throws anything other than TutorWriteException; a TutorWriteException
 ///      is rethrown and does NOT set state.error.
+///  24. SM-4 (AUD-gamification-01) — disposing the container while
+///      saveReward()'s sync push is in flight must not throw an uncaught
+///      disposed-ref exception; the notifier checks `ref.mounted` before
+///      touching `state`/`ref` again after the await.
 
 @Tags(['gamification', 'reward_config_controller'])
 library;
+
+import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -120,6 +126,57 @@ class _ThrowingSyncFacade implements SyncWriteFacade {
   Future<void> pushGamificationSettingsSnapshot() async {
     throw error;
   }
+
+  @override
+  Future<void> pushUiPreferencesSnapshot() async {}
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {}
+  @override
+  Future<void> pushSettings(Map<String, dynamic> settings) async {}
+  @override
+  Future<void> pushGoal(Map<String, dynamic> goal) async {}
+  @override
+  Future<void> deleteGoal(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {}
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> items,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {}
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushStageDefinitions({
+    required int trackId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> stages,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStudyDayConfig(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
+}
+
+// ── SM-4 disposal-mid-await fake (AUD-gamification-01) ──────────────────────
+
+/// [SyncWriteFacade] whose [pushGamificationSettingsSnapshot] blocks on
+/// [gate] until the test completes it -- lets a test dispose the
+/// [ProviderContainer] while a mutation method's `await` is in flight, then
+/// resume it and observe whether the notifier throws touching a disposed
+/// `ref`/`state`.
+class _GatedSyncFacade implements SyncWriteFacade {
+  final Completer<void> gate = Completer<void>();
+
+  @override
+  Future<void> pushGamificationSettingsSnapshot() => gate.future;
 
   @override
   Future<void> pushUiPreferencesSnapshot() async {}
@@ -1328,5 +1385,60 @@ void main() {
         expect(_state(c).loading, isFalse);
       },
     );
+  });
+
+  // ── 24. SM-4 — disposal mid-await (AUD-gamification-01) ────────────────────
+
+  group('SM-4: disposal mid-await does not throw on the disposed ref '
+      '(AUD-gamification-01)', () {
+    test('disposing the container while saveReward()\'s sync push is in '
+        'flight completes the returned Future without an uncaught '
+        'disposed-ref exception', () async {
+      final gated = _GatedSyncFacade();
+      final c = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(inMemoryDb()),
+          activeProfileIdProvider.overrideWithValue(1),
+          syncWriteFacadeProvider.overrideWithValue(gated),
+          achievementsOverviewProvider.overrideWith(
+            (ref) async => const AchievementsOverview(
+              rows: [],
+              unlockedCount: 0,
+              totalMilestones: 0,
+              trackFilterOptions: [],
+            ),
+          ),
+        ],
+      );
+      await seedProfileWithIds(
+        c.read(userDatabaseProvider),
+        accountId: 1,
+        profileId: 1,
+      );
+
+      _notifier(c).setName('Gold Star');
+      _notifier(c).setPointsText('500');
+
+      final future = _notifier(c).saveReward();
+
+      // Let the milestone-lookup + upsert (in-memory DB, sub-millisecond)
+      // run to completion so execution parks on `await gated.future`
+      // inside _persistAndSync -- this is the await the finding says is
+      // unguarded.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Screen/notifier torn down (e.g. a fast back-gesture) while the
+      // sync push is still pending.
+      c.dispose();
+
+      // Resume the pending push; _persistAndSync's `ref.invalidate(...)`
+      // calls and the outer switch's `state = ...` now run against a
+      // disposed container. Before the SM-4 fix this threw a
+      // "used after dispose" StateError that surfaced on `future`,
+      // failing this test instead of completing normally.
+      gated.gate.complete();
+
+      await expectLater(future, completes);
+    });
   });
 }

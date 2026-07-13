@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Amber tip card shown below the achievements list with a pro-tip about
@@ -12,12 +13,12 @@ class ProTipCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFEFD5),
+        color: AppColors.gamifProTipCardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFCC80)),
+        border: Border.all(color: AppColors.gamifProTipBorder),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x14000000),
+            color: AppColors.gamifProTipShadow,
             blurRadius: 8,
             offset: Offset(0, 2),
           ),
@@ -33,7 +34,7 @@ class ProTipCard extends StatelessWidget {
               child: Icon(
                 Icons.lightbulb_rounded,
                 size: 26,
-                color: Color(0xFF212121),
+                color: AppColors.gamifProTipTitleText,
               ),
             ),
             const SizedBox(width: 12),
@@ -41,7 +42,7 @@ class ProTipCard extends StatelessWidget {
               child: Text.rich(
                 TextSpan(
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF4E342E),
+                    color: AppColors.gamifTierBronzeTitle,
                     height: 1.4,
                   ),
                   children: [
@@ -49,7 +50,7 @@ class ProTipCard extends StatelessWidget {
                       text: '${l10n.achievementsProTipTitle} ',
                       style: const TextStyle(
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFFBF360C),
+                        color: AppColors.gamifTierBronzeTagFg,
                       ),
                     ),
                     TextSpan(text: l10n.achievementsProTipBody),

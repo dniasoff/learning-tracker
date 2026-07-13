@@ -110,9 +110,15 @@ class AchievementTierCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Positioned(
+                    // AUD-gamification-02: PositionedDirectional(end:) so the
+                    // badge stays clear of the topStart-aligned title in
+                    // both LTR and RTL -- a plain Positioned(right:) pins
+                    // the badge to the physical right in RTL too, where the
+                    // title (topStart flips to physically right-aligned)
+                    // also renders, overlapping it.
+                    PositionedDirectional(
                       top: 0,
-                      right: 0,
+                      end: 0,
                       child: TrackTagChip(label: trackTag, scheme: scheme),
                     ),
                   ],
@@ -189,11 +195,14 @@ class AchievementTierCard extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF1A237E), Color(0xFF4A148C)],
+            colors: [
+              AppColors.gamifLegendGradientStart,
+              AppColors.gamifLegendGradientEnd,
+            ],
           ),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x441A237E),
+              color: AppColors.gamifLegendCardShadow,
               blurRadius: 14,
               offset: Offset(0, 6),
             ),

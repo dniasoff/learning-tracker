@@ -78,18 +78,19 @@ String _trackLabelEn(CurriculumId? c, String rawKey) {
   return rawKey;
 }
 
+/// SM-2 (AUD-gamification-03): a pure read of the achievements overview.
+/// Stripping legacy stock-template milestones + pushing the resulting
+/// snapshot used to happen inline here as a side effect of simply watching
+/// this provider (on every rebuild, e.g. every [completionCommittedProvider]
+/// tick) -- that write/sync-push now lives exclusively in
+/// [GamificationMaintenanceController.stripStockTemplateMilestonesIfNeeded],
+/// invoked explicitly once from `GamificationScreen`'s `initState`.
 final achievementsOverviewProvider =
     FutureProvider.autoDispose<AchievementsOverview>((ref) async {
       ref.watch<int>(completionCommittedProvider);
       final db = ref.watch(userDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
       final service = ref.watch(rewardMilestoneServiceProvider);
-
-      if (await service.stripStockTemplateMilestones()) {
-        await ref
-            .read(syncWriteFacadeProvider)
-            ?.pushGamificationSettingsSnapshot();
-      }
 
       final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
       final rewardTracks = <CurriculumTrack>[];
@@ -210,3 +211,35 @@ final achievementsOverviewProvider =
         trackFilterOptions: filterOptions,
       );
     });
+
+// ─── Maintenance action (AUD-gamification-03) ──────────────────────────────
+
+/// One-shot, idempotent action that strips legacy stock-template milestones
+/// (a no-op after the first run that actually finds something to strip) and
+/// pushes the updated snapshot if anything changed.
+///
+/// SM-2: this is the ONLY place [achievementsOverviewProvider]'s former
+/// inline strip-and-push side effect now happens. Must be invoked explicitly
+/// (see `GamificationScreen`'s `initState`) -- never as a side effect of
+/// watching a read provider.
+class GamificationMaintenanceController extends Notifier<void> {
+  @override
+  void build() {}
+
+  Future<void> stripStockTemplateMilestonesIfNeeded() async {
+    final service = ref.read(rewardMilestoneServiceProvider);
+    final changed = await service.stripStockTemplateMilestones();
+    if (!changed) return;
+    // SM-4: the screen that triggered this can be disposed while the
+    // strip write above / the awaits below are in flight.
+    if (!ref.mounted) return;
+    await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
+    if (!ref.mounted) return;
+    ref.invalidate(achievementsOverviewProvider);
+  }
+}
+
+final gamificationMaintenanceControllerProvider =
+    NotifierProvider<GamificationMaintenanceController, void>(
+      GamificationMaintenanceController.new,
+    );

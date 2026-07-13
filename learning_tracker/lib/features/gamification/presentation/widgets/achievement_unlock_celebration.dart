@@ -174,13 +174,13 @@ class AchievementUnlockCelebration {
 }
 
 const _partyColors = <Color>[
-  Color(0xFFFF6B6B),
-  Color(0xFFFFD93D),
+  AppColors.gamifPartyColorCoral,
+  AppColors.gamifPartyColorYellow,
   AppColors.chartGreen,
   AppColors.chartBlue,
-  Color(0xFFFF9FF3),
-  Color(0xFFFFA502),
-  Color(0xFF5F27CD),
+  AppColors.gamifPartyColorPink,
+  AppColors.gamifPartyColorOrange,
+  AppColors.gamifPartyColorPurple,
 ];
 
 class _UnlockPartyDialog extends StatefulWidget {
@@ -339,11 +339,15 @@ class AchievementUnlockCard extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFFFF4E0), Color(0xFFFFE0F0), Color(0xFFE0F4FF)],
+            colors: [
+              AppColors.gamifUnlockCardGradientCream,
+              AppColors.gamifUnlockCardGradientPink,
+              AppColors.accentTealSoft,
+            ],
           ),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x4D0038A8),
+              color: AppColors.gamifUnlockCardShadow,
               blurRadius: 32,
               offset: Offset(0, 12),
             ),
@@ -364,7 +368,7 @@ class AchievementUnlockCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFFE65100),
+                  color: AppColors.accentBurntOrange,
                   letterSpacing: 0.3,
                   height: 1.1,
                 ),
@@ -380,7 +384,7 @@ class AchievementUnlockCard extends StatelessWidget {
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   height: 1.4,
-                  color: const Color(0xFF37474F),
+                  color: AppColors.gamifInkCharcoal,
                 ),
               ),
               const SizedBox(height: 20),
