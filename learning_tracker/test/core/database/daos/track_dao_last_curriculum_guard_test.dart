@@ -12,7 +12,8 @@
 ///   • Soft-deleting the only active track → active curricula count = 0 (BUG)
 ///   • Wipe-purging the only active track → active curricula count = 0 (BUG)
 ///   • The guard belongs in [ActiveCurriculumDao.deactivateByProfile], which
-///     throws [StateError] correctly — but the hub/detail bypass it.
+///     throws [DaoInvariantError] (code [DaoErrorCode.lastActiveCurriculum])
+///     correctly — but the hub/detail bypass it.
 ///
 /// After the fix, the hub/detail screens must call
 /// [CurriculumActivationService.deactivate] (or check the count themselves)
@@ -24,6 +25,7 @@ library;
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/dao_invariant_error.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
@@ -103,26 +105,34 @@ void main() {
       );
     });
 
-    test(
-      'deactivateByProfile throws StateError on the last active curriculum '
-      '(the guard that hub/detail must invoke before direct DAO calls)',
-      () async {
-        await seedTrack(db, profileId: 1, curriculumId: 'mishnayos');
+    test('deactivateByProfile throws DaoInvariantError on the last active '
+        'curriculum (the guard that hub/detail must invoke before direct DAO '
+        'calls)', () async {
+      await seedTrack(db, profileId: 1, curriculumId: 'mishnayos');
 
-        // The correct path (used by CurriculumActivationService.deactivate)
-        // is guarded by deactivateByProfile which checks active count <= 1.
-        expect(
-          () => db.activeCurriculumDao.deactivateByProfile(
-            CurriculumId.mishnayos,
-            1,
+      // The correct path (used by CurriculumActivationService.deactivate)
+      // is guarded by deactivateByProfile which checks active count <= 1.
+      // AUD-core-database-14 (EH-5) replaced the raw StateError this guard
+      // used to throw with the typed, localizable DaoInvariantError.
+      expect(
+        () => db.activeCurriculumDao.deactivateByProfile(
+          CurriculumId.mishnayos,
+          1,
+        ),
+        throwsA(
+          isA<DaoInvariantError>().having(
+            (e) => e.code,
+            'code',
+            DaoErrorCode.lastActiveCurriculum,
           ),
-          throwsA(isA<StateError>()),
-          reason:
-              'deactivateByProfile must throw StateError when it would remove '
-              'the last active curriculum — this is the guard the hub/detail bypass.',
-        );
-      },
-    );
+        ),
+        reason:
+            'deactivateByProfile must throw DaoInvariantError('
+            'DaoErrorCode.lastActiveCurriculum) when it would remove the '
+            'last active curriculum — this is the guard the hub/detail '
+            'bypass.',
+      );
+    });
 
     test('soft-deleting one of two active tracks preserves the other curriculum '
         '(delete is safe when not the last)', () async {
