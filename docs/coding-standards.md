@@ -350,7 +350,7 @@ This is a children's app (COPPA / GDPR-K / Play Families posture). These rules a
 
 **PV-6 — App Check: debug providers and emulator wiring appear only in the `kDebugMode`-guarded bootstrap; activation is non-fatal (a failed attestation never blocks local-first startup); debug tokens are injected via `FIREBASE_APPCHECK_DEBUG_TOKEN` from secrets and never committed; enforcement flips only after CI/device tokens are registered and metrics reviewed, recorded in `docs/appcheck-enforcement.md`.**
 **Why:** shipping a debug provider disables real attestation on children's data; a hard-fail on `activate()` locks children out over a transient Play-Integrity failure; and the known wipe-regenerates-token incident means premature enforcement re-triggers the 403 outage for everyone.
-**Enforce:** [Enforced] bootstrap is `kDebugMode`-gated and non-fatal today — lock in with: [Pending] audit greps (App Check symbols confined to bootstrap; UUID-shaped token pattern returns zero tracked lines), a secret-scanning CI step, and the committed enforcement-status doc.
+**Enforce:** [Enforced] bootstrap is `kDebugMode`-gated and non-fatal today; the enforcement-status doc is committed at `docs/appcheck-enforcement.md` — lock in with: [Pending] audit greps (App Check symbols confined to bootstrap; UUID-shaped token pattern returns zero tracked lines) and a secret-scanning CI step.
 **Source:** firebase.google.com/docs/app-check/flutter/debug-provider, /monitor-metrics
 
 ---
@@ -694,7 +694,7 @@ Content tables (read-only, shared across profiles) are exempt. The invariant app
 
 ## Lint Baseline
 
-The analyzer baseline is a **deliberately hand-rolled explicit list** (83 rules in `analysis_options.yaml`) plus `strict-casts` / `strict-inference` / `strict-raw-types` — not a `flutter_lints`/`very_good_analysis` include. Keep it explicit: every enabled rule is a decision, not an inheritance.
+The analyzer baseline is a **deliberately hand-rolled explicit list** (79 rules in `analysis_options.yaml`) plus `strict-casts` / `strict-inference` / `strict-raw-types` — not a `flutter_lints`/`very_good_analysis` include. Keep it explicit: every enabled rule is a decision, not an inheritance.
 
 Adopted additions (each closes a gap named by the rules above) — **[Pending]** until enabled:
 

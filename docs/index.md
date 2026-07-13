@@ -25,6 +25,7 @@ For domain-specific deep dives, see the flows and planning sections below.
 - [Developer Handbook](developer-handbook.md)
 - [Architecture (current state)](architecture.md)
 - [Coding Standards](coding-standards.md)
+- [App Check Enforcement Status](appcheck-enforcement.md) — PV-6 enforcement record
 - [Data Models](data-models.md)
 - [Component Inventory](component-inventory.md)
 - [Source Tree Analysis](source-tree-analysis.md)
