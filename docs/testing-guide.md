@@ -687,10 +687,6 @@ adb -s emulator-5560 shell getprop sys.boot_completed    # == 1 when fully boote
 
 ## Known Gotchas
 
-### progress_providers.g.dart Is Manually Authored
-
-The generated file `progress_providers.g.dart` is manually maintained because the Riverpod code generator does not handle `Map<K, V>` return types correctly. Do not delete or regenerate this file with `build_runner`.
-
 ### Regenerate After Model Changes
 
 After modifying Drift tables, Freezed models, or Riverpod providers, regenerate generated files before running tests:
