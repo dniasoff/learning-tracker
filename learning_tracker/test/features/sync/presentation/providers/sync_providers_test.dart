@@ -39,6 +39,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/drift_memory.dart';
+
 class _MockOutboxProcessor extends Mock implements OutboxProcessor {}
 
 class _MockSyncOrchestrator extends Mock implements SyncOrchestrator {}
@@ -233,6 +235,108 @@ void main() {
     });
   });
 
+  // ── AUD-t-cross-05 ─────────────────────────────────────────────────────
+  //
+  // GAP: `write_tee_status_update_test.dart` only unit-tests
+  // `SyncOrchestratorImpl.recordDrainAttempt()` by calling it directly from
+  // the test body against a bare orchestrator — it never builds an
+  // `OutboxSyncWriteFacade` or fires the real `onEnqueueDrain` closure. The
+  // `outboxDrainAndRecordAttempt (SM-4 / AUD-sync-04)` group above has the
+  // same gap from the other side: it calls `outboxDrainAndRecordAttempt`
+  // directly, bypassing the facade's enqueue path entirely. Neither test
+  // would fail if a future refactor dropped the `onEnqueueDrain:` wiring
+  // from `syncWriteFacadeProvider`/`outboxSyncWriteFacadeProvider` in this
+  // file — the original bug (a write-tee drain failure leaves the sync
+  // badge falsely "Synced") could silently reappear with the whole suite
+  // green.
+  //
+  // FIX (coverage-only — the production wiring was already correct, see
+  // sync_providers.dart:89/174): this test drives the write-tee END TO END
+  // through the REAL production wiring — build the facade from
+  // `outboxSyncWriteFacadeProvider` (whose `onEnqueueDrain` closure is the
+  // genuine `() => outboxDrainAndRecordAttempt(ref, profileId)`, not a
+  // test-supplied stand-in), call a real facade write method, and assert
+  // `recordDrainAttempt()` fires as a side effect of the enqueue — the test
+  // body itself never calls `recordDrainAttempt()`.
+  group('OutboxSyncWriteFacade write-tee → recordDrainAttempt, end to end '
+      '(AUD-t-cross-05)', () {
+    late UserDatabase db;
+    late _MockOutboxProcessor mockProcessor;
+    late _MockSyncOrchestrator mockOrchestrator;
+    late ProviderContainer container;
+
+    setUp(() async {
+      db = inMemoryDb();
+      await seedProfile(db);
+
+      mockProcessor = _MockOutboxProcessor();
+      mockOrchestrator = _MockSyncOrchestrator();
+      when(() => mockProcessor.drain(any())).thenAnswer((_) async => 0);
+      when(
+        () => mockOrchestrator.recordDrainAttempt(),
+      ).thenAnswer((_) async {});
+
+      container = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(db),
+          activeProfileIdProvider.overrideWith(
+            () => _MutableActiveProfileId(1),
+          ),
+          authStateProvider.overrideWith(() => _MutableAuthState(_kCloudUser1)),
+          outboxProcessorProvider.overrideWithValue(mockProcessor),
+          syncOrchestratorProvider.overrideWithValue(mockOrchestrator),
+        ],
+      );
+    });
+
+    tearDown(() async {
+      container.dispose();
+      await db.close();
+    });
+
+    test('OutboxSyncWriteFacade.pushSettings enqueue fires the real '
+        'onEnqueueDrain closure, which drains and calls '
+        'recordDrainAttempt() — the test never calls it directly', () async {
+      final facade = container.read(outboxSyncWriteFacadeProvider);
+      expect(
+        facade,
+        isNotNull,
+        reason: 'cloud-born + not tutored → a real facade is built',
+      );
+
+      // The real write-tee: enqueuing fires OutboxSyncWriteFacade's
+      // fire-and-forget `_kickDrainTee`, which invokes the PRODUCTION
+      // `onEnqueueDrain` closure wired in `outboxSyncWriteFacadeProvider`
+      // above (sync_providers.dart:174) — not a test-supplied stand-in.
+      await facade!.pushSettings({'curriculum_id': 'mishnayos'});
+
+      // The tee is unawaited — pump the event queue so the drain +
+      // recordDrainAttempt chain settles before asserting.
+      await pumpEventQueue();
+
+      verify(() => mockProcessor.drain(1)).called(1);
+      // The core assertion: recordDrainAttempt() fired as a SIDE EFFECT
+      // of the enqueue, through the real onEnqueueDrain closure — this
+      // test body never calls orchestrator.recordDrainAttempt() itself.
+      verify(() => mockOrchestrator.recordDrainAttempt()).called(1);
+    });
+
+    test('a second pushSettings enqueue drains and records again — the tee '
+        'fires on every write, not just the first', () async {
+      final facade = container.read(outboxSyncWriteFacadeProvider);
+      await facade!.pushSettings({'curriculum_id': 'mishnayos'});
+      await pumpEventQueue();
+      await facade.pushCurriculumTrack({
+        'curriculum_id': 'mishnayos',
+        'track_id': 't1',
+      });
+      await pumpEventQueue();
+
+      verify(() => mockProcessor.drain(1)).called(2);
+      verify(() => mockOrchestrator.recordDrainAttempt()).called(2);
+    });
+  });
+
   group('outboxSyncWriteFacadeProvider — D14 recovery scan dedup '
       '(AUD-sync-08 regression)', () {
     late _SpyUserDatabase db;
@@ -243,7 +347,9 @@ void main() {
       container = ProviderContainer(
         overrides: [
           userDatabaseProvider.overrideWithValue(db),
-          activeProfileIdProvider.overrideWith(() => _MutableActiveProfileId(1)),
+          activeProfileIdProvider.overrideWith(
+            () => _MutableActiveProfileId(1),
+          ),
           authStateProvider.overrideWith(() => _MutableAuthState(_kCloudUser1)),
         ],
       );
