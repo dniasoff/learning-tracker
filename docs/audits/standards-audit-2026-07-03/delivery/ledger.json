@@ -2892,13 +2892,18 @@
   {
    "id": "AUD-t-cross-20",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Extract duplicated E2E fixture helpers (_EmptyContentRepository, _navigateTo, silence overrides) into a shared file instead of copy-pasting across 5 journey files",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "4a5723c86776bfa3e760c7f38934796ce394e546"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-20 AC1 OK: e2e_overrides.dart has canonical class EmptyContentRepository + navigateTo + 6 silence-override helpers",
+    "AUD-t-cross-20 AC2 OK: all 5 journeys import helper, 0 local redefs (grep NONE), analyze clean, all pass, testWidgets counts unchanged 8/12/4/10/12"
+   ],
+   "notes": "Re-verified duplication per evidence. Extracted EmptyContentRepository, navigateTo, and 6 silence-override helpers into e2e_overrides.dart; all 5 files import it, no local redefinitions remain. testWidgets counts unchanged vs HEAD. analyze clean, audit PASS, all tests green."
   },
   {
    "id": "AUD-t-cross-28",
