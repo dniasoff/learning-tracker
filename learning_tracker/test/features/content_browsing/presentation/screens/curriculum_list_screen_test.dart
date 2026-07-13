@@ -1,8 +1,10 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -14,7 +16,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
 
+class _MockStackRouter extends Mock implements StackRouter {}
+
+class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
 void main() {
+  setUpAll(() {
+    registerFallbackValue(_FakePageRouteInfo());
+  });
+
   // DNI-328 flipped the Hebrew-terms default to false (English transliteration).
   // These tests assert on Hebrew strings so seed the per-profile preference to
   // true before each test.
@@ -24,7 +34,20 @@ void main() {
     });
   });
 
-  Widget createTestWidget({required ContentRepository repository}) {
+  // [router] is only needed by the navigation test — it wraps [home] in a
+  // StackRouterScope so `context.router` resolves to the mocked StackRouter
+  // instead of throwing for want of a real AutoRouter ancestor.
+  Widget createTestWidget({
+    required ContentRepository repository,
+    _MockStackRouter? router,
+  }) {
+    final home = router == null
+        ? const CurriculumListScreen()
+        : StackRouterScope(
+            controller: router,
+            stateHash: 0,
+            child: const CurriculumListScreen(),
+          );
     return ProviderScope(
       overrides: [
         contentRepositoryProvider.overrideWithValue(repository),
@@ -33,15 +56,15 @@ void main() {
           (ref, curriculum) async => 0.0,
         ),
       ],
-      child: const MaterialApp(
-        localizationsDelegates: [
+      child: MaterialApp(
+        localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: CurriculumListScreen(),
+        home: home,
       ),
     );
   }
@@ -171,6 +194,8 @@ void main() {
       tester,
     ) async {
       final mockRepo = MockContentRepository();
+      final router = _MockStackRouter();
+      when(() => router.push<Object?>(any())).thenAnswer((_) async => null);
 
       for (final curriculum in CurriculumId.values) {
         when(
@@ -178,18 +203,30 @@ void main() {
         ).thenAnswer((_) async => []);
       }
 
-      await tester.pumpWidget(createTestWidget(repository: mockRepo));
+      await tester.pumpWidget(
+        createTestWidget(repository: mockRepo, router: router),
+      );
       await tester.pumpAndSettle();
 
       // Tap on Mishnayos curriculum
       await tester.tap(find.text('משניות').first);
       await tester.pump();
 
-      // The tap triggers context.router.push() which throws because
-      // there is no AutoRouter in the test widget tree. Swallow the
-      // exception; real navigation is verified in integration tests.
-      final exception = tester.takeException();
-      expect(exception, isNotNull);
+      // The tap must push the SPECIFIC ContentHierarchyRoute for Mishnayos
+      // via context.router — not merely "some exception happened", which
+      // would also pass for an unrelated build error introduced by a
+      // future regression.
+      verify(
+        () => router.push<Object?>(
+          any(
+            that: isA<ContentHierarchyRoute>().having(
+              (r) => r.args?.curriculumId,
+              'curriculumId',
+              CurriculumId.mishnayos.storageKey,
+            ),
+          ),
+        ),
+      ).called(1);
     });
   });
 }

@@ -1,7 +1,9 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -15,8 +17,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
 
+class _MockStackRouter extends Mock implements StackRouter {}
+
+class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
 void main() {
   late MockContentRepository mockRepo;
+  late _MockStackRouter router;
+
+  setUpAll(() {
+    registerFallbackValue(_FakePageRouteInfo());
+  });
 
   // DNI-328 flipped the Hebrew-terms default to false. These tests assert on
   // Hebrew labels, so seed the preference to true for the default profile.
@@ -25,9 +36,15 @@ void main() {
       'hebrew_terms_script_p0': true,
     });
     mockRepo = MockContentRepository();
+    router = _MockStackRouter();
+    when(() => router.push<Object?>(any())).thenAnswer((_) async => null);
   });
 
-  Widget createTestApp({required Widget home}) {
+  // [router] is only needed by the test that exercises a `context.router`
+  // push (StackRouterScope wraps [home] so `context.router` resolves to the
+  // mocked StackRouter instead of throwing for want of an AutoRouter
+  // ancestor). Tests that never navigate omit it and get a plain MaterialApp.
+  Widget createTestApp({required Widget home, _MockStackRouter? router}) {
     return ProviderScope(
       overrides: [
         contentRepositoryProvider.overrideWithValue(mockRepo),
@@ -39,7 +56,9 @@ void main() {
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: home,
+        home: router == null
+            ? home
+            : StackRouterScope(controller: router, stateHash: 0, child: home),
       ),
     );
   }
@@ -111,61 +130,18 @@ void main() {
           }
         }
 
-        // Setup hierarchy config
-        when(
-          () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
-        ).thenAnswer(
-          (_) async => const CurriculumHierarchyConfig(
-            curriculumId: 'mishnayos',
-            levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
-            totalItems: 4192,
-          ),
-        );
-
-        // Setup filtered content for each level
-        when(
-          () => mockRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnayos,
-            level1: null,
-            level2: null,
-            level3: null,
-            level4: null,
-          ),
-        ).thenAnswer((_) async => [mishnayosContent[0]]);
-
-        when(
-          () => mockRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnayos,
-            level1: 'Seder Zeraim',
-            level2: null,
-            level3: null,
-            level4: null,
-          ),
-        ).thenAnswer((_) async => [mishnayosContent[1]]);
-
-        when(
-          () => mockRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnayos,
-            level1: 'Seder Zeraim',
-            level2: 'Berachos',
-            level3: null,
-            level4: null,
-          ),
-        ).thenAnswer((_) async => [mishnayosContent[2]]);
-
-        when(
-          () => mockRepo.filterByLevel(
-            curriculumId: CurriculumId.mishnayos,
-            level1: 'Seder Zeraim',
-            level2: 'Berachos',
-            level3: 'Perek 1',
-            level4: null,
-          ),
-        ).thenAnswer((_) async => [mishnayosContent[3]]);
+        // NOTE: this test only exercises the FIRST hop (curriculum list →
+        // tap → route push). It intentionally does NOT stub
+        // getHierarchyConfig/filterByLevel — the mocked StackRouter below
+        // captures the push instead of letting a real AutoRouter build
+        // ContentHierarchyScreen, so those stubs would never be consulted.
+        // Deeper-level breadcrumb/filter behaviour is covered by
+        // 'breadcrumb navigation allows jumping to parent levels' below and
+        // by r2_content_hierarchy_nav_test.dart.
 
         // Step 1: Start with curriculum list
         await tester.pumpWidget(
-          createTestApp(home: const CurriculumListScreen()),
+          createTestApp(home: const CurriculumListScreen(), router: router),
         );
         await tester.pumpAndSettle();
 
@@ -176,12 +152,21 @@ void main() {
         await tester.tap(find.text('משניות').first);
         await tester.pump();
 
-        // The tap triggers context.router.push() which throws because
-        // there is no AutoRouter in the test widget tree. Swallow the
-        // exception; real navigation is verified in full app integration
-        // tests or manual testing.
-        final exception = tester.takeException();
-        expect(exception, isNotNull);
+        // The tap must push the SPECIFIC ContentHierarchyRoute for the
+        // tapped curriculum via context.router — not merely "some
+        // exception happened", which would also pass for an unrelated
+        // build error introduced by a future regression.
+        verify(
+          () => router.push<Object?>(
+            any(
+              that: isA<ContentHierarchyRoute>().having(
+                (r) => r.args?.curriculumId,
+                'curriculumId',
+                CurriculumId.mishnayos.storageKey,
+              ),
+            ),
+          ),
+        ).called(1);
       },
     );
 
