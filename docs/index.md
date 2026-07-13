@@ -48,7 +48,7 @@ Active planning artifacts — the design intent and the rationale behind the cur
 - [Upgrade Flow — UX Spec](planning/ux-upgrade-flow-spec.md)
 - [Upgrade Flow — Visual Design](planning/ux-upgrade-flow-visual.md)
 - [UX Patterns Quick Reference](planning/ux-patterns-quick-reference.md)
-- [Testing Quick Reference](planning/testing-quick-reference.md)
+- [Testing Quick Reference](planning/testing-quick-reference.md) — **superseded 2026-07-13** by [Testing Guide](testing-guide.md) and [Test Options](test-options.md)
 - [Research](planning/research/)
 
 ## Flows (`flows/`)
