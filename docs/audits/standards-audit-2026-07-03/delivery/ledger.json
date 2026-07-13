@@ -8673,13 +8673,17 @@
     {
       "id": "AUD-t-cross-100",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "lifecycle_observer_test.dart's 'hidden and detached' test never exercises AppLifecycleState.detached",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "2119cda7a12ec4a551b2953995529463ec12bab4"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-100 AC1 OK: test:156-158 drive detached->resumed, assert calls.first=='reset'; behavioral (source:125 treats detached as backgrounded)"
+      ],
+      "notes": "Re-verified: test at line 136 only drove hidden->resumed (149), never detached; register accurate. LifecycleObserver treats detached same as hidden. Added detached->resumed assertion block matching the hidden pattern; test body now exercises both states named in its title. AC satisfied."
     },
     {
       "id": "AUD-t-cross-64",
