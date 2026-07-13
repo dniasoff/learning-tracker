@@ -9088,13 +9088,18 @@
   {
    "id": "AUD-gamification-19",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Rename StreakStateProvider — it is a plain service class, not a @riverpod provider",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "990879be"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-gamification-19 AC1a OK: grep -rn 'class StreakStateProvider' lib/ -> exit1, 0 hits; class now StreakStateService in streak_state_service.dart:20",
+    "AUD-gamification-19 AC1b OK: 0 refs to old name anywhere in lib/+test/ incl .g.dart; old file deleted, new present; all 5 construction sites use StreakStateService"
+   ],
+   "notes": "Confirmed: streak_state_provider.dart was a plain class (no @riverpod) misnamed like a provider. Renamed to streak_state_service.dart/StreakStateService; updated 5 construction sites + docs, 26 files. grep 'class StreakStateProvider' lib/ -> 0 hits."
   },
   {
    "id": "AUD-t-gamification-08",
