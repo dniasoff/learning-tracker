@@ -5815,13 +5815,17 @@
   {
    "id": "AUD-docs-37",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Update docs/delete-policy.md — curriculum_tracks moved from deletedAt to state/stateChangedAt in W3.28/W3.29",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "7742027a06649fd1c47ab385806458aaaee4aa97"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-docs-37 AC1 OK: delete-policy.md:7,30 now cite state/stateChangedAt (real cols curriculum_tracks.dart:30,33); grep deletedAt in doc = empty (exit1)"
+   ],
+   "notes": "Confirmed live: doc still said curriculum_tracks uses deletedAt; schema (curriculum_tracks.dart:9-11,30,33) shows state/stateChangedAt replaced it in W3.28/W3.29. Updated table row + prose. grep deletedAt now empty; state/stateChangedAt confirmed as real columns."
   },
   {
    "id": "AUD-t-cross-53",
