@@ -47,35 +47,24 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:auto_route/auto_route.dart' show PageRouteInfo;
 import 'package:flutter/material.dart' show Key, PopupMenuButton, TextField;
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
-    show connectivityStreamProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart'
     show activeProfileIdProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
-    show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart'
     show switcherSheetPinGuardRequiredProvider;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
-    show pendingTutorInvitesProvider;
 
 import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
+import '../helpers/e2e_overrides.dart';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -98,45 +87,6 @@ Future<int> _seedSecondProfile(
           updatedAt: now,
         ),
       );
-}
-
-/// Silence dashboard heavy providers to avoid timer leaks on dispose.
-List<Override> _dashboardSilence(E2EHarness h) => h.dashboardSilenceOverrides;
-
-/// Prevent the sacred-time 30-second repeating timer from leaking into
-/// `_verifyInvariants` after test teardown.
-Override _sacredWindowNullOverride() =>
-    currentSacredWindowProvider.overrideWithValue(null);
-
-/// Prevent connectivity plugin debounce/recovery-probe timers from leaking.
-Override _connectivitySilenceOverride() =>
-    connectivityStreamProvider.overrideWith((ref) => Stream.value(true));
-
-/// Override [incomingTutorGrantsProvider] with an empty list (no Cloud
-/// Function calls in headless tests).
-Override _incomingGrantsEmptyOverride() =>
-    incomingTutorGrantsProvider.overrideWith((ref) => Future.value([]));
-
-/// Override [pendingTutorInvitesProvider] with an empty list.
-Override _pendingInvitesEmptyOverride() =>
-    pendingTutorInvitesProvider.overrideWith((ref) => Future.value([]));
-
-/// Override [pendingRedemptionsCountProvider] (Drift stream) with a static
-/// zero-stream so ProviderScope disposal doesn't leak a Drift cleanup timer.
-Override _pendingRedemptionsZeroOverride() =>
-    pendingRedemptionsCountProvider.overrideWith((ref) => Stream.value(0));
-
-/// Override [activeProfilePointsBalanceProvider] (Drift stream) with a
-/// static zero-stream for the same reason.
-Override _pointsBalanceZeroOverride() =>
-    activeProfilePointsBalanceProvider.overrideWith((ref) => Stream.value(0));
-
-/// Navigates by fire-and-forget router push + frames to let guards settle.
-Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {
-  unawaited(h.router.push(route));
-  await h.pump();
-  await h.pump(const Duration(milliseconds: 500));
-  await h.pump();
 }
 
 /// Notifier subclass that mirrors the active profile id so that
@@ -197,14 +147,14 @@ void main() {
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
-            ..._dashboardSilence(h),
-            _incomingGrantsEmptyOverride(),
-            _pendingInvitesEmptyOverride(),
-            _sacredWindowNullOverride(),
-            _connectivitySilenceOverride(),
+            ...h.dashboardSilenceOverrides,
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
+            sacredWindowNullOverride(),
+            connectivitySilenceOverride(),
             // Silence Drift-backed stream providers to avoid timer leaks.
-            _pendingRedemptionsZeroOverride(),
-            _pointsBalanceZeroOverride(),
+            pendingRedemptionsZeroOverride(),
+            pointsBalanceZeroOverride(),
             // No active tutored session so ChildViewBanner shows (not
             // TutorModeIndicatorBar).
             activeTutoredProfileSelectionProvider.overrideWith(
@@ -273,9 +223,9 @@ void main() {
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
-            ..._dashboardSilence(h),
-            _incomingGrantsEmptyOverride(),
-            _pendingInvitesEmptyOverride(),
+            ...h.dashboardSilenceOverrides,
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
               () => NullTutoredSelection(),
             ),
@@ -358,15 +308,15 @@ void main() {
       await h.pumpApp(
         path: '/dashboard',
         extraOverrides: [
-          ..._dashboardSilence(h),
-          _incomingGrantsEmptyOverride(),
-          _pendingInvitesEmptyOverride(),
+          ...h.dashboardSilenceOverrides,
+          incomingGrantsEmptyOverride(),
+          pendingInvitesEmptyOverride(),
         ],
       );
 
       // Navigate to ManageLearnersScreen — childModeGuard allows because the
       // active profile is a child profile.
-      await _navigateTo(h, const ManageLearnersRoute());
+      await navigateTo(h, const ManageLearnersRoute());
       await h.pump(const Duration(milliseconds: 400));
       await h.pump();
 
@@ -437,9 +387,9 @@ void main() {
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
-            ..._dashboardSilence(h),
-            _incomingGrantsEmptyOverride(),
-            _pendingInvitesEmptyOverride(),
+            ...h.dashboardSilenceOverrides,
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
           ],
         );
 
@@ -455,7 +405,7 @@ void main() {
 
         // Navigate to ManageLearnersScreen — childModeGuard allows because
         // the active profile is a child profile.
-        await _navigateTo(h, const ManageLearnersRoute());
+        await navigateTo(h, const ManageLearnersRoute());
         await h.pump(const Duration(milliseconds: 400));
         await h.pump();
 
@@ -524,14 +474,14 @@ void main() {
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
-            ..._dashboardSilence(h),
-            _incomingGrantsEmptyOverride(),
-            _pendingInvitesEmptyOverride(),
+            ...h.dashboardSilenceOverrides,
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
           ],
         );
 
         // childModeGuard allows because the active profile is a child profile.
-        await _navigateTo(h, const ManageLearnersRoute());
+        await navigateTo(h, const ManageLearnersRoute());
         await h.pump(const Duration(milliseconds: 400));
         await h.pump();
 
@@ -584,9 +534,9 @@ void main() {
       await h.pumpApp(
         path: '/dashboard',
         extraOverrides: [
-          ..._dashboardSilence(h),
-          _incomingGrantsEmptyOverride(),
-          _pendingInvitesEmptyOverride(),
+          ...h.dashboardSilenceOverrides,
+          incomingGrantsEmptyOverride(),
+          pendingInvitesEmptyOverride(),
           activeTutoredProfileSelectionProvider.overrideWith(
             () => NullTutoredSelection(),
           ),
@@ -707,9 +657,9 @@ void main() {
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
-            ..._dashboardSilence(h),
-            _incomingGrantsEmptyOverride(),
-            _connectivitySilenceOverride(),
+            ...h.dashboardSilenceOverrides,
+            incomingGrantsEmptyOverride(),
+            connectivitySilenceOverride(),
             // Prime an active tutored session so the amber bar renders.
             activeTutoredProfileSelectionProvider.overrideWith(
               () => _FixedTutoredSelection(tutoredSelection),
@@ -803,14 +753,14 @@ void main() {
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
-            ..._dashboardSilence(h),
-            _incomingGrantsEmptyOverride(),
+            ...h.dashboardSilenceOverrides,
+            incomingGrantsEmptyOverride(),
             // Override pending invites to return one stub invite.
             // AcceptInviteRoute only needs the grant.grantId as the token,
             // so we inject a provider override that the card can render.
             // The real TutorGrant requires a TutorGrantDoc; we produce a fake
             // outcome by overriding the ENTIRE provider:
-            pendingTutorInvitesProvider.overrideWith((ref) => Future.value([])),
+            pendingInvitesEmptyOverride(),
           ],
         );
 
@@ -878,9 +828,9 @@ void main() {
           await h.pumpApp(
             path: '/dashboard',
             extraOverrides: [
-              ..._dashboardSilence(h),
-              _incomingGrantsEmptyOverride(),
-              _pendingInvitesEmptyOverride(),
+              ...h.dashboardSilenceOverrides,
+              incomingGrantsEmptyOverride(),
+              pendingInvitesEmptyOverride(),
               activeTutoredProfileSelectionProvider.overrideWith(
                 () => NullTutoredSelection(),
               ),

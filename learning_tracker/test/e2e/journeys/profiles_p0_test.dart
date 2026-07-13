@@ -39,26 +39,15 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:auto_route/auto_route.dart' show PageRouteInfo;
 import 'package:flutter/material.dart' show Key, ListView, TextField;
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart'
-    show connectivityStreamProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
-    show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
-import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart'
-    show currentSacredWindowProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
-    show incomingTutorGrantsProvider;
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
-    show pendingTutorInvitesProvider;
 
 import '../harness/e2e_harness.dart';
+import '../helpers/e2e_overrides.dart';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -83,60 +72,6 @@ Future<int> _seedSecondProfile(
           updatedAt: now,
         ),
       );
-}
-
-/// One-shot override for [incomingTutorGrantsProvider].
-///
-/// [ProfilePickerScreen] and [SettingsScreen] both watch this provider; the
-/// real implementation calls a Cloud Function. Overriding it with an empty
-/// list prevents network calls in headless tests.
-///
-/// Note: [incomingTutorGrantsProvider] here is from `manage_tutors_providers`
-/// — the same symbol used by ProfilePickerScreen and SettingsScreen. A
-/// generated provider with the same name in `tutor_grant_providers` is a
-/// different object.
-Override _incomingGrantsEmptyOverride() {
-  return incomingTutorGrantsProvider.overrideWith((ref) => Future.value([]));
-}
-
-/// One-shot override for [pendingTutorInvitesProvider].
-///
-/// Prevents the generated provider from calling Cloud Functions in headless
-/// tests. Emits an empty list so no invite cards appear.
-Override _pendingInvitesEmptyOverride() {
-  return pendingTutorInvitesProvider.overrideWith((ref) => Future.value([]));
-}
-
-/// Override [currentSacredWindowProvider] to return null (no sacred window
-/// active), bypassing the [CurrentSacredWindow] notifier's `build()` which
-/// schedules a 30-second repeating timer. Without this override, tests that
-/// navigate to Settings (which mounts [SacredTimeSettingsCard] and keeps
-/// [SacredTimeLockOverlay] in the AppShell tree) leave the timer pending after
-/// [h.dispose()], triggering the `_verifyInvariants` `!timersPending` assertion.
-Override _sacredWindowNullOverride() {
-  return currentSacredWindowProvider.overrideWithValue(null);
-}
-
-/// Override [connectivityStreamProvider] with a static online stream so the
-/// connectivity plugin's debounce timer and recovery-probe timer (Timer.periodic)
-/// are never created. Without this, tests that pump for >0ms may hit the
-/// connectivity channel's `MissingPluginException`, and any pending timers
-/// created by the provider's `offlineDebounceTimer` / `recoveryProbeTimer`
-/// will trip the `_verifyInvariants` assertion after [h.dispose()].
-Override _connectivitySilenceOverride() {
-  return connectivityStreamProvider.overrideWith((ref) => Stream.value(true));
-}
-
-/// Standard silence overrides for dashboard heavy providers.
-List<Override> _dashboardSilence(E2EHarness h) => h.dashboardSilenceOverrides;
-
-/// Navigates to [route] by firing [router.push] without awaiting and then
-/// pumping frames so the async guard chain can complete.
-Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {
-  unawaited(h.router.push(route));
-  await h.pump();
-  await h.pump(const Duration(milliseconds: 500));
-  await h.pump();
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -175,14 +110,14 @@ void main() {
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
-            ..._dashboardSilence(h),
-            _incomingGrantsEmptyOverride(),
-            _pendingInvitesEmptyOverride(),
+            ...h.dashboardSilenceOverrides,
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
           ],
         );
 
         // Navigate to the picker directly (bypasses ProfileGuard auto-select).
-        await _navigateTo(h, const ProfilePickerRoute());
+        await navigateTo(h, const ProfilePickerRoute());
         await h.pump(const Duration(milliseconds: 500));
 
         // The picker heading must be present.
@@ -254,14 +189,14 @@ void main() {
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
-            ..._dashboardSilence(h),
-            _incomingGrantsEmptyOverride(),
-            _pendingInvitesEmptyOverride(),
+            ...h.dashboardSilenceOverrides,
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
           ],
         );
 
         // Navigate to the picker.
-        await _navigateTo(h, const ProfilePickerRoute());
+        await navigateTo(h, const ProfilePickerRoute());
         await h.pump(const Duration(milliseconds: 500));
 
         h.expectOnScreen('Who is learning?', routeName: 'ProfilePickerScreen');
@@ -328,9 +263,9 @@ void main() {
           await h.pumpApp(
             path: '/dashboard',
             extraOverrides: [
-              ..._dashboardSilence(h),
-              _incomingGrantsEmptyOverride(),
-              _pendingInvitesEmptyOverride(),
+              ...h.dashboardSilenceOverrides,
+              incomingGrantsEmptyOverride(),
+              pendingInvitesEmptyOverride(),
             ],
           );
 
@@ -345,7 +280,7 @@ void main() {
           );
 
           // Navigate to the profile picker via push.
-          await _navigateTo(h, const ProfilePickerRoute());
+          await navigateTo(h, const ProfilePickerRoute());
           // Extra pump for profileListProvider future to resolve with 2 rows.
           await h.pump(const Duration(milliseconds: 300));
           await h.pump();
@@ -418,9 +353,9 @@ void main() {
           await h.pumpApp(
             path: '/dashboard',
             extraOverrides: [
-              ..._dashboardSilence(h),
-              _incomingGrantsEmptyOverride(),
-              _pendingInvitesEmptyOverride(),
+              ...h.dashboardSilenceOverrides,
+              incomingGrantsEmptyOverride(),
+              pendingInvitesEmptyOverride(),
             ],
           );
 
@@ -469,24 +404,20 @@ void main() {
         await h.pumpApp(
           path: '/dashboard',
           extraOverrides: [
-            ..._dashboardSilence(h),
-            _incomingGrantsEmptyOverride(),
-            _pendingInvitesEmptyOverride(),
+            ...h.dashboardSilenceOverrides,
+            incomingGrantsEmptyOverride(),
+            pendingInvitesEmptyOverride(),
             // Silence the sacred-window 30s timer so test teardown is clean.
-            _sacredWindowNullOverride(),
+            sacredWindowNullOverride(),
             // Silence connectivity plugin timers (debounce + recovery probe)
             // so any pump() duration does not leave pending timers.
-            _connectivitySilenceOverride(),
+            connectivitySilenceOverride(),
             // ParentSettingsScreen watches these Drift-backed StreamProviders.
             // On ProviderScope dispose the Drift StreamQueryStore creates a
             // ~200ms cleanup timer that trips _verifyInvariants. Override with
             // static values to prevent any Drift reactive subscription.
-            pendingRedemptionsCountProvider.overrideWith(
-              (ref) => Stream.value(0),
-            ),
-            activeProfilePointsBalanceProvider.overrideWith(
-              (ref) => Stream.value(0),
-            ),
+            pendingRedemptionsZeroOverride(),
+            pointsBalanceZeroOverride(),
           ],
         );
 
@@ -572,14 +503,14 @@ void main() {
 
         await h.pumpApp(
           path: '/dashboard',
-          extraOverrides: [..._dashboardSilence(h)],
+          extraOverrides: [...h.dashboardSilenceOverrides],
         );
 
         // Prime the PIN guard so PinFlowSetupRoute isn't redirected.
         h.markPinAuthenticated();
 
         // Navigate to the PIN setup route.
-        await _navigateTo(h, const PinFlowSetupRoute());
+        await navigateTo(h, const PinFlowSetupRoute());
         await h.pump(const Duration(milliseconds: 500));
 
         // The setup screen must render with the correct title.
@@ -620,7 +551,7 @@ void main() {
 
         await h.pumpApp(
           path: '/dashboard',
-          extraOverrides: [..._dashboardSilence(h)],
+          extraOverrides: [...h.dashboardSilenceOverrides],
         );
 
         // The shell loads — dashboard tab is active.
@@ -656,7 +587,7 @@ void main() {
 
         await h.pumpApp(
           path: '/dashboard',
-          extraOverrides: [..._dashboardSilence(h)],
+          extraOverrides: [...h.dashboardSilenceOverrides],
         );
 
         h.expectOnScreen('DASHBOARD');
