@@ -419,4 +419,4 @@ Riverpod's generator does not support Map return types. The file `lib/features/p
 
 ---
 
-For data model details, see [`data-models.md`](data-models.md). For architecture, see [`architecture.md`](architecture.md). For test patterns, see [`testing-guide.md`](testing-guide.md) and [`planning/testing-quick-reference.md`](planning/testing-quick-reference.md).
+For data model details, see [`data-models.md`](data-models.md). For architecture, see [`architecture.md`](architecture.md). For test patterns, see [`testing-guide.md`](testing-guide.md).
