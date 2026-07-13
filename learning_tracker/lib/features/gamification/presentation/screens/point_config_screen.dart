@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
@@ -65,11 +66,24 @@ _StagePointConfig _primaryStageRow(_TrackPointData data) {
   );
 }
 
-final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>>(
+/// SM-2 (AUD-gamification-03): a pure read of the current point-config rows
+/// for every active track. Stage-definition seeding and default PointConfig
+/// seeding used to happen inline here as a side effect of simply watching
+/// this provider (on every rebuild, e.g. whenever [activeTracksProvider]
+/// emits) -- that write/sync-push work now lives exclusively in
+/// [PointConfigMaintenanceController.seedMissingDefaultsIfNeeded], invoked
+/// explicitly once from [PointConfigScreen]'s `initState`.
+///
+/// A track whose stage definitions haven't been seeded yet (or a stage
+/// whose PointConfig row hasn't been seeded yet) is rendered with an
+/// in-memory-only default (`PointConfig(id: -1, ...)`, never persisted) so
+/// the screen still has something sensible to show/edit before the
+/// maintenance action's write lands; `_savePending`'s upsert doesn't read
+/// `.id`, so editing a synthetic default round-trips correctly.
+final pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData>>(
   (ref) async {
     final db = ref.watch(userDatabaseProvider);
     final profileId = ref.watch(activeProfileIdProvider);
-    final sync = ref.read(syncWriteFacadeProvider);
 
     // Same query as [activeTracksProvider] / dashboard; watch the stream so we
     // rebuild when tracks change, but avoid awaiting another provider's .future
@@ -81,7 +95,6 @@ final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData
       AsyncError() => await db.trackDao.getActiveTracksForProfile(profileId),
     };
 
-    var wroteConfigs = false;
     final result = <_TrackPointData>[];
     for (final track in activeTracks) {
       final curriculum = CurriculumId.values
@@ -90,18 +103,10 @@ final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData
       if (curriculum == null) continue;
 
       final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
-      var stages = await stageRepo.getStagesByTrack(track.id);
-      if (stages.isEmpty) {
-        await stageRepo.initializeDefaults(
-          curriculum,
-          profileId: profileId,
-          trackId: track.id,
-        );
-        stages = await stageRepo.getStagesByTrack(track.id);
-      }
-      if (stages.isEmpty) {
-        continue;
-      }
+      final stages = await stageRepo.getStagesByTrack(track.id);
+      // Nothing to show yet -- the maintenance action seeds this track's
+      // stage definitions and will invalidate this provider once it does.
+      if (stages.isEmpty) continue;
 
       final configs = await db.pointConfigDao.getConfigsByCurriculum(
         curriculum.storageKey,
@@ -118,27 +123,16 @@ final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData
             break;
           }
         }
-        if (config == null) {
-          await db.pointConfigDao.upsertConfig(
-            PointConfigsCompanion.insert(
-              profileId: profileId,
-              curriculumId: curriculum.storageKey,
-              trackId: track.id,
-              stageOrder: stage.stageOrder,
-              points: _defaultPointsForStageOrder(stage.stageOrder),
-            ),
-          );
-          wroteConfigs = true;
-          config = await db.pointConfigDao.getConfig(
-            curriculum.storageKey,
-            stage.stageOrder,
-            profileId: profileId,
-            trackId: track.id,
-          );
-        }
-        if (config != null) {
-          stageConfigs.add(_StagePointConfig(stage: stage, config: config));
-        }
+        // Unpersisted view-model default -- see doc comment above.
+        config ??= PointConfig(
+          id: -1,
+          profileId: profileId,
+          curriculumId: curriculum.storageKey,
+          trackId: track.id,
+          stageOrder: stage.stageOrder,
+          points: _defaultPointsForStageOrder(stage.stageOrder),
+        );
+        stageConfigs.add(_StagePointConfig(stage: stage, config: config));
       }
 
       result.add(
@@ -150,12 +144,85 @@ final _pointConfigDataProvider = FutureProvider.autoDispose<List<_TrackPointData
         ),
       );
     }
-    if (wroteConfigs) {
-      await sync?.pushGamificationSettingsSnapshot();
-    }
     return result;
   },
 );
+
+// ─── Maintenance action (AUD-gamification-03) ──────────────────────────────
+
+/// One-shot, idempotent action that seeds any missing stage definitions and
+/// default [PointConfig] rows for the active profile's active tracks, then
+/// pushes the updated snapshot if anything was actually written.
+///
+/// SM-2: this is the ONLY place `pointConfigDataProvider`'s former inline
+/// seeding writes now happen. It must be invoked explicitly (see
+/// [PointConfigScreen]'s `initState`) -- never as a side effect of watching
+/// a read provider.
+class PointConfigMaintenanceController extends Notifier<void> {
+  @override
+  void build() {}
+
+  Future<void> seedMissingDefaultsIfNeeded() async {
+    final db = ref.read(userDatabaseProvider);
+    final profileId = ref.read(activeProfileIdProvider);
+    final activeTracks = await db.trackDao.getActiveTracksForProfile(profileId);
+
+    var wrote = false;
+    for (final track in activeTracks) {
+      final curriculum = CurriculumId.values
+          .where((c) => c.storageKey == track.curriculumId)
+          .firstOrNull;
+      if (curriculum == null) continue;
+
+      final stageRepo = ref.read(stageDefinitionRepositoryProvider(curriculum));
+      var stages = await stageRepo.getStagesByTrack(track.id);
+      if (stages.isEmpty) {
+        await stageRepo.initializeDefaults(
+          curriculum,
+          profileId: profileId,
+          trackId: track.id,
+        );
+        stages = await stageRepo.getStagesByTrack(track.id);
+        wrote = true;
+      }
+      if (stages.isEmpty) continue;
+
+      final configs = await db.pointConfigDao.getConfigsByCurriculum(
+        curriculum.storageKey,
+        profileId: profileId,
+        trackId: track.id,
+      );
+
+      for (final stage in stages) {
+        final hasConfig = configs.any((c) => c.stageOrder == stage.stageOrder);
+        if (hasConfig) continue;
+        await db.pointConfigDao.upsertConfig(
+          PointConfigsCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculum.storageKey,
+            trackId: track.id,
+            stageOrder: stage.stageOrder,
+            points: _defaultPointsForStageOrder(stage.stageOrder),
+          ),
+        );
+        wrote = true;
+      }
+    }
+
+    if (!wrote) return;
+    // SM-4: the screen that triggered this can be disposed while the seeding
+    // writes above are in flight.
+    if (!ref.mounted) return;
+    await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
+    if (!ref.mounted) return;
+    ref.invalidate(pointConfigDataProvider);
+  }
+}
+
+final pointConfigMaintenanceControllerProvider =
+    NotifierProvider<PointConfigMaintenanceController, void>(
+      PointConfigMaintenanceController.new,
+    );
 
 @RoutePage()
 class PointConfigScreen extends ConsumerStatefulWidget {
@@ -169,6 +236,25 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
   /// Pending edits for the primary (lowest stage order) row per track.
   final Map<int, int> _pendingPrimaryByTrackId = {};
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // SM-2 (AUD-gamification-03): pointConfigDataProvider is a pure read;
+    // the one-shot default-seeding write is triggered explicitly here
+    // instead. Deferred to post-frame + mounted-checked, matching the
+    // established bootstrap() pattern in reward_configuration_screen.dart
+    // (calling it synchronously during initState/build trips Riverpod's
+    // "modify a provider while the widget tree was building").
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        ref
+            .read(pointConfigMaintenanceControllerProvider.notifier)
+            .seedMissingDefaultsIfNeeded(),
+      );
+    });
+  }
 
   int _effectivePrimaryPoints(_TrackPointData data) {
     final pending = _pendingPrimaryByTrackId[data.trackId];
@@ -208,7 +294,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
           _pendingPrimaryByTrackId.clear();
           _saving = false;
         });
-        ref.invalidate(_pointConfigDataProvider);
+        ref.invalidate(pointConfigDataProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.pointSettingsSavedSnackbar)),
         );
@@ -236,7 +322,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final pointsAsync = ref.watch(_pointConfigDataProvider);
+    final pointsAsync = ref.watch(pointConfigDataProvider);
     final tutorPerms = ref.watch(activeTutorPermissionsProvider);
     final canEdit = tutorPerms == null || tutorPerms.canEditPoints;
 

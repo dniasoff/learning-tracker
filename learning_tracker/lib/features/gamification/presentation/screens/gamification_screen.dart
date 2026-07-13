@@ -75,6 +75,26 @@ class _GamificationScreenState extends ConsumerState<GamificationScreen> {
   int? _trackFilterId;
 
   @override
+  void initState() {
+    super.initState();
+    // SM-2 (AUD-gamification-03): achievementsOverviewProvider is a pure
+    // read; the one-shot stock-template-milestone strip is triggered
+    // explicitly here instead. Deferred to post-frame + mounted-checked,
+    // matching the established bootstrap() pattern in
+    // reward_configuration_screen.dart (calling it synchronously during
+    // initState/build trips Riverpod's "modify a provider while the widget
+    // tree was building").
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        ref
+            .read(gamificationMaintenanceControllerProvider.notifier)
+            .stripStockTemplateMilestonesIfNeeded(),
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     ref.listen(achievementsOverviewProvider, (previous, next) {
