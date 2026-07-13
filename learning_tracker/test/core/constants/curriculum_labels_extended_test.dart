@@ -1,5 +1,16 @@
-/// Extended tests for [CurriculumLabels] covering methods not yet tested
-/// in curriculum_defaults_test.dart.
+/// Tests for [CurriculumLabels] formatting/behavior methods and the
+/// [LevelLabels] value type they return.
+///
+/// Partition (AUD-t-cross-11 dedup): this file owns LevelLabels +
+/// CurriculumLabels formatting methods (labelsXxx collections, container,
+/// containerSectionHeader, level, valueWithLabel, fullPath,
+/// stripStructuralPrefix, primaryUnitLabelPlural, containerCountLabelPlural).
+/// curriculum_defaults_test.dart owns CurriculumDefaults plus the curriculum
+/// hierarchy shape (levels/depth) tests. curriculum_label_variant_test.dart
+/// owns transliteration-variant (nusach) behavior — no overlap with this
+/// file. Previously this coverage was split near-verbatim across this file
+/// and curriculum_defaults_extended_test.dart (now removed); see the finding
+/// for the duplicate groups that were merged.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +18,8 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 void main() {
+  // ─── LevelLabels ──────────────────────────────────────────────────────────
+
   group('LevelLabels', () {
     const labels = LevelLabels(
       en: 'Masechta',
@@ -51,99 +64,157 @@ void main() {
     );
   });
 
-  group('CurriculumLabels.labelsEnPlural', () {
-    test('returns list of English plural labels', () {
-      final plurals = CurriculumLabels.labelsEnPlural(CurriculumId.mishnayos);
-      expect(plurals, isNotEmpty);
-      expect(plurals, isA<List<String>>());
+  // ─── CurriculumLabels.labelsXxx collections ───────────────────────────────
+
+  group('CurriculumLabels labels collections', () {
+    test('labelsEnPlural returns non-empty list for all curricula', () {
+      for (final id in CurriculumId.values) {
+        final lbls = CurriculumLabels.labelsEnPlural(id);
+        expect(lbls, isNotEmpty, reason: '$id should have labelsEnPlural');
+      }
+    });
+
+    test('labelsHe returns non-empty list for all curricula', () {
+      for (final id in CurriculumId.values) {
+        final lbls = CurriculumLabels.labelsHe(id);
+        expect(lbls, isNotEmpty, reason: '$id should have labelsHe');
+      }
+    });
+
+    test('labelsHePlural returns non-empty list for all curricula', () {
+      for (final id in CurriculumId.values) {
+        final lbls = CurriculumLabels.labelsHePlural(id);
+        expect(lbls, isNotEmpty, reason: '$id should have labelsHePlural');
+      }
+    });
+
+    test('labelsEnPlural length matches depth for each curriculum', () {
+      for (final id in CurriculumId.values) {
+        expect(
+          CurriculumLabels.labelsEnPlural(id).length,
+          CurriculumLabels.depth(id),
+        );
+      }
     });
   });
 
-  group('CurriculumLabels.labelsHe', () {
-    test('returns list of Hebrew singular labels', () {
-      final heLabels = CurriculumLabels.labelsHe(CurriculumId.mishnayos);
-      expect(heLabels, isNotEmpty);
-      // Hebrew labels should be non-empty strings
-      expect(heLabels.every((l) => l.isNotEmpty), isTrue);
-    });
-  });
-
-  group('CurriculumLabels.labelsHePlural', () {
-    test('returns list of Hebrew plural labels', () {
-      final hePlurals = CurriculumLabels.labelsHePlural(CurriculumId.mishnayos);
-      expect(hePlurals, isNotEmpty);
-    });
-  });
+  // ─── CurriculumLabels.container ──────────────────────────────────────────
 
   group('CurriculumLabels.container', () {
-    test('returns non-null for Mishnayos (4-level curriculum)', () {
-      final cont = CurriculumLabels.container(CurriculumId.mishnayos);
-      expect(cont, isNotNull);
+    test('returns non-null for curricula with 2+ hierarchy levels', () {
+      for (final id in CurriculumId.values) {
+        if (CurriculumLabels.depth(id) >= 2) {
+          expect(
+            CurriculumLabels.container(id),
+            isNotNull,
+            reason: '$id has depth >= 2 so container should be non-null',
+          );
+        }
+      }
     });
 
-    test('container for Bavli (3-level) is non-null', () {
-      final cont = CurriculumLabels.container(CurriculumId.bavli);
-      expect(cont, isNotNull);
+    test('mishnayos container is the second-from-leaf level (Perek)', () {
+      final c = CurriculumLabels.container(CurriculumId.mishnayos);
+      expect(c, isNotNull);
+      // The container is level depth-1, which is Perek for Mishnayos.
+      final levels = CurriculumLabels.levels(CurriculumId.mishnayos);
+      expect(c!.en, levels[levels.length - 2].en);
     });
   });
 
-  group('CurriculumLabels.level — RangeError', () {
-    test('throws RangeError when level is out of range', () {
-      expect(
-        () => CurriculumLabels.level(CurriculumId.mishnayos, 99),
-        throwsA(isA<RangeError>()),
-      );
+  // ─── CurriculumLabels.containerSectionHeader ─────────────────────────────
+
+  group('CurriculumLabels.containerSectionHeader', () {
+    test('returns non-null for curricula with 2+ levels', () {
+      for (final id in CurriculumId.values) {
+        if (CurriculumLabels.depth(id) >= 2) {
+          final header = CurriculumLabels.containerSectionHeader(
+            id,
+            useHebrew: false,
+          );
+          expect(header, isNotNull);
+          expect(header, isNotEmpty);
+        }
+      }
     });
 
+    test('returns English label when useHebrew is false', () {
+      final header = CurriculumLabels.containerSectionHeader(
+        CurriculumId.mishnayos,
+        useHebrew: false,
+      );
+      expect(header, isNotNull);
+      // Should be English (no Hebrew characters at the start).
+      expect(header!.codeUnitAt(0) < 0x5D0, isTrue);
+    });
+
+    test('returns Hebrew label when useHebrew is true', () {
+      final header = CurriculumLabels.containerSectionHeader(
+        CurriculumId.mishnayos,
+        useHebrew: true,
+      );
+      expect(header, isNotNull);
+      // Should start with a Hebrew character (Unicode range 0x5D0-0x5EA).
+      final firstChar = header!.codeUnitAt(0);
+      expect(firstChar >= 0x5D0 && firstChar <= 0x5EA, isTrue);
+    });
+  });
+
+  // ─── CurriculumLabels.level ────────────────────────────────────────────────
+
+  group('CurriculumLabels.level', () {
     test('throws RangeError for level 0', () {
       expect(
         () => CurriculumLabels.level(CurriculumId.mishnayos, 0),
         throwsA(isA<RangeError>()),
       );
     });
-  });
 
-  group('CurriculumLabels.containerSectionHeader', () {
-    test('returns non-null for multi-level curriculum', () {
-      final header = CurriculumLabels.containerSectionHeader(
-        CurriculumId.mishnayos,
-        useHebrew: false,
+    test('throws RangeError for level exceeding depth', () {
+      final depth = CurriculumLabels.depth(CurriculumId.mishnayos);
+      expect(
+        () => CurriculumLabels.level(CurriculumId.mishnayos, depth + 1),
+        throwsA(isA<RangeError>()),
       );
-      expect(header, isNotNull);
-      expect(header, isNotEmpty);
     });
 
-    test('returns Hebrew form when useHebrew=true', () {
-      final header = CurriculumLabels.containerSectionHeader(
-        CurriculumId.mishnayos,
-        useHebrew: true,
-      );
-      expect(header, isNotNull);
-      // Should be different from the English form
-      final headerEn = CurriculumLabels.containerSectionHeader(
-        CurriculumId.mishnayos,
-        useHebrew: false,
-      );
-      expect(header, isNot(equals(headerEn)));
+    test('returns correct label for level 1 of all curricula', () {
+      for (final id in CurriculumId.values) {
+        final l = CurriculumLabels.level(id, 1);
+        expect(l.en, isNotEmpty);
+      }
     });
   });
+
+  // ─── CurriculumLabels.valueWithLabel ─────────────────────────────────────
 
   group('CurriculumLabels.valueWithLabel', () {
-    test('formats with English label when useHebrew=false', () {
+    test('English format: "Daf 2a" for bavli level 3', () {
       final result = CurriculumLabels.valueWithLabel(
+        CurriculumId.bavli,
+        3,
+        '2a',
+        useHebrew: false,
+      );
+      // Should be "Daf 2a" or similar pattern
+      expect(result, contains('2a'));
+      expect(result.codeUnitAt(0) < 0x5D0, isTrue); // starts with Latin
+
+      // Also confirm the label surfaces for a differently-shaped curriculum
+      // (named leaf value rather than numeric) so both value kinds covered.
+      final named = CurriculumLabels.valueWithLabel(
         CurriculumId.mishnayos,
         2,
         'Berakhot',
         useHebrew: false,
       );
-      // Should be "Masechta Berakhot" or similar
-      expect(result, contains('Berakhot'));
+      expect(named, contains('Berakhot'));
     });
 
-    test('formats with Hebrew label when useHebrew=true', () {
+    test('Hebrew format contains the value for any curriculum', () {
       final result = CurriculumLabels.valueWithLabel(
         CurriculumId.mishnayos,
-        2,
+        1,
         'ברכות',
         useHebrew: true,
       );
@@ -151,32 +222,45 @@ void main() {
     });
   });
 
+  // ─── CurriculumLabels.fullPath ────────────────────────────────────────────
+
   group('CurriculumLabels.fullPath', () {
-    test('builds full path with labels in English', () {
+    test('builds path with default separator for mishnayos', () {
       final path = CurriculumLabels.fullPath(CurriculumId.mishnayos, [
         'Zeraim',
         'Berakhot',
-        null,
-        null,
+        '1',
       ], useHebrew: false);
+      expect(path, contains('→'));
       expect(path, contains('Zeraim'));
       expect(path, contains('Berakhot'));
-      expect(path, contains(' → '));
+      expect(path, contains('1'));
     });
 
-    test('skips null segments', () {
-      final path = CurriculumLabels.fullPath(CurriculumId.mishnayos, [
+    test('skips null entries anywhere in the path segments', () {
+      // A null in the middle of the segment list is dropped, not rendered
+      // as an empty slot.
+      final midNull = CurriculumLabels.fullPath(CurriculumId.mishnayos, [
+        'Zeraim',
+        null,
+        '3',
+      ], useHebrew: false);
+      expect(midNull, contains('Zeraim'));
+      expect(midNull, contains('3'));
+
+      // Trailing nulls collapse the path to just the leading real segment.
+      final trailingNulls = CurriculumLabels.fullPath(CurriculumId.mishnayos, [
         'Zeraim',
         null,
         null,
         null,
       ], useHebrew: false);
-      expect(path.split(' → '), hasLength(1));
+      expect(trailingNulls.split(' → '), hasLength(1));
     });
 
-    test('uses custom separator', () {
+    test('uses custom separator when provided', () {
       final path = CurriculumLabels.fullPath(
-        CurriculumId.mishnayos,
+        CurriculumId.bavli,
         ['Zeraim', 'Berakhot'],
         useHebrew: false,
         separator: ' / ',
@@ -184,7 +268,16 @@ void main() {
       expect(path, contains(' / '));
     });
 
-    test('excludes level labels when includeLevelLabel=false', () {
+    test('returns empty string for all-null segments', () {
+      final path = CurriculumLabels.fullPath(CurriculumId.mishnayos, [
+        null,
+        null,
+      ], useHebrew: false);
+      expect(path, isEmpty);
+    });
+
+    test('excludes level labels when includeLevelLabel is false', () {
+      final l1 = CurriculumLabels.level(CurriculumId.mishnayos, 1);
       final withLabel = CurriculumLabels.fullPath(
         CurriculumId.mishnayos,
         ['Zeraim'],
@@ -197,10 +290,48 @@ void main() {
         useHebrew: false,
         includeLevelLabel: false,
       );
+      // Should only contain the value, not the label.
       expect(withLabel, isNot(equals(withoutLabel)));
-      expect(withoutLabel, equals('Zeraim'));
+      expect(withoutLabel, 'Zeraim');
+      expect(withoutLabel.contains(l1.en), isFalse);
     });
   });
+
+  // ─── CurriculumLabels.stripStructuralPrefix ───────────────────────────────
+
+  group('CurriculumLabels.stripStructuralPrefix', () {
+    test('strips mishneh torah prefix scoped to CurriculumId.mishnehTorah', () {
+      // Without scoping, the legacy global strip would chop off "משנה " (the
+      // Mishnayos level label) and leave a leading "תורה, " — the exact bug
+      // that produced "תורה, הלכות גירושין" on the Mishneh Torah browse.
+      expect(
+        CurriculumLabels.stripStructuralPrefix(
+          'משנה תורה, הלכות גירושין',
+          curriculumId: CurriculumId.mishnehTorah,
+        ),
+        'גירושין',
+      );
+      expect(
+        CurriculumLabels.stripStructuralPrefix(
+          'משנה תורה, הלכות אישות',
+          curriculumId: CurriculumId.mishnehTorah,
+        ),
+        'אישות',
+      );
+    });
+
+    test('removes known Hebrew prefixes outside Mishneh Torah scope', () {
+      expect(CurriculumLabels.stripStructuralPrefix('מסכת ברכות'), 'ברכות');
+      expect(CurriculumLabels.stripStructuralPrefix('ספר בראשית'), 'בראשית');
+    });
+
+    test('returns unchanged string when no prefix matches', () {
+      const input = 'ברכות';
+      expect(CurriculumLabels.stripStructuralPrefix(input), input);
+    });
+  });
+
+  // ─── CurriculumLabels.primaryUnitLabelPlural ──────────────────────────────
 
   group('CurriculumLabels.primaryUnitLabelPlural', () {
     test('returns non-empty string for all curricula', () {
@@ -210,6 +341,8 @@ void main() {
       }
     });
   });
+
+  // ─── CurriculumLabels.containerCountLabelPlural ───────────────────────────
 
   group('CurriculumLabels.containerCountLabelPlural', () {
     test('returns non-empty string for all curricula', () {
