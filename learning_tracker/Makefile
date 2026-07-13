@@ -274,7 +274,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 45 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 46 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -741,9 +741,17 @@ audit: lint-rules-test ## Run all 45 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/story_dod_check.$$$$.log; \
 	fi; \
+	echo "46/46 — AG-8 doc-lint: docs/explainers/sync-subsystem.md's stated EntityMerger count matches lib/core/sync/merge/ (AUD-docs-18)"; \
+	if ! dart run tool/check_sync_explainer_merger_count.dart > /tmp/sync_explainer_merger_count_check.$$$$.log 2>&1; then \
+	  cat /tmp/sync_explainer_merger_count_check.$$$$.log; \
+	  rm -f /tmp/sync_explainer_merger_count_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/sync_explainer_merger_count_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 45 greps clean ==="; \
+	  echo "=== audit PASSED — all 46 greps clean ==="; \
 	fi

@@ -1,7 +1,7 @@
 # How the Sync Subsystem Works
 
 > Concept explainer for contributors. Part of the Learning Tracker [documentation set](../index.md).
-> Reverse-derived from the codebase as of 2026-05-19. The code is the source of truth; if this document and the code disagree, the code wins.
+> Reverse-derived from the codebase as of 2026-07-13. The code is the source of truth; if this document and the code disagree, the code wins.
 
 Learning Tracker is **offline-first**. The app reads and writes a local SQLite database; cloud sync is an additive, optional layer that exists to keep a user's progress safe and consistent across devices. This document explains how that layer is designed, how a write becomes a Firestore document, how a pull merges remote state back in, and what keeps the whole thing correct.
 
@@ -39,14 +39,16 @@ flowchart TD
 
 *Figure: the account tier decides whether the sync stack is built at all. Local-only accounts pay no cost for sync.*
 
-## Two stacks, mid-decomposition
+## One decomposed subsystem
 
-A point of honesty up front: the sync subsystem currently runs **two implementations side by side**.
+The sync subsystem used to run two implementations side by side: a legacy `SyncEngine` (`features/sync/data/sync_engine.dart`) plus a legacy `OfflineQueue`, alongside a newer, decomposed stack in `lib/core/sync/`. That dual-stack cut-over is finished — `SyncEngine`, `OfflineQueue`, and `FirestoreDataSource` were deleted (commit `e14479af`, "W2.35-W2.39"). Neither symbol nor file exists in `lib/` any more. There is now a single implementation:
 
-- **`features/sync/data/sync_engine.dart`** — the legacy `SyncEngine`. Several thousand lines, the largest single file in `features/sync/`, marked `@deprecated` and still load-bearing. It owns push-on-write, twelve foreground Firestore listeners, its own pull-on-launch, the status stream, quota handling, and one-time backfills.
-- **`lib/core/sync/`** — the new, decomposed subsystem. The `SyncOrchestrator` runs pulls through a `PullPipeline` and a `MergeRouter` that dispatches each entity to its `EntityMerger`; a `ListenerSupervisor` runs a smaller set of listeners; an `OutboxProcessor` drains a transactional outbox.
+- **`SyncOrchestrator`** (`lib/core/sync/sync_orchestrator.dart`) — coordinates pull-on-launch, push, status, and lifecycle. It owns the `LifecycleObserver` that drives resume-triggered pulls.
+- **`PullPipeline`** — paginates each collection and hands rows to a **`MergeRouter`**, which dispatches by entity kind to one of the 18 `EntityMerger` implementations under `lib/core/sync/merge/`.
+- **`ListenerSupervisor`** — owns the foreground Firestore real-time subscriptions, one broadcast stream per synced collection.
+- **`OutboxProcessor`** — drains a transactional outbox through a `PushPipeline` implementation, covering every entity kind that pushes to Firestore.
 
-The new stack runs pulls but **delegates push, status, and roughly half the entity merges back to `SyncEngine`** — the cut-over is incomplete. Both stacks register a `WidgetsBinding` lifecycle observer; both have their own pull-on-launch. This is the highest-risk area in the codebase. Completing the decomposition is **Phase 1 stabilization work** (see [PRD § Project Scoping](../planning/prd.md#project-scoping--phased-development)).
+This is still the highest-risk area in the codebase — not because of an incomplete cutover, but because of its size, its correctness invariants, and how much of the app's data depends on it behaving correctly across two devices.
 
 When you change sync code, run `make test-invariants` — the N1–N8 regression suite encodes the bugs the project has fixed before and does not want back.
 
@@ -69,12 +71,11 @@ flowchart TD
 
 *Figure: a completion writes a local event row and an outbox row in one transaction. The UI updates immediately. A background processor drains the outbox to Firestore.*
 
-There are two queues, for historical reasons:
+Every syncable entity pushes through one queue:
 
-- **`Outbox`** (newer, transactional) — completions, streak events, settings, track changes. The outbox row is written in the **same Drift transaction** as the local data, so a local commit cannot succeed without an outbound side-effect being queued. The `OutboxProcessor` drains it in batches, with idempotency keys and bounded exponential backoff.
-- **`SyncQueue`** (legacy) — most other entities. Drained by the legacy `OfflineQueue.flush`.
+- **`Outbox`** (transactional) — completions, streak events, settings, track changes, and every other entity kind. The outbox row is written in the **same Drift transaction** as the local data, so a local commit cannot succeed without an outbound side-effect being queued. The `OutboxProcessor` drains it in batches, with idempotency keys and bounded exponential backoff.
 
-In both cases, **the UI never awaits the network**. Marking a completion looks instantaneous because it *is* — the cloud catches up later.
+**The UI never awaits the network.** Marking a completion looks instantaneous because it *is* — the cloud catches up later.
 
 ## Pulling remote state
 
@@ -154,34 +155,34 @@ Three lines of defense:
 
 The invariant suite is the safety net. When you change sync code, run `make test-invariants` — a green run is the price of admission.
 
-## Known sharp edges
+## Previously known sharp edges — now resolved
 
-The active list of sync defects and gaps lives in [architecture.md §12](../architecture.md#12-known-issues--remediation-context). The high-impact ones at the time of writing:
+Earlier revisions of this document listed four sync defects as open. Re-verified against the current code, all four are closed:
 
-- `learning_order` has no `EntityMerger` in the new stack — the orchestrator's pull silently merges nothing for that collection; the legacy `SyncEngine` carries it.
-- The push and read paths for curriculum-import metadata disagree on the collection name (one writes `curriculum_import_metadata`, the other reads `curriculum_imports`).
-- `DriftMergeStore.currentUpdatedAt` returns `null` for some kinds — for those, the orchestrator's LWW always lets remote win on the first merge, which can clobber a fresh local edit.
-- `deleteUserData`'s subcollection list is stale and can leave orphaned cloud data after account deletion.
+- ~~`learning_order` has no `EntityMerger` in the new stack~~ — `learning_order_merger.dart` exists and is wired into `MergeRouter` (closed by W2.26).
+- ~~The push and read paths for curriculum-import metadata disagree on the collection name~~ — both sides were renamed to a single `import_metadata` collection (W3.34).
+- ~~`DriftMergeStore.currentUpdatedAt` returns `null` for some kinds~~ — the `SyncKv` table now persists the last-applied `updated_at` per `(kind, entityKey)` for every LWW merger (Phase 3 of the sync architecture plan), so `remoteIsNewer` is symmetric instead of always letting remote win on the first merge.
+- ~~`deleteUserData`'s subcollection list is stale~~ — `FirestoreGatewayImpl.perProfileSubcollectionsForDeletion` is `@visibleForTesting` and kept in sync with the real per-profile collection names (AUD-core-sync-02).
 
-These are real, scoped pieces of work — the kind of contribution that is welcome.
+The active list of sync defects and gaps, if any are currently open, lives in [architecture.md §12](../architecture.md#12-known-issues--remediation-context).
 
 ## Where the code lives
 
 ```text
 lib/
-├── core/sync/                          # The new, decomposed subsystem
+├── core/sync/                          # The sync subsystem (single stack)
 │   ├── sync_orchestrator.dart          # Coordinates pulls + listeners + lifecycle
 │   ├── firestore_gateway.dart          # The single I/O seam to Firestore
 │   ├── firestore_gateway_impl.dart     # Only file allowed to import cloud_firestore
 │   ├── pull_pipeline.dart              # Paginates and dispatches pulls
 │   ├── listener_supervisor.dart        # Owns Firestore real-time subscriptions
 │   ├── lifecycle_observer.dart         # Resume-triggered pulls
-│   ├── merge/                          # MergeRouter + 8 EntityMergers
+│   ├── merge/                          # MergeRouter + 18 EntityMergers
 │   └── outbox/                         # OutboxProcessor + PushPipeline
-└── features/sync/                      # The legacy stack and sync-status UI
-    ├── data/sync_engine.dart           # @deprecated — still load-bearing
-    ├── data/offline_queue.dart         # The legacy queue
-    └── presentation/                   # Sync status indicator, restore screens
+└── features/sync/                      # Outbox write facade + sync-status UI
+    ├── data/outbox_sync_write_facade.dart   # SyncWriteFacade → outbox rows
+    ├── data/local_data_upload_service.dart  # pushAllLocalData (upgrade-to-cloud)
+    └── presentation/                        # Sync status indicator, restore screens
 ```
 
 For the full architectural picture, see [architecture.md §6](../architecture.md#6-sync-architecture).
