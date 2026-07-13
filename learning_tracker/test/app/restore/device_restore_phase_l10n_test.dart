@@ -20,109 +20,19 @@
 @Tags(['l1', 'restore', 'l10n'])
 library;
 
-import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/app/restore/device_restore_screen.dart';
-import 'package:learning_tracker/app/restore/restore_providers.dart';
-import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
-import 'package:mocktail/mocktail.dart';
 
-// ── Mocks ──────────────────────────────────────────────────────────────────────
-
-class _MockStackRouter extends Mock implements StackRouter {}
-
-class _MockRestoreGuard extends Mock implements RestoreGuard {
-  @override
-  void markRestoreComplete() {}
-}
-
-class _StubAppRouter extends Mock implements AppRouter {
-  _StubAppRouter({required this.restoreGuard});
-
-  @override
-  final RestoreGuard restoreGuard;
-}
-
-class _FixedSelectedProfileId extends SelectedProfileId {
-  _FixedSelectedProfileId(this._initial);
-  final int? _initial;
-  @override
-  int? build() => _initial;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-_MockStackRouter _makeRouter() {
-  final r = _MockStackRouter();
-  when(() => r.replaceAll(any())).thenAnswer((_) async => []);
-  when(() => r.push(any())).thenAnswer((_) async => null);
-  return r;
-}
-
-_StubAppRouter _makeAppRouter() =>
-    _StubAppRouter(restoreGuard: _MockRestoreGuard());
-
-Widget _buildHarness({
-  required RestoreStatus fixedStatus,
-  required _MockStackRouter mockRouter,
-  required _StubAppRouter stubAppRouter,
-  required UserDatabase db,
-  Locale locale = const Locale('en'),
-}) {
-  return ProviderScope(
-    overrides: [
-      restoreStatusProvider.overrideWithValue(fixedStatus),
-      deviceRestoreServiceProvider.overrideWithValue(null),
-      routerProvider.overrideWithValue(stubAppRouter),
-      userDatabaseProvider.overrideWithValue(db),
-      currentAccountIdProvider.overrideWithValue(1),
-      selectedProfileIdProvider.overrideWith(
-        () => _FixedSelectedProfileId(null),
-      ),
-    ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: mockRouter,
-        stateHash: 0,
-        child: const DeviceRestoreScreen(),
-      ),
-    ),
-  );
-}
-
-Future<void> _tearDown(WidgetTester tester) async {
-  await tester.pumpWidget(const SizedBox.shrink());
-  await tester.pump(Duration.zero);
-}
+import 'restore_test_harness.dart';
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(const AppShellRoute());
-    registerFallbackValue(<PageRouteInfo>[const AppShellRoute()]);
-    registerFallbackValue(const ProfilePickerRoute());
-  });
+  setUpAll(registerRestoreRouteFallbacks);
 
   group(
     'DeviceRestoreScreen — restoring phase labels must be localized (loop-iter2, AUD-app-02)',
@@ -137,14 +47,14 @@ void main() {
           addTearDown(db.close);
 
           await tester.pumpWidget(
-            _buildHarness(
+            buildRestoreHarness(
               fixedStatus: const RestoreStatus.restoring(
                 phase: RestorePhase.pullingData,
                 completedSteps: 0,
                 totalSteps: 3,
               ),
-              mockRouter: _makeRouter(),
-              stubAppRouter: _makeAppRouter(),
+              mockRouter: makeMockRouter(),
+              stubAppRouter: makeStubAppRouter(),
               db: db,
               locale: const Locale('en'),
             ),
@@ -155,7 +65,7 @@ void main() {
           // must still be present (no regression for existing English users).
           expect(find.text('Restoring your data...'), findsOneWidget);
 
-          await _tearDown(tester);
+          await tearDownRestoreHarness(tester);
         },
       );
 
@@ -170,14 +80,14 @@ void main() {
           addTearDown(db.close);
 
           await tester.pumpWidget(
-            _buildHarness(
+            buildRestoreHarness(
               fixedStatus: const RestoreStatus.restoring(
                 phase: RestorePhase.pullingData,
                 completedSteps: 0,
                 totalSteps: 3,
               ),
-              mockRouter: _makeRouter(),
-              stubAppRouter: _makeAppRouter(),
+              mockRouter: makeMockRouter(),
+              stubAppRouter: makeStubAppRouter(),
               db: db,
               locale: const Locale('he'),
             ),
@@ -201,7 +111,7 @@ void main() {
                 'l10n.deviceRestorePhaseRestoring for he locale',
           );
 
-          await _tearDown(tester);
+          await tearDownRestoreHarness(tester);
         },
       );
 
@@ -213,14 +123,14 @@ void main() {
           addTearDown(db.close);
 
           await tester.pumpWidget(
-            _buildHarness(
+            buildRestoreHarness(
               fixedStatus: const RestoreStatus.restoring(
                 phase: RestorePhase.loadingCurricula,
                 completedSteps: 1,
                 totalSteps: 3,
               ),
-              mockRouter: _makeRouter(),
-              stubAppRouter: _makeAppRouter(),
+              mockRouter: makeMockRouter(),
+              stubAppRouter: makeStubAppRouter(),
               db: db,
               locale: const Locale('he'),
             ),
@@ -241,7 +151,7 @@ void main() {
                 'l10n.deviceRestorePhaseLoadingCurricula for he locale',
           );
 
-          await _tearDown(tester);
+          await tearDownRestoreHarness(tester);
         },
       );
 
@@ -253,14 +163,14 @@ void main() {
           addTearDown(db.close);
 
           await tester.pumpWidget(
-            _buildHarness(
+            buildRestoreHarness(
               fixedStatus: const RestoreStatus.restoring(
                 phase: RestorePhase.importingContent,
                 completedSteps: 2,
                 totalSteps: 3,
               ),
-              mockRouter: _makeRouter(),
-              stubAppRouter: _makeAppRouter(),
+              mockRouter: makeMockRouter(),
+              stubAppRouter: makeStubAppRouter(),
               db: db,
               locale: const Locale('he'),
             ),
@@ -281,7 +191,7 @@ void main() {
                 'l10n.deviceRestorePhaseImportingContent for he locale',
           );
 
-          await _tearDown(tester);
+          await tearDownRestoreHarness(tester);
         },
       );
 
