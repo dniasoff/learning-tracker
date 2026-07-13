@@ -333,7 +333,17 @@ Widget _buildCurriculumListApp(_Mode mode, ContentRepository repo) {
         (ref, curriculum) async => 0.0,
       ),
     ],
-    child: const MaterialApp(home: CurriculumListScreen()),
+    child: MaterialApp(
+      locale: mode.locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const CurriculumListScreen(),
+    ),
   );
 }
 
