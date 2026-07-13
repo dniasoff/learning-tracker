@@ -2910,13 +2910,20 @@
     {
       "id": "AUD-docs-13",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Reconcile qa/legacy and ux-patterns-quick-reference tutor-mode docs with the grant-based tutoring redesign",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "b1e01b5d48ec3dbc95dd9192f5d1989659160ba5"
+      ],
+      "reviewRounds": 2,
+      "acVerified": [
+        "AUD-docs-13 AC1 OK: 11-tutor-mode.md:3 banner now states grant-based redesign + 'no new investment no longer accurate'; cited code refs verified in tree",
+        "AUD-docs-13 AC1b OK: PinScope.parent/.tutor(int), guards/pin_guard.dart, TutorPermissions.canMarkLiveCompletion=>false all present; no lib tutor_mode dir",
+        "AUD-docs-13 AC2 OK: remaining TutorPinGuard docs hits are all superseded-banner'd, _archive, audit self-register, or DNI-339 migration story; current-state refs fixed",
+        "AUD-docs-13 links OK: dead-link target ux-design-specification-2026-02-11.md exists; TOC anchor #route-guards-5 matches renamed 'Route Guards (5)' heading"
+      ],
+      "notes": "Confirmed TutorPinGuard absent from lib/. Fixed all 4 evidenced files: banners/cross-refs in 11-tutor-mode.md, 05-multi-track.md, 10-parent-mode.md, ux-patterns-quick-reference.md (+dead link). AC2 grep clean within these; residual docs/-wide hits are sibling-finding/archive/genre exemptions."
     },
     {
       "id": "AUD-t-cross-40",
