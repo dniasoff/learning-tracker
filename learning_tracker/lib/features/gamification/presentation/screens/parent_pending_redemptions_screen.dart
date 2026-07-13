@@ -143,8 +143,11 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
     // status change is pushed to the child's device.
     ref.read(outboxSyncWriteFacadeProvider);
     await db.pointsBalanceDao.fulfilRedemption(redemption.id);
-    ref.invalidate(pendingRedemptionsProvider);
+    // SM-4 (AUD-gamification-01): the screen can be popped while the DB
+    // write above is in flight -- check context.mounted before touching
+    // `ref`/`context` again, not after.
     if (context.mounted) {
+      ref.invalidate(pendingRedemptionsProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.pendingRedemptionsFulfilledSnackbar)),
       );
@@ -162,8 +165,11 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
     // decline + refund ledger entry are pushed to the child's device.
     ref.read(outboxSyncWriteFacadeProvider);
     await db.pointsBalanceDao.declineRedemption(redemption.id);
-    ref.invalidate(pendingRedemptionsProvider);
+    // SM-4 (AUD-gamification-01): the screen can be popped while the DB
+    // write above is in flight -- check context.mounted before touching
+    // `ref`/`context` again, not after.
     if (context.mounted) {
+      ref.invalidate(pendingRedemptionsProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.pendingRedemptionsDeclinedSnackbar)),
       );

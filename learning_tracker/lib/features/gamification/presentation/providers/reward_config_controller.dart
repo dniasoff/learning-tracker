@@ -144,6 +144,11 @@ class RewardConfigController extends _$RewardConfigController {
 
   Future<void> _persistAndSync() async {
     await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
+    // SM-4 (AUD-gamification-01): the screen/notifier can be torn down
+    // while the sync push above is in flight (e.g. a fast back-gesture).
+    // Touching `ref` after disposal throws, so bail out before the
+    // invalidate calls rather than let that throw propagate.
+    if (!ref.mounted) return;
     ref.invalidate(achievementsOverviewProvider);
     ref.invalidate(dashboardChildNextRewardProvider);
     // DG-RDMP-02: invalidate the child-facing reward list so that
@@ -215,6 +220,18 @@ class RewardConfigController extends _$RewardConfigController {
       return RewardSaved(title: title, wasEditing: wasEditing);
     });
 
+    // SM-4 (AUD-gamification-01): the screen/notifier can be disposed while
+    // the guarded block above is still awaiting I/O. Report the outcome to
+    // whichever caller is still awaiting this Future, but do not touch
+    // `state` on a disposed Notifier.
+    if (!ref.mounted) {
+      return switch (guarded) {
+        AsyncData(:final value) => value,
+        AsyncError() => const RewardSaveFailed(),
+        AsyncLoading() => const RewardSaveFailed(),
+      };
+    }
+
     switch (guarded) {
       case AsyncData(:final value):
         // Always clear `loading` on the happy path first -- clearForm()
@@ -250,6 +267,9 @@ class RewardConfigController extends _$RewardConfigController {
       await _persistAndSync();
     });
 
+    // SM-4 (AUD-gamification-01): see saveReward's mounted check above.
+    if (!ref.mounted) return;
+
     switch (guarded) {
       case AsyncData():
         state = state.copyWith(loading: false);
@@ -271,6 +291,9 @@ class RewardConfigController extends _$RewardConfigController {
       await svc.removeMilestone(m.id);
       await _persistAndSync();
     });
+
+    // SM-4 (AUD-gamification-01): see saveReward's mounted check above.
+    if (!ref.mounted) return;
 
     switch (guarded) {
       case AsyncData():
