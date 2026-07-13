@@ -204,7 +204,12 @@ class CloudContentService {
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
       _cachedManifest = ContentManifest.fromJson(json);
       return _cachedManifest!;
-    } catch (e) {
+    } on Exception catch (e) {
+      // Typed so a programming-error Error subtype (bad-cast TypeError from
+      // a malformed manifest, etc.) propagates directly to the zone's
+      // uncaught-error handler rather than being routed through this
+      // "manifest fetch failed" diagnostic log (AUD-content_browsing-09,
+      // EH-4).
       AppLogger.instance.error(
         event: 'CloudContentService: failed to fetch manifest',
         exception: e,
@@ -301,7 +306,11 @@ class CloudContentService {
       }
 
       return updates;
-    } catch (e) {
+    } on Exception catch (e) {
+      // Typed so a programming-error Error subtype is not silently folded
+      // into "no updates available" — that outcome is indistinguishable
+      // from the real "already up to date" case and would hide a genuine
+      // bug behind a no-op (AUD-content_browsing-09, EH-4).
       AppLogger.instance.error(
         event: 'CloudContentService: failed to check for updates',
         exception: e,
@@ -314,8 +323,14 @@ class CloudContentService {
   Uint8List _decompressGzip(Uint8List data) {
     try {
       return Uint8List.fromList(gzip.decode(data));
-    } catch (_) {
-      // Not gzipped, return as-is
+    } on FormatException {
+      // dart:io's GZipCodec throws FormatException for non-gzip input (the
+      // expected "not gzipped, return as-is" case). Narrowed from a bare
+      // `catch (_)` so an unrelated Error subtype is not silently treated
+      // as "not gzipped" and returned as still-compressed bytes — which
+      // would otherwise surface downstream as a confusing JSON-parse
+      // failure instead of the real decompression error
+      // (AUD-content_browsing-09, EH-4).
       return data;
     }
   }

@@ -148,6 +148,54 @@ void main() {
         expect(updates, isEmpty);
       });
     });
+
+    // ── AUD-content_browsing-09 (EH-4) — typed catch regression ──────────
+    //
+    // getManifest's and checkForUpdates's catch clauses were bare `catch
+    // (e)`, so a programming-error Error subtype (StateError, TypeError,
+    // ...) escaping the fetchBlob call was folded into the same "no
+    // updates available" outcome as an ordinary, ignorable failure —
+    // indistinguishable from "already up to date". Narrowed to `on
+    // Exception catch (e)` so an Error subtype now propagates instead.
+    group('checkForUpdates — EH-4 typed catch (AUD-content_browsing-09)', () {
+      test('a StateError thrown by fetchBlob propagates out of '
+          'checkForUpdates — it is NOT swallowed into an empty list', () async {
+        final throwingService = CloudContentService(
+          fetchBlob: (_) async => throw StateError('boom: fetchBlob bug'),
+        );
+
+        // RED (pre-fix, bare `catch (e)` in both getManifest and
+        // checkForUpdates): the StateError is caught twice — once inside
+        // getManifest (logged, rethrown), then again inside
+        // checkForUpdates (logged, swallowed) — so this call resolves to
+        // `[]` instead of throwing; `throwsA(isA<StateError>())` fails
+        // with "Expected: throws an instance of StateError / Actual: []".
+        // GREEN (post-fix, `on Exception catch (e)` in both): StateError
+        // is not an Exception, so neither catch clause fires — it
+        // propagates all the way out of checkForUpdates.
+        await expectLater(
+          () => throwingService.checkForUpdates(
+            activeCurricula: [CurriculumId.bavli],
+            localVersions: {'bavli': '1.0'},
+          ),
+          throwsA(isA<StateError>()),
+        );
+      });
+
+      test('an ordinary Exception thrown by fetchBlob is still swallowed into '
+          'an empty list — unchanged by the EH-4 narrowing', () async {
+        final throwingService = CloudContentService(
+          fetchBlob: (_) async => throw const FormatException('network hiccup'),
+        );
+
+        final updates = await throwingService.checkForUpdates(
+          activeCurricula: [CurriculumId.bavli],
+          localVersions: {'bavli': '1.0'},
+        );
+
+        expect(updates, isEmpty);
+      });
+    });
   });
 
   group('ContentDownloadProgress', () {

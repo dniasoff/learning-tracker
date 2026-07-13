@@ -11,6 +11,8 @@
 @Tags(['e2e', 'journey'])
 library;
 
+import 'dart:async' show runZonedGuarded;
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart' show Key, MaterialApp;
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
@@ -107,6 +109,24 @@ class _FakeCompletionRepository extends Fake implements CompletionRepository {
       completedAt: now,
       points: 10,
     );
+  }
+}
+
+/// Fake [CompletionRepository] whose [markComplete] always throws
+/// [_error], for AUD-content_browsing-09 (EH-4) —
+/// TextDisplayScreen._handleComplete's typed-catch regression test.
+class _ThrowingCompletionRepository extends _FakeCompletionRepository {
+  _ThrowingCompletionRepository(this._error);
+
+  final Error _error;
+
+  @override
+  Future<MarkCompletionResult> markComplete(
+    CompletionRequest request, {
+    bool awardGamificationPoints = true,
+    bool creditsAchievement = true,
+  }) async {
+    throw _error;
   }
 }
 
@@ -954,6 +974,95 @@ void main() {
           find.byKey(const Key('content_hierarchy_search_icon')),
           findsOneWidget,
           reason: 'ContentHierarchyScreen must have a search action icon',
+        );
+      },
+    );
+  });
+
+  // ── AUD-content_browsing-09 (EH-4) ──────────────────────────────────────
+  //
+  // TextDisplayScreen._handleComplete's final `catch (e, st)` was bare, so
+  // a programming-error Error subtype (StateError, TypeError, ...) escaping
+  // the mark-completion write path was caught and shown as the same
+  // friendly "Could not save" snackbar as an ordinary, expected write
+  // failure (e.g. a transient DB/Firestore error). Narrowed to `on
+  // Exception catch (e, st)` so an Error subtype now propagates instead of
+  // being silently downgraded.
+  group('AUD-content_browsing-09 (EH-4) — _handleComplete typed catch', () {
+    testWidgets(
+      'a StateError thrown by the completion repository propagates as an '
+      'uncaught exception — it is NOT swallowed into the "Could not save" '
+      'snackbar',
+      (tester) async {
+        final identity = E2EIdentity.localBorn(displayName: 'Alice');
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
+
+        final task = _finePacedTask(trackId: 1);
+        final throwingRepo = _ThrowingCompletionRepository(
+          StateError('boom: markComplete bug'),
+        );
+
+        await h.pumpApp(
+          path: '/text/${task.contentItemSefariaRef}',
+          extraOverrides: [
+            ..._textDisplayBaseOverrides(),
+            allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
+            coarsePacedTrackIdsProvider.overrideWith((ref) => Future.value({})),
+            completionRepositoryProvider.overrideWithValue(throwingRepo),
+            ..._textContentOverrides(task.contentItemSefariaRef),
+            adjacentContentRefsProvider(
+              task.contentItemSefariaRef,
+            ).overrideWith((ref) => Future.value((prev: null, next: null))),
+          ],
+        );
+
+        // Pump until _CompletionSection resolves allDailyTasksProvider and
+        // renders the FilledButton (mirrors the E2E-301 happy-path test
+        // above).
+        await tester.pump(const Duration(milliseconds: 200));
+        await tester.pump(const Duration(milliseconds: 200));
+
+        // _handleComplete's onPressed callback is fire-and-forget (the
+        // button widget does not await it), so an uncaught error inside it
+        // surfaces via the current Zone's handleUncaughtError — NOT via
+        // FlutterError.reportError/tester.takeException(), which only
+        // covers errors reported synchronously during a pump (e.g. widget
+        // build failures). flutter_test's OWN outer test zone treats any
+        // zone-level uncaught error as an immediate test failure, so the
+        // tap is wrapped in a dedicated runZonedGuarded here — mirroring
+        // AUD-core-sync-26's tutored_listener_supervisor_test.dart pattern
+        // — so this (nearer) zone claims the error first and the test can
+        // assert on it instead of being auto-failed by the outer one.
+        Object? capturedError;
+        await runZonedGuarded(
+          () async {
+            await h.tapText(
+              'Mark complete',
+              settle: const Duration(milliseconds: 500),
+            );
+            await tester.pump(const Duration(milliseconds: 300));
+          },
+          (error, stack) {
+            capturedError = error;
+          },
+        );
+
+        // RED (pre-fix, bare `catch (e, st)`): the StateError is caught
+        // inside _handleComplete, logged via AppLogger, and rendered as
+        // l10n.couldNotSave(...) — no zone error is ever raised, so
+        // `capturedError` stays null and the "Could not save" snackbar is
+        // on screen instead.
+        // GREEN (post-fix, `on Exception catch (e, st)`): StateError is not
+        // an Exception, escapes the catch clause, and reaches the
+        // surrounding zone's handleUncaughtError — captured above.
+        expect(
+          capturedError,
+          isA<StateError>(),
+          reason:
+              'a StateError from markComplete must propagate to the zone '
+              'uncaught-error handler, not be folded into the "Could not '
+              'save" snackbar',
         );
       },
     );

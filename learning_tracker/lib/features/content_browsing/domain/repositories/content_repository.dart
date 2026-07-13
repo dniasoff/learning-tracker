@@ -13,7 +13,13 @@ abstract class ContentRepository {
   /// Lazily loads and parses the JSON file on first call, then caches in
   /// memory. Returns the full hierarchy (both containers and leaf nodes).
   ///
-  /// Throws [ContentLoadException] if the asset file is missing or malformed.
+  /// Throws [ContentLoadException] if the JSON content is malformed (invalid
+  /// JSON syntax, or another [Exception] surfaces while loading/parsing). A
+  /// genuinely missing/unreadable asset file surfaces as a raw platform
+  /// error instead of being downgraded to [ContentLoadException] — EH-4,
+  /// AUD-content_browsing-09: that case indicates a content-bundling defect
+  /// (every [CurriculumId] this method is called with is expected to ship
+  /// an asset), not an ordinary recoverable content-load failure.
   Future<List<ContentItem>> getContentForCurriculum(CurriculumId curriculumId);
 
   /// Get the hierarchy configuration for a curriculum.

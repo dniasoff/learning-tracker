@@ -84,7 +84,11 @@ class ContentRepositoryImpl implements ContentRepository {
       final json = jsonDecode(jsonString) as Map<String, dynamic>;
       _parseAndCache(key, json);
       return _contentCache[key]!;
-    } catch (e) {
+    } on Exception catch (e) {
+      // Typed so a bad-cast/logic-bug Error (TypeError, StateError) inside
+      // _parseAndCache propagates raw instead of being folded into a
+      // generic ContentLoadException that hides the real defect
+      // (AUD-content_browsing-09, EH-4).
       throw ContentLoadException(
         'Failed to load content for ${curriculumId.displayNameEn}',
         cause: e,

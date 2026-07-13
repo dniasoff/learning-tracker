@@ -274,7 +274,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 41 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 42 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -709,9 +709,17 @@ audit: lint-rules-test ## Run all 41 enforcement greps (NFR19) — exits non-zer
 	    FAIL=1; \
 	  fi; \
 	done; \
+	echo "42/42 — EH-4: catch clauses in content_browsing's search / repository / text-display / cloud-content-service paths are typed (AUD-content_browsing-09)"; \
+	if ! dart run tool/check_eh4_content_browsing_catches.dart > /tmp/eh4_content_browsing_catches_check.$$$$.log 2>&1; then \
+	  cat /tmp/eh4_content_browsing_catches_check.$$$$.log; \
+	  rm -f /tmp/eh4_content_browsing_catches_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/eh4_content_browsing_catches_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 41 greps clean ==="; \
+	  echo "=== audit PASSED — all 42 greps clean ==="; \
 	fi

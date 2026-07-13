@@ -40,7 +40,13 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
       return CurriculumId.values.firstWhere(
         (c) => c.storageKey == widget.curriculumId,
       );
-    } catch (_) {
+    } on StateError {
+      // Iterable.firstWhere throws StateError('No element') when no
+      // CurriculumId matches — the expected "unknown curriculum id" case
+      // this getter exists to convert to null (AUD-content_browsing-09,
+      // EH-4). Narrowed from a bare `catch (_)` so an unrelated
+      // programming-error Error subtype is not silently folded into the
+      // same "just return null" branch.
       return null;
     }
   }
