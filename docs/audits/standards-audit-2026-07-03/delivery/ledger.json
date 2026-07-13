@@ -3791,13 +3791,26 @@
   {
    "id": "AUD-profiles-09",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace string-matched PIN error localization with typed error codes (EH-5/AX-2)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "8a738fbf45f314d87af77c04ef9120cd7c835ee5"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-profiles-09 AC1 (error field is closed enum, not String): `enum PinFlowError { incorrectPin, pinsDoNotMatch, noActiveProfile, invalidPinFormat, unexpected }` declared at pin_flow_controller.dart:31; PinFlowState.error is typed `PinFlowError?` (was `String? errorMessage`).",
+    "AUD-profiles-09 AC1 (screen switch has no fallback arm): pin_flow_screen.dart's `_resolvePinFlowError` is a switch EXPRESSION over `PinFlowError?` with cases for `null` + all 5 enum values and no `_ =>`/default arm - grep for '_ =>' inside the function body returns nothing; `flutter analyze` confirms Dart's own exhaustiveness checker accepts it with no fallback.",
+    "AUD-profiles-09 AC1 (used consistently, closes a real latent leak): both call sites (_PinFlowScreenState.build at line 188 and _SetupScaffold.build at line 354) now call the SAME `_resolvePinFlowError(state.error, l10n)` - previously _SetupScaffold passed `state.errorMessage` raw, bypassing localization entirely for first-time PIN setup.",
+    "AUD-profiles-09 AC2 (test drives EACH error path, asserts Locale('he') rendered text): new group H in pin_flow_and_setup_dialog_l1_test.dart - H2 pinsDoNotMatch/he, H3 noActiveProfile/he, H4 invalidPinFormat/he, H5/H6 unexpected/he each assert the specific Hebrew ARB string renders and the English sentinel does NOT leak. incorrectPin/he covered by pre-existing B4-he (kept). All 8 new H-tests + B4-he: PASS.",
+    "AUD-profiles-20 AC1 (both sites read e.message without unchecked cast): `grep -rn 'message as String' lib/features/profiles/` -> NONE FOUND. pin_flow_controller.dart:317 `fields: {'detail': e.message?.toString() ?? 'no message'}` inside `on ArgumentError catch (e, st)`; parent_pin_setup_dialog.dart:146 same pattern inside its own `on ArgumentError catch (e, st)`.",
+    "AUD-profiles-20 AC2 (ArgumentError.value(42,'pin') test, does not crash) - controller site: test H6 'setup mode - ArgumentError.value(42, \"pin\") (literal AC case, message omitted) does not crash' - PASS; H5 is the true crash-reproducing 3-arg variant (ArgumentError.value(42,'pin',99)) also PASS.",
+    "AUD-profiles-20 AC2 (ArgumentError.value(42,'pin') test, does not crash) - dialog site: test H8 'ParentPinSetupDialog - ArgumentError.value(42, \"pin\") (literal AC case) does not crash' - PASS; H7 is the 3-arg crash-reproducing variant via showParentPinSetupDialog, also PASS.",
+    "Red-first proof: git stash of the 3 lib/ files (pre-fix code) + new tests -> `flutter test --plain-name H` showed 6 of 8 new tests FAILING (H2, H4, H5, H6, H7, H8) before the fix; git stash pop restored the fix and all 8 passed again.",
+    "TQ-7 (no weakened/deleted existing test): pin_flow_controller_test.dart's two `errorMessage: 'err'`/`isNull` assertions were retyped to `error: PinFlowError.incorrectPin`/`.error` (same sentinel-copyWith behavior asserted, corrected type - same pattern as AUD-onboarding-16's ArgumentError->InvalidPinFormatException type correction). All 58 pre-existing tests in the two target files still pass unmodified in behavior.",
+    "Gates: `make audit` -> '=== audit PASSED — all 41 greps clean ==='; `flutter analyze` -> 'No issues found!'; `flutter test test/features/parent_mode/.../pin_flow_controller_test.dart test/features/profiles/pin_flow_and_setup_dialog_l1_test.dart --concurrency=4` -> 66 passed, 0 failed; `flutter test test/features/profiles/` (full dir) -> 328 passed; `flutter test test/features/parent_mode/` (full dir) -> 127 passed; `dart run custom_lint` -> 'No issues found!'."
+   ],
+   "notes": "PARKED finding built fresh on PO request (bundle commit belonged to AUD-onboarding-16); delivered with profiles-20 in one commit; adversarially verified PASS (typed PinFlowError enum, exhaustive switch no fallback, he-rendered text tests, null-safe casts)"
   },
   {
    "id": "AUD-t-profiles-01",
@@ -5715,13 +5728,26 @@
   {
    "id": "AUD-profiles-20",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace unchecked e.message as String? casts in PIN dialogs with a null-safe read",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "8a738fbf45f314d87af77c04ef9120cd7c835ee5"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-profiles-09 AC1 (error field is closed enum, not String): `enum PinFlowError { incorrectPin, pinsDoNotMatch, noActiveProfile, invalidPinFormat, unexpected }` declared at pin_flow_controller.dart:31; PinFlowState.error is typed `PinFlowError?` (was `String? errorMessage`).",
+    "AUD-profiles-09 AC1 (screen switch has no fallback arm): pin_flow_screen.dart's `_resolvePinFlowError` is a switch EXPRESSION over `PinFlowError?` with cases for `null` + all 5 enum values and no `_ =>`/default arm - grep for '_ =>' inside the function body returns nothing; `flutter analyze` confirms Dart's own exhaustiveness checker accepts it with no fallback.",
+    "AUD-profiles-09 AC1 (used consistently, closes a real latent leak): both call sites (_PinFlowScreenState.build at line 188 and _SetupScaffold.build at line 354) now call the SAME `_resolvePinFlowError(state.error, l10n)` - previously _SetupScaffold passed `state.errorMessage` raw, bypassing localization entirely for first-time PIN setup.",
+    "AUD-profiles-09 AC2 (test drives EACH error path, asserts Locale('he') rendered text): new group H in pin_flow_and_setup_dialog_l1_test.dart - H2 pinsDoNotMatch/he, H3 noActiveProfile/he, H4 invalidPinFormat/he, H5/H6 unexpected/he each assert the specific Hebrew ARB string renders and the English sentinel does NOT leak. incorrectPin/he covered by pre-existing B4-he (kept). All 8 new H-tests + B4-he: PASS.",
+    "AUD-profiles-20 AC1 (both sites read e.message without unchecked cast): `grep -rn 'message as String' lib/features/profiles/` -> NONE FOUND. pin_flow_controller.dart:317 `fields: {'detail': e.message?.toString() ?? 'no message'}` inside `on ArgumentError catch (e, st)`; parent_pin_setup_dialog.dart:146 same pattern inside its own `on ArgumentError catch (e, st)`.",
+    "AUD-profiles-20 AC2 (ArgumentError.value(42,'pin') test, does not crash) - controller site: test H6 'setup mode - ArgumentError.value(42, \"pin\") (literal AC case, message omitted) does not crash' - PASS; H5 is the true crash-reproducing 3-arg variant (ArgumentError.value(42,'pin',99)) also PASS.",
+    "AUD-profiles-20 AC2 (ArgumentError.value(42,'pin') test, does not crash) - dialog site: test H8 'ParentPinSetupDialog - ArgumentError.value(42, \"pin\") (literal AC case) does not crash' - PASS; H7 is the 3-arg crash-reproducing variant via showParentPinSetupDialog, also PASS.",
+    "Red-first proof: git stash of the 3 lib/ files (pre-fix code) + new tests -> `flutter test --plain-name H` showed 6 of 8 new tests FAILING (H2, H4, H5, H6, H7, H8) before the fix; git stash pop restored the fix and all 8 passed again.",
+    "TQ-7 (no weakened/deleted existing test): pin_flow_controller_test.dart's two `errorMessage: 'err'`/`isNull` assertions were retyped to `error: PinFlowError.incorrectPin`/`.error` (same sentinel-copyWith behavior asserted, corrected type - same pattern as AUD-onboarding-16's ArgumentError->InvalidPinFormatException type correction). All 58 pre-existing tests in the two target files still pass unmodified in behavior.",
+    "Gates: `make audit` -> '=== audit PASSED — all 41 greps clean ==='; `flutter analyze` -> 'No issues found!'; `flutter test test/features/parent_mode/.../pin_flow_controller_test.dart test/features/profiles/pin_flow_and_setup_dialog_l1_test.dart --concurrency=4` -> 66 passed, 0 failed; `flutter test test/features/profiles/` (full dir) -> 328 passed; `flutter test test/features/parent_mode/` (full dir) -> 127 passed; `dart run custom_lint` -> 'No issues found!'."
+   ],
+   "notes": "PARKED finding built fresh on PO request (bundle commit belonged to AUD-onboarding-16); delivered with profiles-20 in one commit; adversarially verified PASS (typed PinFlowError enum, exhaustive switch no fallback, he-rendered text tests, null-safe casts)"
   },
   {
    "id": "AUD-t-profiles-05",
@@ -6336,13 +6362,24 @@
   {
    "id": "AUD-content_browsing-09",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Type the catch clauses in content_browsing instead of bare catch(e)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "ab894806a158f2401dbd6c5978d5b3735416f325"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC (finding's literal text): grep -n '} catch (' on the 4 evidence files returns zero hits post-fix - verified: `grep -n '} catch (' content_search_screen.dart content_repository_impl.dart text_display_screen.dart cloud_content_service.dart` -> exit 1 (no matches).",
+    "Rule-0 checker built: learning_tracker/tool/check_eh4_content_browsing_catches.dart, wired into `make audit` as check 42/42. Ran against pre-fix tree (git stash of the 4 source files): exit 1, reported all 6 evidence sites (content_search_screen.dart:43, content_repository_impl.dart:87, text_display_screen.dart:755, cloud_content_service.dart:207/304/317). Ran post-fix: exit 0, 'EH-4 content_browsing typed-catch check passed'.",
+    "make audit (from learning_tracker/): PASSED, '=== audit PASSED — all 42 greps clean ===', exit 0 - includes new check 42/42 line for AUD-content_browsing-09.",
+    "flutter analyze: 'No issues found!' exit 0.",
+    "dart run custom_lint: 'No issues found!' exit 0.",
+    "content_search_screen.dart:43 -> `on StateError` (Iterable.firstWhere's sole reachable throw). Regression proof: pre-existing test 'S1. unknown curriculumId -> errorUnknownCurriculum body shown' in content_tile_search_providers_test.dart re-run and PASSED post-fix, confirming the on-clause still returns null for the only reachable case.",
+    "content_repository_impl.dart:87 -> `on Exception`. New test content_repository_impl_eh4_typed_catch_test.dart: (1) malformed-cast TypeError - RED pre-fix (threw ContentLoadException), GREEN post-fix (raw TypeError); (2) missing-asset - RED pre-fix (threw ContentLoadException), GREEN post-fix (raw FlutterError); (3) sanity FormatException-still-wrapped - passed both pre/post. Confirmed via git-stash RED then restored GREEN.",
+    "text_display_screen.dart:755 -> `on Exception`. New test in learning_p0_test.dart ('_handleComplete typed catch'): injects StateError via throwing CompletionRepository fake, taps Mark Complete inside nested runZonedGuarded (mirrors AUD-core-sync-26 pattern). RED pre-fix: 'Expected StateError, Actual null' (swallowed into snackbar). GREEN post-fix: capturedError is StateError. Confirmed via git stash."
+   ],
+   "notes": "PARKED finding built fresh on PO request (bundle had no correct commit — matched commit was AUD-core-sync-26); adversarially verified PASS; adds EH-4 Rule-0 checker check_eh4_content_browsing_catches.dart (make audit 42/42, proven to fire pre-fix)"
   },
   {
    "id": "AUD-t-learning-04",
