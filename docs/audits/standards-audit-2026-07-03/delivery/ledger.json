@@ -9685,13 +9685,19 @@
   {
    "id": "AUD-docs-35",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove test-options.md's reference to tool/device_e2e/night_runner.py — the file does not exist in the repo",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a5f879d37a2bbee16abd5ed2170ceb3ffe84ccc0"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-docs-35 AC1 OK: night_runner.py bullet removed; grep -n night_runner docs/test-options.md -> no match (exit 1)",
+    "AUD-docs-35 AC1 OK: remaining 3 Pieces exist under tool/device_e2e/ (ls: driver.py, journey_01_signup_profile.py, README.md)",
+    "AUD-docs-35 AC1 OK: night_runner not planned in e2e-test-suite-plan.md (grep exit 1), so removal is correct AC branch"
+   ],
+   "notes": "Re-verified: night_runner.py doesn't exist repo-wide, isn't in README.md's own file list, isn't planned in e2e-test-suite-plan.md; added to doc with no file ever committed. Removed the 2-line fabricated bullet. Post-fix grep confirms no match; remaining 3 pieces verified to exist."
   }
  ]
 }
