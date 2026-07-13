@@ -4,7 +4,7 @@
 
 | Entity | Policy | Column / Mechanism |
 |--------|--------|--------------------|
-| `curriculum_tracks` | Soft-delete | `deletedAt` — null = active; non-null = deleted |
+| `curriculum_tracks` | Soft-delete | `state` — `'deleted'` = deleted; `'active'`/`'retired'`/`'archived'` = not deleted; `stateChangedAt` records when |
 | `goals` | Hard-delete | Row removed on track/profile deletion |
 | `stage_definitions` | Hard-delete | Row removed on track deletion |
 | `completion_events` | Tombstone (append-only) | `purgedAt` — null = live; non-null = purged |
@@ -27,7 +27,7 @@ Invariant **N8** (test: `regression_invariants_test.dart`) asserts that the
 
 ## Why soft-delete for tracks but hard-delete for goals/stages?
 
-Tracks carry a `deletedAt` because:
+Tracks carry a `state`/`stateChangedAt` tombstone (rather than a hard delete) because:
 1. The sync engine needs to propagate deletions to other devices (tombstone required).
 2. `restoreOrCreate` must detect previously-deleted tracks to avoid re-using stale PKs.
 
