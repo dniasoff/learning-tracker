@@ -1,6 +1,6 @@
 # Story 19.6: Startup Sequence Hardening
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -695,10 +695,17 @@ final connectivityServiceProvider = Provider<ConnectivityService>((ref) {
 
 ### Agent Model Used
 
-_To be filled during implementation_
+_Retroactively reconciled 2026-07-13 (AUD-docs-06) — this record was never backfilled at implementation time; sprint-status.yaml already showed `done` while this header still read the template default. No contemporaneous dev-agent record exists for the original implementation._
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Re-verified 2026-07-13 against the live tree: a hardened, decomposed startup sequence is shipped under `lib/app/bootstrap/` (`bootstrap.dart`, `firebase_bootstrap.dart`, `account_bootstrap.dart`, `crashlytics_bootstrap.dart`, `logger_bootstrap.dart`, `notifications_bootstrap.dart`, `analytics_bootstrap.dart`).
+- Test coverage: `test/app/bootstrap/firebase_bootstrap_test.dart`, `test/app/bootstrap/account_bootstrap_test.dart`.
+- Status header + sprint-status.yaml were inconsistent (header said `ready-for-dev`, tracker said `done`) — header corrected to match verified reality, not the other way around.
+
 ### File List
+
+- `learning_tracker/lib/app/bootstrap/`
+- `learning_tracker/test/app/bootstrap/`

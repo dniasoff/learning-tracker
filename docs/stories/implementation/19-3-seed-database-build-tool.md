@@ -1,6 +1,6 @@
 # Story 19.3: Seed Database Build Tool
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -614,10 +614,17 @@ if (args.contains('--size-report')) {
 
 ### Agent Model Used
 
-_To be filled during implementation_
+_Retroactively reconciled 2026-07-13 (AUD-docs-06) — this record was never backfilled at implementation time; sprint-status.yaml already showed `done` while this header still read the template default. No contemporaneous dev-agent record exists for the original implementation._
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Re-verified 2026-07-13 against the live tree: the seed build pipeline is shipped under `learning_tracker/tool/` (`seed_content*.dart`, `seed_text_content.dart`, `sefaria_fetch/main.go`, `hebcal_fetch/main.mjs`, `build_cities_db.dart`), producing the bundled `seed.db.gz` `ContentDatabase` consumed at runtime.
+- Acceptance coverage: `test/story_acceptance/epic_19_offline_first_test.dart`, group `Story 19.3 — Seed Database Build Tool`, 0 `skip:` markers.
+- Status header + sprint-status.yaml were inconsistent (header said `ready-for-dev`, tracker said `done`) — header corrected to match verified reality, not the other way around.
+
 ### File List
+
+- `learning_tracker/tool/` (seed pipeline scripts)
+- `learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart`

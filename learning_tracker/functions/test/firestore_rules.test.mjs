@@ -306,6 +306,52 @@ describe('learner_profiles/{profileId} document — owner write, tutor read, str
   });
 });
 
+// ── SR-5: revoked/expired tutor access is denied ─────────────────────────────
+// hasActiveTutorAccess() is an O(1) EXISTENCE check against
+// tutor_active_access/{accessId} — the doc is maintained authoritatively by
+// Cloud Functions: written by acceptInvite, DELETED by revokeGrant /
+// resignGrant / expirePendingInvites (see functions/src/tutor_invites.ts,
+// functions/src/deletes.ts). There is no separate `state`/`expires_at` field
+// on this doc for the rule to inspect — absence of the doc IS "revoked or
+// expired". This block proves that cutoff actually holds at the rules layer:
+// once the access doc is gone, every previously-tutor-readable path denies
+// the same tutor, using the SAME auth identity that succeeded while access
+// was active (beforeEach seeds it; each test here deletes it first).
+describe('SR-5 — revoked/expired tutor access (tutor_active_access absent) denies tutor reads', () => {
+  async function revokeAccess() {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await deleteDoc(doc(ctx.firestore(), `tutor_active_access/${ACCESS_ID}`));
+    });
+  }
+
+  test('revoked tutor cannot read the learner profile doc (was readable while active)', async () => {
+    // Sanity: access is active before revocation (mirrors the test above).
+    await assertSucceeds(getDoc(doc(tutor(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
+    await revokeAccess();
+    await assertFails(getDoc(doc(tutor(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
+  });
+
+  test('revoked tutor cannot read completions (was readable while active)', async () => {
+    await assertSucceeds(getDoc(doc(tutor(), `${COMPLETIONS}/c1`)));
+    await revokeAccess();
+    await assertFails(getDoc(doc(tutor(), `${COMPLETIONS}/c1`)));
+  });
+
+  test('revoked tutor cannot read goals (was readable while active)', async () => {
+    await revokeAccess();
+    await assertFails(getDoc(doc(tutor(), `${GOALS}/g1`)));
+  });
+
+  test('a tutor who was never granted access (no tutor_active_access doc ever written) is denied', async () => {
+    // Distinct from revocation: this asserts the non-existence branch holds
+    // even without a prior active state, i.e. hasActiveTutorAccess() never
+    // defaults to true when the lookup doc is simply missing.
+    await revokeAccess();
+    await assertFails(getDoc(doc(tutor(), `${LP}/streak_events/s1`)));
+    await assertFails(getDoc(doc(tutor(), `${LP}/learning_ledger/ll1`)));
+  });
+});
+
 // ── Path 7: completions — owner write + validation + TUTOR WRITE BLOCK ───────
 describe('completions — owner write + validation + TUTOR WRITE BLOCK', () => {
   test('owner creates valid completion (points in range, no future date)', async () => {
@@ -400,6 +446,14 @@ describe('streak_events — owner write, tutor read, delete denied', () => {
   test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
     await expectSR4ListLimitCap(`${LP}/streak_events`);
   });
+  test('SR-3: owner cannot write a future created_at; past created_at succeeds', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/streak_events/future`), { event: 'x', created_at: futureTs }),
+    );
+    await assertSucceeds(
+      setDoc(doc(owner(), `${LP}/streak_events/past`), { event: 'x', created_at: pastTs }),
+    );
+  });
 });
 
 // ── Path 9: learning_ledger ──────────────────────────────────────────────────
@@ -420,6 +474,14 @@ describe('learning_ledger — owner write, tutor read, delete denied', () => {
   test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
     await expectSR4ListLimitCap(`${LP}/learning_ledger`);
   });
+  test('SR-3: owner cannot write a future completed_at; past completed_at succeeds', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/learning_ledger/future`), { minutes: 1, completed_at: futureTs }),
+    );
+    await assertSucceeds(
+      setDoc(doc(owner(), `${LP}/learning_ledger/past`), { minutes: 1, completed_at: pastTs }),
+    );
+  });
 });
 
 // ── Path 10: points_ledger ───────────────────────────────────────────────────
@@ -439,6 +501,14 @@ describe('points_ledger — owner write, tutor read, delete denied', () => {
   });
   test('SR-4: list() capped at limit(500); unbounded/501+ denied; get() unaffected', async () => {
     await expectSR4ListLimitCap(`${LP}/points_ledger`);
+  });
+  test('SR-3: owner cannot write a future created_at; past created_at succeeds', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/points_ledger/future`), { points: 1, created_at: futureTs }),
+    );
+    await assertSucceeds(
+      setDoc(doc(owner(), `${LP}/points_ledger/past`), { points: 1, created_at: pastTs }),
+    );
   });
 });
 
@@ -562,6 +632,22 @@ describe('bookmarks — owner write with key whitelist, tutor read, delete denie
   test('tutor cannot write bookmarks', async () => {
     await assertFails(setDoc(doc(tutor(), `${LP}/bookmarks/bk1`), validBookmark));
   });
+  test('SR-2: an oversized sefaria_ref (>500 chars) is denied', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/bookmarks/bk2`), {
+        ...validBookmark,
+        sefaria_ref: 'x'.repeat(501),
+      }),
+    );
+  });
+  test('SR-2: a wrong-typed curriculum_id (number, not string) is denied', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/bookmarks/bk3`), {
+        ...validBookmark,
+        curriculum_id: 12345,
+      }),
+    );
+  });
 });
 
 // ── Path 16: learning_order (with hasOnly whitelist) ─────────────────────────
@@ -602,6 +688,25 @@ describe('preferences — owner write (open bag, no whitelist), tutor read, dele
   test('tutor cannot write preferences', async () => {
     await assertFails(
       setDoc(doc(tutor(), `${LP}/preferences/notification_settings`), { enabled: false }),
+    );
+  });
+  // SR-2: preferences has no hasOnly() whitelist (open, heterogeneous bag),
+  // so Firestore Rules can't type/size-check arbitrary unknown keys — the
+  // achievable generic guard is a top-level key-count cap (see the rule's
+  // comment in firestore.rules), a defence against a garbage/DoS payload.
+  test('SR-2: a payload with 51 keys (over the 50 key-count cap) is denied', async () => {
+    const bloated = {};
+    for (let i = 0; i < 51; i++) bloated[`field_${i}`] = i;
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/preferences/notification_settings`), bloated),
+    );
+  });
+  test('SR-2: a normal-sized preferences payload (well under the cap) succeeds', async () => {
+    await assertSucceeds(
+      setDoc(doc(owner(), `${LP}/preferences/notification_settings`), {
+        enabled: true,
+        any_open_field: 'allowed',
+      }),
     );
   });
 });

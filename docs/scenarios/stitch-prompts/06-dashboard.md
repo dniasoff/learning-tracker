@@ -121,18 +121,17 @@ Create a mobile dashboard screen for a Torah learning tracking app with these sp
      - Icon representing action (checkmark, bookmark, etc.)
    - Item height: 56dp
 
-7. **Bottom Navigation Bar**
+7. **Bottom Navigation Bar** (AUD-docs-22, corrected 2026-07-13 to match `lib/app/router/app_shell.dart`'s live 4-tab shell)
    - Fixed bottom position
-   - 5 navigation items
+   - 4 navigation items
    - Height: 64dp
    - Background: #1E1E1E, elevated
 
    **Nav items:**
-   - Home (selected - green icon & text)
-   - Browse (gray icon)
-   - Progress (gray icon)
-   - Calendar (gray icon)
-   - More (gray icon)
+   - Dashboard (selected - green icon & text, `space_dashboard_rounded`)
+   - Learn (gray icon, `menu_book_rounded`)
+   - Progress (gray icon, `auto_graph_rounded`)
+   - Settings (gray icon, `settings_rounded`)
    - Icons: 24dp
    - Text: 11sp
    - Selected state: green (#13ec13)

@@ -1,7 +1,7 @@
 ---
 title: Source Tree Analysis
 description: Annotated guide to the Learning Tracker source tree, directory structure, feature modules, and strategies for finding code.
-date: 2026-03-18
+date: 2026-07-13
 ---
 
 # Source Tree Analysis
@@ -24,15 +24,18 @@ The Learning Tracker is a Flutter application for tracking daily learning progre
 
 ```
 learning_tracker/
-├── lib/                          # Main application code (366 files)
-│   ├── core/                     # Cross-cutting infrastructure (121 files)
+├── lib/                          # Main application code — AUD-docs-16, re-verified 2026-07-13 (704 files, excl. .g.dart/.freezed.dart)
+│   ├── core/                     # Cross-cutting infrastructure (245 files, excl. generated)
 │   │   ├── constants/            # App constants, curriculum defaults, text config
-│   │   ├── database/             # Drift SQLite ORM (69 files)
-│   │   │   ├── daos/             # 22 Data Access Objects (44 files incl. generated)
-│   │   │   ├── tables/           # 22 table definitions
+│   │   ├── database/             # Drift SQLite ORM — AUD-docs-16, re-verified 2026-07-13 (101 files)
+│   │   │   ├── daos/             # 24 User DB Data Access Objects (49 files incl. generated)
+│   │   │   ├── tables/           # 27 table definitions (User DB + Content DB tables share this dir)
 │   │   │   ├── seed/             # Learning program & test date seeds
-│   │   │   ├── app_database.dart # Main database class (schema v15)
-│   │   │   └── app_database.g.dart
+│   │   │   ├── user/
+│   │   │   │   ├── user_database.dart   # UserDatabase — schema v35 (there is no app_database.dart; the class was renamed)
+│   │   │   │   └── user_database.g.dart
+│   │   │   ├── content/           # ContentDatabase — schema v5
+│   │   │   └── registry/          # DeviceRegistryDatabase — schema v1
 │   │   ├── enums/                # CurriculumId, TrackType, UserMode
 │   │   ├── exceptions/           # DuplicateCompletionException
 │   │   ├── logging/              # AppLogger with sensitive data filtering
@@ -45,29 +48,27 @@ learning_tracker/
 │   │   ├── theme/                # Material 3 theme, bidirectional typography
 │   │   ├── utils/                # DateUtils (UTC/P5), HebrewUtils, HebrewCalendarUtils
 │   │   └── widgets/              # 11 reusable widgets
-│   └── features/                 # Feature modules (18 features: auth, content_browsing, dashboard, gamification, learning, learning_order, notifications, onboarding, parent_mode, profiles, progress, scheduler, settings, stages, sync, test_tracking, track_setup, tutor_mode)
-│       ├── auth/                 # Firebase Auth (5 files)
-│       ├── content_browsing/     # Content hierarchy browsing (18 files)
-│       ├── dashboard/            # Main dashboard (6 files)
-│       ├── gamification/         # Points, streaks, rewards (12 files)
-│       ├── learning/             # Core completion logic (29 files) ★ Most complex
-│       ├── learning_order/       # Drag-and-drop reordering (9 files)
-│       ├── notifications/        # Reminders, alerts, Shabbos mode (10 files)
-│       ├── onboarding/           # Setup wizard flow (15 files)
-│       ├── parent_mode/          # Parent dashboard & controls (16 files)
-│       ├── profiles/             # Multi-profile management (11 files)
-│       ├── progress/             # Charts, stats, Learning Journey (28 files)
-│       ├── scheduler/            # Smart scheduling engine (34 files) ★ Largest
-│       ├── settings/             # App settings, export/import (15 files)
-│       ├── stages/               # Stage configuration (9 files)
-│       ├── sync/                 # Cloud sync engine (14 files)
-│       ├── test_tracking/        # Test scores & reminders (2 files)
-│       └── tutor_mode/           # Read-only tutor dashboard (10 files)
-├── test/                         # Test suite (182 files)
-│   ├── core/                     # Core infrastructure tests (47 files)
-│   ├── features/                 # Feature-specific tests (100 files)
-│   ├── story_acceptance/         # Epic-based acceptance tests (15 files, 401 tests)
-│   ├── integration/              # Cross-feature integration tests (2 files)
+│   └── features/                 # Feature modules — AUD-docs-16, re-verified 2026-07-13, `ls lib/features/` (15 features: account, content_browsing, dashboard, gamification, learning, notifications, onboarding, profiles, progress, sacred_time, scheduler, settings, sync, tracks, tutoring)
+│       ├── account/               # Firebase Auth, local-born accounts, hard-tier upgrade (35 files)
+│       ├── content_browsing/     # Content hierarchy browsing (22 files)
+│       ├── dashboard/            # Main dashboard (31 files)
+│       ├── gamification/         # Points, streaks, rewards (45 files)
+│       ├── learning/             # Core completion logic (33 files)
+│       ├── notifications/        # Reminders, alerts, Shabbos mode (14 files)
+│       ├── onboarding/           # Setup wizard flow, child/adult mode (29 files)
+│       ├── profiles/             # Multi-profile management, parent-mode dashboard (40 files)
+│       ├── progress/             # Charts, stats, Learning Journey (42 files)
+│       ├── sacred_time/          # Shabbos/Yom Tov lock overlay, zmanim, city picker (20 files)
+│       ├── scheduler/            # Smart scheduling engine (59 files) ★ Largest of the "flat" features
+│       ├── settings/             # App settings, export/import (19 files)
+│       ├── sync/                 # SyncWriteFacade / outbox push entry points — engine internals live in core/sync/ (10 files)
+│       ├── tracks/               # Track management hub, setup/stages/order (formerly separate stages/track_setup/learning_order features) (67 files) ★ Most complex
+│       └── tutoring/             # Cross-user tutor access — grants, tutor dashboard, write proxies (36 files)
+├── test/                         # Test suite — AUD-docs-16, re-verified 2026-07-13 (865 files total)
+│   ├── core/                     # Core infrastructure tests (198 files)
+│   ├── features/                 # Feature-specific tests (472 files)
+│   ├── story_acceptance/         # Epic-based acceptance tests (57 files, ~1000 tests)
+│   ├── integration/              # Cross-feature integration tests (10 files)
 │   ├── fixtures/                 # Test data factories
 │   ├── helpers/                  # Test utilities (in-memory DB)
 │   └── mocks/                    # Mocktail mock implementations
@@ -111,13 +112,14 @@ Navigation is managed by `auto_route` with nested tab routing. Guards control ac
 
 ### `lib/core/database/` (69 files)
 
-The persistence layer is built on Drift (SQLite ORM) and split across **three databases** (Epic 19 + Epic 21):
+The persistence layer is built on Drift (SQLite ORM) and split across **three databases** (Epic 19 + Epic 21 + Epic 25 schema-v1 rebuild):
 
-- **User DB** — schema v4, 23 tables, 20 DAOs, read-write, per-account file.
-- **Content DB** — schema v3, 3 tables (`text_cache`, `calendar_cycles`, `seed_metadata`), read-only, bundled seed.
-- **Device Registry DB** — schema v1, 2 tables (`device_accounts`, `device_state`), workspace-level.
+**AUD-docs-16, re-verified 2026-07-13 via `tool/gen_arch_tables.dart`:**
+- **User DB** — schema v35, 24 tables, 24 DAOs, read-write, per-account file.
+- **Content DB** — schema v5, 4 tables (`TextCache`, `CalendarCycles`, `DailyContent`, `SeedMetadata`), read-only, bundled seed.
+- **Device Registry DB** — schema v1, 2 tables (`DeviceAccounts`, `DeviceState`), workspace-level.
 
-Key User DB tables include: `user_profiles`, `profiles`, `completions`, `curriculum_tracks`, `active_curricula`, `streaks`, `streak_events`, `xp_events`, `rewards`, `bookmarks`, `goals`, `test_scores`. See `docs/data-models.md` for the full table inventory.
+Key User DB tables include: `accounts`, `learner_profiles`, `completion_events`, `curriculum_tracks`, `stage_definitions`, `streak_events`, `learning_ledger`, `points_ledger`, `reward_redemptions`, `bookmarks`, `goals`, `outbox`. See `docs/architecture.md` §Database Schema for the full, generated table inventory (the `test_scores`/`xp_events`/`active_curricula` tables previously listed here don't exist in the current schema).
 
 ### `lib/features/learning/` (29 files) -- Most Complex
 
@@ -137,7 +139,7 @@ Route guards enforce the app's access control model:
 - **ChildModeGuard** - Restricts navigation in child mode
 - **PinGuard** - PIN challenge parameterized by `PinScope` — `PinScope.parent(profileId)` for parent-mode screens, `PinScope.tutor(profileId)` for tutor-mode screens. A single guard class parameterized by scope, replacing the earlier per-mode guard classes.
 
-### `test/story_acceptance/` (15 files, 401 tests)
+### `test/story_acceptance/` (57 files, ~1000 tests — AUD-docs-16, re-verified 2026-07-13)
 
 Story-based acceptance tests are organized by epic. Each file covers one epic and contains tests tagged by story ID (e.g., `@Tags(['epic-1', 'story-1.1'])`). These tests use in-memory Drift databases and exercise full feature flows without a running app.
 
@@ -167,8 +169,8 @@ feature_name/
 | Purpose | Path |
 |---|---|
 | App entry point | `lib/main.dart` |
-| Database definition | `lib/core/database/app_database.dart` |
-| Route configuration | `lib/core/navigation/app_router.dart` |
+| Database definitions | `lib/core/database/user/user_database.dart` (User DB), `lib/core/database/content/content_database.dart` (Content DB), `lib/core/database/registry/device_registry_database.dart` (Registry DB) — AUD-docs-16, corrected 2026-07-13; `app_database.dart` no longer exists |
+| Route configuration | `lib/app/router/app_router.dart` (`lib/core/navigation/app_router.dart` is a 2-line re-export shim to this canonical location) |
 | Theme definition | `lib/core/theme/app_theme.dart` |
 | Core providers | `lib/core/providers/` |
 | Completion recording | `lib/features/learning/data/repositories/completion_repository_impl.dart` |

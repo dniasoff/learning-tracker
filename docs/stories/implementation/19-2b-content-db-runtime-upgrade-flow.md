@@ -1,6 +1,6 @@
 # Story 19.2b: Content DB Runtime Upgrade Flow
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -1232,10 +1232,17 @@ story_19_2b:
 
 ### Agent Model Used
 
-_To be filled during implementation_
+_Retroactively reconciled 2026-07-13 (AUD-docs-06) — this record was never backfilled at implementation time; sprint-status.yaml already showed `done` while this header still read the template default. No contemporaneous dev-agent record exists for the original implementation._
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Re-verified 2026-07-13 against the live tree: `ContentDatabase` (`lib/core/database/content/content_database.dart`) uses the file-replacement (not in-place migration) model this story specifies — `schemaVersion` resolves to `expectedSchemaVersion` with no `onUpgrade`; a version bump ships as a full seed rebuild + file replacement.
+- Acceptance coverage: `test/story_acceptance/epic_19_offline_first_test.dart`, group `Story 19.2b — Seed Version Constant`, 0 `skip:` markers.
+- Status header + sprint-status.yaml were inconsistent (header said `ready-for-dev`, tracker said `done`) — header corrected to match verified reality, not the other way around.
+
 ### File List
+
+- `learning_tracker/lib/core/database/content/content_database.dart`
+- `learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart`

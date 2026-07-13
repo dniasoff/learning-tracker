@@ -1,0 +1,5 @@
+# AUD-docs-06 story-status-reconciliation baseline — generated
+# by tool/check_story_status_reconciliation.dart --update-baseline.
+# Pre-existing backlog only. A NEW mismatch not listed here fails
+# `make audit`. Burn this list down over time — do NOT add fresh
+# entries to paper over a new mismatch.

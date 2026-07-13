@@ -1,3 +1,5 @@
+> ⚠️ **Status — 2026-07-13 (AUD-docs-22):** This prompt describes a superseded early-concept IA — a dedicated 3-way Self-Learner/Parent/Tutor mode-selection screen. The shipped app has no such screen or 3-way split: mode selection is a **Child Mode / Adult Mode** card pair embedded inline within the profile-creation step (`childModeCardTitle`/`adultModeCardTitle`, `lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart`), alongside the profile name field and preferences — not a standalone screen. Do not re-run this prompt for the current app without a fresh design pass against that file; treat everything below as inspiration-only, not a spec.
+
 # Mode Selection Screen - Stitch Prompt
 
 ## Screen Purpose

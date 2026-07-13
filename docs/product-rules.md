@@ -166,7 +166,7 @@ These appear in the fix plan's "Open questions" section. When decided, fold them
 - ~~**Q-IA.**~~ **Decided 2026-05-21.** Recent Activity "All Time" = **Totals summary card only**. Shows total limudim, total chazaros, total active days — a simple stats card. No per-day calendar grid for the All Time range. Last 7 / Last 30 keep the existing day-cell calendar.
 - **Q-O.** Definitive list of online-only flows beyond sign-in / password reset / first sync / remote config refresh.
 - ~~**Q-G.**~~ **Decided 2026-05-20.** Pace grace window = **1 day** (days 0 and 1 of a track). From day 2 onward the ahead/behind comparison is live. `kPaceGraceWindowDays = 1` in `pace_calculator.dart`.
-- **Q-Term.** Code-side `UserMode.parent` → `adult` rename — bundled with Stream C or separate cleanup pass.
+- ~~**Q-Term.**~~ **Resolved (AUD-docs-16, confirmed shipped 2026-07-13).** Code-side rename is complete: `UserMode` no longer exists in `lib/`, replaced by `ProfileMode` (`lib/core/domain/value_objects/profile_mode.dart`) with `child`/`adult` values, DB-enforced via a `CHECK (mode IN ('adult','child'))` constraint on `learner_profiles` (schema v26).
 
 ---
 

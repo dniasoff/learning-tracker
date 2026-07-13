@@ -15,7 +15,7 @@ Learning Tracker stores its data in **three separate SQLite databases**, each ma
 flowchart LR
     App[App startup<br/>main.dart] --> Registry[(Device Registry DB<br/>schema v1<br/>read-write)]
     Registry --> Pick[Resolve active account]
-    Pick --> User[(User DB<br/>schema v23<br/>read-write<br/>one file per account)]
+    Pick --> User[(User DB<br/>schema v35<br/>read-write<br/>one file per account)]
     Pick --> Content[(Content DB<br/>schema v5<br/>read-only<br/>bundled seed)]
 ```
 
@@ -124,7 +124,7 @@ Five mechanisms work together:
 1. **Drift migrations.** Every schema change adds a migration step and bumps `schemaVersion`. The migrations are tested in `test/migration/` — one test per version bump, opening the database at the old schema and asserting the upgrade behaves.
 2. **Connection-scoped foreign keys.** SQLite enforces foreign keys per-connection. `UserDatabase.beforeOpen` runs `PRAGMA foreign_keys = ON` on every connection, so cascades and FK constraints actually fire.
 3. **`tool/schema_check.dart`.** A CI gate that parses the Drift table definitions and asserts every profile-scoped table keys on `profileId` and has at least one composite index. Drift cannot express these invariants natively, so a code-generation pass enforces them.
-4. **The `make audit` greps.** Thirteen targeted greps catch the patterns the schema cannot — for example, `DateTime.now()` outside `core/time/`, raw `print()` in production code, hardcoded `currentAccountId = 1`, and several layering-rule shortcuts.
+4. **The `make audit` greps.** 49 targeted greps (AUD-docs-16, re-verified 2026-07-13) catch the patterns the schema cannot — for example, `DateTime.now()` outside `core/time/`, raw `print()` in production code, hardcoded `currentAccountId = 1`, several layering-rule shortcuts, and doc-drift Rule-0 checks (story-status reconciliation, generated DB-schema/feature-graph sections).
 5. **The N1–N8 regression invariants.** Encoded in `test/story_acceptance/regression_invariants_test.dart`. They are the production-derived rules the schema has to satisfy.
 
 Run all of these locally before you push:
@@ -135,7 +135,7 @@ make schema-check                    # profileId + composite-index invariants
 
 # from learning_tracker/
 cd learning_tracker
-make audit                           # 13 enforcement greps
+make audit                           # 49 enforcement greps
 flutter test test/migration/         # per-version migration tests
 make test-invariants                 # the N1–N8 regression net
 ```
@@ -146,7 +146,7 @@ The two Makefiles are split deliberately: `schema-check` parses Drift table sour
 
 For the column-level reference, see [data-models.md](../data-models.md). The conceptual map:
 
-- **User DB** (22 tables + 1 view) — accounts, learner profiles, curriculum tracks and their scopes, stage definitions, study-day configurations, completion events and the projection view, daily plans, the learning ledger, bookmarks, two ordering tables, goals, the streak cache and event log, the outbox and the legacy sync queue, text-download status, and the Sacred-Time window cache.
+- **User DB** (24 tables + 1 view — AUD-docs-16, re-verified 2026-07-13 via `tool/gen_arch_tables.dart`) — accounts, learner profiles, curriculum tracks and their scopes, stage definitions, study-day configurations, completion events and the `completions_view` projection, daily plans, the learning ledger, bookmarks, two ordering tables, goals, streak events, the outbox, points balance/ledger and reward redemptions, prior-completion imports, a sync key-value table, text-download status (confirmed dead code, not yet removed — see AUD-docs-06), and the Sacred-Time window cache. The `completions`/`streaks`/`sync_queue` tables this line previously named were dropped outright in the schema-v1 rebuild, not retained.
 - **Content DB** (4 tables) — the Sefaria text cache, pre-computed calendar cycles, pre-resolved daily content keyed by calendar ref, and a single-row metadata table describing the seed build. See the [content database explainer](./content-database.md).
 - **Device Registry DB** (2 tables) — one row per account on the device, and a small key-value store for device-level state (`lastActiveAccountId`).
 

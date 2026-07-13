@@ -11,8 +11,12 @@ Do not start any of these autonomously.
 `completion_events` is the canonical write table. `completions_view` (schema v20, commit
 `298a80d3`) is the read surface for all DAOs and services — a Drift view backed by
 `completion_events WHERE purged_at IS NULL`. `CompletionWriter` writes `completion_events`
-only. The `completions` physical table is retained as an empty legacy artifact (no rows
-written post-C1).
+only. **AUD-docs-16 correction (2026-07-13):** the `completions` physical table was NOT
+retained as an empty legacy artifact — it was dropped outright in a later schema-v1
+rebuild migration (`user_database.dart`'s migration comments: "Dropped legacy tables:
+completions, streaks, sync_queue"). It does not exist in the current schema at all
+(re-verified via `tool/gen_arch_tables.dart` — 24 User DB tables, no `Completions` among
+them).
 
 ---
 

@@ -1,6 +1,11 @@
 # Story 19.10: Navigation & State Cleanup
 
-Status: ready-for-dev
+> ⚠️ **Status — 2026-07-13 (AUD-docs-06):** sprint-status.yaml previously marked this story `done`; it is not. Re-verified against the live tree:
+> - **AC-1/AC-2 (deprecated screen deletion + AuthGuard redirect) — premise is now WRONG, not just unimplemented.** `mode_selection_screen.dart` and `account_creation_screen.dart` are gone, but `AppIntroScreen` (`lib/features/onboarding/presentation/screens/app_intro_screen.dart`) is still live and is the app's `initial: true` route (`/intro` in `app_router.dart`) — the opposite of AC-1's premise that it's "no longer reachable." Onboarding evolved differently than this story anticipated.
+> - **AC-4 (delete `TextDownloadService` / `TextDownloadStatusDao` / `TextDownloadStatuses` table / `cloud_content_providers.dart`) — confirmed still NOT done.** All four still exist (`lib/features/content_browsing/data/services/text_download_service.dart`, `lib/core/database/daos/text_download_status_dao.dart`, `TextDownloadStatuses` table in `user_database.dart` schemaVersion 35, `lib/features/content_browsing/presentation/providers/cloud_content_providers.dart`) and are confirmed **dead** — zero consumers of `cloudContentServiceProvider`, `contentDownloadStatusDaoProvider`, or `isTextDownloadedProvider` anywhere in `lib/` (grep-verified 2026-07-13). No legitimate retention justification was found; this is neglected cleanup, not an intentional keep. Deleting it requires a Drift schema migration (bump `schemaVersion`, drop table) — out of scope for this docs-accuracy pass; tracked as outstanding.
+> - Given AC-1/AC-2's premise is obsolete and AC-4 is a real, still-valid outstanding cleanup, this story is **not** `done`. `sprint-status.yaml`'s `19-10-navigation-state-cleanup` entry is corrected to `in-progress` to match.
+
+Status: in-progress
 
 ## Story
 
@@ -372,10 +377,20 @@ make ci
 
 ### Agent Model Used
 
-_To be filled during implementation_
+_Retroactively reconciled 2026-07-13 (AUD-docs-06) — no contemporaneous dev-agent record exists; sprint-status.yaml falsely showed `done` while this header still read the template default and the code confirms the story is genuinely incomplete (not just undocumented)._
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- AC-1/AC-2: partially done (2 of 3 deprecated screens deleted) but premise invalidated — `AppIntroScreen` was kept and is the live initial route, not deleted. Recommend re-scoping or closing this pair as superseded rather than re-attempting the original deletion.
+- AC-3: not independently re-verified in this pass (out of scope for AUD-docs-06, which targeted the sprint-status.yaml drift and AC-4 specifically).
+- AC-4: confirmed still outstanding — see status banner above. Recommend a follow-up story/finding to perform the Drift migration and delete the 4 dead-code artifacts, rather than folding a schema migration into this docs-accuracy pass.
+- AC-5/AC-6/AC-7: not independently re-verified (downstream of AC-4; moot until AC-4 lands).
+
 ### File List
+
+- `learning_tracker/lib/features/onboarding/presentation/screens/app_intro_screen.dart` (still live — AC-1 premise wrong)
+- `learning_tracker/lib/features/content_browsing/data/services/text_download_service.dart` (still present — AC-4 outstanding)
+- `learning_tracker/lib/core/database/daos/text_download_status_dao.dart` (still present — AC-4 outstanding)
+- `learning_tracker/lib/features/content_browsing/presentation/providers/cloud_content_providers.dart` (still present — AC-4 outstanding)

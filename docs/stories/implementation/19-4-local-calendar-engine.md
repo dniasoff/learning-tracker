@@ -1,6 +1,6 @@
 # Story 19.4: Local Calendar Engine
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -743,10 +743,17 @@ ContentDatabase
 
 ### Agent Model Used
 
-_To be filled during implementation_
+_Retroactively reconciled 2026-07-13 (AUD-docs-06) — this record was never backfilled at implementation time; sprint-status.yaml already showed `done` while this header still read the template default. No contemporaneous dev-agent record exists for the original implementation._
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Re-verified 2026-07-13 against the live tree: `LocalCalendarEngine` is shipped at `lib/features/scheduler/domain/services/local_calendar_engine.dart`, querying the seed-populated `CalendarCycles` table in `ContentDatabase`.
+- Acceptance coverage: `test/story_acceptance/epic_19_offline_first_test.dart`, group `Story 19.4 — Local Calendar Engine`, 0 `skip:` markers.
+- Status header + sprint-status.yaml were inconsistent (header said `ready-for-dev`, tracker said `done`) — header corrected to match verified reality, not the other way around.
+
 ### File List
+
+- `learning_tracker/lib/features/scheduler/domain/services/local_calendar_engine.dart`
+- `learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart`

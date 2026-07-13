@@ -34,7 +34,7 @@ Create a mobile curriculum selection screen for a Torah learning tracking app wi
    - Subtitle: "Select one or more curricula to track"
    - Padding: 24dp horizontal
 
-3. **Curriculum Cards (5 Scrollable Cards)**
+3. **Curriculum Cards (9 Scrollable Cards — AUD-docs-22, corrected 2026-07-13 to match `lib/core/enums/curriculum_id.dart`'s 9-value `CurriculumId` enum; order below is the enum's canonical learning-sequence declaration order, not alphabetical)**
 
    **Card Layout Template:**
    Each card should have:
@@ -45,16 +45,40 @@ Create a mobile curriculum selection screen for a Torah learning tracking app wi
    - Brief description (2 lines)
    - Checkbox (top-right, green when selected)
 
-   **Curriculum 1: Mishnayos**
+   **Curriculum 1: Chumash**
+   - Accent color: Green (#2E7D32 light, #66BB6A dark)
+   - Icon: Torah scroll
+   - English: "Chumash"
+   - Hebrew: "חומש"
+   - Description: "Five Books of Torah with classic commentaries"
+   - Background: #1E1E1E
+   - Selected state: green glow/outline
+
+   **Curriculum 2: Nach**
+   - Accent color: Teal (#00695C light, #4DB6AC dark)
+   - Icon: Open scroll
+   - English: "Nach"
+   - Hebrew: "נ״ך"
+   - Description: "Prophets and Writings — the rest of the Hebrew Bible after the Torah"
+   - Selected state: teal glow/outline
+
+   **Curriculum 3: Tanach**
+   - Accent color: Deep Purple (#4527A0 light, #7E57C2 dark)
+   - Icon: Bound book with clasp
+   - English: "Tanach"
+   - Hebrew: "תנ״ך"
+   - Description: "The complete Hebrew Bible — Torah, Nach, and Ketuvim combined"
+   - Selected state: purple glow/outline
+
+   **Curriculum 4: Mishnayos**
    - Accent color: Amber (#FF8F00 light, #FFD54F dark)
    - Icon: Simple book symbol
    - English: "Mishnayos"
    - Hebrew: "משניות"
    - Description: "Foundational oral Torah teachings organized by topic"
-   - Background: #1E1E1E
    - Selected state: amber glow/outline
 
-   **Curriculum 2: Bavli (Talmud Bavli)**
+   **Curriculum 5: Bavli (Talmud Bavli)**
    - Accent color: Blue (#1565C0 light, #42A5F5 dark)
    - Icon: Layered books or scroll
    - English: "Bavli"
@@ -62,7 +86,7 @@ Create a mobile curriculum selection screen for a Torah learning tracking app wi
    - Description: "Babylonian Talmud - comprehensive analysis and discussion"
    - Selected state: blue glow/outline
 
-   **Curriculum 3: Yerushalmi (Talmud Yerushalmi)**
+   **Curriculum 6: Yerushalmi (Talmud Yerushalmi)**
    - Accent color: Cyan (#00838F light, #4DD0E1 dark)
    - Icon: Ancient scroll
    - English: "Yerushalmi"
@@ -70,7 +94,15 @@ Create a mobile curriculum selection screen for a Torah learning tracking app wi
    - Description: "Jerusalem Talmud - concise teachings and discussions"
    - Selected state: cyan glow/outline
 
-   **Curriculum 4: Mishna Berurah**
+   **Curriculum 7: Mishneh Torah**
+   - Accent color: Gold (#B8860B light, #DAA520 dark)
+   - Icon: Crowned book
+   - English: "Mishneh Torah"
+   - Hebrew: "משנה תורה"
+   - Description: "Maimonides' comprehensive code of Jewish law"
+   - Selected state: gold glow/outline
+
+   **Curriculum 8: Mishna Berurah**
    - Accent color: Burgundy (#6A1B29 light, #AD1E3D dark)
    - Icon: Open book with candle/light
    - English: "Mishna Berurah"
@@ -78,13 +110,13 @@ Create a mobile curriculum selection screen for a Torah learning tracking app wi
    - Description: "Practical halacha guide for daily Jewish life"
    - Selected state: burgundy glow/outline
 
-   **Curriculum 5: Chumash**
-   - Accent color: Green (#2E7D32 light, #66BB6A dark)
-   - Icon: Torah scroll
-   - English: "Chumash"
-   - Hebrew: "חומש"
-   - Description: "Five Books of Torah with classic commentaries"
-   - Selected state: green glow/outline
+   **Curriculum 9: Mussar**
+   - Accent color: Indigo (#283593 light, #5C6BC0 dark)
+   - Icon: Candle/lamp
+   - English: "Mussar"
+   - Hebrew: "מוסר"
+   - Description: "Ethical and character-development teachings"
+   - Selected state: indigo glow/outline
 
 4. **Selection Info**
    - Below cards, centered
@@ -133,7 +165,7 @@ Create a mobile curriculum selection screen for a Torah learning tracking app wi
 - Nikud (vowel marks) not required
 
 **Scrolling:**
-- Vertical scroll for all 5 cards
+- Vertical scroll for all 9 cards
 - Smooth scrolling behavior
 - Cards should scroll within safe area (between header and button)
 

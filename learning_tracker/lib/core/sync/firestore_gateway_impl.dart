@@ -156,69 +156,49 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     return cleaned;
   }
 
-  /// Return a copy of [data] in which the `completed_at` field is a genuine
-  /// Firestore [Timestamp] rather than an ISO-8601 string.
+  /// Return a copy of [data] in which [field] is a genuine Firestore
+  /// [Timestamp] rather than an ISO-8601 string or [DateTime].
   ///
-  /// The outbox payload is JSON, so `completed_at` arrives here as an
-  /// ISO-8601 *string* (`cmd.completedAt.toUtc().toIso8601String()`). The
-  /// `completions` security rule compares `completed_at <= request.time`;
-  /// in Firestore Security Rules a `string <= timestamp` comparison is
-  /// `false`, which would deny EVERY completion create. Writing a real
-  /// `Timestamp` makes the rule comparison sound.
+  /// The outbox payload is JSON, so date fields arrive here as ISO-8601
+  /// *strings* (e.g. `cmd.completedAt.toUtc().toIso8601String()`). Several
+  /// per-collection security rules (SR-3) compare a date field against
+  /// `request.time`; in Firestore Security Rules a `string <= timestamp`
+  /// comparison is `false`, which would deny EVERY create that carries the
+  /// field. Writing a real `Timestamp` makes the rule comparison sound.
   ///
   /// The value is left untouched when it is already a [Timestamp] (defensive
-  /// — a future caller may pre-convert) or absent/null (the rule guards the
-  /// field with `'completed_at' in request.resource.data`, so an omitted
-  /// field is not denied). The read path is unaffected: [_normalizeRow]
-  /// converts any Firestore `Timestamp` back to an ISO-8601 string on read.
+  /// — a future caller may pre-convert), absent/null (SR-3 rules guard the
+  /// field with `'<field>' in request.resource.data`, so an omitted field is
+  /// not denied), or an unparseable string (a malformed string must not
+  /// throw out of the whole batch — left untouched so only this one document
+  /// is affected, denied by the rule, rather than poisoning every sibling in
+  /// the chunk). The read path is unaffected: [_normalizeRow] converts any
+  /// Firestore `Timestamp` back to an ISO-8601 string on read.
+  static Map<String, dynamic> _timestampifyField(
+    Map<String, dynamic> data,
+    String field,
+  ) {
+    final value = data[field];
+    if (value == null || value is Timestamp) return data;
+    if (value is DateTime) {
+      return {...data, field: Timestamp.fromDate(value.toUtc())};
+    }
+    if (value is String) {
+      final parsed = DateTime.tryParse(value);
+      if (parsed != null) {
+        return {...data, field: Timestamp.fromDate(parsed.toUtc())};
+      }
+    }
+    return data;
+  }
+
+  /// Timestampifies the `completed_at` and `purged_at` fields used by the
+  /// `completions` collection (SR-3 / tombstone purges).
   static Map<String, dynamic> _timestampifyCompletedAt(
     Map<String, dynamic> data,
   ) {
-    var result = data;
-
-    // Normalize completed_at
-    final completedAt = result['completed_at'];
-    if (completedAt != null && completedAt is! Timestamp) {
-      if (completedAt is DateTime) {
-        result = {
-          ...result,
-          'completed_at': Timestamp.fromDate(completedAt.toUtc()),
-        };
-      } else if (completedAt is String) {
-        // A malformed string must not throw out of the whole batch — leave the
-        // value untouched so only this one document is affected (denied by the
-        // completed_at rule) rather than poisoning every sibling in the chunk.
-        final parsed = DateTime.tryParse(completedAt);
-        if (parsed != null) {
-          result = {
-            ...result,
-            'completed_at': Timestamp.fromDate(parsed.toUtc()),
-          };
-        }
-      }
-    }
-
-    // Normalize purged_at (present in tombstone outbox payloads).
-    if (result.containsKey('purged_at')) {
-      final purgedAt = result['purged_at'];
-      if (purgedAt != null && purgedAt is! Timestamp) {
-        if (purgedAt is DateTime) {
-          result = {
-            ...result,
-            'purged_at': Timestamp.fromDate(purgedAt.toUtc()),
-          };
-        } else if (purgedAt is String) {
-          final parsed = DateTime.tryParse(purgedAt);
-          if (parsed != null) {
-            result = {
-              ...result,
-              'purged_at': Timestamp.fromDate(parsed.toUtc()),
-            };
-          }
-        }
-      }
-    }
-
+    var result = _timestampifyField(data, 'completed_at');
+    result = _timestampifyField(result, 'purged_at');
     return result;
   }
 
@@ -321,8 +301,12 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final ulid = data['ulid'] as String?;
     final ref = ulid != null ? collection.doc(ulid) : collection.doc();
     await _guardPermission(
+      // SR-3: `created_at` must land as a genuine Firestore Timestamp (not
+      // the ISO-8601 string the outbox payload carries) so the rule's
+      // `created_at <= request.time` comparison is sound — see
+      // _timestampifyField.
       () => ref.set({
-        ..._stripInternalKeys(data),
+        ..._timestampifyField(_stripInternalKeys(data), 'created_at'),
         'synced_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true)),
       collection: 'streak_events',
@@ -531,8 +515,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final ulid = data['ulid'] as String?;
     final ref = ulid != null ? collection.doc(ulid) : collection.doc();
     await _guardPermission(
+      // SR-3: `completed_at` must land as a genuine Firestore Timestamp —
+      // see _timestampifyField.
       () => ref.set({
-        ..._stripInternalKeys(data),
+        ..._timestampifyField(_stripInternalKeys(data), 'completed_at'),
         'synced_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true)),
       collection: 'learning_ledger',
@@ -553,8 +539,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
       // W3.36: use ULID as doc-id for idempotent batch writes.
       final ulid = entry['ulid'] as String?;
       final ref = ulid != null ? collection.doc(ulid) : collection.doc();
+      // SR-3: `completed_at` must land as a genuine Firestore Timestamp —
+      // see _timestampifyField.
       batch.set(ref, {
-        ..._stripInternalKeys(entry),
+        ..._timestampifyField(_stripInternalKeys(entry), 'completed_at'),
         'synced_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     }
@@ -1230,8 +1218,10 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     final ulid = data['ulid'] as String?;
     final ref = ulid != null ? collection.doc(ulid) : collection.doc();
     await _guardPermission(
+      // SR-3: `created_at` must land as a genuine Firestore Timestamp — see
+      // _timestampifyField.
       () => ref.set({
-        ..._stripInternalKeys(data),
+        ..._timestampifyField(_stripInternalKeys(data), 'created_at'),
         'synced_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true)),
       collection: 'points_ledger',

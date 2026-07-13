@@ -153,8 +153,10 @@ The error paths are quiet by design:
 lib/core/database/
 ├── content/
 │   ├── content_database.dart           # The Drift class (read-only, query_only ON)
-│   ├── daos/                           # Read-only DAOs for the 4 tables
-│   └── tables/                         # text_cache, calendar_cycles, daily_content, seed_metadata
+│   └── daos/                           # Read-only DAOs for the 4 tables
+├── tables/                             # AUD-docs-16 (2026-07-13): shared with User DB — TextCache,
+│                                        # CalendarCycles, DailyContent, SeedMetadata live here, NOT
+│                                        # under content/tables/ (that directory doesn't exist)
 ├── seed_manager.dart                   # ensureContentDb, atomic replace, .bak recovery
 ├── content_db_health_checker.dart      # Integrity check + forceReExtract
 └── seed/

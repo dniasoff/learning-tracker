@@ -1,6 +1,6 @@
 # Story 19.11: End-to-End Offline Integration Testing
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -990,10 +990,17 @@ so that I can verify the app works fully without network from first launch throu
 
 ### Agent Model Used
 
-_To be filled during implementation_
+_Retroactively reconciled 2026-07-13 (AUD-docs-06) — this record was never backfilled at implementation time; sprint-status.yaml already showed `done` while this header still read the template default. No contemporaneous dev-agent record exists for the original implementation._
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Re-verified 2026-07-13: the AC-1..AC-7 scenarios (never-online install, deferred account creation, multi-device sync, seed-database update, adverse conditions, content-DB replacement, offline calendar) are covered by the capabilities of the sibling stories they integrate — all independently re-verified live in this pass (19.2/19.2b two-database split + seed replacement, 19.4 offline calendar, Epic 21 multi-device account switching, Epic 23 deferred/local-born accounts).
+- **Deviation from spec:** the story specified a dedicated `test/integration/offline/` directory with `offline_test_helpers.dart`; that literal structure was never built. Coverage instead lives in `test/story_acceptance/epic_19_offline_first_test.dart` (0 skips) and `test/integration/bypass_cleanup_offline_test.dart`. Functional intent is met; the specified test-file layout is not — noted here rather than silently marking the AC's literal checklist items complete.
+- Status header + sprint-status.yaml were inconsistent (header said `ready-for-dev`, tracker said `done`) — header corrected to match verified reality, not the other way around.
+
 ### File List
+
+- `learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart`
+- `learning_tracker/test/integration/bypass_cleanup_offline_test.dart`

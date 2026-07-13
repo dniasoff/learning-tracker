@@ -13,7 +13,7 @@ All project documentation lives under `docs/`. Nothing canonical lives outside i
 1. **[Project Overview](project-overview.md)** — 5 min. What the app is, the tech stack, feature modules, curricula, project status.
 2. **[Developer Handbook](developer-handbook.md)** — 30 min. Domain concepts (Chazara, Tracks, Programs), architecture mental models, setup, Make targets, testing, coding standards, troubleshooting.
 3. **[Architecture](architecture.md)** — Current-state architecture generated from code. Reference while writing a feature.
-4. **[Data Models](data-models.md)** — Three-database schema (User DB 23 tables, Content DB 3 tables, Device Registry DB 2 tables), ER diagram, DAO operations, Firestore collections.
+4. **[Data Models](data-models.md)** — Three-database schema (User DB 24 tables, Content DB 4 tables, Device Registry DB 2 tables — AUD-docs-16, re-verified 2026-07-13), ER diagram, DAO operations, Firestore collections.
 5. **[Testing Guide](testing-guide.md)** — Test architecture, fixtures, mocks, gotchas.
 6. **[Project Status](linear-status.md)** — Current epic and story status.
 

@@ -1,6 +1,6 @@
 # Story 19.12: Content DB Resilience & Error Recovery
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -863,10 +863,17 @@ lib/features/dashboard/presentation/
 
 ### Agent Model Used
 
-_To be filled during implementation_
+_Retroactively reconciled 2026-07-13 (AUD-docs-06) — this record was never backfilled at implementation time; sprint-status.yaml already showed `done` while this header still read the template default. No contemporaneous dev-agent record exists for the original implementation._
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Re-verified 2026-07-13 against the live tree: `ContentDbHealthChecker` is shipped at `lib/core/database/content_db_health_checker.dart`, running `PRAGMA integrity_check` and re-extracting from the bundled `seed.db.gz` on detected corruption.
+- Test coverage was re-homed under Epic 25's schema rebuild: `test/story_acceptance/epic_25_schema_core_test.dart` references `ContentDbHealthChecker` directly.
+- Status header + sprint-status.yaml were inconsistent (header said `ready-for-dev`, tracker said `done`) — header corrected to match verified reality, not the other way around.
+
 ### File List
+
+- `learning_tracker/lib/core/database/content_db_health_checker.dart`
+- `learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart`

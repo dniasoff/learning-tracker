@@ -3,10 +3,12 @@
 > Part of the Learning Tracker project documentation. Start at [index.md](./index.md).
 > Generated 2026-05-19 by an exhaustive codebase scan (BMAD `document-project` workflow).
 
+> **AUD-docs-07 partial refresh (2026-07-13):** §2 (Cloud Functions) and the indexes claim in §3 are re-verified below and current. **§1.2's per-profile collection table (`streak`, `notification_settings`, `gamification_settings`, `ui_preferences`, `curriculum_import_metadata`, ...) and §3's non-tutor rules summary still describe a pre-rebuild layout** — the live collections are `streak_events`, `preferences/{scope}` (scopes `notification_settings`/`gamification_settings`/`ui_preferences`), `import_metadata`, plus `points_ledger`, `reward_redemptions`, `stage_definitions`, `curriculum_scopes` and `study_day_configs`, none of which have rows here. That is separate, wider drift than this finding's scope (AUD-docs-07 covers only Cloud Functions + tutor-mode collections + the indexes claim) — see `learning_tracker/firestore.rules` for the authoritative current layout until §1/§3 get their own regeneration pass.
+
 This is an **offline-first mobile app** — it exposes no HTTP API of its own. Its external "contracts" are:
 
 1. **Firestore document model** — the cloud schema the app reads/writes for tier-gated sync.
-2. **Cloud Functions** — 4 callable/trigger endpoints (deletion cascades).
+2. **Cloud Functions** — 27 callable/trigger endpoints: 4 deletion-cascade endpoints, 8 tutor invite/grant-lifecycle endpoints, 13 tutor write-proxy endpoints, plus `purgeExpiredAuditLogs` and `tutorBulkPriorCompletions` (§2).
 3. **Firestore security rules** — server-side access control.
 4. **Sefaria API** — used only by build-time tooling, not at runtime.
 
@@ -49,20 +51,42 @@ Gateway conventions applied on every push: keys starting with `_` are stripped; 
 
 > ⚠️ **Known mismatch:** `pushCurriculumImportMetadata` writes `curriculum_import_metadata` but `fetchCurriculumImportMetadata` reads `curriculum_imports` — reads will never find pushed docs. See [architecture.md](./architecture.md) §9.
 
+### 1.3 Tutor Mode — top-level collections (AUD-docs-07)
+
+Tutor cross-user access is **not** part of the owner-gated `users/{uid}/...` tree above — it lives in two top-level collections, both Admin-SDK-write-only (no client ever creates/updates/deletes either):
+
+| Collection | Doc ID | Written by | Key fields |
+|---|---|---|---|
+| `tutor_grants/{grantId}` | `{encodedEmail}__{parentUid}__{childProfileId}` | Cloud Functions only (`tutor_invites.ts`) | `tutor_uid?`, `tutor_email`, `parent_uid`, `child_profile_id`, `state` (`pending`/`active`/`revoked`/...), `tutor_name_snapshot?`, `accepted_at?`, `invite_token?`, `updated_at`. Readable by the referenced tutor (`tutor_uid`) or parent (`parent_uid`). |
+| `tutor_grants/{grantId}/audit_log/{entryId}` | auto | Cloud Functions only | `tutor_uid`, `action`, `target`, `after_value`, `created_at`. Readable by the grant's parent/tutor. 12-month retention (`purgeExpiredAuditLogs`, see below). |
+| `tutor_active_access/{tutorUid}_{parentUid}_{profileId}` | deterministic (no `grantId` needed) | `acceptTutorInvite` (write) / `revokeTutorGrant`, `resignTutorGrant`, `expirePendingInvites` (delete) | `tutor_uid`, `parent_uid`, `child_profile_id`, `grant_id`, `created_at`. **O(1) existence-checked secondary index** — `firestore.rules`' `hasActiveTutorAccess()` grants a tutor read access to a learner's profile/subcollections purely by this doc's presence; there is no `state`/`expires_at` field to check because absence of the doc *is* "revoked or expired" (SR-5, `docs/coding-standards.md`). |
+
+Once `hasActiveTutorAccess(ownerUid, profileId)` is true, the tutor gets READ access to `users/{ownerUid}/learner_profiles/{profileId}` and its subcollections (never write — `completions` etc. are owner-write-only even for an active tutor; tutor-authored changes go through the `tutor_*` Cloud Function proxies in §2, which write as the owner uid via Admin SDK).
+
 ---
 
 ## 2. Cloud Functions
 
-Source: `learning_tracker/functions/src/index.ts` (TypeScript → `tsc` → `lib/`). Runtime Node 20. `firebase-admin ^13.7.0`, `firebase-functions ^7.2.3`. All use `db.recursiveDelete` so the client never enumerates subcollections.
+Source: `learning_tracker/functions/src/index.ts` — a re-export barrel (kept under 300 lines, AUD-firebase-15) over 5 focused modules: `deletes.ts`, `audit_log_purge.ts`, `tutor_bulk_completions.ts`, `tutor_invites.ts`, `tutor_writes.ts`. TypeScript → `tsc` → `lib/`. Runtime Node 20+. `firebase-admin ^13.10.0`, `firebase-functions ^7.2.5`. **27 exported functions total** (deletion cascades use `db.recursiveDelete` so the client never enumerates subcollections).
+
+**Deletion cascades (4)** — `deletes.ts`:
 
 | Function | Type | Input | Behavior |
 |---|---|---|---|
 | `onUserDeleted` | Auth trigger (`auth.user().onDelete`, v1) | Auth `user` | Cascades `recursiveDelete` on `users/{uid}` after an Auth account is deleted (safety net). |
-| `deleteLearnerProfile` | Callable (v2 https) | `{ profileId: number }` | Recursively deletes `users/{uid}/learner_profiles/{profileId}`. Throws `unauthenticated` / `invalid-argument`. |
+| `deleteLearnerProfile` | Callable (v2 https) | `{ profileId: number }` | Recursively deletes `users/{uid}/learner_profiles/{profileId}`; also removes the caller's `tutor_active_access` lookup docs for that profile. Throws `unauthenticated` / `invalid-argument`. |
 | `deleteCurriculumTrack` | Callable (v2) | `{ profileId, curriculumId, trackType }` | Deletes `curriculum_tracks/{curriculumId}_{trackType}` under the profile. |
 | `deleteAccountData` | Callable (v2) | `{}` (identity from `request.auth.uid`) | Recursively deletes all data under `users/{uid}`; called before Auth-account deletion. |
 
-Callers: `AccountManagementService` / `AccountLifecycleService` invoke `deleteAccountData`; `ProfileRepositoryImpl` invokes `deleteLearnerProfile` (via the gateway).
+**Audit log retention (1)** — `audit_log_purge.ts`: `purgeExpiredAuditLogs` (scheduled) — deletes `tutor_grants/*/audit_log` entries past the 12-month retention window (W3.42).
+
+**Tutor invite / grant lifecycle (8)** — `tutor_invites.ts`, all Callable (v2): `inviteTutor`, `acceptTutorInvite`, `declineTutorInvite`, `rescindTutorInvite`, `revokeTutorGrant`, `resignTutorGrant`, `listTutorGrants`, `expirePendingInvites`. These are the only writers of `tutor_grants` and `tutor_active_access` (§1.3) — `acceptTutorInvite` also writes `tutor_active_access`; `revokeTutorGrant`/`resignTutorGrant`/`expirePendingInvites` delete it.
+
+**Tutor bulk-prior-completions proxy (1)** — `tutor_bulk_completions.ts`: `tutorBulkPriorCompletions` — writes `completions` **as the owner uid** via Admin SDK (the client-side rule denies a tutor's own uid from writing completions — W3.43). Enforces `canMarkLiveCompletion=false`.
+
+**Tutor write proxies (13)** — `tutor_writes.ts`, all Callable (v2), each writes as the owner uid via Admin SDK after checking the caller has an active grant: `tutorResetCompletion`, `tutorUpsertGoal`, `tutorDeleteGoal`, `tutorUpsertTrack`, `tutorDeleteTrack`, `tutorUpsertStageDefinition`, `tutorUpsertStudyDayConfig`, `tutorDeleteStudyDayConfig`, `tutorUpdateGamificationSettings`, `tutorUpsertBookmark`, `tutorSetProfileProgram`, `tutorUpsertCurriculumScope`, `tutorEditProfile`.
+
+Callers: `AccountManagementService` / `AccountLifecycleService` invoke `deleteAccountData`; `ProfileRepositoryImpl` invokes `deleteLearnerProfile` (via the gateway); the `tutoring` feature module invokes the invite/grant and `tutor_*` write-proxy functions.
 
 ---
 
@@ -83,7 +107,7 @@ Callers: `AccountManagementService` / `AccountLifecycleService` invoke `deleteAc
 
 **Deprecated top-level blocks** (`accounts`, `learner_profiles`, `completion_events`, `streak_events`, `learning_ledger`, `track_configs`, `bookmarks`, `settings`) are retained because the Story 27.8 acceptance test and `test/firestore-rules/` pin them, even though the app no longer writes that layout.
 
-**Indexes:** `firestore.indexes.json` is empty (`{"indexes":[],"fieldOverrides":[]}`) — no composite indexes defined.
+**Indexes:** `firestore.indexes.json` (AUD-docs-07, corrected 2026-07-13) defines **6 composite indexes, all on `tutor_grants`** — supporting the tutor-read (`tutor_uid`+`state`), parent-lookup (`parent_uid`+`child_profile_id`+`state`), pending-invite (`tutor_email`+`state`), expiry-sweep (`state`+`updated_at`), and two recency-ordered (`tutor_uid`/`parent_uid` + `updated_at` DESC) queries the tutor invite/grant Cloud Functions (§2) run. No other collection has a composite index defined.
 
 ---
 

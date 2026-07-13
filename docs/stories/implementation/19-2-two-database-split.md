@@ -1,6 +1,6 @@
 # Story 19.2: Two-Database Split (ContentDatabase + UserDatabase)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -712,10 +712,18 @@ All content lookups should return nullable or use a `ContentResult<T>` wrapper. 
 
 ### Agent Model Used
 
-_To be filled during implementation_
+_Retroactively reconciled 2026-07-13 (AUD-docs-06) — this record was never backfilled at implementation time; sprint-status.yaml already showed `done` while this header still read the template default. No contemporaneous dev-agent record exists for the original implementation._
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Re-verified 2026-07-13 against the live tree: the two-database split is shipped. `UserDatabase` (`lib/core/database/user/user_database.dart`, per-account, read-write) and `ContentDatabase` (`lib/core/database/content/content_database.dart`, read-only, bundled+extracted) are both live, distinct `@DriftDatabase` classes.
+- Acceptance coverage: `test/story_acceptance/epic_19_offline_first_test.dart`, group `Story 19.2 — Two-Database Split`, 0 `skip:` markers.
+- Status header + sprint-status.yaml were inconsistent (header said `ready-for-dev`, tracker said `done`) — header corrected to match verified reality, not the other way around.
+
 ### File List
+
+- `learning_tracker/lib/core/database/user/user_database.dart`
+- `learning_tracker/lib/core/database/content/content_database.dart`
+- `learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart`

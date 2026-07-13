@@ -32,7 +32,7 @@ The shipping path is **Android → Google Play**. iOS is not deployment-ready. F
 |---|---|---|
 | Cloud Functions | `cd functions && npm run deploy` (= `firebase deploy --only functions`) | `functions/src/index.ts` |
 | Firestore rules | `firebase deploy --only firestore:rules` | `firestore.rules` |
-| Firestore indexes | `firebase deploy --only firestore:indexes` | `firestore.indexes.json` (currently empty) |
+| Firestore indexes | `firebase deploy --only firestore:indexes` | `firestore.indexes.json` (6 composite indexes, all on `tutor_grants` — AUD-docs-07, corrected 2026-07-13) |
 
 Cloud Functions build with `tsc` (`npm run build`). Local emulation: `npm run serve` (functions) or `firebase emulators:start --only firestore`.
 

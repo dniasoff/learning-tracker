@@ -189,7 +189,9 @@ Shared widgets in `lib/core/widgets/` including `AnimatedProgressBar`, `HebrewTe
 
 ## Feature Modules
 
-The application contains 18 active feature modules (zombie features `tutor_mode` and `test_tracking` removed in Epic 25/26). Each follows the same internal layering:
+> **AUD-docs-15 regenerated 2026-07-13.** Node/feature list derives from `ls lib/features/`; file counts from `find lib/features/<f> -name '*.dart' | wc -l`. Previous revision named 6 nonexistent features (`auth`, `stages`, `parent_mode`, `track_setup`, `learning_order`, `track_learning_order` — folded into `tracks/` or renamed to `account`) and omitted `sacred_time`, `tutoring`, and `tracks` entirely.
+
+The application contains **15 active feature modules**. Each follows the same internal layering:
 
 ```text
 lib/features/<feature>/
@@ -207,92 +209,86 @@ lib/features/<feature>/
     providers/        # Riverpod providers
 ```
 
+`tracks/` additionally nests `setup/`, `stages/`, `track_order/`, and `whole_curriculum_order/` sub-packages (the former standalone `track_setup`/`stages`/`track_learning_order` features, unified under Epic 25/26).
+
 ### Feature Summary
 
-| # | Feature | Description |
-| --- | --- | --- |
-| 1 | **auth** | Firebase Auth with email/password and Google Sign-In; local-born account support (argon2id hash); hard-tier upgrade flow |
-| 2 | **content_browsing** | Bundled content from ContentDB; in-memory ContentIndex; Hebrew search with nikud stripping |
-| 3 | **dashboard** | Cross-curriculum aggregation, streaks (via StreakReducer), points, today's tasks |
-| 4 | **gamification** | Per-curriculum points (configurable per stage), global streaks, mystery rewards |
-| 5 | **learning** | Core completion logic via CompletionWriter (transactional, idempotent), stage progression, bookmarks, append-only ledger |
-| 6 | **learning_order** | Drag-and-drop reordering at configurable level; parent control restriction; optimistic UI |
-| 7 | **notifications** | Daily reminders, streak alerts, reward milestones; Shabbos/Yom Tov quiet mode with location-based zmanim; 3 channels |
-| 8 | **onboarding** | Account creation, mode selection, curriculum activation, bulk prior completions, learning process wizard |
-| 9 | **parent_mode** | PIN-protected dashboard, per-curriculum analytics, engagement metrics, reward catalog management |
-| 10 | **profiles** | Multi-profile support (up to 10), cascade delete across dependent tables, profile switching |
-| 11 | **progress** | Hierarchy-based progress, charts (daily, cumulative, points, streak calendar), Learning Journey, milestones |
-| 12 | **sacred_time** | Shabbos/Yom Tov lock overlay; zmanim-based start/end times |
-| 13 | **scheduler** | Three-phase engine, adaptive pacing, 3 schedule types (delay/weekly/rolling), 7-day rolling average |
-| 14 | **settings** | Account management, curriculum activation (min 1), data export/import |
-| 15 | **stages** | Stage definitions with 3 schedule types, max 10 stages, protected Learn stage, 2-pass reordering |
-| 16 | **sync** | Monolithic `SyncEngine` (production); `core/sync/` 7-class layer built but pending Wave D wiring; Firestore profile-scoped collections, Outbox-driven push, merge strategies, offline queue |
-| 17 | **track_learning_order** | Track-scoped content ordering |
-| 18 | **track_setup** | Track management hub; track detail and editing screens |
+| # | Feature | Files | Description |
+| --- | --- | --- | --- |
+| 1 | **account** | 35 | Firebase Auth (email/password + Google Sign-In), local-born account support (argon2id hash), hard-tier upgrade flow, account onboarding |
+| 2 | **content_browsing** | 22 | Bundled content from ContentDB; in-memory ContentIndex; Hebrew search with nikud stripping |
+| 3 | **dashboard** | 31 | Cross-curriculum aggregation, streaks, points, today's tasks |
+| 4 | **gamification** | 45 | Per-curriculum points (configurable per stage), global streaks, mystery rewards |
+| 5 | **learning** | 33 | Core completion logic via CompletionWriter (transactional, idempotent), stage progression, bookmarks, append-only ledger |
+| 6 | **notifications** | 14 | Daily reminders, streak alerts, reward milestones; Shabbos/Yom Tov quiet mode with location-based zmanim |
+| 7 | **onboarding** | 29 | Mode selection (child/adult), curriculum activation, bulk prior completions, learning-process wizard |
+| 8 | **profiles** | 40 | Multi-profile support, cascade delete across dependent tables, profile switching, parent-mode PIN-protected dashboard |
+| 9 | **progress** | 42 | Hierarchy-based progress, charts (daily, cumulative, points, streak calendar), Learning Journey, milestones |
+| 10 | **sacred_time** | 20 | Shabbos/Yom Tov lock overlay; zmanim-based start/end times; city picker |
+| 11 | **scheduler** | 59 | Three-phase engine, adaptive pacing, multiple schedule types, rolling-average pace tracking |
+| 12 | **settings** | 19 | Account management, curriculum activation, data export/import |
+| 13 | **sync** | 10 | `SyncWriteFacade`/outbox-driven push entry points consumed by other features (the sync engine internals live in `core/sync/`, not this feature module) |
+| 14 | **tracks** | 67 | Track management hub, track setup/detail/editing, stage definitions (max 10 stages, protected Learn stage), custom learning order |
+| 15 | **tutoring** | 36 | Cross-user tutor access — invite/accept/revoke grant lifecycle, tutor dashboard, tutor write proxies via Cloud Functions (see `docs/api-contracts.md` §1.3/§2, AUD-docs-07) |
 
 ---
 
 ## Feature Dependency Graph
 
+> **AUD-docs-15 regenerated 2026-07-13** by `tool/gen_feature_graph.dart` (`make gen-feature-graph` to reprint; `make check-feature-graph` fails CI if this node set drifts from `ls lib/features/`). Nodes are exactly `ls lib/features/`; edges are derived from a real grep of `import 'package:learning_tracker/features/...'` across every file. The full cross-feature import graph is dense — **101 edges among 15 nodes** — so this diagram keeps only "significant" dependencies (an edge survives if ≥6 distinct files make that import) plus, for any node that would otherwise be edge-less at that threshold, its single heaviest real edge (this is how `sacred_time` stays visible). Run `dart run tool/gen_feature_graph.dart --full` for every edge, or `--min-weight=N` for a different cutoff. `core` is omitted as a node here — every feature module imports `core/` (databases, navigation, shared services); that edge is universal, not differentiating, and was true of the prior revision's `core` fan-out too.
+
 ```mermaid
 graph TD
-    core["core"]
+    account["account"]
+    content_browsing["content_browsing"]
+    dashboard["dashboard"]
+    gamification["gamification"]
+    learning["learning"]
+    notifications["notifications"]
+    onboarding["onboarding"]
+    profiles["profiles"]
+    progress["progress"]
+    sacred_time["sacred_time"]
+    scheduler["scheduler"]
+    settings["settings"]
+    sync["sync"]
+    tracks["tracks"]
+    tutoring["tutoring"]
 
-    auth --> onboarding
-    onboarding --> content_browsing
-    onboarding --> stages
-
-    content_browsing --> learning
-    learning --> gamification
-    learning --> progress
+    dashboard --> profiles
+    dashboard --> scheduler
+    gamification --> profiles
     learning --> sync
-    learning --> learning_order
+    notifications --> sacred_time
+    onboarding --> tracks
+    profiles --> tutoring
+    progress --> learning
+    progress --> profiles
+    settings --> account
+    settings --> profiles
+    tracks --> content_browsing
+    tracks --> onboarding
+    tracks --> profiles
+    tracks --> scheduler
+    tracks --> settings
+    tutoring --> account
+    tutoring --> profiles
 
-    stages --> scheduler
-    scheduler --> dashboard
-    gamification --> dashboard
-
-    profiles --> parent_mode
-    profiles --> settings
-
-    notifications -. listens .-> scheduler
-    notifications -. listens .-> gamification
-
-    sync -. cross-cutting .-> settings
-
-    auth --> core
-    onboarding --> core
-    content_browsing --> core
-    learning --> core
-    gamification --> core
-    progress --> core
-    scheduler --> core
-    dashboard --> core
-    profiles --> core
-    parent_mode --> core
-    settings --> core
-    stages --> core
-    sync --> core
-    notifications --> core
-    learning_order --> core
-    track_setup --> core
-
-    style core fill:#e1f5fe
     style learning fill:#fff3e0
     style sync fill:#fce4ec
     style scheduler fill:#e8f5e9
     style dashboard fill:#f3e5f5
+    style tracks fill:#e8eaf6
 ```
 
 ### Dependency Notes
 
-- **core** is the foundation; every feature module depends on it for databases, navigation, and shared services.
-- **auth** feeds into **onboarding**, which activates curricula and sets up stages.
-- **learning** is the central feature, producing completion data that **gamification**, **progress**, and **sync** consume.
-- **stages** defines stage configurations that drive the **scheduler**, which in turn feeds **dashboard**.
-- **profiles** scopes **parent_mode** and **settings**.
-- **notifications** listens to **scheduler** and **gamification** for reminder and alert triggers.
-- **sync** operates as a cross-cutting concern, triggered by mutations in **learning** and **settings**.
+- **tracks** (67 files — the largest feature) is the hub of the current graph: it depends on `content_browsing`, `onboarding`, `profiles`, `scheduler`, and `settings`, reflecting the Epic 25/26 unification of the former `track_setup`/`stages`/`track_learning_order` features.
+- **progress --> learning** and **dashboard --> scheduler** (both corrected from the prior revision's reversed direction — the consumer imports the producer, not the reverse): `progress` reads completion data that `learning` produces; `dashboard` reads schedule state that `scheduler` produces.
+- **tutoring --> account** / **tutoring --> profiles**: the tutoring feature is a consumer of the account/profile domain models, not a producer other features depend on — see `docs/api-contracts.md` §1.3 for the Firestore-side (`tutor_grants`/`tutor_active_access`) picture, which is the inverse relationship (Cloud Functions writing into the owner's data on the tutor's behalf).
+- **settings --> account** / **settings --> profiles**: settings screens read and mutate account/profile state directly rather than through an abstraction layer.
+- **notifications --> sacred_time**: the Shabbos/Yom Tov quiet-mode check is notifications' only architecturally-real edge above the noise floor of one-off imports elsewhere in the codebase.
+- Every feature module also imports `core/` for databases, navigation, and shared services — a universal edge omitted from the diagram above as non-differentiating (see the diagram's own caption).
 
 ---
 
@@ -509,11 +505,13 @@ Firebase Authentication handles cloud-born accounts (email/password and Google S
 
 ## Database Schema
 
+> **AUD-docs-15/16 regenerated 2026-07-13** by `tool/gen_arch_tables.dart` (`make gen-arch-tables` to reprint; `make check-arch-tables` fails CI if this section drifts from a fresh run). The tool and Makefile target this section has claimed to be generated by since schema v14 did not actually exist until this pass — the numbers below had drifted arbitrarily (v14/21 tables/22 DAOs claimed vs. real v35/24/24) with no mechanical check catching it.
+
 Schema versions:
 
 | Database | Schema Version | Tables | DAOs |
 | --- | --- | --- | --- |
-| User DB (`user_acc_<id>.db`) | **v14** | 21 | 22 |
+| User DB (`user_acc_<id>.db`) | **v35** | 24 | 24 |
 | Content DB (`content.db.gz`) | **v5** | 4 | 4 |
 | Registry DB (`device_registry.db`) | **v1** | 2 | — (inline) |
 
@@ -523,27 +521,30 @@ The table below is generated by `tool/gen_arch_tables.dart` from the Drift `@Dri
 
 | Database | Table | Columns |
 | --- | --- | --- |
-| User DB | Accounts | 9 |
-| User DB | LearnerProfiles | 7 |
-| User DB | CurriculumTracks | 9 |
-| User DB | CurriculumScopes | 7 |
+| User DB | Accounts | 8 |
+| User DB | LearnerProfiles | 11 |
+| User DB | CurriculumTracks | 8 |
+| User DB | CurriculumScopes | 8 |
 | User DB | ProfilePrograms | 6 |
-| User DB | StageDefinitions | 11 |
+| User DB | StageDefinitions | 9 |
 | User DB | PointConfigs | 6 |
 | User DB | StudyDayConfigs | 6 |
-| User DB | Completions | 9 |
-| User DB | CompletionEvents | 8 |
+| User DB | CompletionEvents | 11 |
 | User DB | DailyPlans | 16 |
 | User DB | LearningLedger | 15 |
 | User DB | Bookmarks | 6 |
-| User DB | LearningOrder | 6 |
+| User DB | LearningOrder | 7 |
 | User DB | TrackLearningOrder | 4 |
 | User DB | Goals | 14 |
-| User DB | Streaks | 7 |
 | User DB | StreakEvents | 7 |
-| User DB | SyncQueue | 6 |
 | User DB | TextDownloadStatuses | 5 |
 | User DB | Outbox | 9 |
+| User DB | SacredWindowEntries | 8 |
+| User DB | PriorCompletionImports | 8 |
+| User DB | SyncKv | 4 |
+| User DB | PointsBalance | 3 |
+| User DB | PointsLedger | 9 |
+| User DB | RewardRedemptions | 9 |
 | Content DB | TextCache | 4 |
 | Content DB | CalendarCycles | 5 |
 | Content DB | DailyContent | 3 |
@@ -551,15 +552,16 @@ The table below is generated by `tool/gen_arch_tables.dart` from the Drift `@Dri
 | Registry DB | DeviceAccounts | 9 |
 | Registry DB | DeviceState | 2 |
 
-_Generated by `tool/gen_arch_tables.dart`. Total: 21 User DB + 4 Content DB + 2 Registry DB = 27 tables._
+_Generated by `tool/gen_arch_tables.dart`. Total: 24 User DB + 4 Content DB + 2 Registry DB = 30 tables._
 
 ### Key Schema Notes
 
 - **Profile isolation:** `profileId` participates in the primary key or a composite unique index on all user-facing tables (enforced by `tool/schema_check.dart` — DNI-327).
-- **Append-only tables:** `Completions`, `CompletionEvents`, and `LearningLedger` are never updated or deleted, preserving a full audit trail.
+- **Append-only tables:** `CompletionEvents` and `LearningLedger` are never updated or deleted, preserving a full audit trail. The legacy `Completions`/`Streaks`/`SyncQueue` tables named in the prior revision of this section were dropped outright in the schema-v1 rebuild (see `user_database.dart`'s migration comments) — they no longer exist, not merely renamed.
 - **Cascade deletes:** Profile deletion cascades across dependent tables.
 - **`Outbox` table** (`core/sync/outbox/`): staging area for all cloud pushes; drained by `OutboxPushPipeline`.
 - **`StreakEvents` table**: append-only event log; `StreakReducer` derives streak state from it.
+- **`TextDownloadStatuses` table**: confirmed dead code as of 2026-07-13 (zero live provider consumers) — tracked for removal, not yet removed; see `docs/stories/implementation/19-10-navigation-state-cleanup.md` (AUD-docs-06).
 
 ---
 

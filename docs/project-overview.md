@@ -16,7 +16,7 @@ Learning Tracker is a multi-curriculum Torah learning tracker for Android, built
 
 The app covers nine Torah curricula sourced from Sefaria, with Hebrew and English display. Core capabilities include adaptive daily scheduling, multi-stage review cycles, offline-first data with cloud sync, and a lifetime learning ledger. A PIN-protected parent dashboard handles analytics and reward management.
 
-**Codebase snapshot:** ~366 source files, 182 test files, 18 feature modules.
+**Codebase snapshot (AUD-docs-16, re-verified 2026-07-13):** 704 source files (`find lib -name '*.dart'`, excluding `.g.dart`/`.freezed.dart`), 865 test files, 15 feature modules.
 
 ## Tech stack
 
@@ -26,7 +26,7 @@ The app covers nine Torah curricula sourced from Sefaria, with Hebrew and Englis
 | Language | Dart | 3.10.8+ |
 | State Management | Riverpod | 3.x with code generation |
 | Navigation | auto_route | 11.x (type-safe, code generated) |
-| Local DB | Drift (SQLite ORM) | Three databases: User DB (23 tables, schema v4) + Content DB (3 tables, read-only, v3) + Device Registry DB (2 tables, v1) |
+| Local DB | Drift (SQLite ORM) | Three databases: User DB (24 tables, schema v35) + Content DB (4 tables, read-only, v5) + Device Registry DB (2 tables, v1) — see `tool/gen_arch_tables.dart` / `docs/architecture.md` §Database Schema |
 | Backend | Firebase | Auth + Cloud Firestore + Storage |
 | Data Classes | Freezed | Immutable models |
 | HTTP | dio | 5.9+ (Sefaria API, dev-time only) |
@@ -40,7 +40,7 @@ The app covers nine Torah curricula sourced from Sefaria, with Hebrew and Englis
 
 ## Architecture overview
 
-Feature-first Clean Architecture with 18 feature modules. Each module has three layers:
+Feature-first Clean Architecture with 15 feature modules (AUD-docs-16, re-verified 2026-07-13). Each module has three layers:
 
 ```text
 feature/
@@ -72,26 +72,25 @@ feature/
 
 ## Feature modules
 
+> **AUD-docs-16 regenerated 2026-07-13** — derived from `ls lib/features/`. The prior revision named 6 features that no longer exist under that name (`auth`→`account`; `learning_order`/`stages`/`track_setup`→folded into `tracks/`) and 2 that were removed outright (`test_tracking`, `tutor_mode`→renamed `tutoring`), while omitting `sacred_time`, `tutoring`, and `tracks`. See `docs/architecture.md` §Feature Modules for file counts and the dependency graph.
+
 | Module | Description |
 |---|---|
-| **auth** | Firebase Auth (email/password + Google Sign-In) |
+| **account** | Firebase Auth (email/password + Google Sign-In), local-born accounts, hard-tier upgrade flow |
 | **content_browsing** | Browses and displays curriculum content from bundled Sefaria assets |
 | **dashboard** | Main dashboard with daily tasks and cross-curriculum summaries |
 | **gamification** | Per-curriculum points, global streak, mystery rewards |
 | **learning** | Core learning flow with completion tracking and stage progression |
-| **learning_order** | Sequence and ordering of learning items per curriculum |
 | **notifications** | Local notifications with Shabbos/Yom Tov quiet mode |
-| **onboarding** | User setup, curriculum selection, initial configuration |
-| **parent_mode** | PIN-protected analytics and reward management for parents |
-| **profiles** | Multi-profile management (up to 10 learner profiles per account) |
+| **onboarding** | User setup (child/adult mode), curriculum selection, initial configuration |
+| **profiles** | Multi-profile management, profile switching, parent-mode PIN-protected analytics and reward management |
 | **progress** | Tracks and visualizes learning progress across curricula |
+| **sacred_time** | Shabbos/Yom Tov lock overlay, zmanim-based start/end times, city picker |
 | **scheduler** | Smart daily schedules with adaptive pacing and deadline tracking |
 | **settings** | App preferences, data export/import, account settings |
-| **stages** | Multi-stage review cycles (Learn, Chazara 1..N, up to 10 stages) |
-| **sync** | Offline queue, cloud sync (push/pull), conflict resolution |
-| **test_tracking** | Test results and performance analytics |
-| **track_setup** | Track management hub and track detail screens for configuring and editing tracks |
-| **tutor_mode** | PIN-protected read-only dashboard for tutors (shipped, not actively promoted in v1 roadmap) |
+| **sync** | `SyncWriteFacade`/outbox push entry points consumed by other features (sync engine internals live in `core/sync/`) |
+| **tracks** | Track management hub, track setup/detail/editing, stage definitions (up to 10 stages), custom learning order |
+| **tutoring** | Cross-user tutor access — invite/accept/revoke grant lifecycle, tutor dashboard, tutor write proxies (see `docs/api-contracts.md` §1.3) |
 
 ### Schedule types
 
@@ -119,14 +118,14 @@ Users activate only the curricula they need and scope each to specific sedarim, 
 
 ## Project status
 
-**As of 2026-04-19** — sourced from [`docs/linear-status.md`](./linear-status.md), which is the canonical epic/story status document.
+**Re-verified 2026-07-13 (AUD-docs-16)** — sourced from [`docs/linear-status.md`](./linear-status.md), which is the canonical epic/story status document and the authoritative detail behind this summary (per-epic status, reasons for cancellation/supersession, story counts).
 
 | Metric | Value |
 |---|---|
-| Epics delivered (production) | 1–14, 16, 19, 21, 23 |
-| Epics in review | 18 (Onboarding & Track Management Overhaul — all 12 stories in review) |
-| Epics in design / backlog | 20 (dashboard redesign, 12 stories canceled pending re-scope), 22 (catch-up & amnesty, 22 stories planned) |
-| Total stories shipped | 100+ |
+| Epics delivered pre-rebuild (v1, Epics 1–7/16/19 pre-Linear + 21) | 1–14, 16, 19, 21 — several later superseded by the greenfield rebuild (their Linear tickets show Canceled once replaced; see linear-status.md) |
+| Greenfield rebuild — Epics 24–27 | **Delivered** — 82 stories, completed 2026-05-14 |
+| Epics Canceled outright (never shipped) | 17, 18, 20, 22, 23 |
+| Total stories tracked in Linear | 194 |
 
 ## Links
 

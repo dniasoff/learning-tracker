@@ -348,25 +348,24 @@ jobs:
       # test/firestore-rules/*.js suite was obsolete (accounts/{uid} model) AND read a
       # non-existent repo-root firestore.rules, so this job errored ENOENT on every run —
       # silently un-gating rules drift. See `make test-rules`.
-      - name: Check if firestore-rules suite exists
-        id: check-dir
+      #
+      # TQ-9: this job HARD-FAILS if the suite file is missing — it must never
+      # soft-skip. A missing suite means the rules layer has zero test coverage,
+      # which is a CI-stopping condition, not a "notice" to skip past.
+      - name: Fail if firestore-rules suite is missing (TQ-9 — no soft-skip)
         run: |
-          if [ -f "learning_tracker/functions/test/firestore_rules.test.mjs" ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::firestore_rules.test.mjs not found — skipping firestore-rules job"
+          if [ ! -f "learning_tracker/functions/test/firestore_rules.test.mjs" ]; then
+            echo "::error::functions/test/firestore_rules.test.mjs not found — the rules suite must never be soft-skipped (TQ-9)."
+            exit 1
           fi
 
       - name: Setup Java (required by Firebase emulator)
-        if: steps.check-dir.outputs.exists == 'true'
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '21'
 
       - name: Setup Node.js
-        if: steps.check-dir.outputs.exists == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: '22'
@@ -374,29 +373,30 @@ jobs:
           cache-dependency-path: learning_tracker/functions/package-lock.json
 
       - name: Install Firebase CLI
-        if: steps.check-dir.outputs.exists == 'true'
         run: npm install -g firebase-tools
 
       - name: Cache Firebase emulator
-        if: steps.check-dir.outputs.exists == 'true'
         uses: actions/cache@v5
         with:
           path: ~/.cache/firebase/emulators
           key: ${{ runner.os }}-firebase-emulator-firestore-v1.21.0
 
       - name: Install test dependencies
-        if: steps.check-dir.outputs.exists == 'true'
         working-directory: learning_tracker/functions
         run: npm ci
 
-      - name: Run Firestore rules tests against emulator
-        if: steps.check-dir.outputs.exists == 'true'
+      # TQ-9: chained in the SAME emulators:exec session as the test run so the
+      # coverage endpoint reflects this run's evaluations before the emulator
+      # (and its in-memory coverage report) shuts down. Fails the job on any
+      # never-evaluated `allow ...: if <condition>` rule expression — see
+      # functions/tool/check_rule_coverage.mjs for the coverage semantics.
+      - name: Run Firestore rules tests + TQ-9 rule-coverage gate against emulator
         working-directory: learning_tracker
         run: |
           firebase emulators:exec \
             --only firestore \
             --project demo-rules \
-            "node --test functions/test/firestore_rules.test.mjs"
+            "node --test functions/test/firestore_rules.test.mjs && node functions/tool/check_rule_coverage.mjs demo-rules firestore.rules"
 
   # ── 8. functions ───────────────────────────────────────────────────────────
   # Builds functions/src (tsc) and runs the Cloud Functions handler suite

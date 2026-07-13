@@ -299,12 +299,12 @@ The sync engine writes ordinary collections as the owner, so for those paths `fi
 
 **SR-2 — Validate value types and cap string sizes in rules (`is timestamp`, `is number`, `s.size() <= N`), not just key sets via `hasOnly()`.**
 **Why:** `hasOnly()` gates keys, never values — a compromised client can store a several-hundred-KB string, driving docs toward the 1 MiB ceiling on children's data.
-**Enforce:** [Pending] `assertFails` tests for oversized and wrong-typed fields, guarded by the zero-denial oracle for canonical fixtures.
+**Enforce:** [Enforced] (AUD-docs-02) `firestore.rules` `bookmarks` (hasOnly-guarded) type/size-checks `sefaria_ref` (string, ≤500 chars) and `curriculum_id` (string, ≤100 chars) when present; `preferences` (open, heterogeneous bag — no per-field whitelist by design) gets a top-level key-count cap (`size() <= 50`) since Rules has no construct to iterate arbitrary map values generically. Deny-tests in `functions/test/firestore_rules.test.mjs` (`make test-rules`) for an oversized string, a wrong-typed field, and an over-cap key count.
 **Source:** firebase.google.com/docs/rules/data-validation
 
 **SR-3 — Every event create requires a server-bounded timestamp: present, `is timestamp`, and `<= request.time`.**
 **Why:** an offline device with a skewed clock (or a malicious client) can otherwise plant events at arbitrary times, corrupting streaks and the points economy; `request.time` is the only trustworthy clock.
-**Enforce:** [Pending] per-collection deny-tests for missing/wrong-typed/future timestamps.
+**Enforce:** [Enforced] (AUD-docs-02) `firestore.rules` gates `streak_events.created_at`, `learning_ledger.completed_at` and `points_ledger.created_at` with an optional-field `is timestamp && <= request.time` guard, mirroring `completions.completed_at`. `FirestoreGatewayImpl._timestampifyField` converts the outbox's ISO-8601 string to a genuine Firestore `Timestamp` on all three push paths before the write lands (the same fix `completions` already had — a raw string vs. `request.time` comparison is `false`, which would deny every create). Future-timestamp deny-tests + past-timestamp accept-tests per collection in `functions/test/firestore_rules.test.mjs`.
 **Source:** firebase.google.com/docs/firestore/security/rules-conditions
 
 **SR-4 — Cap `list` queries on per-profile event collections: `allow list: if <cond> && request.query.limit <= 500`; single-doc reads stay on `allow get`.**
@@ -312,9 +312,9 @@ The sync engine writes ordinary collections as the owner, so for those paths `fi
 **Enforce:** [Enforced] `firestore.rules` splits `read` into `get` (unrestricted) and `list` (`request.query.limit <= 500`) on `completions`, `streak_events`, `learning_ledger`, `points_ledger`; deny-tests in `functions/test/firestore_rules.test.mjs` (`make test-rules`) assert `limit(500)` succeeds and `limit(501)`/unbounded fails, for all 4 collections (AUD-firebase-09).
 **Source:** firebase.google.com/docs/firestore/security/rules-query
 
-**SR-5 — Tutor cross-user access checks state and expiry in the rule itself (`state == 'active' && expires_at > request.time` via `get()`), with ≤ 2 document-access calls per rule and same-path reads deduped.**
+**SR-5 — Tutor cross-user access is cut off immediately on revoke/resign/expiry: the rule's `hasActiveTutorAccess()` check is authoritative, and no client can extend or forge it.**
 **Why:** trusting the mere existence of the CF-maintained access doc means a missed revoke leaves a tutor with indefinite read access to a child's records; and `get()`/`exists()` are billed reads capped at 10 per request — duplicates multiply cost and risk denial at scale.
-**Enforce:** [Pending] rules tests seeding expired vs active grants; grep on `firestore.rules` for the access-call budget.
+**Enforce:** [Enforced] (AUD-docs-02 corrected this rule's own description — the implemented mechanism differs from an earlier `state`/`expires_at`-field design that was never built) `hasActiveTutorAccess()` is a single `exists()` check (1 document-access call, not 2) against `tutor_active_access/{tutorUid}_{ownerUid}_{profileId}` — a doc that Cloud Functions WRITE on `acceptInvite` and DELETE on `revokeGrant`/`resignGrant`/`expirePendingInvites` (`functions/src/tutor_invites.ts`, `functions/src/deletes.ts`). There is no `state`/`expires_at` field on the doc for a rule (or a compromised client) to inspect or race — absence of the doc IS "revoked or expired", checked fresh on every read. `functions/test/firestore_rules.test.mjs`'s `SR-5 — revoked/expired tutor access` block proves the cutoff: a tutor who reads successfully while `tutor_active_access` exists is denied on every previously-readable path (learner profile, completions, streak_events, learning_ledger) the instant that doc is deleted, plus a control asserting a tutor who was never granted access (no doc ever written) is denied identically.
 **Source:** firebase.google.com/docs/firestore/security/rules-conditions
 
 ---
@@ -492,8 +492,8 @@ The offline account model (credential-less local account, converted on reconnect
 **Source:** code.claude.com/docs — best practices
 
 **TQ-9 — The Firestore rules suite is part of the local and CI gates: `test-rules` joins `make ci`'s prerequisites; the CI rules job hard-fails if the suite file is missing (no soft-skip); tests run against a `demo-*` project with seeding only via `withSecurityRulesDisabled`; and the emulator's `ruleCoverage` report fails the job on never-evaluated rule expressions.**
-**Why:** today `make ci` doesn't run the rules suite and the CI job soft-skips itself if the file moves — a rules regression can reach `dev` unflagged. The `demo-` prefix makes the emulator physically unable to touch production data.
-**Enforce:** [Pending] Makefile + `ci.yml` edits (see [Compliance Gaps](#current-compliance-gaps-2026-07-02)).
+**Why:** without this, `make ci` doesn't run the rules suite and the CI job soft-skips itself if the file moves — a rules regression can reach `dev` unflagged. The `demo-` prefix makes the emulator physically unable to touch production data.
+**Enforce:** [Enforced] (AUD-docs-02) `test-rules` is a prerequisite of `make ci`; `ci.yml`'s `firestore-rules` job hard-fails (no `if:` soft-skip) when the suite file is absent; `make test-rules` chains `functions/tool/check_rule_coverage.mjs` inside the same `emulators:exec` session, which fetches the emulator's `ruleCoverage.html` report and fails on any `allow ...: if <condition>` line whose only report entries have an empty `values` array (line-granularity — see the script's doc comment for the short-circuit sub-expression caveat).
 **Source:** firebase.google.com/docs/firestore/security/test-rules-emulator
 
 ---
@@ -574,6 +574,7 @@ All Dart files use **snake_case**. The file suffix encodes its architectural rol
 | `_model.dart` | Freezed value object / domain entity | `streak_snapshot_model.dart` |
 | `_dto.dart` | Data Transfer Object (Firestore / JSON boundary) | `completion_dto.dart` |
 | `_mapper.dart` | Converts between layers (DTO ↔ domain) | `completion_mapper.dart` |
+| `_codec.dart` | Combined Firestore wire-format encode/decode for one entity (merged DTO + mapper) — `core/sync/codec/` (AUD-docs-23) | `track_codec.dart` |
 | `_test.dart` | Test file | `completion_dao_test.dart` |
 | `.g.dart` | Generated file — never edit by hand | `completion_providers.g.dart` |
 | `.freezed.dart` | Freezed-generated file — never edit by hand | `streak_snapshot.freezed.dart` |
@@ -776,9 +777,9 @@ Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|r
 | audit | `make audit` (includes `lint-rules-test` — `packages/custom_lints/` unit tests, AUD-guardrails-17) | ⚠️ job **soft-skips** if target considered absent — must hard-fail; `lint-rules-test` itself never soft-skips |
 | custom_lint | `dart run custom_lint` | ⚠️ **non-functional** — the compile crash is fixed (AUD-guardrails-03), but the CLI cannot currently run at all in CI/local without also breaking the `analyze` hard gate; it silently reports "No issues found!" (0 projects discovered, not 0 violations) — see "custom_lint toolchain status" below |
 | test + coverage | `make ci` (also includes `lint-rules-test`) then lcov floor | hard gate, line coverage ≥ 60% (generated files excluded), cannot drop on a PR |
-| firestore-rules | emulator + `firestore_rules.test.mjs` | ⚠️ **soft-skips** if the suite file is missing — must hard-fail (TQ-9) |
+| firestore-rules | emulator + `firestore_rules.test.mjs` + `check_rule_coverage.mjs` | hard gate (AUD-docs-02) — no soft-skip; also fails on any never-evaluated rule expression (TQ-9) |
 
-Until the soft-skips are removed, **local `make audit` is the real gate** — run it. (`dart run custom_lint` is currently a no-op; do not treat its exit code as a signal — see below.)
+Until the remaining `audit`/`custom_lint` soft-skips are removed, **local `make audit` is the real gate** — run it. (`dart run custom_lint` is currently a no-op; do not treat its exit code as a signal — see below.)
 
 #### custom_lint toolchain status (AUD-guardrails-03, partially resolved 2026-07-03 — CLI currently non-functional)
 
@@ -920,7 +921,6 @@ Live violations of the rules above, verified in the working tree on this date. E
 | Analytics sends `sefaria_ref` and `profile_id` as event params on the 3 Story 27.14 convenience methods (`logCompletionRecorded`, `logPinLockedOut`, `logParentModeEntered`) | PV-1 | `lib/core/analytics/analytics_service.dart:86,112,117` — narrower than it was: AUD-core-analytics-01 (2026-07) closed the larger uncatalogued-`.logEvent()` bypass (see PV-5 row below); these 3 catalog-native sites are the remaining known gap |
 | Crashlytics enabled unconditionally at bootstrap | PV-3 | `lib/app/bootstrap/firebase_bootstrap.dart:45` |
 | No committed `storage.rules` | ST-1 | Storage serves `content/v1/...` on console-only rules |
-| `make ci` doesn't run `test-rules`; CI rules job soft-skips | TQ-9 | `learning_tracker/Makefile` `ci:` target; `ci.yml` |
 | CI soft-skips `audit` | Rule 0 | `ci.yml` — local `make audit` is the real gate meanwhile |
 | custom_lint compile crash is fixed (AUD-guardrails-03) but the CLI still can't run: it needs an analysis_options.yaml marker that breaks the `dart analyze --fatal-infos` hard gate, so it silently discovers 0 projects; ~1,840 pre-existing violations across 8/9 rules were observed in a one-time manual scratch run and are not currently re-checkable via CLI/CI | Rule 0 | see "custom_lint toolchain status" under Enforcement above |
 | Two divergent Makefile audit sets; RTL grep only in root | AX-1, Rule 0 | consolidate into one authoritative target |

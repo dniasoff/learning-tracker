@@ -42,9 +42,16 @@ rules_version = '2';
 // split `read` into `get` (unrestricted) and `list` (capped at
 // request.query.limit <= 500, matching the app's kListenerPageSize) so an
 // unbounded list can't exfiltrate a child's entire event history in one
-// query (SR-4). Snapshot collections deny `delete` and gate writes through
-// `.hasOnly(...)` field whitelists. All ownership enforced by `isOwner(uid)`
-// on the `users/{uid}` path segment.
+// query (SR-4). The 3 event collections that carry a client-supplied
+// timestamp (`streak_events.created_at`, `learning_ledger.completed_at`,
+// `points_ledger.created_at`) reject any value that isn't a real Firestore
+// Timestamp `<= request.time` when the field is present (SR-3), mirroring
+// completions' `completed_at` guard. Snapshot collections deny `delete` and
+// gate writes through `.hasOnly(...)` field whitelists, plus per-field
+// type/size caps on their free-text values (SR-2) where the field set is
+// known; open-bag collections (no whitelist by design) get a top-level
+// key-count cap instead. All ownership enforced by `isOwner(uid)` on the
+// `users/{uid}` path segment.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -266,13 +273,18 @@ service cloud.firestore {
           allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
             && request.query.limit <= 500;
-          // The push writes created_at as an ISO STRING (not a Firestore
-          // timestamp), so a `created_at <= request.time` guard compared a
-          // string to request.time and was rejected at the type level —
-          // permission-denied on every streak create. Match the other
-          // append-only event collections (learning_ledger / points_ledger):
-          // owner-only create. Doc-id is the ULID.
-          allow create: if isOwner(uid);
+          // SR-3: created_at, when present, must be a server-bounded
+          // Firestore Timestamp <= request.time — the same optional-field
+          // guard as completions' completed_at above. The gateway
+          // (FirestoreGatewayImpl._timestampifyField) converts the outbox's
+          // ISO-8601 created_at string to a real Timestamp before this write
+          // lands, so the comparison below is type-sound.
+          allow create: if isOwner(uid)
+            && (
+              !('created_at' in request.resource.data)
+                || (request.resource.data.created_at is timestamp
+                    && request.resource.data.created_at <= request.time)
+            );
           // SR-1 (append-only): update is allowed ONLY for the idempotent
           // merge:true re-push of the same ULID doc on outbox retry — the
           // new value must equal the existing value. A changed-value update
@@ -292,7 +304,15 @@ service cloud.firestore {
           // committed entry is an UPDATE, so `update: false` would strand it
           // (permission-denied). Append-only is enforced by the
           // deterministic doc-id.
-          allow create: if isOwner(uid);
+          // SR-3: completed_at, when present, must be a server-bounded
+          // Firestore Timestamp <= request.time (same optional-field guard
+          // as completions / streak_events above).
+          allow create: if isOwner(uid)
+            && (
+              !('completed_at' in request.resource.data)
+                || (request.resource.data.completed_at is timestamp
+                    && request.resource.data.completed_at <= request.time)
+            );
           // SR-1 (append-only): update is allowed ONLY for the idempotent
           // identical re-push, matching points_ledger below — a
           // changed-value update is denied.
@@ -308,7 +328,15 @@ service cloud.firestore {
           allow get: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow list: if (isOwner(uid) || hasActiveTutorAccess(uid, profileId))
             && request.query.limit <= 500;
-          allow create: if isOwner(uid);
+          // SR-3: created_at, when present, must be a server-bounded
+          // Firestore Timestamp <= request.time (same optional-field guard
+          // as completions / streak_events above).
+          allow create: if isOwner(uid)
+            && (
+              !('created_at' in request.resource.data)
+                || (request.resource.data.created_at is timestamp
+                    && request.resource.data.created_at <= request.time)
+            );
           // SR-1 (append-only): update is allowed ONLY for the idempotent
           // merge:true re-push of the same doc on outbox retry — a
           // changed-value update is denied.
@@ -381,12 +409,27 @@ service cloud.firestore {
 
         match /bookmarks/{bookmarkId} {
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          // SR-2: hasOnly() only gates key sets — a compromised client could
+          // still store an oversized/wrong-typed value under a whitelisted
+          // key. sefaria_ref and curriculum_id are capped and type-checked
+          // (when present) so a several-hundred-KB string can't ride in on
+          // a legitimate field and drive the doc toward the 1 MiB ceiling.
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'profile_id', 'curriculum_id',
               'content_item_id', 'sefaria_ref', 'stage_id', 'updated_at',
               'synced_at'
-            ]);
+            ])
+            && (
+              !('sefaria_ref' in request.resource.data)
+                || (request.resource.data.sefaria_ref is string
+                    && request.resource.data.sefaria_ref.size() <= 500)
+            )
+            && (
+              !('curriculum_id' in request.resource.data)
+                || (request.resource.data.curriculum_id is string
+                    && request.resource.data.curriculum_id.size() <= 100)
+            );
           allow delete: if false;
         }
 
@@ -405,7 +448,18 @@ service cloud.firestore {
         // Open-ended payload — intentionally NOT whitelisted.
         match /preferences/{scope} {
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          allow create, update: if isOwner(uid);
+          // SR-2: this collection is intentionally NOT key-whitelisted (open,
+          // heterogeneous payload across the notification_settings /
+          // gamification_settings / ui_preferences scopes), so per-field
+          // type/size checks aren't viable here the way they are on the
+          // hasOnly()-guarded collections above — Firestore Rules has no
+          // construct to iterate arbitrary map values generically. The
+          // achievable SR-2 mitigation for a genuinely open bag is a
+          // top-level key-count cap, guarding against a garbage/DoS payload
+          // with an unbounded number of keys driving the doc toward the
+          // 1 MiB ceiling; legitimate scopes carry well under 20 keys.
+          allow create, update: if isOwner(uid)
+            && request.resource.data.size() <= 50;
           allow delete: if false;
         }
 
