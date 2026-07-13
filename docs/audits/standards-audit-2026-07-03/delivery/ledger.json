@@ -7458,13 +7458,18 @@
   {
    "id": "AUD-docs-34",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Reconcile stale backlog/implementation-ready language in docs/scenarios/evolution/README.md with its own OBSOLETE banner",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "7a8224674825a468d8e49ff5e7c2d8f6a6898289"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-docs-34 AC1 OK: grep -in 'backlog' and 'when Epic 22 work starts' on README.md both = 0 matches; 'implementation-ready' only in a negation (L22)",
+    "AUD-docs-34 AC2 OK: frontmatter status:superseded (L9) + body Canceled/not-implemented (L14/22) agree with L1 OBSOLETE banner; linear-status confirms 22 stories Canceled"
+   ],
+   "notes": "Confirmed: OBSOLETE/superseded banner contradicted frontmatter status:backlog and body text; linear-status.md confirms all 22 Epic-22 stories Canceled. Fixed frontmatter, callout, and stale anchor. Post-fix grep -in backlog = 0 matches."
   },
   {
    "id": "AUD-t-cross-65",
