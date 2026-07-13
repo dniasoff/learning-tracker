@@ -7042,13 +7042,21 @@
   {
    "id": "AUD-t-content_browsing-06",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Merge the duplicate TextCacheRepository and TextDisplayScreen test files produced by parallel coverage-wave commits",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "0b6e32818e8e24a5b0190454f31ed6cb2a43d28e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-content_browsing-06 AC-1a OK: dup pairs collapsed — _extra deleted, _l1 merged+renamed to canonical text_display_screen_test.dart (ls confirms)",
+    "AUD-t-content_browsing-06 AC-1b OK: 0 exact cross-file scenario-name overlaps across all 4 files (python set-intersection); ≤1 met",
+    "AUD-t-content_browsing-06 AC-1c OK: merged < sum of originals — repo 605→351; screen 1300→1106",
+    "AUD-t-content_browsing-06 AC-1d OK: no coverage loss — lcov hit-sets identical orig vs merged: repo 54/54, screen 273/273, 0 lost",
+    "AUD-t-content_browsing-06 fold OK: HTML-entity test byte-identical (real decode assert); textAlign.start real; 0 l1 scenarios dropped"
+   ],
+   "notes": "Confirmed ~80% duplication. Merged repo pair (kept extended, folded unique HTML-entity case, deleted extra). Merged screen pair into l1, renamed to canonical text_display_screen_test.dart for AG-5. lcov diff: zero coverage lost; lines 605->351, 1300->1103; zero name overlap. gatePolicy=disjoint-skip: rebase file-disjoint vs dev (merge-base 7c251fa3585cc27178c210898adebdf6a6476fcd) — no overlapping paths between tipSha diff and dev diff, so the flutter test run was skipped per policy; post-rebase gate ran make audit (49/49 clean) and flutter analyze (No issues found!). payload.touchedStrings=false so make arb-parity was not run."
   },
   {
    "id": "AUD-dashboard-11",
