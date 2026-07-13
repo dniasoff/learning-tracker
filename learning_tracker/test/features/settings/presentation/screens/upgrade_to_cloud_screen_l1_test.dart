@@ -242,7 +242,8 @@ void main() {
       );
 
       expect(find.byType(TextFormField), findsOneWidget);
-      // HARDCODED STRING: "Confirm your password" is not sourced from l10n.
+      // AppLocalizations-sourced: "Confirm your password" is
+      // l10n.upgradeToCloudPasswordLabel (app_en.arb).
       expect(find.text('Confirm your password'), findsOneWidget);
 
       await _tearDown(tester);
@@ -277,7 +278,8 @@ void main() {
         ),
       );
 
-      // HARDCODED STRING: "You're signed in as …" body text is hardcoded.
+      // AppLocalizations-sourced: "You're signed in as …" body text is
+      // l10n.upgradeToCloudValueProp({email}) (app_en.arb).
       expect(find.textContaining(_email), findsWidgets);
 
       await _tearDown(tester);
@@ -321,7 +323,8 @@ void main() {
         await tester.tap(find.byType(FilledButton));
         await tester.pump();
 
-        // HARDCODED STRING: "Password required" is hardcoded in the validator.
+        // AppLocalizations-sourced: "Password required" is
+        // l10n.upgradeToCloudPasswordRequired in the validator (app_en.arb).
         expect(find.text('Password required'), findsOneWidget);
 
         await _tearDown(tester);
@@ -369,7 +372,8 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        // HARDCODED STRING: this message is hardcoded in _submit().
+        // AppLocalizations-sourced: this message is
+        // l10n.upgradeToCloudErrorLocalBornOnly in _submit() (app_en.arb).
         expect(
           find.text('Only local-born accounts can be upgraded.'),
           findsOneWidget,
@@ -406,7 +410,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      // HARDCODED STRING: "Incorrect password." is hardcoded in the catch block.
+      // AppLocalizations-sourced: "Incorrect password." is
+      // l10n.upgradeToCloudErrorIncorrectPassword in the catch block (app_en.arb).
       expect(find.text('Incorrect password.'), findsOneWidget);
 
       await _tearDown(tester);
@@ -589,7 +594,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      // HARDCODED STRING: internet error message is hardcoded.
+      // AppLocalizations-sourced: internet error message is
+      // l10n.upgradeToCloudErrorInternetRequired (app_en.arb).
       expect(
         find.textContaining('Internet connection is required'),
         findsOneWidget,
@@ -789,7 +795,8 @@ void main() {
     // argon2id verify → createUserAccount → reloadCurrentUser → upgradeLocalToCloud
     // → setCloudBornSession → setState(_PhaseSuccess). The argon2id Isolate
     // completion cannot propagate in fake_async (see ARCHITECTURE NOTE).
-    // HARDCODED STRING: "You're backed up!" in _SuccessBlock is not l10n-sourced.
+    // AppLocalizations-sourced: "You're backed up!" in _SuccessBlock is
+    // l10n.upgradeToCloudSuccessTitle (app_en.arb).
     testWidgets(
       'shows "You\'re backed up!" block after complete upgrade',
       skip: true,
