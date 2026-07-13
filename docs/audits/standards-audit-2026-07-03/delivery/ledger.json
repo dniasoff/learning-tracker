@@ -4730,13 +4730,18 @@
   {
    "id": "AUD-sacred_time-06",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Narrow LocationService's `on Object catch` clauses so programming errors aren't swallowed",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "5c4c6d09e645d5719e0ec6d23c73dc1f0960322c"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AC1 OK: both location_service.dart catch clauses narrowed on Object->on Exception (detectCurrent outer + _reverseCountryCode inner); verified in committed diff",
+    "AC2 OK: red-first test in sacred_location_and_data_test.dart - _GeoScenario.programmingError throws StateError from getCurrentPosition/placemarkFromCoordinates; two tests assert throwsA(isA<StateError>()) propagation. RED pre-fix (StateError swallowed to LocationFetchError/Success), GREEN post-fix. Ordinary-Exception sanity cases preserved (no over-narrowing)"
+   ],
+   "notes": "PARKED finding built fresh on PO request (bundle commit belonged to AUD-core-sync-26, different files); independently verified diff (both clauses typed, test asserts real Error propagation, no test weakened); mirrors AUD-core-sync-26 EH-4 pattern"
   },
   {
    "id": "AUD-sacred_time-04",
