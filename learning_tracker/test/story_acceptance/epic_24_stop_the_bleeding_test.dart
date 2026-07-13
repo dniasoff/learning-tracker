@@ -180,33 +180,43 @@ void main() {
       });
 
       // ── Emulator test suite exists ────────────────────────────────────
+      //
+      // The original test/firestore-rules/ Jest suite (accounts/{uid} model)
+      // was deleted by AUD-t-cross-18 (18f9bd6b) as dead code: it targeted an
+      // obsolete rules layout, was wired into no Makefile target, and read a
+      // non-existent repo-root firestore.rules path. The canonical, CI-wired
+      // suite — already required by the "CI workflow has firestore-rules
+      // job" test below and run via `make test-rules` — has lived at
+      // learning_tracker/functions/test/firestore_rules.test.mjs since
+      // 76fb1d5f. These assertions were missed by 18f9bd6b and are updated
+      // here to point at that canonical suite instead.
 
       group('emulator test suite', () {
-        test('test/firestore-rules/firestore.rules.test.js exists', () {
+        test('functions/test/firestore_rules.test.mjs exists', () {
           final candidates = [
-            File('../test/firestore-rules/firestore.rules.test.js'),
-            File('test/firestore-rules/firestore.rules.test.js'),
+            File('../functions/test/firestore_rules.test.mjs'),
+            File('functions/test/firestore_rules.test.mjs'),
           ];
           final exists = candidates.any((f) => f.existsSync());
           expect(
             exists,
             isTrue,
             reason:
-                'Emulator test suite not found at test/firestore-rules/firestore.rules.test.js',
+                'Emulator test suite not found at '
+                'functions/test/firestore_rules.test.mjs',
           );
         });
 
-        test('test/firestore-rules/package.json exists', () {
+        test('functions/package.json exists', () {
           final candidates = [
-            File('../test/firestore-rules/package.json'),
-            File('test/firestore-rules/package.json'),
+            File('../functions/package.json'),
+            File('functions/package.json'),
           ];
           final exists = candidates.any((f) => f.existsSync());
           expect(
             exists,
             isTrue,
-            reason:
-                'package.json not found at test/firestore-rules/package.json',
+            reason: 'package.json not found at functions/package.json',
           );
         });
 
