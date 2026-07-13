@@ -129,6 +129,20 @@ part 'user_database.g.dart';
 ///   the exact gap this migration closes could already have let one in -
 ///   so the rebuild's `PRAGMA foreign_key_check` never trips on stale data.
 ///
+/// Schema v36 (AUD-t-cross-06 — track_learning_order profileId-in-PK gap
+/// closure):
+/// - `track_learning_order` was the one user_database table with a bare
+///   autoincrement PK and no `profileId` — isolation depended entirely on
+///   `trackId` never being confused across profiles, with no schema-level
+///   guard. Declares `profileId` (`.references(LearnerProfiles, #id,
+///   onDelete: KeyAction.cascade)`) and folds it into `uniqueKeys` with
+///   `trackId`/`sefariaRef`. `profileId` is backfilled per-row from the
+///   owning `curriculum_tracks` row via a correlated subquery; rows whose
+///   `trackId` no longer resolves to a real `curriculum_tracks` row (never
+///   possible before this fix, since nothing purged this table on
+///   track/profile delete) are dropped first, since their owning profile is
+///   unrecoverable.
+///
 /// This database uses standard Drift migrations and holds all user-generated
 /// content: profiles, progress, configuration, streaks, and sync state.
 /// It is the only database that accepts writes at runtime.
@@ -192,7 +206,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 35;
+  int get schemaVersion => 36;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -224,6 +238,7 @@ class UserDatabase extends _$UserDatabase {
       // WS9 (v27): additive ulid columns for Wave-B points sync.
       // AUD-guardrails-01 (v33): additive composite index on goals.
       // AUD-core-database-09 (v35): real FK on points_ledger.redemptionId.
+      // AUD-t-cross-06 (v36): profileId FK added to track_learning_order.
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 25) {
           await m.createTable(pointsBalance);
@@ -582,6 +597,62 @@ class UserDatabase extends _$UserDatabase {
             assert(
               orphans.isEmpty,
               'v35 migration orphaned ${orphans.length} row(s): '
+              '${orphans.map((r) => r.data).toList()}',
+            );
+
+            await customStatement('PRAGMA foreign_keys = ON');
+          }
+        }
+        if (from < 36) {
+          // AUD-t-cross-06: track_learning_order was the one user_database
+          // table with a bare autoincrement PK and no profileId — isolation
+          // depended entirely on trackId never being confused across
+          // profiles, with no schema-level guard. Backfill profileId from
+          // the owning curriculum_tracks row, then rebuild with the new FK.
+          // Guard: partial-schema migration paths (e.g. older upgrade tests
+          // that model only their own migration's tables) may not have
+          // created track_learning_order yet — same pattern as the
+          // hasLedger/hasGoals/hasPointsLedger guards above.
+          final hasTrackLearningOrder = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'track_learning_order'",
+          ).get();
+          if (hasTrackLearningOrder.isNotEmpty) {
+            await customStatement('PRAGMA foreign_keys = OFF');
+
+            // Defensive cleanup FIRST: a row whose trackId no longer
+            // resolves to a real curriculum_tracks row (e.g. a track
+            // hard-deleted by an older app version — track_learning_order
+            // was never cleaned up on track/profile delete before this fix)
+            // has no profileId to backfill and is unrecoverable (the owning
+            // profile is unknown), so it must be dropped or the rebuild's
+            // NOT NULL profileId column would fail on it.
+            await customStatement(
+              'DELETE FROM track_learning_order '
+              'WHERE track_id NOT IN (SELECT id FROM curriculum_tracks)',
+            );
+
+            // Backfill: profileId is the owning track's profileId, read via
+            // a correlated subquery against curriculum_tracks (untouched by
+            // this migration, so it still reflects the real owner).
+            await m.alterTable(
+              TableMigration(
+                trackLearningOrder,
+                columnTransformer: {
+                  trackLearningOrder.profileId: const CustomExpression(
+                    '(SELECT profile_id FROM curriculum_tracks '
+                    'WHERE curriculum_tracks.id = track_learning_order.track_id)',
+                  ),
+                },
+              ),
+            );
+
+            final orphans = await customSelect(
+              'PRAGMA foreign_key_check',
+            ).get();
+            assert(
+              orphans.isEmpty,
+              'v36 migration orphaned ${orphans.length} row(s): '
               '${orphans.map((r) => r.data).toList()}',
             );
 

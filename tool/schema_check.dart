@@ -45,10 +45,16 @@ const _defaultTablesDir = 'learning_tracker/lib/core/database/tables';
 ///   - Accounts, LearnerProfiles, UserProfiles, Profiles: account- or
 ///     identity-scoped; not per-profile.
 ///   - CalendarCycles, DailyContent, TextCache, TextDownloadStatus,
-///     SeedMetadata, TrackLearningOrder: global / content / per-track,
-///     not per-profile.
+///     SeedMetadata: global / content, not per-profile.
 ///   - SyncQueue: legacy outbox replacement; pre-v1 schema, scheduled
 ///     for removal once OutboxProcessor (DNI-326) lands fully.
+///
+/// AUD-t-cross-06: TrackLearningOrder was previously listed here as
+/// "global / content / per-track, not per-profile" — that claim was wrong
+/// (it holds a specific profile's personal reordering preference within
+/// their own track, not shared content) and is exactly the doc/reality gap
+/// the finding closed. It now carries `profileId` (schema v36) and is
+/// listed below like every other profile-scoped table.
 const _defaultWhitelist = <String>{
   'Bookmarks',
   'CompletionEvents',
@@ -64,6 +70,7 @@ const _defaultWhitelist = <String>{
   'StageDefinitions',
   'StreakEvents',
   'StudyDayConfigs',
+  'TrackLearningOrder',
 };
 
 /// AUD-core-database-01 (2026-07-03): the profile-scoped tables whose

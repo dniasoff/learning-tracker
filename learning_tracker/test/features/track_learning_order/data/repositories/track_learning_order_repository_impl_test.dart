@@ -177,6 +177,10 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
+    // AUD-t-cross-06: track_learning_order.profileId is now a real FK to
+    // learner_profiles(id) — seed the owning profile (id = 0, matching the
+    // track's profileId below) first.
+    await seedProfileZero(db);
     final track = await db
         .into(db.curriculumTracks)
         .insertReturning(
@@ -281,7 +285,10 @@ void main() {
       final repo = _makeRepo(db, items);
 
       // Store custom order: Moed first
-      await db.trackLearningOrderDao.upsertOrder(trackId, ['Moed', 'Zeraim']);
+      await db.trackLearningOrderDao.upsertOrder(0, trackId, [
+        'Moed',
+        'Zeraim',
+      ]);
 
       final result = await repo.getSedarimOrder(
         trackId,
@@ -347,7 +354,10 @@ void main() {
       final repo = _makeRepo(db, items);
 
       // Custom: Peah first
-      await db.trackLearningOrderDao.upsertOrder(trackId, ['Peah', 'Berakhot']);
+      await db.trackLearningOrderDao.upsertOrder(0, trackId, [
+        'Peah',
+        'Berakhot',
+      ]);
 
       final result = await repo.getMasechtosOrder(
         trackId,
@@ -379,7 +389,7 @@ void main() {
       // saveSedarimOrder(trackId, [2 items]) path; this one now checks both
       // ref membership AND the persisted order/sortOrder, which the variant
       // additionally checked and this one previously did not).
-      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      final rows = await db.trackLearningOrderDao.getByTrack(0, trackId);
       expect(rows.map((r) => r.sefariaRef).toList(), ['Moed', 'Zeraim']);
       expect(rows.map((r) => r.sortOrder).toList(), [0, 1]);
     });
@@ -391,14 +401,14 @@ void main() {
       // Call again with same item.
       await repo.saveSedarimOrder(trackId, [_item('Zeraim', 0)]);
 
-      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      final rows = await db.trackLearningOrderDao.getByTrack(0, trackId);
       expect(rows, hasLength(1));
     });
 
     test('saves empty list without error', () async {
       final repo = _makeRepo(db, []);
       await repo.saveSedarimOrder(trackId, []);
-      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      final rows = await db.trackLearningOrderDao.getByTrack(0, trackId);
       expect(rows, isEmpty);
     });
   });
@@ -422,7 +432,7 @@ void main() {
       // saveMasechtosOrder(trackId, [2 items]) path; this one now checks the
       // persisted order too, which the variant additionally checked and this
       // one previously did not — via containsAll only).
-      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      final rows = await db.trackLearningOrderDao.getByTrack(0, trackId);
       expect(rows.map((r) => r.sefariaRef).toList(), ['Peah', 'Berakhot']);
     });
   });
@@ -439,7 +449,7 @@ void main() {
 
       // Seed a pre-existing order — this is what must survive a failed
       // reorder attempt untouched.
-      await db.trackLearningOrderDao.upsertOrder(trackId, ['Zeraim']);
+      await db.trackLearningOrderDao.upsertOrder(0, trackId, ['Zeraim']);
 
       // Inject a genuine SQLite failure on the SECOND write of the pair
       // (stampReorderAt's UPDATE) via a real trigger — not a fake/mocked
@@ -458,7 +468,7 @@ void main() {
         throwsA(anything),
       );
 
-      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      final rows = await db.trackLearningOrderDao.getByTrack(0, trackId);
       expect(
         rows.map((r) => r.sefariaRef).toList(),
         ['Zeraim'],
@@ -473,7 +483,7 @@ void main() {
     test('resetToDefault rolls back deleteByTrack when the stampReorderAt '
         'update fails, leaving the pre-reset order intact', () async {
       final repo = _makeRepo(db, []);
-      await db.trackLearningOrderDao.upsertOrder(trackId, ['Zeraim']);
+      await db.trackLearningOrderDao.upsertOrder(0, trackId, ['Zeraim']);
 
       await db.customStatement('''
           CREATE TRIGGER poison_curriculum_tracks_reset
@@ -486,7 +496,7 @@ void main() {
 
       await expectLater(repo.resetToDefault(trackId), throwsA(anything));
 
-      final rows = await db.trackLearningOrderDao.getByTrack(trackId);
+      final rows = await db.trackLearningOrderDao.getByTrack(0, trackId);
       expect(
         rows.map((r) => r.sefariaRef).toList(),
         ['Zeraim'],
@@ -510,16 +520,16 @@ void main() {
         _item('Moed', 0),
         _item('Zeraim', 1),
       ]);
-      expect((await db.trackLearningOrderDao.getByTrack(trackId)).length, 2);
+      expect((await db.trackLearningOrderDao.getByTrack(0, trackId)).length, 2);
 
       await repo.resetToDefault(trackId);
-      expect((await db.trackLearningOrderDao.getByTrack(trackId)).length, 0);
+      expect((await db.trackLearningOrderDao.getByTrack(0, trackId)).length, 0);
     });
 
     test('is a no-op when no custom order exists', () async {
       final repo = _makeRepo(db, []);
       await repo.resetToDefault(trackId);
-      expect(await db.trackLearningOrderDao.getByTrack(trackId), isEmpty);
+      expect(await db.trackLearningOrderDao.getByTrack(0, trackId), isEmpty);
     });
 
     test('after reset getSedarimOrder returns default content order', () async {
@@ -556,25 +566,26 @@ void main() {
     // trackDao.stampReorderAt, neither of which reads `items`).
 
     test('does not affect rows for a different track', () async {
+      await seedProfile(db); // profile id 1, owner of the other track below.
       final otherTrackId = await db
           .into(db.curriculumTracks)
           .insert(
             CurriculumTracksCompanion.insert(
-              profileId: 2,
+              profileId: 1,
               curriculumId: 'bavli',
               stateChangedAt: DateTime.utc(2026, 1, 1),
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
-      await db.trackLearningOrderDao.upsertOrder(trackId, ['Zeraim']);
-      await db.trackLearningOrderDao.upsertOrder(otherTrackId, ['Moed']);
+      await db.trackLearningOrderDao.upsertOrder(0, trackId, ['Zeraim']);
+      await db.trackLearningOrderDao.upsertOrder(1, otherTrackId, ['Moed']);
 
       final repo = _makeRepo(db, []);
       await repo.resetToDefault(trackId);
 
-      expect(await db.trackLearningOrderDao.getByTrack(trackId), isEmpty);
+      expect(await db.trackLearningOrderDao.getByTrack(0, trackId), isEmpty);
       expect(
-        await db.trackLearningOrderDao.getByTrack(otherTrackId),
+        await db.trackLearningOrderDao.getByTrack(1, otherTrackId),
         hasLength(1),
       );
     });

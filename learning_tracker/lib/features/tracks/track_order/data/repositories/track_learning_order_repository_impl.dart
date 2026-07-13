@@ -15,6 +15,18 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
   final UserDatabase _database;
   final ContentRepository _contentRepository;
 
+  /// AUD-t-cross-06: resolves the owning profileId for [trackId] from
+  /// `curriculum_tracks` — the single source of truth for track ownership —
+  /// so every `track_learning_order` read/write is scoped by profileId, not
+  /// trackId alone.
+  Future<int> _resolveProfileId(int trackId) async {
+    final track = await _database.trackDao.getTrackById(trackId);
+    if (track == null) {
+      throw StateError('No track found for trackId=$trackId');
+    }
+    return track.profileId;
+  }
+
   Future<Map<String, ({String he, String en, int sortOrder})>>
   _buildSedarimIndex(CurriculumId curriculumId) async {
     final allItems = await _contentRepository.getContentForCurriculum(
@@ -45,7 +57,11 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
 
     // Convert DAO rows to the savedSederOrder list expected by the policy:
     // only include rows whose sefariaRef matches a known seder, in row order.
-    final daoRows = await _database.trackLearningOrderDao.getByTrack(trackId);
+    final profileId = await _resolveProfileId(trackId);
+    final daoRows = await _database.trackLearningOrderDao.getByTrack(
+      profileId,
+      trackId,
+    );
     final savedSederOrder = daoRows
         .where((r) => sedarimIndex.containsKey(r.sefariaRef))
         .map((r) => r.sefariaRef)
@@ -62,7 +78,11 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
     int trackId,
     Map<String, ({String he, String en, int sortOrder})> index,
   ) async {
-    final rows = await _database.trackLearningOrderDao.getByTrack(trackId);
+    final profileId = await _resolveProfileId(trackId);
+    final rows = await _database.trackLearningOrderDao.getByTrack(
+      profileId,
+      trackId,
+    );
     final matchingRows = rows
         .where((r) => index.containsKey(r.sefariaRef))
         .toList();
@@ -125,8 +145,13 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
     // stamp must commit or roll back together — a crash/error between the
     // two would otherwise leave a stale lastReorderAt (or vice versa),
     // breaking the reorder-amnesty logic documented at architecture §10.1.
+    final profileId = await _resolveProfileId(trackId);
     await _database.transaction(() async {
-      await _database.trackLearningOrderDao.upsertOrder(trackId, refs);
+      await _database.trackLearningOrderDao.upsertOrder(
+        profileId,
+        trackId,
+        refs,
+      );
       // Reorder-amnesty: stamp lastReorderAt so the projection clears
       // overdue items that were scheduled before this reorder.
       await _database.trackDao.stampReorderAt(trackId);
@@ -140,8 +165,13 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
   ) async {
     final refs = items.map((i) => i.sefariaRef).toList();
     // AUD-core-database-05 (DB-2): see saveSedarimOrder above.
+    final profileId = await _resolveProfileId(trackId);
     await _database.transaction(() async {
-      await _database.trackLearningOrderDao.upsertOrder(trackId, refs);
+      await _database.trackLearningOrderDao.upsertOrder(
+        profileId,
+        trackId,
+        refs,
+      );
       // Reorder-amnesty: stamp lastReorderAt so the projection clears
       // overdue items scheduled before this reorder.
       await _database.trackDao.stampReorderAt(trackId);
@@ -151,8 +181,9 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
   @override
   Future<void> resetToDefault(int trackId) async {
     // AUD-core-database-05 (DB-2): see saveSedarimOrder above.
+    final profileId = await _resolveProfileId(trackId);
     await _database.transaction(() async {
-      await _database.trackLearningOrderDao.deleteByTrack(trackId);
+      await _database.trackLearningOrderDao.deleteByTrack(profileId, trackId);
       // Reorder-amnesty: reset-to-default is a content-order change.
       await _database.trackDao.stampReorderAt(trackId);
     });

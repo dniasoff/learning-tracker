@@ -401,6 +401,7 @@ class DataExportImportService {
           .map(
             (t) => {
               'id': t.id,
+              'profileId': t.profileId,
               'trackId': t.trackId,
               'sefariaRef': t.sefariaRef,
               'sortOrder': t.sortOrder,
@@ -528,17 +529,6 @@ class DataExportImportService {
         .toSet();
 
     await _database.transaction(() async {
-      // trackLearningOrder has no profileId column — it is scoped via the
-      // curriculumTracks it belongs to, so this must be read before
-      // curriculumTracks is cleared below.
-      final trackIdsToClear = importedProfileIds.isEmpty
-          ? const <int>{}
-          : (await (_database.select(
-                  _database.curriculumTracks,
-                )..where((t) => t.profileId.isIn(importedProfileIds))).get())
-                .map((t) => t.id)
-                .toSet();
-
       // Clear existing user data for the imported profiles/accounts only
       // (order: FK children before parents). W3.20: `streaks` and
       // `completions` tables dropped — no longer cleared.
@@ -554,9 +544,12 @@ class DataExportImportService {
       await (_database.delete(
         _database.dailyPlans,
       )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      // AUD-t-cross-06: trackLearningOrder now carries profileId directly —
+      // no longer needs the pre-clear curriculumTracks lookup this used to
+      // require to scope by trackId.
       await (_database.delete(
         _database.trackLearningOrder,
-      )..where((t) => t.trackId.isIn(trackIdsToClear))).go();
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
       await (_database.delete(
         _database.learningOrder,
       )..where((t) => t.profileId.isIn(importedProfileIds))).go();
@@ -899,11 +892,28 @@ class DataExportImportService {
       // --- Import track learning order ---
       for (final t in (data['trackLearningOrder'] as List? ?? [])) {
         final map = t as Map<String, dynamic>;
+        final trackId = map['trackId'] as int;
+        // AUD-t-cross-06: profileId was added after formatVersion schemaV1
+        // shipped — a backup exported by an older app version won't carry
+        // it. Fall back to resolving it from the track's current owner
+        // (already imported above) so legacy backups still import cleanly.
+        final profileId =
+            map['profileId'] as int? ??
+            (await (_database.select(
+                  _database.curriculumTracks,
+                )..where((c) => c.id.equals(trackId))).getSingleOrNull())
+                ?.profileId;
+        if (profileId == null) {
+          // Orphaned reference (track no longer exists) — skip, matching
+          // the v36 migration's own drop-orphans behaviour.
+          continue;
+        }
         await _database
             .into(_database.trackLearningOrder)
             .insert(
               TrackLearningOrderCompanion.insert(
-                trackId: map['trackId'] as int,
+                profileId: profileId,
+                trackId: trackId,
                 sefariaRef: map['sefariaRef'] as String,
                 sortOrder: map['sortOrder'] as int,
               ),

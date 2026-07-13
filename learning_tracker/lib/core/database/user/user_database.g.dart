@@ -7575,6 +7575,20 @@ class $TrackLearningOrderTable extends TrackLearningOrder
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _profileIdMeta = const VerificationMeta(
+    'profileId',
+  );
+  @override
+  late final GeneratedColumn<int> profileId = GeneratedColumn<int>(
+    'profile_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES learner_profiles (id) ON DELETE CASCADE',
+    ),
+  );
   static const VerificationMeta _trackIdMeta = const VerificationMeta(
     'trackId',
   );
@@ -7609,7 +7623,13 @@ class $TrackLearningOrderTable extends TrackLearningOrder
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, trackId, sefariaRef, sortOrder];
+  List<GeneratedColumn> get $columns => [
+    id,
+    profileId,
+    trackId,
+    sefariaRef,
+    sortOrder,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -7624,6 +7644,14 @@ class $TrackLearningOrderTable extends TrackLearningOrder
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('profile_id')) {
+      context.handle(
+        _profileIdMeta,
+        profileId.isAcceptableOrUnknown(data['profile_id']!, _profileIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_profileIdMeta);
     }
     if (data.containsKey('track_id')) {
       context.handle(
@@ -7656,7 +7684,7 @@ class $TrackLearningOrderTable extends TrackLearningOrder
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
   List<Set<GeneratedColumn>> get uniqueKeys => [
-    {trackId, sefariaRef},
+    {profileId, trackId, sefariaRef},
   ];
   @override
   TrackLearningOrderData map(Map<String, dynamic> data, {String? tablePrefix}) {
@@ -7665,6 +7693,10 @@ class $TrackLearningOrderTable extends TrackLearningOrder
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
+      )!,
+      profileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}profile_id'],
       )!,
       trackId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -7690,11 +7722,15 @@ class $TrackLearningOrderTable extends TrackLearningOrder
 class TrackLearningOrderData extends DataClass
     implements Insertable<TrackLearningOrderData> {
   final int id;
+
+  /// AUD-t-cross-06: FK → learner_profiles(id) CASCADE DELETE.
+  final int profileId;
   final int trackId;
   final String sefariaRef;
   final int sortOrder;
   const TrackLearningOrderData({
     required this.id,
+    required this.profileId,
     required this.trackId,
     required this.sefariaRef,
     required this.sortOrder,
@@ -7703,6 +7739,7 @@ class TrackLearningOrderData extends DataClass
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    map['profile_id'] = Variable<int>(profileId);
     map['track_id'] = Variable<int>(trackId);
     map['sefaria_ref'] = Variable<String>(sefariaRef);
     map['sort_order'] = Variable<int>(sortOrder);
@@ -7712,6 +7749,7 @@ class TrackLearningOrderData extends DataClass
   TrackLearningOrderCompanion toCompanion(bool nullToAbsent) {
     return TrackLearningOrderCompanion(
       id: Value(id),
+      profileId: Value(profileId),
       trackId: Value(trackId),
       sefariaRef: Value(sefariaRef),
       sortOrder: Value(sortOrder),
@@ -7725,6 +7763,7 @@ class TrackLearningOrderData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return TrackLearningOrderData(
       id: serializer.fromJson<int>(json['id']),
+      profileId: serializer.fromJson<int>(json['profileId']),
       trackId: serializer.fromJson<int>(json['trackId']),
       sefariaRef: serializer.fromJson<String>(json['sefariaRef']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
@@ -7735,6 +7774,7 @@ class TrackLearningOrderData extends DataClass
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'profileId': serializer.toJson<int>(profileId),
       'trackId': serializer.toJson<int>(trackId),
       'sefariaRef': serializer.toJson<String>(sefariaRef),
       'sortOrder': serializer.toJson<int>(sortOrder),
@@ -7743,11 +7783,13 @@ class TrackLearningOrderData extends DataClass
 
   TrackLearningOrderData copyWith({
     int? id,
+    int? profileId,
     int? trackId,
     String? sefariaRef,
     int? sortOrder,
   }) => TrackLearningOrderData(
     id: id ?? this.id,
+    profileId: profileId ?? this.profileId,
     trackId: trackId ?? this.trackId,
     sefariaRef: sefariaRef ?? this.sefariaRef,
     sortOrder: sortOrder ?? this.sortOrder,
@@ -7755,6 +7797,7 @@ class TrackLearningOrderData extends DataClass
   TrackLearningOrderData copyWithCompanion(TrackLearningOrderCompanion data) {
     return TrackLearningOrderData(
       id: data.id.present ? data.id.value : this.id,
+      profileId: data.profileId.present ? data.profileId.value : this.profileId,
       trackId: data.trackId.present ? data.trackId.value : this.trackId,
       sefariaRef: data.sefariaRef.present
           ? data.sefariaRef.value
@@ -7767,6 +7810,7 @@ class TrackLearningOrderData extends DataClass
   String toString() {
     return (StringBuffer('TrackLearningOrderData(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('trackId: $trackId, ')
           ..write('sefariaRef: $sefariaRef, ')
           ..write('sortOrder: $sortOrder')
@@ -7775,12 +7819,14 @@ class TrackLearningOrderData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(id, trackId, sefariaRef, sortOrder);
+  int get hashCode =>
+      Object.hash(id, profileId, trackId, sefariaRef, sortOrder);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is TrackLearningOrderData &&
           other.id == this.id &&
+          other.profileId == this.profileId &&
           other.trackId == this.trackId &&
           other.sefariaRef == this.sefariaRef &&
           other.sortOrder == this.sortOrder);
@@ -7789,31 +7835,37 @@ class TrackLearningOrderData extends DataClass
 class TrackLearningOrderCompanion
     extends UpdateCompanion<TrackLearningOrderData> {
   final Value<int> id;
+  final Value<int> profileId;
   final Value<int> trackId;
   final Value<String> sefariaRef;
   final Value<int> sortOrder;
   const TrackLearningOrderCompanion({
     this.id = const Value.absent(),
+    this.profileId = const Value.absent(),
     this.trackId = const Value.absent(),
     this.sefariaRef = const Value.absent(),
     this.sortOrder = const Value.absent(),
   });
   TrackLearningOrderCompanion.insert({
     this.id = const Value.absent(),
+    required int profileId,
     required int trackId,
     required String sefariaRef,
     required int sortOrder,
-  }) : trackId = Value(trackId),
+  }) : profileId = Value(profileId),
+       trackId = Value(trackId),
        sefariaRef = Value(sefariaRef),
        sortOrder = Value(sortOrder);
   static Insertable<TrackLearningOrderData> custom({
     Expression<int>? id,
+    Expression<int>? profileId,
     Expression<int>? trackId,
     Expression<String>? sefariaRef,
     Expression<int>? sortOrder,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (profileId != null) 'profile_id': profileId,
       if (trackId != null) 'track_id': trackId,
       if (sefariaRef != null) 'sefaria_ref': sefariaRef,
       if (sortOrder != null) 'sort_order': sortOrder,
@@ -7822,12 +7874,14 @@ class TrackLearningOrderCompanion
 
   TrackLearningOrderCompanion copyWith({
     Value<int>? id,
+    Value<int>? profileId,
     Value<int>? trackId,
     Value<String>? sefariaRef,
     Value<int>? sortOrder,
   }) {
     return TrackLearningOrderCompanion(
       id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
       trackId: trackId ?? this.trackId,
       sefariaRef: sefariaRef ?? this.sefariaRef,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -7839,6 +7893,9 @@ class TrackLearningOrderCompanion
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (profileId.present) {
+      map['profile_id'] = Variable<int>(profileId.value);
     }
     if (trackId.present) {
       map['track_id'] = Variable<int>(trackId.value);
@@ -7856,6 +7913,7 @@ class TrackLearningOrderCompanion
   String toString() {
     return (StringBuffer('TrackLearningOrderCompanion(')
           ..write('id: $id, ')
+          ..write('profileId: $profileId, ')
           ..write('trackId: $trackId, ')
           ..write('sefariaRef: $sefariaRef, ')
           ..write('sortOrder: $sortOrder')
@@ -13438,6 +13496,13 @@ abstract class _$UserDatabase extends GeneratedDatabase {
         'learner_profiles',
         limitUpdateKind: UpdateKind.delete,
       ),
+      result: [TableUpdate('track_learning_order', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'learner_profiles',
+        limitUpdateKind: UpdateKind.delete,
+      ),
       result: [TableUpdate('goals', kind: UpdateKind.delete)],
     ),
     WritePropagation(
@@ -14036,6 +14101,33 @@ final class $$LearnerProfilesTableReferences
     );
   }
 
+  static MultiTypedResultKey<
+    $TrackLearningOrderTable,
+    List<TrackLearningOrderData>
+  >
+  _trackLearningOrderRefsTable(_$UserDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.trackLearningOrder,
+        aliasName: $_aliasNameGenerator(
+          db.learnerProfiles.id,
+          db.trackLearningOrder.profileId,
+        ),
+      );
+
+  $$TrackLearningOrderTableProcessedTableManager get trackLearningOrderRefs {
+    final manager = $$TrackLearningOrderTableTableManager(
+      $_db,
+      $_db.trackLearningOrder,
+    ).filter((f) => f.profileId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _trackLearningOrderRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$GoalsTable, List<Goal>> _goalsRefsTable(
     _$UserDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -14394,6 +14486,31 @@ class $$LearnerProfilesTableFilterComposer
           }) => $$LearningOrderTableFilterComposer(
             $db: $db,
             $table: $db.learningOrder,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> trackLearningOrderRefs(
+    Expression<bool> Function($$TrackLearningOrderTableFilterComposer f) f,
+  ) {
+    final $$TrackLearningOrderTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.trackLearningOrder,
+      getReferencedColumn: (t) => t.profileId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TrackLearningOrderTableFilterComposer(
+            $db: $db,
+            $table: $db.trackLearningOrder,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -14860,6 +14977,32 @@ class $$LearnerProfilesTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> trackLearningOrderRefs<T extends Object>(
+    Expression<T> Function($$TrackLearningOrderTableAnnotationComposer a) f,
+  ) {
+    final $$TrackLearningOrderTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.trackLearningOrder,
+          getReferencedColumn: (t) => t.profileId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$TrackLearningOrderTableAnnotationComposer(
+                $db: $db,
+                $table: $db.trackLearningOrder,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> goalsRefs<T extends Object>(
     Expression<T> Function($$GoalsTableAnnotationComposer a) f,
   ) {
@@ -15034,6 +15177,7 @@ class $$LearnerProfilesTableTableManager
             bool learningLedgerRefs,
             bool bookmarksRefs,
             bool learningOrderRefs,
+            bool trackLearningOrderRefs,
             bool goalsRefs,
             bool streakEventsRefs,
             bool priorCompletionImportsRefs,
@@ -15124,6 +15268,7 @@ class $$LearnerProfilesTableTableManager
                 learningLedgerRefs = false,
                 bookmarksRefs = false,
                 learningOrderRefs = false,
+                trackLearningOrderRefs = false,
                 goalsRefs = false,
                 streakEventsRefs = false,
                 priorCompletionImportsRefs = false,
@@ -15140,6 +15285,7 @@ class $$LearnerProfilesTableTableManager
                     if (learningLedgerRefs) db.learningLedger,
                     if (bookmarksRefs) db.bookmarks,
                     if (learningOrderRefs) db.learningOrder,
+                    if (trackLearningOrderRefs) db.trackLearningOrder,
                     if (goalsRefs) db.goals,
                     if (streakEventsRefs) db.streakEvents,
                     if (priorCompletionImportsRefs) db.priorCompletionImports,
@@ -15309,6 +15455,27 @@ class $$LearnerProfilesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (trackLearningOrderRefs)
+                        await $_getPrefetchedData<
+                          LearnerProfile,
+                          $LearnerProfilesTable,
+                          TrackLearningOrderData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$LearnerProfilesTableReferences
+                              ._trackLearningOrderRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$LearnerProfilesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).trackLearningOrderRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.profileId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (goalsRefs)
                         await $_getPrefetchedData<
                           LearnerProfile,
@@ -15463,6 +15630,7 @@ typedef $$LearnerProfilesTableProcessedTableManager =
         bool learningLedgerRefs,
         bool bookmarksRefs,
         bool learningOrderRefs,
+        bool trackLearningOrderRefs,
         bool goalsRefs,
         bool streakEventsRefs,
         bool priorCompletionImportsRefs,
@@ -20613,6 +20781,7 @@ typedef $$LearningOrderTableProcessedTableManager =
 typedef $$TrackLearningOrderTableCreateCompanionBuilder =
     TrackLearningOrderCompanion Function({
       Value<int> id,
+      required int profileId,
       required int trackId,
       required String sefariaRef,
       required int sortOrder,
@@ -20620,10 +20789,47 @@ typedef $$TrackLearningOrderTableCreateCompanionBuilder =
 typedef $$TrackLearningOrderTableUpdateCompanionBuilder =
     TrackLearningOrderCompanion Function({
       Value<int> id,
+      Value<int> profileId,
       Value<int> trackId,
       Value<String> sefariaRef,
       Value<int> sortOrder,
     });
+
+final class $$TrackLearningOrderTableReferences
+    extends
+        BaseReferences<
+          _$UserDatabase,
+          $TrackLearningOrderTable,
+          TrackLearningOrderData
+        > {
+  $$TrackLearningOrderTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $LearnerProfilesTable _profileIdTable(_$UserDatabase db) =>
+      db.learnerProfiles.createAlias(
+        $_aliasNameGenerator(
+          db.trackLearningOrder.profileId,
+          db.learnerProfiles.id,
+        ),
+      );
+
+  $$LearnerProfilesTableProcessedTableManager get profileId {
+    final $_column = $_itemColumn<int>('profile_id')!;
+
+    final manager = $$LearnerProfilesTableTableManager(
+      $_db,
+      $_db.learnerProfiles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_profileIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
 
 class $$TrackLearningOrderTableFilterComposer
     extends Composer<_$UserDatabase, $TrackLearningOrderTable> {
@@ -20653,6 +20859,29 @@ class $$TrackLearningOrderTableFilterComposer
     column: $table.sortOrder,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$LearnerProfilesTableFilterComposer get profileId {
+    final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableFilterComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TrackLearningOrderTableOrderingComposer
@@ -20683,6 +20912,29 @@ class $$TrackLearningOrderTableOrderingComposer
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$LearnerProfilesTableOrderingComposer get profileId {
+    final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableOrderingComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TrackLearningOrderTableAnnotationComposer
@@ -20707,6 +20959,29 @@ class $$TrackLearningOrderTableAnnotationComposer
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  $$LearnerProfilesTableAnnotationComposer get profileId {
+    final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.profileId,
+      referencedTable: $db.learnerProfiles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$LearnerProfilesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.learnerProfiles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TrackLearningOrderTableTableManager
@@ -20720,16 +20995,9 @@ class $$TrackLearningOrderTableTableManager
           $$TrackLearningOrderTableAnnotationComposer,
           $$TrackLearningOrderTableCreateCompanionBuilder,
           $$TrackLearningOrderTableUpdateCompanionBuilder,
-          (
-            TrackLearningOrderData,
-            BaseReferences<
-              _$UserDatabase,
-              $TrackLearningOrderTable,
-              TrackLearningOrderData
-            >,
-          ),
+          (TrackLearningOrderData, $$TrackLearningOrderTableReferences),
           TrackLearningOrderData,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool profileId})
         > {
   $$TrackLearningOrderTableTableManager(
     _$UserDatabase db,
@@ -20750,11 +21018,13 @@ class $$TrackLearningOrderTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int> profileId = const Value.absent(),
                 Value<int> trackId = const Value.absent(),
                 Value<String> sefariaRef = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
               }) => TrackLearningOrderCompanion(
                 id: id,
+                profileId: profileId,
                 trackId: trackId,
                 sefariaRef: sefariaRef,
                 sortOrder: sortOrder,
@@ -20762,19 +21032,68 @@ class $$TrackLearningOrderTableTableManager
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                required int profileId,
                 required int trackId,
                 required String sefariaRef,
                 required int sortOrder,
               }) => TrackLearningOrderCompanion.insert(
                 id: id,
+                profileId: profileId,
                 trackId: trackId,
                 sefariaRef: sefariaRef,
                 sortOrder: sortOrder,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$TrackLearningOrderTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({profileId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (profileId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.profileId,
+                                referencedTable:
+                                    $$TrackLearningOrderTableReferences
+                                        ._profileIdTable(db),
+                                referencedColumn:
+                                    $$TrackLearningOrderTableReferences
+                                        ._profileIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ),
       );
 }
@@ -20789,16 +21108,9 @@ typedef $$TrackLearningOrderTableProcessedTableManager =
       $$TrackLearningOrderTableAnnotationComposer,
       $$TrackLearningOrderTableCreateCompanionBuilder,
       $$TrackLearningOrderTableUpdateCompanionBuilder,
-      (
-        TrackLearningOrderData,
-        BaseReferences<
-          _$UserDatabase,
-          $TrackLearningOrderTable,
-          TrackLearningOrderData
-        >,
-      ),
+      (TrackLearningOrderData, $$TrackLearningOrderTableReferences),
       TrackLearningOrderData,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool profileId})
     >;
 typedef $$GoalsTableCreateCompanionBuilder =
     GoalsCompanion Function({

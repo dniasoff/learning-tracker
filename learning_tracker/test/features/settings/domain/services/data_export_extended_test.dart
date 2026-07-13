@@ -500,8 +500,25 @@ void main() {
       'formatVersion': 'schemaV1',
       'exportedAt': '2026-01-01T00:00:00.000Z',
       'appVersion': '1.0.0',
-      'userProfiles': <dynamic>[],
-      'learnerProfiles': <dynamic>[],
+      'userProfiles': [
+        {
+          'id': 1,
+          'displayName': 'Test User',
+          'tier': 'localBorn',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          'updatedAt': '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      'learnerProfiles': [
+        {
+          'id': 1,
+          'accountId': 1,
+          'displayName': 'Test Profile',
+          'mode': 'adult',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          'updatedAt': '2026-01-01T00:00:00.000Z',
+        },
+      ],
       'curriculumTracks': [
         {
           'id': 1,
@@ -537,7 +554,7 @@ void main() {
     test('imports track learning order entries', () async {
       await service.importData(payload());
 
-      final orders = await db.trackLearningOrderDao.getByTrack(1);
+      final orders = await db.trackLearningOrderDao.getByTrack(1, 1);
       expect(orders, hasLength(1));
       expect(orders.first.sefariaRef, 'Berakhot');
     });

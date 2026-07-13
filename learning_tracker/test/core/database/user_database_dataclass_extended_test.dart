@@ -836,6 +836,7 @@ void main() {
           .into(db.trackLearningOrder)
           .insert(
             TrackLearningOrderCompanion.insert(
+              profileId: profileId,
               trackId: trackId,
               sefariaRef: 'Berakhot 2a',
               sortOrder: 1,
@@ -860,6 +861,7 @@ void main() {
           .into(db.trackLearningOrder)
           .insert(
             TrackLearningOrderCompanion.insert(
+              profileId: profileId,
               trackId: trackId,
               sefariaRef: 'Shabbat 2a',
               sortOrder: 2,
@@ -886,6 +888,7 @@ void main() {
           .into(db.trackLearningOrder)
           .insert(
             TrackLearningOrderCompanion.insert(
+              profileId: profileId,
               trackId: trackId,
               sefariaRef: 'Eruvin 2a',
               sortOrder: 3,

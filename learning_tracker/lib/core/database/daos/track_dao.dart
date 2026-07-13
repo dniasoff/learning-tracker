@@ -244,7 +244,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       await db.pointConfigDao.deleteAllForTrack(trackId);
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
-      await db.trackLearningOrderDao.deleteByTrack(trackId);
+      await db.trackLearningOrderDao.deleteByTrack(track.profileId, trackId);
       // D7: also remove the program-enrolment row — otherwise a deleted program
       // track leaves a dangling profile_programs row (the scheduler would keep
       // projecting that program's tasks against a now-deleted track).
@@ -552,7 +552,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       await db.pointConfigDao.deleteAllForTrack(trackId);
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
-      await db.trackLearningOrderDao.deleteByTrack(trackId);
+      await db.trackLearningOrderDao.deleteByTrack(track.profileId, trackId);
       // D7: also remove the program-enrolment row (see deleteTrackAndData).
       await db.profileProgramDao.clearProgramForProfileAndCurriculum(
         track.profileId,

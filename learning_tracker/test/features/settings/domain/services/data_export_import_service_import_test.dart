@@ -639,6 +639,7 @@ void main() {
     test('inserts track learning order rows', () async {
       final payload = minimalPayload()
         ..['userProfiles'] = [userProfileMap(id: 1)]
+        ..['learnerProfiles'] = [learnerProfileMap()]
         ..['curriculumTracks'] = [trackMap(id: 1)]
         ..['trackLearningOrder'] = [
           {'trackId': 1, 'sefariaRef': 'Berakhot.2a', 'sortOrder': 1},
@@ -863,6 +864,7 @@ void main() {
           .into(db.trackLearningOrder)
           .insert(
             TrackLearningOrderCompanion.insert(
+              profileId: profileId,
               trackId: trackId,
               sefariaRef: 'Berakhot.2a',
               sortOrder: 1,
@@ -971,6 +973,7 @@ void main() {
           .into(db.trackLearningOrder)
           .insert(
             TrackLearningOrderCompanion.insert(
+              profileId: 1,
               trackId: trackId,
               sefariaRef: 'Berakhot.4a',
               sortOrder: 5,
@@ -985,6 +988,7 @@ void main() {
       expect(orders.first['sefariaRef'], 'Berakhot.4a');
       expect(orders.first['sortOrder'], 5);
       expect(orders.first['trackId'], trackId);
+      expect(orders.first['profileId'], 1);
     });
   });
 
@@ -1227,6 +1231,7 @@ void main() {
             .into(db.trackLearningOrder)
             .insert(
               TrackLearningOrderCompanion.insert(
+                profileId: profileId,
                 trackId: trackId,
                 sefariaRef: '$refPrefix.1.1',
                 sortOrder: 1,
