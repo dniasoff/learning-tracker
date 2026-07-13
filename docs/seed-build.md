@@ -152,7 +152,8 @@ ported from the retired `tool/text_extract/main.py`:
 - **Version bump:** increment `bundledSeedVersion` in
   `learning_tracker/lib/core/database/seed_version.dart`. `SeedManager` compares
   it against the installed DB's `seed_metadata.version` and atomically replaces
-  the on-device DB when the bundled version is higher. Currently **14**.
+  the on-device DB when the bundled version is higher. See that constant for
+  the current value — not restated here to avoid drift (AG-8).
 
 ## Validation checklist (current build, verified)
 
