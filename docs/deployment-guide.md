@@ -81,4 +81,4 @@ All secret-derived files are cleaned up on `always()` at the end of the build/de
 
 ## 6. Store assets
 
-`learning_tracker/golden/store_screenshots_test.dart` generates Play Store screenshots as golden images (`phone_1_dashboard` … `phone_5_gamification`). `tool/upload_store_assets.py` uploads the listing/screenshots/icon/feature-graphic via the Android Publisher API (it does not upload the APK/AAB — that is `deploy-play-store.yml`'s job). Raw store assets live in `store_assets/`.
+`learning_tracker/test/golden/store_screenshots_test.dart` generates Play Store screenshots as golden images (`phone_1_dashboard` … `phone_5_gamification`). `tool/upload_store_assets.py` uploads the listing/screenshots/icon/feature-graphic via the Android Publisher API (it does not upload the APK/AAB — that is `deploy-play-store.yml`'s job). Raw store assets live in `store_assets/`.
