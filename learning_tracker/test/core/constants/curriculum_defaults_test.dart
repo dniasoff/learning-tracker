@@ -1,3 +1,14 @@
+/// Tests for [CurriculumDefaults] and the curriculum hierarchy shape
+/// (levels/depth) exposed via [CurriculumLabels].
+///
+/// Partition (AUD-t-cross-11 dedup): this file owns CurriculumDefaults plus
+/// hierarchy-shape tests. curriculum_labels_extended_test.dart owns
+/// LevelLabels + CurriculumLabels formatting methods (container,
+/// containerSectionHeader, level, valueWithLabel, fullPath,
+/// stripStructuralPrefix, etc). curriculum_label_variant_test.dart owns
+/// transliteration-variant (nusach) behavior — no overlap with this file.
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -33,6 +44,13 @@ void main() {
       for (var i = 0; i < CurriculumDefaults.defaultStages.length; i++) {
         expect(CurriculumDefaults.defaultStages[i].stageOrder, i);
       }
+    });
+
+    test('defaultPointsPerStage has 3 entries matching stage order', () {
+      expect(CurriculumDefaults.defaultPointsPerStage.length, 3);
+      expect(CurriculumDefaults.defaultPointsPerStage[0], 10);
+      expect(CurriculumDefaults.defaultPointsPerStage[1], 5);
+      expect(CurriculumDefaults.defaultPointsPerStage[2], 3);
     });
   });
 
@@ -176,35 +194,9 @@ void main() {
       );
     });
 
-    test(
-      'stripStructuralPrefix scoped to Mishneh Torah strips "משנה תורה,"',
-      () {
-        // Without scoping, the legacy global strip would chop off "משנה " (the
-        // Mishnayos level label) and leave a leading "תורה, " — the exact bug
-        // that produced "תורה, הלכות גירושין" on the Mishneh Torah browse.
-        expect(
-          CurriculumLabels.stripStructuralPrefix(
-            'משנה תורה, הלכות גירושין',
-            curriculumId: CurriculumId.mishnehTorah,
-          ),
-          'גירושין',
-        );
-        expect(
-          CurriculumLabels.stripStructuralPrefix(
-            'משנה תורה, הלכות אישות',
-            curriculumId: CurriculumId.mishnehTorah,
-          ),
-          'אישות',
-        );
-      },
-    );
-
-    test('stripStructuralPrefix removes known Hebrew prefixes', () {
-      expect(CurriculumLabels.stripStructuralPrefix('מסכת ברכות'), 'ברכות');
-      expect(CurriculumLabels.stripStructuralPrefix('ספר בראשית'), 'בראשית');
-      // No-match passes through unchanged.
-      expect(CurriculumLabels.stripStructuralPrefix('ברכות'), 'ברכות');
-    });
+    // stripStructuralPrefix is a CurriculumLabels formatting method, not a
+    // hierarchy-shape one — its coverage lives in
+    // curriculum_labels_extended_test.dart (AUD-t-cross-11 partition).
 
     test('hasReorderableLevel2 hides chapter list for chumash/tanach', () {
       expect(
