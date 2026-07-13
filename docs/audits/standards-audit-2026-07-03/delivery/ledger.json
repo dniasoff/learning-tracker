@@ -2361,13 +2361,20 @@
   {
    "id": "AUD-t-cross-16",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or rewrite the 474 row-existence-only Drift Manager-API tests in test/core/database/user_database_managers_*_test.dart — none can detect an ordering or filtering regression",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "f4346b89ad635a541e682508668e0db97046ef1a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-16 AC1 OK: exact grep 'db.managers' over user_database_managers_*_test.dart returns nothing — all 7 files deleted",
+    "AUD-t-cross-16 AC2 OK(wiring): Makefile 'test' runs lcov --remove *.g.dart/*.freezed.dart; 'ci' depends on 'test'; ci.yml installs lcov before make ci",
+    "AUD-t-cross-16 AC2 OK(functional): exact lcov cmd stripped all 30 generated SF entries (109->79), lcov --summary still parseable",
+    "AUD-t-cross-16 AC3 OK: 7 files/7689 lines deleted; dir now 8065 lines; 8065+7689=15754 matches commit; diff stat shows the drop"
+   ],
+   "notes": "Re-verified: grep for .managers. in lib/ still 0 hits; suite still tautological; coverage floor still unfiltered. Deleted all 7 user_database_managers_*_test.dart files; added lcov --remove for .g.dart/.freezed.dart to Makefile + earlier lcov install in ci.yml. AC1-3 verified live."
   },
   {
    "id": "AUD-notifications-04",
