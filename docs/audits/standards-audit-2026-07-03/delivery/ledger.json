@@ -8948,13 +8948,17 @@
   {
    "id": "AUD-core-database-11",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete vestigial .gitkeep from core/database/tables/",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "7ccdcad7274945acba62008604bcdc664fffa0b2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-11 AC1 OK: git ls-files tables/.gitkeep empty (untracked), ls->No such file; 27 real .dart still tracked; git show=empty-blob deletion; no refs"
+   ],
+   "notes": "Re-verified: tables/ had .gitkeep + 27 real .dart table files (register said 26; immaterial - dir non-empty either way). Not already fixed. Hygiene finding, no behavior; grepped for references to .gitkeep first (none). git rm'd it, committed. AC satisfied: file removed, 27 real files remain tracked."
   },
   {
    "id": "AUD-core-labels-04",
