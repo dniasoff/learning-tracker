@@ -14,7 +14,7 @@ import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
 /// Keeps alive to monitor streak milestones for the active profile.
@@ -42,7 +42,7 @@ final streakMilestoneAnalyticsObserverProvider =
       final analytics = ref.watch(analyticsServiceProvider);
       final logger = AppLogger.instance;
 
-      final stateProvider = StreakStateProvider(
+      final stateProvider = StreakStateService(
         db: db,
         clock: const SystemLocalDayClock(),
       );

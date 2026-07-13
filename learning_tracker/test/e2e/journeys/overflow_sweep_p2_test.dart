@@ -771,7 +771,7 @@ void main() {
       label: 'CurriculumListScreen',
       path: '/browse',
       extraOverrides: [
-        // Silence the 15-min periodic timer in StreakStateProvider so the
+        // Silence the 15-min periodic timer in StreakStateService so the
         // timer-pending invariant doesn't fire at teardown.
         dashboardStreakProvider.overrideWith(
           (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -858,7 +858,7 @@ void main() {
         activeTracksProvider.overrideWith(
           (ref) => Stream.fromFuture(Future.value(<CurriculumTrack>[])),
         ),
-        // Silence the 15-min periodic timer in StreakStateProvider.
+        // Silence the 15-min periodic timer in StreakStateService.
         dashboardStreakProvider.overrideWith(
           (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
         ),

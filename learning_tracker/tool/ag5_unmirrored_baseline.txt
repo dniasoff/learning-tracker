@@ -248,7 +248,7 @@ lib/features/gamification/streak/streak_event_log.dart
 lib/features/gamification/streak/streak_log_event.dart
 lib/features/gamification/streak/streak_reducer.dart
 lib/features/gamification/streak/streak_restorer.dart
-lib/features/gamification/streak/streak_state_provider.dart
+lib/features/gamification/streak/streak_state_service.dart
 lib/features/learning/data/repositories/track_repository_impl.dart
 lib/features/learning/domain/entities/bookmark.dart
 lib/features/learning/domain/entities/completion_command.dart

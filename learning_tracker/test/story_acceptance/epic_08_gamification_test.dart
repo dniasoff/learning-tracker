@@ -11,7 +11,7 @@ import 'package:learning_tracker/features/gamification/domain/services/points_se
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart' show seedCompletion;
@@ -195,7 +195,7 @@ void main() {
       await recordOn(DateTimeFactory.utc(2026, 3, 11, 14));
       await recordOn(DateTimeFactory.utc(2026, 3, 12, 9));
 
-      final state = await StreakStateProvider(
+      final state = await StreakStateService(
         db: db,
         clock: FakeLocalDayClock(DateTimeFactory.utc(2026, 3, 12, 15)),
       ).read(profileId: 1);
@@ -207,7 +207,7 @@ void main() {
       await recordOn(DateTimeFactory.utc(2026, 3, 10, 8));
       await recordOn(DateTimeFactory.utc(2026, 3, 10, 20));
 
-      final state = await StreakStateProvider(
+      final state = await StreakStateService(
         db: db,
         clock: FakeLocalDayClock(DateTimeFactory.utc(2026, 3, 10, 22)),
       ).read(profileId: 1);

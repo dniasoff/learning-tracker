@@ -35,7 +35,7 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_mile
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -703,13 +703,13 @@ void main() {
     });
 
     // AUD-gamification-11 (SM-7): dashboardStreak used to construct its own
-    // `StreakStateProvider(db: db, clock: ...)` ad hoc on every rebuild —
+    // `StreakStateService(db: db, clock: ...)` ad hoc on every rebuild —
     // there was no way for a test (or a caller) to substitute a fake without
     // also faking the whole `UserDatabase`. It must now read through the
     // shared `streakStateProvider` seam.
     test(
       'AUD-gamification-11: reads through an overridden streakStateProvider '
-      'instead of constructing its own StreakStateProvider(db: db, ...)',
+      'instead of constructing its own StreakStateService(db: db, ...)',
       () async {
         // A second database, seeded with a streak event for _profileId. `db`
         // (the container's userDatabaseProvider override) has NO events for
@@ -734,7 +734,7 @@ void main() {
           db,
           extraOverrides: [
             streakStateProvider.overrideWithValue(
-              StreakStateProvider(
+              StreakStateService(
                 db: overrideDb,
                 clock: const SystemLocalDayClock(),
               ),

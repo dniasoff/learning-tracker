@@ -118,7 +118,7 @@ List<Override> _fullSilenceOverrides(E2EHarness h) => [
 ///
 /// [E2EHarness.dashboardSilenceOverrides] covers the shell case. For routes
 /// that skip the shell these providers must still be silenced to prevent
-/// the 15-minute StreakStateProvider periodic timer from leaking.
+/// the 15-minute StreakStateService periodic timer from leaking.
 List<Override> _nonShellStreakSilences() => [
   dashboardStreakProvider.overrideWith(
     (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),

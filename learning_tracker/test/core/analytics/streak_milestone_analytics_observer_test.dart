@@ -24,7 +24,7 @@ void main() {
         'enter an error state', () async {
       final analytics = FakeAnalyticsService();
       // Close the DB before the observer opens it so restoreIfEmpty throws
-      // and StreakStateProvider.watch surfaces a stream error.
+      // and StreakStateService.watch surfaces a stream error.
       final db = inMemoryDb();
       await seedProfile(db); // profile id = 1
       await db.close(); // force an error when the observer tries to watch

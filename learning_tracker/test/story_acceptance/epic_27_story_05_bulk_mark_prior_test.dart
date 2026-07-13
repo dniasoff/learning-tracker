@@ -17,7 +17,7 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:mocktail/mocktail.dart';
@@ -147,7 +147,7 @@ void main() {
       );
 
       // AC: zero rows in streak_events attributable to the batch.
-      // We check this BEFORE invoking StreakStateProvider so the
+      // We check this BEFORE invoking StreakStateService so the
       // `StreakRestorer` (which synthesises rows from `completions`
       // on first read) does not pollute the count we are asserting.
       final streakRows = await (db.select(
@@ -167,7 +167,7 @@ void main() {
       // Pinning the reducer directly against the empty event log
       // is what NFR13 is really asking: replay over the events
       // *attributable to the batch* must yield zero. The
-      // `StreakStateProvider` path additionally exercises
+      // `StreakStateService` path additionally exercises
       // `StreakRestorer`, which is independently the subject of
       // Story 26.27 (and Story 27.6's cloud-restore test) — its
       // behaviour on prior-only completion logs is verified there,
@@ -200,7 +200,7 @@ void main() {
       )..where((t) => t.profileId.equals(profileId))).get();
       expect(streakRows, hasLength(1));
 
-      final state = await StreakStateProvider(
+      final state = await StreakStateService(
         db: db,
         clock: FakeLocalDayClock(today),
       ).read(profileId: profileId);

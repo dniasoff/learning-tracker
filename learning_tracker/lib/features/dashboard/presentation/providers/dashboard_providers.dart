@@ -252,7 +252,7 @@ Future<DateTime?> dashboardLastCompletion(
 
 /// Streak data provider, scoped to the active profile.
 ///
-/// Reads streak state through `core/streak/StreakStateProvider` — the
+/// Reads streak state through `core/streak/StreakStateService` — the
 /// only read path post-DNI-337. The provider replays the append-only
 /// `streak_events` log through `StreakReducer` (UTC day boundaries),
 /// restoring from `completions` on a new-device empty-log first launch.

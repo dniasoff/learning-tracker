@@ -939,7 +939,7 @@ class DataExportImportService {
       }
 
       // W3.20: `streaks` table dropped. Streak state is now derived from
-      // `streak_events` via StreakStateProvider / StreakReducer. Old exports
+      // `streak_events` via StreakStateService / StreakReducer. Old exports
       // may contain a `streaks` key (legacy snapshot rows) — they are skipped
       // here because the corresponding streak_events rows carry the same history.
 

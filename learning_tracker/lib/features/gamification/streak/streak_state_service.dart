@@ -1,4 +1,4 @@
-/// `StreakStateProvider` — the only read path for streak values.
+/// `StreakStateService` — the only read path for streak values.
 ///
 /// Wraps `[Restorer → Reducer]`:
 ///
@@ -20,8 +20,8 @@ import 'package:learning_tracker/features/gamification/streak/streak_log_event.d
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_restorer.dart';
 
-class StreakStateProvider {
-  StreakStateProvider({required UserDatabase db, required LocalDayClock clock})
+class StreakStateService {
+  StreakStateService({required UserDatabase db, required LocalDayClock clock})
     : _db = db,
       _clock = clock,
       _restorer = StreakRestorer(db);
