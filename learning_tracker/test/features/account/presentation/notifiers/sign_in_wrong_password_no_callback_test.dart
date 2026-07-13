@@ -205,6 +205,7 @@ void main() {
       (tester) async {
         final formKey = await _buildValidFormKey(tester);
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
         await _seedCloudAccount(registry);
 
         final authRepo = _MockAuthRepository();
@@ -228,6 +229,7 @@ void main() {
           checker: checker,
           tutorGrantRepo: tutorGrantRepo,
         );
+        addTearDown(() => _tearDownContainer(tester, container));
 
         // Callbacks set BEFORE sign-in (the correct post-fix path).
         String? capturedError;
@@ -268,8 +270,15 @@ void main() {
               'fires — this is the only user-visible error path',
         );
 
-        await _tearDownContainer(tester, container);
-        await registry.close();
+        // Drain the zero-duration Timer that ProviderContainer.read()
+        // scheduled internally when its temporary subscription closed
+        // (autoDispose bookkeeping) — must happen before this test body
+        // returns so flutter_test's pending-timer invariant check (which
+        // runs immediately after, before any addTearDown callback) is
+        // satisfied. Actual resource cleanup stays in addTearDown above,
+        // registered right after creation, so it still fires even if an
+        // expect() throws before reaching here.
+        await tester.pump(Duration.zero);
       },
     );
 
@@ -280,6 +289,7 @@ void main() {
       (tester) async {
         final formKey = await _buildValidFormKey(tester);
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
         await _seedCloudAccount(registry);
 
         final authRepo = _MockAuthRepository();
@@ -301,6 +311,7 @@ void main() {
           checker: checker,
           tutorGrantRepo: tutorGrantRepo,
         );
+        addTearDown(() => _tearDownContainer(tester, container));
 
         // Intentionally do NOT call setCallbacks() — simulates the
         // pre-fix race where postFrameCallback hadn't fired yet.
@@ -336,8 +347,15 @@ void main() {
               'regardless of callback registration status',
         );
 
-        await _tearDownContainer(tester, container);
-        await registry.close();
+        // Drain the zero-duration Timer that ProviderContainer.read()
+        // scheduled internally when its temporary subscription closed
+        // (autoDispose bookkeeping) — must happen before this test body
+        // returns so flutter_test's pending-timer invariant check (which
+        // runs immediately after, before any addTearDown callback) is
+        // satisfied. Actual resource cleanup stays in addTearDown above,
+        // registered right after creation, so it still fires even if an
+        // expect() throws before reaching here.
+        await tester.pump(Duration.zero);
       },
     );
 
@@ -347,6 +365,7 @@ void main() {
       (tester) async {
         final formKey = await _buildValidFormKey(tester);
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
         await _seedCloudAccount(registry);
 
         final authRepo = _MockAuthRepository();
@@ -366,6 +385,7 @@ void main() {
           checker: checker,
           tutorGrantRepo: tutorGrantRepo,
         );
+        addTearDown(() => _tearDownContainer(tester, container));
 
         String? capturedError;
         final controller = container.read(signInControllerProvider.notifier);
@@ -388,8 +408,15 @@ void main() {
         expect((state as SignInError).message, l10n.authErrWrongPassword);
         expect(capturedError, l10n.authErrWrongPassword);
 
-        await _tearDownContainer(tester, container);
-        await registry.close();
+        // Drain the zero-duration Timer that ProviderContainer.read()
+        // scheduled internally when its temporary subscription closed
+        // (autoDispose bookkeeping) — must happen before this test body
+        // returns so flutter_test's pending-timer invariant check (which
+        // runs immediately after, before any addTearDown callback) is
+        // satisfied. Actual resource cleanup stays in addTearDown above,
+        // registered right after creation, so it still fires even if an
+        // expect() throws before reaching here.
+        await tester.pump(Duration.zero);
       },
     );
   });

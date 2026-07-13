@@ -56,6 +56,8 @@ class _StubRouter implements StackRouter {
       throw UnsupportedError('StubRouter: unexpected call to ${i.memberName}');
 }
 
+final _kNow = DateTime.utc(2026, 1, 1);
+
 const _googleUser = AppUser(
   uid: 'uid-google-user',
   email: 'google@example.com',
@@ -74,8 +76,8 @@ Future<void> _seedAccounts(DeviceRegistryDatabase db, int count) async {
         displayName: 'User $i',
         tier: 'localBorn',
         dbFileName: 'user_acc_$i.db',
-        createdAt: DateTime.now(),
-        lastUsedAt: DateTime.now(),
+        createdAt: _kNow,
+        lastUsedAt: _kNow,
       ),
     );
   }
@@ -206,8 +208,8 @@ void main() {
             displayName: 'Local User',
             tier: 'localBorn',
             dbFileName: 'user_acc_local.db',
-            createdAt: DateTime.now(),
-            lastUsedAt: DateTime.now(),
+            createdAt: _kNow,
+            lastUsedAt: _kNow,
           ),
         );
 
