@@ -8,6 +8,18 @@ help: ## Show this help message
 
 test: ## Run all tests with coverage instrumentation
 	flutter test --coverage
+	@# AUD-t-cross-16: generated Drift/Freezed code inflates line-coverage
+	@# numbers without protecting any hand-written behavior (nothing in lib/
+	@# calls db.managers.*) — strip it from the report so coverage reflects
+	@# real, reachable code. Skips gracefully if lcov isn't installed (local
+	@# dev machines); CI installs lcov before this target runs.
+	@if command -v lcov >/dev/null 2>&1; then \
+	  lcov --remove coverage/lcov.info '*.g.dart' '*.freezed.dart' \
+	    --output-file coverage/lcov.info --ignore-errors unused >/dev/null; \
+	  echo "coverage/lcov.info: excluded *.g.dart and *.freezed.dart"; \
+	else \
+	  echo "lcov not installed — coverage/lcov.info still includes generated .g.dart/.freezed.dart lines (install lcov to exclude them)"; \
+	fi
 
 test-invariants: ## Run the N1–N7 quality-crisis invariant net
 	flutter test test/story_acceptance/regression_invariants_test.dart --reporter=expanded

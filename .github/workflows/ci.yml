@@ -272,6 +272,13 @@ jobs:
           FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
         run: echo "$FIREBASE_OPTIONS_DART" > learning_tracker/lib/firebase_options.dart
 
+      # Installed before `make ci` (not just before the floor check below) so
+      # the `test` Makefile target's own lcov.info generated-file exclusion
+      # (AUD-t-cross-16) actually runs in CI, not just locally when a dev
+      # happens to have lcov installed.
+      - name: Install lcov
+        run: sudo apt-get install -y lcov
+
       - name: Run tests with coverage (make ci)
         working-directory: learning_tracker
         run: make ci
@@ -290,9 +297,9 @@ jobs:
           retention-days: 7
 
       # ── 6. coverage-floor (50% line coverage, always enforced) ──
-      - name: Install lcov
-        run: sudo apt-get install -y lcov
-
+      # lcov is installed earlier (before `make ci`) so the `test` Makefile
+      # target can exclude generated files from coverage/lcov.info itself;
+      # this step reads that already-filtered file.
       - name: Assert coverage floor ≥ 60%
         run: |
           LCOV_FILE="learning_tracker/coverage/lcov.info"
