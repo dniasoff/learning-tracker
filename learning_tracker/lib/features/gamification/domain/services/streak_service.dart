@@ -3,17 +3,17 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 
 /// Read facade over derived streak state.
 ///
 /// W3.20: the `streaks` snapshot table was dropped. Streak state is now
-/// derived exclusively from `streak_events` via [StreakStateProvider] /
+/// derived exclusively from `streak_events` via [StreakStateService] /
 /// [StreakReducer]. This service wraps that read path as a compatibility
 /// shim for notification/dashboard call sites.
 class StreakService {
   /// AUD-gamification-11 (SM-7): [streakStateProvider] is injectable so
-  /// callers — and their tests — can substitute a fake [StreakStateProvider]
+  /// callers — and their tests — can substitute a fake [StreakStateService]
   /// without also faking the whole [UserDatabase]. Defaults to the prior
   /// ad-hoc construction (same `db`, system clock) so every existing
   /// positional-only call site (`StreakService(db, profileId: ...)`) is
@@ -21,14 +21,14 @@ class StreakService {
   StreakService(
     UserDatabase db, {
     int profileId = 0,
-    StreakStateProvider? streakStateProvider,
+    StreakStateService? streakStateProvider,
   }) : _profileId = profileId,
        _provider =
            streakStateProvider ??
-           StreakStateProvider(db: db, clock: const SystemLocalDayClock());
+           StreakStateService(db: db, clock: const SystemLocalDayClock());
 
   final int _profileId;
-  final StreakStateProvider _provider;
+  final StreakStateService _provider;
 
   /// Get streak recovery info.
   ///

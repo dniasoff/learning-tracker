@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 
 /// Service for managing streak protection alert notifications.
@@ -13,7 +13,7 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 /// streak and its own completion activity.
 ///
 /// W3.20: `streaks` table dropped; streak state derived from
-/// [StreakStateProvider] (streak_events → StreakReducer).
+/// [StreakStateService] (streak_events → StreakReducer).
 class StreakAlertService {
   StreakAlertService({
     required UserDatabase db,
@@ -27,7 +27,7 @@ class StreakAlertService {
        _profileId = profileId,
        _clock = clock ?? DateTimeFactory.nowUtc,
        _analytics = analytics ?? const NullAnalyticsService(),
-       _streakProvider = StreakStateProvider(
+       _streakProvider = StreakStateService(
          db: db,
          clock: streakClock ?? const SystemLocalDayClock(),
        );
@@ -37,7 +37,7 @@ class StreakAlertService {
   final int _profileId;
   final DateTime Function() _clock;
   final AnalyticsService _analytics;
-  final StreakStateProvider _streakProvider;
+  final StreakStateService _streakProvider;
 
   /// Evaluate streak state and schedule or cancel the alert accordingly.
   ///

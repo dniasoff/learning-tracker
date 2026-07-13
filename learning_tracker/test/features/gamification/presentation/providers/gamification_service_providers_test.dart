@@ -4,7 +4,7 @@
 /// [streakStateProvider], and [streakServiceProvider] replaced ad-hoc
 /// `RewardMilestoneService(db, profileId: ...)` /
 /// `StreakService(db, profileId: ...)` /
-/// `StreakStateProvider(db: ..., clock: ...)` construction at 9+ call sites
+/// `StreakStateService(db: ..., clock: ...)` construction at 9+ call sites
 /// across `features/gamification/` and `features/dashboard/`. Coverage:
 ///   - each provider wires to userDatabaseProvider/activeProfileIdProvider
 ///     correctly (default, non-overridden wiring)
@@ -24,7 +24,7 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -134,7 +134,7 @@ void main() {
         overrides: [
           userDatabaseProvider.overrideWithValue(defaultDb),
           streakStateProvider.overrideWithValue(
-            StreakStateProvider(
+            StreakStateService(
               db: overrideDb,
               clock: const SystemLocalDayClock(),
             ),
@@ -196,7 +196,7 @@ void main() {
             userDatabaseProvider.overrideWithValue(defaultDb),
             activeProfileIdProvider.overrideWithValue(1),
             streakStateProvider.overrideWithValue(
-              StreakStateProvider(
+              StreakStateService(
                 db: overrideDb,
                 clock: const SystemLocalDayClock(),
               ),
@@ -212,7 +212,7 @@ void main() {
           reason:
               'streakServiceProvider must read through the overridden '
               'streakStateProvider rather than building its own '
-              'StreakStateProvider(db: userDatabaseProvider, ...).',
+              'StreakStateService(db: userDatabaseProvider, ...).',
         );
       },
     );

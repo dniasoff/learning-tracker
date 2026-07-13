@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
@@ -88,7 +88,7 @@ class ParentDashboardAggregator {
   final int _profileId;
   final StageDefinitionRepository? _stageRepository;
   final LocalDayClock _clock;
-  final StreakStateProvider Function(LocalDayClock clock)
+  final StreakStateService Function(LocalDayClock clock)
   _streakStateProviderFactory;
 
   /// [clock] defaults to the real system clock; inject a [FakeLocalDayClock]
@@ -97,10 +97,10 @@ class ParentDashboardAggregator {
   ///
   /// AUD-gamification-11 (SM-7): [streakStateProviderFactory] is injectable
   /// so callers — and their tests — can substitute a fake
-  /// [StreakStateProvider] without also faking the whole [UserDatabase].
+  /// [StreakStateService] without also faking the whole [UserDatabase].
   /// It's a factory (not a single instance) rather than an eagerly-built
   /// field like [rewardMilestoneServiceProvider] because [compute] must
-  /// bind the [StreakStateProvider]'s clock to its own per-call `now`
+  /// bind the [StreakStateService]'s clock to its own per-call `now`
   /// (AUD-dashboard-07) — a single shared instance bound at construction
   /// time would reintroduce the day-boundary race that fix closed. Defaults
   /// to the prior ad-hoc construction (same `db`, caller-supplied clock) so
@@ -111,21 +111,21 @@ class ParentDashboardAggregator {
     int profileId = 0,
     StageDefinitionRepository? stageRepository,
     LocalDayClock clock = const SystemLocalDayClock(),
-    StreakStateProvider Function(LocalDayClock clock)?
+    StreakStateService Function(LocalDayClock clock)?
     streakStateProviderFactory,
   }) : _profileId = profileId,
        _stageRepository = stageRepository,
        _clock = clock,
        _streakStateProviderFactory =
            streakStateProviderFactory ??
-           ((c) => StreakStateProvider(db: _db, clock: c));
+           ((c) => StreakStateService(db: _db, clock: c));
 
   /// Compute the full dashboard data snapshot.
   ///
   /// [now] defaults to [clock]'s current instant; pass explicitly for
   /// testability. The streak sub-computation derives its "today" from this
   /// same [now] (via a clock fixed to it), rather than reading [_clock]
-  /// independently a second time inside `StreakStateProvider` — so a single
+  /// independently a second time inside `StreakStateService` — so a single
   /// [now] value fully determines the entire snapshot, including streak,
   /// closing the day-boundary race where an independent clock read could
   /// otherwise see a different "today" than the rest of the snapshot.

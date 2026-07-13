@@ -300,7 +300,7 @@ List<Override> _baseSilences(E2EHarness h) => [
 /// [E2EHarness.dashboardSilenceOverrides] covers dashboard tests. For routes
 /// that do NOT start at the shell (e.g. `/invite`, `/text/<ref>`), these
 /// providers must still be overridden to prevent the 15-minute
-/// [StreakStateProvider] periodic timer from leaking into the test teardown.
+/// [StreakStateService] periodic timer from leaking into the test teardown.
 List<Override> _nonDashboardStreakSilences() => [
   dashboardStreakProvider.overrideWith(
     (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
@@ -498,7 +498,7 @@ void main() {
         await h.pumpApp(
           path: '/invite?token=$grantId',
           extraOverrides: [
-            // Silence the 15-minute StreakStateProvider periodic timer.
+            // Silence the 15-minute StreakStateService periodic timer.
             // The invite deep-link skips the shell, but the provider scope
             // still initialises dashboard providers that create this timer.
             ..._nonDashboardStreakSilences(),

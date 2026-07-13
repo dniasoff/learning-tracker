@@ -9,7 +9,7 @@ import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
@@ -379,7 +379,7 @@ void main() {
   group('streak integration', () {
     // Streak state is derived from `streak_events` (DNI-337). The
     // completion path tees an event into the log; assertions go
-    // through `StreakStateProvider` rather than the cached `streaks`
+    // through `StreakStateService` rather than the cached `streaks`
     // snapshot.
     test('first completion produces currentStreak=1 via the reducer', () async {
       await repository.markComplete(
@@ -391,7 +391,7 @@ void main() {
         ),
       );
 
-      final state = await StreakStateProvider(
+      final state = await StreakStateService(
         db: database,
         clock: const SystemLocalDayClock(),
       ).read(profileId: learnerId);
@@ -410,7 +410,7 @@ void main() {
       await repository.markComplete(request);
       await repository.markComplete(request); // idempotent path
 
-      final state = await StreakStateProvider(
+      final state = await StreakStateService(
         db: database,
         clock: const SystemLocalDayClock(),
       ).read(profileId: learnerId);

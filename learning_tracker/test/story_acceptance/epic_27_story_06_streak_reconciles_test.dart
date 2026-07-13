@@ -24,7 +24,7 @@ import 'package:learning_tracker/features/gamification/streak/streak_event_log.d
 import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_restorer.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
@@ -249,7 +249,7 @@ void main() {
 
           // 6. Reducer over the restored log must compute the right streak.
           //    May 9 → May 10 is a 2-day consecutive run; today = May 10.
-          final provider = StreakStateProvider(
+          final provider = StreakStateService(
             db: db,
             clock: FakeLocalDayClock(DateTime.utc(2026, 5, 10, 12)),
           );

@@ -4,7 +4,7 @@
 /// Acceptance criteria:
 ///   Given a fresh install,
 ///   When 50 prior completions are written across stages 1, 2, and 3,
-///   Then StreakStateProvider returns currentStreak == 0.
+///   Then StreakStateService returns currentStreak == 0.
 library;
 
 import 'package:drift/native.dart';
@@ -15,7 +15,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 
@@ -181,7 +181,7 @@ void main() {
           // The StreakRestorer reconstitutes events from completions, but the
           // StreakReducer discards runs that are not alive relative to "today".
           final farFutureClock = FakeLocalDayClock(DateTime.utc(2099, 1, 1));
-          final state = await StreakStateProvider(
+          final state = await StreakStateService(
             db: db,
             clock: farFutureClock,
           ).read(profileId: profileId);
@@ -216,7 +216,7 @@ void main() {
           );
 
           final farFutureClock = FakeLocalDayClock(DateTime.utc(2099, 1, 1));
-          final state = await StreakStateProvider(
+          final state = await StreakStateService(
             db: db,
             clock: farFutureClock,
           ).read(profileId: profileId);
@@ -255,7 +255,7 @@ void main() {
         );
 
         final farFutureClock = FakeLocalDayClock(DateTime.utc(2099, 1, 1));
-        final state = await StreakStateProvider(
+        final state = await StreakStateService(
           db: db,
           clock: farFutureClock,
         ).read(profileId: profileId);

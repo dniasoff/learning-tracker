@@ -1,4 +1,4 @@
-/// Tests for StreakStateProvider covering read() and watch().
+/// Tests for StreakStateService covering read() and watch().
 library;
 
 import 'dart:async';
@@ -7,14 +7,14 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 
 import '../../helpers/drift_memory.dart';
 
 void main() {
   late UserDatabase db;
   late FakeLocalDayClock clock;
-  late StreakStateProvider provider;
+  late StreakStateService provider;
   const profileId = 1;
 
   // Helper to insert a streak event.
@@ -57,7 +57,7 @@ void main() {
           ),
         );
     clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14, 12));
-    provider = StreakStateProvider(db: db, clock: clock);
+    provider = StreakStateService(db: db, clock: clock);
   });
 
   tearDown(() async {
@@ -66,7 +66,7 @@ void main() {
 
   // ── read() ────────────────────────────────────────────────────────────────
 
-  group('StreakStateProvider.read', () {
+  group('StreakStateService.read', () {
     test('returns zero streak when no events exist', () async {
       final state = await provider.read(profileId: profileId);
       expect(state.currentStreak, 0);
@@ -127,7 +127,7 @@ void main() {
 
   // ── watch() ───────────────────────────────────────────────────────────────
 
-  group('StreakStateProvider.watch', () {
+  group('StreakStateService.watch', () {
     test('emits streak state as a stream', () async {
       // First emission should be the initial state (no events = 0 streak).
       final firstState = await provider.watch(profileId: profileId).first;

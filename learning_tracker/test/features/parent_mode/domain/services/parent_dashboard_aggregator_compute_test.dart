@@ -120,7 +120,7 @@ void main() {
       // AUD-dashboard-07: streak is derived from streak_events, replayed
       // against an injected LocalDayClock (not the real wall clock), so
       // "today" is a fixed, hermetic value. Seed 5 consecutive days ending
-      // on that fixed today so StreakStateProvider sees an active streak.
+      // on that fixed today so StreakStateService sees an active streak.
       final todayUtc = DateTime.utc(2026, 3, 20);
       for (var i = 0; i < 5; i++) {
         final day = todayUtc.subtract(Duration(days: 4 - i));

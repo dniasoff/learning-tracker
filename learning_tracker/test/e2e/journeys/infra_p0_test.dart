@@ -294,7 +294,7 @@ void main() {
           // zero-duration timer visible to _verifyInvariants. Even though the
           // /notifications route does not render the dashboard, some provider
           // in the notification chain indirectly triggers dashboardStreak
-          // (which contains a StreakStateProvider.watch() call and a 15-min
+          // (which contains a StreakStateService.watch() call and a 15-min
           // periodic rollover timer). Including these overrides prevents the
           // pending-timer invariant failure.
           ...h.dashboardSilenceOverrides,

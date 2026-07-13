@@ -22,7 +22,7 @@ export 'package:learning_tracker/features/gamification/domain/services/streak_se
 // ── Presentation providers ──────────────────────────────────────────────
 // AUD-gamification-11 (SM-7): rewardMilestoneServiceProvider /
 // streakStateProvider / streakServiceProvider — the sanctioned DI seams for
-// RewardMilestoneService / StreakStateProvider / StreakService. External
+// RewardMilestoneService / StreakStateService / StreakService. External
 // callers (e.g. features/dashboard/) must read these through this barrel
 // rather than deep-importing gamification_service_providers.dart (Rule 2).
 export 'package:learning_tracker/features/gamification/presentation/providers/gamification_service_providers.dart';
@@ -32,4 +32,4 @@ export 'package:learning_tracker/features/gamification/presentation/widgets/achi
 export 'package:learning_tracker/features/gamification/presentation/widgets/gamification_route_push_guard.dart';
 
 // ── Streak read path ────────────────────────────────────────────────────
-export 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+export 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';

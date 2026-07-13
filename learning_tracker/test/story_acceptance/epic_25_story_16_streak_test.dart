@@ -6,7 +6,7 @@
 ///   * `StreakReducer`          — pure `(events, today) → (current, max)`.
 ///   * `StreakRestorer`         — reconstitutes events from `completions`
 ///                                when the local log is empty.
-///   * `StreakStateProvider`    — the *only* read path for streak values.
+///   * `StreakStateService`    — the *only* read path for streak values.
 ///   * `StreakEventMerger`      — append-only merger (round-trip via sync).
 @Tags(['epic_25'])
 library;
@@ -20,7 +20,7 @@ import 'package:learning_tracker/features/gamification/streak/streak_event_log.d
 import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_restorer.dart';
-import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
@@ -483,7 +483,7 @@ void main() {
             );
 
             // StreakRestorer sees empty streak_events → restores from completions.
-            final state = await StreakStateProvider(
+            final state = await StreakStateService(
               db: db,
               clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14, 9)),
             ).read(profileId: 1);
@@ -494,9 +494,9 @@ void main() {
         );
       });
 
-      // ── AC3: StreakStateProvider is the only read path ────────────────
+      // ── AC3: StreakStateService is the only read path ────────────────
 
-      group('AC3 — StreakStateProvider is the only read path', () {
+      group('AC3 — StreakStateService is the only read path', () {
         test('computes (current, max) end-to-end from streak_events', () async {
           await StreakEventLog(db).append(
             StreakLogEvent(
@@ -520,7 +520,7 @@ void main() {
             ),
           );
 
-          final provider = StreakStateProvider(
+          final provider = StreakStateService(
             db: db,
             clock: FakeLocalDayClock(DateTime.utc(2026, 5, 10, 9)),
           );
@@ -548,7 +548,7 @@ void main() {
               sefariaRef: 'Mishnah Berakhot 2',
             );
 
-            final state = await StreakStateProvider(
+            final state = await StreakStateService(
               db: db,
               clock: FakeLocalDayClock(DateTime.utc(2026, 5, 10, 12)),
             ).read(profileId: 1);
