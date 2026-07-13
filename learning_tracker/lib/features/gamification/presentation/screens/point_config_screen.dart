@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -23,13 +24,13 @@ import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // Design tokens aligned with Point Settings mock (deep blue + orange accents).
-const Color _kScreenBg = Color(0xFFF8F9FB);
-const Color _kOrangeAccent = Color(0xFFF5A623);
-const Color _kActiveBadgeBg = Color(0xFFFFE4D1);
-const Color _kActiveBadgeInk = Color(0xFF5C4033);
-const Color _kHebrewSubtitleBlue = Color(0xFF5B9BD5);
-const Color _kHeroBlueTop = Color(0xFF002D9C);
-const Color _kHeroBlueBottom = Color(0xFF001F6E);
+const Color _kScreenBg = AppColors.gamifPointConfigScreenBg;
+const Color _kOrangeAccent = AppColors.gamifPointConfigOrangeAccent;
+const Color _kActiveBadgeBg = AppColors.gamifPointConfigActiveBadgeBg;
+const Color _kActiveBadgeInk = AppColors.gamifPointConfigActiveBadgeInk;
+const Color _kHebrewSubtitleBlue = AppColors.gamifPointConfigHebrewSubtitleBlue;
+const Color _kHeroBlueTop = AppColors.gamifPointConfigHeroBlueTop;
+const Color _kHeroBlueBottom = AppColors.gamifPointConfigHeroBlueBottom;
 
 /// Matches [PointConfigDao.seedDefaults] descending defaults per stage order.
 int _defaultPointsForStageOrder(int stageOrder) {
@@ -784,7 +785,9 @@ class _RoundStepButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = filled ? AppTheme.brandBlue : const Color(0xFFE8EBF0);
+    final bg = filled
+        ? AppTheme.brandBlue
+        : AppColors.gamifPointConfigChipUnselectedBg;
     final fg = filled ? Colors.white : AppTheme.brandInkMuted;
     final child = Icon(icon, size: 20, color: fg);
     return Opacity(

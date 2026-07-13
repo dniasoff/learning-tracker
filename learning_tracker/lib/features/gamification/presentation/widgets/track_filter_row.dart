@@ -93,12 +93,14 @@ class AchievementFilterChip extends StatelessWidget {
             color: selected ? _kBrandBlue : Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: selected ? _kBrandBlue : const Color(0xFFE0E4E8),
+              color: selected
+                  ? _kBrandBlue
+                  : AppColors.gamifTrackFilterChipUnselected,
             ),
             boxShadow: selected
                 ? const [
                     BoxShadow(
-                      color: Color(0x220038A8),
+                      color: AppColors.gamifTrackFilterChipShadow,
                       blurRadius: 8,
                       offset: Offset(0, 3),
                     ),

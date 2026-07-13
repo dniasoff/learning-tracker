@@ -230,7 +230,7 @@ class _RedemptionCardState extends State<_RedemptionCard> {
               width: 52,
               height: 52,
               decoration: const BoxDecoration(
-                color: Color(0xFFEEF3FA),
+                color: AppColors.gamifSoftBlueCardBg,
                 shape: BoxShape.circle,
               ),
               child: Icon(

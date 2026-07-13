@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/tier_style.dart';
 
@@ -23,7 +24,7 @@ class TierIconBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLocked = !unlocked;
     final borderColor = (comingSoon && isLocked)
-        ? const Color(0xFFB0BEC5)
+        ? AppColors.gamifTierLockedIconGrey
         : scheme.iconBorder;
     final rewardIcon = RewardMilestoneIcons.iconForIndex(rewardIconIndex);
     return Container(
