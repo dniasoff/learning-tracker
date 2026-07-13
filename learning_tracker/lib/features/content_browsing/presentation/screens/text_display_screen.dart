@@ -752,7 +752,12 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           },
         );
       }
-    } catch (e, st) {
+    } on Exception catch (e, st) {
+      // Typed so a programming-error Error subtype (TypeError/StateError)
+      // escaping the mark-completion path propagates to the zone's
+      // uncaught-error handler instead of being shown as an ordinary
+      // "Could not save" snackbar, same as any other expected write
+      // failure (AUD-content_browsing-09, EH-4).
       AppLogger.instance.error(
         event: 'Failed to mark completion',
         exception: e,
