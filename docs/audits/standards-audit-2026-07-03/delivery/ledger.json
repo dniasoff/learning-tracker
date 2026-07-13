@@ -3070,13 +3070,19 @@
   {
    "id": "AUD-t-auth-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or merge the duplicate pending_local_signup test suites",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "adac3197f42695a17f385d7a3de62de16d765f1d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-auth-01 AC1 OK: duplicate pending_local_registration_test.dart deleted (-219 lines); survivor pending_local_signup_test.dart is sole unit-test for the matrix",
+    "AUD-t-auth-01 AC2 OK: all 18 deleted cases have survivor equivalents; the 4 distinct single-missing-field cases merged into survivor L74-98",
+    "AUD-t-auth-01 AC3 OK: flutter test on survivor => +31: All tests passed! (dir suite 60/60 green)"
+   ],
+   "notes": "Deleted duplicate pending_local_registration_test.dart (219 lines) after merging its 4 distinct single-field-missing tryParse cases into the correctly-named survivor pending_local_signup_test.dart. All 3 ACs met; verified 31/31 green before and after deletion, no coverage lost."
   },
   {
    "id": "AUD-content_browsing-06",
