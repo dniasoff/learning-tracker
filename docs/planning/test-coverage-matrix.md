@@ -221,4 +221,3 @@ block), tutor_grants, tutor_active_access, every `users/{uid}/learner_profiles/{
 | 2026-05-30 (connectivity DI) | sign_in_controller now reads internetConnectionCheckerProvider (was bypassing it) — unblocks deterministic sign-in tests | 27/27 | 24/24 | 0 | testability fix |
 | 2026-05-30 (coverage w10) | +99 (sign_in routing 7, settings utils 11, curriculum/change-password 23, content tile/search/providers 28, pending-signup/mode-card 30) | 27/27 | 24/24 | 0 | **measured 80.1%** |
 | 2026-05-30 (CI gate) | **`make ci` GREEN** (analyze + format-check + 8937 tests) after normalizing dart-format across 35 test files — the canonical clean full pass | 27/27 | 24/24 | 0 | **80.1%, make ci green** |
-</content>
