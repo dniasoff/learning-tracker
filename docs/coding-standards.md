@@ -760,6 +760,7 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 27 | Every `SeedManager(` construction site in `lib/` passes a `logger:` argument (EH-3, AUD-app-07) |
 | 33 | EH-5: no `@freezed sealed class` status/result type has a `required String message` field, and no raw `error.toString()`/`e.toString()` flows into a `message:` argument (AUD-sync-01) |
 | 37 | SM-7 (scoped): no ad-hoc `ParentAnalyticsRepositoryImpl`/`RewardMilestoneService` construction in the three AUD-sync-05 fix sites (`local_data_upload_service.dart`, `outbox_sync_write_facade.dart`, `reward_settings_merge_delegate.dart`) — see SM-7 above for the wider repo-wide backlog |
+| 44 | Tier-4 doc-lint: every `docs/stories/implementation/*.md` marked `Status: ready-for-dev`/`backlog`/`todo` has its "Key Files" table targets resolving under `lib/` (exact path or by basename) — `tool/check_stale_story_file_targets.dart` (AUD-docs-03). Ratcheted against a tracked baseline (`tool/story_stale_file_targets_baseline.txt`) of pre-existing, out-of-scope drift; a NEW violation fails the gate. |
 
 The table above has known gaps between the last-renumbered entries (34–36 exist in the Makefile but aren't yet reflected here) — tracked under the same Makefile/doc consolidation noted at the top of this section.
 

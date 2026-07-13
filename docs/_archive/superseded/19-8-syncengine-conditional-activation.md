@@ -1,6 +1,34 @@
 # Story 19.8: SyncEngine Conditional Activation
 
-Status: ready-for-dev
+> ⚠️ **SUPERSEDED — 2026-07-12 (AUD-docs-03).** This spec prescribes editing
+> `lib/features/sync/data/sync_engine.dart` and making `syncEngineProvider`
+> nullable. Both were deleted during the SyncOrchestrator+outbox rewrite
+> (DNI-333/334/335 SyncEngine decomposition, DNI-342 multi-account
+> threading) — `sync_engine.dart` no longer exists anywhere under `lib/`
+> (only a `.skip`-suffixed dead test remains:
+> `test/features/sync/data/sync_engine_test.dart.skip`). This story's own
+> goal is already shipped, just via different symbols:
+>
+> - `syncEngineProvider` (nullable, gated on having a cloud account) →
+>   replaced by `syncWriteFacadeProvider`
+>   (`lib/features/sync/presentation/providers/sync_providers.dart`), gated
+>   on `authState.isCloudBorn`.
+> - `SyncStatus.localOnly` (this story's AC-3) → already defined in
+>   `lib/features/sync/domain/models/sync_status.dart` and emitted by
+>   `SyncOrchestratorImpl` (`lib/core/sync/sync_orchestrator.dart`) exactly
+>   as this story specifies.
+>
+> **Current canonical spec:** [`../../planning/architecture-offline-v2.md`](../../planning/architecture-offline-v2.md)
+> and `lib/core/sync/sync_orchestrator.dart`. See also
+> [DNI-189](https://linear.app/dniasoff/issue/DNI-189) for the Linear ticket
+> (marked Done).
+>
+> Archived per [AUD-docs-03](../../audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-03.json) — this file was
+> `Status: ready-for-dev` while prescribing edits to deleted architecture,
+> which risked a developer/agent burning a full cycle trying to resurrect
+> `SyncEngine`.
+
+Status: superseded
 
 ## Story
 

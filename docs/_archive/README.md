@@ -38,6 +38,8 @@ Docs replaced by newer canonical versions still present under `docs/planning/`.
 - [`product-brief-2026-01-03.md`](superseded/product-brief-2026-01-03.md) — Original product brief. PRD (`docs/planning/prd.md`) is the active reference.
 - [`coding-standards-2026-02-10.md`](superseded/coding-standards-2026-02-10.md) — Original root-level coding standards. Contradicted the canonical [`docs/coding-standards.md`](../coding-standards.md) (e.g. required `DateTime.now().toUtc()` where the canonical doc bans `DateTime.now()` outside `core/time` entirely). Archived 2026-07-03 (AUD-docs-04); `make audit` check 23 keeps a second `coding-standards.md` from reappearing outside this folder.
 - `epic-15-stories/` — 14 story files from the original Multi-Profile epic. Work delivered under Epics 18 and 21.
+- [`19-8-syncengine-conditional-activation.md`](superseded/19-8-syncengine-conditional-activation.md) — Prescribed editing the deleted `SyncEngine`/`syncEngineProvider`. Superseded by the SyncOrchestrator+outbox architecture (`lib/core/sync/sync_orchestrator.dart`, `syncWriteFacadeProvider`); this story's own AC-3 goal (`SyncStatus.localOnly`) already ships there. Archived 2026-07-12 (AUD-docs-03).
+- [`19-9-multi-device-sync.md`](superseded/19-9-multi-device-sync.md) — Prescribed auditing `sync_engine.dart`/`firestore_data_source.dart`/`offline_queue.dart`, all deleted in the same rewrite. Superseded by `lib/core/sync/sync_orchestrator.dart`'s `pullOnLaunch`/foreground-listener merge path. Archived 2026-07-12 (AUD-docs-03).
 
 ### epic-qa-reports/
 

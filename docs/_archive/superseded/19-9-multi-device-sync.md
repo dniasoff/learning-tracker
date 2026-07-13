@@ -1,6 +1,28 @@
 # Story 19.9: Multi-Device Sync & Efficient Real-Time Sync
 
-Status: ready-for-dev
+> ⚠️ **SUPERSEDED — 2026-07-12 (AUD-docs-03).** This spec's "Key Files" list
+> prescribes auditing `lib/features/sync/data/sync_engine.dart`,
+> `firestore_data_source.dart`, and `offline_queue.dart` — none of which
+> exist anywhere under `lib/` any more. All three were deleted during the
+> SyncOrchestrator+outbox rewrite (DNI-333/334/335 SyncEngine
+> decomposition, DNI-342 multi-account threading); the merge/listener/pull
+> logic this story describes now lives in `lib/core/sync/sync_orchestrator.dart`
+> (`SyncOrchestratorImpl.pullOnLaunch`, foreground listeners, merge
+> routing) and `lib/core/sync/` generally (gateway, pipelines, merge
+> router — see `sync_engine_test.dart.skip` for the one remaining dead
+> trace of the old design).
+>
+> **Current canonical spec:** [`../../planning/architecture-offline-v2.md`](../../planning/architecture-offline-v2.md)
+> and `lib/core/sync/sync_orchestrator.dart`. See also
+> [DNI-190](https://linear.app/dniasoff/issue/DNI-190) for the Linear
+> ticket (marked Done).
+>
+> Archived per [AUD-docs-03](../../audits/standards-audit-2026-07-03/delivery/findings/AUD-docs-03.json) — this file was
+> `Status: ready-for-dev` while prescribing edits to deleted architecture,
+> which risked a developer/agent burning a full cycle trying to resurrect
+> `SyncEngine`.
+
+Status: superseded
 
 ## Story
 

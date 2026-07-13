@@ -274,7 +274,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 43 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 44 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -717,7 +717,7 @@ audit: lint-rules-test ## Run all 43 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/eh4_content_browsing_catches_check.$$$$.log; \
 	fi; \
-	echo "43/43 — EH-4: DeviceAccountX.accountTier never catches an Error subtype (AUD-core-database-16, avoid_catching_errors)"; \
+	echo "43/44 — EH-4: DeviceAccountX.accountTier never catches an Error subtype (AUD-core-database-16, avoid_catching_errors)"; \
 	if ! dart run tool/check_eh4_avoid_catching_errors.dart > /tmp/eh4_avoid_catching_errors_check.$$$$.log 2>&1; then \
 	  cat /tmp/eh4_avoid_catching_errors_check.$$$$.log; \
 	  rm -f /tmp/eh4_avoid_catching_errors_check.$$$$.log; \
@@ -725,9 +725,17 @@ audit: lint-rules-test ## Run all 43 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/eh4_avoid_catching_errors_check.$$$$.log; \
 	fi; \
+	echo "44/44 — Tier-4 doc-lint: every ready-for-dev/backlog/todo docs/stories/implementation/*.md Key-Files target resolves under lib/ (AUD-docs-03)"; \
+	if ! dart run tool/check_stale_story_file_targets.dart > /tmp/stale_story_targets_check.$$$$.log 2>&1; then \
+	  cat /tmp/stale_story_targets_check.$$$$.log; \
+	  rm -f /tmp/stale_story_targets_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/stale_story_targets_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 43 greps clean ==="; \
+	  echo "=== audit PASSED — all 44 greps clean ==="; \
 	fi
