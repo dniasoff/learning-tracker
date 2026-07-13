@@ -4,6 +4,15 @@ Goal: reliable (no data loss), quick, efficient, low-bandwidth, low-CPU/battery,
 Status: pre-launch (no live users — `project_pre_launch_status` memory).
 Author: architecture review 2026-05-21.
 
+> **Part A verified current as of 2026-05-21 only — not maintained since.** Part A
+> below is a point-in-time snapshot, including its "outbox never drains" headline
+> finding. Most of Part A's findings were resolved by the Phase 0–4 rollout (Part
+> F) that shipped after this doc was written; re-running the file/grep evidence
+> today will *not* reproduce several of the claims. Do not treat Part A as
+> current-state without cross-checking the code. See [Findings — remediation
+> status (checked 2026-07-13)](#findings--remediation-status-checked-2026-07-13)
+> for the resolved/open status of each of the 15 ranked findings.
+
 This document has six parts:
 - **A. Current-state audit** — what exists, with file:line refs and a ranked findings list.
 - **B. NFR targets** — quantified.
@@ -234,6 +243,34 @@ Gaps:
 14. **Stage-definition push has dual paths (LOW, dead code).** Outbox kind `stage_definition` and gateway `pushStageDefinition` exist (`outbox_processor.dart:25,280`, `firestore_gateway_impl.dart:746`), but the repository writes through `pushSettings` (`stage_definition_repository_impl.dart:379`). Either the dedicated path is dead code or the repository is misrouted. Required: pick one.
 
 15. **Sacred-time prefs only sync for `profileId == 0` (LOW, multi-profile).** `outbox_sync_write_facade.dart:217-233` gates sacred-time block by `_profileId == 0`. Documented memories say child profiles have no adult sacred-time, but adult-secondary profiles also fall through. Required: confirm intent or always include.
+
+## Findings — remediation status (checked 2026-07-13)
+
+Part A and the ranked findings above are a snapshot from 2026-05-21 and were not
+updated as the Part F rollout landed. Checked against `lib/` as of 2026-07-13
+(AUD-docs-11):
+
+| # | Severity | Status | Notes |
+|---|---|---|---|
+| 1 | CRITICAL | **RESOLVED** | `OutboxProcessor.drain()` now has production callers: write-tee (`outbox_sync_write_facade.dart` `_enqueue` → `_kickDrainTee`), pull-complete (`sync_orchestrator.dart:401`), and the periodic/lifecycle/connectivity triggers wired in `sync_orchestrator_providers.dart:234`. `grep -rn '\.drain(' lib/` now returns matches outside `outbox_processor.dart` itself — the claim that motivated this finding no longer holds. |
+| 2 | HIGH | **RESOLVED** | Learning ledger, notification settings, profile program, and the track-creation bookmark write all route through `OutboxSyncWriteFacade`/the outbox now (each site carries a `// Phase 1` comment marking the conversion). |
+| 3 | HIGH | **RESOLVED** | `CompletionRepositoryImpl._appendStreakEvent` enqueues via `OutboxSyncWriteFacade` (Phase 1); doc comment confirms day-to-day streak events now replicate. |
+| 4 | MEDIUM | **RESOLVED** | `OutboxEntityKind.studyDayConfig` push plus `study_day_configs` pull and real-time listener are wired (Phase 1). |
+| 5 | MEDIUM | **RESOLVED** | `DriftMergeStore.currentUpdatedAt` now reads a persisted `updated_at` from the `SyncKv` table for every LWW kind instead of returning null (Phase 3; class doc references a ±5 s server-timestamp tie-break too). |
+| 6 | MEDIUM | **RESOLVED** | `merge_router_provider.dart:107` wires `onRewardSettings: rewardSettingsMergeDelegate` — no longer `null`. |
+| 7 | MEDIUM | **RESOLVED** | `FirestoreGatewayImpl.listenToCollection` now issues bounded, ordered queries (`.limit(...)`) with an `isAtLimit` signal for a recovery pull, instead of an unfiltered `ref.snapshots()`. |
+| 8 | LOW-MEDIUM | **OPEN** | The non-completion drain loop in `OutboxProcessor` still pushes rows one at a time with no coalescing by `entityKey`; rapid snapshot-kind toggles (e.g. UI prefs) still enqueue and push one row per toggle. |
+| 9 | MEDIUM | **RESOLVED** | `FirestoreListenerSource` now opens channels for `goals`, `learning_ledger`, `learning_order`, `profile_programs`, `learner_profiles`, all three `preferences/*` docs, and `tutor_grants` (Phase 2 class doc). |
+| 10 | LOW | **RESOLVED** | `device_restore_service.dart:186` comment confirms the duplicate `fetchAll('curriculum_tracks')` was removed; active curricula are derived from the local DB after `pullOnLaunch` merges it. |
+| 11 | LOW | **OPEN** | `pushGamificationSettingsSnapshot` still rebuilds the full snapshot (queries point configs, totals, reward service) on every call; no debounce at the facade boundary. |
+| 12 | LOW | **RESOLVED** | `SyncOrchestratorImpl` now derives `pending`/`degraded`/`offline` `SyncStatus` values from outbox depth and attempt counts (Phase 4). |
+| 13 | LOW | **OPEN** | `OutboxDao.markAttempted` (the single-row path still used by the non-completion drain loop) remains a separate `select` then `update`, not one atomic `UPDATE … SET attempts = attempts + 1`. (`markAttemptedBulk` was added, but only for the completions batch path.) |
+| 14 | LOW | **RESOLVED** | The legacy `pushSettings` piggyback route is gone; `StageDefinitionRepositoryImpl` pushes only through the dedicated `pushStageDefinitions` outbox kind (class doc: "the only push contract"). |
+| 15 | LOW | **RESOLVED (by decision)** | DEC-26 (WS6): sacred-time prefs are now explicitly device-scoped by design and excluded from the per-profile `ui_preferences` payload for *every* profile — not just a `profileId == 0` special case. Intent confirmed, not "always include." |
+
+Net: 12 of 15 resolved, including the CRITICAL headline finding and both HIGH
+findings. The 3 still open (#8, #11, #13) are LOW/LOW-MEDIUM cost or
+race-window items, not data-loss.
 
 ---
 
