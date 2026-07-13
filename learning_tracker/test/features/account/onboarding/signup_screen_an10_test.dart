@@ -7,143 +7,152 @@
 // Fix: wrapped the ConstrainedBox in Center() so on wide viewports the card
 // is centered horizontally.
 //
-// Test strategy: render the SignupScreen (or a structural equivalent) in a
-// wide (tablet) viewport and verify the card's center X position is close to
-// the screen's horizontal center — not left-anchored.
+// Test strategy (AUD-t-account-01 / TQ-8): pump the REAL SignupScreen — not a
+// hand-rolled structural replica — at a tablet-width viewport and assert on
+// the actual rendered ConstrainedBox(maxWidth: 430) card. This pins real
+// source behavior: removing the Center(...) wrapper, or removing/changing
+// BoxConstraints(maxWidth: 430), in
+// lib/features/account/onboarding/presentation/screens/signup_screen.dart
+// must fail this test.
+//
+// A prior version of this file asserted against two hand-defined lookalike
+// widgets (_CenteredCardLayout / _LeftAnchoredCardLayout) that never imported
+// signup_screen.dart, so no edit to the real screen could ever fail the
+// test. Those stand-ins are deleted per AUD-t-account-01's recommendation;
+// this file now renders the production widget directly, wired the same way
+// as test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart.
 
 @Tags(['account', 'signup', 'an10'])
 library;
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:mocktail/mocktail.dart';
 
-/// Key to identify the card container in the test widget tree.
-const _cardKey = Key('an10-card');
+// ── Mocks ─────────────────────────────────────────────────────────────────────
 
-// Minimal widget that replicates the AN-10-relevant layout change:
-// a ConstrainedBox(maxWidth: 430) wrapped in Center inside a Column.
-class _CenteredCardLayout extends StatelessWidget {
-  const _CenteredCardLayout();
+class _MockStackRouter extends Mock implements StackRouter {}
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // AN-10 fix: Center wraps the ConstrainedBox so it centers on wide
-        // viewports. Before the fix there was no Center wrapper.
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: Container(key: _cardKey, height: 100, color: Colors.white),
-          ),
-        ),
+class _MockAuthRepository extends Mock implements AuthRepository {}
+
+class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// Builds the real [SignupScreen], wired the same way as the L1 suite in
+/// signup_screen_l1_test.dart, so this test exercises actual production
+/// layout rather than a structural replica.
+Widget _buildRealSignupScreen() {
+  final router = _MockStackRouter();
+  final authRepo = _MockAuthRepository();
+
+  when(() => router.replace(any())).thenAnswer((_) async => null);
+  when(
+    () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+  ).thenAnswer((_) async => null);
+  when(() => router.replaceAll(any())).thenAnswer((_) async => []);
+  when(() => router.canPop()).thenReturn(false);
+  when(() => authRepo.currentUser).thenReturn(null);
+
+  return ProviderScope(
+    retry: (_, __) => null,
+    overrides: [
+      authRepositoryProvider.overrideWithValue(authRepo),
+      connectivityStreamProvider.overrideWith((ref) => Stream.value(true)),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
-    );
-  }
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: StackRouterScope(
+        controller: router,
+        stateHash: 0,
+        child: const Scaffold(body: SignupScreen()),
+      ),
+    ),
+  );
 }
 
-// Minimal widget that replicates the PRE-FIX (buggy) layout:
-// ConstrainedBox inside Column WITHOUT Center — left-anchored on wide viewports.
-class _LeftAnchoredCardLayout extends StatelessWidget {
-  const _LeftAnchoredCardLayout();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // PRE-FIX: no Center — ConstrainedBox inside a stretch Column
-        // effectively does nothing on a wide viewport because the Column
-        // gives tight (full-width) constraints that override maxWidth.
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 430),
-          child: Container(key: _cardKey, height: 100, color: Colors.white),
-        ),
-      ],
-    );
-  }
-}
+/// Locates the AN-10 card by its actual layout constraint — the
+/// ConstrainedBox(maxWidth: 430) that wraps the signup form card in
+/// signup_screen.dart — rather than a test-only Key, so the finder stays
+/// pinned to what the real widget renders. (The screen's other
+/// ConstrainedBox, further up the tree, caps minHeight and has an unbounded
+/// maxWidth, so this predicate cannot ambiguously match it.)
+final _card430Finder = find.byWidgetPredicate(
+  (widget) => widget is ConstrainedBox && widget.constraints.maxWidth == 430,
+);
 
 void main() {
-  group('AN-10 regression — SignupScreen centered on tablet', () {
-    // Flutter layout note: a Column gives its children tight width = column width.
-    // A `ConstrainedBox(maxWidth: 430)` inside a Column with tight width 810
-    // receives min=810 from the parent, which overrides the maxWidth cap — the
-    // card stretches to full 810px. When `Center` wraps the ConstrainedBox it
-    // provides loose constraints (min=0) so the maxWidth cap actually works.
-    // This is the root cause of AN-10: without Center, the 430-wide card is
-    // never produced on a tablet; with Center, it is properly capped and centered.
+  setUpAll(() {
+    registerFallbackValue(_FakePageRouteInfo());
+    registerFallbackValue(const SignInRoute());
+    registerFallbackValue(const OnboardingRoute());
+  });
 
-    testWidgets(
-      // AN-10: The BUGGY pre-fix layout (no Center) produces a full-width card
-      // because Column's tight constraints override ConstrainedBox(maxWidth).
-      // This test shows the "wrong" behavior for baseline reference.
-      'BUGGY pre-fix: ConstrainedBox(maxWidth:430) inside Column is full-width '
-      'on wide viewport (tight constraint defeats maxWidth)',
-      (tester) async {
-        tester.view.physicalSize = const Size(810 * 2, 1080 * 2);
-        tester.view.devicePixelRatio = 2.0;
-        addTearDown(tester.view.reset);
+  group('AN-10 regression — real SignupScreen centered on tablet', () {
+    testWidgets('AN-10: real SignupScreen card is capped at maxWidth 430 and '
+        'centered on a wide (tablet) viewport', (tester) async {
+      // 810x1080 logical pixels at devicePixelRatio 2.0 — a tablet-class
+      // wide viewport, matching the AN-10 bug report's reproduction size.
+      tester.view.physicalSize = const Size(810 * 2, 1080 * 2);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.reset);
 
-        await tester.pumpWidget(
-          const MaterialApp(home: Scaffold(body: _LeftAnchoredCardLayout())),
-        );
-        await tester.pump();
+      await tester.pumpWidget(_buildRealSignupScreen());
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        final cardRect = tester.getRect(find.byKey(_cardKey));
+      expect(
+        _card430Finder,
+        findsOneWidget,
+        reason:
+            'AN-10: expected exactly one ConstrainedBox(maxWidth: 430) in '
+            'the real SignupScreen tree — if this fails, the '
+            'maxWidth: 430 card constraint was changed or removed from '
+            'signup_screen.dart',
+      );
 
-        // BUGGY: without Center, the card stretches to FULL width (810px).
-        // The ConstrainedBox(maxWidth:430) is defeated by the Column's tight
-        // constraint (crossAxisAlignment.stretch), so the card is NOT
-        // constrained to 430px.
-        expect(
-          cardRect.width,
-          greaterThan(430),
-          reason:
-              'BUGGY: ConstrainedBox(maxWidth:430) without Center wrapper '
-              'is defeated by Column tight width — card fills viewport width',
-        );
-      },
-    );
+      final cardRect = tester.getRect(_card430Finder);
+      final screenWidth =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
 
-    testWidgets(
-      // AN-10: FAILS before fix (card.width == screenWidth, not capped at 430);
-      // PASSES after fix (Center provides loose constraints, card capped at 430
-      // and centered).
-      'AN-10 fixed: Center wrapper allows ConstrainedBox to cap at 430 and '
-      'centers the card on wide (tablet) viewport',
-      (tester) async {
-        tester.view.physicalSize = const Size(810 * 2, 1080 * 2);
-        tester.view.devicePixelRatio = 2.0;
-        addTearDown(tester.view.reset);
+      // Card must be capped at 430px (not stretched to full screen width).
+      expect(
+        cardRect.width,
+        closeTo(430, 5),
+        reason: 'AN-10: card must be capped at maxWidth 430',
+      );
 
-        await tester.pumpWidget(
-          const MaterialApp(home: Scaffold(body: _CenteredCardLayout())),
-        );
-        await tester.pump();
+      // And it must be centered horizontally — this is the assertion that
+      // fails if the Center(...) wrapper around the card is removed: an
+      // uncentered ConstrainedBox(maxWidth: 430) inside signup_screen.dart's
+      // Column is left-anchored, not centered, on a wide viewport.
+      final expectedLeft = (screenWidth - cardRect.width) / 2;
+      expect(
+        cardRect.left,
+        closeTo(expectedLeft, 10),
+        reason:
+            'AN-10: card must be centered on wide viewport '
+            '(left=${cardRect.left}, expectedLeft=$expectedLeft)',
+      );
 
-        final cardRect = tester.getRect(find.byKey(_cardKey));
-        final screenWidth =
-            tester.view.physicalSize.width / tester.view.devicePixelRatio;
-
-        // After the fix: card is capped at 430px (not full screen width).
-        expect(
-          cardRect.width,
-          closeTo(430, 5),
-          reason: 'AN-10: card must be capped at maxWidth 430',
-        );
-
-        // And it must be centered.
-        final expectedLeft = (screenWidth - cardRect.width) / 2;
-        expect(
-          cardRect.left,
-          closeTo(expectedLeft, 10),
-          reason:
-              'AN-10: card must be centered on wide viewport '
-              '(left=${cardRect.left}, expectedLeft=$expectedLeft)',
-        );
-      },
-    );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
   });
 }
