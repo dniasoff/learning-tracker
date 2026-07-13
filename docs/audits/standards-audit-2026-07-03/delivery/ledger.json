@@ -2635,13 +2635,21 @@
     {
       "id": "AUD-docs-20",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Update docs/qa/legacy auth scenarios and docs/planning upgrade-flow UX specs for the credential-less offline-account redesign",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_9a0b2338-66d-24 (branch worktree-wf_9a0b2338-66d-24, commit 8537c4c3ba7be6633477b715e1f6b14a474f5758, tip of this cid's build) but the review agent was lost (quota) before opus review/merge could complete. Built fix added dated (2026-07-13) staleness banners to docs/qa/legacy/{01-product-overview,02-auth-and-accounts,03-onboarding,13-settings}.md and docs/planning/ux-upgrade-flow-{spec,visual}.md flagging the password-based local-born account narrative (argon2id hash, password-confirm upgrade step) as superseded by the 2026-06-14 credential-less offline-account redesign, and marked the two docs/index.md links to the planning docs as partially superseded; none of this landed on dev. Per merge-lane payload cid w4r1c13, MODE=ledger-only: nothing merged onto dev this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_9a0b2338-66d-24 removed per payload.worktreesToRemove (`git worktree remove --force`). testsToRun for a future resume: none (docs-only change; the built commit reported `make audit` PASSED, 43/43 greps clean, but this was not independently re-verified here since nothing merged)."
+      "commits": [
+        "9791a3a03e37f3a094807d109ffb1511eea92f4b"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-20 AC1 OK: all 6 files carry dated 2026-07-13 staleness banner pointing at current design (git diff, 6 hunks)",
+        "AUD-docs-20 AC1 OK: signup_screen.dart offline path credential-less (synthetic email+UUID pw, L111-123)",
+        "AUD-docs-20 AC1 OK: upgrade_to_cloud_service.dart upgradeWithNewCredentials() full sign-in, no local-pw verify (L124-160)",
+        "AUD-docs-20 AC1 OK: design record loop-progress.md L1031-1073; cited AUTH/SET/OB scenario IDs all exist",
+        "AUD-docs-20 AC2 OK: index.md:48-49 marks 2 planning links 'partially superseded'; 4 qa/legacy via dir link (L86)+in-file banners"
+      ],
+      "notes": "Confirmed offline signup is credential-less (2026-06-14 decision); upgrade flow re-signs-in, doesn't verify old password. Added dated banners to all 6 files; marked 2 docs/index.md planning links superseded. Reused a lost prior fix (commit 8537c4c3) after re-verifying its claims. Merged --no-ff onto dev (cid w4r1c5, mergeSha 9455fc61f8af55debc9226fd3fff93203f675cc5; content commit 9791a3a03e37f3a094807d109ffb1511eea92f4b). Rebase onto dev was a no-op (dev already an ancestor of tipSha). Post-rebase gate: make audit PASSED (45/45 greps clean), flutter analyze PASSED (No issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base 2d58f7351851934b41855499523383f3230ce8d6), so payload.testsToRun (empty) was not re-run here; the wave-closing full make ci is the integration gate. touchedStrings=false, so make arb-parity was not run."
     },
     {
       "id": "AUD-docs-22",
