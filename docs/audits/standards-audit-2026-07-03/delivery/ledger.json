@@ -5902,13 +5902,18 @@
   {
    "id": "AUD-t-content_browsing-05",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix the tautological 'Gematriya correctness' test in text_display_screen_deep_l1_test.dart to call the real Gematriya.forNumber",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "10f27eb6ce2a0b74f02caf311f7e94ebd367ad91"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-content_browsing-05 AC (direct call): import added line 73; 5 expect(Gematriya.forNumber(...)) assertions; _gematriya helper+table deleted, 0 leftover refs",
+    "AUD-t-content_browsing-05 AC (red-first): disabling lib 15/16 branch failed the test (Expected tet-vav, Actual yud-heh @768); reverted clean; 25/25 green"
+   ],
+   "notes": "Test called private _gematriya() helper (hand-copied table), not Gematriya.forNumber; gematriya.dart is zero-import pure-static. Deleted helper; test now imports gematriya.dart, calls forNumber directly. AC proof: disabled 15/16 branch in lib/, test failed; reverted; 25/25 pass."
   },
   {
    "id": "AUD-dashboard-12",
