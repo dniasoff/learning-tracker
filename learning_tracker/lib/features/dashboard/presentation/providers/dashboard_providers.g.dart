@@ -327,7 +327,7 @@ final class DashboardTrackCompletionPercentageProvider
 }
 
 String _$dashboardTrackCompletionPercentageHash() =>
-    r'6c62c3cd2383c19a9e71eb4ae7f5763211f620c7';
+    r'32c9b362e0ee936621f88c9786f7c8b6d9658291';
 
 /// Track completion percentage for the Manage Tracks card.
 ///
@@ -470,7 +470,7 @@ final class DashboardCompletionPercentageProvider
 }
 
 String _$dashboardCompletionPercentageHash() =>
-    r'7ceee9ec3e5bf87f4b23ed05225cc6e1931cc5af';
+    r'9499397873f06d2b46333c74a71900c4fe3f9b89';
 
 /// Per-curriculum item-based completion percentage, scoped to active profile.
 ///
@@ -792,7 +792,7 @@ final class StripStockMilestonesEffectProvider
 }
 
 String _$stripStockMilestonesEffectHash() =>
-    r'ecd5496ae0cb613533309e99d0a34f610b03f254';
+    r'e0b343687c26cff6837a2360c4fd17297661333e';
 
 /// Next reward milestone for the child dashboard (closest threshold not yet met).
 ///
@@ -970,7 +970,7 @@ final class DashboardPaceStatusProvider
 }
 
 String _$dashboardPaceStatusHash() =>
-    r'84a2063bc4137e52daaadea4c1ecfc2347cf4995';
+    r'fa3e9bc9deaa191d9bc354737ef95b6bfb55119d';
 
 /// Per-curriculum pace status for the dashboard.
 ///
