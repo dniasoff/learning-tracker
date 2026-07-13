@@ -1618,13 +1618,18 @@
   {
    "id": "AUD-t-cross-08",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Close or auto-close inMemoryDb() in profiles _buildApp test helpers — 3 files leak native Drift handles whenever db: is omitted",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "4071097d8d08decf4d1315f7eaf25065f691fdeb"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-08 AC1 OK: all 5 _buildApp* variants register addTearDown(...close), guarded if(db==null) so caller-owned dbs aren't double-closed",
+    "AUD-t-cross-08 AC1 OK: regression test asserts each variant structurally; 80/80 targeted tests pass exit0"
+   ],
+   "notes": "Verified evidence still holds (no drift since 4018a91c). The 3 files' _buildApp*/close only self-created dbs via addTearDown, guarded so caller-owned dbs aren't double-closed. Red-first: new regression test failed pre-fix (git stash), passed post-fix. Commit fae00f31."
   },
   {
    "id": "AUD-tutoring-11",
@@ -3478,13 +3483,19 @@
   {
    "id": "AUD-t-cross-12",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Deduplicate seedProfile/seedProfileZero between test/helpers/drift_memory.dart and test/helpers/test_database.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "4071097d8d08decf4d1315f7eaf25065f691fdeb"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-12 AC1 OK: seedProfile/seedProfileZero defined once (drift_memory.dart:50/105); test_database.dart re-exports; deleted bodies byte-identical",
+    "AUD-t-cross-12 AC2 OK: disambiguating `show seedCompletion` stripped, no hide remains, flutter analyze clean; overlap is same declaration",
+    "AUD-t-cross-12 AC3 OK: check_test_helpers_duplicate_functions.dart exists, wired make audit 51/51, FIRES exit1 dup / exit0 clean"
+   ],
+   "notes": "Duplication still present at HEAD. test_database.dart re-exports seedProfile/seedProfileZero from canonical drift_memory.dart instead of redefining. Stripped now-unneeded show/hide from 23 files. New Rule-0 checker in make audit (51/51), red pre-fix/green post-fix. Commit 3a312c39."
   },
   {
    "id": "AUD-guardrails-09",
