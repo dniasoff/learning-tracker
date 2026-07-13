@@ -84,7 +84,7 @@ There are **two Makefiles** with overlapping targets — `learning_tracker/Makef
 
 **Backlog stories** have a `skip:` on their `group()` with an empty body — activate one by removing `skip:` and filling in assertions. Tests run **real** dependencies (in-memory Drift, real Riverpod/navigation, `fake_cloud_firestore`).
 
-Firestore-rules tests are separate — `test/firestore-rules/` (Jest against the Firestore emulator on `localhost:9090`).
+Firestore-rules tests are separate — `functions/test/firestore_rules.test.mjs` (Node's built-in test runner against the Firestore emulator, `firebase emulators:exec --only firestore`, port 8080 per `firebase.json`; run via `make test-rules`). The old `test/firestore-rules/` Jest suite was dead (obsolete `accounts/{uid}` model, non-existent rules path) and was deleted — AUD-t-cross-18.
 
 ## 6. Code quality & conventions
 

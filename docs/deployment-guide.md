@@ -48,7 +48,7 @@ Triggers: PRs to `main`/`dev`, pushes to `main`/`dev`/`dev/**`. 8 mostly-paralle
 4. **lint** — `dart run custom_lint` if the package is in deps; **non-blocking** (custom_lint 0.8.1 needs analyzer ^8 but the app forces analyzer ^9 — a known unresolved conflict; failures emit a warning only).
 5. **test** — `make ci`; uploads golden-failure artifacts on failure.
 6. **coverage-floor** — fails if line coverage `< 60%`; uploads to Codecov.
-7. **firestore-rules** — Java 21 + Node 22 → `firebase emulators:exec --only firestore` → Jest.
+7. **firestore-rules** — Java 21 + Node 22 → `firebase emulators:exec --only firestore` → `node --test functions/test/firestore_rules.test.mjs` + the TQ-9 rule-coverage gate (the old `test/firestore-rules/` Jest suite was dead and was deleted — AUD-t-cross-18).
 8. **arb-parity** — `tool/arb_parity_check.dart`.
 
 ### `build.yml` — Build APK

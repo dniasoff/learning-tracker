@@ -574,7 +574,7 @@ The GitHub Actions CI (`ci.yml`) runs 4 jobs on every PR and push to `main`/`dev
 | `format` | 5 min | `dart format --set-exit-if-changed` |
 | `analyze` | 10 min | `dart analyze --fatal-infos` (after code-gen + asset prep) |
 | `test` | 15 min | `flutter test --concurrency=4 --coverage`; uploads to Codecov |
-| `firestore-rules` | 10 min | Firebase emulator + Jest rules tests in `test/firestore-rules/` |
+| `firestore-rules` | 10 min | Firebase emulator + `node --test learning_tracker/functions/test/firestore_rules.test.mjs` (the old `test/firestore-rules/` Jest suite was deleted, AUD-t-cross-18 — obsolete `accounts/{uid}` model, ENOENT rules path) |
 
 Local equivalent: `make ci` runs `analyze + format + schema-check + test-all`.
 
