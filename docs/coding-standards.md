@@ -512,7 +512,7 @@ The offline account model (credential-less local account, converted on reconnect
 
 **AG-3 — Hand-written Dart files stay under 400 lines (generated files exempt).**
 **Why:** oversized files exceed per-file agent read budgets (content past the window is invisible), become dumping grounds, and drive re-implementation elsewhere. 400 is a chosen ratchet point, not a sourced constant — the enforcement matters more than the number.
-**Enforce:** [Pending] audit check: `find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` (introduce as warn-only, ratchet down existing violations, then hard-fail).
+**Enforce:** [Enforced, warn-only] (AUD-t-cross-15) `make audit` check 52/52: `find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`. Introduced warn-only per this rule's own rollout plan — the codebase carries many pre-existing violations; ratchet them down before flipping this check to hard-fail.
 **Source:** practitioner consensus (see Sources)
 
 **AG-4 — Public top-level symbol names are unique across `lib/` — no class/function name reused in two features.**

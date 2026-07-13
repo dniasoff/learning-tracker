@@ -286,7 +286,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 50 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 52 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -785,14 +785,14 @@ audit: lint-rules-test ## Run all 50 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/gen_feature_graph_check.$$$$.log; \
 	fi; \
-	echo "50/51 — AG-8 doc-lint: no leaked tool-call framing artifacts (</content>, </invoke>) in committed docs/ (AUD-docs-36)"; \
+	echo "50/52 — AG-8 doc-lint: no leaked tool-call framing artifacts (</content>, </invoke>) in committed docs/ (AUD-docs-36)"; \
 	if grep -rnE "^</(content|invoke)>$$" ../docs/ | grep -q .; then \
 	  echo "  A stray XML-ish tool-call closing tag was committed verbatim — an unstripped"; \
 	  echo "  Write/Edit tool-call content boundary leaked into a tracked doc; delete the line(s):"; \
 	  grep -rnE "^</(content|invoke)>$$" ../docs/; \
 	  FAIL=1; \
 	fi; \
-	echo "51/51 — TQ-6: no duplicate public top-level function defined in more than one file under test/helpers/ (AUD-t-cross-12)"; \
+	echo "51/52 — TQ-6: no duplicate public top-level function defined in more than one file under test/helpers/ (AUD-t-cross-12)"; \
 	if ! dart run tool/check_test_helpers_duplicate_functions.dart > /tmp/test_helpers_dup_check.$$$$.log 2>&1; then \
 	  cat /tmp/test_helpers_dup_check.$$$$.log; \
 	  rm -f /tmp/test_helpers_dup_check.$$$$.log; \
@@ -800,9 +800,16 @@ audit: lint-rules-test ## Run all 50 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/test_helpers_dup_check.$$$$.log; \
 	fi; \
+	echo "52/52 — AG-3: hand-written Dart files stay under 400 lines, generated files exempt [warn-only: introduce-then-ratchet per docs/coding-standards.md AG-3] (AUD-t-cross-15)"; \
+	AG3_HITS=$$(find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$$2 != "total" && $$1 > 400'); \
+	if [ -n "$$AG3_HITS" ]; then \
+	  echo "  WARN: the following hand-written files exceed AG-3's 400-line cap — do not grow them further,"; \
+	  echo "  ratchet the count down over time (see docs/coding-standards.md AG-3):"; \
+	  echo "$$AG3_HITS"; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 51 greps clean ==="; \
+	  echo "=== audit PASSED — all 52 greps clean ==="; \
 	fi
