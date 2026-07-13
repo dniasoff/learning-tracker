@@ -7364,13 +7364,21 @@
   {
    "id": "AUD-core-database-13",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Rename outbox_table.dart and text_download_status.dart to match their table class names",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "010bcf68e830cdfee6418a8789d89368927abf43"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-13 AC(grep) OK: 0 hits for old filenames in code/config/build; only docs/audits/** retain them as the finding's own evidence",
+    "AUD-core-database-13 AC(analyze) OK: flutter analyze -> No issues found (after regenerating gitignored content.db.gz)",
+    "AUD-core-database-13 AC(build_runner) OK: build_runner built successfully with zero generated-code diff after rename",
+    "AUD-core-database-13 support OK: gen_arch_tables override removal correct - resolves Outbox(9)/TextDownloadStatuses(5) via default snake_case",
+    "AUD-core-database-13 support OK: ag5 baseline path renames correct - AG-5 ratchet 469 unmirrored, 0 new violations"
+   ],
+   "notes": "Renamed outbox_table.dart->outbox.dart, text_download_status.dart->text_download_statuses.dart; updated 3 imports; removed redundant gen_arch_tables.dart overrides; updated ag5 baseline. git grep old filenames (excl docs/) = 0 hits; analyze clean; AG-5 ratchet 0 new violations."
   },
   {
    "id": "AUD-core-database-12",
