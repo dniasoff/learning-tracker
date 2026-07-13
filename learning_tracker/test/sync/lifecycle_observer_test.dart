@@ -149,6 +149,13 @@ void main() {
       await observer.didChangeAppLifecycleState(AppLifecycleState.hidden);
       await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
       expect(log.calls.first, equals('reset'));
+      log.calls.clear();
+
+      // `detached` — the engine is running with no view attached (e.g. the
+      // last Android Activity was destroyed but the process survives).
+      await observer.didChangeAppLifecycleState(AppLifecycleState.detached);
+      await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      expect(log.calls.first, equals('reset'));
     });
   });
 }
