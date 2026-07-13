@@ -545,13 +545,13 @@
     {
       "id": "AUD-t-cross-04",
       "wave": 4,
-      "status": "todo",
+      "status": "skipped-refuted",
       "severity": "P1",
       "title": "Rewire or retarget tutored_wipe_wrong_id_test.dart \u2014 its D18 fix symbols (resolveOwnerAccountIdForWipe, wipeRevokedMirrors) have zero production callers",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "skipped-refuted (merge-lane w4r2c2, 2026-07-14). Already fixed in code, independently confirmed: the target function resolveOwnerAccountIdForWipe was deleted outright by ancestor commit 5f59ba4d5bf4e303eb9f96dbc807ab40d5778fb4 (fix(audit): AUD-core-sync-28 - remove dead D18 wipe-id-resolution helper), which remains an ancestor of this branch's current HEAD (this finding is a duplicate of AUD-core-sync-28, already merged). Independently re-verified against the current tree: `grep -rn resolveOwnerAccountIdForWipe learning_tracker/lib/` returns 0 matches. AC2 (exercise the real revoke-reconcile mechanics) is satisfied by the rewritten tutored_wipe_wrong_id_test.dart (which now proves currentAccountIdProvider cannot resolve to the talmid's learner_profiles.id and exercises the real getTutoredMirrorsForAccount + TutoredMirrorWipeService.wipeMirrorForGrant loop) plus the pre-existing incoming_tutor_grants_reconcile_test.dart. No code change made."
     },
     {
       "id": "AUD-t-track_setup-01",

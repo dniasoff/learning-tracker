@@ -115,3 +115,13 @@ finding, appended as it happens.
 - **Delivery disposition:** `skipped-refuted` (merge-lane w4r1c19, 2026-07-13).
 - **Basis — already fixed in code, independently confirmed:** commit `f7428230` (`fix(account): AUD-account-05 - localize EmailVerificationConfirmPanel title/action labels`, an ancestor of this branch's current `HEAD`) removed the H1 test's `skip:true` and its stale RTL-overflow `BUG` comment as part of that finding's localization fix. Independently re-verified against the current tree: `grep -n "skip:\|BUG:" learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart` returns 0 hits (the file's only "skip" match is an unrelated launchUrl-skip prose comment at line 855, not a test skip); `flutter test --plain-name H1 test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart` → `00:01 +1: All tests passed!`. AC already satisfied; no code change made.
 - **Logged by:** merge-lane w4r1c19 agent (sonnet), 2026-07-13.
+
+---
+
+## AUD-t-cross-04 — Rewire or retarget tutored_wipe_wrong_id_test.dart — its D18 fix symbols (resolveOwnerAccountIdForWipe, wipeRevokedMirrors) have zero production callers
+
+- **Wave:** 4
+- **Severity:** P1
+- **Delivery disposition:** `skipped-refuted` (merge-lane w4r2c2, 2026-07-14).
+- **Basis — already fixed in code, independently confirmed:** this finding is a duplicate of `AUD-core-sync-28` (already merged). Ancestor commit `5f59ba4d5bf4e303eb9f96dbc807ab40d5778fb4` (`fix(audit): AUD-core-sync-28 - remove dead D18 wipe-id-resolution helper`) deleted the target `resolveOwnerAccountIdForWipe`/`wipeRevokedMirrors` symbols outright and remains an ancestor of this branch's current `HEAD`. Independently re-verified against the current tree: `grep -rn resolveOwnerAccountIdForWipe learning_tracker/lib/` returns 0 matches. This finding's AC2 (exercise the real revoke-reconcile mechanics rather than the dead helper pair) is satisfied by the rewritten `tutored_wipe_wrong_id_test.dart` — which now proves `currentAccountIdProvider` cannot resolve to the talmid's `learner_profiles.id` and exercises the real `getTutoredMirrorsForAccount` + `TutoredMirrorWipeService.wipeMirrorForGrant` loop that `incomingTutorGrantsProvider` runs inline — plus the pre-existing `incoming_tutor_grants_reconcile_test.dart`. No code change made.
+- **Logged by:** merge-lane w4r2c2 agent (sonnet), 2026-07-14.
