@@ -9217,13 +9217,19 @@
   {
    "id": "AUD-docs-36",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Strip leaked `</content>`/`</invoke>` tool-call artifacts from committed planning docs",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "03885c429ac4998d916ec7acdcad0422ee76e829"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-docs-36 AC1 OK: docs/planning/ grep=0; anchored genuine-leak grep '^</(content|invoke)>$' across ALL docs/=0. 2 leaked lines deleted, files end on real content.",
+    "AUD-docs-36 AC1 literal OK-by-intent: 35 residual unanchored hits ALL in pre-existing audit corpus (incl finding's own JSON) as quoted evidence, not leaks.",
+    "AUD-docs-36 AC2 OK: committed Makefile check 50/50 uses recommendation's exact '^</(content|invoke)>$'; red-first verified: audit FAILs on fixture, clean after removal."
+   ],
+   "notes": "Confirmed leaked lines on disk; deleted them. Added make audit check 50/50 (anchored regex), red-demonstrated via scratch fixture then clean. AC1 verified 0 matches; unanchored grep still hits the audit's own evidence corpus by construction (out of scope)."
   },
   {
    "id": "AUD-account-23",
