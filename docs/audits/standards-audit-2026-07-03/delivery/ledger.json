@@ -3463,13 +3463,13 @@
     {
       "id": "AUD-docs-18",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Rewrite docs/explainers/sync-subsystem.md — it still presents the deleted SyncEngine/OfflineQueue dual-stack as the live, highest-risk architecture",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "BLOCKED (not merged, ledger-only): fix built on worktree wf_9a0b2338-66d-17 (branch worktree-wf_9a0b2338-66d-17, commit b4ec83de9af15f047dc8b0fa8da70aca95e0df17, tip of this cid's build) but the review agent was lost (quota) before opus review/merge could complete. Built fix rewrote docs/explainers/sync-subsystem.md's two-stack SyncEngine/OfflineQueue narrative to the single core/sync/ stack, corrected the N1-N8 invariant list and the 8->18 EntityMerger count, and added make audit check 44/44 (AG-8, learning_tracker/Makefile) plus a regression test in learning_tracker/test/tool/audit_and_arb_parity_test.dart asserting that count against `ls lib/core/sync/merge/*_merger.dart`; none of this landed on dev. Per merge-lane payload cid w4r1c11, MODE=ledger-only: nothing merged onto dev this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_9a0b2338-66d-17 removed per payload.worktreesToRemove (`git worktree remove --force`). testsToRun for a future resume: learning_tracker/test/tool/audit_and_arb_parity_test.dart (new group: 'make audit check 44/44 — AG-8 EntityMerger count (AUD-docs-18)')."
     },
     {
       "id": "AUD-docs-17",
