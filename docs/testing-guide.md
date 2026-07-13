@@ -1,7 +1,7 @@
 ---
 title: "Testing Guide"
 description: "Comprehensive guide to writing, running, and maintaining tests in Learning Tracker"
-date: 2026-03-18
+date: 2026-07-13
 ---
 
 # Testing Guide
@@ -26,7 +26,9 @@ date: 2026-03-18
 
 ## Test Architecture
 
-The project maintains 531+ tests across 167 files, structured as a test pyramid.
+The project maintains roughly 10,000 tests (`test()`/`testWidgets()` calls) across
+`test/**`, structured as a test pyramid — see [test-options.md](test-options.md)
+for the current authoritative count and per-layer breakdown.
 
 ### Test Pyramid
 
@@ -60,15 +62,15 @@ test/
 │   ├── gamification/
 │   ├── learning/
 │   └── ...
-├── story_acceptance/           # 15 files, 401 acceptance tests
+├── story_acceptance/           # one file per epic — see dart_test.yaml for the current tag list
 │   ├── epic_01_foundation_test.dart
 │   ├── epic_02_content_test.dart
-│   └── ...epic_15_multi_profile_test.dart
+│   └── ...epic_27_*_test.dart
 ├── fixtures/                   # Reusable test data factories
 │   ├── content_fixtures.dart   # ContentItemFixtures
-│   └── curriculum_fixtures.dart # CurriculumFixtures, StageFixtures, TrackTypeFixtures
+│   └── curriculum_fixtures.dart # CurriculumFixtures, StageFixtures
 ├── helpers/                    # Shared test utilities
-│   └── test_database.dart      # createTestDatabase (NativeDatabase.memory())
+│   └── test_database.dart      # createTestDatabase -> UserDatabase (NativeDatabase.memory())
 └── mocks/                      # Shared mocks (mocktail)
     ├── mock_repositories.dart  # MockAuthRepository, MockContentRepository
     └── mock_services.dart      # MockConnectivityService
@@ -76,7 +78,7 @@ test/
 
 ### Story Acceptance Tests
 
-Each epic has one file in `test/story_acceptance/`. Tags at the file level (`@Tags(['epic_N'])`) and group level (`tags: ['story_N_M']`) enable precise filtering. The `dart_test.yaml` file registers all tags (14 epic tags, 62 story tags) to prevent "unknown tag" warnings.
+Each epic has one file in `test/story_acceptance/`. Tags at the file level (`@Tags(['epic_N'])`) and group level (`tags: ['story_N_M']`) enable precise filtering. The `dart_test.yaml` file registers all tags (20 epic tags, 97 story tags) to prevent "unknown tag" warnings.
 
 ## How to Run Tests
 
@@ -108,41 +110,45 @@ flutter test --tags story_1_2  # Tests matching a tag
 Use the in-memory database pattern for fast, isolated tests with no disk I/O.
 
 ```dart
-import 'package:drift/drift.dart';
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:test/test.dart';
 
 import '../helpers/test_database.dart';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
 
-  setUp(() {
+  setUp(() async {
     db = createTestDatabase();
+    await seedProfile(db); // creates accounts(id=1) + learner_profiles(id=1)
   });
 
   tearDown(() async {
     await db.close();
   });
 
-  /// Helper: insert a completion record
+  /// Helper: commit a completion via the single write path.
   Future<int> insertCompletion({
     String ref = 'Mishnah Berachos 1.1',
     int stageId = 1,
     int points = 10,
-  }) {
-    return db.completionDao.insertCompletion(
-      CompletionsCompanion.insert(
+  }) async {
+    final result = await CompletionWriter(db).commit(
+      CompletionCommand(
+        profileId: 1,
         curriculumId: CurriculumId.mishnayos.storageKey,
         sefariaRef: ref,
         stageId: stageId,
-        trackType: TrackType.personal.storageKey,
+        trackType: 'personal',
+        trackId: 1,
         completedAt: DateTime.now(),
-        points: Value(points),
+        points: points,
       ),
     );
+    return result.completion.id;
   }
 
   group('CompletionDao', () {
@@ -151,7 +157,7 @@ void main() {
       final id = await insertCompletion();
 
       // Act
-      final all = await db.completionDao.getAllCompletions();
+      final all = await db.completionDao.getCompletionsByProfile(1);
 
       // Assert
       expect(id, greaterThan(0));
@@ -160,7 +166,7 @@ void main() {
 
     test('returns empty list when no completions exist', () async {
       // Act
-      final all = await db.completionDao.getAllCompletions();
+      final all = await db.completionDao.getCompletionsByProfile(1);
 
       // Assert
       expect(all, isEmpty);
@@ -171,13 +177,20 @@ void main() {
 
 ### Key Points
 
-- Call `createTestDatabase()` in `setUp` to get a fresh in-memory Drift database.
+- Call `createTestDatabase()` in `setUp` to get a fresh in-memory `UserDatabase`,
+  then `await seedProfile(db)` to satisfy the `learner_profiles` foreign key that
+  `completion_events` (and most other tables) require.
 - Always call `db.close()` in `tearDown` to release resources.
+- Write completions through `CompletionWriter.commit()` / `commitBatch()` —
+  `CompletionDao`'s write methods were removed; it is read-only, backed by the
+  `completions_view` Drift view over `completion_events`.
 - Extract helper functions for repetitive insertions.
 - Follow Arrange-Act-Assert in every test body.
 - Use `mocktail` (not `mockito`) for all mocking:
 
 ```dart
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockContentRepository extends Mock implements ContentRepository {}
@@ -191,14 +204,20 @@ void main() {
 
   test('returns content items', () async {
     // Arrange
-    when(() => mockRepo.getAll()).thenAnswer((_) async => []);
+    when(
+      () => mockRepo.getContentForCurriculum(CurriculumId.mishnayos),
+    ).thenAnswer((_) async => []);
 
     // Act
-    final result = await mockRepo.getAll();
+    final result = await mockRepo.getContentForCurriculum(
+      CurriculumId.mishnayos,
+    );
 
     // Assert
     expect(result, isEmpty);
-    verify(() => mockRepo.getAll()).called(1);
+    verify(
+      () => mockRepo.getContentForCurriculum(CurriculumId.mishnayos),
+    ).called(1);
   });
 }
 ```
@@ -209,18 +228,28 @@ Wrap the widget under test in `MaterialApp` and use `find` APIs to locate elemen
 
 ```dart
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/enums/user_mode.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {
-  /// Helper: build the widget inside a MaterialApp shell
+  /// Helper: build the widget inside a MaterialApp shell with localizations
+  /// wired up (StreakWidget reads AppLocalizations.of(context)).
   Widget buildWidget({
     required int currentStreak,
     required int maxStreak,
-    required UserMode userMode,
+    required ProfileMode userMode,
   }) {
     return MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: StreakWidget(
           currentStreak: currentStreak,
@@ -234,7 +263,11 @@ void main() {
   group('StreakWidget', () {
     testWidgets('displays current and max streak', (tester) async {
       await tester.pumpWidget(
-        buildWidget(currentStreak: 5, maxStreak: 10, userMode: UserMode.child),
+        buildWidget(
+          currentStreak: 5,
+          maxStreak: 10,
+          userMode: ProfileMode.child,
+        ),
       );
 
       expect(find.text('5 day streak!'), findsOneWidget);
@@ -243,7 +276,11 @@ void main() {
 
     testWidgets('shows Card in child mode', (tester) async {
       await tester.pumpWidget(
-        buildWidget(currentStreak: 3, maxStreak: 7, userMode: UserMode.child),
+        buildWidget(
+          currentStreak: 3,
+          maxStreak: 7,
+          userMode: ProfileMode.child,
+        ),
       );
       await tester.pumpAndSettle(); // Wait for animations
 
@@ -279,6 +316,10 @@ testWidgets('uses overridden provider value', (tester) async {
 ### Key Points
 
 - Always wrap widgets in `MaterialApp` (and `Scaffold` if needed for Material ancestors).
+- Wire `AppLocalizations.delegate` (plus the `Global*Localizations` delegates) into
+  `MaterialApp.localizationsDelegates` whenever the widget under test reads
+  `AppLocalizations.of(context)` — most screens/widgets do; omitting this throws
+  at pump time, not just at the assertion.
 - Call `tester.pumpAndSettle()` after actions that trigger animations or async rebuilds.
 - Use `find.text()`, `find.byType()`, `find.byIcon()`, and `find.byKey()` to locate elements.
 - Use `ProviderScope` with `overrides` for Riverpod provider testing.
@@ -299,15 +340,17 @@ library;
 
 ### Group-Level Tags
 
-Tag each story group:
+Tag each story group. Imports: `UserDatabase` + `createTestDatabase`/`seedProfile`
+as in the Unit Test example above, plus `CompletionWriter` and `CompletionCommand`.
 
 ```dart
 void main() {
   group('Story 3.1 -- Mark a unit complete', tags: ['story_3_1'], () {
-    late AppDatabase db;
+    late UserDatabase db;
 
-    setUp(() {
+    setUp(() async {
       db = createTestDatabase();
+      await seedProfile(db); // creates accounts(id=1) + learner_profiles(id=1)
     });
 
     tearDown(() async {
@@ -315,17 +358,19 @@ void main() {
     });
 
     test('inserting a completion persists to the database', () async {
-      final id = await db.completionDao.insertCompletion(
-        CompletionsCompanion.insert(
+      final result = await CompletionWriter(db).commit(
+        CompletionCommand(
+          profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'Mishnah Berachos 1.1',
           stageId: 1,
-          trackType: TrackType.personal.storageKey,
+          trackType: 'personal',
+          trackId: 1,
           completedAt: DateTime.now(),
-          points: const Value(10),
+          points: 10,
         ),
       );
-      expect(id, greaterThan(0));
+      expect(result.completion.id, greaterThan(0));
     });
   });
 }
@@ -368,16 +413,21 @@ Integration tests verify interactions across multiple services or features using
 ### Cross-Service Testing Pattern
 
 ```dart
-import 'package:learning_tracker/core/database/app_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
+import 'package:learning_tracker/features/learning/data/completion_writer.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:test/test.dart';
 
 import '../helpers/test_database.dart';
 
 void main() {
-  late AppDatabase db;
+  late UserDatabase db;
 
-  setUp(() {
+  setUp(() async {
     db = createTestDatabase();
+    await seedProfile(db); // creates accounts(id=1) + learner_profiles(id=1)
   });
 
   tearDown(() async {
@@ -386,12 +436,38 @@ void main() {
 
   group('Completion + Streak integration', () {
     test('completing a unit updates the streak record', () async {
-      // Insert a completion via CompletionDao
-      await db.completionDao.insertCompletion(/* ... */);
+      final now = DateTime.now();
 
-      // Verify the streak was updated via StreakDao
-      final streak = await db.streakDao.getCurrentStreak();
-      expect(streak, isNotNull);
+      // Insert a completion via CompletionWriter (the single write path;
+      // CompletionDao's write methods were removed).
+      await CompletionWriter(db).commit(
+        CompletionCommand(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 1.1',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: 1,
+          completedAt: now,
+          points: 10,
+        ),
+      );
+
+      // Tee a streak_events row for the same local day -- in the running app
+      // this is done by CompletionRepositoryImpl's streak tee; teed directly
+      // here to keep the example focused on the DAO read/write pattern.
+      await db.streakEventDao.appendEvent(
+        StreakEventsCompanion.insert(
+          profileId: 1,
+          eventType: 'completion',
+          dayUtc: DateTime.utc(now.year, now.month, now.day),
+          eventTimestamp: now,
+        ),
+      );
+
+      // Verify the streak was updated via StreakService.
+      final streak = await StreakService(db, profileId: 1).getStreak();
+      expect(streak.currentStreak, greaterThan(0));
     });
   });
 }
@@ -416,11 +492,14 @@ All database tests use `NativeDatabase.memory()` via the `createTestDatabase()` 
 - Fast execution with no disk I/O.
 - Each test gets a fresh, isolated database instance.
 - Full schema creation runs on every `setUp`, ensuring tests match the current schema.
+- Most tables carry a `learner_profiles` foreign key, so call `await seedProfile(db)`
+  right after `createTestDatabase()` in any test that writes completions, streaks,
+  goals, etc.
 
 ```dart
 // test/helpers/test_database.dart
-AppDatabase createTestDatabase() {
-  return AppDatabase(NativeDatabase.memory());
+UserDatabase createTestDatabase() {
+  return UserDatabase(NativeDatabase.memory());
 }
 ```
 
@@ -433,7 +512,8 @@ import 'package:mocktail/mocktail.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 class MockContentRepository extends Mock implements ContentRepository {}
-class MockConnectivityService extends Mock implements ConnectivityService {}
+// ConnectivityService was renamed to ConnectivityGateway (W5.20).
+class MockConnectivityService extends Mock implements ConnectivityGateway {}
 ```
 
 ### Registering Fallback Values
@@ -442,12 +522,13 @@ For methods that accept complex types, register fallback values in `setUpAll`:
 
 ```dart
 setUpAll(() {
-  registerFallbackValue(CompletionsCompanion.insert(
+  registerFallbackValue(CompletionEventsCompanion.insert(
+    profileId: 0,
     curriculumId: '',
     sefariaRef: '',
     stageId: 0,
     trackType: '',
-    completedAt: DateTime(2020),
+    eventTimestamp: DateTime(2020),
   ));
 });
 ```
@@ -460,7 +541,7 @@ Tags enable selective test execution:
 
 - **Epic tags**: `@Tags(['epic_1'])` at the file level.
 - **Story tags**: `tags: ['story_1_2']` on individual groups.
-- **Tag registration**: `dart_test.yaml` registers all 14 epic tags and 62 story tags.
+- **Tag registration**: `dart_test.yaml` registers all 20 epic tags and 97 story tags.
 
 Run tagged tests with:
 
@@ -476,7 +557,6 @@ Reusable factory classes provide consistent test data:
 - **ContentItemFixtures**: Creates test `ContentItem` instances (mishna, daf) with sensible defaults.
 - **CurriculumFixtures**: Provides `CurriculumId` values, storage keys, and lookup methods.
 - **StageFixtures**: Defines stage IDs, names, and delay constants.
-- **TrackTypeFixtures**: Provides track type string constants.
 
 ```dart
 import '../fixtures/content_fixtures.dart';
@@ -494,9 +574,23 @@ For tests that need multiple records, use the `batchInsert` helper to wrap inser
 ```dart
 import '../helpers/test_database.dart';
 
-await batchInsert(db, db.completions, [
-  CompletionsCompanion.insert(/* ... */),
-  CompletionsCompanion.insert(/* ... */),
+await batchInsert(db, db.completionEvents, [
+  CompletionEventsCompanion.insert(
+    profileId: 1,
+    curriculumId: CurriculumId.mishnayos.storageKey,
+    sefariaRef: 'Mishnah Berachos 1.1',
+    stageId: 1,
+    trackType: 'personal',
+    eventTimestamp: DateTime.now(),
+  ),
+  CompletionEventsCompanion.insert(
+    profileId: 1,
+    curriculumId: CurriculumId.mishnayos.storageKey,
+    sefariaRef: 'Mishnah Berachos 1.2',
+    stageId: 1,
+    trackType: 'personal',
+    eventTimestamp: DateTime.now(),
+  ),
 ]);
 ```
 
