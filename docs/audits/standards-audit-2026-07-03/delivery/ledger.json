@@ -3751,13 +3751,18 @@
   {
    "id": "AUD-t-cross-15",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or rewrite generated_providers_coverage_test.dart (757 lines) — every test only exercises riverpod_generator boilerplate",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "5aff7ae553941dccd23f568388550061f434e127"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-15 AC1 OK: file removed (ls->No such file; 768 deletions); deleted tests only called toString/==/hashCode = tautological per finding",
+    "AUD-t-cross-15 AC2 OK: find|xargs wc|awk '$1>400' no longer lists file (grep -c=0); make audit 51/51 AG-3 warn check fires on real violations"
+   ],
+   "notes": "Re-verified evidence holds; confirmed all 25 providers have real coverage elsewhere. Deleted tautological file (AC1). Added AG-3 400-line checker to make audit (51/51, warn-only per coding-standards.md's rollout plan); confirmed file no longer listed (AC2). Updated AG-3 Enforce line in docs."
   },
   {
    "id": "AUD-t-cross-14",
