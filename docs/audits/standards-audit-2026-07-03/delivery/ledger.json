@@ -2784,13 +2784,19 @@
   {
    "id": "AUD-t-account-03",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Rewrite account_picker_an4_test.dart to exercise AccountPickerScreen's real sort/tap-guard code instead of a hand-copied replica",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "f9840e1beec40a3ed8b632d715ddfcd563b83195"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-account-03 AC1 OK: imports+pumps real AccountPickerScreen (:56,:197); grep confirms no _sortedAccountDbFileNames/_TapGuardWidget replica",
+    "AUD-t-account-03 AC2 sort OK: reverted sort to lastUsedAt-DESC -> ordering test red 'Expected <109.0>/Actual <333.0>' exit 1; restored",
+    "AUD-t-account-03 AC2 guard OK: reverted onTap to direct _onTap -> tap-guard test red 'Unexpected calls: hasConnection' exit 1; restored, clean"
+   ],
+   "notes": "Test never imported account_picker_screen.dart (private sort+guard replicas). Rewrote to pump real screen; ordering via getTopLeft().dy, tap-guard via Completer gate on hasConnection. Red-first: reverted sort -> red; reverted guard -> red ('Unexpected calls'). Reverts restored before commit."
   },
   {
    "id": "AUD-t-gamification-03",
