@@ -62,6 +62,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -196,12 +197,6 @@ class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
   TutoredProfileSelection? build() => _fixed;
 }
 
-/// Fixed-value notifier for [ActiveTutoredProfileSelection] — no session.
-class _NullTutoredSelection extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => null;
-}
-
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -227,7 +222,7 @@ void main() {
           extraOverrides: [
             ..._dashboardSilence(h),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -331,7 +326,7 @@ void main() {
           extraOverrides: [
             ..._dashboardSilence(h),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -408,7 +403,7 @@ void main() {
             _activeTracksOneShotOverride(),
             _childRedemptionBalanceOneShotOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -722,7 +717,7 @@ void main() {
             // Stub out the streak calendar FutureProvider to avoid DB reads.
             streakCalendarProvider.overrideWith((ref) async => <DateTime>{}),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -790,7 +785,7 @@ void main() {
               _pendingRedemptionsOneShotOverride(),
               _activeProfileBalanceOneShotOverride(),
               activeTutoredProfileSelectionProvider.overrideWith(
-                () => _NullTutoredSelection(),
+                () => NullTutoredSelection(),
               ),
             ],
           );
@@ -870,7 +865,7 @@ void main() {
             ),
             // syncWriteFacadeProvider is already null in harness defaults.
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );

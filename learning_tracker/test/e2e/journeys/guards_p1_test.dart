@@ -91,15 +91,14 @@ import 'package:learning_tracker/features/sacred_time/presentation/providers/sac
     show currentSacredWindowProvider;
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart'
     show RestoreStatus;
-import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
-    show TutoredProfileSelection;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
-    show ActiveTutoredProfileSelection, activeTutoredProfileSelectionProvider;
+    show activeTutoredProfileSelectionProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
     show incomingTutorGrantsProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
     show pendingTutorInvitesProvider;
 
+import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -128,13 +127,6 @@ List<Override> _fullSilenceOverrides(E2EHarness h) => [
   _pendingInvitesEmpty(),
   _connectivityOnline(),
 ];
-
-/// No-op notifier that holds no tutored session — prevents [AppShell] from
-/// entering tutor mode (which would hide the switcher bar).
-class _NullTutoredSelection extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => null;
-}
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
@@ -273,7 +265,7 @@ void main() {
           extraOverrides: [
             ..._fullSilenceOverrides(h),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -341,7 +333,7 @@ void main() {
           profileListStreamProvider.overrideWith((ref) => Stream.value([])),
           // No active tutored session → AppShell shows switcher bar.
           activeTutoredProfileSelectionProvider.overrideWith(
-            () => _NullTutoredSelection(),
+            () => NullTutoredSelection(),
           ),
         ],
       );
@@ -446,7 +438,7 @@ void main() {
               ),
               // No active tutored session (keeps test scenario clean).
               activeTutoredProfileSelectionProvider.overrideWith(
-                () => _NullTutoredSelection(),
+                () => NullTutoredSelection(),
               ),
             ],
           );

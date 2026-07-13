@@ -62,6 +62,7 @@ import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pi
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Fakes / Stubs ─────────────────────────────────────────────────────────────
@@ -282,12 +283,6 @@ class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
   TutoredProfileSelection? build() => _fixed;
 }
 
-/// Fixed-value notifier for [ActiveTutoredProfileSelection] — no session.
-class _NullTutoredSelection extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => null;
-}
-
 // ── Grant factory helpers ─────────────────────────────────────────────────────
 
 TutorGrant _pendingGrant({
@@ -429,7 +424,7 @@ void main() {
               _NoopTutorNotificationGateway(),
             ),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -496,7 +491,7 @@ void main() {
               _NoopTutorNotificationGateway(),
             ),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -573,7 +568,7 @@ void main() {
               _NoopTutorNotificationGateway(),
             ),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -669,7 +664,7 @@ void main() {
               _NoopTutorNotificationGateway(),
             ),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -777,7 +772,7 @@ void main() {
               fakeAuditRepo,
             ),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -871,7 +866,7 @@ void main() {
               fakeAuditRepo,
             ),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -1164,7 +1159,7 @@ void main() {
           extraOverrides: [
             ..._baseSilences(h),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -1289,7 +1284,7 @@ void main() {
             ),
             pendingTutorInvitesProvider.overrideWith((ref) => Future.value([])),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );

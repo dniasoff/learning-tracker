@@ -71,6 +71,7 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/manage
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
     show pendingTutorInvitesProvider;
 
+import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Fakes ─────────────────────────────────────────────────────────────────────
@@ -82,12 +83,6 @@ class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
 
   @override
   TutoredProfileSelection? build() => _fixed;
-}
-
-/// Fixed-value [ActiveTutoredProfileSelection] notifier — no session.
-class _NullTutoredSelection extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => null;
 }
 
 // ── Shared silence overrides ─────────────────────────────────────────────────
@@ -850,7 +845,7 @@ void main() {
             // Override activeTutoredProfileSelectionProvider to null so the
             // header is shown (not in a tutored session).
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );

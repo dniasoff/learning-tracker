@@ -107,10 +107,8 @@ import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_
     show AddTrackFlow;
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart'
     show TrackManagementHubScreen;
-import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
-    show TutoredProfileSelection;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
-    show ActiveTutoredProfileSelection, activeTutoredProfileSelectionProvider;
+    show activeTutoredProfileSelectionProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
     show incomingTutorGrantsProvider, outgoingTutorGrantsProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
@@ -118,18 +116,12 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_
 import 'package:learning_tracker/features/tutoring/presentation/screens/manage_tutors_screen.dart'
     show ManageTutorsScreen;
 
+import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 const _he = Locale('he');
-
-/// No-op tutored-selection notifier — keeps the own-profile (non-tutor)
-/// context so the dashboard/gamification/manage screens render normally.
-class _NullTutoredSelection extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => null;
-}
 
 /// Asserts the subtree rooted at the (unique) [screen] widget is laid out RTL.
 void _expectRtl(WidgetTester tester, Finder screen) {
@@ -209,7 +201,7 @@ List<Override> _shellTutoringSilences(E2EHarness h) => [
   outgoingTutorGrantsProvider.overrideWith(
     (ref, childProfileId) => Future.value([]),
   ),
-  activeTutoredProfileSelectionProvider.overrideWith(_NullTutoredSelection.new),
+  activeTutoredProfileSelectionProvider.overrideWith(NullTutoredSelection.new),
 ];
 
 /// Silences the heavy dashboard + lifetime + journey providers that the

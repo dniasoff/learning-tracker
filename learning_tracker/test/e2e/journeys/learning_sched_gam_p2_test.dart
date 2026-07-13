@@ -47,11 +47,10 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
-import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart'
-    show TutoredProfileSelection;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
@@ -150,12 +149,6 @@ Override _childRedemptionBalanceOneShotOverride() {
     final profileId = ref.watch(activeProfileIdProvider);
     return Stream.fromFuture(db.pointsBalanceDao.getBalance(profileId));
   });
-}
-
-/// Fixed-value notifier — no tutored session.
-class _NullTutoredSelection extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => null;
 }
 
 /// Navigates to [route] by fire-and-forget router push + frame pumps.
@@ -345,7 +338,7 @@ void main() {
             _childRedemptionBalanceOneShotOverride(),
             _pendingRedemptionsOneShotOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -435,7 +428,7 @@ void main() {
             _childRedemptionBalanceOneShotOverride(),
             _pendingRedemptionsOneShotOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -568,7 +561,7 @@ void main() {
             _childRedemptionBalanceOneShotOverride(),
             _pendingRedemptionsOneShotOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -618,7 +611,7 @@ void main() {
             (ref) async => <RewardMilestone>[],
           ),
           activeTutoredProfileSelectionProvider.overrideWith(
-            () => _NullTutoredSelection(),
+            () => NullTutoredSelection(),
           ),
         ],
       );
@@ -660,7 +653,7 @@ void main() {
             useHebrewTermsProvider.overrideWithValue(true),
             effectiveUseHebrewTermsProvider.overrideWithValue(true),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
