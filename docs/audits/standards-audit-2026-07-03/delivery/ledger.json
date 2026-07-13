@@ -9190,13 +9190,13 @@
   {
    "id": "AUD-docs-38",
    "wave": 4,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Verify testing-guide.md's 'progress_providers.g.dart is manually authored' gotcha — the file now carries a clean, unmodified codegen header",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "BLOCKED (not merged, ledger-only): review agent lost (quota). Fix built on worktree wf_3790fe1b-00e-75 (branch worktree-wf_3790fe1b-00e-75, commit 7e969b7210ae569bcc1adb1790f95eff515b71cb, tip of this cid's build) but the review agent was lost (quota) before opus review/merge could complete. Built commit 7e969b72 ('docs(testing-guide): AUD-docs-38 - remove stale progress_providers.g.dart gotcha') targets docs/testing-guide.md, removing the stale 'progress_providers.g.dart Is Manually Authored' gotcha subsection (verified via `dart run build_runner build --build-filter=.../progress_providers.g.dart` then `git diff --exit-code` on the generated file, exit 0); none of this landed on dev. Per merge-lane payload cid w4r2c2, MODE=ledger-only: nothing merged onto dev this cid. Worktree directory /home/daniel/repos/learning-tracker/.claude/worktrees/wf_3790fe1b-00e-75 removed per payload.worktreesToRemove (`git worktree remove --force`); branch worktree-wf_3790fe1b-00e-75 retained (unmerged patch at 7e969b72 per git-cherry, not deleted) for a future resume. testsToRun for a future resume: none (docs-only change; gates cited in the built commit: make audit and flutter analyze both passed)."
   },
   {
    "id": "AUD-docs-28",
