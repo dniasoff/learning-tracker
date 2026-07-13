@@ -15,14 +15,13 @@ part 'device_registry_database.g.dart';
 extension DeviceAccountX on DeviceAccount {
   /// Typed account tier parsed from the [tier] storage key.
   ///
-  /// Falls back to [AccountTier.local] for any unrecognised value.
-  AccountTier get accountTier {
-    try {
-      return AccountTier.fromStorageKey(tier);
-    } on ArgumentError {
-      return AccountTier.local;
-    }
-  }
+  /// Falls back to [AccountTier.local] for any unrecognised value, via
+  /// [AccountTier.tryFromStorageKey] rather than a try/catch around
+  /// [AccountTier.fromStorageKey] — EH-4 forbids catching [ArgumentError]
+  /// (an [Error] subtype; Errors are programming-bug signals meant to crash
+  /// loudly, not be swallowed as control flow).
+  AccountTier get accountTier =>
+      AccountTier.tryFromStorageKey(tier) ?? AccountTier.local;
 }
 
 /// Maximum number of accounts allowed on a single device.
@@ -107,7 +106,12 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
   /// is cleared so the next launch does NOT silently auto-activate an arbitrary
   /// fallback account against a dangling pointer (D10). Covers every removal
   /// caller (remove-cloud / delete-local / delete-cloud / dedupe).
-  Future<int> removeAccount(String accountId) async {
+  ///
+  /// The delete and the pointer-clear are wrapped in a single
+  /// `transaction()` (DB-2): without it, a process death between the two
+  /// awaited writes commits the delete but never runs the clear, leaving
+  /// `lastActiveAccountId` dangling at a row that no longer exists.
+  Future<int> removeAccount(String accountId) => transaction(() async {
     final deleted = await (delete(
       deviceAccounts,
     )..where((t) => t.accountId.equals(accountId))).go();
@@ -115,7 +119,7 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
       await setLastActiveAccountId(null);
     }
     return deleted;
-  }
+  });
 
   /// Update the lastUsedAt timestamp for an account.
   Future<void> updateLastUsed(String accountId, DateTime time) =>
@@ -168,6 +172,12 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
   /// picker but remain recoverable if needed).
   ///
   /// Returns the number of rows removed.
+  ///
+  /// The whole merge runs inside a single enclosing `transaction()` (DB-2):
+  /// [removeAccount] opens its own (nested/savepoint) transaction per row,
+  /// but without an outer transaction a crash after merging some email
+  /// groups and before others would leave a partially-deduped registry —
+  /// some duplicate emails cleaned up, others not.
   Future<int> dedupeByEmail() async {
     final accounts = await getAllAccounts();
     final byEmail = <String, List<DeviceAccount>>{};
@@ -176,16 +186,18 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
       if (key.isEmpty) continue; // tolerate malformed legacy rows
       byEmail.putIfAbsent(key, () => <DeviceAccount>[]).add(a);
     }
-    var removed = 0;
-    for (final group in byEmail.values) {
-      if (group.length <= 1) continue;
-      // Keep the most-recently-used; remove the rest from the registry.
-      group.sort((a, b) => b.lastUsedAt.compareTo(a.lastUsedAt));
-      for (var i = 1; i < group.length; i++) {
-        removed += await removeAccount(group[i].accountId);
+    return transaction(() async {
+      var removed = 0;
+      for (final group in byEmail.values) {
+        if (group.length <= 1) continue;
+        // Keep the most-recently-used; remove the rest from the registry.
+        group.sort((a, b) => b.lastUsedAt.compareTo(a.lastUsedAt));
+        for (var i = 1; i < group.length; i++) {
+          removed += await removeAccount(group[i].accountId);
+        }
       }
-    }
-    return removed;
+      return removed;
+    });
   }
 
   // ───── DeviceState queries ────────────────────────────────────

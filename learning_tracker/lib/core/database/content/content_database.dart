@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/database/tables/calendar_cycles.dart';
 import 'package:learning_tracker/core/database/tables/daily_content.dart';
 import 'package:learning_tracker/core/database/tables/seed_metadata.dart';
 import 'package:learning_tracker/core/database/tables/text_cache.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 
 part 'content_database.g.dart';
 
@@ -34,10 +35,10 @@ part 'content_database.g.dart';
   ],
 )
 class ContentDatabase extends _$ContentDatabase {
-  ContentDatabase(super.e);
+  ContentDatabase(super.e, {AppLogger? logger}) : _logger = logger;
 
   /// Open from a prepared seed file in read-only mode.
-  factory ContentDatabase.openReadOnly(File file) {
+  factory ContentDatabase.openReadOnly(File file, {AppLogger? logger}) {
     return ContentDatabase(
       NativeDatabase(
         file,
@@ -45,8 +46,13 @@ class ContentDatabase extends _$ContentDatabase {
           db.execute('PRAGMA query_only = ON');
         },
       ),
+      logger: logger,
     );
   }
+
+  /// Used to log migration-step failures (AUD-core-database-16, EH-3). Null
+  /// in most tests, which don't exercise migrations directly.
+  final AppLogger? _logger;
 
   /// The schema version the running code expects. Exposed as a const so
   /// [SeedManager] can compare against the on-device DB without instantiating
@@ -81,14 +87,30 @@ class ContentDatabase extends _$ContentDatabase {
               'display_name TEXT NOT NULL DEFAULT \'\', '
               'PRIMARY KEY (program_key, date_key))',
             );
-          } catch (_) {
-            // no-op: CREATE IF NOT EXISTS is defensive; failure here is non-fatal
+          } on SqliteException catch (e, st) {
+            // CREATE IF NOT EXISTS is defensive; failure here is non-fatal
+            // (e.g. upgrading from v2, where the table already exists) —
+            // but still logged so a real failure (disk full, corrupt file)
+            // leaves a diagnostic trail instead of proceeding silently on a
+            // half-migrated schema.
+            _logger?.error(
+              event: 'content_db_migration_create_calendar_cycles_failed',
+              exception: e,
+              stackTrace: st,
+            );
           }
           for (final table in ['learning_programs', 'test_dates']) {
             try {
               await customStatement('DROP TABLE IF EXISTS $table');
-            } catch (_) {
-              // no-op: DROP IF EXISTS is defensive; table may already be absent
+            } on SqliteException catch (e, st) {
+              // DROP IF EXISTS is defensive; table may already be absent —
+              // but still logged, see the create-table catch above.
+              _logger?.error(
+                event: 'content_db_migration_drop_table_failed',
+                fields: {'table': table},
+                exception: e,
+                stackTrace: st,
+              );
             }
           }
         }
@@ -101,8 +123,16 @@ class ContentDatabase extends _$ContentDatabase {
               'ALTER TABLE calendar_cycles '
               "ADD COLUMN sefaria_ref_he TEXT NOT NULL DEFAULT ''",
             );
-          } catch (_) {
-            // no-op: ALTER TABLE fails if column already exists (prior upgrade path); non-fatal
+          } on SqliteException catch (e, st) {
+            // ALTER TABLE fails if the column already exists (prior upgrade
+            // path); non-fatal, but still logged — see the create-table
+            // catch above.
+            _logger?.error(
+              event: 'content_db_migration_add_column_failed',
+              fields: {'column': 'sefaria_ref_he'},
+              exception: e,
+              stackTrace: st,
+            );
           }
         }
         if (from < 5) {
@@ -118,8 +148,14 @@ class ContentDatabase extends _$ContentDatabase {
               "english_text TEXT NOT NULL DEFAULT '', "
               "hebrew_text TEXT NOT NULL DEFAULT '')",
             );
-          } catch (_) {
-            // no-op: CREATE IF NOT EXISTS is defensive; failure here is non-fatal
+          } on SqliteException catch (e, st) {
+            // CREATE IF NOT EXISTS is defensive; failure here is non-fatal —
+            // see the create-table catch above.
+            _logger?.error(
+              event: 'content_db_migration_create_daily_content_failed',
+              exception: e,
+              stackTrace: st,
+            );
           }
         }
       },

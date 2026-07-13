@@ -70,7 +70,10 @@ Future<String> contentDbPath(Ref ref) async {
 @Riverpod(keepAlive: true)
 Future<ContentDatabase> contentDatabase(Ref ref) async {
   final path = await ref.watch(contentDbPathProvider.future);
-  final database = ContentDatabase.openReadOnly(File(path));
+  final database = ContentDatabase.openReadOnly(
+    File(path),
+    logger: AppLogger.instance,
+  );
   ref.onDispose(database.close);
   return database;
 }

@@ -88,6 +88,23 @@ void main() {
       });
     });
 
+    group(
+      'tryFromStorageKey (AUD-core-database-16, EH-4 non-throwing accessor)',
+      () {
+        test('parses "cloudBorn"', () {
+          expect(AccountTier.tryFromStorageKey('cloudBorn'), AccountTier.cloud);
+        });
+
+        test('parses "localBorn"', () {
+          expect(AccountTier.tryFromStorageKey('localBorn'), AccountTier.local);
+        });
+
+        test('returns null (does not throw) for an unknown key', () {
+          expect(AccountTier.tryFromStorageKey('unknown'), isNull);
+        });
+      },
+    );
+
     group('accessors', () {
       test('isCloud true for cloud', () {
         expect(AccountTier.cloud.isCloud, isTrue);

@@ -333,8 +333,15 @@ class SeedManager {
     if (dbFile.existsSync()) {
       try {
         await dbFile.delete();
-      } catch (_) {
-        // Best effort
+      } on FileSystemException catch (e) {
+        // Best effort: a failure here (e.g. the file is locked) only means
+        // the stale new file lingers alongside the restored backup, which
+        // is recoverable — but still logged so it isn't invisible, matching
+        // every other catch in this file.
+        _logger?.error(
+          event: 'seed_manager_rollback_delete_new_file_failed',
+          exception: e,
+        );
       }
     }
 

@@ -274,7 +274,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 42 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 43 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -604,7 +604,7 @@ audit: lint-rules-test ## Run all 42 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/ag5_mirroring_check.$$$$.log; \
 	fi; \
-	echo "30/40 — DB-2: no multi-write service method in features/onboarding/domain/services without an enclosing transaction() (AUD-onboarding-06)"; \
+	echo "30/40 — DB-2: no multi-write method in features/onboarding/domain/services or core/database/registry without an enclosing transaction() (AUD-onboarding-06, AUD-core-database-08)"; \
 	if ! dart run tool/check_db_transactions.dart > /tmp/db_transactions_check.$$$$.log 2>&1; then \
 	  cat /tmp/db_transactions_check.$$$$.log; \
 	  rm -f /tmp/db_transactions_check.$$$$.log; \
@@ -647,7 +647,7 @@ audit: lint-rules-test ## Run all 42 enforcement greps (NFR19) — exits non-zer
 	  grep -rnE "as (int|num|double|bool)\?" lib/core/sync/codec/*.dart; \
 	  FAIL=1; \
 	fi; \
-	echo "35/40 — EH-3: no log-less catch/catchError in the scoped sync-write-facade file (AUD-sync-03)"; \
+	echo "35/40 — EH-3: no log-less catch/catchError in the scoped sync-write-facade / content-db / seed-manager / device-registry files (AUD-sync-03, AUD-core-database-16)"; \
 	if ! dart run tool/check_eh3_log_less_catch.dart > /tmp/eh3_log_less_catch_check.$$$$.log 2>&1; then \
 	  cat /tmp/eh3_log_less_catch_check.$$$$.log; \
 	  rm -f /tmp/eh3_log_less_catch_check.$$$$.log; \
@@ -709,7 +709,7 @@ audit: lint-rules-test ## Run all 42 enforcement greps (NFR19) — exits non-zer
 	    FAIL=1; \
 	  fi; \
 	done; \
-	echo "42/42 — EH-4: catch clauses in content_browsing's search / repository / text-display / cloud-content-service paths are typed (AUD-content_browsing-09)"; \
+	echo "42/43 — EH-4: catch clauses in content_browsing's search / repository / text-display / cloud-content-service paths are typed (AUD-content_browsing-09)"; \
 	if ! dart run tool/check_eh4_content_browsing_catches.dart > /tmp/eh4_content_browsing_catches_check.$$$$.log 2>&1; then \
 	  cat /tmp/eh4_content_browsing_catches_check.$$$$.log; \
 	  rm -f /tmp/eh4_content_browsing_catches_check.$$$$.log; \
@@ -717,9 +717,17 @@ audit: lint-rules-test ## Run all 42 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/eh4_content_browsing_catches_check.$$$$.log; \
 	fi; \
+	echo "43/43 — EH-4: DeviceAccountX.accountTier never catches an Error subtype (AUD-core-database-16, avoid_catching_errors)"; \
+	if ! dart run tool/check_eh4_avoid_catching_errors.dart > /tmp/eh4_avoid_catching_errors_check.$$$$.log 2>&1; then \
+	  cat /tmp/eh4_avoid_catching_errors_check.$$$$.log; \
+	  rm -f /tmp/eh4_avoid_catching_errors_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/eh4_avoid_catching_errors_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 42 greps clean ==="; \
+	  echo "=== audit PASSED — all 43 greps clean ==="; \
 	fi

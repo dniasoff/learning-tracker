@@ -21,6 +21,14 @@
 /// wide sweep — the same caveat the newer `no_log_less_catch` custom_lint
 /// rule design notes) and is intentionally NOT attempted here.
 ///
+/// AUD-core-database-16 adds its own 3 named files: `content_database.dart`
+/// (4 migration-`catch (_)` sites) and `seed_manager.dart` (`_rollback`'s
+/// `catch (_) { // Best effort }`) both needed a typed clause + an
+/// `AppLogger` call; `device_registry_database.dart` is included too so the
+/// checker keeps proving `DeviceAccountX.accountTier`'s catch — removed
+/// entirely by that same fix, see EH-4's `avoid_catching_errors` checker —
+/// never regresses back to a log-less swallow.
+///
 /// Usage:
 ///   dart run tool/check_eh3_log_less_catch.dart
 ///
@@ -35,7 +43,12 @@ import 'dart:io';
 /// underlying scan logic silently) as later findings burn down the same
 /// pattern elsewhere — see the EH-4 check 27 precedent in
 /// docs/coding-standards.md for the established shape of this ratchet.
-const _scopedFiles = ['lib/features/sync/data/outbox_sync_write_facade.dart'];
+const _scopedFiles = [
+  'lib/features/sync/data/outbox_sync_write_facade.dart',
+  'lib/core/database/content/content_database.dart',
+  'lib/core/database/seed_manager.dart',
+  'lib/core/database/registry/device_registry_database.dart',
+];
 
 /// Any of these substrings appearing in a catch/catchError body counts as
 /// "logs the error" for this checker's purposes.
