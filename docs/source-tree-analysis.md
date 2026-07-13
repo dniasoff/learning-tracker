@@ -36,8 +36,8 @@ learning_tracker/
 │   │   ├── enums/                # CurriculumId, TrackType, UserMode
 │   │   ├── exceptions/           # DuplicateCompletionException
 │   │   ├── logging/              # AppLogger with sensitive data filtering
-│   │   ├── navigation/           # auto_route config (40+ routes, 7 guards)
-│   │   │   └── guards/           # Auth, Profile, Restore, ChildMode, ParentPin, TutorPin
+│   │   ├── navigation/           # auto_route config (40+ routes, 5 guards)
+│   │   │   └── guards/           # Auth, Profile, Restore, ChildMode, Pin (parameterized by PinScope)
 │   │   ├── network/              # ConnectivityService, DioProvider, Sefaria client
 │   │   ├── preferences/          # TextDisplayPreferences
 │   │   ├── providers/            # Core Riverpod providers (database, firebase, network)
@@ -127,7 +127,7 @@ The heart of the app. This feature manages completion recording with strict appe
 
 The smart scheduling engine generates daily learning assignments. It handles multiple scheduling strategies (sequential, cyclical, date-anchored), rest day logic, Shabbos/Yom Tov awareness, and catch-up scheduling. The engine is tightly integrated with the learning and progress features through core providers.
 
-### `lib/core/navigation/guards/` (7 guards)
+### `lib/core/navigation/guards/` (5 guards)
 
 Route guards enforce the app's access control model:
 
@@ -135,9 +135,7 @@ Route guards enforce the app's access control model:
 - **ProfileGuard** - Requires an active profile selection
 - **RestoreGuard** - Handles data restoration flow
 - **ChildModeGuard** - Restricts navigation in child mode
-- **ParentPinGuard** - Requires parent PIN for sensitive screens
-- **TutorPinGuard** - Requires tutor PIN for tutor access
-- **PinGuard** - Shared base guard for PIN verification logic
+- **PinGuard** - PIN challenge parameterized by `PinScope` — `PinScope.parent(profileId)` for parent-mode screens, `PinScope.tutor(profileId)` for tutor-mode screens. A single guard class parameterized by scope, replacing the earlier per-mode guard classes.
 
 ### `test/story_acceptance/` (15 files, 401 tests)
 

@@ -829,7 +829,7 @@ Each scenario follows this structure:
 | **Gamification** | 09 - Gamification & Rewards | Parent mode configures the reward catalog (FR61) and point values (FR62) that drive the gamification system. |
 | **Completions** | 04 - Learning & Completions | Parent analytics (FR64-65) are derived from completion data. Point values configured here determine points per completion. |
 | **Multi-Track** | 05 - Multi-Track Management | Parents add/remove School and Tutor tracks (FR63) from parent mode. |
-| **Tutor Mode** | 11 - Tutor Mode | Tutor PIN is stored separately from parent PIN (FR98). Tutor mode is read-only (FR100) while parent mode has full write access. |
+| **Tutor Mode** | 11 - Tutor Mode | Tutor PIN is stored separately from parent PIN (FR98). **Superseded 2026-07-13:** tutor access is no longer strictly read-only — the parent can grant a tutor write permissions (goals, stages, rewards, study days, points, bulk-prior completions) under the grant-based model; only live-forward completion marking is permanently blocked, and parent mode retains unrestricted write access. See [`11-tutor-mode.md`](11-tutor-mode.md). |
 | **Onboarding** | 03 - Onboarding | Parents configure initial mystery rewards during child account onboarding (FR80). PIN may be set during onboarding. |
 | **Settings** | 13 - Settings | Child/adult mode toggle (FR81) determines whether parent mode is available (FR67). |
 | **Sync** | 14 - Sync & Multi-Device | PIN is device-local only and never synced (FR99). Reward catalog and point configuration DO sync for cloud-born accounts. |
