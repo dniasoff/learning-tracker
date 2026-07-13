@@ -7891,13 +7891,18 @@
   {
    "id": "AUD-t-auth-04",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "auth_integration_test.dart is fully subsumed by auth_repository_impl_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "423e2d2a2294f20dfdbd936d6e84853ca0adad94"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-auth-04 AC1 OK: old file deleted; sign-in-then-sign-out scenario folded into onAuthStateChanged L410-468; all 5 old asserts preserved",
+    "AUD-t-auth-04 AC2 OK: flutter test sibling -> 34 tests passed, folded scenario at +21"
+   ],
+   "notes": "Re-verified: no drift since 4018a91c. Both files mocked same two gateways, no other collaborator. One scenario (sign-in-then-sign-out on one subscription) was uncovered by sibling's single-emission tests; folded it in per recommendation's fallback, then deleted the redundant file."
   },
   {
    "id": "AUD-t-auth-03",
