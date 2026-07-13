@@ -212,22 +212,22 @@ grep -rl 'Provider' lib/core/providers/
 
 ### How to find a DAO
 
-All DAOs live in `lib/core/database/daos/`. Each DAO file corresponds to a table and follows the naming convention `<entity>_dao.dart` (e.g., `completion_dao.dart`, `streak_dao.dart`). The generated query code is in the matching `.g.dart` file.
+All DAOs live in `lib/core/database/daos/`. Each DAO file corresponds to a table (or a small cluster of related tables/views) and follows the naming convention `<entity>_dao.dart` (e.g., `completion_dao.dart`, `streak_event_dao.dart`). The generated query code is in the matching `.g.dart` file. (`dao_invariant_error.dart` also lives in this directory but is a shared error type, not a DAO — it is excluded from the count below.)
 
-The 20 User DB DAOs are:
+The 24 User DB DAOs are — AUD-docs-16, corrected 2026-07-13, sourced from the `daos: [...]` list in `lib/core/database/user/user_database.dart`:
 
-- `active_curriculum_dao`, `bookmark_dao`, `completion_dao`, `content_download_status_dao`
-- `curriculum_scope_dao`, `goal_dao`, `learning_ledger_dao`, `learning_order_dao`
-- `learning_program_dao`, `point_config_dao`, `profile_dao`, `profile_program_dao`
-- `reward_dao`, `stage_dao`, `streak_dao`, `sync_queue_dao`
-- `test_date_dao`, `test_score_dao`, `text_cache_dao`, `text_download_status_dao`
-- `track_dao`, `user_profile_dao`
+- `active_curriculum_dao`, `bookmark_dao`, `completion_dao`, `completion_event_dao`
+- `curriculum_scope_dao`, `daily_plan_dao`, `goal_dao`, `learning_ledger_dao`
+- `learning_order_dao`, `outbox_dao`, `point_config_dao`, `points_balance_dao`
+- `prior_completion_import_dao`, `profile_dao`, `profile_program_dao`, `sacred_window_dao`
+- `stage_dao`, `streak_event_dao`, `study_day_config_dao`, `sync_kv_dao`
+- `text_download_status_dao`, `track_dao`, `track_learning_order_dao`, `user_profile_dao`
 
 ### How to find a database table
 
-Table definitions live in `lib/core/database/tables/`. Each file defines a single Drift table class. The naming convention is the plural entity name (e.g., `completions.dart`, `profiles.dart`, `streaks.dart`).
+Table definitions live in `lib/core/database/tables/`. Each file defines a single Drift table class. The naming convention is the plural entity name (e.g., `completion_events.dart`, `learner_profiles.dart`, `streak_events.dart`).
 
-All tables are registered in `lib/core/database/app_database.dart` via the `@DriftDatabase(tables: [...])` annotation.
+All tables are registered in `lib/core/database/user/user_database.dart` via the `@DriftDatabase(tables: [...])` annotation — AUD-docs-16, corrected 2026-07-13; there is no `app_database.dart` (see the Key File Locations table above).
 
 ### How to find a route or guard
 
