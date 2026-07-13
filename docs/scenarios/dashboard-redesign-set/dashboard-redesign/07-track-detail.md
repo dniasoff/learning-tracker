@@ -1,3 +1,5 @@
+> ⚠️ **Status — 2026-04-19:** Epic 20 (DNI-210) was canceled 2026-04-15 (all 12 child stories). The per-track data infrastructure partially landed via Epic 23 and Epic 21, but the dashboard UI redesign specified in this set is **not shipped**. Use this scenario set as a design reference if Epic 20 is re-scoped.
+
 # 07 — Track Detail Screen
 
 **Parent scenario:** [00-scenario-overview.md](00-scenario-overview.md)
