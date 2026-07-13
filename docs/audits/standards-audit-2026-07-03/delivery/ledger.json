@@ -4569,13 +4569,17 @@
   {
    "id": "AUD-gamification-04",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Add an accessibility label to RewardConfigHeader's icon-only back button",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "2ec18b3fde15aef5cae6cd2ab8f5bc9e2af2c24e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-gamification-04 AC1 OK: EN getSemantics(backButton).label=='Back' + find.bySemanticsLabel; HE bySemanticsLabel; green 2/2; red-first confirmed fails unfixed"
+   ],
+   "notes": "Evidence confirmed. Red-first test ran RED (empty label, HE missing). Fixed via tooltip + Icon(semanticLabel:) - probe showed tooltip: alone only sets .tooltip not .label on this SDK, so semanticLabel was needed. Test now GREEN 2/2."
   },
   {
    "id": "AUD-learning-05",
