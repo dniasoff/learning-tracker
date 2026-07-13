@@ -5401,13 +5401,26 @@
     {
       "id": "AUD-docs-11",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Flag docs/planning/sync-architecture-plan.md Part A as stale \u2014 its outbox-drain headline finding is now false",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "0c1ebc7fa8023470c3be2cdf0d846e5bf467d786"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-11 AC1 (date branch) OK: top callout 'Part A verified current as of 2026-05-21 only' + '## Findings \u2014 remediation status (checked 2026-07-13)' header",
+        "AUD-docs-11 AC1 (markers branch) OK: all 15 findings carry explicit RESOLVED/OPEN markers; net '12 of 15 resolved, 3 open (#8,#11,#13)'",
+        "AUD-docs-11 #1 OK: grep '\\.drain(' lib/ hits sync_orchestrator.dart:401 + sync_orchestrator_providers.dart:234 outside outbox_processor.dart; RESOLVED correct",
+        "AUD-docs-11 #6 OK: merge_router_provider.dart:107 'onRewardSettings: rewardSettingsMergeDelegate' (not null); RESOLVED correct",
+        "AUD-docs-11 #7 OK: firestore_gateway.dart:212-407 bounded '.limit' ordered snapshots + isAtLimit signal; RESOLVED correct",
+        "AUD-docs-11 #10 OK: device_restore_service.dart:186-188 comment confirms duplicate fetchAll('curriculum_tracks') removed; RESOLVED correct",
+        "AUD-docs-11 #12 OK: sync_orchestrator.dart:288-296 derives pending/degraded/offline from outbox depth (\u00a7F Phase 4); RESOLVED correct",
+        "AUD-docs-11 #13 OK: outbox_dao.dart:46-59 markAttempted still separate select-then-update (non-atomic); markAttemptedBulk batch-only; OPEN correct",
+        "AUD-docs-11 anchor OK: callout link #findings--remediation-status-checked-2026-07-13 resolves to added H2",
+        "AUD-docs-11 scope OK: range diff touches only docs/planning/sync-architecture-plan.md (+37/-0); no code/tests/arb/rules; no TQ-7"
+      ],
+      "notes": "Re-verified: grep '\\.drain(' lib/ now hits sync_orchestrator.dart:401 + providers.dart:234 - 'zero drain callers' claim is false, CONFIRMED stale. Fixed: added staleness callout + remediation-status table marking all 15 ranked findings RESOLVED/OPEN vs current code (12/15 resolved; #8/#11/#13 open)."
     },
     {
       "id": "AUD-sync-06",
