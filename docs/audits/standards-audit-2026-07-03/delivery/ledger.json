@@ -1437,13 +1437,19 @@
   {
    "id": "AUD-t-account-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Point signup_screen_an10_test.dart at the real SignupScreen instead of a decoupled replica widget",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "21297d51ee03c0c183e1d2827d0eef095f60ba4e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-account-01 AC1 OK: test imports signup_screen.dart and pumps Scaffold(body: SignupScreen()) via _buildRealSignupScreen(); 37/37 green",
+    "AUD-t-account-01 AC2a OK: removed real Center() (signup_screen.dart:554) -> card left=16.0 vs expectedLeft=190.0, centering assert line 146 FAILED, reverted clean",
+    "AUD-t-account-01 AC2b OK: maxWidth 430->500 (line 556) -> _card430Finder matched 0, findsOneWidget FAILED, reverted clean"
+   ],
+   "notes": "Verified accurate, no drift. Rewrote test to pump real SignupScreen instead of deleted replica widgets; asserts getRect() on real ConstrainedBox(maxWidth:430). Red-first: broke Center->Align and maxWidth 430->800 separately, both failed, then reverted cleanly."
   },
   {
    "id": "AUD-account-11",
