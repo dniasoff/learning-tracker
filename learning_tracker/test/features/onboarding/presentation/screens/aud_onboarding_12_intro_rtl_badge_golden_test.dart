@@ -54,7 +54,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../golden/store_screenshots_test.dart' show loadFonts;
+import '../../../../helpers/golden_font_loader.dart' show loadFonts;
 
 class _MockStackRouter extends Mock implements StackRouter {}
 

@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -15,46 +12,7 @@ import 'package:learning_tracker/features/profiles/presentation/widgets/profile_
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Load real fonts so text renders in golden screenshots instead of Ahem boxes.
-Future<void> loadFonts() async {
-  const fontDir =
-      '/home/daniel/fvm/versions/stable/bin/cache/artifacts/material_fonts';
-
-  // Load Roboto variants (Flutter's default Material font)
-  final robotoVariants = {
-    'Roboto': [
-      'Roboto-Regular.ttf',
-      'Roboto-Medium.ttf',
-      'Roboto-Bold.ttf',
-      'Roboto-Light.ttf',
-      'Roboto-Thin.ttf',
-      'Roboto-Black.ttf',
-      'Roboto-Italic.ttf',
-    ],
-  };
-
-  for (final entry in robotoVariants.entries) {
-    final loader = FontLoader(entry.key);
-    for (final file in entry.value) {
-      final path = '$fontDir/$file';
-      if (File(path).existsSync()) {
-        final bytes = File(path).readAsBytesSync();
-        loader.addFont(Future.value(ByteData.view(bytes.buffer)));
-      }
-    }
-    await loader.load();
-  }
-
-  // Load MaterialIcons
-  // ignore: prefer_const_declarations
-  final iconsPath = '$fontDir/MaterialIcons-Regular.otf';
-  if (File(iconsPath).existsSync()) {
-    final loader = FontLoader('MaterialIcons');
-    final bytes = File(iconsPath).readAsBytesSync();
-    loader.addFont(Future.value(ByteData.view(bytes.buffer)));
-    await loader.load();
-  }
-}
+import '../helpers/golden_font_loader.dart';
 
 /// Wraps content in a phone-sized Material app with the real theme.
 Widget phoneApp({required Widget child}) {
