@@ -1,64 +1,64 @@
-/// Regression test for PP-18 — No clear (X) affordance in the content-search field.
+/// Regression test for PP-18 — No clear (X) affordance in the content-search
+/// field.
 ///
-/// ROOT CAUSE: `ContentSearchScreen`'s `TextField` uses `InputBorder.none` and
-/// defines no `suffixIcon` / clear button. Once text is entered, the only way
-/// to erase it is to backspace through every character.
+/// ROOT CAUSE: `ContentSearchScreen`'s `TextField` used `InputBorder.none`
+/// and defined no `suffixIcon` / clear button. Once text was entered, the
+/// only way to erase it was to backspace through every character.
 ///
-/// FIX: Add a suffix `IconButton` with `Icons.clear` that calls
-/// `_searchController.clear()` and resets the query, and show it only when the
-/// field is non-empty.
+/// FIX: `ContentSearchScreen` renders a suffix `IconButton` with
+/// `Icons.clear` that calls `_searchController.clear()` and resets the
+/// query, shown only when the field is non-empty (see the "PP-18 fix"
+/// comment on `suffixIcon` in content_search_screen.dart).
 ///
-/// This test directly verifies that the `InputDecoration.suffixIcon` is wired:
-/// when the controller has text, the clear icon must be present; when the
-/// controller is empty, no clear icon appears.
+/// AUD-t-content_browsing-01: this suite used to pump a hand-rolled
+/// `TextField` clone that only "mirrored" the real screen's decoration
+/// logic instead of the screen itself (TQ-8 — tautological test), so it
+/// stayed green even if the real `suffixIcon` wiring broke. It now pumps
+/// the real `ContentSearchScreen` and drives its real search field, so a
+/// regression in the actual wiring fails this test.
 @Tags(['unit', 'content_browsing', 'search', 'pp18'])
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/screens/content_search_screen.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  group('PP-18 — content search TextField clear icon', () {
-    /// Helper: builds a minimal TextField that mirrors the ContentSearchScreen
-    /// decoration logic (suffixIcon shows iff controller.text is non-empty).
-    Widget buildSearchField({required TextEditingController controller}) {
-      return StatefulBuilder(
-        builder: (context, setState) => MaterialApp(
-          home: Scaffold(
-            appBar: AppBar(
-              title: TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  hintText: 'Search…',
-                  border: InputBorder.none,
-                  // PP-18 fix: the suffix icon must exist when text is present.
-                  suffixIcon: controller.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          tooltip: 'Clear',
-                          onPressed: () {
-                            controller.clear();
-                            setState(() {});
-                          },
-                        )
-                      : null,
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-            body: const SizedBox.shrink(),
-          ),
-        ),
-      );
-    }
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
 
-    testWidgets('PP-18 RED: clear icon is absent when search field is empty', (
+  /// Pumps the real [ContentSearchScreen] — not a hand-rolled clone — so
+  /// this suite exercises the actual `suffixIcon` wiring it claims to
+  /// protect (AUD-t-content_browsing-01).
+  Future<void> pumpSearchScreen(WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          // Avoid pulling in a real UserDatabase via the chazara-badge gate.
+          anyActiveTrackHasChazaraProvider.overrideWith((ref) => false),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ContentSearchScreen(curriculumId: 'mishnayos'),
+        ),
+      ),
+    );
+    await tester.pump();
+  }
+
+  group('PP-18 — content search TextField clear icon', () {
+    testWidgets('clear icon is absent when search field is empty', (
       tester,
     ) async {
-      final controller = TextEditingController();
-      await tester.pumpWidget(buildSearchField(controller: controller));
+      await pumpSearchScreen(tester);
 
-      // With empty field, no clear icon.
+      // With an empty field, no clear icon.
       expect(
         find.byIcon(Icons.clear),
         findsNothing,
@@ -67,17 +67,16 @@ void main() {
       );
     });
 
-    testWidgets('PP-18 GREEN: clear icon appears once text is entered', (
-      tester,
-    ) async {
-      final controller = TextEditingController();
-      await tester.pumpWidget(buildSearchField(controller: controller));
+    testWidgets('clear icon appears once text is entered', (tester) async {
+      await pumpSearchScreen(tester);
 
       // Enter some text.
       await tester.enterText(find.byType(TextField), 'shabbos');
-      await tester.pump();
+      // ContentSearchScreen debounces onChanged by 300ms before rebuilding
+      // (see _onSearchChanged in content_search_screen.dart).
+      await tester.pump(const Duration(milliseconds: 300));
 
-      // With non-empty field, clear icon must appear.
+      // With a non-empty field, the clear icon must appear.
       expect(
         find.byIcon(Icons.clear),
         findsOneWidget,
@@ -87,24 +86,25 @@ void main() {
       );
     });
 
-    testWidgets('PP-18 GREEN: tapping clear icon empties the field', (
+    testWidgets('tapping clear icon empties the field and hides the icon', (
       tester,
     ) async {
-      final controller = TextEditingController();
-      await tester.pumpWidget(buildSearchField(controller: controller));
+      await pumpSearchScreen(tester);
 
-      // Enter text and pump.
+      // Enter text and let the debounce settle.
       await tester.enterText(find.byType(TextField), 'mishnayot');
-      await tester.pump();
-
+      await tester.pump(const Duration(milliseconds: 300));
       expect(find.byIcon(Icons.clear), findsOneWidget);
 
       // Tap the clear button.
       await tester.tap(find.byIcon(Icons.clear));
-      await tester.pump();
+      // The clear button's onPressed also routes through _onSearchChanged,
+      // which is debounced the same 300ms before the screen rebuilds.
+      await tester.pump(const Duration(milliseconds: 300));
 
-      // Field must now be empty and clear icon gone.
-      expect(controller.text, isEmpty);
+      // The field must now be empty and the clear icon gone.
+      final searchField = tester.widget<TextField>(find.byType(TextField));
+      expect(searchField.controller!.text, isEmpty);
       expect(
         find.byIcon(Icons.clear),
         findsNothing,
