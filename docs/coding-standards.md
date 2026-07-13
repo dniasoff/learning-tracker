@@ -694,7 +694,7 @@ Content tables (read-only, shared across profiles) are exempt. The invariant app
 
 ## Lint Baseline
 
-The analyzer baseline is a **deliberately hand-rolled explicit list** (83 rules in `analysis_options.yaml`) plus `strict-casts` / `strict-inference` / `strict-raw-types` — not a `flutter_lints`/`very_good_analysis` include. Keep it explicit: every enabled rule is a decision, not an inheritance.
+The analyzer baseline is a **deliberately hand-rolled explicit list** (79 rules in `analysis_options.yaml`) plus `strict-casts` / `strict-inference` / `strict-raw-types` — not a `flutter_lints`/`very_good_analysis` include. Keep it explicit: every enabled rule is a decision, not an inheritance.
 
 Adopted additions (each closes a gap named by the rules above) — **[Pending]** until enabled:
 
