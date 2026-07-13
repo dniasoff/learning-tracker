@@ -4313,13 +4313,20 @@
     {
       "id": "AUD-docs-19",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Rewrite docs/planning/testing-quick-reference.md \u2014 it teaches the banned mockito pattern and cites nonexistent files",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "cb8694a3d206b8e27df5d70d1a18295c17310e73"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-19 AC1 OK: grep 'package:mockito' on the doc = 0; doc is a redirect stub, 0 code fences; 2 'mockito' hits are prose explaining supersession (L7,L9), not code",
+        "AUD-docs-19 AC2 OK: 0 '**File:**' lines remain (grep none); recommendation allowed option-2 pointer; 4 cross-ref docs all exist",
+        "AUD-docs-19 support: index.md link annotated 'superseded', handbook link removed (in-scope per finding why); no dangling refs remain",
+        "AUD-docs-19 support: stub claim accurate - 0 live package:mockito imports, 205 mocktail test files in learning_tracker/test/"
+      ],
+      "notes": "Verified live: 9 mockito imports, 9/11 dead File: paths. Replaced body with pointer to current testing-guide.md (option 2). Both ACs grep-verified: 0 mockito, 0 File: lines. Fixed index.md/handbook cross-refs too."
     },
     {
       "id": "AUD-app-06",
