@@ -9073,13 +9073,17 @@
   {
    "id": "AUD-docs-32",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Mark hebrew-terms.md §11 item 5 as fixed — the make audit grep already targets the right symbol",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "e56d5b630a1a2a72b8a1d306331034accfc6eb56"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-docs-32 AC1 OK: hebrew-terms.md:154 item5 now 'FIXED (prior wave)' like item4:150; Makefile:337 check7 greps real useHebrewTermsProvider, phantom symbol 0 hits"
+   ],
+   "notes": "Confirmed Makefile check 7/15 greps useHebrewTermsProvider (real symbol), zero hits for hebrewTermsScriptProvider in lib/. Fix landed in 709cb5fc, same commit as item 4 (B11-4/5), so labeled item 5 '— FIXED (prior wave)' matching item 4's label. AC met."
   },
   {
    "id": "AUD-docs-29",
