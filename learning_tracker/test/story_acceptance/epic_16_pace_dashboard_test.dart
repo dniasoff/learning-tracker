@@ -16,7 +16,7 @@ import 'package:learning_tracker/features/scheduler/domain/services/cross_curric
 import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 
 /// Inline copy of milestone logic to avoid importing Flutter-dependent widget.

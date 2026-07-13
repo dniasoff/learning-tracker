@@ -15,7 +15,7 @@ import 'package:test/test.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz_lib;
 
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 
 class MockNotificationGateway extends Mock implements NotificationGateway {}

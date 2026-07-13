@@ -9,8 +9,8 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
-import '../../helpers/drift_memory.dart' show seedCompletion, seedProfile;
-import '../../helpers/test_database.dart' hide seedProfile;
+import '../../helpers/drift_memory.dart';
+import '../../helpers/test_database.dart';
 
 void main() {
   group('Schema v1 smoke tests', () {

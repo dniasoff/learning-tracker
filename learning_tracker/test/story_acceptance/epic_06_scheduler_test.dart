@@ -19,7 +19,7 @@ import 'package:learning_tracker/features/scheduler/domain/services/pace_calcula
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 
 class _InMemoryContentRepo implements SchedulerContentRepository {

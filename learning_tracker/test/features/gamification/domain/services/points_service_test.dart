@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:test/test.dart';
 
-import '../../../../helpers/drift_memory.dart' show seedCompletion;
+import '../../../../helpers/drift_memory.dart';
 import '../../../../helpers/test_database.dart';
 
 // Sentinel date used by bulk-prior / lifetime-only imports.

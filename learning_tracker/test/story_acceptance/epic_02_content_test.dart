@@ -30,7 +30,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 
 import '../fixtures/content_fixtures.dart';
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 import '../mocks/mock_repositories.dart';
 

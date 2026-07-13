@@ -14,7 +14,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/services/streak_service.dart';
 import 'package:test/test.dart';
 
-import '../../../../helpers/drift_memory.dart' show seedCompletion;
+import '../../../../helpers/drift_memory.dart';
 import '../../../../helpers/test_database.dart'
     show createTestDatabase, seedProfileZero;
 

@@ -10,7 +10,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/schedule_confi
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 
-import '../../../../helpers/drift_memory.dart' show seedCompletion;
+import '../../../../helpers/drift_memory.dart';
 import '../../../../helpers/test_database.dart';
 
 /// Fake content repository that returns in-memory items (no asset loading).

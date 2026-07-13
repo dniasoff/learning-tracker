@@ -785,16 +785,24 @@ audit: lint-rules-test ## Run all 50 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/gen_feature_graph_check.$$$$.log; \
 	fi; \
-	echo "50/50 — AG-8 doc-lint: no leaked tool-call framing artifacts (</content>, </invoke>) in committed docs/ (AUD-docs-36)"; \
+	echo "50/51 — AG-8 doc-lint: no leaked tool-call framing artifacts (</content>, </invoke>) in committed docs/ (AUD-docs-36)"; \
 	if grep -rnE "^</(content|invoke)>$$" ../docs/ | grep -q .; then \
 	  echo "  A stray XML-ish tool-call closing tag was committed verbatim — an unstripped"; \
 	  echo "  Write/Edit tool-call content boundary leaked into a tracked doc; delete the line(s):"; \
 	  grep -rnE "^</(content|invoke)>$$" ../docs/; \
 	  FAIL=1; \
 	fi; \
+	echo "51/51 — TQ-6: no duplicate public top-level function defined in more than one file under test/helpers/ (AUD-t-cross-12)"; \
+	if ! dart run tool/check_test_helpers_duplicate_functions.dart > /tmp/test_helpers_dup_check.$$$$.log 2>&1; then \
+	  cat /tmp/test_helpers_dup_check.$$$$.log; \
+	  rm -f /tmp/test_helpers_dup_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/test_helpers_dup_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 50 greps clean ==="; \
+	  echo "=== audit PASSED — all 51 greps clean ==="; \
 	fi

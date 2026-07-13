@@ -14,7 +14,7 @@ import 'package:learning_tracker/features/scheduler/domain/services/daily_task_g
 import 'package:learning_tracker/features/scheduler/domain/services/scheduler_engine.dart';
 import 'package:test/test.dart';
 
-import '../../../../helpers/drift_memory.dart' show seedCompletion;
+import '../../../../helpers/drift_memory.dart';
 import '../../../../helpers/test_database.dart';
 
 /// In-memory content repo that returns items per curriculum.

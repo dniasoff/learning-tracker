@@ -10,7 +10,7 @@ import 'package:learning_tracker/features/tracks/stages/domain/models/stage_defi
     as domain_stage;
 import 'package:test/test.dart';
 
-import '../../../../helpers/drift_memory.dart' show seedCompletion;
+import '../../../../helpers/drift_memory.dart';
 import '../../../../helpers/test_database.dart';
 
 void main() {
