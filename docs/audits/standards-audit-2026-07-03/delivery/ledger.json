@@ -8997,13 +8997,18 @@
     {
       "id": "AUD-docs-28",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Fix docs/qa/legacy/00-testing-methodology.md §9 document index — none of the listed filenames exist",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "818cad0bbe06e68672dad91f5df1f962e7295077"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-28 AC1 OK: all 17 table rows (L404-420) map to real files and each prefix equals its row number (17/17 EXISTS+ORDER-OK, verified via awk)",
+        "AUD-docs-28 AC1 OK: pointer L452 now cites real 01/02 files; zero old-scheme refs (01-auth..18-settings) remain"
+      ],
+      "notes": "§9's table listed 18 nonexistent filenames; real dir has 17 files, different scheme. Regenerated table/total/order/pointer from real files. Self-check: all 17 rows OK (exist + order matches prefix); zero stale refs remain outside historical audit-artifact records."
     },
     {
       "id": "AUD-docs-36",
