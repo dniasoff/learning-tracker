@@ -40,7 +40,8 @@ void main() {
     });
 
     test('--report lists the known baseline (16 epic-21 stories + '
-        '16-1-pace-based-goal-mode.md) and nothing else new', () async {
+        '7 epic-19 stories + 16-1-pace-based-goal-mode.md) and nothing else '
+        'new', () async {
       final result = await Process.run('dart', [
         'run',
         scriptPath,
@@ -55,7 +56,17 @@ void main() {
       ]) {
         expect(out, contains(expected));
       }
-      expect(out, contains('17 docs/stories/implementation'));
+      // Baseline grew 17 -> 24 when AUD-docs-06 backfilled 7 pre-existing
+      // Epic-19 offline-first stories (real, tested deliverables; DoD-doc
+      // sections still pending) into the tracked ratchet baseline.
+      expect(out, contains('24 docs/stories/implementation'));
+      // Confirm the 7 Epic-19 additions are genuinely present in the report.
+      for (final expected in [
+        '19-2-two-database-split.md',
+        '19-12-content-db-resilience-error-recovery.md',
+      ]) {
+        expect(out, contains(expected));
+      }
     });
 
     test('AC: a fixture story with Status: done, an unchecked Tasks/Subtasks '
