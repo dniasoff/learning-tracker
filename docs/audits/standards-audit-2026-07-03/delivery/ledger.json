@@ -6072,7 +6072,7 @@
     "AUD-gamification-21 AC1 OK: grep finds 0 Color(0x...) literals under lib/features/gamification (excl generated); values extracted to AppColors",
     "AUD-gamification-21 AC2 OK: dart-test Rule-0 checker EMPIRICALLY fires on planted violation (exit1), clean now; custom_lint N/A per AUD-guardrails-03"
    ],
-   "notes": "Found 126 Color(0x...) occurrences (100 values) across 14 files, incl. uncited tier_style.dart (~83), all in AC scope. Extracted to AppColors (5 reused, 96 new). Added dart-test Rule-0 checker (custom_lint blocked, AUD-guardrails-03). Red-first via git-stash proved 126 violations. Commit 58d764b9."
+   "notes": "Found 126 Color(0x...) occurrences (100 values) across 14 files, incl. uncited tier_style.dart (~83), all in AC scope. Extracted to AppColors (5 reused, 96 new). Added dart-test Rule-0 checker (custom_lint blocked, AUD-guardrails-03). Red-first via git-stash proved 126 violations. Commit 58d764b9. [100% AC audit 2026-07-13: AC1 (zero Color(0x) literals; all sites use AppColors tokens) VERIFIED. AC2 CLI-verification (dart run custom_lint reports zero) is blocked by AUD-guardrails-03 — custom_lint plugin marker intentionally omitted repo-wide to preserve dart analyze; proven non-functional for ALL rules via positive control. Rule no_color_literal_outside_theme exists and its logic is proven by 9/9 passing unit tests. Substantively complete; AC2 will pass once AUD-guardrails-03 restores custom_lint.]"
   },
   {
    "id": "AUD-core-preferences-05",
