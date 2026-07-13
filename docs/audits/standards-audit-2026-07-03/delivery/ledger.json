@@ -1640,13 +1640,18 @@
   {
    "id": "AUD-core-database-06",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace awaited per-row insert/update loops with Drift batch() in curriculum_scope_dao, stage_dao, and track_dao.purgeHistory",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a3f4ee0d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-06 AC1 OK: batch() in setScopes + stage_dao replace* (insertAll) + purgeHistory (db.batch/per-row, :532); 0 loops remain",
+    "AUD-core-database-06 AC2 OK: 105-test DAO suite exit 0 incl N8 purge-invariant + tombstone-in-transaction; no assertions changed"
+   ],
+   "notes": "Re-verified: all 4 sites still had awaited per-row loops. Converted curriculum_scope_dao.setScopes, stage_dao.replaceStagesForTrack/Curriculum, track_dao.purgeHistory's tombstone loop to batch() in the existing transaction(), mirroring AUD-05's pattern. Behavior-preserving. Commit a3f4ee0d."
   },
   {
    "id": "AUD-t-cross-06",
@@ -5897,13 +5902,18 @@
   {
    "id": "AUD-core-database-15",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace track_dao.dart's stringly-typed TrackState class with a real Dart enum",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "cb4f57cd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-database-15 AC1 OK: enum TrackState w/ storageKey at track_dao.dart:26; analyze clean; grep=no bare TrackState.* in lib (rest AddTrackState)",
+    "AUD-core-database-15 AC2 OK: grep=no switch/when over TrackState; exhaustiveness now a type property; 249-test suite exit 0"
+   ],
+   "notes": "Re-verified: TrackState was still a String-constants class. Converted to a real enum with storageKey field (values unchanged). DB column stays plain TextColumn so sync forward-compat is preserved. Updated all 21 call sites to .storageKey. Commit cb4f57cd."
   },
   {
    "id": "AUD-core-network-03",
