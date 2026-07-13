@@ -69,7 +69,7 @@ import 'package:learning_tracker/features/gamification/presentation/providers/ac
 import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_tier_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-import '../../../../golden/store_screenshots_test.dart' show loadFonts;
+import '../../../../helpers/golden_font_loader.dart' show loadFonts;
 
 RewardMilestone _milestone(String title, int threshold) {
   return RewardMilestone(

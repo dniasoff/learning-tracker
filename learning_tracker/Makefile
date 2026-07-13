@@ -298,7 +298,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 53 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 54 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -819,14 +819,24 @@ audit: lint-rules-test ## Run all 53 enforcement greps (NFR19) — exits non-zer
 	  echo "  ratchet the count down over time (see docs/coding-standards.md AG-3):"; \
 	  echo "$$AG3_HITS"; \
 	fi; \
-	echo "53/53 — No hand-rolled ARB-loading helper in test/l10n/*.dart — use test/helpers/arb_loader.dart's loadArb() (AUD-t-cross-22)"; \
+	echo "53/54 — No hand-rolled ARB-loading helper in test/l10n/*.dart — use test/helpers/arb_loader.dart's loadArb() (AUD-t-cross-22)"; \
 	if grep -rn "_loadArb(String locale)\|final file = File('lib/l10n/app_" test/l10n/*.dart | grep -v "test/helpers/" | grep -q .; then \
 	  grep -rn "_loadArb(String locale)\|final file = File('lib/l10n/app_" test/l10n/*.dart | grep -v "test/helpers/"; \
+	  FAIL=1; \
+	fi; \
+	echo "54/54 — TQ-5/Rule-0: no hardcoded /home/<user>/, /Users/<user>/, or /root/... developer-machine absolute path under test/ (AUD-t-cross-03)"; \
+	if grep -rnE "['\"]/(home|Users|root)/[A-Za-z0-9_.-]+" test/ --include="*.dart" \
+	    | grep -v ":[[:space:]]*//" | grep -v "isNot(contains(" | grep -q .; then \
+	  echo "  A test hardcodes an absolute path into one developer's home directory — goldens/tests must resolve"; \
+	  echo "  SDK/tool paths portably (e.g. Platform.environment['FLUTTER_ROOT'], see test/helpers/golden_font_loader.dart)"; \
+	  echo "  instead of a machine-specific literal that doesn't exist in CI or on a teammate's machine (TQ-5):"; \
+	  grep -rnE "['\"]/(home|Users|root)/[A-Za-z0-9_.-]+" test/ --include="*.dart" \
+	    | grep -v ":[[:space:]]*//" | grep -v "isNot(contains("; \
 	  FAIL=1; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 53 greps clean ==="; \
+	  echo "=== audit PASSED — all 54 greps clean ==="; \
 	fi
