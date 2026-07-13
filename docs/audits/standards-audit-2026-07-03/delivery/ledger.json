@@ -3466,24 +3466,35 @@
     {
       "id": "AUD-docs-10",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Fix the GoalSetupScreen \"provably-dead \u2014 delete\" verdict in docs/planning/on-device-preflight-cheatsheet.md before anyone acts on it",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "658c94a370cd67d9d98e34a57e55ee929ca1a512"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-10 AC1 OK: cheatsheet.md:42-49 header now 'CORRECTED: reachable - DO NOT DELETE'; Recommendation struck + Superseded note",
+        "AUD-docs-10 AC2 OK: dated snapshot disclaimer at cheatsheet.md:3 (commit 03792fc2 / 2026-05-31, 're-run grep before acting')",
+        "AUD-docs-10 AC3 OK: grep 'GoalSetupScreen(' -> track_detail_screen.dart:788; live path onTap 691-693 -> _openGoalEdit -> navigator.push verified"
+      ],
+      "notes": "Re-verified track_detail_screen.dart:786-794 still pushes GoalSetupScreen live via Navigator - dead verdict was wrong. Corrected doc entry, added re-verify disclaimer. AC3 grep confirmed post-commit."
     },
     {
       "id": "AUD-docs-12",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Propagate the Epic-20-canceled banner to dashboard-redesign-set pages 01-07 (currently read as ready-to-build)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "658c94a370cd67d9d98e34a57e55ee929ca1a512"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-12 AC1 OK: 01..07 each open with Epic 20 (DNI-210) canceled/'not shipped' banner identical to 00-scenario-overview.md:3",
+        "AUD-docs-12 AC2 OK: grep -L 'canceled' dashboard-redesign/*.md returns empty (all 00-07 contain 'canceled')"
+      ],
+      "notes": "Re-verified 00-scenario-overview.md:3 has the banner; 01-07 lacked it. Copied identical banner to all 7 files. AC1/AC2 (grep -L 'canceled' empty) verified post-commit."
     },
     {
       "id": "AUD-app-07",
