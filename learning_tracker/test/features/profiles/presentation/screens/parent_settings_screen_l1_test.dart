@@ -112,6 +112,13 @@ Widget _buildApp({
   final resolvedAuthState = authState ?? const AuthState.signedOut();
 
   final resolvedDb = db ?? inMemoryDb();
+  // AUD-t-cross-08: only close the database WE created here — a
+  // caller-supplied db: is the caller's responsibility (several tests in
+  // this file explicitly `await db.close()` themselves), so closing it a
+  // second time here would double-close it.
+  if (db == null) {
+    addTearDown(resolvedDb.close);
+  }
 
   return ProviderScope(
     retry: (_, __) => null,

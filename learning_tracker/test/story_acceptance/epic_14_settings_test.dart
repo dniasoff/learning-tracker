@@ -17,7 +17,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart'
     show createTestDatabase, seedProfile, seedProfileZero;
 

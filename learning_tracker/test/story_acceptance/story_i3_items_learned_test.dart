@@ -25,7 +25,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:mocktail/mocktail.dart';
 
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 
 // ---------------------------------------------------------------------------

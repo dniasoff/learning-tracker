@@ -20,7 +20,7 @@ import 'package:learning_tracker/features/profiles/data/repositories/profile_rep
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 
 const _curriculumId = 'mishnayos';

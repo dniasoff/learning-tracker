@@ -39,7 +39,7 @@ import '../../tool/lib/sefaria/mishna_fetcher.dart';
 import '../../tool/lib/sefaria/sefaria_fetcher_base.dart';
 // ignore: avoid_relative_lib_imports
 import '../../tool/lib/sefaria/yerushalmi_fetcher.dart';
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────

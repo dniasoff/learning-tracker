@@ -14,7 +14,7 @@ import 'package:learning_tracker/features/gamification/streak/streak_log_event.d
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 
 /// Creates a default curriculum track and returns its ID.

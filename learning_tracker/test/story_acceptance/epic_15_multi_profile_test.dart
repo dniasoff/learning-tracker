@@ -34,7 +34,7 @@ import 'package:learning_tracker/features/tracks/stages/domain/services/stage_va
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 
 class _InMemoryContentRepo implements SchedulerContentRepository {

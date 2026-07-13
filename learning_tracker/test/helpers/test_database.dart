@@ -8,6 +8,18 @@ import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
+// AUD-t-cross-12: seedProfile/seedProfileZero used to be redefined here
+// byte-for-byte identically to drift_memory.dart's versions.
+// drift_memory.dart's own doc comment already names itself canonical — this
+// re-export keeps both files' public surface unchanged (callers that only
+// import test_database.dart keep working unqualified) while there being
+// exactly one definition. Since both `import`-paths now resolve to the SAME
+// declaration, importing drift_memory.dart and test_database.dart together
+// (as ~23 test files do) no longer triggers Dart's ambiguous-import error on
+// these two names, so the show/hide combinators those files used purely to
+// dodge that collision are no longer needed.
+export 'drift_memory.dart' show seedProfile, seedProfileZero;
+
 /// Creates an in-memory test UserDatabase
 UserDatabase createTestDatabase() {
   return UserDatabase(NativeDatabase.memory());
@@ -26,35 +38,6 @@ ContentDatabase createTestContentDatabase() {
 /// Creates an in-memory test database with custom executor
 UserDatabase createTestDatabaseWithExecutor(QueryExecutor executor) {
   return UserDatabase(executor);
-}
-
-/// Seeds a minimal account + learner profile into [db].
-///
-/// Required before any FK-constrained insert into completions,
-/// completion_events, streak_events, etc.
-Future<void> seedProfile(UserDatabase db) async {
-  final accountId = await db
-      .into(db.accounts)
-      .insert(
-        AccountsCompanion.insert(
-          email: 'test@example.com',
-          tier: 'localBorn',
-          displayName: 'Test User',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  await db
-      .into(db.learnerProfiles)
-      .insert(
-        LearnerProfilesCompanion.insert(
-          accountId: accountId,
-          displayName: 'Test User',
-          mode: 'adult',
-          createdAt: DateTimeFactory.nowUtc(),
-          updatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
 }
 
 /// Seeds an account + learner profile with explicit [accountId] and
@@ -126,40 +109,6 @@ Future<int> seedAccount2(UserDatabase db) async {
           createdAt: DateTimeFactory.nowUtc(),
           updatedAt: DateTimeFactory.nowUtc(),
         ),
-      );
-}
-
-/// Seeds a learner profile with id = 0 into [db].
-///
-/// Required by code that hardcodes profileId = 0 (e.g.
-/// [StageDefinitionRepositoryImpl.initializeDefaults] — DNI-322). Call
-/// this alongside [seedProfile] in any setUp that exercises such code.
-Future<void> seedProfileZero(UserDatabase db) async {
-  await db
-      .into(db.accounts)
-      .insert(
-        AccountsCompanion(
-          id: const Value(0),
-          email: const Value('test0@example.com'),
-          tier: const Value('localBorn'),
-          displayName: const Value('Test User 0'),
-          createdAt: Value(DateTimeFactory.nowUtc()),
-          updatedAt: Value(DateTimeFactory.nowUtc()),
-        ),
-        mode: InsertMode.insertOrIgnore,
-      );
-  await db
-      .into(db.learnerProfiles)
-      .insert(
-        LearnerProfilesCompanion(
-          id: const Value(0),
-          accountId: const Value(0),
-          displayName: const Value('Test User 0'),
-          mode: const Value('adult'),
-          createdAt: Value(DateTimeFactory.nowUtc()),
-          updatedAt: Value(DateTimeFactory.nowUtc()),
-        ),
-        mode: InsertMode.insertOrIgnore,
       );
 }
 

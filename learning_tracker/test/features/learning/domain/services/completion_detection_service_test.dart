@@ -13,7 +13,7 @@ import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
-import '../../../../helpers/drift_memory.dart' show seedCompletion;
+import '../../../../helpers/drift_memory.dart';
 import '../../../../helpers/test_database.dart';
 
 /// Counts SELECT statements that touch `completions_view`.
