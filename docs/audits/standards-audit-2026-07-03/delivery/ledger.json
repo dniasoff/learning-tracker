@@ -6111,13 +6111,20 @@
   {
    "id": "AUD-t-settings-09",
    "wave": 3,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix 7 stale 'HARDCODED STRING' comments in upgrade_to_cloud_screen_l1_test.dart — the strings are l10n-sourced now",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "84251cfeb24ff49f3b46751c303994f8df5e74e0"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-settings-09 AC1 OK: grep 'HARDCODED STRING' in test file = 0 hits (was 7); all 7 comments rewritten to AppLocalizations-sourced citations",
+    "AUD-t-settings-09 AC1 OK: all 7 target strings have ZERO literal hits in upgrade_to_cloud_screen.dart (grep -F each) - genuinely not hardcoded",
+    "AUD-t-settings-09 AC1 OK: all 7 cited getters used in screen (e.g. upgradeToCloudPasswordLabel:605, upgradeToCloudSuccessTitle:682)",
+    "AUD-t-settings-09 AC1 OK: ARB values match asserts (app_en.arb:1676 'Confirm your password', :1688 'You're backed up!', :1677/:1681)"
+   ],
+   "notes": "Re-verified: grep of upgrade_to_cloud_screen.dart finds zero hits for any of the 7 strings; all confirmed AppLocalizations-sourced with matching app_en.arb values. Rewrote all 7 comments to cite the actual l10n getter/ARB key. grep 'HARDCODED STRING' now returns 0 matches (was 7)."
   },
   {
    "id": "AUD-guardrails-32",
