@@ -10,15 +10,30 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 
 part 'track_dao.g.dart';
 
-/// Track lifecycle state constants. Must match the `state` column values
-/// in [CurriculumTracks] (W3.28).
-class TrackState {
-  const TrackState._();
+/// Track lifecycle state. Must match the `state` column values in
+/// [CurriculumTracks] (W3.28).
+///
+/// AUD-core-database-15 (EH-6 spirit / Evans ubiquitous language): a real
+/// Dart `enum` instead of bare `String` constants, so any switch/`when` over
+/// a track's state is compiler-exhaustive and no non-member string can be
+/// constructed at a `TrackState.*` call site. The `state` column itself
+/// stays a plain [TextColumn] (not enum-backed via `.withConverter`): the
+/// sync merge path (`TrackDao.upsertFromSyncRaw`) must keep tolerating
+/// state strings from remote payloads that don't (yet) match a known
+/// member — the same forward-compat requirement documented on
+/// [TrackDao.upsertFromSyncRaw] for `curriculumId`. Call sites that need
+/// the persisted string use [storageKey].
+enum TrackState {
+  active('active'),
+  retired('retired'),
+  archived('archived'),
+  deleted('deleted');
 
-  static const active = 'active';
-  static const retired = 'retired';
-  static const archived = 'archived';
-  static const deleted = 'deleted';
+  const TrackState(this.storageKey);
+
+  /// The literal string stored in the `state` column and synced to
+  /// Firestore. Must match the value documented on [CurriculumTracks.state].
+  final String storageKey;
 }
 
 @DriftAccessor(tables: [CurriculumTracks])
@@ -43,7 +58,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       (select(curriculumTracks)..where(
             (t) =>
                 t.curriculumId.equals(curriculumId.storageKey) &
-                t.state.equals(TrackState.active),
+                t.state.equals(TrackState.active.storageKey),
           ))
           .get();
 
@@ -65,7 +80,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
             ))
             .getSingleOrNull();
 
-    return track?.state == TrackState.active;
+    return track?.state == TrackState.active.storageKey;
   }
 
   /// Activate a track for a curriculum.
@@ -90,18 +105,18 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId.storageKey,
-          state: const Value(TrackState.active),
+          state: Value(TrackState.active.storageKey),
           stateChangedAt: now,
           activatedAt: now,
           lastReorderAt: Value(now),
         ),
       );
-    } else if (existing.state != TrackState.active) {
+    } else if (existing.state != TrackState.active.storageKey) {
       await (update(
         curriculumTracks,
       )..where((t) => t.id.equals(existing.id))).write(
         CurriculumTracksCompanion(
-          state: const Value(TrackState.active),
+          state: Value(TrackState.active.storageKey),
           stateChangedAt: Value(now),
           activatedAt: Value(now),
           lastReorderAt: Value(now),
@@ -127,12 +142,12 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
             ))
             .getSingleOrNull();
 
-    if (existing != null && existing.state == TrackState.active) {
+    if (existing != null && existing.state == TrackState.active.storageKey) {
       await (update(
         curriculumTracks,
       )..where((t) => t.id.equals(existing.id))).write(
         CurriculumTracksCompanion(
-          state: const Value(TrackState.retired),
+          state: Value(TrackState.retired.storageKey),
           stateChangedAt: Value(now),
         ),
       );
@@ -151,7 +166,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
             ..where(
               (t) =>
                   t.profileId.equals(profileId) &
-                  t.state.equals(TrackState.active),
+                  t.state.equals(TrackState.active.storageKey),
             )
             ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
           .get();
@@ -164,7 +179,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
   /// profiles so content re-import covers each one.
   Future<List<CurriculumTrack>> getAllActiveTracks() =>
       (select(curriculumTracks)
-            ..where((t) => t.state.equals(TrackState.active))
+            ..where((t) => t.state.equals(TrackState.active.storageKey))
             ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
           .get();
 
@@ -199,7 +214,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
           ..where(
             (t) =>
                 t.profileId.equals(profileId) &
-                t.state.equals(TrackState.active),
+                t.state.equals(TrackState.active.storageKey),
           )
           ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
         .watch();
@@ -242,7 +257,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         curriculumTracks,
       )..where((t) => t.id.equals(trackId))).write(
         CurriculumTracksCompanion(
-          state: const Value(TrackState.deleted),
+          state: Value(TrackState.deleted.storageKey),
           stateChangedAt: Value(now),
         ),
       );
@@ -255,7 +270,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
           payload: jsonEncode({
             'track_id': trackId,
             'curriculum_id': track.curriculumId,
-            'state': TrackState.deleted,
+            'state': TrackState.deleted.storageKey,
             'deleted_at': now.toUtc().toIso8601String(),
             'profile_id': track.profileId,
           }),
@@ -293,7 +308,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         curriculumTracks,
       )..where((t) => t.id.equals(trackId))).write(
         CurriculumTracksCompanion(
-          state: const Value(TrackState.archived),
+          state: Value(TrackState.archived.storageKey),
           stateChangedAt: Value(now),
         ),
       );
@@ -306,7 +321,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
           payload: jsonEncode({
             'track_id': trackId,
             'curriculum_id': track.curriculumId,
-            'state': TrackState.archived,
+            'state': TrackState.archived.storageKey,
             'archived_at': now.toUtc().toIso8601String(),
             'profile_id': track.profileId,
           }),
@@ -427,7 +442,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         await (select(curriculumTracks)..where(
               (t) =>
                   t.profileId.equals(profileId) &
-                  t.state.equals(TrackState.active),
+                  t.state.equals(TrackState.active.storageKey),
             ))
             .get();
     return tracks.length;
@@ -455,12 +470,12 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
             .getSingleOrNull();
 
     if (existing != null) {
-      if (existing.state != TrackState.active) {
+      if (existing.state != TrackState.active.storageKey) {
         await (update(
           curriculumTracks,
         )..where((t) => t.id.equals(existing.id))).write(
           CurriculumTracksCompanion(
-            state: const Value(TrackState.active),
+            state: Value(TrackState.active.storageKey),
             stateChangedAt: Value(now),
             activatedAt: Value(now),
             // Reset amnesty to activation time so no pre-existing tasks are
@@ -476,7 +491,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       CurriculumTracksCompanion.insert(
         profileId: profileId,
         curriculumId: curriculumId.storageKey,
-        state: const Value(TrackState.active),
+        state: Value(TrackState.active.storageKey),
         stateChangedAt: now,
         activatedAt: now,
         // lastReorderAt = activatedAt so the default (canonical) order is
@@ -571,7 +586,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
           payload: jsonEncode({
             'track_id': trackId,
             'curriculum_id': track.curriculumId,
-            'state': TrackState.deleted,
+            'state': TrackState.deleted.storageKey,
             'purged_at': purgedAt.toUtc().toIso8601String(),
             'purged': true,
             'profile_id': track.profileId,
@@ -639,7 +654,7 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId.storageKey,
-          state: const Value(TrackState.active),
+          state: Value(TrackState.active.storageKey),
           stateChangedAt: now,
           activatedAt: now,
           lastReorderAt: Value(now),

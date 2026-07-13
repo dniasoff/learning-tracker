@@ -120,7 +120,7 @@ class ProfileCreationUseCase {
               CurriculumTracksCompanion.insert(
                 profileId: newProfileId,
                 curriculumId: curriculumId.storageKey,
-                state: const Value(TrackState.active),
+                state: Value(TrackState.active.storageKey),
                 stateChangedAt: now,
                 activatedAt: now,
               ),

@@ -41,7 +41,7 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
         await (select(curriculumTracks)..where(
               (t) =>
                   t.profileId.equals(profileId) &
-                  t.state.equals(TrackState.active),
+                  t.state.equals(TrackState.active.storageKey),
             ))
             .get();
     return rows.map((r) => r.curriculumId).toSet().toList();
@@ -51,7 +51,8 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
   Stream<List<String>> watchActiveCurriculaByProfile(int profileId) {
     return (select(curriculumTracks)..where(
           (t) =>
-              t.profileId.equals(profileId) & t.state.equals(TrackState.active),
+              t.profileId.equals(profileId) &
+              t.state.equals(TrackState.active.storageKey),
         ))
         .watch()
         .map((rows) => rows.map((r) => r.curriculumId).toSet().toList());
@@ -68,7 +69,7 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
                 (t) =>
                     t.profileId.equals(profileId) &
                     t.curriculumId.equals(curriculum.storageKey) &
-                    t.state.equals(TrackState.active),
+                    t.state.equals(TrackState.active.storageKey),
               )
               ..limit(1))
             .getSingleOrNull();
@@ -89,7 +90,7 @@ class ActiveCurriculumDao extends DatabaseAccessor<UserDatabase>
       CurriculumTracksCompanion.insert(
         profileId: profileId,
         curriculumId: curriculum.storageKey,
-        state: const Value(TrackState.active),
+        state: Value(TrackState.active.storageKey),
         stateChangedAt: now,
         activatedAt: now,
       ),

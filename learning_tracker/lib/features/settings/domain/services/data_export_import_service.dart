@@ -647,7 +647,9 @@ class DataExportImportService {
         final rawIsActive = map['isActive'] as bool?;
         final state =
             rawState ??
-            ((rawIsActive == false) ? TrackState.retired : TrackState.active);
+            ((rawIsActive == false)
+                ? TrackState.retired.storageKey
+                : TrackState.active.storageKey);
         final rawStateChangedAt =
             map['stateChangedAt'] as String? ?? map['deactivatedAt'] as String?;
         await _database

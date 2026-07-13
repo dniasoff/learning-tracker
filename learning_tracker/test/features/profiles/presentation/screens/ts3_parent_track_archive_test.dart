@@ -267,7 +267,7 @@ void main() {
       final row = await db.trackDao.getTrackById(trackId);
       expect(
         row?.state,
-        equals(TrackState.archived),
+        equals(TrackState.archived.storageKey),
         reason:
             'AUD-profiles-01: "Archive (keep history)" must set '
             'state=archived, not delete the track (state=deleted).',
@@ -365,7 +365,7 @@ void main() {
         final row = await db.trackDao.getTrackById(trackId);
         expect(
           row?.state,
-          equals(TrackState.archived),
+          equals(TrackState.archived.storageKey),
           reason:
               'AUD-profiles-01: tapping "Archive (keep history)" on the real '
               'screen must set state=archived, not delete the track.',
