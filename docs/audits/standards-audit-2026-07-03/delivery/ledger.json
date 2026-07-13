@@ -6979,13 +6979,13 @@
   {
    "id": "AUD-t-account-06",
    "wave": 4,
-   "status": "todo",
+   "status": "skipped-refuted",
    "severity": "P3",
    "title": "Remove the stale skip and stale RTL-overflow comment from email_verification_confirm_panel_test.dart's H1 test",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "skipped-refuted (merge-lane w4r1c19, 2026-07-13). Already fixed in code, independently confirmed: commit f7428230 (fix(account): AUD-account-05 - localize EmailVerificationConfirmPanel title/action labels, an ancestor of this branch's current HEAD) removed the H1 test's skip:true and the stale RTL-overflow BUG comment as part of its localization fix. Independently re-verified against the current tree: `grep -n \"skip:\\|BUG:\" learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart` returns 0 hits (the only \"skip\" match in the file is an unrelated launchUrl-skip prose comment at line 855, not a test skip); `flutter test --plain-name H1 test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart` -> 00:01 +1: All tests passed. AC already satisfied; no code change made."
   },
   {
    "id": "AUD-content_browsing-07",

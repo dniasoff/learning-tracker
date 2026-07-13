@@ -105,3 +105,13 @@ finding, appended as it happens.
 - **Delivery disposition:** `skipped-refuted` (merge-lane w3r2c1, 2026-07-13).
 - **Basis — already fixed in code, independently confirmed:** the prior `AUD-gamification-10` fix (an ancestor of this finding's start `HEAD`) made `_handleMutationError` set `state.error` on generic failures, making the error `Scaffold` branch reachable — proven by the existing passing test `reward_configuration_screen_l1_test.dart:735-760`. `AUD-gamification-10`'s own ledger notes name `AUD-gamification-17` as a duplicate of the defect it fixed. No code change required for this id.
 - **Logged by:** merge-lane w3r2c1 agent (sonnet), 2026-07-13.
+
+---
+
+## AUD-t-account-06 — Remove the stale skip and stale RTL-overflow comment from email_verification_confirm_panel_test.dart's H1 test
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `skipped-refuted` (merge-lane w4r1c19, 2026-07-13).
+- **Basis — already fixed in code, independently confirmed:** commit `f7428230` (`fix(account): AUD-account-05 - localize EmailVerificationConfirmPanel title/action labels`, an ancestor of this branch's current `HEAD`) removed the H1 test's `skip:true` and its stale RTL-overflow `BUG` comment as part of that finding's localization fix. Independently re-verified against the current tree: `grep -n "skip:\|BUG:" learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart` returns 0 hits (the file's only "skip" match is an unrelated launchUrl-skip prose comment at line 855, not a test skip); `flutter test --plain-name H1 test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart` → `00:01 +1: All tests passed!`. AC already satisfied; no code change made.
+- **Logged by:** merge-lane w4r1c19 agent (sonnet), 2026-07-13.
