@@ -287,6 +287,8 @@ Each scenario follows this structure:
 
 ### Tutor Track Lifecycle (P1)
 
+> ⚠️ **Superseded — 2026-07-13.** TRACK-10 through TRACK-12 describe the original self-service "Add Track → Tutor" flow, where the learner sets a device-local tutor PIN directly from track management. That flow — and the `TutorPinGuard` it relied on — no longer exists. It was replaced by a grant-based invite/accept/revoke model where a parent invites a tutor by email; the tutor accepts and authenticates via `PinGuard(PinScope.tutor(profileId))`. Kept for historical reference only; do not use to test current tutor-access behavior. See [`11-tutor-mode.md`](11-tutor-mode.md) and [`../../planning/tutor-mode-brief.md`](../../planning/tutor-mode-brief.md).
+
 ---
 
 #### TRACK-10 | P1 | Activate tutor track prompts PIN setup
@@ -570,6 +572,8 @@ Each scenario follows this structure:
 ---
 
 #### TRACK-23 | P1 | Parent adds tutor track with PIN setup flow
+
+> ⚠️ **Superseded — 2026-07-13.** As with TRACK-10 (see the note above the Tutor Track Lifecycle section), this scenario's "add a tutor track from parent mode with a self-service PIN" flow no longer exists — tutor access is granted by inviting the tutor's email through the grant-based model, not by the parent setting a track-scoped PIN. Kept for historical reference only.
 
 **Preconditions:** Parent account is active with an associated child. Child has Mishnayos active.
 

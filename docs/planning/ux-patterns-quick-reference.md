@@ -69,10 +69,10 @@ Settings → Enter Parent PIN → Parent Dashboard → [Rewards | Track Mgmt | A
 Sign In → Welcome → Mode Selection → Curriculum Selection → Goal Setup (per curriculum) → Bulk Mark Prior → Initial Rewards (child) → Home
 ```
 
-### Route Guards (Story 1.5)
+### Route Guards (Story 1.5; unified into one typed guard by DNI-339, 2026-07)
 - `AuthGuard` — Requires signed-in user (all routes except auth)
-- `ParentPinGuard` — Requires parent PIN entry (child mode only)
-- `TutorPinGuard` — Requires tutor PIN entry (both modes)
+- `PinGuard(PinScope.parent(profileId))` — Requires parent PIN entry (child mode only). Superseded the standalone `ParentPinGuard`.
+- `PinGuard(PinScope.tutor(profileId))` — Requires tutor PIN entry (both modes), verified against the grant-based tutoring model (`lib/features/tutoring/`). Superseded the standalone `TutorPinGuard`.
 
 ---
 
@@ -505,4 +505,4 @@ Your 23-day streak is at risk! Complete one item to keep it going.
 
 ---
 
-**Questions?** Check [UX Design Specification](ux-design-specification.md) for full rationale and mockups.
+**Questions?** Check [UX Design Specification](../_archive/superseded/ux-design-specification-2026-02-11.md) (archived — see the note at the top of this document) for full rationale and mockups.
