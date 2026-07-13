@@ -17,7 +17,7 @@ Technical reference for all screens, widgets, providers, and navigation in the L
   - [Provider Patterns](#provider-patterns)
 - [Navigation](#navigation)
   - [Shell Structure](#shell-structure)
-  - [Route Guards](#route-guards-7)
+  - [Route Guards](#route-guards-5)
 - [Screens (45)](#screens-45)
 - [Reusable Widgets](#reusable-widgets)
   - [Core Widgets](#core-widgets-libcorewidgets)
@@ -110,7 +110,7 @@ Persist for the lifetime of the app process.
 | Progress | `ProgressScreen` |
 | Settings | `SettingsScreen` |
 
-### Route Guards (7)
+### Route Guards (5)
 
 | Guard | Role |
 |---|---|
@@ -118,9 +118,7 @@ Persist for the lifetime of the app process.
 | `ProfileGuard` | Requires an active learner profile |
 | `RestoreGuard` | Blocks navigation during device-restore flow |
 | `ChildModeGuard` | Restricts access to screens not permitted inside child mode |
-| `PinGuard` | Base class for PIN verification (used by the two below) |
-| `ParentPinGuard` | PIN challenge for parent-mode screens |
-| `TutorPinGuard` | PIN challenge for tutor-mode screens |
+| `PinGuard` | PIN challenge for a `PinScope`, resolved at navigation time — `PinScope.parent(profileId)` for parent-mode screens, `PinScope.tutor(profileId)` for tutor-mode screens. A single guard class parameterized by scope, replacing the earlier per-mode guard classes. |
 
 **Total routes:** 40+
 

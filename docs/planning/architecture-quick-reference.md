@@ -332,7 +332,7 @@ final hasCompletionYesterday = await (db.select(db.completions)
 1. Drift database with all tables (D1, D3, D7) + DAOs following P2
 2. Firebase Auth + Firestore integration (D2) with security rules (P4)
 3. Sefaria API client + base adapter pattern (D6) — at least MishnayosAdapter implemented
-4. auto_route 11.x navigation with ParentPinGuard, TutorPinGuard, AuthGuard
+4. auto_route 11.x navigation with AuthGuard, PinGuard (`PinScope.parent`/`PinScope.tutor`)
 5. Riverpod provider architecture (P3 family pattern established)
 6. Sync engine foundation (D4): push-on-write, pull-on-launch stubs (Epic 13 completes)
 7. Talker logging, error handling, crash reporting wired
