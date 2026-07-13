@@ -1510,4 +1510,177 @@ void main() {
       expect(result.isGlobal, isTrue);
     });
   });
+
+  // ── AUD-dashboard-06 (SM-4): ref.mounted guards after in-flight awaits ────
+  //
+  // dashboardTrackCompletionPercentage, dashboardCompletionPercentage,
+  // stripStockMilestonesEffect, and dashboardPaceStatus each did a
+  // ref.watch/ref.read AFTER an earlier `await` (a Drift DB read) with no
+  // `ref.mounted` guard in between. If the autoDispose provider loses its
+  // last listener (or its container is torn down — e.g. the user swipes the
+  // active-tracks carousel past a card, or navigates away) while that DB
+  // read is still in flight, the later ref call throws
+  // UnmountedRefException — an uncaught exception inside the async provider
+  // body.
+  //
+  // Each test below calls the annotated top-level function DIRECTLY (not
+  // through the generated provider) with a `Ref` sourced from a host
+  // `Provider<void>`, exactly mirroring the AUD-sync-04 reference fix's test
+  // (sync_providers_test.dart `outboxDrainAndRecordAttempt` group). Calling
+  // the function returns control to the test at its first `await`
+  // (synchronous-until-suspend, per Dart async semantics); disposing the
+  // container immediately afterward — before that DB await resolves —
+  // deterministically simulates "torn down mid-await" without any
+  // timing-dependent Completer/fake_async machinery.
+  group(
+    'AUD-dashboard-06 (SM-4): ref.mounted guards after in-flight awaits',
+    () {
+      /// Builds a real [Ref] sourced from [container] (the same technique
+      /// `outboxDrainAndRecordAttempt`'s regression test uses) so
+      /// `capturedRef.mounted` reflects the real Riverpod 3 framework
+      /// disposal state, not a fake.
+      Ref captureRef(ProviderContainer container) {
+        late Ref capturedRef;
+        final hostProvider = Provider<void>((ref) {
+          capturedRef = ref;
+        });
+        container.read(hostProvider);
+        return capturedRef;
+      }
+
+      test(
+        'dashboardTrackCompletionPercentage: container disposed mid-track-read '
+        '— no UnmountedRefException, resolves to 0.0',
+        () async {
+          final trackId = await _insertTrack(db, curriculumId: 'mishnayos');
+
+          final container = _makeContainer(db);
+          final capturedRef = captureRef(container);
+
+          // Runs synchronously up to `await db.trackDao.getTrackById(trackId)`,
+          // then suspends and returns control here.
+          final resultFuture = dashboardTrackCompletionPercentage(
+            capturedRef,
+            trackId,
+          );
+
+          // Simulate the carousel card being swiped away / dashboard left
+          // while that DB read is still in flight.
+          container.dispose();
+          expect(
+            capturedRef.mounted,
+            isFalse,
+            reason:
+                'container.dispose() must tear down the captured ref — '
+                'this is the exact staleness this test simulates',
+          );
+
+          await expectLater(
+            resultFuture,
+            completes,
+            reason:
+                'no UnmountedRefException (or any exception) may reach '
+                'the caller',
+          );
+          expect(await resultFuture, 0.0);
+        },
+      );
+
+      test(
+        'dashboardCompletionPercentage: container disposed mid-completions-read '
+        '— no UnmountedRefException, resolves to 0.0',
+        () async {
+          final container = _makeContainer(db);
+          final capturedRef = captureRef(container);
+
+          // Runs synchronously up to
+          // `await db.completionDao.getCompletionsByCurriculumAndProfile(...)`,
+          // then suspends.
+          final resultFuture = dashboardCompletionPercentage(
+            capturedRef,
+            CurriculumId.mishnayos,
+          );
+
+          container.dispose();
+          expect(capturedRef.mounted, isFalse);
+
+          await expectLater(resultFuture, completes);
+          expect(await resultFuture, 0.0);
+        },
+      );
+
+      test('stripStockMilestonesEffect: container disposed mid-strip — no '
+          'UnmountedRefException, the gamification-settings push is safely '
+          'skipped', () async {
+        SharedPreferences.setMockInitialValues({});
+        // A stock-ladder milestone so stripStockTemplateMilestones()
+        // resolves `true` — without that, the original buggy code never
+        // reaches the unguarded `ref.read(syncWriteFacadeProvider)` at all,
+        // and this test would pass whether or not the guard exists.
+        final milestoneService = RewardMilestoneService(
+          db,
+          profileId: _profileId,
+        );
+        await milestoneService.upsertMilestone(
+          trackId: 10,
+          title: 'Bronze Star',
+          thresholdPoints: 500,
+          milestoneId: 'stock-1',
+        );
+
+        final container = _makeContainer(
+          db,
+          extraOverrides: [
+            rewardMilestoneServiceProvider.overrideWithValue(milestoneService),
+          ],
+        );
+        final capturedRef = captureRef(container);
+
+        // Runs synchronously up to
+        // `await milestoneService.stripStockTemplateMilestones()`, then
+        // suspends.
+        final resultFuture = stripStockMilestonesEffect(capturedRef);
+
+        container.dispose();
+        expect(capturedRef.mounted, isFalse);
+
+        await expectLater(resultFuture, completes);
+      });
+
+      test('dashboardPaceStatus: container disposed mid-goals-read — no '
+          'UnmountedRefException', () async {
+        final trackId = await _insertTrack(db, curriculumId: 'mishnayos');
+        final now = DateTime.utc(2026, 1, 1);
+        // A real goal so the function proceeds past the first `if
+        // (goals.isEmpty) return null;` short-circuit and reaches the
+        // second (unguarded) await -> ref.watch hazard.
+        await db.goalDao.insertGoal(
+          GoalsCompanion.insert(
+            profileId: _profileId,
+            curriculumId: 'mishnayos',
+            trackId: trackId,
+            targetDate: Value(DateTime.utc(2026, 6, 1)),
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+
+        final container = _makeContainer(db);
+        final capturedRef = captureRef(container);
+
+        // Runs synchronously up to
+        // `await db.goalDao.getGoalsByCurriculumAndProfile(...)`, then
+        // suspends.
+        final resultFuture = dashboardPaceStatus(
+          capturedRef,
+          CurriculumId.mishnayos,
+        );
+
+        container.dispose();
+        expect(capturedRef.mounted, isFalse);
+
+        await expectLater(resultFuture, completes);
+      });
+    },
+  );
 }

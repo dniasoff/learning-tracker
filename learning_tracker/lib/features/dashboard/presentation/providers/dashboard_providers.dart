@@ -135,7 +135,13 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
   ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  final service = ref.watch(trackProgressServiceProvider);
   final track = await db.trackDao.getTrackById(trackId);
+  // Guard: this autoDispose provider may have been disposed during the async
+  // gap above (e.g. the user swiped the active-tracks carousel past this
+  // card, or left the dashboard mid-load) — see dashboardChildNextReward's
+  // identical guard (SM-4, AUD-dashboard-06).
+  if (!ref.mounted) return 0.0;
   if (track == null) return 0.0;
   final curriculum = CurriculumId.values
       .where((c) => c.storageKey == track.curriculumId)
@@ -151,7 +157,6 @@ Future<double> dashboardTrackCompletionPercentage(Ref ref, int trackId) async {
   final totalItems = await ref.watch(
     scopedItemCountProvider(curriculum).future,
   );
-  final service = ref.watch(trackProgressServiceProvider);
   return service.completionPercent(
     trackId: trackId,
     profileId: profileId,
@@ -178,9 +183,14 @@ Future<double> dashboardCompletionPercentage(
   ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
+  final stageRepository = ref.watch(globalStageRepositoryProvider);
 
   final completions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
+  // Guard: this autoDispose provider may have been disposed during the async
+  // gap above (e.g. the user navigated away from the dashboard mid-load) —
+  // see dashboardChildNextReward's identical guard (SM-4, AUD-dashboard-06).
+  if (!ref.mounted) return 0.0;
 
   final totalItems = await ref.watch(
     scopedItemCountProvider(curriculum).future,
@@ -195,7 +205,6 @@ Future<double> dashboardCompletionPercentage(
   }
 
   // Fetch required stages for each track encountered.
-  final stageRepository = ref.watch(globalStageRepositoryProvider);
   final byTrack = <int, TrackEntry>{};
   for (final trackId in completionsByTrack.keys) {
     if (trackId == 0) continue; // bulk-mark sentinel — skip
@@ -309,7 +318,12 @@ Stream<int> dashboardGlobalPoints(Ref ref) async* {
 Future<void> stripStockMilestonesEffect(Ref ref) async {
   final milestoneService = ref.watch(rewardMilestoneServiceProvider);
 
-  if (await milestoneService.stripStockTemplateMilestones()) {
+  final stripped = await milestoneService.stripStockTemplateMilestones();
+  // Guard: this autoDispose provider may have been disposed during the async
+  // gap above (e.g. the user navigated away before the strip completed) —
+  // see dashboardChildNextReward's identical guard (SM-4, AUD-dashboard-06).
+  if (!ref.mounted) return;
+  if (stripped) {
     await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
   }
 }
@@ -422,6 +436,11 @@ Future<PaceStatus?> dashboardPaceStatus(
   final dailyCounts = ComputePaceStatusUseCase.buildDailyCounts(
     allCompletions.map((c) => c.completedAt),
   );
+
+  // Guard: this autoDispose provider may have been disposed during the async
+  // gap above (e.g. the user navigated away from the dashboard mid-load) —
+  // see dashboardChildNextReward's identical guard (SM-4, AUD-dashboard-06).
+  if (!ref.mounted) return null;
 
   // Real total-item count from the scoped content tree (DNI-345).
   final totalItems = await ref.watch(

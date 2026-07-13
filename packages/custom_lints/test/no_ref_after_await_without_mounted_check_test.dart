@@ -45,8 +45,7 @@ class Foo {
           expect(
             errors.where((e) => e.errorCode.name == _lintName),
             isNotEmpty,
-            reason:
-                'A ref.read() that runs after an earlier await with no '
+            reason: 'A ref.read() that runs after an earlier await with no '
                 'ref.mounted guard in between must be flagged',
           );
         },
@@ -78,8 +77,7 @@ class FooNotifier {
         );
       });
 
-      test('flags ref.watch() (not just ref.read()) after an await',
-          () async {
+      test('flags ref.watch() (not just ref.read()) after an await', () async {
         final file = _tmpFile('''
 class Ref {
   bool get mounted => true;
@@ -205,7 +203,8 @@ class Foo {
         );
       });
 
-      test('does not flag an unrelated variable that happens to be named '
+      test(
+          'does not flag an unrelated variable that happens to be named '
           '"ref" but is not a Riverpod Ref (no matching method name)',
           () async {
         final file = _tmpFile('''
@@ -229,6 +228,158 @@ class Foo {
               'unrelated Reference.getDownloadURL() must not be flagged',
         );
       });
+    });
+
+    // AC2 (AUD-dashboard-06): confirms this checker covers the exact hazard
+    // shapes dashboardTrackCompletionPercentage, dashboardCompletionPercentage,
+    // stripStockMilestonesEffect, and dashboardPaceStatus had in
+    // dashboard_providers.dart before their SM-4 fix — a `ref.watch`/
+    // `ref.read` after a Drift DB-read `await` with no intervening
+    // `ref.mounted` guard. Fires on the deliberately-broken (guard-removed)
+    // shape and passes clean on the actual production fix shape.
+    group('AUD-dashboard-06 — dashboard_providers.dart SM-4 hazard shapes', () {
+      test(
+        'flags a ref.watch(...) that follows a `final x = await '
+        'db.call();` DB-read await with no guard (the '
+        'dashboardTrackCompletionPercentage / dashboardCompletionPercentage '
+        '/ dashboardPaceStatus shape before their fix)',
+        () async {
+          final file = _tmpFile('''
+class Ref {
+  bool get mounted => true;
+  T? watch<T>(Object provider) => null;
+}
+
+class Db {
+  Future<Object?> getTrackById(int id) async => null;
+}
+
+class Foo {
+  Future<double> run(Ref ref, Db db, int trackId) async {
+    final track = await db.getTrackById(trackId);
+    if (track == null) return 0.0;
+    ref.watch(Object());
+    return 0.0;
+  }
+}
+''');
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isNotEmpty,
+            reason: 'ref.watch after the DB-read await with no mounted '
+                'guard in between must be flagged — the exact hazard shape '
+                'these dashboard providers had before their AUD-dashboard-06 '
+                'fix',
+          );
+        },
+      );
+
+      test(
+        'does not flag once the mounted guard sits between the DB-read '
+        'await and the later ref.watch (the actual '
+        'dashboardTrackCompletionPercentage / dashboardCompletionPercentage '
+        '/ dashboardPaceStatus fix shape)',
+        () async {
+          final file = _tmpFile('''
+class Ref {
+  bool get mounted => true;
+  T? watch<T>(Object provider) => null;
+}
+
+class Db {
+  Future<Object?> getTrackById(int id) async => null;
+}
+
+class Foo {
+  Future<double> run(Ref ref, Db db, int trackId) async {
+    final track = await db.getTrackById(trackId);
+    if (!ref.mounted) return 0.0;
+    if (track == null) return 0.0;
+    ref.watch(Object());
+    return 0.0;
+  }
+}
+''');
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isEmpty,
+            reason: 'the ref.mounted guard immediately after the DB-read '
+                'await must silence the rule for the ref.watch that '
+                'follows it',
+          );
+        },
+      );
+
+      test(
+        'flags a ref.read(...) inside a later if-body that follows an '
+        'earlier `final stripped = await ...;` await with no guard (the '
+        'stripStockMilestonesEffect shape once its await is extracted out '
+        'of the if-condition)',
+        () async {
+          final file = _tmpFile('''
+class Ref {
+  bool get mounted => true;
+  T? watch<T>(Object provider) => null;
+  T? read<T>(Object provider) => null;
+}
+
+class Foo {
+  Future<void> stripStockMilestonesEffect(Ref ref) async {
+    final milestoneService = ref.watch(Object());
+    final stripped = await Future<bool>.value(true);
+    if (stripped) {
+      await ref.read(Object())?.toString();
+    }
+  }
+}
+''');
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isNotEmpty,
+            reason: 'ref.read inside the if-body runs after an earlier '
+                'await with no ref.mounted guard in between — must be '
+                'flagged',
+          );
+        },
+      );
+
+      test(
+        'does not flag the actual stripStockMilestonesEffect fix shape: '
+        'mounted guard between the extracted await and the later if-body '
+        'ref.read',
+        () async {
+          final file = _tmpFile('''
+class Ref {
+  bool get mounted => true;
+  T? watch<T>(Object provider) => null;
+  T? read<T>(Object provider) => null;
+}
+
+class Foo {
+  Future<void> stripStockMilestonesEffect(Ref ref) async {
+    final milestoneService = ref.watch(Object());
+    final stripped = await Future<bool>.value(true);
+    if (!ref.mounted) return;
+    if (stripped) {
+      await ref.read(Object())?.toString();
+    }
+  }
+}
+''');
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isEmpty,
+            reason: 'the ref.mounted guard immediately after the extracted '
+                'await must silence the rule for the ref.read that follows '
+                'it — this is the actual production fix in '
+                'dashboard_providers.dart',
+          );
+        },
+      );
     });
   });
 }
