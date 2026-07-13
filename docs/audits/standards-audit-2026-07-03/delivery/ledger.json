@@ -1205,13 +1205,18 @@
     {
       "id": "AUD-t-cross-03",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Replace the hardcoded /home/daniel font path in store_screenshots_test.dart's loadFonts() with a portable source",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "d47d709c454a19c61297f5bfdca0f2ce25c22a1b"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-03 AC1 OK: /home/daniel literal removed; loadFonts resolves via FLUTTER_ROOT; store_screenshots_test passes in 16/16 run, zero goldens regenerated",
+        "AUD-t-cross-03 AC2 OK: Makefile 54/54 check exists AND fires \u2014 planted violation, make audit exit!=0; removed, exit 0"
+      ],
+      "notes": "Re-verified hardcoded /home/daniel/fvm path still present. Moved loadFonts() to test/helpers/golden_font_loader.dart; resolves dir via FLUTTER_ROOT env w/ fallback. AC1: red-first tests + golden test pass, no dev-path refs remain. AC2: audit check 54/54 rejects /home|/Users|/root paths under test/."
     },
     {
       "id": "AUD-tracks-05",
