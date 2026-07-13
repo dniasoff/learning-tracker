@@ -127,6 +127,13 @@ Widget _buildApp({
   Locale locale = const Locale('en'),
 }) {
   final database = db ?? inMemoryDb();
+  // AUD-t-cross-08: only close the database WE created here — a
+  // caller-supplied db: is the caller's responsibility (several tests in
+  // this file explicitly `await db.close()` themselves), so closing it a
+  // second time here would double-close it.
+  if (db == null) {
+    addTearDown(database.close);
+  }
   final profileId = tracks.isNotEmpty ? tracks.first.profileId : _kProfileId;
 
   return ProviderScope(
@@ -165,6 +172,9 @@ Widget _buildAppLoading({
   Locale locale = const Locale('en'),
 }) {
   final database = inMemoryDb();
+  // AUD-t-cross-08: this variant has no db: parameter, so it always creates
+  // its own database — always close it.
+  addTearDown(database.close);
 
   return ProviderScope(
     overrides: [
@@ -201,6 +211,9 @@ Widget _buildAppError({
   Locale locale = const Locale('en'),
 }) {
   final database = inMemoryDb();
+  // AUD-t-cross-08: this variant has no db: parameter, so it always creates
+  // its own database — always close it.
+  addTearDown(database.close);
 
   return ProviderScope(
     overrides: [
