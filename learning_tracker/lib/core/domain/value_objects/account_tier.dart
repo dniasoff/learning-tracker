@@ -39,17 +39,36 @@ enum AccountTier {
   ///
   /// Accepts both `'cloudBorn'` and `'localBorn'`. Throws [ArgumentError]
   /// for unrecognised keys.
+  ///
+  /// Prefer [tryFromStorageKey] when the caller wants to tolerate an
+  /// unrecognised value rather than throw — EH-4 forbids catching
+  /// [ArgumentError] (an [Error] subtype) as control flow, so a
+  /// try/catch around this method is never the right way to get a
+  /// fallback.
   static AccountTier fromStorageKey(String key) {
-    return switch (key) {
-      'cloudBorn' => AccountTier.cloud,
-      'localBorn' => AccountTier.local,
-      _ => throw ArgumentError.value(
-        key,
-        'key',
-        'Unknown AccountTier storage key. Expected "cloudBorn" or "localBorn".',
-      ),
-    };
+    final parsed = tryFromStorageKey(key);
+    if (parsed != null) return parsed;
+    throw ArgumentError.value(
+      key,
+      'key',
+      'Unknown AccountTier storage key. Expected "cloudBorn" or "localBorn".',
+    );
   }
+
+  /// Parses [key] from storage, returning `null` for unrecognised keys
+  /// instead of throwing.
+  ///
+  /// EH-4 (`docs/coding-standards.md`): "never catch `Error` subtypes" —
+  /// [fromStorageKey] throws [ArgumentError], an [Error] subtype, so a
+  /// caller that wants a non-throwing fallback must not wrap it in
+  /// try/catch. Use this accessor instead (see
+  /// `DeviceAccountX.accountTier` in `device_registry_database.dart` for
+  /// the established call site).
+  static AccountTier? tryFromStorageKey(String key) => switch (key) {
+    'cloudBorn' => AccountTier.cloud,
+    'localBorn' => AccountTier.local,
+    _ => null,
+  };
 
   // ---------------------------------------------------------------------------
   // Accessors

@@ -278,7 +278,7 @@ final class ContentDatabaseProvider
   }
 }
 
-String _$contentDatabaseHash() => r'6e7d8d35d2ce55fddbdad8d7e171cb517291d2ed';
+String _$contentDatabaseHash() => r'3b0abd70c91e83caeb5640494bbbfffbc250b8ee';
 
 /// Legacy alias — will be removed after full migration.
 /// DO NOT use in new code.

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/account_tier.dart';
 
 /// Test double that lets a single test simulate a crash between
 /// [removeAccount]'s delete and its `lastActiveAccountId` clear (AUD-core-
@@ -139,6 +140,29 @@ void main() {
       final accounts = await db.getAllAccounts();
       expect(accounts.first.accountId, 'a2'); // more recent
       expect(accounts.last.accountId, 'a1');
+    });
+  });
+
+  group('DeviceAccountX.accountTier (AUD-core-database-16, EH-4)', () {
+    test('parses "cloudBorn" to AccountTier.cloud', () async {
+      await db.addAccount(makeAccount(id: 'a1', tier: 'cloudBorn'));
+      final account = await db.findById('a1');
+      expect(account!.accountTier, AccountTier.cloud);
+    });
+
+    test('parses "localBorn" to AccountTier.local', () async {
+      await db.addAccount(makeAccount(id: 'a1', tier: 'localBorn'));
+      final account = await db.findById('a1');
+      expect(account!.accountTier, AccountTier.local);
+    });
+
+    test('falls back to AccountTier.local for an unrecognised stored value '
+        'without catching an Error subtype', () async {
+      // The tier column is a raw String with no DB-level enum constraint,
+      // so a legacy/corrupted row can carry an unrecognised value.
+      await db.addAccount(makeAccount(id: 'a1', tier: 'not-a-real-tier'));
+      final account = await db.findById('a1');
+      expect(account!.accountTier, AccountTier.local);
     });
   });
 
