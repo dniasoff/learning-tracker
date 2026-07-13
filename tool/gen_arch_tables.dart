@@ -58,8 +58,6 @@ Directory _projectRoot() {
 /// Overrides for class names whose file name differs from the default
 /// PascalCase → snake_case conversion.
 const _fileNameOverrides = {
-  'TextDownloadStatuses': 'text_download_status',
-  'Outbox': 'outbox_table',
   // Registry DB
   'DeviceAccounts': 'device_accounts',
   'DeviceState': 'device_state',
