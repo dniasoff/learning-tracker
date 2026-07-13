@@ -537,7 +537,7 @@ The offline account model (credential-less local account, converted on reconnect
 
 **AG-8 — Change types bind to docs: a schema/migration diff updates [data-models](data-models.md); a sync-behavior diff updates [sync-conflict-resolution](sync-conflict-resolution.md); a collection-shape diff updates [firestore-collection-layout](firestore-collection-layout.md); a new invariant updates this file (with its checker — Rule 0). Doc updates ship in the same PR. In docs, prefer pointers (`file:line`, symbol names) over pasted code.**
 **Why:** agents trust docs; a doc that lies is worse than no doc. Pasted snippets drift the moment the code changes.
-**Enforce:** [Pending] audit rule pairing diff paths with doc paths; review-checklist.
+**Enforce:** [Pending] audit rule pairing diff paths with doc paths; review-checklist. For one concrete count-drift slice of this (`docs/explainers/sync-subsystem.md` restating a stale, hand-picked `EntityMerger` count instead of deriving it from `lib/core/sync/merge/`, AUD-docs-18): `dart run tool/check_sync_explainer_merger_count.dart` (learning_tracker/), wired into `make audit` (check 46/46). Not a ratchet — the doc must always state the true count; the checker fails on any mismatch, including a doc that drops the count claim entirely.
 **Source:** anthropic.com/engineering — context engineering
 
 **AG-9 — Non-trivial agent changes get (a) verification evidence in the PR/commit — the command run and its output, not an assertion of success — and (b) an adversarial review by a fresh-context reviewer that sees only the diff + spec, scoped to correctness and stated requirements (style belongs to the linter).**
@@ -761,8 +761,9 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 33 | EH-5: no `@freezed sealed class` status/result type has a `required String message` field, and no raw `error.toString()`/`e.toString()` flows into a `message:` argument (AUD-sync-01) |
 | 37 | SM-7 (scoped): no ad-hoc `ParentAnalyticsRepositoryImpl`/`RewardMilestoneService` construction in the three AUD-sync-05 fix sites (`local_data_upload_service.dart`, `outbox_sync_write_facade.dart`, `reward_settings_merge_delegate.dart`) — see SM-7 above for the wider repo-wide backlog |
 | 44 | Tier-4 doc-lint: every `docs/stories/implementation/*.md` marked `Status: ready-for-dev`/`backlog`/`todo` has its "Key Files" table targets resolving under `lib/` (exact path or by basename) — `tool/check_stale_story_file_targets.dart` (AUD-docs-03). Ratcheted against a tracked baseline (`tool/story_stale_file_targets_baseline.txt`) of pre-existing, out-of-scope drift; a NEW violation fails the gate. |
+| 46 | AG-8 doc-lint: `docs/explainers/sync-subsystem.md`'s stated `EntityMerger` count matches the actual `*_merger.dart` file count under `lib/core/sync/merge/` — `tool/check_sync_explainer_merger_count.dart` (AUD-docs-18). Not a ratchet; fails on any mismatch or on a doc that drops the count claim entirely. |
 
-The table above has known gaps between the last-renumbered entries (34–36 exist in the Makefile but aren't yet reflected here) — tracked under the same Makefile/doc consolidation noted at the top of this section.
+The table above has known gaps between the last-renumbered entries (34–36, 45 exist in the Makefile but aren't yet reflected here) — tracked under the same Makefile/doc consolidation noted at the top of this section.
 
 Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|right:)`** (RTL violation — AX-1).
 
