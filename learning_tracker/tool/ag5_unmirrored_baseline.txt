@@ -60,7 +60,7 @@ lib/core/database/tables/learner_profiles.dart
 lib/core/database/tables/learning_ledger.dart
 lib/core/database/tables/learning_order.dart
 lib/core/database/tables/monthly_activity_rollups.dart
-lib/core/database/tables/outbox_table.dart
+lib/core/database/tables/outbox.dart
 lib/core/database/tables/point_configs.dart
 lib/core/database/tables/points_balance.dart
 lib/core/database/tables/prior_completion_imports.dart
@@ -72,7 +72,7 @@ lib/core/database/tables/streak_events.dart
 lib/core/database/tables/study_day_configs.dart
 lib/core/database/tables/sync_kv.dart
 lib/core/database/tables/text_cache.dart
-lib/core/database/tables/text_download_status.dart
+lib/core/database/tables/text_download_statuses.dart
 lib/core/database/tables/track_learning_order.dart
 lib/core/database/user/user_database.dart
 lib/core/database/views/completions_view.dart
