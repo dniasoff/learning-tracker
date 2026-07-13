@@ -2657,13 +2657,18 @@
     {
       "id": "AUD-docs-03",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Archive or rewrite epic-19 sync stories 19-8/19-9 \u2014 both still target a SyncEngine/syncEngineProvider architecture that has been deleted",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "19dd89270c3e73c17b962426feddbb4c6a2a0d96"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-03 AC1 OK: 19-8/19-9 moved to docs/_archive/superseded/, Status: superseded, sync_engine.dart absent from lib/, no syncEngineProvider def",
+        "AUD-docs-03 AC2 OK: check_stale_story_file_targets.dart is make audit 44/44; injected story targeting deleted sync_engine.dart -> exit 1, clean -> exit 0"
+      ],
+      "notes": "Verified sync_engine.dart/syncEngineProvider deleted from lib/. Archived 19-8 & 19-9 to docs/_archive/superseded/ with banners to SyncOrchestratorImpl. Shipped check_stale_story_file_targets.dart as audit check 44/44 (ratcheted). Red-first: failed pre-fix, green post-fix; regression test added."
     },
     {
       "id": "AUD-t-cross-36",
