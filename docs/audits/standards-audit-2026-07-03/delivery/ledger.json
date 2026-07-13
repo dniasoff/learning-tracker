@@ -3469,13 +3469,19 @@
     {
       "id": "AUD-docs-17",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Retire or clearly re-header the pre-refactor code samples in docs/planning/architecture-quick-reference.md and the stale tech-debt callout in architecture-offline-v2.md",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "d76383f0082567034bd44c7a90ca4ecdc8170408"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-17 AC1 OK: KeyDataModels+CommonQueries headed 'Epic 1-5 historical-superseded' w/ warnings; grep db.contentItems lib=0, db.completions=only _db.completionsView",
+        "AUD-docs-17 AC2 OK: dead _bmad template link removed, replaced by ../coding-standards.md which resolves to docs/coding-standards.md (exists 86KB)",
+        "AUD-docs-17 AC3 OK: callout='Tech debt closed'; no 'class AppAuthState|LocalAuthGuard' in lib, only 3 doc-comment hits; account_tier+upgrade_to_cloud_service exist"
+      ],
+      "notes": "Re-verified evidence (all claims confirmed). Quarantined Key Data Models + Common Queries as historical/superseded, added cloudBorn/localBorn to D2, fixed dead _bmad link to coding-standards.md. Rewrote offline-v2.md tech-debt callout: gap closed, cites shipped code. All 3 ACs re-verified."
     },
     {
       "id": "AUD-docs-10",
