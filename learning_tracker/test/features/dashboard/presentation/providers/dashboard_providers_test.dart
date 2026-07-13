@@ -97,7 +97,7 @@ Future<int> _insertTrack(
   UserDatabase db, {
   required String curriculumId,
   int profileId = _profileId,
-  String state = TrackState.active,
+  TrackState state = TrackState.active,
 }) async {
   final now = DateTime.utc(2026, 1, 1);
   return db
@@ -106,7 +106,7 @@ Future<int> _insertTrack(
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: curriculumId,
-          state: Value(state),
+          state: Value(state.storageKey),
           stateChangedAt: now,
           activatedAt: now,
         ),
@@ -324,7 +324,7 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: _profileId,
               curriculumId: 'unknown_curriculum_xyz',
-              state: const Value(TrackState.active),
+              state: Value(TrackState.active.storageKey),
               stateChangedAt: now,
               activatedAt: now,
             ),

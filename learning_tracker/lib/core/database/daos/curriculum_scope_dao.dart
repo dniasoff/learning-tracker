@@ -58,19 +58,29 @@ class CurriculumScopeDao extends DatabaseAccessor<UserDatabase>
           ))
           .go();
 
-      // Insert new scopes
+      // Insert new scopes.
+      //
+      // AUD-core-database-06 (DB-3): single batch() round trip instead of an
+      // awaited per-row insert loop. Already inside the enclosing
+      // transaction() above (DB-2), so batch() reuses it rather than opening
+      // its own.
       final now = DateTimeFactory.nowUtc();
-      for (final value in scopeValues) {
-        await into(curriculumScopes).insert(
-          CurriculumScopesCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculum.storageKey,
-            trackId: trackId,
-            scopeLevel: scopeLevel,
-            scopeValue: value,
-            createdAt: now,
-          ),
-        );
+      if (scopeValues.isNotEmpty) {
+        await batch((b) {
+          b.insertAll(
+            curriculumScopes,
+            scopeValues.map(
+              (value) => CurriculumScopesCompanion.insert(
+                profileId: profileId,
+                curriculumId: curriculum.storageKey,
+                trackId: trackId,
+                scopeLevel: scopeLevel,
+                scopeValue: value,
+                createdAt: now,
+              ),
+            ),
+          );
+        });
       }
     });
   }

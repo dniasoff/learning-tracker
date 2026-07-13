@@ -63,7 +63,11 @@ void main() {
           CurriculumTracksCompanion(
             profileId: Value(profileId),
             curriculumId: Value(curriculumId),
-            state: Value(isActive ? TrackState.active : TrackState.retired),
+            state: Value(
+              isActive
+                  ? TrackState.active.storageKey
+                  : TrackState.retired.storageKey,
+            ),
             stateChangedAt: Value(activatedAt ?? DateTime.utc(2026, 1, 1)),
             activatedAt: Value(activatedAt ?? DateTime.utc(2026, 1, 1)),
           ),

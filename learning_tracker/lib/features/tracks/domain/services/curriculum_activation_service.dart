@@ -203,7 +203,7 @@ class CurriculumActivationService {
                 (t) =>
                     t.profileId.equals(profileId) &
                     t.curriculumId.equals(curriculum.storageKey) &
-                    t.state.equals(TrackState.active),
+                    t.state.equals(TrackState.active.storageKey),
               )
               ..limit(1))
             .getSingleOrNull();
