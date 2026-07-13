@@ -65,6 +65,7 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/manage
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
     show pendingTutorInvitesProvider;
 
+import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Factories ──────────────────────────────────────────────────────────────────
@@ -108,12 +109,6 @@ class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
 
   @override
   TutoredProfileSelection? build() => _fixed;
-}
-
-/// Null tutored session — no amber bar.
-class _NullTutoredSelection extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => null;
 }
 
 // ── Common override helpers ────────────────────────────────────────────────────
@@ -360,7 +355,7 @@ void main() {
             _pointsBalanceZeroOverride(),
             // No active tutor session so the normal shell renders.
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -452,7 +447,7 @@ void main() {
             _pendingRedemptionsZeroOverride(),
             _pointsBalanceZeroOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );

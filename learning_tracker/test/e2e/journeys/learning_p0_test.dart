@@ -18,17 +18,13 @@ import 'package:flutter/material.dart' show Key, MaterialApp;
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/completion_dao.dart'
-    show Completion;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -36,7 +32,6 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_mile
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -47,75 +42,19 @@ import 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
+import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Stubs and fakes ──────────────────────────────────────────────────────────
+//
+// FakeCompletionRepository and FakeContentRepository were extracted to the
+// shared ../fakes/e2e_fakes.dart module (AUD-t-cross-10). Only the
+// file-specific throwing variant remains here.
 
-/// Fake [CompletionRepository] that records mark calls and returns a
-/// configurable [MarkCompletionResult].
-class _FakeCompletionRepository extends Fake implements CompletionRepository {
-  _FakeCompletionRepository({List<RewardUnlockRecord>? unlocks})
-    : _unlocks = unlocks ?? const [];
-
-  final List<RewardUnlockRecord> _unlocks;
-  final List<CompletionRequest> markedRequests = [];
-
-  @override
-  Future<MarkCompletionResult> markComplete(
-    CompletionRequest request, {
-    bool awardGamificationPoints = true,
-    bool creditsAchievement = true,
-  }) async {
-    markedRequests.add(request);
-    return MarkCompletionResult(
-      completion: _stubCompletion(request),
-      newMilestoneUnlocks: _unlocks,
-    );
-  }
-
-  @override
-  Future<bool> isStageCompleted({
-    required String sefariaRef,
-    required int stageId,
-    required String trackType,
-  }) async => false;
-
-  @override
-  Future<List<Completion>> getCompletionsByCurriculum(
-    String curriculumId, {
-    int? profileId,
-  }) async => const <Completion>[];
-
-  @override
-  Future<List<Completion>> getCompletionsForContentItem(
-    String sefariaRef,
-  ) async => const <Completion>[];
-
-  @override
-  Future<List<Completion>> bulkMarkComplete(
-    BulkCompletionRequest request,
-  ) async => const <Completion>[];
-
-  Completion _stubCompletion(CompletionRequest req) {
-    final now = DateTimeFactory.nowUtc();
-    return Completion(
-      id: 1,
-      profileId: 1,
-      curriculumId: req.curriculumId,
-      sefariaRef: req.sefariaRef,
-      stageId: req.stageId,
-      trackType: req.trackType,
-      trackId: 1,
-      completedAt: now,
-      points: 10,
-    );
-  }
-}
-
-/// Fake [CompletionRepository] whose [markComplete] always throws
+/// A [FakeCompletionRepository] whose [markComplete] always throws
 /// [_error], for AUD-content_browsing-09 (EH-4) —
 /// TextDisplayScreen._handleComplete's typed-catch regression test.
-class _ThrowingCompletionRepository extends _FakeCompletionRepository {
+class _ThrowingCompletionRepository extends FakeCompletionRepository {
   _ThrowingCompletionRepository(this._error);
 
   final Error _error;
@@ -127,80 +66,6 @@ class _ThrowingCompletionRepository extends _FakeCompletionRepository {
     bool creditsAchievement = true,
   }) async {
     throw _error;
-  }
-}
-
-/// Fake [ContentRepository] that returns a fixed list of [ContentItem]s.
-class _FakeContentRepository extends Fake implements ContentRepository {
-  _FakeContentRepository(this._items);
-
-  final List<ContentItem> _items;
-
-  @override
-  Future<List<ContentItem>> getContentForCurriculum(
-    CurriculumId curriculumId,
-  ) async =>
-      _items.where((i) => i.curriculumId == curriculumId.storageKey).toList();
-
-  @override
-  Future<CurriculumHierarchyConfig> getHierarchyConfig(
-    CurriculumId curriculumId,
-  ) async => CurriculumHierarchyConfig(
-    curriculumId: curriculumId.storageKey,
-    levelLabels: const ['Level 1'],
-    totalItems: 0,
-  );
-
-  @override
-  Future<List<ContentItem>> filterByLevel({
-    required CurriculumId curriculumId,
-    String? level1,
-    String? level2,
-    String? level3,
-    String? level4,
-  }) async {
-    var items = await getContentForCurriculum(curriculumId);
-    if (level1 != null) items = items.where((i) => i.level1 == level1).toList();
-    if (level2 != null) items = items.where((i) => i.level2 == level2).toList();
-    if (level3 != null) items = items.where((i) => i.level3 == level3).toList();
-    if (level4 != null) items = items.where((i) => i.level4 == level4).toList();
-    return items;
-  }
-
-  @override
-  Future<List<ContentItem>> getScopedContent({
-    required CurriculumId curriculumId,
-    required int scopeLevel,
-    required List<String> scopeValues,
-  }) async => await getContentForCurriculum(curriculumId);
-
-  @override
-  Future<List<ContentItem>> search({
-    required CurriculumId curriculumId,
-    required String query,
-  }) async {
-    final items = await getContentForCurriculum(curriculumId);
-    final q = query.toLowerCase();
-    return items
-        .where(
-          (i) =>
-              i.displayNameEn.toLowerCase().contains(q) ||
-              i.displayNameHe.contains(q),
-        )
-        .toList();
-  }
-
-  @override
-  Future<ContentItem?> getContentByRef({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) async {
-    final items = await getContentForCurriculum(curriculumId);
-    try {
-      return items.firstWhere((i) => i.sefariaRef == sefariaRef);
-    } catch (_) {
-      return null;
-    }
   }
 }
 
@@ -373,7 +238,7 @@ void main() {
         addTearDown(h.dispose);
 
         final task = _finePacedTask(trackId: 1);
-        final fakeRepo = _FakeCompletionRepository();
+        final fakeRepo = FakeCompletionRepository();
 
         await h.pumpApp(
           path: '/learn',
@@ -416,7 +281,7 @@ void main() {
       addTearDown(h.dispose);
 
       final task = _finePacedTask(trackId: 1);
-      final fakeRepo = _FakeCompletionRepository();
+      final fakeRepo = FakeCompletionRepository();
 
       await h.pumpApp(
         path: '/text/${task.contentItemSefariaRef}',
@@ -494,7 +359,7 @@ void main() {
       addTearDown(h.dispose);
 
       final task = _finePacedTask(trackId: 1);
-      final fakeRepo = _FakeCompletionRepository();
+      final fakeRepo = FakeCompletionRepository();
 
       await h.pumpApp(
         path: '/text/${task.contentItemSefariaRef}',
@@ -510,7 +375,7 @@ void main() {
           ).overrideWith((ref) => Future.value((prev: null, next: null))),
           // Child is not in a tutored session.
           activeTutoredProfileSelectionProvider.overrideWith(
-            () => _NullTutoredSelection(),
+            () => NullTutoredSelection(),
           ),
         ],
       );
@@ -538,7 +403,7 @@ void main() {
         final task = _finePacedTask(trackId: 1);
         final now = DateTimeFactory.nowUtc();
         const milestoneTitle = 'Gold Star';
-        final fakeRepo = _FakeCompletionRepository(
+        final fakeRepo = FakeCompletionRepository(
           unlocks: [
             RewardUnlockRecord(
               milestoneId: 'milestone-1',
@@ -565,7 +430,7 @@ void main() {
               task.contentItemSefariaRef,
             ).overrideWith((ref) => Future.value((prev: null, next: null))),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
             // dashboardUserModeProvider reads the profile from the DB asynchronously.
             // Explicitly override to ProfileMode.child so _handleComplete's
@@ -765,8 +630,8 @@ void main() {
         isLeaf: true,
       );
 
-      final fakeContentRepo = _FakeContentRepository([amud2a, amud2b]);
-      final fakeCompletionRepo = _FakeCompletionRepository();
+      final fakeContentRepo = FakeContentRepository([amud2a, amud2b]);
+      final fakeCompletionRepo = FakeCompletionRepository();
 
       await h.pumpApp(
         path: '/text/$sefariaRef2a',
@@ -868,7 +733,7 @@ void main() {
 
         // Use a fake content repository (returns empty lists immediately) to
         // avoid pending timers from rootBundle.loadString() calls.
-        final fakeContentRepo = _FakeContentRepository(const []);
+        final fakeContentRepo = FakeContentRepository(const []);
 
         await h.pumpApp(
           path: '/browse',
@@ -903,7 +768,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final fakeContentRepo = _FakeContentRepository(const []);
+        final fakeContentRepo = FakeContentRepository(const []);
 
         await h.pumpApp(
           path: '/browse',
@@ -943,7 +808,7 @@ void main() {
         final h = E2EHarness(tester, identity: identity);
         addTearDown(h.dispose);
 
-        final fakeContentRepo = _FakeContentRepository(const []);
+        final fakeContentRepo = FakeContentRepository(const []);
 
         // Navigate directly to ContentHierarchyScreen for Mishnayos.
         await h.pumpApp(
@@ -1070,14 +935,6 @@ void main() {
 }
 
 // ── Fixed-value notifier helpers ─────────────────────────────────────────────
-
-/// A [ActiveTutoredProfileSelection] notifier that always returns null
-/// (no tutored session). Used to ensure the child-mode journeys do not
-/// accidentally enter a tutor session.
-class _NullTutoredSelection extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => null;
-}
 
 /// A [ActiveTutoredProfileSelection] notifier that always returns the
 /// provided [TutoredProfileSelection]. Used to simulate an active tutor

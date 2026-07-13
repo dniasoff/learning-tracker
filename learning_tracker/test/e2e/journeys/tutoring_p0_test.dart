@@ -67,6 +67,7 @@ import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pi
     show TutorPinEntryGate;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Fakes / Stubs ─────────────────────────────────────────────────────────────
@@ -231,12 +232,6 @@ class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
 
   @override
   TutoredProfileSelection? build() => _fixed;
-}
-
-/// Fixed-value notifier for [ActiveTutoredProfileSelection] — no session.
-class _NullTutoredSelection extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => null;
 }
 
 // ── Grant factory helpers ─────────────────────────────────────────────────────
@@ -408,7 +403,7 @@ void main() {
               _NoopTutorNotificationGateway(),
             ),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -655,7 +650,7 @@ void main() {
                 (ref) => Future.value([activeGrant]),
               ),
               activeTutoredProfileSelectionProvider.overrideWith(
-                () => _NullTutoredSelection(),
+                () => NullTutoredSelection(),
               ),
             ],
           );
@@ -722,7 +717,7 @@ void main() {
             _NoopTutorNotificationGateway(),
           ),
           activeTutoredProfileSelectionProvider.overrideWith(
-            () => _NullTutoredSelection(),
+            () => NullTutoredSelection(),
           ),
         ],
       );

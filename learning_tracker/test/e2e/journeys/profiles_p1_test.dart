@@ -74,6 +74,7 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/manage
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
     show pendingTutorInvitesProvider;
 
+import '../fakes/e2e_fakes.dart';
 import '../harness/e2e_harness.dart';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -150,12 +151,6 @@ class _SameAsActiveParentPinAuth extends ParentPinAuthenticatedProfileId {
   int? build() => ref.watch(activeProfileIdProvider);
 }
 
-/// Fixed-value notifier for [ActiveTutoredProfileSelection] — no session.
-class _NullTutoredSelection extends ActiveTutoredProfileSelection {
-  @override
-  TutoredProfileSelection? build() => null;
-}
-
 /// Fixed-value notifier for [ActiveTutoredProfileSelection] — active session.
 class _FixedTutoredSelection extends ActiveTutoredProfileSelection {
   _FixedTutoredSelection(this._fixed);
@@ -213,7 +208,7 @@ void main() {
             // No active tutored session so ChildViewBanner shows (not
             // TutorModeIndicatorBar).
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
             // Prime parentPinAuthenticatedProfileIdProvider to the active
             // profile's id so the "Viewing [child]" banner renders.
@@ -282,7 +277,7 @@ void main() {
             _incomingGrantsEmptyOverride(),
             _pendingInvitesEmptyOverride(),
             activeTutoredProfileSelectionProvider.overrideWith(
-              () => _NullTutoredSelection(),
+              () => NullTutoredSelection(),
             ),
           ],
         );
@@ -593,7 +588,7 @@ void main() {
           _incomingGrantsEmptyOverride(),
           _pendingInvitesEmptyOverride(),
           activeTutoredProfileSelectionProvider.overrideWith(
-            () => _NullTutoredSelection(),
+            () => NullTutoredSelection(),
           ),
         ],
       );
@@ -887,7 +882,7 @@ void main() {
               _incomingGrantsEmptyOverride(),
               _pendingInvitesEmptyOverride(),
               activeTutoredProfileSelectionProvider.overrideWith(
-                () => _NullTutoredSelection(),
+                () => NullTutoredSelection(),
               ),
               // AN-2: override the PIN-guard-required provider to simulate a
               // child profile with a configured Parent PIN.
