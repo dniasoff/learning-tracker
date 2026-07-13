@@ -6,10 +6,9 @@
 /// that was never computed at runtime.
 library;
 
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
+
+import '../helpers/arb_loader.dart';
 
 /// Matches strings that contain a hardcoded percentage like "+12%" or "-5%".
 final _hardcodedPercentPattern = RegExp(r'[+-]\d+%');
@@ -18,15 +17,7 @@ void main() {
   group('chartCumulativeProgressSubtitle — no hardcoded percentage', () {
     for (final locale in ['en', 'he']) {
       test('app_$locale.arb does not contain a hardcoded ±N% literal', () {
-        final arbFile = File('lib/l10n/app_$locale.arb');
-        expect(
-          arbFile.existsSync(),
-          isTrue,
-          reason: 'ARB file for locale "$locale" must exist',
-        );
-
-        final arb =
-            json.decode(arbFile.readAsStringSync()) as Map<String, dynamic>;
+        final arb = loadArb(locale);
 
         final subtitle = arb['chartCumulativeProgressSubtitle'] as String?;
         expect(

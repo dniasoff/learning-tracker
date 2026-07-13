@@ -9,29 +9,15 @@
 // Fix: in app_he.arb, these strings hardcode the Hebrew "שבת" / "שבת שלום" and
 // do not reference {term}, so the Hebrew locale always renders correctly
 // regardless of what term value the feature code passes.
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 
-Map<String, dynamic> _loadArb(String locale) {
-  final candidates = [
-    File('lib/l10n/app_$locale.arb'),
-    File('../lib/l10n/app_$locale.arb'),
-  ];
-  final file = candidates.firstWhere(
-    (f) => f.existsSync(),
-    orElse: () =>
-        throw TestFailure('Could not locate lib/l10n/app_$locale.arb.'),
-  );
-  return json.decode(file.readAsStringSync()) as Map<String, dynamic>;
-}
+import '../helpers/arb_loader.dart';
 
 void main() {
   late final Map<String, dynamic> heArb;
 
   setUpAll(() {
-    heArb = _loadArb('he');
+    heArb = loadArb('he');
   });
 
   group('IL-9 — Hebrew Shabbos strings do not leak Latin {term}', () {
