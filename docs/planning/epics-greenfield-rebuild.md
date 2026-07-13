@@ -802,6 +802,8 @@ So that the `getAllX` / `getXByProfile` / `getXByCurriculumAndProfile` triplet d
 
 ### Story 25.18: `core/navigation/` — typed auto_route + PinScope-parameterized guard
 
+> ℹ️ **Historical framing.** Story 25.18 shipped as DNI-339 (Epic 25, Done 2026-05-14 — see `docs/linear-status.md`). The "Given" clause and the `ParentPinGuard`/`TutorPinGuard` names below describe the pre-story state this story replaced; those classes no longer exist in code. See `docs/stories/implementation/DNI-339-typed-auto-route-pinscope-guard.md` for the implementation record and `lib/core/navigation/guards/pin_guard.dart` for the current single `PinGuard(PinScope)`.
+
 As a developer adding a new gated route,
 I want typed auto_route generation and one composable `PinGuard(PinScope.{parent(profileId), tutor(profileId)})` rather than separate `ParentPinGuard`/`TutorPinGuard`,
 So that guard duplication is removed and adding a new PIN-gated route is one line (NFR1, simplification of architecture-doc's 7 guards).

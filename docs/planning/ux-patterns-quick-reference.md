@@ -72,7 +72,7 @@ Sign In → Welcome → Mode Selection → Curriculum Selection → Goal Setup (
 ### Route Guards (Story 1.5; unified into one typed guard by DNI-339, 2026-07)
 - `AuthGuard` — Requires signed-in user (all routes except auth)
 - `PinGuard(PinScope.parent(profileId))` — Requires parent PIN entry (child mode only). Superseded the standalone `ParentPinGuard`.
-- `PinGuard(PinScope.tutor(profileId))` — Requires tutor PIN entry (both modes), verified against the grant-based tutoring model (`lib/features/tutoring/`). Superseded the standalone `TutorPinGuard`.
+- `PinGuard(PinScope.tutor(profileId))` — Requires tutor PIN entry (both modes), verified against the grant-based tutoring model (`lib/features/tutoring/`). Consolidated from a separate dedicated tutor-only guard class by DNI-339 (2026-07). PIN entry only gates access to the tutor dashboard — it does not grant live-forward completion marking, which `canMarkLiveCompletion` blocks permanently regardless of granted `TutorPermissions`.
 
 ---
 

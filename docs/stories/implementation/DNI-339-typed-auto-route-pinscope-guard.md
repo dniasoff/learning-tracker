@@ -3,6 +3,8 @@
 **Status:** review
 **Linear:** [DNI-339](https://linear.app/orvexai/issue/DNI-339)
 
+> ℹ️ **Historical implementation record.** This story is complete (per `docs/linear-status.md`, Epic 25 — all 22 stories Done, 2026-05-14). The `ParentPinGuard` / `TutorPinGuard` classes named in the Story statement below are what this change *replaced*; neither exists in code anymore. The single typed guard they were consolidated into is `PinGuard(PinScope.{parent,tutor}(profileId))` in `lib/core/navigation/guards/pin_guard.dart`. The class names are kept here only to document what was removed — do not use them as current API reference.
+
 ## Story
 
 As a developer adding a new gated route, I want typed auto_route generation and one composable `PinGuard(PinScope.{parent(profileId), tutor(profileId)})` rather than separate `ParentPinGuard` / `TutorPinGuard`, so that guard duplication is removed and adding a new PIN-gated route is one line.
