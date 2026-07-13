@@ -3038,13 +3038,18 @@
   {
    "id": "AUD-t-cross-22",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Extract the duplicated ARB-loading helper out of 4 test/l10n regression tests",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "3e112f4ef9944b681dbc3106998d0b71dedb6a67"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-22 AC1 OK: arb_loader.dart is the single loadArb() def; all 5 ARB-reading test/l10n files import it (other 2 use generated AppLocalizations)",
+    "AUD-t-cross-22 AC2 OK: exact grep=0 matches; Rule-0 audit grep 51/51 exists and fires - injected both violation forms into temp test/l10n file, grep matched, then removed"
+   ],
+   "notes": "Re-verified: 5 hand-rolled _loadArb copies found, matching evidence - not fixed. Extracted shared loadArb() into test/helpers/arb_loader.dart; fixed 4 evidence sites plus the 5th named copy (AC#2 grep scans all test/l10n/*.dart). Added make audit grep 51/51 as Rule-0 checker; showed red-then-green."
   },
   {
    "id": "AUD-core-auth-03",
