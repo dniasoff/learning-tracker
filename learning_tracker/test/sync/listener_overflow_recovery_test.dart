@@ -18,6 +18,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/listener_supervisor.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 
 /// A listener source whose channels are backed by user-driven controllers.
 class _ControllerSource implements ListenerSource {
@@ -93,7 +94,14 @@ void main() {
     );
 
     test('a second at-limit snapshot within 60 s does NOT retrigger the pull '
-        '(per-channel throttle)', () async {
+        '(per-channel throttle), and one past the 60 s window DOES', () async {
+      // AUD-t-cross-101: drive the throttle boundary through the
+      // injectable LocalDayClock seam instead of real elapsed time, so
+      // both sides of the 60 s window are provable by construction.
+      final clock = FakeLocalDayClock(DateTime.utc(2026, 1, 1));
+      useLocalDayClock(clock);
+      addTearDown(resetLocalDayClock);
+
       final source = _ControllerSource(['completions']);
       var pullCount = 0;
       final supervisor = ListenerSupervisor(
@@ -116,12 +124,15 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(pullCount, 1);
 
-      // Another at-limit snapshot ~immediately — must be coalesced.
+      // Advance the fake clock but stay INSIDE the 60 s throttle window —
+      // a burst of at-limit snapshots here must be coalesced.
+      clock.advance(const Duration(seconds: 30));
       source.emit(
         'completions',
         const ListenerSnapshot(rows: [], isAtLimit: true),
       );
       await Future<void>.delayed(Duration.zero);
+      clock.advance(const Duration(seconds: 29));
       source.emit(
         'completions',
         const ListenerSnapshot(rows: [], isAtLimit: true),
@@ -132,8 +143,29 @@ void main() {
         1,
         reason:
             'recovery-pull is throttled to one invocation per minute per '
-            'channel — a burst of at-limit snapshots must not loop the '
-            'pull pipeline.',
+            'channel — a burst of at-limit snapshots inside the window '
+            'must not loop the pull pipeline.',
+      );
+
+      // Advance the fake clock PAST the 60 s throttle window (59 s + 2 s
+      // = 61 s elapsed since the first pull) — the next at-limit
+      // snapshot must retrigger the recovery pull. This is the side of
+      // the boundary the original wall-clock-only test could never
+      // exercise deterministically.
+      clock.advance(const Duration(seconds: 2));
+      source.emit(
+        'completions',
+        const ListenerSnapshot(rows: [], isAtLimit: true),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        pullCount,
+        2,
+        reason:
+            'once the throttle window has elapsed, the next at-limit '
+            'snapshot must retrigger the recovery pull — the throttle '
+            'coalesces bursts, it does not permanently suppress '
+            'recovery.',
       );
     });
 
