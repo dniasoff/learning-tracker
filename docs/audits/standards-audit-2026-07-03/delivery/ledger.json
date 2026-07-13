@@ -2642,13 +2642,21 @@
   {
    "id": "AUD-t-cross-10",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Deduplicate hand-rolled e2e fakes (_FakeContentRepository, _NullTutoredSelection) before more copies drift like learning_p1_test.dart's broken filterByLevel",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "2943d73bb523f0e55e9d5a6a25595e73812bf8e1"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-10 AC1 OK: one shared NullTutoredSelection/FakeContentRepo/FakeCompletionRepo in e2e_fakes.dart, imported by all 11 journeys; 0 remaining _-copies",
+    "AUD-t-cross-10 AC1 naming: literal '_NullTutoredSelection' grep=0 (renamed public) - Dart bars cross-lib _-import; documented, TQ-4, intent met, concur",
+    "AUD-t-cross-10 AC2 OK: shared filterByLevel filters level1..4 (e2e_fakes.dart:80-91), tested level1/1+2/3/4/empty, 6/6 green by my run",
+    "AUD-t-cross-10 genuine: pre-fix learning_p1 filterByLevel was pass-through ignoring args vs p0 correct; shared impl adopts correct filter",
+    "AUD-t-cross-10 no-TQ7: 0 expect/verify removed; test-block counts unchanged (p0 11->11, p1 9->9), only fake code extracted"
+   ],
+   "notes": "Confirmed live: 11 dup _NullTutoredSelection + 2 diverged Fake repos (p1 filterByLevel ignored args). Extracted to e2e_fakes.dart, imported by all 11 files. Public naming (Dart bars private cross-lib import) per TQ-4. Red-first: 3/4 failed on reintroduced bug, 6/6 green after fix."
   },
   {
    "id": "AUD-t-cross-31",
