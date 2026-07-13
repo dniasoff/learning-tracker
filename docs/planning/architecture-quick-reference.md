@@ -1,6 +1,6 @@
 # Learning Tracker — Architecture Quick Reference
 
-**Last Updated:** 2026-04-19
+**Last Updated:** 2026-07-13
 **Full Details:** [architecture.md](../architecture.md) | [Architecture Design (intent)](architecture-design.md) | [Offline-First v2 (auth)](architecture-offline-v2.md) | [Two-Database Architecture](two-database-architecture.md) | [PRD (historical)](prd.md)
 
 > ⚠️ **Historical context:** Sections dated earlier than 2026-04-15 describe earlier phases of the project. Where they conflict with current code, trust the current-state docs linked above.
@@ -40,10 +40,12 @@ curriculum_hierarchy_config (
 )
 ```
 
-### D2: Authentication — Firebase Auth (Email/Password + Google Sign-In)
-**Why:** Multi-device sync requires account-based auth (not anonymous)
-**Providers:** Email/password (primary), Google Sign-In (convenience)
+### D2: Authentication — Hard-Tier Auth (Cloud-Born vs Local-Born)
+**Why:** Multi-device sync requires account-based auth (not anonymous); offline-first users still get a real account, just tier-gated for sync.
+**Tiers:** `cloudBorn` (Firebase Auth, Firestore sync active) | `localBorn` (email + argon2id hash in SQLite, local-only, no sync). Tier is decided by network state at signup and is immutable; local→cloud is a one-way, explicit upgrade.
+**Providers:** Email/password (both tiers), Google Sign-In (cloud-born only, convenience)
 **Security:** Parent PIN (bcrypt, device-local) for child mode; tutor PIN separate
+**Canonical doc:** [architecture-offline-v2.md](architecture-offline-v2.md)
 
 ### D3: Stage Storage — Separate Relational Table
 **Problem:** Users customize stages per curriculum (e.g., Learn + 3 chazara vs. Learn + 5 chazara)
@@ -185,7 +187,9 @@ features/<feature>/
 
 ---
 
-## Key Data Models
+## Key Data Models (Epic 1-5, historical — superseded)
+
+> ⚠️ **Historical context — do not use for new implementation work.** These models reflect the pre-Epic-19 single-database schema (one unified `db` with a flat `Completion` keyed by `contentItemId`, no `profileId`). The codebase has since moved to a three-database, multi-profile architecture where `profileId` participates in the primary key of every user-facing table (`profileId`-in-PK is an [E]nforced rule — see [Coding Standards](../coding-standards.md)), and completions live in the User DB's `Completions`/`CompletionEvents` tables. For the current schema, see [Database Schema](../architecture.md#database-schema) in architecture.md.
 
 ### CurriculumId (P1)
 ```dart
@@ -258,7 +262,9 @@ class LearningOrder {
 
 ---
 
-## Common Queries
+## Common Queries (Epic 1-5, historical — superseded)
+
+> ⚠️ **Historical context — do not use for new implementation work.** These Drift query samples target the pre-Epic-19 single-database schema (`db.completions`, `db.contentItems` against one unified `db`). That schema no longer exists in `learning_tracker/lib` — `grep -r "db\.contentItems" learning_tracker/lib` returns zero matches, and the only substring hit for `db.completions` is the unrelated `_db.completionsView` (a Drift view accessor, not this sample's flat `completions` table). Current code queries the three-database split (Content DB / User DB / Registry DB) via per-database DAOs, profile-scoped. For current query patterns, read the DAOs under `learning_tracker/lib/core/database/daos/` and [Database Schema](../architecture.md#database-schema) in architecture.md.
 
 ### Get Next Unlearned Item (for Bookmark)
 ```dart
@@ -351,9 +357,9 @@ final hasCompletionYesterday = await (db.select(db.completions)
 
 ---
 
-## Coding Standards (120+ Rules)
+## Coding Standards
 
-See [project-context.md](../../_bmad/bmm/data/project-context-template.md) for full 120+ rules. Key highlights:
+See [Coding Standards](../coding-standards.md) for the full rule set. Key highlights:
 
 - **TDD First:** Write failing test → implement → refactor
 - **No premature optimization:** Simple first, measure, then optimize
