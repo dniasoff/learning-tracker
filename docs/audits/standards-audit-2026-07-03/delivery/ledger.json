@@ -3120,13 +3120,17 @@
   {
    "id": "AUD-t-content_browsing-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Make pp18_content_search_clear_button_test.dart render the real ContentSearchScreen instead of a hand-rolled TextField clone",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "1415ec37333646008455febed243d8c0c38d7e03"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-content_browsing-01 AC1 OK: test imports+pumps real ContentSearchScreen (lines 25,38-53); I set suffixIcon->null, re-ran -> 2/3 tests RED, then git-restored"
+   ],
+   "notes": "Confirmed finding still applied. Rewrote pp18 test to pump the real ContentSearchScreen instead of the hand-rolled clone; asserts real Icons.clear IconButton. AC verified: deleting suffixIcon block made 2/3 tests fail RED; restoring it (git diff clean) made them pass again. Committed 99ca7a5d."
   },
   {
    "id": "AUD-t-dashboard-02",
