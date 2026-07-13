@@ -604,7 +604,7 @@ audit: lint-rules-test ## Run all 42 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/ag5_mirroring_check.$$$$.log; \
 	fi; \
-	echo "30/40 — DB-2: no multi-write service method in features/onboarding/domain/services without an enclosing transaction() (AUD-onboarding-06)"; \
+	echo "30/40 — DB-2: no multi-write method in features/onboarding/domain/services or core/database/registry without an enclosing transaction() (AUD-onboarding-06, AUD-core-database-08)"; \
 	if ! dart run tool/check_db_transactions.dart > /tmp/db_transactions_check.$$$$.log 2>&1; then \
 	  cat /tmp/db_transactions_check.$$$$.log; \
 	  rm -f /tmp/db_transactions_check.$$$$.log; \

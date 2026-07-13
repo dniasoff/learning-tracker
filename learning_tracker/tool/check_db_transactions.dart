@@ -11,7 +11,12 @@
 /// `upsert*`, `replace*`, `remove*`, `set*`, `mark*`, `tombstone*`,
 /// `expunge*`, `save*`, `enqueue*`, `push*`, `create*`, or the Drift
 /// delete-statement terminal `.go(`) with **no** enclosing `transaction(` /
-/// `runTransaction(` / `.batch(` call anywhere in that same method body.
+/// `runTransaction(` / `.batch(` call anywhere in that same method body. The
+/// mutation call may be receiver-qualified (`db.deleteFoo(`) or a bare
+/// same-class call with an implicit `this` receiver (`await removeAccount(`,
+/// `await setLastActiveAccountId(`) — DAO classes like
+/// `DeviceRegistryDatabase` call their own sibling write methods without an
+/// explicit `this.` prefix, so both shapes must count.
 ///
 /// Heuristic, not a full parser: methods are located by brace-depth
 /// scanning (a `{` opened directly inside a class body, i.e. at nesting
@@ -28,11 +33,14 @@
 /// Scope (deliberate, Rule 0 "ship the checker when you first apply the
 /// rule"): `lib/features/onboarding/domain/services/` — the exact area of
 /// AUD-onboarding-06's two violations (`learning_process_wizard_service.dart`,
-/// `bulk_prior_completion_service.dart`). A codebase-wide DB-2 rollout risks
-/// surfacing a large pre-existing-violation backlog unrelated to this
-/// finding (mirroring the audit's own precedent of introducing new checks
-/// scoped/warn-only against legacy debt — checks 14/15 in this Makefile);
-/// widening this checker's scope is a follow-up, not part of this fix.
+/// `bulk_prior_completion_service.dart`) — plus
+/// `lib/core/database/registry/` — the exact area of AUD-core-database-08's
+/// violation (`device_registry_database.dart`'s `removeAccount` and
+/// `dedupeByEmail`). A codebase-wide DB-2 rollout risks surfacing a large
+/// pre-existing-violation backlog unrelated to either finding (mirroring the
+/// audit's own precedent of introducing new checks scoped/warn-only against
+/// legacy debt — checks 14/15 in this Makefile); widening this checker's
+/// scope further is a follow-up, not part of either fix.
 ///
 /// Usage:
 ///   dart run tool/check_db_transactions.dart
@@ -45,8 +53,11 @@ library;
 
 import 'dart:io';
 
-/// Directory scanned for DB-2 violations — see the scope note above.
-const _scanDir = 'lib/features/onboarding/domain/services';
+/// Directories scanned for DB-2 violations — see the scope note above.
+const _scanDirs = [
+  'lib/features/onboarding/domain/services',
+  'lib/core/database/registry',
+];
 
 /// Method-selector prefixes treated as "mutation-shaped" calls, plus the
 /// exact-match Drift delete-statement terminal `go`.
@@ -69,7 +80,7 @@ const _writeVerbPrefixes = [
 ];
 
 final _writeCallPattern = RegExp(
-  r'await\s+[^;{}]*?\.(?:' +
+  r'await\s+(?:[^;{}]*?\.)?(?:' +
       _writeVerbPrefixes.map((v) => '$v\\w*').join('|') +
       r'|go)\s*\(',
 );
@@ -79,21 +90,23 @@ final _transactionPattern = RegExp(r'[Tt]ransaction\(|\.batch\(');
 const _controlFlowKeywords = {'if', 'for', 'while', 'switch', 'catch'};
 
 void main() {
-  final dir = Directory(_scanDir);
-  if (!dir.existsSync()) {
-    stderr.writeln('ERROR: $_scanDir not found — run from learning_tracker/');
-    exit(1);
-  }
-
-  final dartFiles =
+  final dartFiles = <File>[];
+  for (final scanDir in _scanDirs) {
+    final dir = Directory(scanDir);
+    if (!dir.existsSync()) {
+      stderr.writeln('ERROR: $scanDir not found — run from learning_tracker/');
+      exit(1);
+    }
+    dartFiles.addAll(
       dir
           .listSync(recursive: true)
           .whereType<File>()
           .where((f) => f.path.endsWith('.dart'))
           .where((f) => !f.path.endsWith('.g.dart'))
-          .where((f) => !f.path.endsWith('.freezed.dart'))
-          .toList()
-        ..sort((a, b) => a.path.compareTo(b.path));
+          .where((f) => !f.path.endsWith('.freezed.dart')),
+    );
+  }
+  dartFiles.sort((a, b) => a.path.compareTo(b.path));
 
   final violations = <String>[];
 
@@ -130,7 +143,8 @@ void main() {
 
   stdout.writeln(
     'DB-2 transaction-safety check passed — every multi-write method in '
-    '$_scanDir/ has an enclosing transaction().',
+    '${_scanDirs.map((d) => '$d/').join(', ')} has an enclosing '
+    'transaction().',
   );
 }
 

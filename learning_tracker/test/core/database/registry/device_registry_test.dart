@@ -3,6 +3,30 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 
+/// Test double that lets a single test simulate a crash between
+/// [removeAccount]'s delete and its `lastActiveAccountId` clear (AUD-core-
+/// database-08 / DB-2). [setLastActiveAccountId] is called with an implicit
+/// `this` receiver from inside [removeAccount], so overriding it here is
+/// enough to inject a fault partway through the method without touching
+/// production code.
+class _CrashingDeviceRegistryDatabase extends DeviceRegistryDatabase {
+  _CrashingDeviceRegistryDatabase(super.e);
+
+  /// When true, the next [setLastActiveAccountId] call throws instead of
+  /// writing — simulating a process death after the delete has already
+  /// gone to disk but before the pointer-clear commits.
+  bool crashOnNextClear = false;
+
+  @override
+  Future<void> setLastActiveAccountId(String? accountId) async {
+    if (crashOnNextClear) {
+      crashOnNextClear = false;
+      throw StateError('simulated crash between delete and state-clear');
+    }
+    return super.setLastActiveAccountId(accountId);
+  }
+}
+
 void main() {
   late DeviceRegistryDatabase db;
 
@@ -180,6 +204,45 @@ void main() {
         expect(await db.getLastActiveAccountId(), 'a1');
       },
     );
+
+    test('removeAccount rolls back the delete if the state-clear throws '
+        'mid-method (crash-safety, DB-2 / AUD-core-database-08)', () async {
+      final crashingDb = _CrashingDeviceRegistryDatabase(
+        NativeDatabase.memory(),
+      );
+      addTearDown(crashingDb.close);
+
+      await crashingDb.addAccount(makeAccount(id: 'a1'));
+      await crashingDb.addAccount(makeAccount(id: 'a2', email: 'b@test.local'));
+      await crashingDb.setLastActiveAccountId('a1');
+
+      crashingDb.crashOnNextClear = true;
+
+      await expectLater(
+        () => crashingDb.removeAccount('a1'),
+        throwsA(isA<StateError>()),
+      );
+
+      // Neither write may have applied: the row must still exist AND the
+      // pointer must still reference it — a bare exception between two
+      // un-transacted writes must not leave a half-applied removal.
+      final accounts = await crashingDb.getAllAccounts();
+      expect(
+        accounts.map((a) => a.accountId),
+        contains('a1'),
+        reason:
+            'the delete must roll back when the state-clear throws before '
+            'the operation commits (transaction() required by DB-2)',
+      );
+      expect(
+        await crashingDb.getLastActiveAccountId(),
+        'a1',
+        reason:
+            'the pointer-clear must roll back together with the delete — '
+            'a torn write here is the exact D10 dangling-pointer state '
+            'removeAccount exists to prevent',
+      );
+    });
   });
 
   // ─── dedupeByEmail — heals "two cards in the account picker" symptom ────
