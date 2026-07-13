@@ -3404,13 +3404,19 @@
     {
       "id": "AUD-t-cross-24",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Fix clear_overdue_button_test.dart's push-spy test to verify SyncWriteFacade, the collaborator EditTrackScreen actually calls",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "5cb19c0c0376fc1471a5422d34fa5eeb4ac277c0"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-24 AC1 OK: my mutation (commented out push in edit_track_screen.dart:391) turned Test E red ('no calls at all'); reverted clean",
+        "AUD-t-cross-24 AC2 OK: verify(mockFacade.pushProfileProgram(captureAny())) on _MockSyncWriteFacade; single-Map matches sync_write_facade.dart:87; FirestoreGateway removed",
+        "AUD-t-cross-24 AC3 OK: all 6 keys asserted; dropping only updated_at (2nd mutation) turned Test E red (Expected date, Actual null)"
+      ],
+      "notes": "Confirmed prod code calls SyncWriteFacade.pushProfileProgram(Map), not FirestoreGateway. Old test mocked the wrong seam. Replaced with a widget test on the real screen + mocked facade, asserting all 6 payload keys. Red-first proof via mutation (disable/revert). All ACs met."
     },
     {
       "id": "AUD-t-tracks-02",
