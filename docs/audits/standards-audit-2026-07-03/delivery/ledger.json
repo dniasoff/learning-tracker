@@ -8668,13 +8668,21 @@
     {
       "id": "AUD-t-cross-101",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "listener_overflow_recovery_test.dart's per-channel throttle test bypasses the project's injectable clock seam, depending on real wall-clock proximity",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "c8a612796da19107cfebb9224571c8b1cf238175"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-101 AC1 OK: test overrides LocalDayClock via useLocalDayClock(FakeLocalDayClock)+addTearDown(resetLocalDayClock) (test:101-103)",
+        "AUD-t-cross-101 AC1 OK: INSIDE-window asserted - clock.advance to 59s, expect(pullCount,1) coalesced (test:135,141)",
+        "AUD-t-cross-101 AC1 OK: PAST-window asserted - clock.advance +2s to 61s, expect(pullCount,2) retriggers (test:155,161)",
+        "AUD-t-cross-101 AC1 OK: no real wait - only Duration.zero microtask flushes; time via fake clock.advance",
+        "AUD-t-cross-101 AC1 OK: seam wired - DateTimeFactory.nowUtc=currentLocalDayClock.nowUtc (date_utils:19) read by throttle (supervisor:357), throttle=1min (:168)"
+      ],
+      "notes": "Confirmed: test never overrode LocalDayClock, only asserted inside-window side. Wired FakeLocalDayClock; now asserts coalesce (pullCount=1) AND past-window retrigger (pullCount=2). Red-first: held advance at 59s, saw Expected:<2> Actual:<1>; restored 61s advance to green. gatePolicy=disjoint-skip (rebase file-disjoint vs dev; make audit + flutter analyze green)."
     },
     {
       "id": "AUD-t-cross-100",
