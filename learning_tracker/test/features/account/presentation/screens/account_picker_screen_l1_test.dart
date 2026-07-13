@@ -277,6 +277,15 @@ void main() {
       final fixture = await _buildFixture();
       final completer = Completer<List<DeviceAccount>>();
       final mockRegistry = _PendingRegistry(completer.future);
+      // Single teardown covering both DBs actually wired into this test's
+      // widget tree (mockRegistry stands in for fixture.registry here), kept
+      // as one addTearDown so the unmount-before-close ordering below is
+      // preserved and still registered well before the expect()s that
+      // follow — not as the final statement of the test body.
+      addTearDown(() async {
+        await _tearDown(tester, fixture);
+        await mockRegistry.close();
+      });
 
       await tester.pumpWidget(
         ProviderScope(
@@ -315,9 +324,6 @@ void main() {
 
       completer.complete([]);
       await tester.pump(const Duration(seconds: 1));
-
-      await _tearDown(tester, fixture);
-      await mockRegistry.close();
     },
   );
 
@@ -327,6 +333,7 @@ void main() {
     '2. single local-born account shows display name, email, LOCAL ACCOUNT badge',
     (tester) async {
       final fixture = await _buildFixture();
+      addTearDown(() => _tearDown(tester, fixture));
       await fixture.registry.addAccount(_localAccount());
 
       await tester.pumpWidget(fixture.buildSubject());
@@ -348,8 +355,6 @@ void main() {
       // cloud session), so the trailing affordance is a "tap to enter" chevron,
       // not a misleading lock icon.
       expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
-
-      await _tearDown(tester, fixture);
     },
   );
 
@@ -359,6 +364,7 @@ void main() {
     '3. cloud account with valid session shows CLOUD ACCOUNT badge + chevron',
     (tester) async {
       final fixture = await _buildFixture();
+      addTearDown(() => _tearDown(tester, fixture));
       await fixture.registry.addAccount(_cloudAccount());
 
       // authRepo.currentUser returns the matching Firebase user
@@ -381,8 +387,6 @@ void main() {
 
       // No sign-in-again badge
       expect(find.text('SIGN IN AGAIN'), findsNothing);
-
-      await _tearDown(tester, fixture);
     },
   );
 
@@ -392,6 +396,7 @@ void main() {
     '4. cloud account with no valid session shows SIGN IN AGAIN badge + warning icon',
     (tester) async {
       final fixture = await _buildFixture();
+      addTearDown(() => _tearDown(tester, fixture));
       await fixture.registry.addAccount(_cloudAccount(firebaseUid: 'fb-uid-1'));
 
       // currentUser is null → no valid session
@@ -404,8 +409,6 @@ void main() {
       expect(find.text('SIGN IN AGAIN'), findsOneWidget);
       expect(find.byIcon(Icons.warning_rounded), findsOneWidget);
       expect(find.text('CLOUD ACCOUNT'), findsNothing);
-
-      await _tearDown(tester, fixture);
     },
   );
 
@@ -413,6 +416,7 @@ void main() {
 
   testWidgets('5. two accounts — both names rendered', (tester) async {
     final fixture = await _buildFixture();
+    addTearDown(() => _tearDown(tester, fixture));
     await fixture.registry.addAccount(
       _localAccount(
         accountId: 'acc-a',
@@ -439,8 +443,6 @@ void main() {
 
     // Two LOCAL ACCOUNT badges
     expect(find.text('LOCAL ACCOUNT'), findsNWidgets(2));
-
-    await _tearDown(tester, fixture);
   });
 
   // ── 6. Add-account button visible when below kMaxDeviceAccounts ──────────────
@@ -449,6 +451,7 @@ void main() {
     '6. add-another button shown when account count < kMaxDeviceAccounts',
     (tester) async {
       final fixture = await _buildFixture();
+      addTearDown(() => _tearDown(tester, fixture));
       // Seed 2 accounts — below the limit of 5
       await fixture.registry.addAccount(
         _localAccount(
@@ -483,8 +486,6 @@ void main() {
         ),
         findsNothing,
       );
-
-      await _tearDown(tester, fixture);
     },
   );
 
@@ -494,6 +495,7 @@ void main() {
     '7. max-accounts message shown when account count == kMaxDeviceAccounts',
     (tester) async {
       final fixture = await _buildFixture();
+      addTearDown(() => _tearDown(tester, fixture));
       for (var i = 0; i < kMaxDeviceAccounts; i++) {
         await fixture.registry.addAccount(
           _localAccount(
@@ -525,8 +527,6 @@ void main() {
 
       // Add button NOT rendered
       expect(find.textContaining('Add another account'), findsNothing);
-
-      await _tearDown(tester, fixture);
     },
   );
 
@@ -536,6 +536,7 @@ void main() {
     '8. DEC-34: tapping local-born account switches to AppShell WITHOUT calling signOut',
     (tester) async {
       final fixture = await _buildFixture();
+      addTearDown(() => _tearDown(tester, fixture));
       await fixture.registry.addAccount(_localAccount());
       await fixture.seedLocalUserDbRow();
 
@@ -568,8 +569,6 @@ void main() {
         isFalse,
         reason: 'local-born switch must never navigate to SignInRoute',
       );
-
-      await _tearDown(tester, fixture);
     },
   );
 
@@ -580,6 +579,7 @@ void main() {
     'WITHOUT calling signOut',
     (tester) async {
       final fixture = await _buildFixture();
+      addTearDown(() => _tearDown(tester, fixture));
       await fixture.registry.addAccount(_cloudAccount());
       await fixture.seedCloudUserDbRow();
 
@@ -616,8 +616,6 @@ void main() {
         isFalse,
         reason: 'cloud-born valid-session switch must never route to sign-in',
       );
-
-      await _tearDown(tester, fixture);
     },
   );
 
@@ -627,6 +625,7 @@ void main() {
     tester,
   ) async {
     final fixture = await _buildFixture();
+    addTearDown(() => _tearDown(tester, fixture));
     await fixture.registry.addAccount(_cloudAccount());
 
     await tester.pumpWidget(fixture.buildSubject());
@@ -644,8 +643,6 @@ void main() {
       find.text('Your cloud data is safe — you can sign back in anytime.'),
       findsOneWidget,
     );
-
-    await _tearDown(tester, fixture);
   });
 
   // ── 11. Swipe-to-remove local account — confirm dialog title ─────────────────
@@ -654,6 +651,7 @@ void main() {
     tester,
   ) async {
     final fixture = await _buildFixture();
+    addTearDown(() => _tearDown(tester, fixture));
     await fixture.registry.addAccount(_localAccount());
 
     await tester.pumpWidget(fixture.buildSubject());
@@ -671,8 +669,6 @@ void main() {
       ),
       findsOneWidget,
     );
-
-    await _tearDown(tester, fixture);
   });
 
   // ── 12. Cancel dismiss — item stays ──────────────────────────────────────────
@@ -681,6 +677,7 @@ void main() {
     '12. cancelling the dismiss dialog keeps the account tile visible',
     (tester) async {
       final fixture = await _buildFixture();
+      addTearDown(() => _tearDown(tester, fixture));
       await fixture.registry.addAccount(_localAccount());
 
       await tester.pumpWidget(fixture.buildSubject());
@@ -701,8 +698,6 @@ void main() {
 
       // Tile remains visible — dismissal was cancelled
       expect(find.text('Local Learner'), findsOneWidget);
-
-      await _tearDown(tester, fixture);
     },
   );
 
@@ -710,6 +705,7 @@ void main() {
 
   testWidgets('13. privacy footer text is always visible', (tester) async {
     final fixture = await _buildFixture();
+    addTearDown(() => _tearDown(tester, fixture));
     await fixture.registry.addAccount(_localAccount());
 
     await tester.pumpWidget(fixture.buildSubject());
@@ -720,8 +716,6 @@ void main() {
       find.text('Manage your privacy and security in Settings'),
       findsOneWidget,
     );
-
-    await _tearDown(tester, fixture);
   });
 
   // ── 14. Hebrew-locale smoke ───────────────────────────────────────────────────
@@ -730,6 +724,7 @@ void main() {
     tester,
   ) async {
     final fixture = await _buildFixture();
+    addTearDown(() => _tearDown(tester, fixture));
     await fixture.registry.addAccount(
       _localAccount(displayName: 'בני', email: 'beni@example.test'),
     );
@@ -746,8 +741,6 @@ void main() {
 
     // Account name still shows
     expect(find.text('בני'), findsOneWidget);
-
-    await _tearDown(tester, fixture);
   });
 
   // ── 15. Offline tap of expired-session cloud tile restores locally ──────────
@@ -762,6 +755,7 @@ void main() {
     'data and routes to AppShell (never SignInRoute)',
     (tester) async {
       final fixture = await _buildFixture();
+      addTearDown(() => _tearDown(tester, fixture));
       await fixture.registry.addAccount(_cloudAccount(firebaseUid: 'fb-uid-1'));
       // Seed the matching cloud-born profile row so the local restore resolves
       // a profile without any network call.
@@ -802,8 +796,6 @@ void main() {
       );
       // The offline path must NOT push the network sign-in screen.
       verifyNever(() => fixture.router.push(any<PageRouteInfo>()));
-
-      await _tearDown(tester, fixture);
     },
   );
 }
