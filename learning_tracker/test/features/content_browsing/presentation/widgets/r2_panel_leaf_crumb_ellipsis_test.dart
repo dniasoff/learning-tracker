@@ -189,18 +189,31 @@ void main() {
           );
           expect(leaf.maxLines, 1);
 
-          // It must be bounded by a ConstrainedBox (the width cap) so the
-          // ellipsis actually engages instead of running unbounded under the
-          // horizontal scroll viewport.
+          // It must be bounded by a *real* width cap so the ellipsis
+          // actually engages instead of running unbounded under the
+          // horizontal scroll viewport. `find.byType(ConstrainedBox)` alone
+          // is NOT sufficient: TextButton wraps its child in its own
+          // ConstrainedBox for the Material minimum tap-target size
+          // (minWidth: 64, maxWidth: double.infinity), which satisfies an
+          // unqualified ancestor lookup even if the fix's width cap were
+          // removed. Require a finite maxWidth so only the actual
+          // width-cap box (not TextButton's unrelated min-size box) can
+          // match.
           expect(
             find.ancestor(
               of: find.byWidget(leaf),
-              matching: find.byType(ConstrainedBox),
+              matching: find.byWidgetPredicate(
+                (w) =>
+                    w is ConstrainedBox &&
+                    w.constraints.maxWidth < double.infinity,
+              ),
             ),
             findsWidgets,
             reason:
-                '$dirName @scale $scale: leaf crumb must be width-capped so '
-                'ellipsis engages',
+                '$dirName @scale $scale: leaf crumb must be width-capped '
+                '(finite maxWidth) so ellipsis engages — a ConstrainedBox '
+                "with an unbounded maxWidth (e.g. TextButton's own "
+                'min-tap-target box) does not satisfy this',
           );
 
           // No render-overflow exceptions should have been thrown.
