@@ -3121,13 +3121,18 @@
   {
    "id": "AUD-t-content_browsing-02",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Remove the false 'Bundled JSON removed' skip on ContentRepositoryImpl's acceptance suite in content_repository_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "de8328dc69bf7e1888fb3dc3accf558fe69e046e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-content_browsing-02 AC1 OK: grep shows no `skip:`; both groups plain `group(...)` (L15,L211); flutter test = 11/11 pass exit 0",
+    "AUD-t-content_browsing-02 AC2 OK: search-Berakhot test passes on real assets via _rawEnCache; red-first: reverting impl makes it fail empty (L164)"
+   ],
+   "notes": "Verified skips were false. Red-first: removed skips, 10/11 passed, search('Berakhot') failed empty (index only had Ashkenazi 'Berakhos'). Fixed index: added _rawEnCache of raw displayNameEn, OR'd into match. All 11 pass, no skip: left. Updated stale comment in sibling test my fix falsified."
   },
   {
    "id": "AUD-t-content_browsing-01",
