@@ -14,6 +14,30 @@ export 'package:learning_tracker/features/profiles/presentation/providers/pin_fl
     show PinFlowMode;
 
 // ---------------------------------------------------------------------------
+// Error-code resolution (AUD-profiles-09)
+// ---------------------------------------------------------------------------
+
+/// Localizes a [PinFlowError] code into its ARB string.
+///
+/// The PIN flow's controller has no `BuildContext`, so [PinFlowState.error]
+/// is a closed enum ([PinFlowError]), never free text (AUD-profiles-09,
+/// EH-5/AX-2). This switch is EXHAUSTIVE — deliberately no default/fallback
+/// arm — so adding a new [PinFlowError] value without adding a case here is a
+/// compile error, not a silent raw-English leak to Hebrew-locale users. Both
+/// [_PinFlowScreenState] (change/verify modes) and [_SetupScaffold] (setup
+/// mode) resolve through this single function so the two surfaces cannot
+/// drift apart the way `_resolveError`'s old string-matching once did.
+String? _resolvePinFlowError(PinFlowError? error, AppLocalizations l10n) =>
+    switch (error) {
+      null => null,
+      PinFlowError.incorrectPin => l10n.incorrectPin,
+      PinFlowError.pinsDoNotMatch => l10n.pinsDoNotMatch,
+      PinFlowError.noActiveProfile => l10n.pinNoActiveProfile,
+      PinFlowError.invalidPinFormat => l10n.pinInvalidFormat,
+      PinFlowError.unexpected => l10n.pinFailedToSave,
+    };
+
+// ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
 
@@ -161,7 +185,7 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
               title: _resolveTitle(state, l10n),
               subtitle: _resolveSubtitle(state, l10n),
               digits: state.digits,
-              errorMessage: _resolveError(state.errorMessage, l10n),
+              errorMessage: _resolvePinFlowError(state.error, l10n),
               lockedOut: state.lockedOut,
               lockoutMinutes: state.lockoutMinutes,
               busy: state.busy,
@@ -181,22 +205,6 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
   // ------------------------------------------------------------------
   // Copy helpers
   // ------------------------------------------------------------------
-
-  /// Localizes the controller's error message. The PinFlowController is a
-  /// Riverpod notifier with no BuildContext, so it emits stable English
-  /// sentinels as fallbacks (see its `_incorrectPin`/`_pinsDoNotMatch`/… and
-  /// PinFlowMachine's defaults). The screen — which HAS l10n — maps those
-  /// sentinels to the localized string so a Hebrew device shows Hebrew (not raw
-  /// English). Anything unrecognized (already-localized lockout copy, etc.) is
-  /// passed through unchanged.
-  String? _resolveError(String? raw, AppLocalizations l10n) => switch (raw) {
-    null => null,
-    'Incorrect PIN' => l10n.incorrectPin,
-    'PINs do not match' => l10n.pinsDoNotMatch,
-    'Failed to save PIN' => l10n.pinFailedToSave,
-    'No active profile' => l10n.pinNoActiveProfile,
-    _ => raw,
-  };
 
   String _resolveTitle(PinFlowState state, AppLocalizations l10n) {
     switch (widget.mode) {
@@ -337,7 +345,13 @@ class _SetupScaffold extends StatelessWidget {
                         ? l10n.confirmNewPinSubtitle
                         : l10n.pinFlowSetupSubtitle,
                     digits: state.digits,
-                    errorMessage: state.errorMessage,
+                    // AUD-profiles-09: this used to pass state.error's raw
+                    // value straight through, bypassing localization
+                    // entirely — a Hebrew-locale user setting up a PIN for
+                    // the first time saw raw English error text. Resolve it
+                    // through the same exhaustive switch as the
+                    // change/verify surface.
+                    errorMessage: _resolvePinFlowError(state.error, l10n),
                     lockedOut: false,
                     lockoutMinutes: 0,
                     busy: state.busy,

@@ -2,6 +2,7 @@ import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -117,15 +118,37 @@ class _ParentPinSetupDialogState extends ConsumerState<_ParentPinSetupDialog> {
       await ref.read(pinServiceProvider).setProfilePin(widget.profileId, pin);
       if (mounted) Navigator.of(context).pop(true);
     } on InvalidPinFormatException catch (e) {
-      // AUD-onboarding-16: PinService now throws a typed
-      // InvalidPinFormatException instead of ArgumentError (whose
-      // Object?-typed .message required an unsafe cast here). This dialog's
-      // own l10n resolution of PIN-service errors is tracked separately
-      // (AUD-profiles-20) — kept behavior-neutral (same message text)
+      // AUD-onboarding-16: PinService throws a typed InvalidPinFormatException
+      // whose .message is a plain String (AppException.message) — no cast
+      // needed. This dialog's own l10n resolution of PIN-service errors is
+      // tracked separately (AUD-profiles-09, scoped to pin_flow_controller.dart
+      // / pin_flow_screen.dart) — kept behavior-neutral (same message text)
       // pending that fix.
       if (!mounted) return;
       setState(() {
         _errorMessage = e.message;
+        _isConfirmStep = false;
+        _firstPin = null;
+        _digits = '';
+        _busy = false;
+      });
+    } on ArgumentError catch (e, st) {
+      // AUD-profiles-20: ArgumentError.message is typed Object? (dynamic),
+      // not String — reading it with an unchecked `as String?` cast (the
+      // previous code here) would throw a TypeError the moment any caller
+      // constructed one with a non-String message (e.g.
+      // ArgumentError.value(42, 'pin', 99)). Read it null-safely via
+      // `?.toString()` purely for diagnostics; the user-facing text is a
+      // generic localized fallback, never the raw message.
+      if (!mounted) return;
+      AppLogger.instance.warning(
+        event: 'parent_pin_setup_dialog_unexpected_argument_error',
+        fields: {'detail': e.message?.toString() ?? 'no message'},
+        exception: e,
+        stackTrace: st,
+      );
+      setState(() {
+        _errorMessage = l10n.pinFailedToSave;
         _isConfirmStep = false;
         _firstPin = null;
         _digits = '';
