@@ -6818,13 +6818,18 @@
   {
    "id": "AUD-docs-31",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix wrong bundled seed-asset filename (seed.db.gz) in docs/qa/legacy/14-sync-and-offline.md",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "4ad8f94d9f000b4d4661e5d60b3470a42f84c0be"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-docs-31 AC1 OK: lines 19/690/699/757 now read content.db.gz, matching shipped asset per seed_manager.dart:73 + pubspec.yaml:231; all refer to bundled asset",
+    "AUD-docs-31 AC2 OK: grep -c 'seed.db.gz' on the doc returns 0 (exit 1); remaining hits only in audit ledger/finding JSON"
+   ],
+   "notes": "Re-verified: seed_manager.dart:73 _seedAssetPath const = assets/db/content.db.gz, not seed.db.gz. Doc had 4 stray seed.db.gz mentions (lines 19,690,699,757 - finding named 2, grep found 4). Replaced all 4 with content.db.gz. grep -c 'seed.db.gz' now returns 0, satisfying AC."
   },
   {
    "id": "AUD-core-content-06",
