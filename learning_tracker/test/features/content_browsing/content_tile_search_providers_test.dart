@@ -931,19 +931,20 @@ void main() {
     test(
       'P2. empty query — contentSearch returns empty list directly',
       () async {
-        // Verify the business rule: the repository search() is not called for
-        // empty query (provider is never invoked with empty query by the screen,
-        // but if called directly, the repository returns []).
+        // Verify the business rule through the actual provider: an empty
+        // query resolves contentSearchProvider itself to [] (not just the
+        // fake repository's own search() called directly).
         final repo = _FakeContentRepository([_kLeafItem, _kLeafItem2]);
         final container = ProviderContainer(
           overrides: [contentRepositoryProvider.overrideWithValue(repo)],
         );
         addTearDown(container.dispose);
 
-        // content_repository_impl.search() returns [] for empty query.
-        final results = await repo.search(
-          curriculumId: CurriculumId.mishnayos,
-          query: '',
+        final results = await container.read(
+          contentSearchProvider(
+            curriculumId: CurriculumId.mishnayos,
+            query: '',
+          ).future,
         );
         expect(results, isEmpty);
       },
