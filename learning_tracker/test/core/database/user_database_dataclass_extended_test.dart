@@ -1523,27 +1523,12 @@ void main() {
       expect(rows.first.eventType, 'completion');
     });
 
-    test('managers.outbox.filter works', () async {
-      final accId = await insertAccount(email: 'mgr-ob@test.local');
-      final profileId = await insertProfile(accId);
-
-      await db
-          .into(db.outbox)
-          .insert(
-            OutboxCompanion.insert(
-              profileId: profileId,
-              entityKind: 'completion',
-              entityKey: 'k1',
-              payload: '{}',
-              createdAt: now,
-            ),
-          );
-
-      final rows = await db.managers.outbox
-          .filter((f) => f.profileId(profileId))
-          .get();
-      expect(rows, hasLength(1));
-    });
+    // AUD-t-cross-13: the former 'managers.outbox.filter works' test here
+    // duplicated 'managers — outbox' in user_database_companion_coverage_
+    // test.dart (same DAO/manager code path, that file's version has
+    // strictly more assertions — insert+filter+orderBy+update). Removed;
+    // the single surviving copy lives in user_database_companion_coverage_
+    // test.dart.
 
     test('managers.bookmarks.filter works', () async {
       final accId = await insertAccount(email: 'mgr-bm@test.local');
@@ -1569,45 +1554,13 @@ void main() {
       expect(rows.first.sefariaRef, 'Berakhot 5a');
     });
 
-    test('managers.textDownloadStatuses.filter works', () async {
-      await db
-          .into(db.textDownloadStatuses)
-          .insert(
-            TextDownloadStatusesCompanion.insert(
-              curriculumId: 'mgr-tds',
-              itemCount: 100,
-              textVersion: '1.0',
-              downloadedAt: now,
-            ),
-          );
-
-      final rows = await db.managers.textDownloadStatuses
-          .filter((f) => f.curriculumId('mgr-tds'))
-          .get();
-      expect(rows, hasLength(1));
-      expect(rows.first.itemCount, 100);
-    });
-
-    test('managers.sacredWindowEntries.filter works', () async {
-      final start = DateTime.utc(2026, 1, 9, 17);
-      final end = DateTime.utc(2026, 1, 10, 18);
-
-      await db
-          .into(db.sacredWindowEntries)
-          .insert(
-            SacredWindowEntriesCompanion.insert(
-              startUtc: start,
-              endUtc: end,
-              kind: 'shabbos',
-              inIsrael: true,
-              createdAt: Value(now),
-            ),
-          );
-
-      final rows = await db.managers.sacredWindowEntries
-          .filter((f) => f.kind('shabbos'))
-          .get();
-      expect(rows, isNotEmpty);
-    });
+    // AUD-t-cross-13: the former 'managers.textDownloadStatuses.filter
+    // works' and 'managers.sacredWindowEntries.filter works' tests here
+    // duplicated 'managers — textDownloadStatuses' / 'managers —
+    // sacredWindowEntries' in user_database_companion_coverage_test.dart
+    // (same DAO/manager code paths, that file's versions have strictly
+    // more assertions — insert+filter+orderBy, plus a nullable-column
+    // case for textDownloadStatuses). Removed; the single surviving
+    // copies live in user_database_companion_coverage_test.dart.
   });
 }

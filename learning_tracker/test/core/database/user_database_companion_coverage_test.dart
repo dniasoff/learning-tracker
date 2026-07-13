@@ -344,7 +344,11 @@ void main() {
   // ─── CompletionEventsCompanion ─────────────────────────────────────────────────
 
   group('CompletionEventsCompanion', () {
-    test('toString covers StringBuffer body', () {
+    // AUD-t-cross-13: this group used to be pasted twice under the same
+    // name — one copy exercising the `points` field, the other exercising
+    // `createdAt`. Merged into one group; every original assertion is
+    // preserved, just with disambiguated test names.
+    test('toString covers StringBuffer body (points field)', () {
       const c = CompletionEventsCompanion();
       final s = c.toString();
       expect(s, contains('CompletionEventsCompanion'));
@@ -352,7 +356,7 @@ void main() {
       expect(s, contains('points'));
     });
 
-    test('custom() covers RawValuesInsertable body', () {
+    test('custom() covers RawValuesInsertable body (points field)', () {
       final insertable = CompletionEventsCompanion.custom(
         profileId: const Variable(1),
         trackId: const Variable(1),
@@ -382,19 +386,15 @@ void main() {
       final cols = c.toColumns(false);
       expect(cols.containsKey('points'), isTrue);
     });
-  });
 
-  // ─── CompletionEventsCompanion ────────────────────────────────────────────
-
-  group('CompletionEventsCompanion', () {
-    test('toString covers StringBuffer body', () {
+    test('toString covers StringBuffer body (createdAt field)', () {
       const c = CompletionEventsCompanion();
       final s = c.toString();
       expect(s, contains('CompletionEventsCompanion'));
       expect(s, contains('eventTimestamp'));
     });
 
-    test('custom() covers RawValuesInsertable body', () {
+    test('custom() covers RawValuesInsertable body (createdAt field)', () {
       final insertable = CompletionEventsCompanion.custom(
         profileId: const Variable(1),
         curriculumId: const Variable('bavli'),

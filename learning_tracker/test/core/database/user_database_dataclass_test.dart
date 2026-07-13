@@ -850,4 +850,137 @@ void main() {
       expect(rows, hasLength(1));
     });
   });
+
+  // ─── validateIntegrity — missing required fields ──────────────────────────
+  //
+  // AUD-t-cross-13: ported from the (now-deleted) user_database_dataclass_
+  // core_test.dart, which wholesale duplicated this file's DataClass groups.
+  // This group was the one genuinely unique section in that file. Two
+  // copy-paste pairs are deduplicated here: 'Completions'/'CompletionEvents'
+  // and 'Streaks'/'StreakEvents' were each byte-for-byte identical tests —
+  // the legacy 'Completions'/'Streaks' table names were dropped in the
+  // schema-v1 rebuild (see user_database.dart's migration comments), so only
+  // the current table names survive.
+
+  group('validateIntegrity — main tables', () {
+    test('Accounts insert without email throws', () {
+      expect(
+        () => db.into(db.accounts).insert(const AccountsCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('LearnerProfiles insert without accountId throws', () {
+      expect(
+        () => db
+            .into(db.learnerProfiles)
+            .insert(const LearnerProfilesCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('CurriculumTracks insert without profileId throws', () {
+      expect(
+        () => db
+            .into(db.curriculumTracks)
+            .insert(const CurriculumTracksCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('CurriculumScopes insert without profileId throws', () {
+      expect(
+        () => db
+            .into(db.curriculumScopes)
+            .insert(const CurriculumScopesCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('ProfilePrograms insert without profileId throws', () {
+      expect(
+        () => db
+            .into(db.profilePrograms)
+            .insert(const ProfileProgramsCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('DailyPlans insert without profileId throws', () {
+      expect(
+        () => db.into(db.dailyPlans).insert(const DailyPlansCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('LearningLedger insert without profileId throws', () {
+      expect(
+        () =>
+            db.into(db.learningLedger).insert(const LearningLedgerCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('Goals insert without profileId throws', () {
+      expect(
+        () => db.into(db.goals).insert(const GoalsCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('StageDefinitions insert without profileId throws', () {
+      expect(
+        () => db
+            .into(db.stageDefinitions)
+            .insert(const StageDefinitionsCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('PointConfigs insert without profileId throws', () {
+      expect(
+        () => db.into(db.pointConfigs).insert(const PointConfigsCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('StudyDayConfigs insert without profileId throws', () {
+      expect(
+        () => db
+            .into(db.studyDayConfigs)
+            .insert(const StudyDayConfigsCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('CompletionEvents insert without profileId throws', () {
+      expect(
+        () => db
+            .into(db.completionEvents)
+            .insert(const CompletionEventsCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('Bookmarks insert without profileId throws', () {
+      expect(
+        () => db.into(db.bookmarks).insert(const BookmarksCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('LearningOrder insert without profileId throws', () {
+      expect(
+        () => db.into(db.learningOrder).insert(const LearningOrderCompanion()),
+        throwsA(anything),
+      );
+    });
+
+    test('StreakEvents insert without profileId throws', () {
+      expect(
+        () => db.into(db.streakEvents).insert(const StreakEventsCompanion()),
+        throwsA(anything),
+      );
+    });
+  });
 }
