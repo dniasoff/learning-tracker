@@ -447,6 +447,101 @@ void main() {
     }, timeout: const Timeout(Duration(minutes: 5)));
   });
 
+  group('make audit check 44/44 — stale story file targets (AUD-docs-03)', () {
+    // Keyed off the check's stable description text, not its N/total
+    // position — see the file-level NOTE on the SM-7 group above for why
+    // (the position has already drifted twice on unrelated additions).
+    const checkDescription =
+        'Tier-4 doc-lint: every ready-for-dev/backlog/todo '
+        'docs/stories/implementation/*.md Key-Files target resolves under '
+        'lib/';
+
+    Future<ProcessResult> runAudit() =>
+        Process.run('make', ['audit'], workingDirectory: packageDir);
+
+    test(
+      'runs and is clean against the tracked baseline '
+      '(19-8/19-9 archived, no longer ready-for-dev)',
+      () async {
+        final result = await runAudit();
+        expect(
+          result.stdout.toString(),
+          contains(checkDescription),
+          reason:
+              'make audit must run the AUD-docs-03 stale-story-target '
+              'check.\nstdout=${result.stdout}\nstderr=${result.stderr}',
+        );
+        expect(
+          result.exitCode,
+          0,
+          reason:
+              'story targets must be clean against the tracked baseline.\n'
+              'stdout=${result.stdout}\nstderr=${result.stderr}',
+        );
+      },
+      // AUD-guardrails-17 (see file-level NOTE above): shells out to
+      // `make audit`; see the longer rationale on the 25/26 test above.
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
+
+    test(
+      'AC1: a ready-for-dev story targeting a deleted lib/ file flips the '
+      'check from clean to FAIL and back',
+      () async {
+        final fixtureFile = File(
+          '$repoRoot/docs/stories/implementation/'
+          'zzz-audit-fixture-do-not-commit.md',
+        );
+
+        try {
+          // sync_engine.dart is the AUD-docs-03 fix's own proof case — it
+          // was deleted in the SyncOrchestrator+outbox rewrite and exists
+          // nowhere under lib/ (exact path or by basename).
+          fixtureFile.writeAsStringSync('''
+# Fixture Story (AUDIT FIXTURE — DO NOT COMMIT, AUD-docs-03 check test)
+
+Status: ready-for-dev
+
+### Key Files
+
+| File | Action |
+|------|--------|
+| `lib/features/sync/data/sync_engine.dart` | Modify — resurrect deleted engine |
+''');
+
+          final dirty = await runAudit();
+          expect(
+            dirty.stdout.toString(),
+            contains('zzz-audit-fixture-do-not-commit.md'),
+            reason:
+                'a ready-for-dev story targeting a deleted lib/ file must '
+                'be caught, not silently swallowed.\n'
+                'stdout=${dirty.stdout}',
+          );
+          expect(
+            dirty.exitCode,
+            isNot(0),
+            reason: 'the AUD-docs-03 check is a hard gate.',
+          );
+        } finally {
+          if (fixtureFile.existsSync()) fixtureFile.deleteSync();
+        }
+
+        final clean = await runAudit();
+        expect(
+          clean.stdout.toString(),
+          isNot(contains('zzz-audit-fixture-do-not-commit.md')),
+          reason: 'removing the fixture restores a clean pass.',
+        );
+        expect(clean.exitCode, 0);
+      },
+      // AUD-guardrails-17 (see file-level NOTE above): shells out to
+      // `make audit` twice; see the longer rationale on the 25/26 test
+      // above.
+      timeout: const Timeout(Duration(minutes: 5)),
+    );
+  });
+
   group('tool/arb_parity_check.dart (DNI-389 — Story 27.13 AC2)', () {
     final scriptPath = '$repoRoot/tool/arb_parity_check.dart';
 
