@@ -3110,13 +3110,15 @@
   {
    "id": "AUD-t-content_browsing-04",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Rewrite tests that don't actually exercise the repository/provider they claim to test",
-   "commits": [],
-   "reviewRounds": 0,
+   "commits": [
+    "804f23069d43244373e9d41e26c26d7dd71092f7"
+   ],
+   "reviewRounds": 1,
    "acVerified": [],
-   "notes": ""
+   "notes": "Confirmed: repo still loads hierarchy JSON via rootBundle; weak/skipped test groups deleted, replaced with always-on smoke test + fixed P2 provider bypass. AC1 proven red-first via mutation (reverted, clean diff). AC2: grep confirms 0 skip: in file."
   },
   {
    "id": "AUD-t-content_browsing-02",
