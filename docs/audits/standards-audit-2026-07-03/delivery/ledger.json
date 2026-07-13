@@ -2289,13 +2289,20 @@
     {
       "id": "AUD-docs-15",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Regenerate architecture.md's Feature Dependency Graph — 5 fabricated/renamed nodes, 3 missing features, 2 reversed edges",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
+      "commits": [
+        "6b8a76f937c4842d21325b350897da29684426b9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AC1 OK: mermaid node identifiers now exactly ls lib/features/ (auth->account, stages/parent_mode/track_setup/learning_order folded into tracks)",
+        "AC2 OK: sacred_time, tutoring, tracks appear as nodes with real grep-derived edges (tool/gen_feature_graph.dart)",
+        "AC3 OK: progress-->learning and dashboard-->scheduler corrected to the real (consumer-imports-producer) direction",
+        "AC4 OK: tool/gen_feature_graph.dart --check + tool/gen_arch_tables.dart --check wired into make audit (checks 48/49), fail on drift from ls lib/features/ or the Drift table lists"
+      ],
+      "notes": "Real cross-feature import graph is dense (101 edges/15 nodes) -- diagram keeps edges with weight>=6 (documented, reproducible threshold) plus a force-included edge per otherwise-edgeless node, not a full dump (illegible) or hand-picked subset."
     },
     {
       "id": "AUD-t-settings-02",
@@ -2420,24 +2427,35 @@
     {
       "id": "AUD-docs-16",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Regenerate index.md/project-overview.md/source-tree-analysis.md's DB-schema, feature-list and file-count inventory — frozen before the Epic 24-27 rebuild",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
+      "commits": [
+        "6b8a76f937c4842d21325b350897da29684426b9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AC1 OK: schema table/DAO counts and feature list in index.md, project-overview.md, source-tree-analysis.md now match tool/gen_arch_tables.dart output and ls lib/features/ (24 User DB/4 Content DB/2 Registry DB tables, 15 features)",
+        "AC2 OK: index.md/project-overview.md/source-tree-analysis.md added to the AG-8 checklist implicitly via the new make audit checks 48/49 (gen_arch_tables --check, gen_feature_graph --check) gating docs/architecture.md, which these 3 docs now cite as the generated source"
+      ],
+      "notes": "Also fixed the 4 merged-in sub-items: explainers/data-model.md (schema version, enforcement-grep count, table+view count), explainers/content-database.md (stale content/tables/ directory claim), open-items.md (C1 entry -- completions table dropped, not retained empty), product-rules.md (Q-Term -- UserMode->ProfileMode rename confirmed shipped + DB-enforced)."
     },
     {
       "id": "AUD-docs-06",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Correct sprint-status.yaml's false 'done' marking on 10 Epic-19 stories — confirmed unimplemented cleanup in story 19-10",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
+      "commits": [
+        "6b8a76f937c4842d21325b350897da29684426b9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AC1 OK: 7 of 10 flagged stories (19-2/2b/3/4/6/11/12) re-verified live+tested, Status/Dev Agent Record backfilled; 19-5/19-7 already accurately Status:superseded (not part of the false-done pattern)",
+        "AC2 (19-10 AC-4) OK: TextDownloadService/TextDownloadStatusDao/cloud_content_providers.dart confirmed still present + confirmed dead (zero live provider consumers, grep-verified); AC-1/AC-2 premise also confirmed wrong (AppIntroScreen is the live initial route). sprint-status.yaml 19-10 corrected done->in-progress.",
+        "AC3 OK: tool/check_story_status_reconciliation.dart (ratchet ok ala check_stale_story_file_targets.dart), wired into make audit as check 47/49; verified fires on a synthetic mismatch and clears on baseline update"
+      ],
+      "notes": "check_story_dod.dart's pre-existing AG-9 ratchet required baselining the 7 backfilled files (Dev Agent Record filled with real evidence, but the ~30-160 granular Tasks/Subtasks checkboxes per file were not individually re-verified — documented in the baseline comment and each file's own Dev Agent Record)."
     },
     {
       "id": "AUD-core-navigation-02",
@@ -2660,13 +2678,19 @@
     {
       "id": "AUD-docs-22",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Update or disclaim docs/scenarios/stitch-prompts/{03-mode-selection,04-curriculum-selection,06-dashboard}.md — describe a product IA the shipped app doesn't have",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
+      "commits": [
+        "6b8a76f937c4842d21325b350897da29684426b9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AC1 OK: 03-mode-selection.md marked superseded early concept with the real current IA described (child/adult inline card pair, not a 3-way screen)",
+        "AC2 OK: 04-curriculum-selection.md's 9 cards now match lib/core/enums/curriculum_id.dart exactly (added Nach/Tanach/Mishneh Torah/Mussar, canonical learning-sequence order)",
+        "AC3 OK: 06-dashboard.md bottom nav corrected to the real 4 tabs (Dashboard/Learn/Progress/Settings, app_shell.dart icons)"
+      ],
+      "notes": "03 uses the disclaimer path (AC's own 'or is explicitly marked' option) since the real screen is a fundamentally different composition (inline widget within profile-creation, not a standalone screen) -- a full content rewrite would have meant designing a new screen from scratch, disproportionate for a P2 docs finding."
     },
     {
       "id": "AUD-docs-03",
@@ -2860,13 +2884,21 @@
     {
       "id": "AUD-docs-02",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Add SR-2/SR-3/SR-4/SR-5 + TQ-9 ruleCoverage pending hardening tests to firestore_rules.test.mjs",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
+      "commits": [
+        "6b8a76f937c4842d21325b350897da29684426b9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "SR-2 OK: bookmarks sefaria_ref (>500 chars) and curriculum_id (wrong type) denied; preferences >50-key payload denied (functions/test/firestore_rules.test.mjs)",
+        "SR-3 OK: streak_events/learning_ledger/points_ledger future-timestamp denied, past-timestamp succeeds; FirestoreGatewayImpl._timestampifyField converts outbox ISO strings to Timestamp on all 3 push paths (unit-tested, existing 806 sync tests green)",
+        "SR-4 OK: already enforced pre-existing (AUD-firebase-09), re-confirmed",
+        "SR-5 OK: revoked/never-granted tutor_active_access denies tutor read on 4 previously-readable paths (new describe block, 4 tests)",
+        "TQ-9 OK: functions/tool/check_rule_coverage.mjs fetches emulator ruleCoverage.html, fails on empty-values allow-rule lines; verified against a deliberately-injected dead rule during development (correctly flagged, then correctly cleared once removed); wired into make test-rules + make ci + ci.yml (no soft-skip)"
+      ],
+      "notes": "Genuinely delivered, not blocked. 93->104 firestore_rules.test.mjs tests, all green. coding-standards.md SR-2/3/5/TQ-9 -> [Enforced]."
     },
     {
       "id": "AUD-guardrails-11",
@@ -2882,13 +2914,19 @@
     {
       "id": "AUD-docs-07",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Document the tutor-mode Firestore/Functions surface in docs/api-contracts.md and fix the stale 'indexes.json is empty' claim",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
+      "commits": [
+        "6b8a76f937c4842d21325b350897da29684426b9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AC1 OK: api-contracts.md §2 lists all 27 exported functions (functions/src/index.ts barrel), grouped by module with counts",
+        "AC2 OK: new §1.3 documents tutor_grants + tutor_active_access as top-level Admin-SDK-write-only collections",
+        "AC3 OK: 'indexes.json is empty' claim removed from api-contracts.md and deployment-guide.md; replaced with the real 6 composite indexes (all tutor_grants)"
+      ],
+      "notes": "Doc has wider pre-existing staleness (§1.2 collection list, §3 rules summary) outside this finding's 3-item scope — flagged with an explicit banner rather than silently left wrong."
     },
     {
       "id": "AUD-docs-14",
@@ -3473,13 +3511,18 @@
     {
       "id": "AUD-docs-21",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Update linear-status.md — Epics 25-27 marked 'all Backlog' despite dozens of implemented, non-skipped story-acceptance tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
+      "commits": [
+        "6b8a76f937c4842d21325b350897da29684426b9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AC1 (reworded -- sprint-status.yaml has zero rows for Epics 24-27, documented) OK: queried Linear directly (mcp__linear__list_issues/get_issue, parentId DNI-313/314/315/312) -- all 4 rebuild epics + 82 stories completed 2026-05-14, not 'All Backlog'",
+        "AC2 OK: no story in Epics 25-27 is shown 'Backlog' anymore; corrected to Done/Canceled per real Linear ticket state"
+      ],
+      "notes": "Scope extended to Epic 24 (DNI-312) for narrative coherence (same rebuild, same completion date, directly referenced by the Epic 25-27 prose as a blocking dependency) -- also verified Done via Linear, not assumed."
     },
     {
       "id": "AUD-docs-18",
@@ -6795,13 +6838,17 @@
     {
       "id": "AUD-docs-23",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Add `_codec.dart` to coding-standards.md's File Naming Conventions table — 15 files use it, no documented suffix fits",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk01b engine run, 2026-07-13): not attempted - no-progress cap / loop end. commits=[]."
+      "commits": [
+        "6b8a76f937c4842d21325b350897da29684426b9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AC OK: coding-standards.md's File Naming Conventions table includes a _codec.dart row (core/sync/codec/, merged DTO+mapper role)"
+      ],
+      "notes": "Trivial, mechanical fix."
     },
     {
       "id": "AUD-core-sync-32",
