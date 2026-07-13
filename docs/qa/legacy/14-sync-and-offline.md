@@ -16,7 +16,7 @@ Before running these scenarios:
 3. Have a **local-born** test account with meaningful data
 4. Have **two physical devices** (or one device + emulator) signed in to the same cloud-born account for multi-device tests
 5. Have reliable control over network state (airplane mode toggle, or a Wi-Fi network you can disconnect)
-6. Content DB seed file (`seed.db.gz`) is available in the APK assets
+6. Content DB seed file (`content.db.gz`) is available in the APK assets
 
 **Sync is invisible when it works and catastrophic when it doesn't.** A user
 who loses a 200-day streak or months of completion data due to a sync bug will
@@ -687,7 +687,7 @@ Each scenario follows this structure:
 
 #### SYNC-29 | P1 | Content DB decompresses on first launch
 
-**Preconditions:** Fresh install of the app. The APK contains `seed.db.gz` in assets.
+**Preconditions:** Fresh install of the app. The APK contains `content.db.gz` in assets.
 
 **Steps:**
 1. Install the app fresh
@@ -696,7 +696,7 @@ Each scenario follows this structure:
 4. Browse through the content hierarchy (Mishnayos > Seder > Masechta > Perek)
 
 **Expected:**
-- Content DB is decompressed from `seed.db.gz` during first launch
+- Content DB is decompressed from `content.db.gz` during first launch
 - All content is browsable (no missing sections or empty hierarchies)
 - Decompression does not cause an excessively long startup (user sees a progress indicator if needed)
 - Content DB is stored as a separate SQLite file from User DB
@@ -754,7 +754,7 @@ Each scenario follows this structure:
 
 **Expected:**
 - The app detects the corruption (SQLite integrity check or read failure)
-- The app re-decompresses `seed.db.gz` to restore the content DB
+- The app re-decompresses `content.db.gz` to restore the content DB
 - Content is available again after recovery
 - User DB is unaffected -- no completions, bookmarks, or progress is lost
 - If recovery fails, a clear error message is shown (not a crash)
