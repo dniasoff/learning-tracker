@@ -12,11 +12,12 @@
 ///     (FakeFirebaseFirestore is always "offline-safe")
 library;
 
-// AUD-core-sync-20: group 17's permission-denied test proxies implement
-// cloud_firestore's `@sealed`-annotated CollectionReference/DocumentReference
-// to intercept a `set()`/`commit()` call at the exact I/O point (see the
-// class docs below) — a deliberate, narrow, test-only exception to the
-// "don't implement sealed classes" guidance.
+// AUD-core-sync-20 / AUD-t-cross-01: group 17's and group 5's
+// deterministic-failure test proxies implement cloud_firestore's `@sealed`
+// -annotated CollectionReference/DocumentReference/WriteBatch to intercept
+// a `set()`/`commit()` call at the exact I/O point (see the class docs
+// below, near the bottom of this file) — a deliberate, narrow, test-only
+// exception to the "don't implement sealed classes" guidance.
 // ignore_for_file: subtype_of_sealed_class
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -1320,6 +1321,46 @@ void main() {
         expect(await _count(fs, _uid, _profileId, 'completions'), equals(10));
       },
     );
+
+    test('pushCompletionsBatch chunks at the 500-op WriteBatch limit and — '
+        'when chunk 2 fails — reports SyncPushException.committed as exactly '
+        "chunk 1's entityKeys (AUD-t-cross-01)", () async {
+      // 501 items forces exactly two chunks: [0, 500) and [500, 501).
+      // The proxy lets chunk 1's WriteBatch commit for real against the
+      // fake (so we can assert the rows genuinely landed) and makes
+      // chunk 2's commit throw — driving the real pushCompletionsBatch
+      // chunk loop, not a hand-constructed exception.
+      final real = createFakeFirestore(authenticatedUid: _uid);
+      final proxy = _FailingOnNthBatchFirestore(real, failOnCall: 2);
+      final gw = FirestoreGatewayImpl(
+        firestore: proxy,
+        authRepository: _StubAuth(_uid),
+      );
+
+      final items = List.generate(
+        501,
+        (i) => (
+          entityKey: 'k$i',
+          payload: _completionPayload(sefariaRef: 'Item $i'),
+        ),
+      );
+      final chunk1Keys = items.take(500).map((e) => e.entityKey).toList();
+
+      await expectLater(
+        gw.pushCompletionsBatch(profileId: _profileId, items: items),
+        throwsA(
+          isA<SyncPushException>().having(
+            (e) => e.committed,
+            'committed',
+            equals(chunk1Keys),
+          ),
+        ),
+      );
+
+      // Chunk 1 genuinely committed server-side (H3: already-landed rows
+      // are never re-pushed or dead-lettered); chunk 2 never did.
+      expect(await _count(real, _uid, _profileId, 'completions'), equals(500));
+    });
 
     test(
       'pushCompletionsBatch is idempotent — re-pushing same items = same doc count',
@@ -2758,6 +2799,75 @@ class _PermissionDeniedBatch implements WriteBatch {
       code: 'permission-denied',
       message: 'simulated PERMISSION_DENIED (test)',
     );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled WriteBatch member in test proxy: ${invocation.memberName}',
+  );
+}
+
+// ── Chunk-boundary failure simulation helper (group 5, AUD-t-cross-01) ──────
+//
+// Unlike the permission-denied proxies above (which never let a batch
+// genuinely commit), this proxy lets every batch EXCEPT the [failOnCall]-th
+// commit for real against the wrapped delegate — so a test can prove that
+// entityKeys reported as `committed` on [SyncPushException] correspond to
+// chunks that truly landed server-side, while a later chunk's underlying
+// commit failure is deterministically simulated.
+
+/// Delegates every [FirebaseFirestore] member to [_delegate] except
+/// [collection] (path navigation, unaffected) and [batch]: the
+/// [failOnCall]-th call (1-indexed) to [batch] returns a [_FailingBatch]
+/// whose `commit()` throws instead of landing; every other call returns the
+/// delegate's own real batch, which commits normally.
+class _FailingOnNthBatchFirestore implements FirebaseFirestore {
+  _FailingOnNthBatchFirestore(this._delegate, {required this.failOnCall});
+  final FirebaseFirestore _delegate;
+  final int failOnCall;
+  int _batchCalls = 0;
+
+  @override
+  CollectionReference<Map<String, dynamic>> collection(String collectionPath) =>
+      _delegate.collection(collectionPath);
+
+  @override
+  WriteBatch batch() {
+    _batchCalls++;
+    final real = _delegate.batch();
+    return _batchCalls == failOnCall ? _FailingBatch(real) : real;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'Unhandled FirebaseFirestore member in test proxy: '
+    '${invocation.memberName}',
+  );
+}
+
+/// Wraps a real [WriteBatch]; [set] forwards to the delegate so the batch
+/// would otherwise genuinely be ready to commit, but [commit] throws a
+/// simulated write failure INSTEAD of ever calling the delegate's commit —
+/// this chunk must never land, simulating "the underlying commit for this
+/// chunk failed" (e.g. a transient network error on chunk 2 of a >500-item
+/// push).
+class _FailingBatch implements WriteBatch {
+  _FailingBatch(this._delegate);
+  final WriteBatch _delegate;
+
+  @override
+  WriteBatch set<T extends Object?>(
+    DocumentReference<T> document,
+    T data, [
+    SetOptions? options,
+  ]) {
+    _delegate.set(document, data, options);
+    return this;
+  }
+
+  @override
+  Future<void> commit() async {
+    throw Exception('simulated chunk write failure (test)');
   }
 
   @override
