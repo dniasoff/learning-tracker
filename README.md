@@ -132,7 +132,6 @@ All documentation is under [`docs/`](docs/). Start at [`docs/index.md`](docs/ind
 - **iOS support**
 - **Additional curricula** as the Sefaria content library expands
 - **Dashboard & Progress Redesign** (Epic 20) — per-track isolation across the dashboard, progress screen, and charts
-- **Offline-First Architecture v2** — hard-tier auth refactor to simplify the offline-first model
 
 Parked ideas and cut features are documented under [`docs/_archive/`](docs/_archive/README.md).
 
