@@ -503,20 +503,31 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
 
     await db.transaction(() async {
       // C3: stamp purgedAt on completion_events (tombstone — never delete rows).
+      //
+      // AUD-core-database-06 (DB-3): single batch() round trip instead of an
+      // awaited per-row update loop. Already inside the transaction() above
+      // (DB-2), so batch() reuses it rather than opening its own. Each row
+      // keeps its own distinct WHERE clause (the natural key has no single
+      // indexable column), so batch.update — not batch.insertAll — is used.
       final purgedAt = DateTimeFactory.nowUtc();
       final completionsForTrack = await db.completionDao.getCompletionsByTrack(
         trackId,
       );
-      for (final c in completionsForTrack) {
-        await (db.update(db.completionEvents)..where(
-              (t) =>
+      if (completionsForTrack.isNotEmpty) {
+        await db.batch((b) {
+          for (final c in completionsForTrack) {
+            b.update(
+              db.completionEvents,
+              CompletionEventsCompanion(purgedAt: Value(purgedAt)),
+              where: (t) =>
                   t.profileId.equals(c.profileId) &
                   t.sefariaRef.equals(c.sefariaRef) &
                   t.stageId.equals(c.stageId) &
                   t.trackType.equals(c.trackType) &
                   t.curriculumId.equals(c.curriculumId),
-            ))
-            .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
+            );
+          }
+        });
       }
       await db.goalDao.deleteGoalsForTrack(trackId);
       await (db.delete(

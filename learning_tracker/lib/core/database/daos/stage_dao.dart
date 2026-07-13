@@ -111,8 +111,11 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
   ) async {
     await db.transaction(() async {
       await deleteStagesForTrack(trackId);
-      for (final stage in stages) {
-        await insertStageDefinition(stage);
+      // AUD-core-database-06 (DB-3): single batch() round trip instead of an
+      // awaited per-row insert loop. Already inside the transaction() above
+      // (DB-2), so batch() reuses it rather than opening its own.
+      if (stages.isNotEmpty) {
+        await batch((b) => b.insertAll(stageDefinitions, stages));
       }
     });
   }
@@ -150,8 +153,11 @@ class StageDao extends DatabaseAccessor<UserDatabase> with _$StageDaoMixin {
   ) async {
     await db.transaction(() async {
       await deleteAllForCurriculum(curriculumId);
-      for (final stage in stages) {
-        await insertStageDefinition(stage);
+      // AUD-core-database-06 (DB-3): single batch() round trip instead of an
+      // awaited per-row insert loop. Already inside the transaction() above
+      // (DB-2), so batch() reuses it rather than opening its own.
+      if (stages.isNotEmpty) {
+        await batch((b) => b.insertAll(stageDefinitions, stages));
       }
     });
   }
