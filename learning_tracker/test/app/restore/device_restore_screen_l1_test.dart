@@ -33,40 +33,19 @@ import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/app/restore/device_restore_screen.dart';
 import 'package:learning_tracker/app/restore/device_restore_service.dart';
-import 'package:learning_tracker/app/restore/restore_providers.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_phase.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'restore_test_harness.dart';
+
 // ── Mocks ──────────────────────────────────────────────────────────────────────
-
-class _MockStackRouter extends Mock implements StackRouter {}
-
-class _MockRestoreGuard extends Mock implements RestoreGuard {
-  @override
-  void markRestoreComplete() {}
-}
-
-/// A minimal [AppRouter] stand-in that lets the screen call
-/// `router.restoreGuard.markRestoreComplete()` without real guard logic.
-class _StubAppRouter extends Mock implements AppRouter {
-  _StubAppRouter({required this.restoreGuard});
-
-  @override
-  final RestoreGuard restoreGuard;
-}
 
 /// Stub [DeviceRestoreService] that records calls and returns preset results.
 ///
@@ -126,89 +105,11 @@ class _StubRestoreService extends Fake implements DeviceRestoreService {
   }
 }
 
-// ── Fixed notifier helpers ─────────────────────────────────────────────────────
-
-class _FixedSelectedProfileId extends SelectedProfileId {
-  _FixedSelectedProfileId(this._initial);
-  final int? _initial;
-  @override
-  int? build() => _initial;
-}
-
-// ── Harness ────────────────────────────────────────────────────────────────────
-
-/// Builds the test pump rig. [fixedStatus] overrides [restoreStatusProvider]
-/// so the screen renders that state immediately — no service I/O required.
-/// [service] overrides [deviceRestoreServiceProvider]; pass null for
-/// rendering-only tests (prevents initState's _startRestore from doing work).
-Widget _buildHarness({
-  required RestoreStatus fixedStatus,
-  required _MockStackRouter mockRouter,
-  required _StubAppRouter stubAppRouter,
-  required UserDatabase db,
-  DeviceRestoreService? service,
-  Locale locale = const Locale('en'),
-}) {
-  return ProviderScope(
-    overrides: [
-      // Override the two providers the screen directly reads.
-      restoreStatusProvider.overrideWithValue(fixedStatus),
-      deviceRestoreServiceProvider.overrideWithValue(service),
-      // Router providers so _navigateAfterRestore can call replaceAll.
-      routerProvider.overrideWithValue(stubAppRouter),
-      // Database so db.profileDao calls resolve.
-      userDatabaseProvider.overrideWithValue(db),
-      // currentAccountIdProvider — default returns 1.
-      currentAccountIdProvider.overrideWithValue(1),
-      // selectedProfileId — start as null; tests verify mutations.
-      selectedProfileIdProvider.overrideWith(
-        () => _FixedSelectedProfileId(null),
-      ),
-    ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: mockRouter,
-        stateHash: 0,
-        child: const DeviceRestoreScreen(),
-      ),
-    ),
-  );
-}
-
-Future<void> _tearDown(WidgetTester tester) async {
-  await tester.pumpWidget(const SizedBox.shrink());
-  await tester.pump(Duration.zero);
-}
-
-// ── Shared setup ───────────────────────────────────────────────────────────────
-
-_MockStackRouter _makeRouter() {
-  final r = _MockStackRouter();
-  when(() => r.replaceAll(any())).thenAnswer((_) async => []);
-  when(() => r.push(any())).thenAnswer((_) async => null);
-  return r;
-}
-
-_StubAppRouter _makeAppRouter() =>
-    _StubAppRouter(restoreGuard: _MockRestoreGuard());
-
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 void main() {
   // Register fallback values so captureAny() / any<T>() work for PageRouteInfo.
-  setUpAll(() {
-    registerFallbackValue(const AppShellRoute());
-    registerFallbackValue(<PageRouteInfo>[const AppShellRoute()]);
-    registerFallbackValue(const ProfilePickerRoute());
-  });
+  setUpAll(registerRestoreRouteFallbacks);
 
   // ── idle state ────────────────────────────────────────────────────────────────
   //
@@ -221,13 +122,13 @@ void main() {
     ) async {
       final db = UserDatabase(NativeDatabase.memory());
       addTearDown(db.close);
-      final mockRouter = _makeRouter();
+      final mockRouter = makeMockRouter();
 
       await tester.pumpWidget(
-        _buildHarness(
+        buildRestoreHarness(
           fixedStatus: const RestoreStatus.idle(),
           mockRouter: mockRouter,
-          stubAppRouter: _makeAppRouter(),
+          stubAppRouter: makeStubAppRouter(),
           db: db,
         ),
       );
@@ -239,7 +140,7 @@ void main() {
       expect(find.byType(LinearProgressIndicator), findsNothing);
       expect(find.byType(ElevatedButton), findsNothing);
 
-      await _tearDown(tester);
+      await tearDownRestoreHarness(tester);
     });
   });
 
@@ -251,13 +152,13 @@ void main() {
     ) async {
       final db = UserDatabase(NativeDatabase.memory());
       addTearDown(db.close);
-      final mockRouter = _makeRouter();
+      final mockRouter = makeMockRouter();
 
       await tester.pumpWidget(
-        _buildHarness(
+        buildRestoreHarness(
           fixedStatus: const RestoreStatus.checking(),
           mockRouter: mockRouter,
-          stubAppRouter: _makeAppRouter(),
+          stubAppRouter: makeStubAppRouter(),
           db: db,
         ),
       );
@@ -268,7 +169,7 @@ void main() {
       // No error / retry affordance visible
       expect(find.byType(ElevatedButton), findsNothing);
 
-      await _tearDown(tester);
+      await tearDownRestoreHarness(tester);
     });
 
     testWidgets('checking text resolves from l10n (not hardcoded)', (
@@ -295,7 +196,7 @@ void main() {
       await tester.pumpWidget(testApp);
       await tester.pump();
       expect(find.text('Checking device...'), findsOneWidget);
-      await _tearDown(tester);
+      await tearDownRestoreHarness(tester);
     });
   });
 
@@ -307,17 +208,17 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.restoring(
               phase: RestorePhase.pullingData,
               completedSteps: 1,
               totalSteps: 3,
             ),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
           ),
         );
@@ -331,7 +232,7 @@ void main() {
         // No retry button during restore
         expect(find.byType(ElevatedButton), findsNothing);
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
 
@@ -340,17 +241,17 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.restoring(
               phase: RestorePhase.loadingCurricula,
               completedSteps: 2,
               totalSteps: 4,
             ),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
           ),
         );
@@ -362,7 +263,7 @@ void main() {
         // 2/4 = 0.5
         expect(indicator.value, closeTo(0.5, 0.001));
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
 
@@ -371,17 +272,17 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.restoring(
               phase: RestorePhase.importingContent,
               completedSteps: 0,
               totalSteps: 0,
             ),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
           ),
         );
@@ -392,7 +293,7 @@ void main() {
         );
         expect(indicator.value, isNull);
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
   });
@@ -405,13 +306,13 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.complete(collectionsRestored: 3),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
           ),
         );
@@ -426,7 +327,7 @@ void main() {
         expect(find.byType(CircularProgressIndicator), findsNothing);
         expect(find.byType(ElevatedButton), findsNothing);
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
   });
@@ -439,16 +340,16 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.error(
               code: SyncErrorCode.timeout,
               debugDetail: 'Network timeout',
             ),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
           ),
         );
@@ -483,7 +384,7 @@ void main() {
         // No spinner or progress bar
         expect(find.byType(CircularProgressIndicator), findsNothing);
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
 
@@ -523,7 +424,7 @@ void main() {
       expect(find.text('Skip & continue'), findsOneWidget);
       expect(find.text('Restore complete!'), findsOneWidget);
       expect(find.text('Step 1 of 3'), findsOneWidget);
-      await _tearDown(tester);
+      await tearDownRestoreHarness(tester);
     });
 
     // AUD-app-02 / AC2: a forced restore failure under Locale('he') must
@@ -538,7 +439,7 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
 
         // A realistic raw exception string — exactly the shape AUD-app-02
         // flagged (untranslated, technical, leaks SDK/Firestore internals).
@@ -547,13 +448,13 @@ void main() {
             'The service is currently unavailable.';
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.error(
               code: SyncErrorCode.timeout,
               debugDetail: rawExceptionText,
             ),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
             locale: const Locale('he'),
           ),
@@ -597,7 +498,7 @@ void main() {
           reason: 'l10n.skipAndContinue (he) must label the Skip button',
         );
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
   });
@@ -610,7 +511,7 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
         // restoreStatusAfterCall: error — simulates a restore that previously
         // failed (consistent with fixedStatus: error); prevents the
         // blank-screen idle-escape guard from triggering on the initState call.
@@ -624,13 +525,13 @@ void main() {
         addTearDown(stubService.dispose);
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.error(
               code: SyncErrorCode.timeout,
               debugDetail: 'Timed out',
             ),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
             service: stubService,
           ),
@@ -649,7 +550,7 @@ void main() {
         // No navigation when retry fails
         verifyNever(() => mockRouter.replaceAll(any<List<PageRouteInfo>>()));
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
 
@@ -658,13 +559,13 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
-        final appRouter = _makeAppRouter();
+        final mockRouter = makeMockRouter();
+        final appRouter = makeStubAppRouter();
         final stubService = _StubRestoreService(retryResult: true);
         addTearDown(stubService.dispose);
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.error(
               code: SyncErrorCode.timeout,
               debugDetail: 'Timed out',
@@ -692,7 +593,7 @@ void main() {
           reason: 'replaceAll must be called after successful retry',
         );
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
   });
@@ -705,12 +606,11 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
-        final mockGuard = _MockRestoreGuard();
-        final appRouter = _StubAppRouter(restoreGuard: mockGuard);
+        final mockRouter = makeMockRouter();
+        final appRouter = makeStubAppRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.error(
               code: SyncErrorCode.unknown,
               debugDetail: 'Offline',
@@ -735,7 +635,7 @@ void main() {
         expect(routes, hasLength(1));
         expect(routes.first, isA<AppShellRoute>());
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
   });
@@ -749,15 +649,15 @@ void main() {
         // An in-memory DB with no profiles seeded simulates zero-profile state.
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
         final stubService = _StubRestoreService(restoreResult: true);
         addTearDown(stubService.dispose);
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.idle(),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
             service: stubService,
           ),
@@ -774,7 +674,7 @@ void main() {
         final routes = captured.first as List<PageRouteInfo>;
         expect(routes.first, isA<AppShellRoute>());
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
   });
@@ -799,14 +699,13 @@ void main() {
         // service.restore() returns false → simulate "not a new device"
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
-        final mockGuard = _MockRestoreGuard();
-        final appRouter = _StubAppRouter(restoreGuard: mockGuard);
+        final mockRouter = makeMockRouter();
+        final appRouter = makeStubAppRouter();
         final stubService = _StubRestoreService(restoreResult: false);
         addTearDown(stubService.dispose);
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.idle(),
             mockRouter: mockRouter,
             stubAppRouter: appRouter,
@@ -842,7 +741,7 @@ void main() {
               'navigation target must be AppShellRoute when restore is skipped',
         );
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
   });
@@ -860,13 +759,13 @@ void main() {
 
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.error(code: SyncErrorCode.unknown),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
             locale: const Locale('he'),
           ),
@@ -876,7 +775,7 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byType(Scaffold), findsOneWidget);
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
 
@@ -890,17 +789,17 @@ void main() {
 
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.restoring(
               phase: RestorePhase.pullingData,
               completedSteps: 1,
               totalSteps: 3,
             ),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
             locale: const Locale('he'),
           ),
@@ -910,7 +809,7 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byType(LinearProgressIndicator), findsOneWidget);
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
   });

@@ -19,110 +19,22 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/app/restore/device_restore_screen.dart';
-import 'package:learning_tracker/app/restore/restore_providers.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
-// ── Mocks ──────────────────────────────────────────────────────────────────────
+import 'restore_test_harness.dart';
 
-class _MockStackRouter extends Mock implements StackRouter {}
-
-class _MockRestoreGuard extends Mock implements RestoreGuard {
-  @override
-  void markRestoreComplete() {}
-}
-
-class _StubAppRouter extends Mock implements AppRouter {
-  _StubAppRouter({required this.restoreGuard});
-
-  @override
-  final RestoreGuard restoreGuard;
-}
-
-class _FixedSelectedProfileId extends SelectedProfileId {
-  _FixedSelectedProfileId(this._initial);
-  final int? _initial;
-  @override
-  int? build() => _initial;
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-_MockStackRouter _makeRouter() {
-  final r = _MockStackRouter();
-  when(() => r.replaceAll(any())).thenAnswer((_) async => []);
-  when(() => r.push(any())).thenAnswer((_) async => null);
-  return r;
-}
-
-_StubAppRouter _makeAppRouter() =>
-    _StubAppRouter(restoreGuard: _MockRestoreGuard());
-
-Widget _buildHarness({
-  required RestoreStatus fixedStatus,
-  required _MockStackRouter mockRouter,
-  required _StubAppRouter stubAppRouter,
-  required UserDatabase db,
-  bool nullService = false,
-}) {
-  return ProviderScope(
-    overrides: [
-      restoreStatusProvider.overrideWithValue(fixedStatus),
-      // null service simulates a local-only account (no restore possible).
-      deviceRestoreServiceProvider.overrideWithValue(
-        nullService
-            ? null
-            : null, // always null — no service needed for these tests
-      ),
-      routerProvider.overrideWithValue(stubAppRouter),
-      userDatabaseProvider.overrideWithValue(db),
-      currentAccountIdProvider.overrideWithValue(1),
-      selectedProfileIdProvider.overrideWith(
-        () => _FixedSelectedProfileId(null),
-      ),
-    ],
-    child: MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: mockRouter,
-        stateHash: 0,
-        child: const DeviceRestoreScreen(),
-      ),
-    ),
-  );
-}
-
-Future<void> _tearDown(WidgetTester tester) async {
-  await tester.pumpWidget(const SizedBox.shrink());
-  await tester.pump(Duration.zero);
-}
+// This file's tests always exercise the null-service (local-only account)
+// path, so buildRestoreHarness's `service` parameter is left at its default
+// (null) at every call site below.
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(const AppShellRoute());
-    registerFallbackValue(<PageRouteInfo>[const AppShellRoute()]);
-    registerFallbackValue(const ProfilePickerRoute());
-  });
+  setUpAll(registerRestoreRouteFallbacks);
 
   // SY-2a — Idle branch must render a spinner (not SizedBox.shrink).
   //
@@ -137,15 +49,14 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.idle(),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
-            nullService: true,
           ),
         );
         await tester.pump();
@@ -159,7 +70,7 @@ void main() {
               'not a permanently blank SizedBox.shrink()',
         );
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
 
@@ -168,15 +79,14 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
+        final mockRouter = makeMockRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.idle(),
             mockRouter: mockRouter,
-            stubAppRouter: _makeAppRouter(),
+            stubAppRouter: makeStubAppRouter(),
             db: db,
-            nullService: true,
           ),
         );
         await tester.pump();
@@ -195,7 +105,7 @@ void main() {
               'not the empty SizedBox.shrink() that causes the SY-2 blank screen',
         );
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
   });
@@ -213,17 +123,15 @@ void main() {
       (tester) async {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
-        final mockRouter = _makeRouter();
-        final mockGuard = _MockRestoreGuard();
-        final appRouter = _StubAppRouter(restoreGuard: mockGuard);
+        final mockRouter = makeMockRouter();
+        final appRouter = makeStubAppRouter();
 
         await tester.pumpWidget(
-          _buildHarness(
+          buildRestoreHarness(
             fixedStatus: const RestoreStatus.idle(),
             mockRouter: mockRouter,
             stubAppRouter: appRouter,
             db: db,
-            nullService: true, // service == null → local-only path
           ),
         );
         await tester.pump();
@@ -248,7 +156,7 @@ void main() {
           reason: 'navigation target must be AppShellRoute for local-only path',
         );
 
-        await _tearDown(tester);
+        await tearDownRestoreHarness(tester);
       },
     );
   });
