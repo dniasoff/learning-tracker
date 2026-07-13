@@ -38,7 +38,19 @@ class RewardConfigHeader extends StatelessWidget {
               width: 48,
               child: IconButton(
                 padding: EdgeInsets.zero,
-                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                // AX-3 / AUD-gamification-04: icon-only control — without a
+                // label TalkBack/VoiceOver announce nothing for this back
+                // button. `tooltip` alone is not enough on the current
+                // Flutter SDK (it populates SemanticsData.tooltip, not
+                // .label), so the Icon also carries `semanticLabel`, which
+                // Flutter surfaces as Semantics(label:).
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  semanticLabel: MaterialLocalizations.of(
+                    context,
+                  ).backButtonTooltip,
+                ),
                 color: _kNavy,
                 onPressed: onBack,
               ),
