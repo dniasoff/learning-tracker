@@ -2188,13 +2188,17 @@
     {
       "id": "AUD-t-cross-26",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Fix the self-referential SY-3 timeout-message assertion in sync_orchestrator_test.dart \u2014 it never calls SyncOrchestratorImpl",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "129890c647b99b8d3aeb337a6ca2df7c9c006cef"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-26 AC1 OK: tautological+skipped tests deleted (diff), TQ-7 reason in commit body; real timeout coverage in sy3_sync_error_message_sanitize_test.dart passes"
+      ],
+      "notes": "Evidence re-verified verbatim (only line drift), not refuted. Deleted self-referential timeout-message test + always-skipped neighbor. Chose delete over rewrite: AUD-sync-01/EH-5 already removed SyncStatusError.message; real coverage exists in sy3_sync_error_message_sanitize_test.dart."
     },
     {
       "id": "AUD-account-07",
