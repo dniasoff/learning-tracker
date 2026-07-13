@@ -8937,13 +8937,18 @@
     {
       "id": "AUD-docs-30",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Fix nonexistent 'torah' CurriculumId in docs/flows/add-track-flow.md Screen-1 table",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "5e277f092a662b2d0e4e97a2958ba0c92c8ee9ed"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-30 AC1 OK: set-diff of 9 enum storageKeys vs 9 doc-table backtick keys is empty (exact 9/9); `torah` removed, `mishneh_torah` added (add-track-flow.md:207)",
+        "AUD-docs-30 AC1 corroborated: table Hebrew matches enum displayNameHe; Has Programs=Yes backed by 3 mishneh_torah seed rows (learning_program_seeds.dart:161/177/321)"
+      ],
+      "notes": "Verified: curriculum_id.dart has 9 storageKeys incl. mishneh_torah; doc table had fabricated `torah`. Confirmed mishneh_torah has real programs (seeds), so Has Programs=Yes. Replaced row. Scripted diff of enum vs table storageKeys now shows exact 9/9 match."
     },
     {
       "id": "AUD-docs-26",
