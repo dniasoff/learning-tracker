@@ -397,41 +397,41 @@ If you have been testing the same feature for over an hour and everything starts
 
 ## 9. Document Index
 
-The 18 test documents correspond to the 18 feature areas of the app. Work through them in the order listed below — earlier documents set up state that later documents may depend on.
+There are 17 documents in this directory. Document 01 is required context — read it first, before any scenario work. Documents 02-17 cover the 16 feature areas of the app with test scenarios. Work through them in the order listed below — earlier documents set up state that later documents may depend on.
 
 | # | File | Feature Area | Description | Approx. Scenarios |
 |---|------|-------------|-------------|-------------------|
-| 01 | `01-auth.md` | Authentication | Cloud-born and local-born signup/signin, PIN, session management | ~25 |
-| 02 | `02-onboarding.md` | Onboarding | First launch flow, seed DB extraction, welcome screens, connectivity detection | ~20 |
-| 03 | `03-profiles.md` | Profiles | Child/adult profiles, profile switching, profile settings | ~20 |
-| 04 | `04-content-browsing.md` | Content Browsing | Curriculum hierarchy navigation, search, Hebrew/English display, content detail | ~30 |
-| 05 | `05-track-setup.md` | Track Setup | Personal/school/tutor track creation, configuration, removal | ~25 |
-| 06 | `06-stages.md` | Stages | Stage definitions (learn + chazara), custom timing, stage progression | ~20 |
-| 07 | `07-learning.md` | Learning | Mark completion, undo, bulk completion, stage transitions | ~30 |
-| 08 | `08-learning-order.md` | Learning Order | Drag-and-drop reordering, custom sequences, order persistence | ~20 |
-| 09 | `09-scheduler.md` | Scheduler | Daily task generation, pace calculation, catch-up, cross-curriculum composition | ~30 |
-| 10 | `10-progress.md` | Progress | Completion history, statistics, streaks, progress visualization | ~25 |
-| 11 | `11-dashboard.md` | Dashboard | Main dashboard, curriculum cards, daily summary, pace indicators | ~25 |
-| 12 | `12-gamification.md` | Gamification | XP, levels, badges, streaks, mystery rewards (child mode) | ~25 |
-| 13 | `13-parent-mode.md` | Parent Mode | Parent PIN access, reward management, progress monitoring, track configuration | ~25 |
-| 14 | `14-tutor-mode.md` | Tutor Mode | Tutor read-only access, session logging, progress visibility | ~20 |
-| 15 | `15-test-tracking.md` | Test Tracking | Dirshu and other test program tracking, score recording | ~20 |
-| 16 | `16-notifications.md` | Notifications | Daily reminders, streak warnings, schedule-based notifications | ~20 |
-| 17 | `17-sync.md` | Sync | Firestore sync, conflict resolution, offline queue, sync indicators | ~30 |
-| 18 | `18-settings.md` | Settings | App settings, data export/import, account management, tier display | ~25 |
+| 01 | `01-product-overview.md` | Product Overview | Required reading before any scenario work — glossary, architecture, and the 9-curriculum reference table | — |
+| 02 | `02-auth-and-accounts.md` | Authentication & Accounts | Cloud-born and local-born signup/signin, PIN, session management, upgrade flow, account deletion | ~26 |
+| 03 | `03-onboarding.md` | Onboarding | First launch flow, mode/curriculum selection, learning process wizard, goal setup, bulk mark, study days | ~31 |
+| 04 | `04-learning-and-completions.md` | Learning & Completions | Mark completion, undo, bulk completion, stage transitions, bookmarks, points, review counts | ~45 |
+| 05 | `05-multi-track.md` | Multi-Track Learning | Multi-track lifecycle, bookmark independence, completion routing, track management | ~25 |
+| 06 | `06-scheduler-and-goals.md` | Smart Scheduler & Goals | Daily task generation, pace calculation, goal management, chazara scheduling, study days, daily load cap | ~42 |
+| 07 | `07-content-browsing.md` | Content Browsing | Curriculum hierarchy navigation, search, Hebrew/English display, offline browsing, performance | ~21 |
+| 08 | `08-dashboard-and-progress.md` | Dashboard & Progress | Dashboard summary cards, pace status, per-curriculum progress, completion history, charts, streak calendar | ~45 |
+| 09 | `09-gamification.md` | Gamification & Rewards | Points, streaks, mystery rewards, celebrations, Shabbos/Yom Tov streak awareness | ~26 |
+| 10 | `10-parent-mode.md` | Parent Mode | Parent PIN access, reward catalog, point configuration, track management, analytics | ~36 |
+| 11 | `11-tutor-mode.md` | Tutor Mode | Tutor PIN setup, read-only enforcement, completion history, chazara view, on-track status | ~28 |
+| 12 | `12-notifications.md` | Notifications & Reminders | Daily reminders, streak protection alerts, reward notifications, configurable times, quiet mode | ~30 |
+| 13 | `13-settings.md` | Settings & Account Management | Mode switch, curriculum activation, notification prefs, data export/import, account deletion, upgrade to cloud | ~29 |
+| 14 | `14-sync-and-offline.md` | Sync & Offline | Push-on-write, pull-on-launch, conflict resolution, retry with backoff, offline core features, content DB lifecycle | ~34 |
+| 15 | `15-profiles.md` | Profiles | Multi-profile management, profile switching, data isolation, cascade delete | ~22 |
+| 16 | `16-stages-and-order.md` | Configurable Stages & Learning Order | Stage configuration (add/edit/delete/reorder), schedule types, learning order customization | ~25 |
+| 17 | `17-catchup-and-amnesty.md` | Catch-up & Amnesty System | Recovery from out-of-sync states, rescope, amnesty, pause, multi-track triage — forward-looking, feature not yet shipped | ~64 |
 
-**Total: ~455 scenarios across 18 documents**
+**Total: ~529 scenarios across 16 feature documents (02-17), plus the required 01-product-overview.md context read.**
 
 ### Recommended Testing Order
 
 The order above is intentional:
 
-1. **Documents 01-03** (Auth, Onboarding, Profiles) establish the user and account — everything else depends on these working.
-2. **Documents 04-06** (Content, Tracks, Stages) set up the learning infrastructure.
-3. **Documents 07-10** (Learning, Order, Scheduler, Progress) cover the core daily workflow.
-4. **Documents 11-12** (Dashboard, Gamification) test the surfaces users see most.
-5. **Documents 13-15** (Parent, Tutor, Test Tracking) cover secondary user modes.
-6. **Documents 16-18** (Notifications, Sync, Settings) cover supporting infrastructure.
+1. **Document 01** (Product Overview) is required reading before anything else — it establishes the glossary and product context every other document assumes.
+2. **Documents 02-03** (Auth & Accounts, Onboarding) establish the user and account — everything else depends on these working.
+3. **Documents 04-07** (Learning & Completions, Multi-Track, Scheduler & Goals, Content Browsing) set up the learning infrastructure and cover the core daily workflow.
+4. **Documents 08-09** (Dashboard & Progress, Gamification) test the surfaces users see most.
+5. **Documents 10-11** (Parent Mode, Tutor Mode) cover secondary user modes.
+6. **Documents 12-16** (Notifications, Settings, Sync & Offline, Profiles, Stages & Order) cover supporting infrastructure.
+7. **Document 17** (Catch-up & Amnesty) is forward-looking — the feature has not shipped yet; use it as a validation checklist once it does.
 
 If a critical bug in an earlier document blocks later testing, prioritize getting that bug fixed before moving on.
 
@@ -449,6 +449,6 @@ Before you begin testing, confirm:
 - [ ] You have created your progress tracking sheet
 - [ ] You have read this document fully
 
-Then open `01-auth.md` and begin with the P0 scenarios.
+Then open `01-product-overview.md`, followed by `02-auth-and-accounts.md`, and begin with the P0 scenarios.
 
 Good luck. Every bug you find is a bug your users will never see.
