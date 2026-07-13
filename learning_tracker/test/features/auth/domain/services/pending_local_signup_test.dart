@@ -71,6 +71,42 @@ void main() {
       expect(PendingLocalRegistration.tryParse(partial), isNull);
     });
 
+    test('tryParse returns null when accountId is missing', () {
+      final json = jsonEncode({
+        'dbFileName': 'db.sqlite',
+        'email': 'a@b.com',
+        'displayName': 'Alice',
+      });
+      expect(PendingLocalRegistration.tryParse(json), isNull);
+    });
+
+    test('tryParse returns null when dbFileName is missing', () {
+      final json = jsonEncode({
+        'accountId': 'acc-123',
+        'email': 'a@b.com',
+        'displayName': 'Alice',
+      });
+      expect(PendingLocalRegistration.tryParse(json), isNull);
+    });
+
+    test('tryParse returns null when email is missing', () {
+      final json = jsonEncode({
+        'accountId': 'acc-123',
+        'dbFileName': 'db.sqlite',
+        'displayName': 'Alice',
+      });
+      expect(PendingLocalRegistration.tryParse(json), isNull);
+    });
+
+    test('tryParse returns null when displayName is missing', () {
+      final json = jsonEncode({
+        'accountId': 'acc-123',
+        'dbFileName': 'db.sqlite',
+        'email': 'a@b.com',
+      });
+      expect(PendingLocalRegistration.tryParse(json), isNull);
+    });
+
     test('round-trip through JSON encoding preserves all fields', () {
       final raw = jsonEncode(sample.toJson());
       final decoded = PendingLocalRegistration.tryParse(raw)!;
