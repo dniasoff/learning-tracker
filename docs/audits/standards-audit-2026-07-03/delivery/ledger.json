@@ -4613,13 +4613,19 @@
   {
    "id": "AUD-t-auth-02",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "sign_in_screen_test.dart never exercises the registry-mode / forgot-password logic on this churn-hotspot screen",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "59cff4c03c633a43c5073ea1855d1890d66ca25f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-auth-02 AC1 OK: reverting _effectiveSignInMode failed localBorn+online test; reverting forgot-pw catch failed THROWS parity test; restore->14/14 green",
+    "AUD-t-auth-02 AC2 OK: 4 registry-mode tests assert RegistryMatchKind rendered effect (cards+subtitles), proven registry-driven by red-first",
+    "AUD-t-auth-02 AC3 OK: forgot-pw pair asserts identical signInForgotPasswordSent on SUCCEEDS and THROWS(user-not-found) paths"
+   ],
+   "notes": "Verify's narrowed scope (registry-mode + AN-11 parity untested at widget level) confirmed. SI-WP-01 already refuted. Added 4 registry tests + 2 AN-11 tests. Red-first: reverted _effectiveSignInMode & forgot-password catch (uncommitted) broke tests; restored, all 14 pass."
   },
   {
    "id": "AUD-content_browsing-05",
