@@ -349,7 +349,19 @@ void main() {
     }, timeout: const Timeout(Duration(minutes: 3)));
   });
 
-  group('make audit check 37/37 — AUD-sync-05 (SM-7)', () {
+  group('make audit SM-7 check — AUD-sync-05', () {
+    // NOTE: this group used to assert on the check's `N/total` position
+    // string (originally "37/37"). That position renumbers every time a
+    // check is inserted or appended anywhere in the Makefile — it has
+    // already drifted twice (37/37 → 37/40, with the file's grand total
+    // now 42) with zero change to the SM-7 check itself. The assertions
+    // below instead key off the check's stable description text (the
+    // "SM-7" / "AUD-sync-05" identifiers), which only changes if the
+    // check's own scope or fix-site list changes.
+    const smSevenDescription =
+        'SM-7: no ad-hoc ParentAnalyticsRepositoryImpl/RewardMilestoneService '
+        'construction inside the AUD-sync-05 fix sites';
+
     test(
       'clean on the AUD-sync-05 fix sites (no ad-hoc Repository/Service '
       'construction)',
@@ -359,8 +371,11 @@ void main() {
         ], workingDirectory: packageDir);
         expect(
           result.stdout.toString(),
-          contains('37/37'),
-          reason: 'make audit must run the SM-7 AUD-sync-05 scoped check.',
+          contains(smSevenDescription),
+          reason:
+              'make audit must run the SM-7 AUD-sync-05 scoped check '
+              '(matched on its stable description, not its N/total '
+              'position).\nstdout=${result.stdout}\nstderr=${result.stderr}',
         );
         expect(
           result.exitCode,
@@ -376,8 +391,8 @@ void main() {
     );
 
     test('AC1: reintroducing ad-hoc RewardMilestoneService construction in '
-        'outbox_sync_write_facade.dart flips check 37/37 from clean to FAIL '
-        'and back', () async {
+        'outbox_sync_write_facade.dart flips the SM-7 check from clean to '
+        'FAIL and back', () async {
       final fixtureFile = File(
         '$packageDir/lib/features/sync/data/outbox_sync_write_facade.dart',
       );
@@ -388,13 +403,13 @@ void main() {
 
       try {
         // Append a syntactically-valid, unmistakable-as-debris top-level
-        // function reproducing the exact violation shape check 37/37
+        // function reproducing the exact violation shape the SM-7 check
         // greps for: a `final x = RewardMilestoneService(...)` reaching
         // for a fresh instance instead of going through the injected
         // `_rewardMilestoneServiceFactory`.
         fixtureFile.writeAsStringSync(
           '$original\n'
-          '// AUDIT FIXTURE - DO NOT COMMIT (AUD-sync-05 check 37/37 test)\n'
+          '// AUDIT FIXTURE - DO NOT COMMIT (AUD-sync-05 / SM-7 check test)\n'
           'void zzzAuditFixtureDoNotCommit(UserDatabase database) {\n'
           '  final rewardService = RewardMilestoneService(\n'
           '    database,\n'
@@ -410,13 +425,13 @@ void main() {
           contains('outbox_sync_write_facade.dart'),
           reason:
               'a reintroduced ad-hoc RewardMilestoneService construction '
-              'must be caught by check 37/37, not silently swallowed.\n'
+              'must be caught by the SM-7 check, not silently swallowed.\n'
               'stdout=${dirty.stdout}',
         );
         expect(
           dirty.exitCode,
           isNot(0),
-          reason: 'check 37/37 is a hard gate — it must fail the build.',
+          reason: 'the SM-7 check is a hard gate — it must fail the build.',
         );
       } finally {
         fixtureFile.writeAsStringSync(original);
