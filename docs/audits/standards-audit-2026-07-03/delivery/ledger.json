@@ -8953,13 +8953,17 @@
     {
       "id": "AUD-docs-26",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Correct the analyzer lint-rule count in docs/coding-standards.md (claims 83, actual 79)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "36304e0450653396df498a66d98c5323403802fb"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-26 AC OK: awk linter.rules count==79; coding-standards.md:697 now states '79 rules' (the 4 excess '- ' lines are exclude globs, not rules)"
+      ],
+      "notes": "Re-verified: linter.rules block has 79 entries, doc said 83. Changed 83->79 at coding-standards.md:697. Commit bf36eb5e. AC checker re-run post-fix: actual==stated."
     },
     {
       "id": "AUD-docs-32",
@@ -9545,13 +9549,17 @@
     {
       "id": "AUD-docs-27",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Create or remove the dangling docs/appcheck-enforcement.md reference in docs/coding-standards.md",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "36304e0450653396df498a66d98c5323403802fb"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-docs-27 AC OK: docs/appcheck-enforcement.md exists; PV-6 pointer coding-standards.md:351 resolves; content matches firebase_bootstrap.dart:30-43"
+      ],
+      "notes": "Re-verified: docs/appcheck-enforcement.md did not exist while PV-6 pointed to it. Created doc with honest, repo-verifiable content (status: not enforced, gating criteria, code refs). Linked from index.md; updated PV-6 Enforce line. Commit 5ca65b15."
     },
     {
       "id": "AUD-docs-35",
