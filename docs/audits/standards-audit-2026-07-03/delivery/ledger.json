@@ -5377,13 +5377,19 @@
   {
    "id": "AUD-t-content_browsing-03",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace tautological ConstrainedBox-ancestor check in r2_panel_leaf_crumb_ellipsis_test.dart with a real width-bound assertion",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "369e9c2f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-content_browsing-03 AC1 OK: mutated widget (stripped width-cap, kept overflow/maxLines) -> test 0/4 pass, fails line 202 (finite-maxWidth predicate); reverted",
+    "AUD-t-content_browsing-03 AC2 OK: delivered tree -> flutter test 4/4 GREEN (LTR/RTL x scale 1.0/1.3)",
+    "AUD-t-content_browsing-03 finding-real OK: old find.byType(ConstrainedBox) + same mutation stayed 4/4 GREEN = tautology confirmed"
+   ],
+   "notes": "No drift since 4018a91c (empty diff). Mutation-confirmed tautology: old ConstrainedBox-ancestor check stayed GREEN even with width-cap stripped, matching TextButton's own min-tap-target box. Replaced with finite-maxWidth predicate. Same mutation now RED (AC1); real fix restored -> 4/4 GREEN (AC2). gatePolicy=disjoint-skip (file-disjoint rebase; make audit + flutter analyze GREEN)."
   },
   {
    "id": "AUD-learning-04",
