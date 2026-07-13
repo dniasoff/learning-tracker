@@ -3290,13 +3290,19 @@
   {
    "id": "AUD-t-cross-09",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Cover reminderSyncEffect's D1/D2 guards with a real ProviderContainer test instead of overdue_notifications_test.dart's hand-duplicated logic",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "ed955ccaed69342706b76e595784f6bc7eba333e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-09 AC1 OK: O8-b (line319) & O8-d (line489) both read reminderSyncEffectProvider.future via _makeContainer real ProviderContainer (line200).",
+    "AUD-t-cross-09 AC2 OK: mutated notif_providers.dart:519 to `if(false && taskCount==0)`; O8-b failed with body 'You have 0 tasks across 0 curricula today'; reverted.",
+    "AUD-t-cross-09 AC3 OK: grep of test file finds no mocktail import, no MockNotificationGateway class, no registerFallbackValue; diff removed both."
+   ],
+   "notes": "Confirmed O8-b/O8-d never built a ProviderContainer or called reminderSyncEffect. Rewrote both as real-container tests reading reminderSyncEffectProvider.future. Removed unused MockNotificationGateway/mocktail import. AC2 proven via mutation-kill; reverted before commit."
   },
   {
    "id": "AUD-t-cross-42",
