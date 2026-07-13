@@ -3762,13 +3762,18 @@
   {
    "id": "AUD-t-cross-14",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or re-target calendar_program_service_ref_extraction_test.dart — tests hand-duplicated logic absent from production",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "f977c172aa737d2c81d9289cc62aa105743e6d87"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-14 AC1 OK: test deleted (git diff -66; ls gone); no re-target symbol — seed uses encodeComponent (inverse), service is thin delegate",
+    "AUD-t-cross-14 AC2 OK: test/core/services 66/66 pass, analyze clean; deleted file imported only flutter_test so no real coverage lost"
+   ],
+   "notes": "No drift since 4018a91c. Test hand-copied a private URL parser, imports only flutter_test. grep sefaria.org lib/ = 0 hits; service is a thin LocalCalendarEngine delegate post-19.4. No live re-target candidate in tool/. Deleted per AC1; sibling tests confirm coverage remains."
   },
   {
    "id": "AUD-core-sync-16",
