@@ -22,15 +22,15 @@
 ///   E2E-1507  Tutoring screens RTL — ManageTutors renders RTL
 ///   E2E-1508  Gamification screens RTL — GamificationScreen renders RTL (child)
 ///   E2E-1509  Profile picker RTL — ProfilePickerScreen renders RTL
-///   E2E-1510  Onboarding flow RTL — RTL holds; hardcoded-English leak flagged
-///             SKIP — BUG R-OB7 (see assertion below)
+///   E2E-1510  Onboarding flow RTL — RTL holds; mode-card text localised
+///             (R-OB7 FIXED — now a live assertion)
 ///   E2E-1511  City picker RTL — empty search shows localised Hebrew message
 ///             (R-IC3 FIXED in bugs-batch-2 — now a live assertion)
 ///
 /// CONFIRMED BUGS (kept as correct assertions, marked skip per the contract):
-///   R-OB7  OnboardingProfileCreationStep hardcodes English mode-card text
-///          ('Child Mode' / 'Adult Mode' / 'Fun & Rewards' / 'Deep & Scholarly'
-///          / 'ACTIVE' / 'What should we call you?') — renders English under he.
+///   R-OB7  (FIXED) OnboardingProfileCreationStep now localises mode-card
+///          copy via AppLocalizations (childModeCardTitle, adultModeCardTitle,
+///          onboardingNamePrompt, ...) — renders Hebrew, not English, under he.
 ///   R-IC3  (FIXED) CityPickerScreen now uses l10n.cityPickerNoMatches(query).
 ///
 /// Catalog: docs/planning/e2e-test-suite-plan.md §2 Area 15 / §7 risk register.
@@ -534,48 +534,43 @@ void main() {
 
   // ── E2E-1510 ────────────────────────────────────────────────────────────────
 
-  group(
-    'E2E-1510 — Onboarding flow RTL',
-    skip:
-        'BUG R-OB7: onboarding profile-mode card text is hardcoded English '
-        "('Child Mode'/'Adult Mode'/'Fun & Rewards'/'Deep & Scholarly'/"
-        "'ACTIVE'/'What should we call you?') — renders English under he locale",
-    () {
-      // CONFIRMED BUG R-OB7: OnboardingProfileCreationStep hardcodes English
-      // mode-card copy — 'Child Mode' / 'Adult Mode' / 'Fun & Rewards' /
-      // 'Deep & Scholarly' / 'ACTIVE' / 'What should we call you?'
-      // (lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart).
-      // Under the he locale the step is laid out RTL but those literals still
-      // render in English. The correct behaviour is localised Hebrew copy;
-      // asserting that fails because the app is genuinely wrong, so per the
-      // confirm-bug→skip contract the test is kept (correct assertion) but
-      // marked skip with the riskId.
-      testWidgets(
-        'OnboardingScreen profileCreation step shows localised (non-English) '
-        'mode-card text under the he locale',
-        (tester) async {
-          final identity = E2EIdentity.localBorn(displayName: 'Onb');
-          final h = E2EHarness(tester, identity: identity);
-          addTearDown(h.dispose);
+  group('E2E-1510 — Onboarding flow RTL', () {
+    // R-OB7 FIXED: OnboardingProfileCreationStep now localises mode-card copy
+    // via AppLocalizations (childModeCardTitle, adultModeCardTitle,
+    // onboardingNamePrompt, ...) — see
+    // lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart
+    // and the Hebrew translations in lib/l10n/app_he.arb. Under the he locale
+    // the step lays out RTL and the mode-card copy renders in Hebrew, so this
+    // test is un-skipped and asserts both RTL and the localised text.
+    testWidgets(
+      'OnboardingScreen profileCreation step shows localised (non-English) '
+      'mode-card text under the he locale',
+      (tester) async {
+        final identity = E2EIdentity.localBorn(displayName: 'Onb');
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
 
-          await h.pumpApp(path: '/onboarding', locale: _he);
-          await tester.pump(const Duration(milliseconds: 300));
+        await h.pumpApp(path: '/onboarding', locale: _he);
+        await tester.pump(const Duration(milliseconds: 300));
 
-          // RTL holds (this part is correct).
-          expect(
-            Directionality.of(tester.element(find.byType(Scaffold).first)),
-            TextDirection.rtl,
-          );
+        // RTL holds.
+        expect(
+          Directionality.of(tester.element(find.byType(Scaffold).first)),
+          TextDirection.rtl,
+        );
 
-          // Correct behaviour: the mode-card copy must be localised, so the raw
-          // English literals must NOT appear. (Fails today → R-OB7.)
-          expect(find.text('Child Mode'), findsNothing);
-          expect(find.text('Adult Mode'), findsNothing);
-          expect(find.text('What should we call you?'), findsNothing);
-        },
-      );
-    },
-  );
+        // Correct behaviour: the mode-card copy is localised, so the raw
+        // English literals must NOT appear (R-OB7 fixed)...
+        expect(find.text('Child Mode'), findsNothing);
+        expect(find.text('Adult Mode'), findsNothing);
+        expect(find.text('What should we call you?'), findsNothing);
+        // ... and the Hebrew translations ARE what renders.
+        expect(find.text('מצב ילדים'), findsOneWidget);
+        expect(find.text('מצב מבוגרים'), findsOneWidget);
+        expect(find.text('מה נקרא לך?'), findsOneWidget);
+      },
+    );
+  });
 
   // ── E2E-1511 ────────────────────────────────────────────────────────────────
 

@@ -701,7 +701,7 @@ Each risk is tagged with the area audit it came from, and the journey that cover
 | R-OB4 | `OnboardingDoneStep` is dead code — never reached | — | Document dead code; no journey needed |
 | R-OB5 | Unauthenticated bounce uses `addPostFrameCallback` — one-frame race | — | Covered by harness auth override; no special journey |
 | R-OB6 | BulkMarkScreen container-row expunge deferred when `_resolvedItems` is null | E2E-119 | Assert all selected items present in Drift after confirm |
-| R-OB7 | Profile-mode display text hardcoded English — breaks Hebrew locale | E2E-1510 | Assert he-RTL variant shows localised text; flag as gap |
+| R-OB7 | (FIXED) Profile-mode display text hardcoded English — breaks Hebrew locale | E2E-1510 | Assert he-RTL variant shows localised text — now a live, un-skipped assertion |
 | R-OB8 | WizardCustomStep2 'Weeks' mode allows 0 days — produces `daysOfWeek=[]` | — | No E2E; unit test for `CustomRound` validation |
 | R-OB9 | `_onAddTrackCancel` with `_createdProfileId=null` silently routes to profileCreation | E2E-110 | Assert profile row not orphaned in Drift |
 | R-OB10 | Multi-profile post-onboarding: second profile may not have a track when routing to picker | E2E-120 | Assert both profiles have >=1 track before picker shown |
