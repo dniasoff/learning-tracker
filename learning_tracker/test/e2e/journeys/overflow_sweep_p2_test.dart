@@ -37,20 +37,6 @@
 ///   27 TrackManagementHubScreen
 ///   30 ManageTutorsScreen
 ///   31 ManageGrantsScreen
-///   32 TutorAuditLogScreen
-///   33 InviteTutorScreen
-///   34 AcceptInviteScreen
-///   35 DeclineInviteScreen
-///   36 PinFlowSetupRoute
-///   37 PinFlowVerifyRoute
-///   38 ParentSettingsScreen
-///   39 PointConfigScreen
-///   40 RewardConfigurationScreen
-///   41 StudyDayConfigScreen
-///   42 CurriculumProgressScreen
-///   43 CurriculumSettingsScreen
-///   44 LearningOrderScreen
-///   45 ParentTrackManagementScreen
 ///
 /// FIXED (BUG-NEW converted to active passing tests):
 ///   13 LearningScreen (en)     — EmptyState wrapped in SingleChildScrollView
@@ -75,6 +61,23 @@
 ///   PinFlowChangeRoute        — verifyProfilePin bcrypt against FlutterSecureStorage
 ///   AppShellRoute             — container, not a standalone pumped surface
 ///   PersistentSwitcherScaffold — lives in LearningTrackerApp builder slot
+///
+/// SKIPPED (guarded router.push hangs headless — untested, DNI-404 tracks the
+/// on-device overflow sweep; AUD-t-cross-48):
+///   32 TutorAuditLogScreen
+///   33 InviteTutorScreen
+///   34 AcceptInviteScreen
+///   35 DeclineInviteScreen
+///   36 PinFlowSetupRoute
+///   37 PinFlowVerifyRoute
+///   38 ParentSettingsScreen
+///   39 PointConfigScreen
+///   40 RewardConfigurationScreen
+///   41 StudyDayConfigScreen
+///   42 CurriculumProgressScreen
+///   43 CurriculumSettingsScreen
+///   44 LearningOrderScreen
+///   45 ParentTrackManagementScreen
 ///
 /// Catalog: docs/planning/e2e-test-suite-plan.md §2 / §7 (E2E-1512)
 @Tags(['e2e', 'overflow'])
@@ -1032,7 +1035,7 @@ void main() {
   testWidgets(
     '32 TutorAuditLogScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       addTearDown(tester.view.reset);
       tester.view.devicePixelRatio = 1.0;
@@ -1073,7 +1076,7 @@ void main() {
   testWidgets(
     '33 InviteTutorScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       await _sweepPath(
         tester,
@@ -1096,7 +1099,7 @@ void main() {
   testWidgets(
     '34 AcceptInviteScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       await _sweepPath(
         tester,
@@ -1115,7 +1118,7 @@ void main() {
   testWidgets(
     '35 DeclineInviteScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       addTearDown(tester.view.reset);
       tester.view.devicePixelRatio = 1.0;
@@ -1166,7 +1169,7 @@ void main() {
   testWidgets(
     '36 PinFlowSetupRoute — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       await _sweepPath(
         tester,
@@ -1190,7 +1193,7 @@ void main() {
   testWidgets(
     '37 PinFlowVerifyRoute — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       await _sweepPath(
         tester,
@@ -1216,7 +1219,7 @@ void main() {
   testWidgets(
     '38 ParentSettingsScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       addTearDown(tester.view.reset);
       tester.view.devicePixelRatio = 1.0;
@@ -1257,7 +1260,7 @@ void main() {
   testWidgets(
     '39 PointConfigScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       addTearDown(tester.view.reset);
       tester.view.devicePixelRatio = 1.0;
@@ -1296,7 +1299,7 @@ void main() {
   testWidgets(
     '40 RewardConfigurationScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       addTearDown(tester.view.reset);
       tester.view.devicePixelRatio = 1.0;
@@ -1331,7 +1334,7 @@ void main() {
   testWidgets(
     '41 StudyDayConfigScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       addTearDown(tester.view.reset);
       tester.view.devicePixelRatio = 1.0;
@@ -1370,7 +1373,7 @@ void main() {
   testWidgets(
     '42 CurriculumProgressScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       addTearDown(tester.view.reset);
       tester.view.devicePixelRatio = 1.0;
@@ -1419,7 +1422,7 @@ void main() {
   testWidgets(
     '43 CurriculumSettingsScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       addTearDown(tester.view.reset);
       tester.view.devicePixelRatio = 1.0;
@@ -1457,7 +1460,7 @@ void main() {
   testWidgets(
     '44 LearningOrderScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       addTearDown(tester.view.reset);
       tester.view.devicePixelRatio = 1.0;
@@ -1498,7 +1501,7 @@ void main() {
   testWidgets(
     '45 ParentTrackManagementScreen — no overflow',
     skip:
-        true, // device/harness: guarded router.push hangs headless; swept on device
+        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
     (tester) async {
       addTearDown(tester.view.reset);
       tester.view.devicePixelRatio = 1.0;
