@@ -3435,13 +3435,19 @@
   {
    "id": "AUD-t-progress-03",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Consolidate the near-duplicate chart_data_service test files spawned across fix waves",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "781c9a470e3bc227271524c33f178f0db93b0d75"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-progress-03 AC1 OK: exactly 3 chart_data_service test files remain (test, migration, recent_activity); tree-wide find confirms no others",
+    "AUD-t-progress-03 AC2 OK: baselineCount test (test.dart:359) + sentinel-without-import (migration_test.dart:331) both run+pass, +1 each name-filtered",
+    "AUD-t-progress-03 AC3 OK: 114->88 expects reconciled 1:1 to dup removals; moved blocks byte-identical; no unique coverage lost, deletions justified in commit"
+   ],
+   "notes": "Re-verified: real state was 7 files/2276 lines, incl. a 3rd unnamed dup file w1b_test.dart. Consolidated 7->3 (literal AC-1): baseline gets extended+extra's unique case; migration gets sentinel's unique case + w1b's 3 unique groups. All ACs met; expect() 114->88 matches 13 removed dup tests. Merged --no-ff onto dev (w4r1c6, mergeSha 781c9a470e3bc227271524c33f178f0db93b0d75). Post-rebase gate: make audit PASSED (65/65 clean), flutter analyze clean (No issues found!). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (merge-base f1a78c29ee120e3bd12a6ca7f3f49f966076178b; tip touched only chart_data_service_*.dart files + tool/check_inmemory_db_close.dart, dev touched only ledger.json + lifetime_tree_builder.dart + 4 unrelated profiles/progress test files), so payload.testsToRun (empty) was not re-run here; the wave-closing full make ci is the integration gate. touchedStrings=false, arb-parity not run."
   },
   {
    "id": "AUD-scheduler-07",
