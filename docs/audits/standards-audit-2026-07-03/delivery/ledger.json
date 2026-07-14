@@ -2463,13 +2463,17 @@
   {
    "id": "AUD-t-onboarding-02",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Extract a shared L1 pump helper to remove 8 duplicated ProviderScope/MaterialApp blocks in onboarding presentation tests",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "b2aff698fdfefa2130aa103a102d6f6acadac408"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-onboarding-02 AC1 OK: test/helpers/pump_app.dart defines pumpApp; all 8 sites migrated to it; zero residual ProviderScope(/MaterialApp( in the 3 files"
+   ],
+   "notes": "Extracted test/helpers/pump_app.dart (pumpApp, TQ-3's convention, mirrors overflow_harness's _wrap). Migrated all 8 evidence sites onto it (-56 net lines), removed dead const+imports. analyze clean; 111 tests green; audit 61/61."
   },
   {
    "id": "AUD-tracks-11",
@@ -8719,13 +8723,17 @@
   {
    "id": "AUD-t-onboarding-03",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Close the leaked DeviceRegistryDatabase in signup_screen_test.dart's createTestWidgetWithDatabase helper",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "b2aff698fdfefa2130aa103a102d6f6acadac408"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-onboarding-03 AC1 OK: sole DeviceRegistryDatabase ctor signup_screen_test.dart:70 closed via addTearDown at :71 in per-call helper, covers all sites"
+   ],
+   "notes": "Confirmed sole DeviceRegistryDatabase ctor in createTestWidgetWithDatabase had no close, unlike sibling UserDatabase. Added addTearDown(testRegistry.close) after ctor, covers all 3 call sites. analyze clean; 14 tests green; audit 61/61."
   },
   {
    "id": "AUD-t-parent_mode-03",
