@@ -978,10 +978,14 @@ void main() {
                 ))
                 .get();
 
-        // Must have 2+ active rows — one per curriculum.
+        // Must have exactly one active row per curriculum (2 curricula
+        // seeded above) — not merely "2 or more". AUD-t-cross-45:
+        // greaterThanOrEqualTo(2) let a duplicate-insert regression (e.g. a
+        // double-write bug in execute()) pass silently; exact equality
+        // catches it.
         expect(
           rows.length,
-          greaterThanOrEqualTo(2),
+          equals(2),
           reason:
               'Should have one active completion per curriculum for Berakhot 2',
         );
