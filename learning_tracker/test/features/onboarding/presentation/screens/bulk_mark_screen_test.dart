@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart'
     show Completion;
@@ -13,8 +12,9 @@ import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
@@ -40,7 +40,7 @@ void main() {
 
     testWidgets('renders without error', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: [
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) => Future.value([]),
@@ -49,11 +49,7 @@ void main() {
             completionRepositoryProvider.overrideWithValue(completionRepo),
             activeProfileIdProvider.overrideWithValue(1),
           ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
-          ),
+          child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
         ),
       );
       await tester.pumpAndSettle();
@@ -65,7 +61,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: [
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) => Future.value([]),
@@ -74,11 +70,7 @@ void main() {
             completionRepositoryProvider.overrideWithValue(completionRepo),
             activeProfileIdProvider.overrideWithValue(1),
           ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
-          ),
+          child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
         ),
       );
       await tester.pumpAndSettle();
@@ -102,7 +94,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: [
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) => Future.value([]),
@@ -111,11 +103,7 @@ void main() {
             completionRepositoryProvider.overrideWithValue(completionRepo),
             activeProfileIdProvider.overrideWithValue(1),
           ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
-          ),
+          child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
         ),
       );
       await tester.pumpAndSettle();
@@ -210,7 +198,7 @@ void main() {
         );
 
         await tester.pumpWidget(
-          ProviderScope(
+          pumpApp(
             overrides: [
               contentRepositoryProvider.overrideWithValue(contentRepo),
               curriculumContentProvider.overrideWith(
@@ -223,11 +211,7 @@ void main() {
               bulkPriorCompletionServiceProvider.overrideWithValue(service),
               activeProfileIdProvider.overrideWithValue(1),
             ],
-            child: const MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
-            ),
+            child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
           ),
         );
         await tester.pumpAndSettle();
@@ -259,7 +243,8 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
+          locale: const Locale('he'),
           overrides: [
             curriculumContentProvider.overrideWith(
               (ref, curriculumId) => Future.value([]),
@@ -268,12 +253,7 @@ void main() {
             completionRepositoryProvider.overrideWithValue(completionRepo),
             activeProfileIdProvider.overrideWithValue(1),
           ],
-          child: const MaterialApp(
-            locale: Locale('he'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
-          ),
+          child: const BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
         ),
       );
       await tester.pumpAndSettle();
