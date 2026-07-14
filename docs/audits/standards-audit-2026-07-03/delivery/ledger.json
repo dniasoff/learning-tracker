@@ -2161,13 +2161,18 @@
   {
    "id": "AUD-t-progress-06",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Rewrite track_dual_progress_reactivity_test.dart so it stops overriding the provider it claims to guard",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "40f3814d4b6209d2c56f2f3681c7fbb17df75dc9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-progress-06 AC1 OK: grep shows zero trackDualProgressMetricsProvider(...).overrideWith; provider read directly (lines 200/207/225), only leaf deps overridden",
+    "AUD-t-progress-06 AC2 OK: my red-first commented out providers.dart:357 -> test FAILED 'greater than <0.0>/Actual <0.0>'; restored -> green, zero prod delta"
+   ],
+   "notes": "Re-verified: both tests still overrode the provider with a self-watching stub. Rewrote to drive the real, unmodified provider over an in-memory DB + fake ContentRepo (grep confirms no override on it - AC1). Red-first: removed the real watch line -> test failed; restored -> green (AC2)."
   },
   {
    "id": "AUD-progress-06",
