@@ -10150,13 +10150,18 @@
     {
       "id": "AUD-t-cross-95",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Tighten v16_to_v17_test.dart's FK-violation assertion beyond throwsA(anything)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "824986779e6241e3a25156cc4a7f415f7674ace9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-95 AC1 OK: v16_to_v17_test.dart:122 asserts throwsA(isA<SqliteException>()) not anything; import at line 17; matches sibling v27_to_v28_test.dart:159",
+        "AUD-t-cross-95 red-first OK (mine): wrong matcher isA<FormatException>() fails; harness shows threw SqliteException(787) FOREIGN KEY constraint failed"
+      ],
+      "notes": "Confirmed throwsA(anything) still at line 121. Red-first: swapped to throwsA(isA<FormatException>()), reran -> FAILED, revealing real type SqliteException (FK code 787), matching sibling files. Fixed to throwsA(isA<SqliteException>())+import, reran -> green (3/3). AC satisfied."
     },
     {
       "id": "AUD-guardrails-20",
