@@ -3541,24 +3541,35 @@
   {
    "id": "AUD-t-cross-33",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Rebuild store_screenshots_test.dart's Progress/Scheduler/Achievements goldens from real screens instead of in-file mockup widgets",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "bad2103a90e15114af6a5b69427e4ccde30e85f1"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-33 AC1 OK: file+5 goldens git-renamed test/golden/ -> tool/screenshots/; library doc-comment disclaims 'Manual Play Store generator - NOT a regression test'",
+    "AUD-t-cross-33 AC1 OK: AG-3 grep is `find lib test` (Makefile:816), excludes tool/; gone from test/ so flutter test/make ci skip it; explicit run 5/5"
+   ],
+   "notes": "Moved to tool/screenshots/ (+goldens/) with disclaiming doc comment; no longer swept by flutter test/make ci/AG-3 cap. flutter test 5/5 pass; analyze clean; audit clean."
   },
   {
    "id": "AUD-t-cross-39",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace wall-clock DateTime.now() reads with the injectable clock seam in bulk_prior_completion_b6_b8_test.dart and store_screenshots_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "bad2103a90e15114af6a5b69427e4ccde30e85f1"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-39 AC1 OK: grep DateTime.now( bulk_prior file -> NONE; 4th site (store_screenshots:108) removed by prior commit 8e6b8b99 (verified) + file now in tool/",
+    "AUD-t-cross-39 AC2 OK: B8 AC1 pins FakeLocalDayClock(fixedNow)+resetLocalDayClock tearDown, asserts purgedAt.msSinceEpoch equals fixedNowMs; window deleted; 13/13",
+    "AUD-t-cross-39 OK: decorative _fakeBookmark updatedAt DateTime.now() -> DateTime.utc(2026,1,1) constant (line 1244)"
+   ],
+   "notes": "before/after wall-clock -> pinned FakeLocalDayClock + exact ms assertion; decorative DateTime.now() -> fixed constant. 4th site already fixed by unrelated prior commit 8e6b8b99. 13/13 pass."
   },
   {
    "id": "AUD-t-cross-12",
@@ -5358,13 +5369,17 @@
   {
    "id": "AUD-t-cross-45",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Tighten bulk_prior_completion_b6_b8_test.dart's greaterThanOrEqualTo(2) assertion to an exact count",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "bad2103a90e15114af6a5b69427e4ccde30e85f1"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-45 AC1 OK: Finding-8 Test 2 asserts rows.length equals(2) (line 999); double-insert->3 fails; commit shows red-first probe"
+   ],
+   "notes": "greaterThanOrEqualTo(2) -> equals(2). Red-first probe: OLD assertion false-green on 3 rows, NEW assertion correctly failed (2 vs 3); probe removed. 13/13 pass."
   },
   {
    "id": "AUD-t-cross-47",
