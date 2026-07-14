@@ -4,6 +4,31 @@
 // class doc comment), getCompletionsByTrackAndProfile, getAggregateCountByTrack,
 // completionExistsByTrack, and getCompletionsByDateRangeAndTrack were not
 // exercised by the baseline test.
+//
+// AUD-t-cross-58: this file was written independently of and overlaps with
+// completion_dao_extended_test.dart, which covers the same 5 groups below.
+// Per-group, what this file adds beyond completion_dao_extended_test.dart's
+// coverage (do not add a third copy of any of these — extend the existing
+// group in whichever file below already owns the gap):
+//  - seeding + getCompletionsByTrack: adds nothing beyond extended_test.dart
+//    (that file's 'seeding + getCompletionsByProfile' group additionally
+//    covers a single-item insert that this file does not).
+//  - CompletionDao.getCompletionsByTrackAndProfile: adds the
+//    zero-completions case and a multi-row (2 completions in one call)
+//    positive case; extended_test.dart only asserts a single row per
+//    profile.
+//  - CompletionDao.getAggregateCountByTrack: overlaps extended_test.dart's
+//    single test (which already asserts counts for two profiles on one
+//    track); this file's extra 'is scoped to the given profile' test uses
+//    separate tracks per profile but exercises the same profile-scoping
+//    behavior — no new observable coverage.
+//  - CompletionDao.completionExistsByTrack: adds a stageId-mismatch case
+//    (matching sefariaRef/curriculumId/completedAt but a different
+//    stageId) — extended_test.dart only covers full-match and
+//    no-match-at-all.
+//  - CompletionDao.getCompletionsByDateRangeAndTrack: adds a
+//    track-scoping case (completion in range but on a different track);
+//    extended_test.dart only varies the date range, never the track.
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
