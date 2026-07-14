@@ -8674,13 +8674,18 @@
     {
       "id": "AUD-t-learning-03",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "De-duplicate the CompletionSource 3x3 credit-tier matrix tests out of completion_writer_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "b1c6e586e3d0dd366776f7d2f35088c6c6982090"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-learning-03 AC1 OK: completion_writer_test.dart has no CompletionSource.credits* asserts; only pointer comment at line 830 (0 expect() hits)",
+        "AUD-t-learning-03 AC2 OK: mark_completion_use_case_b1_test.dart ran alone = 13 pass incl. all 9 matrix facts; untouched by diff"
+      ],
+      "notes": "Confirmed duplicate 9-fact matrix vs mark_completion_use_case_b1_test.dart. Deleted duplicate group, added pointer+weaken-ok comment. Sibling's 13 tests untouched; grep confirms no direct credits* asserts remain."
     },
     {
       "id": "AUD-notifications-10",
