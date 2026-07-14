@@ -9556,13 +9556,17 @@
   {
    "id": "AUD-t-cross-57",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Broaden no_hardcoded_percent_in_chart_subtitle_test.dart regex to catch unsigned fabricated percentages",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "2f3f6fb67c24e3be25059eb74e2f9e5beb69352c"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-57 AC1 OK: injected 12% into app_en.arb -> main guard test FAILED exit1, then reverted; guard now RegExp(\\d) applied line42"
+   ],
+   "notes": "Evidence verified. Red-first: injected unsigned '12%' into loaded ARB subtitle, ran vs old RegExp -> 2 failures (en+he) captured. Widened pattern to RegExp(r'\\d') (subtitle is static prose). Added 2nd guard test for non-percent stat shape from finding's 'why'. All 6 tests green; AC re-verified. Merged --no-ff onto dev (w4r1c5, mergeSha 99404dc0f7a29f09a60956dd480a9cf871455187). Post-rebase gate: make audit 59/59 clean, flutter analyze clean (No issues found), make arb-parity clean (touchedStrings, 1538 English keys all present in Hebrew). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (only learning_tracker/test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart changed since merge-base, no overlap with dev's concurrent changes), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-core-auth-06",
