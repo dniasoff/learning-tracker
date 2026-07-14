@@ -37,6 +37,7 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/pump_app.dart';
+import '../../../../helpers/scoped_overflow_filter.dart';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,24 @@ class _MockStackRouter extends Mock implements StackRouter {}
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
+/// AUD-t-profiles-06 regression fixture: an UNRELATED widget (nothing to do
+/// with ProfilePickerScreen/ProfileCard) that deterministically overflows a
+/// RenderFlex by a LARGE margin — used to prove the he-RTL smoke test's
+/// scoped FlutterError.onError filter does not swallow overflows outside
+/// the one known, tracked "residual small profile-grid" defect.
+class _UnrelatedOverflowProbe extends StatelessWidget {
+  const _UnrelatedOverflowProbe();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 50,
+      height: 20,
+      child: Row(children: [SizedBox(width: 5000, height: 10)]),
+    );
+  }
+}
 
 // ─── Notifier subclass override ───────────────────────────────────────────────
 
@@ -90,6 +109,11 @@ ProfileModel _adult({int id = 2, String name = 'Avraham'}) => ProfileModel(
 /// [disableRetry]   — pass `retry: (_, __) => null` to ProviderScope so
 ///                    FutureProvider transitions to AsyncError in error tests.
 /// [locale]         — test locale (default: en).
+/// [debugOverflowProbe] — AUD-t-profiles-06 regression-test-only hook: when
+/// supplied, renders alongside the real [ProfilePickerScreen] in the SAME
+/// pumped tree, so a test can inject an UNRELATED overflow-inducing widget
+/// and verify it is NOT swallowed by the he-RTL smoke test's scoped
+/// FlutterError.onError filter. Never used by a non-regression test.
 Widget _buildApp({
   required _MockStackRouter router,
   AsyncValue<List<ProfileModel>>? profilesState,
@@ -101,6 +125,7 @@ Widget _buildApp({
   bool disableRetry = false,
   Locale locale = const Locale('en'),
   ProfileRepository? repo,
+  Widget? debugOverflowProbe,
 }) {
   final resolvedAuth =
       authState ??
@@ -142,7 +167,16 @@ Widget _buildApp({
     child: StackRouterScope(
       controller: router,
       stateHash: 0,
-      child: const Scaffold(body: ProfilePickerScreen()),
+      child: Scaffold(
+        body: debugOverflowProbe == null
+            ? const ProfilePickerScreen()
+            : Column(
+                children: [
+                  debugOverflowProbe,
+                  const Expanded(child: ProfilePickerScreen()),
+                ],
+              ),
+      ),
     ),
   );
 }
@@ -648,9 +682,17 @@ void main() {
       // profile-grid RenderFlex overflows at this 360×780-logical Hebrew viewport
       // are tracked for the Phase 8 RTL/visual sweep; ignore overflow errors here
       // so this functional smoke (Hebrew names render, no crash) isn't masked.
+      //
+      // AUD-t-profiles-06: narrowed from a blanket `.contains('overflowed')`
+      // match (which swallowed EVERY overflow anywhere in the pumped tree)
+      // to isKnownSmallOverflow, which matches only the tracked defect's
+      // magnitude (~3.6px) — see test/helpers/scoped_overflow_filter.dart
+      // for why magnitude, not widget identity, is the discriminator. An
+      // unrelated/larger overflow now still fails this test (regression
+      // test below).
       final originalOnError = FlutterError.onError;
       FlutterError.onError = (details) {
-        if (details.exceptionAsString().contains('overflowed')) return;
+        if (isKnownSmallOverflow(details)) return;
         originalOnError?.call(details);
       };
       addTearDown(() => FlutterError.onError = originalOnError);
@@ -670,6 +712,74 @@ void main() {
       // Both profile names must be visible.
       expect(find.text('יוסף'), findsOneWidget);
       expect(find.text('אברהם'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  // ── AUD-t-profiles-06 regression ─────────────────────────────────────────
+
+  testWidgets(
+    'AUD-t-profiles-06: the he-RTL smoke test\'s overflow filter must NOT '
+    'swallow an UNRELATED overflow in the same pumped tree',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.reset);
+
+      // The SAME (pre-fix, blanket) filter the he-RTL smoke test above
+      // currently installs — RED capture for AUD-t-profiles-06: this proves
+      // the blanket `.contains('overflowed')` check swallows an unrelated
+      // overflow too. TODO(AUD-t-profiles-06): swap to isKnownSmallOverflow.
+      // The SAME scoped filter the he-RTL smoke test above installs.
+      //
+      // Records every overflow NOT swallowed by the filter, instead of
+      // forwarding to the real originalOnError/tester.takeException() path:
+      // Flutter's debug overflow indicator re-reports the tracked small
+      // overflow on every repaint, and routing repeated reports through
+      // TestWidgetsFlutterBinding's one-pending-exception machinery here
+      // (while FlutterError.onError is still overridden) trips its internal
+      // invariant — an orthogonal test-harness gotcha, not something this
+      // regression test is about. Recording locally instead still proves
+      // exactly what matters: whether the filter swallows or forwards an
+      // unrelated overflow.
+      final originalOnError = FlutterError.onError;
+      final forwarded = <String>[];
+      FlutterError.onError = (details) {
+        if (isKnownSmallOverflow(details)) return;
+        forwarded.add(details.exceptionAsString());
+      };
+
+      final profiles = [_child(name: 'יוסף'), _adult(name: 'אברהם')];
+
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          profiles: profiles,
+          locale: const Locale('he'),
+          debugOverflowProbe: const _UnrelatedOverflowProbe(),
+        ),
+      );
+      await tester.pump();
+
+      // Restore BEFORE any expect() so later framework-internal error
+      // reporting (if any) never routes through our test-local filter.
+      FlutterError.onError = originalOnError;
+
+      // The large, UNRELATED overflow from _UnrelatedOverflowProbe must NOT
+      // be swallowed — it must be forwarded (recorded here). A blanket
+      // `.contains('overflowed')` filter (the pre-fix behavior) would
+      // swallow this too, leaving [forwarded] empty.
+      expect(
+        forwarded.any((m) => m.contains('overflowed')),
+        isTrue,
+        reason:
+            'AUD-t-profiles-06: an overflow from an UNRELATED widget (not '
+            'the known small profile-grid overflow) must still fail the '
+            'test — the filter must not blanket-swallow every "overflowed" '
+            'error. Forwarded errors: $forwarded',
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
