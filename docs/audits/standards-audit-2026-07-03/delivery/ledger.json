@@ -2183,13 +2183,18 @@
   {
    "id": "AUD-t-cross-30",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Give sync_status_emission_test.dart's 'empty outbox + online + after pull → synced' test actual assertions",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "5ad3284b3706950cc7f6a7a82fc8f46f3dbecb69"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-30 AC1 OK: synced test now has expect(currentStatus, isA<SyncStatusSynced>()) at test lines 162 and 172 (was zero-assertion)",
+    "AUD-t-cross-30 AC2 OK: line 158 awaits non-throttled pullOnLaunch() via _SuccessfulPullGateway; pull completes to synced emit (orchestrator:943) before assert"
+   ],
+   "notes": "Test had zero expect() calls. Red-first: asserted against original _EmptyGateway, captured failure. Fixed via _SuccessfulPullGateway (extends NoOpFirestoreGateway) letting pullOnLaunch complete for real; asserts SyncStatusSynced after non-throttled pull + recordDrainAttempt(). Both AC met. gatePolicy=disjoint-skip (file-disjoint rebase vs dev; make audit + flutter analyze clean)."
   },
   {
    "id": "AUD-tracks-15",
