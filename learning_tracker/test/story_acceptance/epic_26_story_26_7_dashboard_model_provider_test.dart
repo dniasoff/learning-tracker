@@ -25,22 +25,26 @@
 @Tags(['epic_26'])
 library;
 
-import 'dart:io';
-
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:test/test.dart';
 
+import '../helpers/lib_source.dart';
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-/// Reads [path] relative to the learning_tracker/ app root when run from the
-/// Flutter project directory, with a fallback for the worktree path.
-String _src(String path) {
-  final candidates = ['lib/$path', 'learning_tracker/lib/$path'];
-  for (final c in candidates) {
-    if (File(c).existsSync()) return File(c).readAsStringSync();
-  }
-  return File(candidates.first).readAsStringSync(); // surface the error
-}
+/// Reads [path] relative to `lib/`, trying both the app-root and repo-root
+/// cwd via the shared [readLibSource] lookup (AUD-t-story-acceptance-08).
+String _src(String path) => readLibSource(path);
+
+/// Path to `add_track_flow.dart`, relative to `lib/`. The file was deleted
+/// by DNI-353 (26.10) — the two AC3 tests below both need to detect that
+/// deletion and treat the constraint they assert as trivially satisfied.
+/// Sharing this check collapses what was previously two byte-identical
+/// existence-check blocks into one call (AUD-t-story-acceptance-08 AC3).
+const _addTrackFlowLibPath =
+    'features/tracks/setup/presentation/screens/add_track_flow.dart';
+
+bool _addTrackFlowDeleted() => !libFileExists(_addTrackFlowLibPath);
 
 // ── tests ─────────────────────────────────────────────────────────────────────
 
@@ -124,31 +128,28 @@ void main() {
         },
       );
 
-      test('add_track_flow.dart does not contain parallel invalidation list', () {
-        // add_track_flow.dart was deleted by DNI-353 (26.10). If the file no
-        // longer exists, the constraint is trivially satisfied.
-        final candidates = [
-          'lib/features/tracks/setup/presentation/screens/add_track_flow.dart',
-          'learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow.dart',
-        ];
-        final exists = candidates.any((c) => File(c).existsSync());
-        if (!exists) return; // file deleted — constraint satisfied
-        final src = _src(
-          'features/tracks/setup/presentation/screens/add_track_flow.dart',
-        );
-        final hasParallelList =
-            src.contains(
-              'ref.invalidate(dashboardCompletionPercentageProvider',
-            ) &&
-            src.contains('ref.invalidate(progressOverviewStatsProvider)');
-        expect(
-          hasParallelList,
-          isFalse,
-          reason:
-              'add_track_flow.dart must not have a parallel ad-hoc '
-              'invalidation list — use onTrackChanged() instead',
-        );
-      });
+      test(
+        'add_track_flow.dart does not contain parallel invalidation list',
+        () {
+          // add_track_flow.dart was deleted by DNI-353 (26.10). If the file no
+          // longer exists, the constraint is trivially satisfied.
+          if (_addTrackFlowDeleted())
+            return; // file deleted — constraint satisfied
+          final src = _src(_addTrackFlowLibPath);
+          final hasParallelList =
+              src.contains(
+                'ref.invalidate(dashboardCompletionPercentageProvider',
+              ) &&
+              src.contains('ref.invalidate(progressOverviewStatsProvider)');
+          expect(
+            hasParallelList,
+            isFalse,
+            reason:
+                'add_track_flow.dart must not have a parallel ad-hoc '
+                'invalidation list — use onTrackChanged() instead',
+          );
+        },
+      );
 
       test('add_track_flow_screen.dart calls onTrackChanged', () {
         final src = _src(
@@ -165,15 +166,9 @@ void main() {
       test('add_track_flow.dart calls onTrackChanged', () {
         // add_track_flow.dart was deleted by DNI-353 (26.10). If the file no
         // longer exists, the constraint is trivially satisfied.
-        final candidates = [
-          'lib/features/tracks/setup/presentation/screens/add_track_flow.dart',
-          'learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow.dart',
-        ];
-        final exists = candidates.any((c) => File(c).existsSync());
-        if (!exists) return; // file deleted — constraint satisfied
-        final src = _src(
-          'features/tracks/setup/presentation/screens/add_track_flow.dart',
-        );
+        if (_addTrackFlowDeleted())
+          return; // file deleted — constraint satisfied
+        final src = _src(_addTrackFlowLibPath);
         expect(
           src,
           contains('onTrackChanged('),

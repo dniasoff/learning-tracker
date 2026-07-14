@@ -9,10 +9,10 @@
 @Tags(['epic_26'])
 library;
 
-import 'dart:io';
-
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:test/test.dart';
+
+import '../helpers/lib_source.dart';
 
 void main() {
   // ── AC4: firstTaskInTrackForCategoryProvider in scheduler_providers ──────────
@@ -32,19 +32,9 @@ void main() {
       test(
         'scheduler_providers.dart source declares firstTaskInTrackForCategory',
         () {
-          final candidates = [
-            File(
-              'lib/features/scheduler/presentation/providers/scheduler_providers.dart',
-            ),
-            File(
-              'learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart',
-            ),
-          ];
-          final file = candidates.firstWhere(
-            (f) => f.existsSync(),
-            orElse: () => candidates.first,
+          final source = readLibSource(
+            'features/scheduler/presentation/providers/scheduler_providers.dart',
           );
-          final source = file.existsSync() ? file.readAsStringSync() : '';
           expect(
             source.contains('firstTaskInTrackForCategory'),
             isTrue,
