@@ -3395,13 +3395,18 @@
   {
    "id": "AUD-t-profiles-04",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Rewire pp16/ts14 regression assertions onto the real widget — pp16 tests Flutter's SliverGrid math instead of ProfileGrid's config, ts14's second test reads a bare ARB getter instead of the rendered archive dialog",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "18eaf3d463be9bca7f17124ba4445102dfcbfa81"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-profiles-04 AC1 OK: I reverted profile_grid.dart:39 to FixedCrossAxisCount(2) -> pp16 failed at tile-size expect (line 99); restored -> green",
+    "AUD-t-profiles-04 AC2 OK: I swapped screen:251 to deleteTrackArchiveBody -> ts14 2nd test failed at find.text(parent...Body) (line 224); restored green"
+   ],
+   "notes": "Evidence held. Rewrote pp16 to pump real ProfileGrid, read tile RenderBox size. Rewrote ts14 test 2 to longPress real screen, assert dialog Text. Red-first: reverted prod code, both new tests failed (pp16: 1273.0>274; ts14: 0 widgets found); restored, both green."
   },
   {
    "id": "AUD-progress-05",
