@@ -14,16 +14,12 @@ void main() {
   setUp(() async {
     db = inMemoryDb();
     await seedProfile(db);
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'bavli',
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    trackId = await seedTrack(
+      db,
+      profileId: 1,
+      curriculumId: 'bavli',
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
   });
 
   tearDown(() async {
@@ -86,16 +82,12 @@ void main() {
     });
 
     test('returns empty list for a track with no stages', () async {
-      final other = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final other = await seedTrack(
+        db,
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
 
       final stages = await db.stageDao.getStagesByTrack(other);
       expect(stages, isEmpty);
@@ -119,16 +111,12 @@ void main() {
     });
 
     test('does not affect stages for other tracks', () async {
-      final other = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final other = await seedTrack(
+        db,
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
       await insertStage(stageOrder: 1); // on trackId
       await insertStage(stageOrder: 1, overrideTrackId: other); // on other
 

@@ -12,16 +12,12 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    trackId = await seedTrack(
+      db,
+      profileId: profileId,
+      curriculumId: curriculumId,
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
   });
 
   tearDown(() async {

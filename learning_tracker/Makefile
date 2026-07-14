@@ -298,7 +298,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 57 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 58 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -845,7 +845,7 @@ audit: lint-rules-test ## Run all 57 enforcement greps (NFR19) — exits non-zer
 	      FAIL=1 ;; \
 	  esac; \
 	done; \
-	echo "56/57 — profileId-in-PK Invariant: every non-exempt UserDatabase table carries profileId (AUD-t-cross-06, docs/coding-standards.md:692)"; \
+	echo "56/58 — profileId-in-PK Invariant: every non-exempt UserDatabase table carries profileId (AUD-t-cross-06, docs/coding-standards.md:692)"; \
 	if ! dart run tool/check_profile_id_in_pk.dart > /tmp/profile_id_in_pk_check.$$$$.log 2>&1; then \
 	  cat /tmp/profile_id_in_pk_check.$$$$.log; \
 	  rm -f /tmp/profile_id_in_pk_check.$$$$.log; \
@@ -853,7 +853,7 @@ audit: lint-rules-test ## Run all 57 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/profile_id_in_pk_check.$$$$.log; \
 	fi; \
-	echo "57/57 — TQ-6 Rule-0: no NEW test file pairs a .listen( call with a fixed-millisecond Future<void>.delayed(...) wait in the same test body (AUD-t-cross-36)"; \
+	echo "57/58 — TQ-6 Rule-0: no NEW test file pairs a .listen( call with a fixed-millisecond Future<void>.delayed(...) wait in the same test body (AUD-t-cross-36)"; \
 	if ! dart run tool/check_test_stream_delay_race.dart > /tmp/stream_delay_race_check.$$$$.log 2>&1; then \
 	  cat /tmp/stream_delay_race_check.$$$$.log; \
 	  rm -f /tmp/stream_delay_race_check.$$$$.log; \
@@ -861,9 +861,15 @@ audit: lint-rules-test ## Run all 57 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/stream_delay_race_check.$$$$.log; \
 	fi; \
+	echo "58/58 — Rule-0 (warn-only): no hand-rolled CurriculumTracksCompanion.insert( under test/core/database/daos/**/*.dart — use test/helpers/drift_memory.dart's seedTrack() (AUD-t-cross-37)"; \
+	CT37_HITS=$$(grep -rn "CurriculumTracksCompanion\.insert(" test/core/database/daos/ --include="*.dart" 2>/dev/null | grep -v "test/helpers/drift_memory.dart"); \
+	if [ -n "$$CT37_HITS" ]; then \
+	  echo "  WARN: the following sites hand-roll CurriculumTracksCompanion.insert(...) instead of calling seedTrack() — convert them (AUD-t-cross-37):"; \
+	  echo "$$CT37_HITS"; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 57 greps clean ==="; \
+	  echo "=== audit PASSED — all 58 greps clean ==="; \
 	fi

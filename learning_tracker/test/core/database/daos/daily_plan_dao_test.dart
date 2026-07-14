@@ -10,16 +10,12 @@ void main() {
 
   setUp(() async {
     db = inMemoryDb();
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'bavli',
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    trackId = await seedTrack(
+      db,
+      profileId: 1,
+      curriculumId: 'bavli',
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
   });
 
   tearDown(() async {
@@ -144,16 +140,12 @@ void main() {
       test('per-track granularity — same day, different track', () async {
         // Need a second track for the same profile (UNIQUE allows
         // distinct curricula) so we use a different curriculumId.
-        final otherTrackId = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: 1,
-                curriculumId: 'mishnayos',
-                stateChangedAt: DateTime.utc(2026, 1, 1),
-                activatedAt: DateTime.utc(2026, 1, 1),
-              ),
-            );
+        final otherTrackId = await seedTrack(
+          db,
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          activatedAt: DateTime.utc(2026, 1, 1),
+        );
         await db.dailyPlanDao.insertEntries([
           makeEntry(trackIdOverride: trackId),
         ]);
@@ -199,16 +191,12 @@ void main() {
 
     group('delete operations', () {
       test('deletePlansByTrack removes only rows for that track', () async {
-        final otherTrackId = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: 1,
-                curriculumId: 'mishnayos',
-                stateChangedAt: DateTime.utc(2026, 1, 1),
-                activatedAt: DateTime.utc(2026, 1, 1),
-              ),
-            );
+        final otherTrackId = await seedTrack(
+          db,
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          activatedAt: DateTime.utc(2026, 1, 1),
+        );
         await db.dailyPlanDao.insertEntries([
           makeEntry(),
           makeEntry(

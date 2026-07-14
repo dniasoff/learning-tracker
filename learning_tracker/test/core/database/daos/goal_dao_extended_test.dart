@@ -43,16 +43,12 @@ void main() {
     int profileId = 1,
     String curriculumId = 'mishnayos',
   }) {
-    return db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            stateChangedAt: now,
-            activatedAt: now,
-          ),
-        );
+    return seedTrack(
+      db,
+      profileId: profileId,
+      curriculumId: curriculumId,
+      activatedAt: now,
+    );
   }
 
   Future<int> insertGoal({

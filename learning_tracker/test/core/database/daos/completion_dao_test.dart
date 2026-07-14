@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 
 import '../../../helpers/drift_memory.dart'
-    show inMemoryDb, seedCompletion, seedProfile;
+    show inMemoryDb, seedCompletion, seedProfile, seedTrack;
 
 void main() {
   late UserDatabase database;
@@ -14,16 +14,12 @@ void main() {
     database = inMemoryDb();
     await seedProfile(database);
     // Insert a track first to satisfy FK constraint on completions.trackId
-    trackId = await database
-        .into(database.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'bavli',
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
-          ),
-        );
+    trackId = await seedTrack(
+      database,
+      profileId: 1,
+      curriculumId: 'bavli',
+      activatedAt: DateTime.now(),
+    );
   });
 
   tearDown(() async {

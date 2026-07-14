@@ -11,16 +11,12 @@ void main() {
   setUp(() async {
     database = inMemoryDb();
     await seedProfile(database);
-    trackId = await database
-        .into(database.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
-          ),
-        );
+    trackId = await seedTrack(
+      database,
+      profileId: 1,
+      curriculumId: 'mishnayos',
+      activatedAt: DateTime.now(),
+    );
   });
 
   tearDown(() async {
@@ -107,16 +103,12 @@ void main() {
 
     test('countStagesForCurriculum is scoped to curriculum', () async {
       await insertStage(stageOrder: 1);
-      final bavliTrackId = await database
-          .into(database.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.now(),
-              activatedAt: DateTime.now(),
-            ),
-          );
+      final bavliTrackId = await seedTrack(
+        database,
+        profileId: 1,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.now(),
+      );
       await database.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           profileId: 1,
@@ -150,16 +142,12 @@ void main() {
       'deleteAllForCurriculum removes only that curriculum stages',
       () async {
         await insertStage(stageOrder: 1);
-        final bavliTrackId = await database
-            .into(database.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: 1,
-                curriculumId: 'bavli',
-                stateChangedAt: DateTime.now(),
-                activatedAt: DateTime.now(),
-              ),
-            );
+        final bavliTrackId = await seedTrack(
+          database,
+          profileId: 1,
+          curriculumId: 'bavli',
+          activatedAt: DateTime.now(),
+        );
         await database.stageDao.insertStageDefinition(
           StageDefinitionsCompanion.insert(
             profileId: 1,

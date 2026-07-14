@@ -23,16 +23,12 @@ void main() {
     db = inMemoryDb();
     // Seed profile so learner_profiles FK on curriculum_scopes is satisfied.
     await seedProfile(db);
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculum.storageKey,
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    trackId = await seedTrack(
+      db,
+      profileId: profileId,
+      curriculumId: curriculum.storageKey,
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
   });
 
   tearDown(() async {
@@ -67,16 +63,12 @@ void main() {
     });
 
     test('does not return scopes from another track', () async {
-      final otherTrack = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final otherTrack = await seedTrack(
+        db,
+        profileId: profileId,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
       await db.curriculumScopeDao.setScopes(
         profileId,
         CurriculumId.bavli,

@@ -16,16 +16,12 @@ void main() {
     await seedProfile(database);
     // Insert a track first to satisfy FK constraint on curriculum_scopes.trackId.
     // W3.22: UNIQUE constraint is (profileId, curriculumId); no trackType.
-    trackId = await database
-        .into(database.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
-          ),
-        );
+    trackId = await seedTrack(
+      database,
+      profileId: 1,
+      curriculumId: 'mishnayos',
+      activatedAt: DateTime.now(),
+    );
   });
 
   tearDown(() async {
@@ -205,16 +201,12 @@ void main() {
 
     test('scopes are isolated by curriculumId', () async {
       // Need a track for bavli too
-      final bavliTrackId = await database
-          .into(database.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.now(),
-              activatedAt: DateTime.now(),
-            ),
-          );
+      final bavliTrackId = await seedTrack(
+        database,
+        profileId: 1,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.now(),
+      );
 
       await database.curriculumScopeDao.setScopes(
         0,
