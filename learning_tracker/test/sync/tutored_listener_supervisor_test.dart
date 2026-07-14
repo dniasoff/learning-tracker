@@ -209,7 +209,7 @@ void main() {
           {
             'firestore_id': 'track-1',
             'curriculum_id': 'dafYomi',
-            'updated_at': DateTime.now().toIso8601String(),
+            'updated_at': '2026-05-21T00:00:00.000Z',
           },
         ]);
 
@@ -329,10 +329,7 @@ void main() {
         expect(supervisor.isAttached, isTrue);
 
         gateway2.emitCollection('goals', [
-          {
-            'firestore_id': 'goal-1',
-            'updated_at': DateTime.now().toIso8601String(),
-          },
+          {'firestore_id': 'goal-1', 'updated_at': '2026-05-21T00:00:00.000Z'},
         ]);
         await Future<void>.delayed(Duration.zero);
 
@@ -371,7 +368,7 @@ void main() {
       // Emit a valid payload — dispatch will throw but must not cause an
       // unhandled exception (the catchError in _onEvent absorbs it).
       gateway.emitCollection('goals', [
-        {'firestore_id': 'g1', 'updated_at': DateTime.now().toIso8601String()},
+        {'firestore_id': 'g1', 'updated_at': '2026-05-21T00:00:00.000Z'},
       ]);
       // If catchError is missing this await would surface an unhandled error.
       await Future<void>.delayed(const Duration(milliseconds: 10));
@@ -405,10 +402,7 @@ void main() {
           );
 
           gateway.emitCollection('goals', [
-            {
-              'firestore_id': 'g1',
-              'updated_at': DateTime.now().toIso8601String(),
-            },
+            {'firestore_id': 'g1', 'updated_at': '2026-05-21T00:00:00.000Z'},
           ]);
           await Future<void>.delayed(const Duration(milliseconds: 10));
           await throwingSupervisor.detach();
