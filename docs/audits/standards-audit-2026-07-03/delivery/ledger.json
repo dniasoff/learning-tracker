@@ -2724,13 +2724,19 @@
     {
       "id": "AUD-t-cross-31",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Make E2E-516/E2E-922/E2E-416 actually pump Locale('he') instead of asserting a false harness limitation",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave-4-chunk04 engine run, 2026-07-14, terminated at no-progress cap / loop end): reconciliation pass found a verified-looking fix commit that never reached dev. Two worktree branches each carry an identical commit (ab81cd4f on worktree-wf_cfdc1964-538-1, 875da8b4 on worktree-wf_cfdc1964-538-53 - same message/diff shape) titled 'fix(tests): AUD-t-cross-31 - make E2E-516/E2E-922/E2E-416/E2E-812 actually pump Locale(he)', touching scheduler/settings/tracks/progress p1_test.dart plus a new tool/check_e2e_he_locale_coverage.dart Rule-0 checker; commit message claims make audit 57/57 clean and flutter test all-passed. Neither commit is an ancestor of dev HEAD (git merge-base --is-ancestor fails for both) - the merge lane never landed either. Per engine outcome this id is blocked, not merged; ledger updated to reflect the branch's actual current state (commits: [] on this row, since nothing merged) with the evidence trail recorded here for a future merge/harvest pass. See kill-log-addendum.md."
+      "commits": [
+        "5228fdd3c6b0c6252c3dbdf8a4b5f4ce4daf6c9a"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-31 AC1/AC2 OK: E2E-516 (scheduler) and E2E-416 (tracks) call pumpApp(locale: const Locale('he')) and assert Directionality.rtl.",
+        "AUD-t-cross-31 AC3 OK: E2E-922 (settings_p1_test.dart) no longer skip:true; asserts the Hebrew Terms tile is absent under Locale('he').",
+        "AUD-t-cross-31 AC4 OK: tool/check_e2e_he_locale_coverage.dart added, wired into `make audit` as check 59/59; `dart run tool/check_e2e_he_locale_coverage.dart` -> all 18 catalog dims=he rows have a matching Locale('he') usage."
+      ],
+      "notes": "gate-repair (2026-07-14): the wave-4-chunk04 engine run produced a real, verified fix (commit ab81cd4f on worktree-wf_cfdc1964-538-1, duplicated as 875da8b4 on -538-53) that never reached dev before the run terminated at no-progress cap / loop end -- reconciliation correctly marked it blocked rather than merged. Cherry-picked ab81cd4f onto dev (git cherry-pick -x, 3-way conflicts in Makefile audit-check numbering and two import lines, resolved by hand -- see commit 5228fdd3 body). Verified post-merge: `dart run tool/check_e2e_he_locale_coverage.dart` clean, `flutter test test/e2e/journeys/{scheduler,settings,progress,tracks,hebrew_rtl}_p1_test.dart` all passed, `make audit` 59/59 clean, `flutter analyze` clean. Superseded the earlier `blocked` disposition; see kill-log-addendum.md for the full resolution note."
     },
     {
       "id": "AUD-docs-09",
@@ -2964,13 +2970,18 @@
     {
       "id": "AUD-t-cross-28",
       "wave": 4,
-      "status": "refuted",
+      "status": "merged",
       "severity": "P2",
       "title": "Flip scheduler_p1_test.dart's R-SC1/R-SC2 assertions to match the project's own confirm-bug-to-skip contract",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "refuted (wave-4-chunk04 engine run, 2026-07-14, terminated at no-progress cap / loop end): reconciliation pass received only the engine's summary verdict, no rationale/evidence artifact found anywhere on disk for this id (searched _work/, delivery/, kill-log-addendum.md, and git log --all across every branch/worktree - zero commits reference AUD-t-cross-28, unlike sibling chunk ids AUD-t-cross-31/46/50 which each have worktree commits). Independently verified against the current tree: scheduler_p1_test.dart:316-393 still asserts the hardcoded-English 'Select Hebrew date' string as the expected (passing) value for R-SC1 - the confirm-bug-to-skip flip this finding calls for has NOT landed; R-SC2's half is moot (comment at line 912 confirms AUD-scheduler-07 deleted the dead unlocalized summary field this AC targeted). Basis is partially self-evidencing (R-SC2) but not fully (R-SC1 remains open) - see kill-log-addendum.md. Action required before wave-4 certification: closing-gate reviewer must independently confirm this refutation or reopen R-SC1's half as todo/blocked."
+      "commits": [
+        "d679037cc9f94bc701f1b1df2c54ba2b744ab9bb"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-28 R-SC2 half OK (moot): confirmed dead (ComposedDailySchedule.summary / _summaryForSection deleted by AUD-scheduler-07, commit ca9bc667, ancestor of dev HEAD) -- nothing left to assert.",
+        "AUD-t-cross-28 R-SC1 half OK: HebrewDatePicker's 5 strings were already routed through AppLocalizations by AUD-scheduler-02 (commit 5f4465c9, already an ancestor of dev HEAD) with real translations in app_he.arb -- the finding's premise (hardcoded English) no longer held. scheduler_p1_test.dart E2E-508 previously still ran under the default en locale with a stale 'confirmed bug' comment, so nothing proved the fix; rewrote it to pump locale: const Locale('he') and assert the real Hebrew l10n strings render, mirroring the R-IC3 '(FIXED)' precedent in hebrew_rtl_p1_test.dart."
+      ],
+      "notes": "gate-repair (2026-07-14): the prior wave-4-chunk04 `refuted` disposition's own notes admitted the R-SC1 half was unconfirmed ('R-SC1 remains open') -- a fake/partial refutation per the closing-gate review. Independent investigation found R-SC1's underlying bug is genuinely fixed in production (AUD-scheduler-02, commit 5f4465c9, already merged), so the correct disposition was always close to 'refuted', but the test itself never proved it and the reasoning was unverifiable. Landed a real fix (commit d679037c) that pumps E2E-508 under the actual he MaterialApp locale and asserts the fixed Hebrew l10n strings -- strengthening, not weakening, the test (TQ-7) -- and updated R-SC1/R-SC2 in docs/planning/e2e-test-suite-plan.md's risk register to reflect their fixed/moot status. Verified: `flutter test test/e2e/journeys/scheduler_p1_test.dart` all 11 tests passed, `flutter analyze` clean. Reclassified from `refuted` to `merged` since a real commit now closes the gap the original disposition could only gesture at. See kill-log-addendum.md for the full resolution note."
     },
     {
       "id": "AUD-docs-05",
@@ -4460,24 +4471,34 @@
     {
       "id": "AUD-t-cross-46",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Un-skip hebrew_rtl_p1_test.dart E2E-1510 \u2014 R-OB7 onboarding hardcoded-English bug is already fixed",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave-4-chunk04 engine run, 2026-07-14, terminated at no-progress cap / loop end): reconciliation pass found a verified-looking fix commit that never reached dev. Two worktree branches each carry an identical commit (c9c76868 on worktree-wf_cfdc1964-538-1, cca963c5 on worktree-wf_cfdc1964-538-53) titled 'fix(tests): AUD-t-cross-46 - un-skip hebrew_rtl_p1_test.dart E2E-1510 (R-OB7 fixed)', removing the stale skip + confirmed-bug comment and strengthening assertions to check real Hebrew translations render; commit message claims E2E-1510 passes. Neither commit is an ancestor of dev HEAD (git merge-base --is-ancestor fails for both) - the merge lane never landed either. Per engine outcome this id is blocked, not merged; ledger updated to reflect the branch's actual current state (commits: [] on this row) with the evidence trail recorded here for a future merge/harvest pass. See kill-log-addendum.md."
+      "commits": [
+        "fe8e0dbf22945579654afc4a2323a3dd23089522"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-46 AC1 OK: hebrew_rtl_p1_test.dart E2E-1510 group runs unskipped and passes.",
+        "AUD-t-cross-46 AC2 OK: R-OB7 row in docs/planning/e2e-test-suite-plan.md marked (FIXED)."
+      ],
+      "notes": "gate-repair (2026-07-14): the wave-4-chunk04 engine run produced a real, verified fix (commit c9c76868 on worktree-wf_cfdc1964-538-1, duplicated as cca963c5 on -538-53) that never reached dev before the run terminated at no-progress cap / loop end -- reconciliation correctly marked it blocked rather than merged. Cherry-picked c9c76868 onto dev cleanly (no conflicts). Verified post-merge: `flutter test test/e2e/journeys/hebrew_rtl_p1_test.dart` all passed (E2E-1510 unskipped and green), `flutter analyze` clean. Superseded the earlier `blocked` disposition; see kill-log-addendum.md for the full resolution note."
     },
     {
       "id": "AUD-t-cross-50",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "progress_p1_test.dart E2E-806 claims to verify the documented R-PG7 cross-profile access-control gap but never passes a differing profileId",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave-4-chunk04 engine run, 2026-07-14, terminated at no-progress cap / loop end): reconciliation pass found a verified-looking fix commit that never reached dev. Two worktree branches each carry an identical commit (37de79f4 on worktree-wf_cfdc1964-538-1, 38b8c60c on worktree-wf_cfdc1964-538-53) titled 'fix(tests): AUD-t-cross-50 - progress_p1_test.dart E2E-806 add cross-profile R-PG7 sub-test', adding a second E2E-806 test that seeds a distinct account/profile and deep-links with profileId to prove the cross-profile read; commit message claims the new sub-test and the full file pass. Neither commit is an ancestor of dev HEAD (git merge-base --is-ancestor fails for both) - the merge lane never landed either. Per engine outcome this id is blocked, not merged; ledger updated to reflect the branch's actual current state (commits: [] on this row) with the evidence trail recorded here for a future merge/harvest pass. See kill-log-addendum.md."
+      "commits": [
+        "5d2a5e6c24cb3935b775f7e0e89ae3f5ddd9daac"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-50 AC1 OK: a second E2E-806 test seeds >=2 profiles and requests journey data via an explicit profileId different from the active profile's.",
+        "AUD-t-cross-50 AC2 OK: the new sub-test asserts profile-specific content (the other profile's real display name + a distinct milestone), not just absence of an error banner."
+      ],
+      "notes": "gate-repair (2026-07-14): the wave-4-chunk04 engine run produced a real, verified fix (commit 37de79f4 on worktree-wf_cfdc1964-538-1, duplicated as 38b8c60c on -538-53) that never reached dev before the run terminated at no-progress cap / loop end -- reconciliation correctly marked it blocked rather than merged. Cherry-picked 37de79f4 onto dev cleanly (no conflicts). Verified post-merge: `flutter test test/e2e/journeys/progress_p1_test.dart` all passed (new cross-profile R-PG7 sub-test green), `flutter analyze` clean. Superseded the earlier `blocked` disposition; see kill-log-addendum.md for the full resolution note."
     },
     {
       "id": "AUD-t-cross-51",

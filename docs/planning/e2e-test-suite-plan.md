@@ -756,8 +756,8 @@ Each risk is tagged with the area audit it came from, and the journey that cover
 
 | # | Risk | Journey | Action |
 |---|---|---|---|
-| R-SC1 | `HebrewDatePicker` 4 hardcoded English strings | E2E-508, E2E-1504 he | Assert he locale shows Hebrew (or flag as known gap) |
-| R-SC2 | `_summaryForSection` 3 hardcoded English template strings | E2E-516 he | Assert he locale: no raw English section summary |
+| R-SC1 | (FIXED by AUD-scheduler-02) `HebrewDatePicker`'s strings now route through AppLocalizations with real Hebrew translations | E2E-508, E2E-1504 he | Assert he locale shows Hebrew — now a live, un-skipped assertion (AUD-t-cross-28) |
+| R-SC2 | (RESOLVED by AUD-scheduler-07) `_summaryForSection` / `ComposedDailySchedule.summary` were dead code (never rendered, unlocalized) — deleted | E2E-516 he | N/A — dead code removed, nothing left to assert |
 | R-SC3 | `PaceIndicator` dead widget with hardcoded English strings | — | Dead code; no E2E |
 | R-SC4 | `toggleStudyDayProvider` deprecated/dead — risk of accidental use | — | Code review |
 | R-SC5 | `GoalSetupScreen` not an `@RoutePage` — no auto_route guard chain | E2E-505 | Test via Navigator push pattern (standalone pump) |
