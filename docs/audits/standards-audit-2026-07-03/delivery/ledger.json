@@ -2445,13 +2445,18 @@
   {
    "id": "AUD-t-dashboard-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Use AppLocalizations.localizationsDelegates and add a Locale('he') variant across dashboard widget tests",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "2a0d38a5215b3995522d6a394da7fb4a314c6bf5"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-dashboard-01 AC1 OK: grep -c 'GlobalCupertinoLocalizations.delegate' returns 0 for each of the 7 in-scope test files",
+    "AUD-t-dashboard-01 AC2 OK: dashboard_screen_test.dart adds testWidgets(...Locale(he)...) pumping locale:Locale('he') + expect(takeException(),isNull); runs green exit 0"
+   ],
+   "notes": "Re-verified 12 occurrences across 7 files, no pump_app helper. Replaced all with AppLocalizations.localizationsDelegates; dropped unused imports. Added Locale('he') test to dashboard_screen_test.dart asserting no exception. Both ACs verified: grep=0/7 files; new test passing. Gate: cd learning_tracker && make audit && flutter analyze both green. gatePolicy=disjoint-skip (merge-base(tipSha,dev)==dev head, empty overlap; no test run required per policy)."
   },
   {
    "id": "AUD-t-onboarding-02",
