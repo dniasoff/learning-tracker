@@ -8591,13 +8591,18 @@
   {
    "id": "AUD-t-gamification-09",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Wire or remove the no-op profileMode parameter on reward_config_controller_test.dart's _makeContainer",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "c4c2f1298d563020a11cf5634046692dbc5a06c6"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-gamification-09 AC OK: profileMode param removed (sanctioned disjunct). test:87 now `_makeContainer({int profileId=1})`; no profileMode refs remain except doc note.",
+    "AUD-t-gamification-09 defect real: base body reads only profileId; controller has no mode branch. Adult test keeps mode via seedProfileWithIds(mode:'adult')."
+   ],
+   "notes": "Verified: profileMode was accepted but never read; controller has zero profile-mode branching (gating lives in screen layer). Wiring a stub would fabricate fake behavior, so removed the dead param (AC's other allowed remedy) and updated doc comment + the one call site."
   },
   {
    "id": "AUD-t-gamification-05",
