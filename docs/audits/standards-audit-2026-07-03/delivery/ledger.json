@@ -6890,18 +6890,19 @@
   {
    "id": "AUD-t-cross-92",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace throwsA(anything) with a typed matcher in 20 validateIntegrity insert tests",
    "commits": [
-    "9b79454d"
+    "9b79454d",
+    "86daef74678aa1310fbcc61b38b78dd7ea6e4b3b"
    ],
-   "reviewRounds": 1,
+   "reviewRounds": 2,
    "acVerified": [
     "AUD-t-cross-92 AC1 OK: grep -rn 'throwsA(anything)' on user_database_dataclass_test.dart and user_database_companion_coverage_test.dart returns zero matches",
     "AUD-t-cross-92 AC2 OK: concrete type verified by direct execution (temporary probe on the Accounts case) - Drift's generated insert() throws drift.InvalidDataException specifically for a missing-required-field Companion; all 18 sites now assert that type"
    ],
-   "notes": "GATE-REPAIR (2026-07-14): implemented for real (was blocked with the banned 'not attempted: no-progress cap / loop end' note, no deliverable work done). The finding's named user_database_dataclass_core_test.dart was since deleted by AUD-t-cross-13's dedup pass (commit a14f2b44) - its 17 named sites (15 surviving; 2 were among the dedup pass's dropped copy-paste-identical pairs) now live in user_database_dataclass_test.dart's ported 'validateIntegrity - main tables' group; the other 3 named sites are unchanged in user_database_companion_coverage_test.dart. Replaced throwsA(anything) with throwsA(isA<InvalidDataException>()) at all 18 (15+3) sites. flutter test on both files = 117/117 passed. | REOPENED 100% AC audit 2026-07-14: AC1 met (throwsA(anything)->typed, tests green) but AC2 per-site red-first done for only 1 of 18 sites; other 17 changed by extrapolation."
+   "notes": "GATE-REPAIR (2026-07-14): implemented for real (was blocked with the banned 'not attempted: no-progress cap / loop end' note, no deliverable work done). The finding's named user_database_dataclass_core_test.dart was since deleted by AUD-t-cross-13's dedup pass (commit a14f2b44) - its 17 named sites (15 surviving; 2 were among the dedup pass's dropped copy-paste-identical pairs) now live in user_database_dataclass_test.dart's ported 'validateIntegrity - main tables' group; the other 3 named sites are unchanged in user_database_companion_coverage_test.dart. Replaced throwsA(anything) with throwsA(isA<InvalidDataException>()) at all 18 (15+3) sites. flutter test on both files = 117/117 passed. | REOPENED 100% AC audit 2026-07-14: AC1 met (throwsA(anything)->typed, tests green) but AC2 per-site red-first done for only 1 of 18 sites; other 17 changed by extrapolation. | COMPLETED 86daef74: per-site red-first for all 18 typed matchers (mutated validateIntegrity, all 18 red w/ SqliteException, reverted green 989/989)."
   },
   {
    "id": "AUD-t-cross-82",
