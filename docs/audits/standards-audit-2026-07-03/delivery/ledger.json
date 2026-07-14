@@ -6149,13 +6149,20 @@
     {
       "id": "AUD-t-settings-07",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Close the in-memory UserDatabase created inline in settings test ProviderScope overrides",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "b5e1a8ac30bd55a995016dae421f3d12af8a07b9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-settings-07 AC OK: settings_overflow_guard_test.dart L247/L278 construct userDb inline, each with addTearDown(userDb.close) next line",
+        "AUD-t-settings-07 AC OK: account_actions_test.dart userDb setUp L218, closed tearDown L234 await userDb.close()",
+        "AUD-t-settings-07 AC OK: account_actions_sheet_nav_test.dart userDb setUp L165, closed tearDown L181",
+        "AUD-t-settings-07 AC OK: an7_destructive_icon_contrast_test.dart userDb setUp L143, closed tearDown L159; grep shows no uncaptured inline instances"
+      ],
+      "notes": "Verified: all 4 files leaked UserDatabase(NativeDatabase.memory()) uncaptured, unlike sibling registry which was closed. Fixed by capturing into local/field var + addTearDown/tearDown mirroring existing registry pattern per file. grep confirms every site now has a matching close. Commit 495fb8da."
     },
     {
       "id": "AUD-app-08",
@@ -9326,13 +9333,17 @@
     {
       "id": "AUD-t-settings-11",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Rename account_actions_sheet_nav_test.dart's single-account Sign Out test \u2014 title claims SignInRoute, assertion checks AccountPickerRoute",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "b5e1a8ac30bd55a995016dae421f3d12af8a07b9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-settings-11 AC OK: title L260 replaceAll([AccountPickerRoute]) matches assertion L289 isA<AccountPickerRoute>(); L297 empty-registry keeps SignInRoute"
+      ],
+      "notes": "Verified: title said SignInRoute, assertion checked AccountPickerRoute (text matched finding exactly, line nums drifted). Renamed title to match isA<AccountPickerRoute>() assertion per recommendation. Isolated 1-line commit 588f8a32."
     },
     {
       "id": "AUD-t-sync-03",
