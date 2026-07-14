@@ -8813,13 +8813,17 @@
     {
       "id": "AUD-t-parent_mode-04",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Use addTearDown(container.dispose) in pin_flow_controller_test.dart's async/setup-transition tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "27a6ee5fbbe12b1f94b1e0f60d668907646aae45"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-parent_mode-04 AC1 OK: 0 bare .dispose() outside addTearDown; 22 _makeContainer sites paired; 5 trailing dispose() removed, addTearDown added at construction"
+      ],
+      "notes": "Confirmed all 5 sites present. Added addTearDown(container.dispose) after each _makeContainer(...) in the 2 named groups, removed trailing manual dispose() calls, matching rest of file. Grep-verified: 0 bare dispose() outside addTearDown; all 22 construction sites paired."
     },
     {
       "id": "AUD-dashboard-10",
