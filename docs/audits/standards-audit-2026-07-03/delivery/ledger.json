@@ -6457,13 +6457,17 @@
     {
       "id": "AUD-t-cross-97",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Use `is TalkerDioLogger` instead of a runtimeType.toString() string match in dio_client_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "55df566b5e44dab97a413669f8d785a369d2bedd"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-97 AC1 OK: line51 `is TalkerDioLogger`; grep runtimeType.toString=no match; test 8/8 pass; createDioClient adds real TalkerDioLogger"
+      ],
+      "notes": "Re-verified: test still had runtimeType.toString()=='TalkerDioLogger'; no drift since 4018a91c. talker_dio_logger is a direct dep already imported by code under test. Replaced with `dio.interceptors.any((i) => i is TalkerDioLogger)`. Test is the AC checker, now green."
     },
     {
       "id": "AUD-profiles-17",
