@@ -9262,13 +9262,13 @@
   {
    "id": "AUD-t-cross-81",
    "wave": 4,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Remove flutter_test_config.dart's FlutterError.onError GoogleFonts filter — TestWidgetsFlutterBinding never lets it run during a test",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "blocked (merge-lane w4r1c23, 2026-07-14). review agent lost (quota); fix commit e87d4524 (fix(test-infra): AUD-t-cross-81 - remove dead GoogleFonts onError filter) built on worktree branch worktree-wf_638063e4-8d4-47 was never reviewed/merged before the review agent was lost. Internal process blocker, not an external blocker. Worktree checkout removed; branch retained unmerged (git cherry dev shows +e87d4524, no patch-equivalent commit on dev) pending a future harvest pass."
   },
   {
    "id": "AUD-t-cross-69",
