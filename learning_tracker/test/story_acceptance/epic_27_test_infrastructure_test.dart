@@ -106,13 +106,19 @@ void main() {
       // `goldenTest` registers TWO underlying tests — one per locale.
       // We assert this by counting the locales actually exercised.
       final exercised = <Locale>{};
+      // skipGolden: false (AUD-t-cross-51) — flutter_test_config.dart now
+      // loads real fonts before any test runs (TQ-5), so the pixel
+      // assertion is meaningful. This particular golden has no font
+      // dependency at all (a plain SizedBox, no text) — the safest of the
+      // suite's call sites to baseline first, since its captured PNG can
+      // never regress for font-loading reasons, only for a genuine
+      // structural change to the harness itself.
       goldenTest(
         'records both locale variants — sanity check',
         builder: (locale) {
           exercised.add(locale);
           return const SizedBox(width: 10, height: 10);
         },
-        skipGolden: true,
       );
 
       test('goldenTest exercises both English and Hebrew locales', () {
