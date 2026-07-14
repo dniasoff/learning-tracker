@@ -89,8 +89,11 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
 
-    // Tap reminder time (key appears on both the row widget and inner ListTile)
-    await tester.tap(find.byKey(const Key('reminder_time')).last);
+    // Tap the time-row ListTile. _SettingsTimeRow forwards its key onto the
+    // inner ListTile it builds, so find.byKey would match two elements;
+    // matching on the row's own title text is unambiguous and doesn't
+    // depend on find.byKey's traversal order (AUD-t-notifications-08).
+    await tester.tap(find.widgetWithText(ListTile, 'Reminder Time'));
     await tester.pumpAndSettle();
     expect(find.byType(TimePickerDialog), findsOneWidget);
 

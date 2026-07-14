@@ -281,7 +281,7 @@ void main() {
       await _pump(tester, _buildApp(gateway: _gateway, reminderEnabled: true));
 
       final timeRow = tester.widget<ListTile>(
-        find.byKey(const Key('reminder_time')).last,
+        find.widgetWithText(ListTile, 'Reminder Time'),
       );
       expect(
         timeRow.onTap,
@@ -316,7 +316,7 @@ void main() {
       await _pump(tester, _buildApp(gateway: _gateway, reminderEnabled: false));
 
       final timeRow = tester.widget<ListTile>(
-        find.byKey(const Key('reminder_time')).last,
+        find.widgetWithText(ListTile, 'Reminder Time'),
       );
       expect(
         timeRow.onTap,
@@ -473,9 +473,10 @@ void main() {
     ) async {
       await _pump(tester, _buildApp(gateway: _gateway, reminderEnabled: true));
 
-      // Find the ListTile by key (there are two widgets with this key — the
-      // _SettingsTimeRow wrapper and the inner ListTile; tap the last one).
-      await tester.tap(find.byKey(const Key('reminder_time')).last);
+      // Match the row by its title text rather than find.byKey — the key is
+      // forwarded onto both the _SettingsTimeRow wrapper and its inner
+      // ListTile, so byKey would match two elements (AUD-t-notifications-08).
+      await tester.tap(find.widgetWithText(ListTile, 'Reminder Time'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
@@ -495,7 +496,7 @@ void main() {
 
       // The ListTile has onTap=null when disabled; tapping it should be a no-op.
       await tester.tap(
-        find.byKey(const Key('reminder_time')).last,
+        find.widgetWithText(ListTile, 'Reminder Time'),
         warnIfMissed: false,
       );
       await tester.pump();
@@ -543,7 +544,7 @@ void main() {
       await _pump(tester, _buildApp(gateway: _gateway, streakEnabled: false));
 
       final timeRow = tester.widget<ListTile>(
-        find.byKey(const Key('streak_alert_time')).last,
+        find.widgetWithText(ListTile, 'Streak Alert Time'),
       );
       expect(
         timeRow.onTap,
@@ -558,7 +559,7 @@ void main() {
       await _pump(tester, _buildApp(gateway: _gateway, streakEnabled: true));
 
       final timeRow = tester.widget<ListTile>(
-        find.byKey(const Key('streak_alert_time')).last,
+        find.widgetWithText(ListTile, 'Streak Alert Time'),
       );
       expect(
         timeRow.onTap,
@@ -663,7 +664,9 @@ void main() {
     ) async {
       await _pump(tester, _buildApp(gateway: _gateway, streakEnabled: true));
 
-      await tester.tap(find.byKey(const Key('streak_alert_time')).last);
+      // Match by title text — find.byKey would match both the
+      // _SettingsTimeRow wrapper and its inner ListTile (AUD-t-notifications-08).
+      await tester.tap(find.widgetWithText(ListTile, 'Streak Alert Time'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
