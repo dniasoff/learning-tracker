@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
@@ -245,6 +246,52 @@ void main() {
         // body instead.
         expect(find.text(l10n.appErrorViewInvalidDataTitle), findsOneWidget);
         expect(find.text(l10n.appErrorViewInvalidDataBody), findsOneWidget);
+      },
+    );
+  });
+
+  // AUD-t-learning-02: moved from the deleted learning_screen_test.dart,
+  // where this was the one non-duplicate test in the file (the other two
+  // were a strict, weaker subset of learning_screen_l1_test.dart's
+  // empty-state coverage, and referenced two providers LearningScreen no
+  // longer reads). This test doesn't exercise LearningScreen at all — it
+  // belongs here, alongside AppErrorView's other direct widget tests.
+  group('AppErrorView — generic message never leaks the raw exception string '
+      '(V2-R5 C3)', () {
+    testWidgets(
+      'InternalException: generic ARB title shown, raw exception string '
+      'never rendered',
+      (tester) async {
+        // V2-R5 C3 regression: AppErrorView.build must never render raw
+        // exception strings.
+        //
+        // AUD-core-sync-27: uses SeedManagerException (a real InternalException
+        // leaf genuinely thrown in production — lib/core/database/seed_manager.dart)
+        // instead of the removed MergeException, which was never thrown
+        // anywhere in lib/ (dead scaffolding from the W7.2 backlog item; the
+        // merge-failure telemetry it was meant to carry is fired via inline
+        // AppLogger/analytics calls instead — W7.5/W7.6). Any InternalException
+        // leaf exercises the SAME category-generic-message behavior already
+        // covered by _TestInternalException above; this test's distinct value
+        // is asserting the RAW message is absent, which none of the tests
+        // above do for InternalException (only the ValidationException test
+        // above does, for a different exception category).
+        const rawMsg = 'internal error detail that must not appear in UI';
+        final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+        final crashlytics = _RecordingCrashlyticsService();
+        await tester.pumpWidget(
+          _buildWidget(
+            error: SeedManagerException(rawMsg),
+            crashlytics: crashlytics,
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(AppErrorView), findsOneWidget);
+        expect(find.text(l10n.appErrorViewGenericTitle), findsOneWidget);
+        // Raw exception message must NOT appear anywhere in the UI.
+        expect(find.text(rawMsg), findsNothing);
+        expect(find.textContaining(rawMsg), findsNothing);
       },
     );
   });
