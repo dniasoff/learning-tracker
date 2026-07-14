@@ -181,3 +181,10 @@ tags:
   # Sync schema contract (test/sync/codec_rules_contract_test.dart):
   # asserts every codec's encode() ⊆ the firestore.rules hasOnly() allowlist.
   contract:
+
+  # Notifications feature tests (test/features/notifications/) (AUD-t-notifications-04)
+  needs_flutter:
+  notifications:
+  notifications_screen_l1:
+  aud_notifications_12:
+  unit:
