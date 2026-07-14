@@ -19,26 +19,18 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 class _MockPinService extends Mock implements PinService {}
 
 Widget _buildHarness({required PinService pinService, int profileId = 42}) {
-  return MaterialApp(
-    locale: const Locale('en'),
-    localizationsDelegates: const [
-      AppLocalizations.delegate,
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: Builder(
+  return pumpApp(
+    child: Builder(
       builder: (ctx) => Scaffold(
         body: Center(
           child: ElevatedButton(

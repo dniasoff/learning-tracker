@@ -14,15 +14,15 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -57,7 +57,7 @@ Widget _buildHarness({
   required ProfileModel profile,
   required VoidCallback onEditPressed,
 }) {
-  return ProviderScope(
+  return pumpApp(
     retry: (_, __) => null,
     overrides: [
       profileRepositoryProvider.overrideWithValue(repo),
@@ -67,25 +67,15 @@ Widget _buildHarness({
       ),
       currentAccountIdProvider.overrideWithValue(profile.accountId),
     ],
-    child: MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Consumer(
-        builder: (ctx, ref, _) => Scaffold(
-          body: Center(
-            child: ElevatedButton(
-              onPressed: () async {
-                await editProfileFlow(ctx, ref, profile);
-                onEditPressed();
-              },
-              child: const Text('edit'),
-            ),
+    child: Consumer(
+      builder: (ctx, ref, _) => Scaffold(
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () async {
+              await editProfileFlow(ctx, ref, profile);
+              onEditPressed();
+            },
+            child: const Text('edit'),
           ),
         ),
       ),

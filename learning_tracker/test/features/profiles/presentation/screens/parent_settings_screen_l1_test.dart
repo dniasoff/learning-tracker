@@ -37,8 +37,6 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -55,10 +53,10 @@ import 'package:learning_tracker/features/profiles/presentation/screens/parent_s
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/pump_app.dart';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -120,7 +118,8 @@ Widget _buildApp({
     addTearDown(resolvedDb.close);
   }
 
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     retry: (_, __) => null,
     overrides: [
       // Auth
@@ -142,20 +141,10 @@ Widget _buildApp({
       // In-memory DB for the points-adjust dialog path (userDatabaseProvider)
       userDatabaseProvider.overrideWithValue(resolvedDb),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: const ParentSettingsScreen(),
-      ),
+    child: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: const ParentSettingsScreen(),
     ),
   );
 }

@@ -16,37 +16,27 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 class _MockPinService extends Mock implements PinService {}
 
 Widget _buildHarness({required PinService pinService, int profileId = 99}) {
-  return ProviderScope(
+  return pumpApp(
     retry: (_, __) => null,
     overrides: [pinServiceProvider.overrideWithValue(pinService)],
-    child: MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Consumer(
-        builder: (ctx, ref, _) => Scaffold(
-          body: Center(
-            child: ElevatedButton(
-              onPressed: () =>
-                  showParentPinSetupDialog(ctx, ref, profileId: profileId),
-              child: const Text('open'),
-            ),
+    child: Consumer(
+      builder: (ctx, ref, _) => Scaffold(
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () =>
+                showParentPinSetupDialog(ctx, ref, profileId: profileId),
+            child: const Text('open'),
           ),
         ),
       ),

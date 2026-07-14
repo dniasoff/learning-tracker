@@ -14,7 +14,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,6 +32,7 @@ import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/test_database.dart';
 
 // ---------------------------------------------------------------------------
@@ -196,7 +196,7 @@ void main() {
       final profileToDelete = _cloudProfile(id: 2, name: 'ToDelete');
 
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: [
             userDatabaseProvider.overrideWithValue(db),
             // Cloud-born account: isLocalBorn == false.  This is the case
@@ -209,24 +209,13 @@ void main() {
               () => _FixedSelectedProfileId(1),
             ),
           ],
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Consumer(
-              builder: (ctx, ref, _) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    key: const Key('trigger_delete'),
-                    onPressed: () =>
-                        deleteProfileFlow(ctx, ref, profileToDelete),
-                    child: const Text('Delete'),
-                  ),
+          child: Consumer(
+            builder: (ctx, ref, _) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const Key('trigger_delete'),
+                  onPressed: () => deleteProfileFlow(ctx, ref, profileToDelete),
+                  child: const Text('Delete'),
                 ),
               ),
             ),
@@ -304,7 +293,7 @@ void main() {
         late ProviderContainer container;
 
         await tester.pumpWidget(
-          ProviderScope(
+          pumpApp(
             overrides: [
               userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_cloudBornAuthState),
@@ -315,30 +304,20 @@ void main() {
                 () => _FixedSelectedProfileId(2),
               ),
             ],
-            child: MaterialApp(
-              locale: const Locale('en'),
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Consumer(
-                builder: (ctx, ref, _) {
-                  container = ProviderScope.containerOf(ctx);
-                  return Scaffold(
-                    body: Center(
-                      child: ElevatedButton(
-                        key: const Key('trigger_delete'),
-                        onPressed: () =>
-                            deleteProfileFlow(ctx, ref, profileToDelete),
-                        child: const Text('Delete'),
-                      ),
+            child: Consumer(
+              builder: (ctx, ref, _) {
+                container = ProviderScope.containerOf(ctx);
+                return Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      key: const Key('trigger_delete'),
+                      onPressed: () =>
+                          deleteProfileFlow(ctx, ref, profileToDelete),
+                      child: const Text('Delete'),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
         );
@@ -385,16 +364,8 @@ void main() {
   group('ProfileEditFormDialog — initial mode seeding', () {
     Future<void> pumpDialog(WidgetTester tester, String? initialMode) async {
       await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('en'),
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
+        pumpApp(
+          child: Scaffold(
             body: ProfileEditFormDialog(
               title: 'Edit Learner',
               initialName: 'Sample',
@@ -484,16 +455,8 @@ void main() {
       var dialogOpen = true;
 
       await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('en'),
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
+        pumpApp(
+          child: Scaffold(
             body: Builder(
               builder: (ctx) => Center(
                 child: ElevatedButton(
@@ -650,7 +613,7 @@ void main() {
         ).thenAnswer((_) async => 1);
 
         await tester.pumpWidget(
-          ProviderScope(
+          pumpApp(
             overrides: [
               // Override secure storage so the real PinService uses our
               // in-memory store and we can observe clearProfilePin's effect.
@@ -661,23 +624,13 @@ void main() {
               ),
               currentAccountIdProvider.overrideWithValue(accountId),
             ],
-            child: MaterialApp(
-              locale: const Locale('en'),
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Consumer(
-                builder: (ctx, ref, _) => Scaffold(
-                  body: Center(
-                    child: ElevatedButton(
-                      key: const Key('trigger_edit'),
-                      onPressed: () => editProfileFlow(ctx, ref, childProfile),
-                      child: const Text('Edit'),
-                    ),
+            child: Consumer(
+              builder: (ctx, ref, _) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    key: const Key('trigger_edit'),
+                    onPressed: () => editProfileFlow(ctx, ref, childProfile),
+                    child: const Text('Edit'),
                   ),
                 ),
               ),
@@ -761,7 +714,7 @@ void main() {
         ).thenAnswer((_) async => 1);
 
         await tester.pumpWidget(
-          ProviderScope(
+          pumpApp(
             overrides: [
               flutterSecureStorageProvider.overrideWithValue(mockStorage),
               profileRepositoryProvider.overrideWithValue(repo),
@@ -770,23 +723,13 @@ void main() {
               ),
               currentAccountIdProvider.overrideWithValue(accountId),
             ],
-            child: MaterialApp(
-              locale: const Locale('en'),
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Consumer(
-                builder: (ctx, ref, _) => Scaffold(
-                  body: Center(
-                    child: ElevatedButton(
-                      key: const Key('trigger_edit'),
-                      onPressed: () => editProfileFlow(ctx, ref, childProfile),
-                      child: const Text('Edit'),
-                    ),
+            child: Consumer(
+              builder: (ctx, ref, _) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    key: const Key('trigger_edit'),
+                    onPressed: () => editProfileFlow(ctx, ref, childProfile),
+                    child: const Text('Edit'),
                   ),
                 ),
               ),
@@ -865,7 +808,7 @@ void main() {
       ).thenAnswer((_) async => 1);
 
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: [
             flutterSecureStorageProvider.overrideWithValue(mockStorage),
             profileRepositoryProvider.overrideWithValue(repo),
@@ -874,23 +817,13 @@ void main() {
             ),
             currentAccountIdProvider.overrideWithValue(accountId),
           ],
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Consumer(
-              builder: (ctx, ref, _) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    key: const Key('trigger_edit'),
-                    onPressed: () => editProfileFlow(ctx, ref, adultProfile),
-                    child: const Text('Edit'),
-                  ),
+          child: Consumer(
+            builder: (ctx, ref, _) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const Key('trigger_edit'),
+                  onPressed: () => editProfileFlow(ctx, ref, adultProfile),
+                  child: const Text('Edit'),
                 ),
               ),
             ),
@@ -974,25 +907,15 @@ void main() {
         );
 
         await tester.pumpWidget(
-          ProviderScope(
+          pumpApp(
             overrides: [profileRepositoryProvider.overrideWithValue(repo)],
-            child: MaterialApp(
-              locale: const Locale('en'),
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Consumer(
-                builder: (ctx, ref, _) => Scaffold(
-                  body: Center(
-                    child: ElevatedButton(
-                      key: const Key('trigger_edit'),
-                      onPressed: () => editProfileFlow(ctx, ref, profile),
-                      child: const Text('Edit'),
-                    ),
+            child: Consumer(
+              builder: (ctx, ref, _) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    key: const Key('trigger_edit'),
+                    onPressed: () => editProfileFlow(ctx, ref, profile),
+                    child: const Text('Edit'),
                   ),
                 ),
               ),
@@ -1060,25 +983,15 @@ void main() {
           final profile = _cloudProfile(id: 11, name: 'Original');
 
           await tester.pumpWidget(
-            ProviderScope(
+            pumpApp(
               overrides: [profileRepositoryProvider.overrideWithValue(repo)],
-              child: MaterialApp(
-                locale: const Locale('en'),
-                localizationsDelegates: const [
-                  AppLocalizations.delegate,
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Consumer(
-                  builder: (ctx, ref, _) => Scaffold(
-                    body: Center(
-                      child: ElevatedButton(
-                        key: const Key('trigger_edit'),
-                        onPressed: () => editProfileFlow(ctx, ref, profile),
-                        child: const Text('Edit'),
-                      ),
+              child: Consumer(
+                builder: (ctx, ref, _) => Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      key: const Key('trigger_edit'),
+                      onPressed: () => editProfileFlow(ctx, ref, profile),
+                      child: const Text('Edit'),
                     ),
                   ),
                 ),

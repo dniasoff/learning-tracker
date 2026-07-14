@@ -8,30 +8,20 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 Widget _buildDialog() {
-  return const ProviderScope(
-    child: MaterialApp(
-      localizationsDelegates: [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      // Render the dialog directly to avoid InkSparkle shader asset issues.
-      home: Scaffold(
-        body: ProfileEditFormDialog(
-          title: 'Edit Learner',
-          initialName: 'TestUser',
-          initialMode: 'child',
-          initialAvatar: 0,
-        ),
+  // Render the dialog directly to avoid InkSparkle shader asset issues.
+  return pumpApp(
+    child: const Scaffold(
+      body: ProfileEditFormDialog(
+        title: 'Edit Learner',
+        initialName: 'TestUser',
+        initialMode: 'child',
+        initialAvatar: 0,
       ),
     ),
   );

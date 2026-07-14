@@ -22,16 +22,15 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -53,31 +52,22 @@ Widget _verificationHarness({
   required void Function(bool) onResult,
   Locale locale = const Locale('en'),
 }) {
-  return ProviderScope(
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Builder(
-        builder: (ctx) => Scaffold(
-          body: ElevatedButton(
-            key: const Key('open_verify'),
-            onPressed: () async {
-              final result = await showParentPinVerificationDialog(
-                ctx,
-                profileId: _kProfileId,
-                pinService: pinService,
-                analytics: analytics,
-              );
-              onResult(result);
-            },
-            child: const Text('Open'),
-          ),
+  return pumpApp(
+    locale: locale,
+    child: Builder(
+      builder: (ctx) => Scaffold(
+        body: ElevatedButton(
+          key: const Key('open_verify'),
+          onPressed: () async {
+            final result = await showParentPinVerificationDialog(
+              ctx,
+              profileId: _kProfileId,
+              pinService: pinService,
+              analytics: analytics,
+            );
+            onResult(result);
+          },
+          child: const Text('Open'),
         ),
       ),
     ),
@@ -90,30 +80,21 @@ Widget _changeHarness({
   required void Function(bool) onResult,
   Locale locale = const Locale('en'),
 }) {
-  return ProviderScope(
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Builder(
-        builder: (ctx) => Scaffold(
-          body: ElevatedButton(
-            key: const Key('open_change'),
-            onPressed: () async {
-              final result = await showParentPinChangeDialog(
-                ctx,
-                profileId: _kProfileId,
-                pinService: pinService,
-              );
-              onResult(result);
-            },
-            child: const Text('Open'),
-          ),
+  return pumpApp(
+    locale: locale,
+    child: Builder(
+      builder: (ctx) => Scaffold(
+        body: ElevatedButton(
+          key: const Key('open_change'),
+          onPressed: () async {
+            final result = await showParentPinChangeDialog(
+              ctx,
+              profileId: _kProfileId,
+              pinService: pinService,
+            );
+            onResult(result);
+          },
+          child: const Text('Open'),
         ),
       ),
     ),
@@ -792,30 +773,20 @@ void main() {
       setViewSize(tester);
 
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: PinKeypadDialogFrame(
-                title: 'Test Title',
-                subtitle: 'Test subtitle',
-                digits: '',
-                errorMessage: null,
-                lockedOut: false,
-                lockoutMinutes: 0,
-                busy: false,
-                onClose: () {},
-                onDigit: (_) {},
-                onBackspace: () {},
-                onCancel: () {},
-              ),
+        pumpApp(
+          child: Scaffold(
+            body: PinKeypadDialogFrame(
+              title: 'Test Title',
+              subtitle: 'Test subtitle',
+              digits: '',
+              errorMessage: null,
+              lockedOut: false,
+              lockoutMinutes: 0,
+              busy: false,
+              onClose: () {},
+              onDigit: (_) {},
+              onBackspace: () {},
+              onCancel: () {},
             ),
           ),
         ),
@@ -845,30 +816,20 @@ void main() {
       setViewSize(tester);
 
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: PinKeypadDialogFrame(
-                title: 'Test Title',
-                subtitle: 'Test subtitle',
-                digits: '',
-                errorMessage: null,
-                lockedOut: true,
-                lockoutMinutes: 12,
-                busy: false,
-                onClose: () {},
-                onDigit: (_) {},
-                onBackspace: () {},
-                onCancel: () {},
-              ),
+        pumpApp(
+          child: Scaffold(
+            body: PinKeypadDialogFrame(
+              title: 'Test Title',
+              subtitle: 'Test subtitle',
+              digits: '',
+              errorMessage: null,
+              lockedOut: true,
+              lockoutMinutes: 12,
+              busy: false,
+              onClose: () {},
+              onDigit: (_) {},
+              onBackspace: () {},
+              onCancel: () {},
             ),
           ),
         ),
@@ -892,30 +853,21 @@ void main() {
         setViewSize(tester);
 
         await tester.pumpWidget(
-          ProviderScope(
-            child: MaterialApp(
-              locale: const Locale('he'),
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(
-                body: PinKeypadDialogFrame(
-                  title: 'Test Title',
-                  subtitle: 'Test subtitle',
-                  digits: '',
-                  errorMessage: null,
-                  lockedOut: true,
-                  lockoutMinutes: 12,
-                  busy: false,
-                  onClose: () {},
-                  onDigit: (_) {},
-                  onBackspace: () {},
-                  onCancel: () {},
-                ),
+          pumpApp(
+            locale: const Locale('he'),
+            child: Scaffold(
+              body: PinKeypadDialogFrame(
+                title: 'Test Title',
+                subtitle: 'Test subtitle',
+                digits: '',
+                errorMessage: null,
+                lockedOut: true,
+                lockoutMinutes: 12,
+                busy: false,
+                onClose: () {},
+                onDigit: (_) {},
+                onBackspace: () {},
+                onCancel: () {},
               ),
             ),
           ),
@@ -942,30 +894,20 @@ void main() {
       setViewSize(tester);
 
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: PinKeypadDialogFrame(
-                title: 'Test Title',
-                subtitle: 'Sub',
-                digits: '',
-                errorMessage: 'Custom error msg',
-                lockedOut: false,
-                lockoutMinutes: 0,
-                busy: false,
-                onClose: () {},
-                onDigit: (_) {},
-                onBackspace: () {},
-                onCancel: () {},
-              ),
+        pumpApp(
+          child: Scaffold(
+            body: PinKeypadDialogFrame(
+              title: 'Test Title',
+              subtitle: 'Sub',
+              digits: '',
+              errorMessage: 'Custom error msg',
+              lockedOut: false,
+              lockoutMinutes: 0,
+              busy: false,
+              onClose: () {},
+              onDigit: (_) {},
+              onBackspace: () {},
+              onCancel: () {},
             ),
           ),
         ),
@@ -983,30 +925,20 @@ void main() {
       var backspaceCalled = false;
 
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: PinKeypadDialogFrame(
-                title: 'Title',
-                subtitle: 'Sub',
-                digits: '12',
-                errorMessage: null,
-                lockedOut: false,
-                lockoutMinutes: 0,
-                busy: true,
-                onClose: () {},
-                onDigit: (_) => digitCalled = true,
-                onBackspace: () => backspaceCalled = true,
-                onCancel: () {},
-              ),
+        pumpApp(
+          child: Scaffold(
+            body: PinKeypadDialogFrame(
+              title: 'Title',
+              subtitle: 'Sub',
+              digits: '12',
+              errorMessage: null,
+              lockedOut: false,
+              lockoutMinutes: 0,
+              busy: true,
+              onClose: () {},
+              onDigit: (_) => digitCalled = true,
+              onBackspace: () => backspaceCalled = true,
+              onCancel: () {},
             ),
           ),
         ),

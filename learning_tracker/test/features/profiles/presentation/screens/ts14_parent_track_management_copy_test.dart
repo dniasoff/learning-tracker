@@ -20,8 +20,6 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -37,6 +35,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/pump_app.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -83,7 +82,8 @@ Widget _buildApp({
     addTearDown(database.close);
   }
 
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       activeProfileIdProvider.overrideWithValue(
         tracks.isNotEmpty ? tracks.first.profileId : _kProfileId,
@@ -93,20 +93,10 @@ Widget _buildApp({
       ..._perTrackOverrides(tracks),
       useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: const ParentTrackManagementScreen(),
-      ),
+    child: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: const ParentTrackManagementScreen(),
     ),
   );
 }

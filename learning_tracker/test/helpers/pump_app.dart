@@ -14,7 +14,11 @@
 // across 4 files (AUD-t-profiles-02), which migrated onto this helper too
 // and added the second provider-wiring mode documented below. The
 // gamification feature hand-rolled it 8 more times across 6 files
-// (AUD-t-gamification-06), which migrated onto this helper as well.
+// (AUD-t-gamification-06), which migrated onto this helper as well. A
+// second profiles batch — 15 more files, 35 sites — hand-rolled the same
+// block independently (AUD-t-profiles-03); those migrated onto this helper
+// too, and `tool/check_tq3_pump_app_migration.dart`'s ratchet baseline was
+// lowered accordingly.
 //
 // Usage:
 // ```dart

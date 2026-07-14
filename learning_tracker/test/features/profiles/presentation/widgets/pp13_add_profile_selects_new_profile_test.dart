@@ -12,7 +12,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,9 +20,9 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/test_database.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
@@ -71,7 +70,7 @@ void main() {
       final selectedIds = <int?>[];
 
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: [
             userDatabaseProvider.overrideWithValue(db),
             currentAccountIdProvider.overrideWithValue(1),
@@ -80,30 +79,20 @@ void main() {
               () => _FixedSelectedProfileId(kPrevProfileId),
             ),
           ],
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Consumer(
-              builder: (ctx, ref, _) {
-                final id = ref.watch(selectedProfileIdProvider);
-                selectedIds.add(id);
-                return Scaffold(
-                  body: Center(
-                    child: ElevatedButton(
-                      key: const Key('open'),
-                      onPressed: () => showAddProfileDialog(ctx, ref),
-                      child: const Text('Open'),
-                    ),
+          child: Consumer(
+            builder: (ctx, ref, _) {
+              final id = ref.watch(selectedProfileIdProvider);
+              selectedIds.add(id);
+              return Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    key: const Key('open'),
+                    onPressed: () => showAddProfileDialog(ctx, ref),
+                    child: const Text('Open'),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         ),
       );

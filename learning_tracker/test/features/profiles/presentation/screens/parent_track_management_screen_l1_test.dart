@@ -17,8 +17,6 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -33,10 +31,10 @@ import 'package:learning_tracker/features/profiles/presentation/screens/parent_t
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/pump_app.dart';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -136,7 +134,8 @@ Widget _buildApp({
   }
   final profileId = tracks.isNotEmpty ? tracks.first.profileId : _kProfileId;
 
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       activeProfileIdProvider.overrideWithValue(profileId),
       userDatabaseProvider.overrideWith((ref) => database),
@@ -147,20 +146,10 @@ Widget _buildApp({
         (ref) => _buildActivationService(database, profileId),
       ),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: const ParentTrackManagementScreen(),
-      ),
+    child: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: const ParentTrackManagementScreen(),
     ),
   );
 }
@@ -176,7 +165,8 @@ Widget _buildAppLoading({
   // its own database — always close it.
   addTearDown(database.close);
 
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       activeProfileIdProvider.overrideWithValue(_kProfileId),
       userDatabaseProvider.overrideWith((ref) => database),
@@ -186,20 +176,10 @@ Widget _buildAppLoading({
       ),
       useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: const ParentTrackManagementScreen(),
-      ),
+    child: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: const ParentTrackManagementScreen(),
     ),
   );
 }
@@ -215,7 +195,8 @@ Widget _buildAppError({
   // its own database — always close it.
   addTearDown(database.close);
 
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       activeProfileIdProvider.overrideWithValue(_kProfileId),
       userDatabaseProvider.overrideWith((ref) => database),
@@ -227,20 +208,10 @@ Widget _buildAppError({
       ),
       useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: const ParentTrackManagementScreen(),
-      ),
+    child: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: const ParentTrackManagementScreen(),
     ),
   );
 }
