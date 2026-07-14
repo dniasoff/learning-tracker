@@ -9199,13 +9199,13 @@
   {
    "id": "AUD-t-cross-62",
    "wave": 4,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Delete or reactivate the dead tautological placeholders in v15_to_v16_test.dart's skipped group",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "blocked (merge-lane w4r1c9, 2026-07-14). AC1 (zero grep hits) fully met: deleted both dead tests. AC2 (both named tests unskipped) half met: dedup test unskipped+passes; backfill test, unskipped, hits a real pre-existing UserDatabase.onUpgrade duplicate-col bug, unrelated, out of scope. Left skipped w/ accurate reason; noted as follow-up."
   },
   {
    "id": "AUD-t-cross-86",
