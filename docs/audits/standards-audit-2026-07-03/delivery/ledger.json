@@ -5381,13 +5381,19 @@
     {
       "id": "AUD-t-cross-35",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Remove the stale R-GA-boot skip on gamification_p0_test.dart E2E-601 \u2014 the bug it cites is already fixed",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "758a476282696204c46cd0fe93f259751a486d6e"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-35 AC1 OK: `flutter test ... --plain-name E2E-601` -> '+1: All tests passed!', zero skips/failures",
+        "AUD-t-cross-35 AC2 OK: header lines 3-7 list E2E-601 with no 'SKIP-BUG R-GA-boot'; grep skip|R-GA-boot over file = empty",
+        "AUD-t-cross-35 AC3 OK: make ci->test->'flutter test --coverage' runs whole test/ tree; no e2e/journey exclude; file unskipped"
+      ],
+      "notes": "Re-verified R-GA-boot is fixed (commit 7bfc3669). Reproduced 'Too many elements' -> ambiguous scrollable, fixed with .first (matches infra_p1_test.dart). Unskipping surfaced a masked R-GA-stream timer leak; added one-shot override matching existing pattern. All 3 ACs green."
     },
     {
       "id": "AUD-t-cross-07",
