@@ -17,11 +17,21 @@ void main() {
   late StreakStateService provider;
   const profileId = 1;
 
-  // Helper to insert a streak event.
-  Future<void> insertEvent(UserDatabase db, DateTime timestamp) async {
+  // Captured before insertEvent() below so its `profileId` parameter can
+  // default to the outer constant without being shadowed by its own name.
+  const defaultProfileId = profileId;
+
+  // Helper to insert a streak event. `profileId` defaults to the outer
+  // constant so most call sites don't need to pass it; callers that need a
+  // different profile (e.g. cross-profile isolation tests) can override it.
+  Future<void> insertEvent(
+    UserDatabase db,
+    DateTime timestamp, {
+    int? profileId,
+  }) async {
     await db.streakEventDao.appendEvent(
       StreakEventsCompanion.insert(
-        profileId: profileId,
+        profileId: profileId ?? defaultProfileId,
         eventType: 'completion',
         dayUtc: DateTime.utc(timestamp.year, timestamp.month, timestamp.day),
         eventTimestamp: timestamp,
@@ -57,7 +67,18 @@ void main() {
           ),
         );
     clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14, 12));
-    provider = StreakStateService(db: db, clock: clock);
+    // AUD-t-cross-79: pin day-bucketing to the UTC calendar date instead of
+    // letting it resolve through DateTime.toLocal() (which reads the host
+    // machine's TZ). Every fixture in this file is already expressed in
+    // `DateTime.utc(...)` terms, so this makes the whole suite deterministic
+    // by construction — pass/fail can no longer depend on the timezone the
+    // test runner happens to execute in.
+    provider = StreakStateService(
+      db: db,
+      clock: clock,
+      dayOf: (dt) =>
+          DateTime.utc(dt.toUtc().year, dt.toUtc().month, dt.toUtc().day),
+    );
   });
 
   tearDown(() async {
@@ -108,17 +129,29 @@ void main() {
       expect(state.maxStreak, 1);
     });
 
+    test('currentStreak for a fixed one-UTC-day gap does not depend on the '
+        'host machine timezone (AUD-t-cross-79)', () async {
+      // A completion at 2026-05-10 00:00 UTC and "today" pinned at
+      // 2026-05-11 12:00 UTC are exactly one UTC calendar day apart --
+      // still "alive" per the reducer's <=1-day grace window -- and that
+      // answer must not depend on the executing machine's timezone.
+      clock.setNow(DateTime.utc(2026, 5, 11, 12));
+      await insertEvent(db, DateTime.utc(2026, 5, 10));
+
+      final state = await provider.read(profileId: profileId);
+
+      expect(
+        state.currentStreak,
+        1,
+        reason:
+            'events exactly one UTC calendar day apart must stay "alive" '
+            "independent of the executing machine's TZ",
+      );
+    });
+
     test('does not count events from another profile', () async {
       // Insert event for profile 2.
-      await db.streakEventDao.appendEvent(
-        StreakEventsCompanion.insert(
-          profileId: 2,
-          eventType: 'completion',
-          dayUtc: DateTime.utc(2026, 5, 14),
-          eventTimestamp: DateTime.utc(2026, 5, 14),
-          clientDeviceId: const Value(null),
-        ),
-      );
+      await insertEvent(db, DateTime.utc(2026, 5, 14), profileId: 2);
 
       final state = await provider.read(profileId: profileId);
       expect(state.currentStreak, 0);
@@ -163,7 +196,7 @@ void main() {
 
       // Give the first emission time to arrive.
       await Future<void>.delayed(Duration.zero);
-      expect(states, isNotEmpty); // zero at start
+      expect(states.first, 0); // zero at start
 
       await insertEvent(db, DateTime.utc(2026, 5, 14));
       await Future<void>.delayed(Duration.zero);
