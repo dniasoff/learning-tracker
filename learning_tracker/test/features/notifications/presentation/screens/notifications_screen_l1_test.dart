@@ -233,17 +233,18 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('shows three Switch widgets (reminder, streak alert, reward)', (
-      tester,
-    ) async {
-      await _pump(tester, _buildApp(gateway: _gateway));
+    testWidgets(
+      'shows four Switch widgets (reminder, streak alert, reward, device toggle)',
+      (tester) async {
+        await _pump(tester, _buildApp(gateway: _gateway));
 
-      // Three per-preference switches plus one in DeviceNotificationToggle.
-      final switches = find.byType(Switch);
-      expect(switches, findsNWidgets(4));
+        // Three per-preference switches plus one in DeviceNotificationToggle.
+        final switches = find.byType(Switch);
+        expect(switches, findsNWidgets(4));
 
-      await _tearDown(tester);
-    });
+        await _tearDown(tester);
+      },
+    );
 
     testWidgets('HOT STREAK badge visible when streak alert toggle is shown', (
       tester,
