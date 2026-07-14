@@ -6046,13 +6046,18 @@
     {
       "id": "AUD-t-notifications-07",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace ws5_per_profile_test.dart's tautological payload-format assertions with real NotificationGateway verification",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "256b97a2a65edeb2253d8e8cfcadb92d29d873bc"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-notifications-07 AC1 OK: both payload tests drive NotificationGateway(plugin:mock) and assert captured payload from verify().captured, no re-derivation",
+        "AUD-t-notifications-07 AC2 OK: gateway:189 ':'->'#' -> test1 RED; payload-collapse -> BOTH RED; reverted, 10/10 green"
+      ],
+      "notes": "Re-verified tautology via mutation (both tests stayed green while sibling gateway test went red). Rewrote both to drive a real NotificationGateway with a mocked plugin, asserting on captured payload. Re-mutated post-fix: both go red, pass clean on revert."
     },
     {
       "id": "AUD-sacred_time-07",
