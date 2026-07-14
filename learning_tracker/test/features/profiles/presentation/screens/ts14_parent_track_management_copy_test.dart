@@ -8,6 +8,13 @@
 ///   GREEN: screen uses `l10n.parentManageTracksDetail` and
 ///          `l10n.parentDeleteTrackArchiveBody` (child-management "your child's"
 ///          wording).
+///
+/// AUD-t-profiles-04: the dialog-body test used to read
+/// `AppLocalizations.of(context)!.parentDeleteTrackArchiveBody` from a bare
+/// `Builder` instead of opening the real dialog, so it could not catch
+/// `_showDeleteDialog` being edited to reference the sibling own-profile key
+/// (`deleteTrackArchiveBody`) instead. It now longPresses the real
+/// [ParentTrackManagementScreen] and asserts on the rendered dialog's `Text`.
 @Tags(['profiles', 'ts14'])
 library;
 
@@ -169,51 +176,71 @@ void main() {
       },
     );
 
-    // TS-14: the dialog body l10n string is verified by checking that the
-    // ARB key used in _showDeleteDialog resolves to child-scoped copy.
-    // We test this by rendering an AppLocalizations and verifying the
-    // string used in the screen is the child-scoped one (parentDeleteTrackArchiveBody).
-    testWidgets(
-      'l10n.parentDeleteTrackArchiveBody contains child-scoped wording',
-      (tester) async {
-        late AppLocalizations l10n;
-        await tester.pumpWidget(
-          MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Builder(
-              builder: (context) {
-                l10n = AppLocalizations.of(context)!;
-                return const SizedBox.shrink();
-              },
-            ),
-          ),
-        );
-        await tester.pump();
+    // AUD-t-profiles-04: drive the REAL _showDeleteDialog via longPress on
+    // the real ParentTrackManagementScreen and read the rendered dialog
+    // body Text — not a bare l10n getter — so this test actually fails if
+    // _showDeleteDialog is edited to reference the sibling own-profile key
+    // (l10n.deleteTrackArchiveBody) instead of the child-scoped one.
+    testWidgets('longPress + real archive dialog renders the child-scoped '
+        'parentDeleteTrackArchiveBody body, not the own-profile string', (
+      tester,
+    ) async {
+      final db = inMemoryDb();
+      await seedProfile(db);
+      final trackId = await seedTrack(
+        db,
+        profileId: _kProfileId,
+        curriculumId: 'mishnayos',
+      );
+      // A second active curriculum keeps the profile above the minimum-1
+      // threshold so the dialog offers Archive/Wipe (and therefore
+      // renders parentDeleteTrackArchiveBody) instead of the blocking
+      // "last curriculum" message.
+      await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
 
-        // parentDeleteTrackArchiveBody must use child-scoped "your child's"
-        expect(
-          l10n.parentDeleteTrackArchiveBody,
-          contains("child's"),
-          reason:
-              'TS-14: parentDeleteTrackArchiveBody must contain child-scoped '
-              '"your child\'s completion history" wording.',
-        );
-        // Must NOT match the own-profile string
-        expect(
-          l10n.parentDeleteTrackArchiveBody,
-          isNot(equals(l10n.deleteTrackArchiveBody)),
-          reason:
-              'TS-14: parentDeleteTrackArchiveBody must differ from the '
-              'own-profile deleteTrackArchiveBody.',
-        );
-      },
-    );
+      final track = CurriculumTrack(
+        id: trackId,
+        profileId: _kProfileId,
+        curriculumId: 'mishnayos',
+        state: 'active',
+        stateChangedAt: DateTime.utc(2026, 1, 1),
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
+
+      await tester.pumpWidget(
+        _buildApp(router: router, tracks: [track], db: db),
+      );
+      await _settle(tester);
+
+      await tester.longPress(find.byType(InkWell).first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ParentTrackManagementScreen)),
+      )!;
+
+      // The real dialog must render the child-scoped body verbatim.
+      expect(
+        find.text(l10n.parentDeleteTrackArchiveBody),
+        findsOneWidget,
+        reason:
+            'TS-14: the real archive dialog must render '
+            'parentDeleteTrackArchiveBody ("your child\'s completion '
+            'history"), not the own-profile deleteTrackArchiveBody.',
+      );
+      // The own-profile string must NOT appear — this is what catches
+      // _showDeleteDialog being swapped to the sibling own-profile key.
+      expect(
+        find.text(l10n.deleteTrackArchiveBody),
+        findsNothing,
+        reason:
+            'TS-14: the own-profile deleteTrackArchiveBody string must '
+            'not appear in the parent-managing-child dialog.',
+      );
+
+      await db.close();
+      await _teardown(tester);
+    });
   });
 }
