@@ -127,6 +127,26 @@ DailyTask? programTrackFocusTask(List<DailyTask> tasks) {
 /// (space + U+203A + space).
 const String kBreadcrumbSep = ' › ';
 
+/// Drops the top-level seder segment from a breadcrumb string so the
+/// curriculum chip (already visible above the active-track pill) is not
+/// duplicated in the pill.
+///
+/// The breadcrumb separator produced by `renderedDisplayForRef` is
+/// [kBreadcrumbSep] (space + U+203A + space). When there are 2+ segments,
+/// the first is removed. Single-segment labels (e.g. a top-level tractate
+/// with no sub-units) are returned unchanged.
+///
+/// Example: "קודשים › חולין › דף יד › עמוד א" → "חולין › דף יד › עמוד א"
+///
+/// Public (not `active_track_card.dart`-private) so it can be exercised
+/// directly by unit tests instead of via a hand-copied mirror
+/// (AUD-t-story-acceptance-19).
+String trimSederFromBreadcrumb(String breadcrumb) {
+  final idx = breadcrumb.indexOf(kBreadcrumbSep);
+  if (idx == -1) return breadcrumb; // single segment — nothing to trim
+  return breadcrumb.substring(idx + kBreadcrumbSep.length);
+}
+
 /// Collapses a full amud/verse breadcrumb to its day-level unit.
 ///
 /// A Daf-Yomi day is a whole daf (both amudim), so the leaf "עמוד א" /
