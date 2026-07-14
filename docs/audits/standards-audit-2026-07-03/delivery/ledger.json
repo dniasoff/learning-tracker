@@ -7701,13 +7701,18 @@
   {
    "id": "AUD-t-cross-60",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete dead test fixtures: completion_fixtures.dart.skip (removed schema) and unused StageFixtures",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "34f61357cbcddb92808f999c6e28cc3373af2f48"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-60 AC1 OK: completion_fixtures.dart.skip deleted (ls: No such file; -113 lines in diff); grep completion_fixtures/CompletionFixtures repo-wide = 0",
+    "AUD-t-cross-60 AC2 OK: StageFixtures gone from curriculum_fixtures.dart (grep in test/+lib/ = 0; CurriculumFixtures remains, infrastructure_test 14/14)"
+   ],
+   "notes": "Re-verified evidence: .skip file imported dropped app_database.dart/CompletionsCompanion (zero other refs); StageFixtures had zero callers. Deleted the .skip file and StageFixtures class; dropped stale entry from Makefile AG-6 allowlist. Both ACs verified via grep/file checks."
   },
   {
    "id": "AUD-guardrails-26",
