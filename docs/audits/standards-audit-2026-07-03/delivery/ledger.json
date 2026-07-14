@@ -5229,13 +5229,18 @@
   {
    "id": "AUD-t-progress-04",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Reuse test/helpers/overflow_harness.dart instead of hand-rolling single-point FlutterError.onError overflow checks in lifetime_folder_styled_and_notif_providers_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "218124ee4ea67e82f799a5457acd550d66e697a1"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-progress-04 AC1 OK: 6 FlutterError.onError single-point captures replaced by expectNoOverflowAcrossDevices at 152/262/325/474/751/1084; none remain",
+    "AUD-t-progress-04 AC2 OK: pump_app.dart exists+imported; _wrap delegates to pumpApp() (shell not hand-rolled); TQ-3 ratchet 250->249"
+   ],
+   "notes": "_wrap() migrated to delegate to shared pump_app.dart pumpApp() (dark-theme case uses local Theme() override). All 6 hand-rolled FlutterError.onError single-point overflow checks replaced with expectNoOverflowAcrossDevices matrix calls. AC1 and AC2 verified."
   },
   {
    "id": "AUD-progress-07",
