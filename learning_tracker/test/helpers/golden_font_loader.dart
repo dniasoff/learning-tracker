@@ -92,3 +92,38 @@ Future<void> loadFonts() async {
     await loader.load();
   }
 }
+
+/// Loads the "Noto Sans Hebrew" family declared in `pubspec.yaml`'s
+/// `flutter: fonts:` section (AUD-t-cross-51, TQ-5).
+///
+/// Unlike [loadFonts]'s Roboto/MaterialIcons (which ship inside the
+/// Flutter SDK's cache, never as a repo asset), Noto Sans Hebrew is a
+/// checked-in repo asset under `assets/fonts/` — so this loads it directly
+/// from disk relative to the package root, which is the working directory
+/// `flutter test` always runs from. Declaring a font under pubspec's
+/// `fonts:` section does NOT make `flutter test` load it automatically
+/// (only real apps/`flutter run` get that for free); tests must load it
+/// explicitly via [FontLoader], exactly like [loadFonts] does for Roboto.
+///
+/// No-ops per-weight if a given file is missing — better than throwing and
+/// blocking the whole suite.
+Future<void> loadHebrewFont() async {
+  const family = 'Noto Sans Hebrew';
+  const files = [
+    'NotoSansHebrew-Light.ttf',
+    'NotoSansHebrew-Regular.ttf',
+    'NotoSansHebrew-Medium.ttf',
+    'NotoSansHebrew-SemiBold.ttf',
+    'NotoSansHebrew-Bold.ttf',
+  ];
+
+  final loader = FontLoader(family);
+  for (final file in files) {
+    final path = 'assets/fonts/$file';
+    if (File(path).existsSync()) {
+      final bytes = File(path).readAsBytesSync();
+      loader.addFont(Future.value(ByteData.view(bytes.buffer)));
+    }
+  }
+  await loader.load();
+}
