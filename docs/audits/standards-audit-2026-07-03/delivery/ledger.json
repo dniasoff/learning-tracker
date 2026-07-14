@@ -10282,13 +10282,18 @@
   {
    "id": "AUD-t-progress-08",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix the stale 'fr-FR test below' comment in siyumim_timeline_month_key_ts13_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "e6e9546f3dc0177705c16d51e6929dac38aab09b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-progress-08 AC1 OK: stale 'fr-FR test below' comment fixed (lines 88-96) AND real Locale('he') test added (lines 179-208) asserting Hebrew month header",
+    "AUD-t-progress-08 red-first OK: reverted prod to old array -> he test failed (0 widgets w/ Hebrew header); prod restored via git checkout, so test is genuine"
+   ],
+   "notes": "Confirmed stale comment claiming a 'fr-FR test below' catches the TS-13 regression when none existed. Fixed comment + added genuine Locale('he') test. Red-first: reverted prod file to pre-fix hardcoded-array state, new test failed as expected; restored fix, 4/4 pass."
   },
   {
    "id": "AUD-t-progress-09",
