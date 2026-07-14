@@ -6439,13 +6439,18 @@
   {
    "id": "AUD-t-profiles-05",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace DateTime.now() wall-clock calls with DateTimeFactory.nowUtc() in profile_creation_use_case_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "56c5ad75736ace2a8c0234cb29541f5f295af2c7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-profiles-05 AC1 OK: grep 'DateTime.now()' in test file returns 0 (grep exit 1); all 6 sites now DateTimeFactory.nowUtc()",
+    "AUD-t-profiles-05 AC2 OK: check_tq6_test_wall_clock.dart scans all test/, wired into make audit 61/62 hard gate; injected DateTime.now( -> exit 1, then reverted"
+   ],
+   "notes": "Verified 4 DateTime.now().toUtc() sites (lines 226-227,277-278), swapped to DateTimeFactory.nowUtc(). AC1 grep verified empty. AC2's checker already existed (AUD-t-cross-84, make audit check 61/62) - confirmed it covers test/ and shrunk its baseline to drop this now-clean file."
   },
   {
    "id": "AUD-t-sacred_time-01",
