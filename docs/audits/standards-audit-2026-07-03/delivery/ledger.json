@@ -9092,13 +9092,17 @@
   {
    "id": "AUD-t-progress-10",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace DateTime.now() with a fixed date in curriculum_progress_service_test.dart track seeding",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "2a128144598d320ecbde1c0114950200effa6822"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-progress-10 AC1 OK: grep 'DateTime.now()' on file returns no matches (exit 1); lines 30-31 now DateTime.utc(2026,1,1)"
+   ],
+   "notes": "Confirmed lines 30-31 had DateTime.now() for stateChangedAt/activatedAt. Replaced with DateTime.utc(2026,1,1), matching file's existing fixed-clock pattern. Also shrank check_tq6_test_wall_clock.dart ratchet baseline per checker's own doctrine."
   },
   {
    "id": "AUD-sacred_time-08",
