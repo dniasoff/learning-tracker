@@ -48,8 +48,8 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 0,
               curriculumId: curriculum.storageKey,
-              stateChangedAt: DateTime.now(),
-              activatedAt: DateTime.now(),
+              stateChangedAt: now,
+              activatedAt: now,
             ),
           );
       trackId = trackRow.id;
