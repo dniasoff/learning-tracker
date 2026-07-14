@@ -1,4 +1,3 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -10,13 +9,19 @@ import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_ser
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/fake_secure_storage.dart';
 import '../../../../helpers/test_database.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
-class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
-
 /// In-memory [FlutterSecureStorage] backed by a Map, including [deleteAll].
+///
+/// Reuses the shared [MockFlutterSecureStorage] class from
+/// `test/helpers/fake_secure_storage.dart` (AUD-t-parent_mode-02) instead
+/// of redeclaring it; this file adds a `deleteAll()` stub on top of the
+/// shared class because `AccountManagementService.deleteAccount()` calls
+/// `secureStorage.deleteAll()` directly, which the shared
+/// `createMockStorage()` factory does not stub.
 MockFlutterSecureStorage createMockSecureStorage() {
   final mock = MockFlutterSecureStorage();
   final store = <String, String>{};
