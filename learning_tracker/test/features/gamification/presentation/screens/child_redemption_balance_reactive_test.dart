@@ -53,15 +53,17 @@ void main() {
 
       final emissions = _captureEmissions(container);
 
-      // Initial balance is 0.
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      // Initial balance is 0. Deterministically drain the microtask queue
+      // (TQ-6 / AUD-t-gamification-07) instead of racing a fixed-millisecond
+      // sleep against Drift's watch stream.
+      await pumpEventQueue();
       expect(emissions, contains(0), reason: 'initial balance must be 0');
 
       // Parent awards 100 points.
       await db.pointsBalanceDao.creditCompletion(1, 100);
 
       // Allow the reactive stream to propagate.
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       // Without explicit invalidation, the reactive provider must emit 100.
       expect(
@@ -93,7 +95,10 @@ void main() {
       addTearDown(container.dispose);
 
       final emissions = _captureEmissions(container);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      // Deterministically drain the microtask queue (TQ-6 /
+      // AUD-t-gamification-07) instead of racing a fixed-millisecond sleep
+      // against Drift's watch stream.
+      await pumpEventQueue();
       expect(emissions, contains(80));
 
       // Debit 30 via a redemption.
@@ -104,7 +109,7 @@ void main() {
         pointsCost: 30,
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       // Must have emitted 50 (80 - 30) without invalidation.
       expect(

@@ -85,8 +85,10 @@ void main() {
 
       final emissions = _captureEmissions(container);
 
-      // Initial state: empty list.
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      // Initial state: empty list. Deterministically drain the microtask
+      // queue (TQ-6 / AUD-t-gamification-07) instead of racing a
+      // fixed-millisecond sleep against Drift's watch stream.
+      await pumpEventQueue();
       expect(
         emissions.any((list) => list.isEmpty),
         isTrue,
@@ -103,7 +105,7 @@ void main() {
       );
 
       // Allow the reactive stream to propagate.
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       // Without ref.invalidate(), the reactive provider must have emitted a
       // list containing the new row.
@@ -146,7 +148,10 @@ void main() {
         addTearDown(container.dispose);
 
         final emissions = _captureEmissions(container);
-        await Future<void>.delayed(const Duration(milliseconds: 20));
+        // Deterministically drain the microtask queue (TQ-6 /
+        // AUD-t-gamification-07) instead of racing a fixed-millisecond
+        // sleep against Drift's watch stream.
+        await pumpEventQueue();
 
         // Must initially have emitted the pending row.
         final allRows = emissions.expand((list) => list).toList();
@@ -160,7 +165,7 @@ void main() {
         // Fulfil the redemption — list must shrink without invalidation.
         await db.pointsBalanceDao.fulfilRedemption(row.id);
 
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         // After fulfilment, an emission with an EMPTY list must have arrived.
         expect(

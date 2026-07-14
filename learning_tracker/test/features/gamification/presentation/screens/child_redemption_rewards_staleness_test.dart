@@ -96,7 +96,9 @@ void main() {
       expect(result, isA<RewardSaved>());
 
       // Allow Riverpod to propagate the invalidation and re-fetch.
-      await Future<void>.delayed(const Duration(milliseconds: 150));
+      // Deterministically drain the microtask queue (TQ-6 /
+      // AUD-t-gamification-07) instead of racing a fixed-millisecond sleep.
+      await pumpEventQueue();
       // Wait for re-fetched future to complete.
       await container.read(childRedemptionRewardsProvider.future);
 
@@ -177,7 +179,10 @@ void main() {
         await notifier.deleteMilestone(toy);
 
         // Allow Riverpod to propagate the invalidation and re-fetch.
-        await Future<void>.delayed(const Duration(milliseconds: 150));
+        // Deterministically drain the microtask queue (TQ-6 /
+        // AUD-t-gamification-07) instead of racing a fixed-millisecond
+        // sleep.
+        await pumpEventQueue();
         // Wait for re-fetched future to complete.
         await container.read(childRedemptionRewardsProvider.future);
 
