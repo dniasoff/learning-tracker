@@ -30,6 +30,34 @@ import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/drift_memory.dart';
+import '../helpers/no_op_firestore_gateway.dart';
+
+/// A [FirestoreGateway] whose every collection/document fetch succeeds with
+/// no rows (AUD-t-cross-30). Mirrors `_ProfileProgramsGateway` in
+/// `sync_rework_profile_programs_pull_test.dart`, minus the seeded row —
+/// this lets `pullOnLaunch` complete the full pull sequence without
+/// throwing, so the orchestrator reaches its real "synced" emission instead
+/// of an error status. Built on the shared no-op base (AUD-t-cross-19)
+/// rather than hand-rolling the ~46-method interface.
+class _SuccessfulPullGateway extends NoOpFirestoreGateway {
+  @override
+  Future<FirestorePage> fetchPage({
+    required int profileId,
+    required String collection,
+    required int pageSize,
+    Map<String, dynamic>? cursor,
+  }) async => const FirestorePage(rows: []);
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async => [];
+
+  @override
+  Future<Map<String, dynamic>?> fetchDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) async => null;
+}
 
 class _EmptyGateway implements FirestoreGateway {
   @override
@@ -63,11 +91,12 @@ SyncOrchestratorImpl _buildOrchestrator({
   required UserDatabase db,
   Stream<bool>? connectivityStream,
   SyncIdentityStatus Function()? resolveIdentityStatus,
+  FirestoreGateway? gateway,
 }) {
   final mergeRouter = MergeRouter(mergers: const <String, EntityMerger>{});
   return SyncOrchestratorImpl(
     resolveMergeRouter: () => mergeRouter,
-    resolveGateway: () => _EmptyGateway(),
+    resolveGateway: () => gateway ?? _EmptyGateway(),
     resolveProfileId: () => 1,
     resolvePushAllLocalData: () async {},
     connectivityStream: connectivityStream,
@@ -111,33 +140,36 @@ void main() {
     });
 
     test('empty outbox + online + after pull → synced', () async {
-      final orchestrator = _buildOrchestrator(db: db);
+      // AUD-t-cross-30: unlike the other tests in this file, this scenario
+      // needs a pull that actually COMPLETES (not just "attempted and
+      // swallowed") — `synced` per the header matrix requires online +
+      // empty outbox + a completed pull, and _EmptyGateway can never
+      // deliver that third leg (every fetch throws via noSuchMethod).
+      final orchestrator = _buildOrchestrator(
+        db: db,
+        gateway: _SuccessfulPullGateway(),
+      );
       addTearDown(orchestrator.dispose);
 
-      // Mark a pull as having completed once this session — this is what
-      // makes `synced` reachable per the spec (we don't claim synced until
-      // we've actually pulled at least once).
-      try {
-        await orchestrator.pullOnLaunch();
-      } catch (_) {
-        // PullPipeline against the empty gateway throws; the catch-block in
-        // the orchestrator still sets `_pullGuard = _PullFailed`. For this
-        // test we don't care — we directly assert the next status.
-      }
+      // Non-throttled cold-start pull against an all-empty-but-successful
+      // gateway: every collection returns zero rows, so the outbox stays
+      // empty and `pullOnLaunch` reaches its own `SyncStatus.synced` emit
+      // once the post-pull drain finds nothing to push.
+      await orchestrator.pullOnLaunch();
 
-      // Drop the in-flight error status by emitting an empty recomputation.
-      // After a successful pull would normally set everPulled=true, but the
-      // pull above failed in the empty gateway. We assert the matrix via
-      // direct manipulation of outbox state instead — the connectivity
-      // matrix below covers the cells the orchestrator must emit.
+      expect(
+        orchestrator.currentStatus,
+        isA<SyncStatusSynced>(),
+        reason:
+            'a completed pull with an empty outbox while online must leave '
+            'the orchestrator in SyncStatus.synced',
+      );
 
-      // With outbox empty, recordDrainAttempt does NOT change status when
-      // _everPulledOnLaunch is false. So we don't expect `synced` here
-      // unless we ran a real pull. This row of the matrix is exercised by
-      // the connectivity tests below.
+      // recordDrainAttempt() must independently re-derive `synced` from the
+      // outbox + _everPulledOnLaunch state (the matrix this file's header
+      // documents), not merely inherit the pull's own direct emit.
       await orchestrator.recordDrainAttempt();
-      // No assertion here — pre-pull, status remains whatever the failed
-      // pull emitted.
+      expect(orchestrator.currentStatus, isA<SyncStatusSynced>());
     });
 
     test('non-empty outbox + online → pending (with depth count)', () async {
