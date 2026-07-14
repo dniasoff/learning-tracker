@@ -17,6 +17,19 @@ part 'reward_config_controller.g.dart';
 
 /// Returned by [RewardConfigController.saveReward] to let the screen decide
 /// which UI feedback (dialog/snackbar) to show.
+///
+/// AUD-t-gamification-02: this union used to also carry a "no track
+/// selected" variant and a "duplicate threshold" variant. The former
+/// guarded a per-track branch that [bootstrap] never actually reaches —
+/// `tracks` is hardcoded to `const []` per DEC-32/GA-3 (per-track rewards
+/// were removed from the spend economy), so `RewardForm.usesGlobalLadder`
+/// is always `true` and the "non-global but no track selected" branch was
+/// dead. The latter stopped being returned entirely once GA-3 removed the
+/// duplicate-threshold uniqueness constraint. Both variants were deleted
+/// (and the tests that only exercised them removed/rewritten) rather than
+/// kept as speculative generality for a per-track feature that does not
+/// exist on any real code path today; reintroduce them alongside a real
+/// per-track bootstrap path if per-track rewards come back.
 sealed class RewardSaveResult {
   const RewardSaveResult();
 }
@@ -25,14 +38,6 @@ final class RewardSaved extends RewardSaveResult {
   const RewardSaved({required this.title, required this.wasEditing});
   final String title;
   final bool wasEditing;
-}
-
-final class RewardSaveNoTrack extends RewardSaveResult {
-  const RewardSaveNoTrack();
-}
-
-final class RewardSaveDuplicateThreshold extends RewardSaveResult {
-  const RewardSaveDuplicateThreshold();
 }
 
 final class RewardSaveDuplicateName extends RewardSaveResult {
@@ -172,14 +177,16 @@ class RewardConfigController extends _$RewardConfigController {
         pointsParsed > RewardForm.kMaxPointsCost) {
       return const RewardSaveInvalidInput();
     }
-    if (!state.usesGlobalLadder && state.selectedTrackId == null) {
-      return const RewardSaveNoTrack();
-    }
+    // AUD-t-gamification-02: the "non-global but no track selected" guard
+    // that used to return a dedicated result variant here was removed —
+    // `tracks` is hardcoded empty in [bootstrap], so `usesGlobalLadder` is
+    // always `true` and that branch could never run. See the doc comment on
+    // [RewardSaveResult] above.
+    //
     // GA-3: _hasDuplicateThreshold removed — the spend-economy model allows
     // multiple distinct rewards at the same price (no ladder uniqueness
-    // constraint).  The RewardSaveDuplicateThreshold result class is kept for
-    // any callers that still reference it, but saveReward() no longer returns
-    // it for a same-cost add.
+    // constraint). saveReward() no longer returns a duplicate-threshold
+    // result for a same-cost add.
 
     final svc = ref.read(rewardMilestoneServiceProvider);
     final trackId = state.usesGlobalLadder
