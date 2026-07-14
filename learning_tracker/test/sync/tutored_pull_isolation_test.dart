@@ -685,7 +685,7 @@ void main() {
           grantId: 'grant-999',
           displayName: 'Child',
           mode: 'child',
-          now: DateTime.now(),
+          now: DateTimeFactory.nowUtc(),
         );
 
         // Manually insert an outbox row for the tutored profile (simulate a bug
@@ -724,7 +724,7 @@ void main() {
         final processor = OutboxProcessor(
           outboxDao: db.outboxDao,
           pipeline: _NoPushPipeline(),
-          clock: FakeLocalDayClock(DateTime.now()),
+          clock: FakeLocalDayClock(DateTimeFactory.nowUtc()),
           isTutoredProfile: db.profileDao.isProfileTutored,
         );
         final drained = await processor.drain(tutoredId);
