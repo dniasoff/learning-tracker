@@ -5949,13 +5949,17 @@
   {
    "id": "AUD-t-cross-79",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Pin StreakStateProvider's day-bucketing seam instead of letting streak_state_provider_test.dart depend on the host machine's timezone",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "396719778cf6e548996d09d475144b6aaf0b4a3f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-79 AC1 OK: default-TZ 14/14 + TZ=Pacific/Kiritimati 14/14 green via UTC-pinned dayOf seam; un-seamed probe flips (Kiritimati Exp1 Act0) = not coincidence."
+   ],
+   "notes": "Still-live defect. RED: TZ=Pacific/Kiritimati flutter test on new fixed-gap test -> Expected:<1> Actual:<0> (default TZ green, proving TZ-dependence). Fixed by adding dayOf seam to StreakStateService (null=unchanged prod behavior) + pinning UTC dayOf in test setUp. Green under 4 TZs."
   },
   {
    "id": "AUD-gamification-20",
@@ -6131,13 +6135,17 @@
   {
    "id": "AUD-t-cross-78",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Parameterize insertEvent() by profileId in streak_state_provider_test.dart instead of duplicating the raw companion insert",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "396719778cf6e548996d09d475144b6aaf0b4a3f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-78 AC1 OK: grep -c StreakEventsCompanion.insert( = 1 (line 33 in insertEvent helper); cross-profile test uses insertEvent(db,...,profileId:2)."
+   ],
+   "notes": "Duplicate StreakEventsCompanion.insert still present. Added optional `{int? profileId}` to insertEvent(), switched cross-profile test to use it. grep confirms only 1 insert call site remains. Test green."
   },
   {
    "id": "AUD-t-cross-68",
@@ -9659,13 +9667,17 @@
   {
    "id": "AUD-t-cross-56",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Assert the actual zero value, not just non-emptiness, in streak_state_provider_test.dart's 'stream emits new value' test",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "396719778cf6e548996d09d475144b6aaf0b4a3f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-56 AC1 OK: test file line 199 now `expect(states.first, 0); // zero at start` — asserts value==0 (strengthened from isNotEmpty)."
+   ],
+   "notes": "File renamed (streak_state_provider_test.dart -> streak_state_service_test.dart, earlier commit) but weak assertion survived. Changed `expect(states, isNotEmpty)` to `expect(states.first, 0)` matching its own comment. Test green."
   },
   {
    "id": "AUD-core-sync-38",
