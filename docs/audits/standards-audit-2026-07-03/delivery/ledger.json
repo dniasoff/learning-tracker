@@ -4468,13 +4468,20 @@
     {
       "id": "AUD-t-cross-51",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "test/helpers/golden_runner.dart and flutter_test_config.dart produce no usable golden-regression coverage \u2014 no fonts loaded, and every caller skips the pixel assertion",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "6bccbd73d655379c73d38364ce3a30eb32d11fec"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-51 AC1 OK: viewed baselines font_loading_probe.en.png (legible Roboto 'Probe') + .he.png (legible Noto Hebrew); skipGolden:false test passes",
+        "AUD-t-cross-51 AC1 guard-real: red-first probe disabling loaders made [en] fail 3.73% / [he] fail 3.43% diff; file restored (git diff HEAD clean)",
+        "AUD-t-cross-51 AC2 OK: pubspec fonts: declares only Noto Sans Hebrew (5 wts); config:27-28 calls loadHebrewFont loading exactly those 5 ttf + loadFonts",
+        "AUD-t-cross-51 AC3 OK: epic_27 'records both locale variants' skipGolden removed + 2 baseline PNGs committed under story_acceptance/goldens/; passes"
+      ],
+      "notes": "Re-verified current: no font load in flutter_test_config.dart, all 10 goldenTest sites skipGolden:true. Added loadFonts()+loadHebrewFont(). Red-first: reverted fix, real-text goldenTest showed En=black smear, He=tofu boxes; restored, both legible. Un-skipped+baselined one site."
     },
     {
       "id": "AUD-guardrails-13",
