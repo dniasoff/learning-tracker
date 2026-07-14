@@ -57,15 +57,17 @@ void main() {
 
         final emissions = _captureEmissions(container);
 
-        // Initial balance is 0 — first emission.
-        await Future<void>.delayed(const Duration(milliseconds: 20));
+        // Initial balance is 0 — first emission. Deterministically drain
+        // the microtask queue (TQ-6 / AUD-t-gamification-01) instead of
+        // racing a fixed-millisecond sleep against Drift's watch stream.
+        await pumpEventQueue();
         expect(emissions, contains(0), reason: 'initial balance must be 0');
 
         // Credit 50 points — this mutates PointsBalance in the DB.
         await db.pointsBalanceDao.creditCompletion(1, 50);
 
         // Allow the reactive stream to propagate.
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await pumpEventQueue();
 
         // Without invalidation, the reactive provider must have emitted 50.
         expect(
@@ -97,7 +99,10 @@ void main() {
       addTearDown(container.dispose);
 
       final emissions = _captureEmissions(container);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      // Deterministically drain the microtask queue (TQ-6 /
+      // AUD-t-gamification-01) instead of racing a fixed-millisecond sleep
+      // against Drift's watch stream.
+      await pumpEventQueue();
       expect(emissions, contains(100));
 
       // Debit 40 points via a redemption.
@@ -108,7 +113,7 @@ void main() {
         pointsCost: 40,
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await pumpEventQueue();
 
       // Provider must have emitted 60, not remain stale at 100.
       expect(
@@ -151,7 +156,10 @@ void main() {
           addTearDown(container.dispose);
 
           final emissions = _captureEmissions(container);
-          await Future<void>.delayed(const Duration(milliseconds: 20));
+          // Deterministically drain the microtask queue (TQ-6 /
+          // AUD-t-gamification-01) instead of racing a fixed-millisecond
+          // sleep against Drift's watch stream.
+          await pumpEventQueue();
           expect(
             emissions,
             contains(60),
@@ -161,7 +169,7 @@ void main() {
           // Parent declines → refund 40 → balance back to 100.
           await db.pointsBalanceDao.declineRedemption(redemption!.id);
 
-          await Future<void>.delayed(const Duration(milliseconds: 50));
+          await pumpEventQueue();
 
           expect(
             emissions,

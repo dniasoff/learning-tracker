@@ -62,8 +62,10 @@ void main() {
       // Increment completionCommittedProvider.
       container.read(completionCommittedProvider.notifier).increment();
 
-      // Allow the FutureProvider to react.
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // Allow the FutureProvider to react — deterministically drain the
+      // microtask queue (TQ-6 / AUD-t-gamification-01: no wall-clock waits
+      // in hermetic tests) instead of racing a fixed-millisecond sleep.
+      await pumpEventQueue();
 
       // After the increment, the provider must have entered loading state
       // again (re-evaluated). The loading count must have increased.
