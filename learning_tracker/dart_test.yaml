@@ -168,6 +168,16 @@ tags:
   overflow:
   settings:
 
+  # Dashboard feature tests (test/features/dashboard/) + i18n coverage tag
+  # (AUD-t-dashboard-06)
+  dashboard:
+  i18n:
+
+  # Epic 28 Curriculum Overlap (AUD-t-dashboard-06, merged from co-discovery
+  # t1-story-epics-28plus)
+  epic_28:
+  story_i4:
+
   # Sync schema contract (test/sync/codec_rules_contract_test.dart):
   # asserts every codec's encode() ⊆ the firestore.rules hasOnly() allowlist.
   contract:

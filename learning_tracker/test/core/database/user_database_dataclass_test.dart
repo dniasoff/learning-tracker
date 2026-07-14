@@ -861,12 +861,21 @@ void main() {
   // the legacy 'Completions'/'Streaks' table names were dropped in the
   // schema-v1 rebuild (see user_database.dart's migration comments), so only
   // the current table names survive.
+  //
+  // AUD-t-cross-92: these previously used the untyped "any thrown object"
+  // matcher, not specifically Drift's own required-field validation — a
+  // regression that made validateIntegrity silently no-op while something
+  // unrelated happened to throw would still report green. Verified by
+  // direct execution (probe on the Accounts case) that Drift's generated
+  // insert() throws drift.InvalidDataException specifically for a
+  // missing-required-field Companion; every site below asserts that
+  // concrete type instead.
 
   group('validateIntegrity — main tables', () {
     test('Accounts insert without email throws', () {
       expect(
         () => db.into(db.accounts).insert(const AccountsCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
@@ -875,7 +884,7 @@ void main() {
         () => db
             .into(db.learnerProfiles)
             .insert(const LearnerProfilesCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
@@ -884,7 +893,7 @@ void main() {
         () => db
             .into(db.curriculumTracks)
             .insert(const CurriculumTracksCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
@@ -893,7 +902,7 @@ void main() {
         () => db
             .into(db.curriculumScopes)
             .insert(const CurriculumScopesCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
@@ -902,14 +911,14 @@ void main() {
         () => db
             .into(db.profilePrograms)
             .insert(const ProfileProgramsCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
     test('DailyPlans insert without profileId throws', () {
       expect(
         () => db.into(db.dailyPlans).insert(const DailyPlansCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
@@ -917,14 +926,14 @@ void main() {
       expect(
         () =>
             db.into(db.learningLedger).insert(const LearningLedgerCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
     test('Goals insert without profileId throws', () {
       expect(
         () => db.into(db.goals).insert(const GoalsCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
@@ -933,14 +942,14 @@ void main() {
         () => db
             .into(db.stageDefinitions)
             .insert(const StageDefinitionsCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
     test('PointConfigs insert without profileId throws', () {
       expect(
         () => db.into(db.pointConfigs).insert(const PointConfigsCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
@@ -949,7 +958,7 @@ void main() {
         () => db
             .into(db.studyDayConfigs)
             .insert(const StudyDayConfigsCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
@@ -958,28 +967,28 @@ void main() {
         () => db
             .into(db.completionEvents)
             .insert(const CompletionEventsCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
     test('Bookmarks insert without profileId throws', () {
       expect(
         () => db.into(db.bookmarks).insert(const BookmarksCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
     test('LearningOrder insert without profileId throws', () {
       expect(
         () => db.into(db.learningOrder).insert(const LearningOrderCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
     test('StreakEvents insert without profileId throws', () {
       expect(
         () => db.into(db.streakEvents).insert(const StreakEventsCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
   });

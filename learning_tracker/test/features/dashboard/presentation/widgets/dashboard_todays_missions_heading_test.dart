@@ -102,6 +102,20 @@ Widget _buildApp({required _MockStackRouter router, required Locale locale}) {
         (ref) => Future.value(ProfileMode.adult),
       ),
       dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+      // AUD-t-dashboard-02: dashboardStreak (watched unconditionally
+      // somewhere in the pumped DashboardBody tree) reaches streakStateProvider
+      // -> userDatabaseProvider, a SECOND real-database path alongside
+      // ActiveTrackCard's trackHasChazaraProvider below. Overriding
+      // userDatabaseProvider itself here (instead of both leaf providers)
+      // was tried and rejected: closing the shared in-memory db in
+      // tearDown left a "Timer is still pending" flutter_test invariant
+      // failure, because drift's watch() stream teardown races the
+      // ProviderScope disposal. Overriding each real-database-reaching leaf
+      // provider directly (as already done for anyActiveTrackHasChazaraProvider)
+      // avoids that and is just as hermetic for this widget test's purposes.
+      dashboardStreakProvider.overrideWith(
+        (ref) => Stream.value((currentStreak: 7, maxStreak: 7)),
+      ),
       allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
       initialSyncCompleteProvider.overrideWith((ref) => Future.value(true)),
       journeyViewModelProvider(
@@ -116,6 +130,7 @@ Widget _buildApp({required _MockStackRouter router, required Locale locale}) {
       anyActiveTrackHasChazaraProvider.overrideWith(
         (ref) => Future.value(false),
       ),
+      trackHasChazaraProvider(1).overrideWith((ref) => Future.value(false)),
       for (final c in CurriculumId.values)
         dashboardHasProgramEnrollmentProvider(
           c,
@@ -194,17 +209,22 @@ void main() {
     );
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    // This test targets ONLY the "Today's Missions" heading. At font scale 1.3
-    // an unrelated sibling card (MainFocusMissionCard's "Start learning"
-    // button Row) overflows — a pre-existing issue outside this finding's
-    // scope. The heading uses a Wrap (which cannot RenderFlex-overflow), so we
-    // drain any pending layout exception here and then assert specifically on
-    // the heading's truncation state below, rather than letting the sibling
-    // overflow mask the heading check.
-    dynamic pending = tester.takeException();
-    while (pending != null) {
-      pending = tester.takeException();
-    }
+    // This test targets ONLY the "Today's Missions" heading, which uses a
+    // Wrap (so it cannot itself RenderFlex-overflow) and is asserted
+    // separately below via _expectHeadingNotTruncated. Any OTHER exception
+    // raised anywhere in the pumped tree — a provider throwing, or a real
+    // overflow in a sibling widget — must fail this test rather than be
+    // silently swallowed, so we capture (and clear) at most one pending
+    // exception here and assert there isn't one, instead of blind-draining
+    // a while loop that would mask a real regression.
+    expect(
+      tester.takeException(),
+      isNull,
+      reason:
+          'An exception was raised while pumping DashboardBody — this is a '
+          'real regression, not something this heading test should silently '
+          'swallow.',
+    );
   }
 
   testWidgets('en: "Today\'s Missions" heading is not clipped at font 1.3', (

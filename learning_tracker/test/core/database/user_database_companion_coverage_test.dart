@@ -1079,12 +1079,18 @@ void main() {
   });
 
   // ─── validateIntegrity missing paths ─────────────────────────────────────
+  //
+  // AUD-t-cross-92: these previously used the untyped "any thrown object"
+  // matcher, not specifically Drift's own required-field validation.
+  // Replaced with the concrete type Drift's generated insert() actually
+  // throws for a missing-required-field Companion
+  // (drift.InvalidDataException).
 
   group('validateIntegrity — missing required fields', () {
     test('outbox missing entityKind triggers insert error', () async {
       expect(
         () => db.into(db.outbox).insert(const OutboxCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
@@ -1093,7 +1099,7 @@ void main() {
         () => db
             .into(db.sacredWindowEntries)
             .insert(const SacredWindowEntriesCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
 
@@ -1102,7 +1108,7 @@ void main() {
         () => db
             .into(db.textDownloadStatuses)
             .insert(const TextDownloadStatusesCompanion()),
-        throwsA(anything),
+        throwsA(isA<InvalidDataException>()),
       );
     });
   });
