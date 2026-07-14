@@ -9,7 +9,9 @@
 ///     points, and shows snackbar.
 ///   - Double-tap guard: tapping Decline twice only refunds points once
 ///     (DAO has internal status guard).
-///   - Double-tap guard: tapping Approve twice — flagged as BUG (no UI lock).
+///   - Double-tap guard: tapping Approve twice is guarded by the screen's
+///     `_busy` flag, which disables Fulfil/Decline while the async is in
+///     flight.
 ///   - Loading state shows [CircularProgressIndicator].
 ///   - Error state renders error message.
 ///   - Hebrew-RTL smoke: screen pumps without errors under `he` locale.
