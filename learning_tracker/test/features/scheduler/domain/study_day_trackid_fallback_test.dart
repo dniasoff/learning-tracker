@@ -12,11 +12,18 @@
 ///
 /// The fix: the screen/provider must look up the track ID and skip/no-op
 /// rather than fall back to 0 when the track does not exist.
+///
+/// AUD-t-scheduler-02: the third test below calls
+/// `withResolvedStudyDayTrackId` (`study_day_toggle_service.dart`) — the
+/// real guard `study_day_config_screen.dart:_toggleDay` awaits — instead of
+/// re-implementing `trackId != null` inline. If the guard regresses (e.g.
+/// reintroduces `track?.id ?? 0`), this test fails.
 @Tags(['scheduler', 'study_day', 'studyday_companion_10'])
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/study_day_toggle_service.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -73,24 +80,18 @@ void main() {
       },
     );
 
-    test(
-      'guard: missing track resolves to null via the real lookup → no write, no FK crash',
-      () async {
-        // Mirrors study_day_config_providers.dart:71-82: the provider looks up
-        // the curriculum's track and, when getSingleOrNull() returns null,
-        // returns early instead of passing trackId=0 (which would violate the
-        // FK and crash). No track is seeded here, so the real lookup must be
-        // null and the guarded upsert must be skipped — leaving no rows and
-        // throwing nothing.
-        final track =
-            await (db.select(db.curriculumTracks)
-                  ..where((t) => t.curriculumId.equals('bavli'))
-                  ..limit(1))
-                .getSingleOrNull();
-        expect(track, isNull, reason: 'no track seeded → lookup must be null');
-
-        final trackId = track?.id;
-        if (trackId != null) {
+    test('guard: withResolvedStudyDayTrackId (the real _toggleDay guard) skips '
+        'the write when no track exists → no FK crash', () async {
+      // No track seeded for 'bavli'. Calls the real guard function that
+      // study_day_config_screen.dart:_toggleDay awaits — not a
+      // re-implementation of the `trackId != null` check.
+      var onFoundCalled = false;
+      await withResolvedStudyDayTrackId(
+        db,
+        profileId: 1,
+        curriculumId: 'bavli',
+        onFound: (trackId) async {
+          onFoundCalled = true;
           await db.studyDayConfigDao.upsertDayConfig(
             profileId: 1,
             curriculumId: 'bavli',
@@ -98,18 +99,25 @@ void main() {
             dayOfWeek: 1,
             dayType: 'study',
           );
-        }
+        },
+      );
 
-        final rows = await (db.select(
-          db.studyDayConfigs,
-        )..where((t) => t.curriculumId.equals('bavli'))).get();
-        expect(
-          rows,
-          isEmpty,
-          reason:
-              'guard: null track → upsert skipped → no FK crash and no rows',
-        );
-      },
-    );
+      expect(
+        onFoundCalled,
+        isFalse,
+        reason:
+            'STUDYDAY-COMPANION-10: the real guard must never invoke '
+            'onFound with a synthesized trackId when no track exists.',
+      );
+
+      final rows = await (db.select(
+        db.studyDayConfigs,
+      )..where((t) => t.curriculumId.equals('bavli'))).get();
+      expect(
+        rows,
+        isEmpty,
+        reason: 'guard: null track → upsert skipped → no FK crash and no rows',
+      );
+    });
   });
 }

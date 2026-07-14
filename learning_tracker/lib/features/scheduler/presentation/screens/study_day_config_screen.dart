@@ -1,5 +1,4 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
@@ -13,6 +12,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/study_day_toggle_service.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -80,7 +80,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
     // Per the per-track chazara rule, a learn-only track must not show any
     // chazara/review references — body copy, legend, or the review-day toggle.
     final trackChazaraAsync = ref.watch(
-      _curriculumTrackHasChazaraProvider(curriculumId),
+      curriculumTrackHasChazaraProvider(curriculumId),
     );
     final trackHasChazara = trackChazaraAsync.asData?.value ?? false;
 
@@ -259,75 +259,72 @@ class StudyDayConfigScreen extends ConsumerWidget {
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     final syncFacade = ref.read(syncWriteFacadeProvider);
-    // Look up trackId then upsert
-    (db.select(db.curriculumTracks)
-          ..where(
-            (t) =>
-                t.profileId.equals(profileId) &
-                t.curriculumId.equals(curriculumId.storageKey),
-          )
-          ..limit(1))
-        .getSingleOrNull()
-        .then((track) async {
-          // STUDYDAY-COMPANION-10: skip the write if the track does not exist
-          // rather than falling back to trackId=0 which violates the FK constraint
-          // on study_day_configs.track_id → curriculum_tracks.id.
-          final trackId = track?.id;
-          if (trackId == null) return;
-          await db.studyDayConfigDao.upsertDayConfig(
+    // STUDYDAY-COMPANION-10: withResolvedStudyDayTrackId skips the write
+    // (rather than falling back to trackId=0, which violates the FK
+    // constraint on study_day_configs.track_id → curriculum_tracks.id) when
+    // the track does not exist.
+    withResolvedStudyDayTrackId(
+      db,
+      profileId: profileId,
+      curriculumId: curriculumId.storageKey,
+      onFound: (trackId) async {
+        // STUDYDAY-TOGGLE-RACE-14: writeThenInvalidate guarantees the
+        // scheduler invalidation runs strictly AFTER the DB write completes,
+        // so allDailyTasksProvider re-reads the updated study-day config
+        // instead of rebuilding from stale data.
+        await writeThenInvalidate(
+          write: () => db.studyDayConfigDao.upsertDayConfig(
             profileId: profileId,
             curriculumId: curriculumId.storageKey,
             trackId: trackId,
             dayOfWeek: dayOfWeek,
             dayType: newType.storageKey,
-          );
-          // STUDYDAY-TOGGLE-RACE-14: invalidate AFTER the DB write completes
-          // so the scheduler re-reads the updated study-day config. The
-          // previous placement (after the .then() call, i.e. before the async
-          // write) caused allDailyTasksProvider to rebuild from stale data.
-          ref.invalidate(allDailyTasksProvider);
-          try {
-            await syncFacade?.pushStudyDayConfig({
-              'profile_id': profileId,
-              'curriculum_id': curriculumId.storageKey,
-              'track_id': trackId,
-              'day_of_week': dayOfWeek,
-              'day_type': newType.storageKey,
-              'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-            });
-          } on TutorWriteException catch (e) {
-            if (context.mounted && e.code == 'permission-denied') {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    AppLocalizations.of(context)!.tutorPermissionDenied,
-                  ),
+          ),
+          invalidate: () => ref.invalidate(allDailyTasksProvider),
+        );
+        try {
+          await syncFacade?.pushStudyDayConfig({
+            'profile_id': profileId,
+            'curriculum_id': curriculumId.storageKey,
+            'track_id': trackId,
+            'day_of_week': dayOfWeek,
+            'day_type': newType.storageKey,
+            'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+          });
+        } on TutorWriteException catch (e) {
+          if (context.mounted && e.code == 'permission-denied') {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context)!.tutorPermissionDenied,
                 ),
-              );
-            }
+              ),
+            );
           }
-        });
+        }
+      },
+    );
   }
 }
 
 /// True when the active-profile curriculum track for [curriculumId] has
 /// more than one stage (i.e. chazara is enabled). Keyed by curriculum
 /// rather than trackId because this screen receives only a curriculumId.
-final _curriculumTrackHasChazaraProvider = FutureProvider.autoDispose
+///
+/// Package-visible (not private) so regression tests can drive it directly
+/// via a `ProviderContainer` instead of re-deriving `count > 1` inline
+/// (AUD-t-scheduler-02 / STUDYDAY-CHAZARA-GATE-12).
+final curriculumTrackHasChazaraProvider = FutureProvider.autoDispose
     .family<bool, CurriculumId>((ref, curriculumId) async {
       final db = ref.watch(userDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
-      final track =
-          await (db.select(db.curriculumTracks)
-                ..where(
-                  (t) =>
-                      t.profileId.equals(profileId) &
-                      t.curriculumId.equals(curriculumId.storageKey),
-                )
-                ..limit(1))
-              .getSingleOrNull();
-      if (track == null) return false;
-      final count = await db.stageDao.countStagesForTrack(track.id);
+      final trackId = await resolveStudyDayTrackId(
+        db,
+        profileId: profileId,
+        curriculumId: curriculumId.storageKey,
+      );
+      if (trackId == null) return false;
+      final count = await db.stageDao.countStagesForTrack(trackId);
       return count > 1;
     });
 
