@@ -39,6 +39,7 @@ import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
@@ -75,6 +76,16 @@ const _kLocalUser = AuthState.signedIn(
   ),
   tier: Tier.localBorn,
 );
+
+// AUD-t-settings-10: fixed instant for the relative-time ("just now"/"Xm
+// ago") assertions below. `_formatTimeAgo` reads
+// `DateTimeFactory.nowLocal()`, which is gated by the global
+// `currentLocalDayClock` (installed via `useLocalDayClock`), not by
+// `localDayClockProvider` — so each relative-time test must call
+// `useLocalDayClock(FakeLocalDayClock(_kFixedNow))` and derive
+// `lastSyncedAt` from this same instant, never from a bare
+// `DateTime.now()` wall-clock read (TQ-6).
+final _kFixedNow = DateTime(2026, 6, 15, 10);
 
 /// Pump harness for [BackupSyncSection].
 ///
@@ -153,8 +164,9 @@ void main() {
     testWidgets('shows "Backup & Sync" heading and last-synced subtitle', (
       tester,
     ) async {
-      final now = DateTime.now();
-      final lastSynced = now.subtract(const Duration(minutes: 5));
+      useLocalDayClock(FakeLocalDayClock(_kFixedNow));
+      addTearDown(resetLocalDayClock);
+      final lastSynced = _kFixedNow.subtract(const Duration(minutes: 5));
       await _pump(
         tester,
         _buildHarness(
@@ -177,8 +189,9 @@ void main() {
     testWidgets('shows "just now" when sync was under 1 minute ago', (
       tester,
     ) async {
-      final now = DateTime.now();
-      final lastSynced = now.subtract(const Duration(seconds: 30));
+      useLocalDayClock(FakeLocalDayClock(_kFixedNow));
+      addTearDown(resetLocalDayClock);
+      final lastSynced = _kFixedNow.subtract(const Duration(seconds: 30));
       await _pump(
         tester,
         _buildHarness(
@@ -199,7 +212,9 @@ void main() {
     testWidgets(
       'he locale: minutes-ago relative time is localized (no English)',
       (tester) async {
-        final lastSynced = DateTime.now().subtract(const Duration(minutes: 5));
+        useLocalDayClock(FakeLocalDayClock(_kFixedNow));
+        addTearDown(resetLocalDayClock);
+        final lastSynced = _kFixedNow.subtract(const Duration(minutes: 5));
         await _pump(
           tester,
           _buildHarness(
@@ -225,7 +240,9 @@ void main() {
     testWidgets('he locale: "just now" is localized (no English literal)', (
       tester,
     ) async {
-      final lastSynced = DateTime.now().subtract(const Duration(seconds: 30));
+      useLocalDayClock(FakeLocalDayClock(_kFixedNow));
+      addTearDown(resetLocalDayClock);
+      final lastSynced = _kFixedNow.subtract(const Duration(seconds: 30));
       await _pump(
         tester,
         _buildHarness(
