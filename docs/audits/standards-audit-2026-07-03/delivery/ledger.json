@@ -727,13 +727,19 @@
     {
       "id": "AUD-t-learning-01",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P1",
       "title": "Override userDatabaseProvider/coarsePacedTrackIdsProvider/contentIndexProvider in LearningScreen widget tests \u2014 real Drift DB is being constructed on every pump",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - c513ef84 (worktree-wf_1a1fc4a3-128-50) and 7f8ca629 (worktree-wf_1a1fc4a3-128-1); neither is an ancestor of dev HEAD; current tree confirmed learning_screen_l1_test.dart still has no coarsePacedTrackIdsProvider/contentIndexProvider overrides. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
+      "commits": [
+        "8782bbfe"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-learning-01 AC OK: coarsePacedTrackIdsProvider/contentIndexProvider overridden with inert empty-value stubs, userDatabaseProvider overridden with a single shared in-memory UserDatabase closed once via tearDownAll, in both learning_screen_l1_test.dart and learning_screen_test.dart",
+        "AUD-t-learning-01 AC OK: flutter test test/features/learning/presentation/screens/ --concurrency=2 -> 0 'WARNING (drift)' occurrences (was 26 pre-fix), 31/31 tests pass",
+        "AUD-t-learning-01 AC OK: new make audit check 63/65 runs the same suite and fails the build on any 'WARNING (drift)' regression"
+      ],
+      "notes": "merged (wave-4 gate-repair, 2026-07-14). Ledger reconciliation had classified this blocked because its fix commit (verified-looking, evidence in kill-log-addendum.md) sat on two now-deleted-worktree branches, neither an ancestor of dev HEAD. Independently reviewed the diff (2 files, provider overrides only, no test assertions weakened) and cherry-picked cleanly (-x 7f8ca629, landed as 8782bbfe) onto dev; Makefile's new Rule-0 check renumbered 62/62->63/65 to coexist with checks added by sibling waves since this fix's worktree branched. Re-verified post-merge: flutter test test/features/learning/presentation/screens/ -> 31/31 pass, 0 drift warnings; flutter analyze clean; make audit 65/65 clean."
     },
     {
       "id": "AUD-tracks-02",
@@ -1794,13 +1800,20 @@
     {
       "id": "AUD-t-learning-02",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Delete or merge stale learning_screen_test.dart into learning_screen_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged 2-commit sequences found (delete-then-restore-pruned) - 3c7a3820+dd5ad6bf (worktree-wf_1a1fc4a3-128-50) and 7de83aa6+ff646d9c (worktree-wf_1a1fc4a3-128-1); neither tip is an ancestor of dev HEAD; current tree confirmed learning_screen_test.dart is still present unpruned (stale AG-5 mirror). Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
+      "commits": [
+        "809eaf3c",
+        "569b7915"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-learning-02 AC1 OK: learning_screen_test.dart pruned to hold only the non-duplicate AppErrorView test; the two stale LearningScreen tests and their dead dashboardActiveCurriculaProvider/dashboardUserModeProvider overrides are gone",
+        "AUD-t-learning-02 AC2 OK: the pruned file builds no ProviderScope and overrides no provider, so no override can reference a provider LearningScreen does not read",
+        "AUD-t-learning-02 AG-5 mirror ratchet OK: tool/check_test_mirroring.dart passes (file kept, pruned, at its required exact path) after an intermediate delete-then-restore correction recorded in the same commit sequence"
+      ],
+      "notes": "merged (wave-4 gate-repair, 2026-07-14). Same disposition history as AUD-t-learning-01: verified-looking 2-commit sequence (delete, then restore-pruned after discovering the AG-5 mirroring ratchet requires the exact-path file to exist) on now-deleted worktree branches, neither tip an ancestor of dev HEAD. Independently reviewed both diffs and cherry-picked cleanly (-x 7de83aa6, 809eaf3c; -x ff646d9c, 569b7915) onto dev, with AUD-t-learning-04's pump-helper commit landing between them (touches only learning_screen_l1_test.dart, no interaction). Re-verified post-merge: find learning_tracker/test/features/learning/presentation/screens -iname learning_screen_test.dart shows the file present, pruned to the single AppErrorView test; dart run tool/check_test_mirroring.dart -> AG-5 ratchet OK; flutter test -> 36/36 pass across the two affected files."
     },
     {
       "id": "AUD-t-profiles-02",
@@ -5118,13 +5131,19 @@
     {
       "id": "AUD-t-notifications-02",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Test the real _persistNotificationSettingsToCloud signature logic, not a hand-copied reimplementation",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c3, 2026-07-14). review agent lost (quota) mid-review of the G1-G4 rewrite (worktree wf_1a1fc4a3-128-3, tip faf6947143cfdde2b907db6354b026095eb564b5, commit test(notifications): AUD-t-notifications-02 - couple G1-G4 to the real signature-building code, coupling notification_providers_deep_test.dart's G1-G4 to the real _persistNotificationSettingsToCloud signature-building code instead of a hand-copied reimplementation). No independent review confirmation exists, so the fix is not merged. Worktree wf_1a1fc4a3-128-3 removed by this same pass's cleanup step (payload.worktreesToRemove); the unreviewed commit is stranded on the deleted worktree branch pending a future re-review pass. Left todo->blocked rather than merging unreviewed."
+      "commits": [
+        "57255086"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-notifications-02 AC OK: signature-building extracted into @visibleForTesting buildNotificationSettingsSignature(...); G1-G4 in notification_providers_deep_test.dart now call it directly instead of hand-copying the format string",
+        "AUD-t-notifications-02 mutation-check evidence (commit message): dropping reminderMinute from the extracted function flips G1 from green to red, proving G1-G4 now exercise the real signature-building code",
+        "AUD-t-notifications-02 AC OK: flutter test test/features/notifications/ -> 182/182 pass; flutter analyze clean; make audit clean"
+      ],
+      "notes": "merged (wave-4 gate-repair, 2026-07-14). Original disposition ('blocked', merge-lane w4r1c3) recorded that the opus reviewer ran out of usage quota mid-review before confirming this fix, leaving it correctly unmerged per doctrine (never merge unreviewed) but stranded on a since-deleted worktree branch (wf_1a1fc4a3-128-3) whose commit, faf6947143cfdde2b907db6354b026095eb564b5, survived only because branch deletion during worktree cleanup does not delete the branch ref itself. That disposition note used internal orchestration vocabulary ('quota', 'merge-lane') that does not belong in a delivery ledger and does not by itself establish whether the code was sound. Performed the missing independent review myself: confirmed the commit touches only notification_providers.dart (new @visibleForTesting helper, 2 call sites) and notification_providers_deep_test.dart (G1-G4 now call the helper) -- verified via `git show <sha> --stat` this commit does NOT touch ws5_per_profile_test.dart (a diff against dev showed differences there, but that file was independently fixed by AUD-t-notifications-07 on dev AFTER this worktree branched -- confirmed via `git show <sha>` isolated to the two files above only). No test was weakened; G1-G4's assertions are unchanged, only their setup now calls real production code. Cherry-picked cleanly (-x faf69471, landed as 57255086; merge-base was the direct parent, so no conflicts). Re-verified post-merge: flutter test test/features/notifications/ -> 182/182 pass; flutter analyze clean; make audit clean."
     },
     {
       "id": "AUD-notifications-03",
@@ -5144,13 +5163,19 @@
     {
       "id": "AUD-t-notifications-01",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Override reminderSyncEffectProvider/streakAlertSyncEffectProvider in notifications_screen_test.dart and ws5_two_layers_test.dart to stop opening a real Drift database",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - 623798dc (worktree-wf_1a1fc4a3-128-41) and 7239ce09 (worktree-wf_1a1fc4a3-128-2); neither is an ancestor of dev HEAD (git merge-base --is-ancestor fails for both); current tree confirmed still missing the reminderSyncEffectProvider/streakAlertSyncEffectProvider overrides. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
+      "commits": [
+        "c86eb99e"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-notifications-01 AC OK: reminderSyncEffectProvider/streakAlertSyncEffectProvider overridden with no-ops in both notifications_screen_test.dart and ws5_two_layers_test.dart, matching notifications_screen_l1_test.dart's existing pattern",
+        "AUD-t-notifications-01 AC OK: flutter test test/features/notifications/ --concurrency=2 -> 182/182 pass, 0 Drift 'created ... multiple times' warnings",
+        "AUD-t-notifications-01 AC OK: new make audit check (RATCHET, 2 pre-existing baselined files tolerated) passes; its own unit test proves the checker flips red on a deliberately-broken fixture"
+      ],
+      "notes": "merged (wave-4 gate-repair, 2026-07-14). Verified-looking commit on now-deleted worktree branches, neither tip an ancestor of dev HEAD. Independently reviewed the diff and cherry-picked cleanly (-x 623798dc, landed as c86eb99e) onto dev; Makefile check renumbered 62/62->64/65 to coexist with sibling-wave checks added since this fix's worktree branched. A latent cross-file race was discovered while re-verifying with AUD-t-notifications-03's checker present simultaneously (both checkers' test fixtures live under test/features/notifications/, which each checker scans; running both fixture-test files concurrently could crash a checker with PathNotFoundException when one test's temp fixture vanished between the other checker's directory listing and file read) \u2014 fixed with a defensive FileSystemException catch-and-skip in both check_notifications_*.dart tools (see AUD-t-notifications-03's notes and commit 26090976 for the fix and re-verification). Re-verified post-merge: flutter test test/features/notifications/ -> 182/182 pass; dart run tool/check_notifications_sync_effect_overrides.dart -> passes; make audit -> 65/65 clean."
     },
     {
       "id": "AUD-onboarding-07",
@@ -6696,13 +6721,18 @@
     {
       "id": "AUD-t-notifications-08",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Stop relying on find.byKey(...).last for time-row lookups in notifications_screen_l1_test.dart and notifications_screen_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - f88bc263 (worktree-wf_1a1fc4a3-128-41) and 44c3ad7e (worktree-wf_1a1fc4a3-128-2); neither is an ancestor of dev HEAD; current tree confirmed find.byKey(...).last usage remains in notifications_screen_test.dart. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
+      "commits": [
+        "2afc068b"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-notifications-08 AC OK: all 8 find.byKey(...).last call sites in notifications_screen_test.dart/notifications_screen_l1_test.dart replaced with find.widgetWithText(ListTile, <row title>)",
+        "AUD-t-notifications-08 AC OK: grep -c '\\.last' notifications_screen_test.dart -> 0 for the targeted lookups; flutter test -> 182/182 pass"
+      ],
+      "notes": "merged (wave-4 gate-repair, 2026-07-14). Verified-looking commit on now-deleted worktree branches, neither tip an ancestor of dev HEAD. Independently reviewed the diff (test lookup mechanism only, assertions unchanged) and cherry-picked cleanly (-x f88bc263, landed as 2afc068b) onto dev. Re-verified post-merge: find.byKey(...).last usage gone from both target files; flutter test test/features/notifications/ -> 182/182 pass; flutter analyze clean."
     },
     {
       "id": "AUD-core-domain-07",
@@ -7062,13 +7092,18 @@
     {
       "id": "AUD-t-learning-04",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Extract a shared pump helper in learning_screen_l1_test.dart instead of 4 inline MaterialApp/localizationsDelegates blocks",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - f5d87e45 (worktree-wf_1a1fc4a3-128-1) and c252b2ca (worktree-wf_1a1fc4a3-128-50); neither is an ancestor of dev HEAD; current tree confirmed learning_screen_l1_test.dart still has 4 separate inline MaterialApp/localizationsDelegates blocks. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
+      "commits": [
+        "40e1995c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-learning-04 AC OK: all 4 inline MaterialApp/localizationsDelegates construction sites in learning_screen_l1_test.dart route through the existing _buildScreen() helper via two new optional parameters (streakStream, router); grep 'MaterialApp(' now returns exactly 1 hit (the helper's own definition)",
+        "AUD-t-learning-04 AC OK: flutter test test/features/learning/presentation/screens/learning_screen_l1_test.dart -> 28/28 pass"
+      ],
+      "notes": "merged (wave-4 gate-repair, 2026-07-14). Verified-looking commit on now-deleted worktree branches, neither tip an ancestor of dev HEAD. Independently reviewed the diff (pure test-helper extraction, no assertions changed) and cherry-picked cleanly (-x f5d87e45, landed as 40e1995c) onto dev, between AUD-t-learning-02's two commits (no file overlap). Re-verified post-merge: grep -c 'MaterialApp(' learning_screen_l1_test.dart -> 1; flutter test -> 28/28 pass; flutter analyze clean."
     },
     {
       "id": "AUD-t-notifications-06",
@@ -7560,13 +7595,17 @@
     {
       "id": "AUD-t-notifications-04",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Register needs_flutter/notifications/notifications_screen_l1 tags in dart_test.yaml to silence unknown-tag warnings",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - 5ffcaa60 (worktree-wf_1a1fc4a3-128-41) and a85ada4e (worktree-wf_1a1fc4a3-128-2); neither is an ancestor of dev HEAD; current tree confirmed dart_test.yaml still lacks needs_flutter/notifications/notifications_screen_l1 tag registrations. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
+      "commits": [
+        "2e488f2b"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-notifications-04 AC OK: dart_test.yaml registers needs_flutter, notifications, notifications_screen_l1, aud_notifications_12, and unit tags; grep confirms all three named tags present"
+      ],
+      "notes": "merged (wave-4 gate-repair, 2026-07-14). Verified-looking commit on now-deleted worktree branches, neither tip an ancestor of dev HEAD. Independently reviewed the diff (7-line pure-addition to dart_test.yaml, no code) and cherry-picked cleanly (-x 5ffcaa60, landed as 2e488f2b) onto dev. Re-verified post-merge: grep -n 'needs_flutter:|notifications:|notifications_screen_l1:' dart_test.yaml -> all 3 present; flutter test test/features/notifications/ -> 182/182 pass, no unknown-tag warnings."
     },
     {
       "id": "AUD-onboarding-13",
@@ -8745,24 +8784,35 @@
     {
       "id": "AUD-t-notifications-05",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Rename the 'shows three Switch widgets' test in notifications_screen_l1_test.dart to match its findsNWidgets(4) assertion",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - a98c26e9 (worktree-wf_1a1fc4a3-128-41) and 28da72d0 (worktree-wf_1a1fc4a3-128-2); neither is an ancestor of dev HEAD; current tree confirmed the stale 'shows three Switch widgets' test name is still present at notifications_screen_l1_test.dart:236. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
+      "commits": [
+        "989bc6c7"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-notifications-05 AC OK: notifications_screen_l1_test.dart's stale 'shows three Switch widgets' test renamed to 'shows four Switch widgets (reminder, streak alert, reward, device toggle)', matching its unchanged findsNWidgets(4) assertion"
+      ],
+      "notes": "merged (wave-4 gate-repair, 2026-07-14). Verified-looking commit on now-deleted worktree branches, neither tip an ancestor of dev HEAD. Independently reviewed the diff (test name only, assertion unchanged) and cherry-picked cleanly (-x a98c26e9, landed as 989bc6c7) onto dev. Re-verified post-merge: grep -n 'shows three Switch widgets|shows four Switch widgets' notifications_screen_l1_test.dart -> only the new name present; flutter test -> 182/182 pass."
     },
     {
       "id": "AUD-t-notifications-03",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Deduplicate the MockNotificationGateway class shared verbatim by notifications_screen_test.dart and ws5_two_layers_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - bd46e2ec (worktree-wf_1a1fc4a3-128-41) and a5c9e109 (worktree-wf_1a1fc4a3-128-2); neither is an ancestor of dev HEAD; current tree confirmed MockNotificationGateway is still redeclared in both notifications_screen_test.dart and ws5_two_layers_test.dart. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
+      "commits": [
+        "89cbddfe",
+        "26090976"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-notifications-03 AC OK: MockNotificationGateway declared once in test/features/notifications/support/mock_notification_gateway.dart; notifications_screen_test.dart and ws5_two_layers_test.dart import it instead of redeclaring it",
+        "AUD-t-notifications-03 AC OK: new make audit check (RATCHET, 2 pre-existing baselined files tolerated) passes; its own unit test proves the checker flips red on a deliberately-broken fixture",
+        "AUD-t-notifications-03 AC OK: flutter test test/features/notifications/ -> 182/182 pass"
+      ],
+      "notes": "merged (wave-4 gate-repair, 2026-07-14). Verified-looking commit on now-deleted worktree branches, neither tip an ancestor of dev HEAD. Independently reviewed the diff and cherry-picked cleanly (-x bd46e2ec, landed as 89cbddfe) onto dev; Makefile check renumbered 62/63->65/65. Gate-repair discovery: this finding's checker (check_notifications_duplicate_test_classes.dart) and AUD-t-notifications-01's checker (check_notifications_sync_effect_overrides.dart) both scan test/features/notifications/ recursively and both have unit tests that write/delete short-lived fixture files directly under that same tree; running both fixture-test files in one `flutter test` invocation with concurrency>1 (as the full suite does) intermittently crashed one checker with an unhandled PathNotFoundException when it tried to read a file the OTHER test's teardown had already deleted between the directory listing and the read -- a genuine TOCTOU race, not present when either checker/test runs alone (which is how each was originally verified, in isolation, on its own worktree). Fixed both tools with a defensive try/on FileSystemException/skip around the read (commit 26090976) rather than weakening either checker or test -- a vanished file cannot contain a violation, so skipping it is correct scanner behavior, not a coverage reduction. Re-verified: flutter test test/tool/check_notifications_sync_effect_overrides_test.dart test/tool/check_notifications_duplicate_test_classes_test.dart --concurrency=4, run 3x, 6/6 pass every run (was flaky before the fix); flutter test test/features/notifications/ -> 182/182 pass; make audit -> 65/65 clean."
     },
     {
       "id": "AUD-t-onboarding-05",
