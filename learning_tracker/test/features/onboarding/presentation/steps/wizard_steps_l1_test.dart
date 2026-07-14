@@ -26,8 +26,9 @@
 //   • Offline-first: all wizard steps are purely local / no network calls.
 //
 // Pump rig:
-//   ProviderScope(overrides:[useHebrewTermsProvider], child:
-//   MaterialApp(locale, 4 l10n delegates, home: Scaffold(body: widget)))
+//   pumpApp(overrides:[useHebrewTermsProvider], child: Scaffold(body: widget))
+//   — see test/helpers/pump_app.dart for the shared ProviderScope/MaterialApp
+//   wrapper (AUD-t-onboarding-02).
 //   pump() + pump(Duration(seconds:1)) — never pumpAndSettle.
 //   teardown: pumpWidget(SizedBox.shrink()) + pump(Duration.zero).
 
@@ -35,7 +36,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -45,8 +45,9 @@ import 'package:learning_tracker/features/onboarding/domain/services/learning_pr
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_step.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/wizard_steps.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:learning_tracker/l10n/app_localizations_he.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 // ── Provider overrides ────────────────────────────────────────────────────────
 
@@ -61,13 +62,6 @@ class _TrueUseHebrewTerms extends UseHebrewTerms {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const _kDelegates = [
-  AppLocalizations.delegate,
-  GlobalMaterialLocalizations.delegate,
-  GlobalWidgetsLocalizations.delegate,
-  GlobalCupertinoLocalizations.delegate,
-];
 
 /// AUD-onboarding-04: locale-driven lookup for the "Hebrew locale smoke"
 /// tests below, so a regression that reintroduces a hardcoded English
@@ -148,29 +142,25 @@ void main() {
           advanceCalled = true;
         },
       );
-      return ProviderScope(
+      return pumpApp(
+        locale: locale,
         overrides: [
           useHebrewTermsProvider.overrideWith(
             () => useHebrew ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
           ),
         ],
-        child: MaterialApp(
-          locale: locale,
-          localizationsDelegates: _kDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: Consumer(
-              builder: (context, ref, _) {
-                final step = WizardChooseMethodStep(
-                  curriculumId: CurriculumId.mishnayos,
-                  presets: presets,
-                  isChildMode: isChildMode,
-                  childName: childName,
-                  onComplete: (r) => capturedResult = r,
-                );
-                return step.build(context, ref, ctx);
-              },
-            ),
+        child: Scaffold(
+          body: Consumer(
+            builder: (context, ref, _) {
+              final step = WizardChooseMethodStep(
+                curriculumId: CurriculumId.mishnayos,
+                presets: presets,
+                isChildMode: isChildMode,
+                childName: childName,
+                onComplete: (r) => capturedResult = r,
+              );
+              return step.build(context, ref, ctx);
+            },
           ),
         ),
       );
@@ -365,30 +355,26 @@ void main() {
       bool useHebrew = false,
     }) {
       final stepData = data ?? WizardStepData();
-      return ProviderScope(
+      return pumpApp(
+        locale: locale,
         overrides: [
           useHebrewTermsProvider.overrideWith(
             () => useHebrew ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
           ),
         ],
-        child: MaterialApp(
-          locale: locale,
-          localizationsDelegates: _kDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: Consumer(
-              builder: (context, ref, _) {
-                final step = WizardSelectPresetStep(
-                  curriculumId: CurriculumId.mishnayos,
-                  presets: presets,
-                  isChildMode: isChildMode,
-                  childName: childName,
-                  data: stepData,
-                  onComplete: (r) => capturedResult = r,
-                );
-                return step.build(context, ref, _ctx());
-              },
-            ),
+        child: Scaffold(
+          body: Consumer(
+            builder: (context, ref, _) {
+              final step = WizardSelectPresetStep(
+                curriculumId: CurriculumId.mishnayos,
+                presets: presets,
+                isChildMode: isChildMode,
+                childName: childName,
+                data: stepData,
+                onComplete: (r) => capturedResult = r,
+              );
+              return step.build(context, ref, _ctx());
+            },
           ),
         ),
       );
@@ -595,27 +581,23 @@ void main() {
     Widget buildDirect({
       Locale locale = const Locale('en'),
       bool useHebrew = false,
-    }) => ProviderScope(
+    }) => pumpApp(
+      locale: locale,
       overrides: [
         useHebrewTermsProvider.overrideWith(
           () => useHebrew ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
         ),
       ],
-      child: MaterialApp(
-        locale: locale,
-        localizationsDelegates: _kDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: Consumer(
-            builder: (context, ref, _) {
-              final ctx = _ctx(
-                onAdvance: () async {
-                  advanceCalled = true;
-                },
-              );
-              return WizardCustomStep1(data: stepData).build(context, ref, ctx);
-            },
-          ),
+      child: Scaffold(
+        body: Consumer(
+          builder: (context, ref, _) {
+            final ctx = _ctx(
+              onAdvance: () async {
+                advanceCalled = true;
+              },
+            );
+            return WizardCustomStep1(data: stepData).build(context, ref, ctx);
+          },
         ),
       ),
     );
@@ -743,27 +725,23 @@ void main() {
       bool useHebrew = false,
     }) {
       final d = data ?? stepData;
-      return ProviderScope(
+      return pumpApp(
+        locale: locale,
         overrides: [
           useHebrewTermsProvider.overrideWith(
             () => useHebrew ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
           ),
         ],
-        child: MaterialApp(
-          locale: locale,
-          localizationsDelegates: _kDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: Consumer(
-              builder: (context, ref, _) {
-                final ctx = _ctx(
-                  onAdvance: () async {
-                    advanceCalled = true;
-                  },
-                );
-                return WizardCustomStep2(data: d).build(context, ref, ctx);
-              },
-            ),
+        child: Scaffold(
+          body: Consumer(
+            builder: (context, ref, _) {
+              final ctx = _ctx(
+                onAdvance: () async {
+                  advanceCalled = true;
+                },
+              );
+              return WizardCustomStep2(data: d).build(context, ref, ctx);
+            },
           ),
         ),
       );
@@ -972,27 +950,23 @@ void main() {
       bool useHebrew = false,
     }) {
       final d = data ?? stepData;
-      return ProviderScope(
+      return pumpApp(
+        locale: locale,
         overrides: [
           useHebrewTermsProvider.overrideWith(
             () => useHebrew ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
           ),
         ],
-        child: MaterialApp(
-          locale: locale,
-          localizationsDelegates: _kDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: Consumer(
-              builder: (context, ref, _) {
-                final step = WizardCustomStep3(
-                  curriculumId: CurriculumId.mishnayos,
-                  data: d,
-                  onComplete: (r) => capturedResult = r,
-                );
-                return step.build(context, ref, _ctx());
-              },
-            ),
+        child: Scaffold(
+          body: Consumer(
+            builder: (context, ref, _) {
+              final step = WizardCustomStep3(
+                curriculumId: CurriculumId.mishnayos,
+                data: d,
+                onComplete: (r) => capturedResult = r,
+              );
+              return step.build(context, ref, _ctx());
+            },
           ),
         ),
       );
