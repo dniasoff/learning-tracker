@@ -8779,13 +8779,17 @@
     {
       "id": "AUD-t-parent_mode-03",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Remove tautological 'DashboardStats model' test in parent_dashboard_aggregator_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "9b311055886c485c320fe1a3e6b32d002d31930c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-parent_mode-03 AC1 OK: tautological group deleted; 3 surviving tests call computeEngagement() asserting output; grep mostRecentlyActive on file empty"
+      ],
+      "notes": "Re-verified tautological group still present. mostRecentlyActive is real but lives on unrelated CrossCurriculumAggregator, tested elsewhere - this was a vestige. Deleted per recommendation; AC verified via grep and remaining 3 tests pass."
     },
     {
       "id": "AUD-t-parent_mode-04",
