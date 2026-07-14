@@ -77,8 +77,8 @@ void main() {
     test('points is non-empty', () => expect(he.points, isNotEmpty));
     test('pages is non-empty', () => expect(he.pages, isNotEmpty));
 
-    test('todaysLearning(5) returns non-empty string', () {
-      expect(he.todaysLearning(5), isNotEmpty);
+    test("todaysLearning(5) contains '5'", () {
+      expect(he.todaysLearning(5), contains('5'));
     });
   });
 
