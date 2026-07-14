@@ -18,7 +18,7 @@
 library;
 
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/material.dart' show Icons, ValueKey;
+import 'package:flutter/material.dart' show Icons, Locale, ValueKey;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -311,21 +311,28 @@ void main() {
   group('E2E-508 — Set Hebrew date deadline with HebrewDatePicker', () {
     // Journey: GoalSetupScreen with useHebrewDate=true; tap the date area;
     // HebrewDatePicker dialog appears with Hebrew-year stepper and month/day
-    // dropdowns; "Gregorian" preview row visible.
+    // dropdowns; localized Gregorian preview row visible.
     //
-    // R-SC1: HebrewDatePicker has 4 hardcoded English strings ("Select Hebrew
-    // date", "Hebrew year", "Month", "Day"). These remain English even in the
-    // he locale — confirmed bug. The test asserts the picker opens and shows
-    // the English strings (existing behaviour), marking R-SC1 as a known gap.
+    // R-SC1 (FIXED by AUD-scheduler-02, commit 5f4465c9): HebrewDatePicker's
+    // strings ("Select Hebrew date", "Hebrew year", "Month", "Day", and the
+    // Gregorian-preview prefix) now route through AppLocalizations
+    // (schedulerHebrewDatePickerTitle / schedulerHebrewYearLabel / ... /
+    // schedulerHebrewDateEnglishPreview) with real Hebrew translations in
+    // app_he.arb. This journey pumps under the actual he MaterialApp locale
+    // (not just the useHebrewTermsProvider vocabulary toggle, which stays
+    // forced to English below so curriculum/goal chrome strings are the ones
+    // asserted against their Hebrew l10n values) to prove the fix holds —
+    // mirroring the R-IC3 "(FIXED)" precedent in hebrew_rtl_p1_test.dart.
     //
     // Key assertions:
-    //   • GoalSetupScreen renders with Hebrew date path active.
+    //   • GoalSetupScreen renders with Hebrew date path active, under he.
     //   • Tapping the date card opens HebrewDatePicker dialog.
-    //   • "Select Hebrew date" dialog title is present (hardcoded English — R-SC1).
-    //   • "Hebrew year" label is present.
-    //   • "English:" Gregorian preview row is visible.
+    //   • Dialog title renders the Hebrew l10n string (proving R-SC1 fixed).
+    //   • Year stepper label renders the Hebrew l10n string.
+    //   • Gregorian preview row renders with the Hebrew "אנגלי:" prefix.
     testWidgets(
-      'HebrewDatePicker dialog opens; year stepper and English preview visible',
+      'HebrewDatePicker dialog opens under he locale; year stepper and '
+      'Gregorian preview render the fixed Hebrew l10n strings (R-SC1)',
       (tester) async {
         final identity = E2EIdentity.localBorn(displayName: 'Carol508');
         final h = E2EHarness(tester, identity: identity);
@@ -339,8 +346,13 @@ void main() {
 
         await h.pumpApp(
           path: '/settings/tracks',
+          locale: const Locale('he'),
           extraOverrides: [
             activeTracksProvider.overrideWith((ref) => Stream.value([stub])),
+            // Curriculum vocabulary stays English (decoupled from the he
+            // MaterialApp locale via CurriculumLabelRenderer's explicit
+            // useHebrew param) so "Mishnayos" / "Set Goal" navigation below
+            // targets a stable, non-localized string.
             useHebrewTermsProvider.overrideWithValue(false),
             effectiveUseHebrewTermsProvider.overrideWithValue(false),
             trackDualProgressMetricsProvider.overrideWith(
@@ -366,15 +378,17 @@ void main() {
         await h.tapText('Mishnayos', settle: const Duration(milliseconds: 500));
         await tester.pump(const Duration(milliseconds: 300));
 
-        // Navigate to GoalSetupScreen.
-        await tester.ensureVisible(find.text('Set Goal'));
+        // Navigate to GoalSetupScreen. The button label is
+        // l10n.trackSetGoalLabel — "הגדרת יעד" under he.
+        await tester.ensureVisible(find.text('הגדרת יעד'));
         await tester.pump(const Duration(milliseconds: 100));
-        await h.tapText('Set Goal', settle: const Duration(milliseconds: 100));
+        await h.tapText('הגדרת יעד', settle: const Duration(milliseconds: 100));
         await tester.pumpAndSettle(const Duration(milliseconds: 600));
 
-        // GoalSetupScreen rendered.
-        h.expectOnScreen('New Goal');
-        h.expectOnScreen('Deadline');
+        // GoalSetupScreen rendered. l10n.goalNewTitle / l10n.goalTypeDeadline
+        // under he.
+        h.expectOnScreen('יעד חדש');
+        h.expectOnScreen('תאריך יעד');
 
         // Tap the date selection card to open HebrewDatePicker.
         // The date hint text is l10n.goalDeadlineDatePickerHint when no date set.
@@ -388,16 +402,17 @@ void main() {
         await tester.tap(calendarIcon);
         await tester.pumpAndSettle(const Duration(milliseconds: 400));
 
-        // HebrewDatePicker dialog should be open.
-        // R-SC1 — the title is hardcoded English even in he locale.
-        h.expectOnScreen('Select Hebrew date');
-        // Year stepper label is hardcoded "Hebrew year".
-        h.expectOnScreen('Hebrew year');
-        // "English:" prefix in the Gregorian preview row.
+        // HebrewDatePicker dialog should be open, rendering its real Hebrew
+        // l10n strings (R-SC1 fixed) — not the former hardcoded English.
+        h.expectOnScreen('בחר תאריך עברי');
+        // Year stepper label — l10n.schedulerHebrewYearLabel.
+        h.expectOnScreen('שנה עברית');
+        // l10n.schedulerHebrewDateEnglishPreview's Hebrew prefix.
         expect(
-          find.textContaining('English:'),
+          find.textContaining('אנגלי:'),
           findsOneWidget,
-          reason: 'Expected Gregorian preview row with "English:" prefix',
+          reason:
+              'Expected Gregorian preview row with the Hebrew "אנגלי:" prefix',
         );
       },
     );

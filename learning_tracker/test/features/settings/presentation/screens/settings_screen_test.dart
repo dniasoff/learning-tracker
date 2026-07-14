@@ -232,6 +232,17 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('Manage Tracks'), findsOneWidget);
+
+      // Calendar Preference sits in the next card below Manage Tracks —
+      // scroll further to bring it into the ListView's built/cached range
+      // before asserting (scrollUntilVisible walks incrementally rather than
+      // assuming a fixed pixel offset, so it stays correct as sections above
+      // it grow or shrink).
+      await tester.scrollUntilVisible(
+        find.text('Calendar Preference'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Calendar Preference'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());

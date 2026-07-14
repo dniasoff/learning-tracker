@@ -25,7 +25,7 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:flutter/material.dart' show ListView;
+import 'package:flutter/material.dart' show ListView, Scrollable;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart'
@@ -257,8 +257,14 @@ void main() {
 
         await _goToSettings(h);
         // Calendar Preference is in the PROFILE section below DEVICE section —
-        // scroll to expose it.
-        await _scrollSettingsToBottom(tester);
+        // scroll to expose it. scrollUntilVisible walks the ListView
+        // incrementally (rather than assuming a fixed pixel offset), so it
+        // stays correct regardless of how tall the sections above it are.
+        await tester.scrollUntilVisible(
+          find.text('Calendar Preference'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
         await h.pump(const Duration(milliseconds: 200));
 
         // Calendar Preference tile label.
@@ -305,7 +311,14 @@ void main() {
 
           await _goToSettings(h);
           // Hebrew Terms is in the PROFILE section — scroll to expose it.
-          await _scrollSettingsToBottom(tester);
+          // scrollUntilVisible walks the ListView incrementally (rather than
+          // assuming a fixed pixel offset), so it stays correct regardless of
+          // how tall the sections above it are.
+          await tester.scrollUntilVisible(
+            find.text('Hebrew Terms'),
+            200,
+            scrollable: find.byType(Scrollable).first,
+          );
           await h.pump(const Duration(milliseconds: 200));
 
           // Hebrew Terms toggle should be visible (for non-Hebrew locale).
@@ -339,7 +352,14 @@ void main() {
 
           await _goToSettings(h);
           // Hebrew Terms is in the PROFILE section — scroll to expose it.
-          await _scrollSettingsToBottom(tester);
+          // scrollUntilVisible walks the ListView incrementally (rather than
+          // assuming a fixed pixel offset), so it stays correct regardless of
+          // how tall the sections above it are.
+          await tester.scrollUntilVisible(
+            find.text('Hebrew Terms'),
+            200,
+            scrollable: find.byType(Scrollable).first,
+          );
           await h.pump(const Duration(milliseconds: 200));
 
           // Hebrew Terms toggle visible.

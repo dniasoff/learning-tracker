@@ -48,7 +48,7 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:flutter/material.dart' show FilledButton, ListView;
+import 'package:flutter/material.dart' show FilledButton, ListView, Scrollable;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart'
@@ -430,7 +430,14 @@ void main() {
 
         // Scroll to expose the "Add Lifetime Learning" tile and ensure it is
         // scrolled fully into view before tapping (avoids AppBar occlusion).
-        await _scrollSettingsToBottom(tester);
+        // scrollUntilVisible walks the ListView incrementally rather than
+        // assuming a fixed pixel offset, so it stays correct as unrelated
+        // sections above this tile grow or shrink over time.
+        await tester.scrollUntilVisible(
+          find.text('Add Lifetime Learning'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
         await h.pump(const Duration(milliseconds: 300));
 
         // Tile visible for adult.
