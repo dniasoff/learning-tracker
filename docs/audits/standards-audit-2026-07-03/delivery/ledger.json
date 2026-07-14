@@ -6133,13 +6133,18 @@
   {
    "id": "AUD-t-cross-87",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace date_utils_test.dart's real DateTime.now() read with a fixed/injected clock",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "339697799a4446180874be6886a40c1d9c90d6a3"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-87 AC1 OK: grep 'DateTime.now(' date_utils_test.dart -> no matches (exit 1)",
+    "AUD-t-cross-87 AC2 OK: date_utils_test.dart:11-17 injects FakeLocalDayClock via useLocalDayClock, asserts expect(now,equals(fixedInstant)) exact equality"
+   ],
+   "notes": "Re-verified: test read DateTime.now() w/ 1s tolerance. nowUtc() already delegates to swappable LocalDayClock. Rewrote to useLocalDayClock(FakeLocalDayClock(fixed)) + exact equality; confirmed not vacuous by breaking expected value, seeing it fail, then restoring. Both ACs verified."
   },
   {
    "id": "AUD-t-cross-76",
