@@ -9,159 +9,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 
+import '../../../../helpers/data_export_fixtures.dart';
 import '../../../../helpers/drift_memory.dart';
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Row builders live in test/helpers/data_export_fixtures.dart
+// (AUD-t-settings-08) — this file used to hand-roll its own copies
+// (minimalPayload/userProfileMap/trackMap/stageMap/etc.); it is now the
+// model the shared fixture is built from. `trackMap` → `curriculumTrackMap`,
+// `stageMap` → `stageDefinitionMap`, `streakMap` → `legacyStreakMap` in the
+// shared fixture; everything else kept its name.
 // ---------------------------------------------------------------------------
-
-/// Minimal valid import payload (all required sections as empty lists,
-/// optional sections absent).
-Map<String, dynamic> minimalPayload() => {
-  'formatVersion': 'schemaV1',
-  'exportedAt': '2026-01-01T00:00:00.000Z',
-  'appVersion': '1.0.0',
-  'userProfiles': <dynamic>[],
-  'learnerProfiles': <dynamic>[],
-  'curriculumTracks': <dynamic>[],
-  'stageDefinitions': <dynamic>[],
-  'pointConfigs': <dynamic>[],
-  'completions': <dynamic>[],
-  'bookmarks': <dynamic>[],
-  'learningOrder': <dynamic>[],
-  'goals': <dynamic>[],
-  'streaks': <dynamic>[],
-};
-
-/// Returns a userProfile map (imported as an account row).
-///
-/// WS9.flows: [userMode] removed — mode belongs to learner_profiles, not accounts.
-Map<String, dynamic> userProfileMap({
-  int id = 1,
-  String displayName = 'Test User',
-  String tier = 'localBorn',
-}) => {
-  'id': id,
-  'displayName': displayName,
-  'tier': tier,
-  'createdAt': '2026-01-01T00:00:00.000Z',
-  'updatedAt': '2026-01-01T00:00:00.000Z',
-};
-
-/// Returns a curriculumTrack map.
-Map<String, dynamic> trackMap({
-  int id = 1,
-  int profileId = 1,
-  String curriculumId = 'bavli',
-  String trackType = 'personal',
-  bool isActive = true,
-}) => {
-  'id': id,
-  'profileId': profileId,
-  'curriculumId': curriculumId,
-  'trackType': trackType,
-  'isActive': isActive,
-  'activatedAt': '2026-01-01T00:00:00.000Z',
-  'deactivatedAt': null,
-  'paceResetDate': null,
-  'deletedAt': null,
-};
-
-/// Returns a stageDefinition map.
-Map<String, dynamic> stageMap({
-  int trackId = 1,
-  int stageOrder = 1,
-  String stageName = 'Learn',
-  int delayDays = 0,
-}) => {
-  'profileId': 1,
-  'curriculumId': 'bavli',
-  'trackId': trackId,
-  'stageOrder': stageOrder,
-  'stageName': stageName,
-  'delayDays': delayDays,
-  'isDefault': true,
-};
-
-/// Returns a pointConfig map.
-Map<String, dynamic> pointConfigMap({int trackId = 1, int stageOrder = 1}) => {
-  'profileId': 1,
-  'curriculumId': 'bavli',
-  'trackId': trackId,
-  'stageOrder': stageOrder,
-  'points': 10,
-};
-
-/// Returns a completion map.
-Map<String, dynamic> completionMap({int trackId = 1, int stageId = 1}) => {
-  'profileId': 1,
-  'curriculumId': 'bavli',
-  'sefariaRef': 'Berakhot.2a',
-  'stageId': stageId,
-  'trackType': 'personal',
-  'trackId': trackId,
-  'completedAt': '2026-03-01T00:00:00.000Z',
-  'points': 5,
-};
-
-/// Returns a streak map.
-Map<String, dynamic> streakMap({int profileId = 1}) => {
-  'profileId': profileId,
-  'currentStreak': 7,
-  'maxStreak': 14,
-  'lastCompletionDate': '2026-05-13T00:00:00.000Z',
-  'graceUsedDate': null,
-  'gracePeriodDays': 1,
-};
-
-/// Returns a goal map.
-Map<String, dynamic> goalMap({int trackId = 1}) => {
-  'profileId': 1,
-  'curriculumId': 'bavli',
-  'trackId': trackId,
-  'targetPercent': 90.0,
-  'targetDate': null,
-  'description': '',
-  'dateType': 'gregorian',
-  'goalType': 'deadline',
-  'paceValue': null,
-  'pacePeriod': null,
-  'paceGranularity': null,
-  'createdAt': '2026-01-01T00:00:00.000Z',
-  'updatedAt': '2026-01-01T00:00:00.000Z',
-};
-
-/// Returns a bookmark map.
-Map<String, dynamic> bookmarkMap({int trackId = 1}) => {
-  'profileId': 1,
-  'curriculumId': 'bavli',
-  'trackId': trackId,
-  'sefariaRef': 'Berakhot.2a',
-  'updatedAt': '2026-05-01T00:00:00.000Z',
-};
-
-/// Returns a learningOrder map.
-Map<String, dynamic> learningOrderMap({
-  String sefariaRef = 'Berakhot.2a',
-  int userSortOrder = 1,
-}) => {
-  'profileId': 1,
-  'curriculumId': 'bavli',
-  'sefariaRef': sefariaRef,
-  'userSortOrder': userSortOrder,
-  'updatedAt': '2026-05-01T00:00:00.000Z',
-};
-
-/// Returns a learnerProfile map (id=1, accountId=1).
-Map<String, dynamic> learnerProfileMap({int id = 1, int accountId = 1}) => {
-  'id': id,
-  'accountId': accountId,
-  'displayName': 'Test User',
-  'mode': 'adult',
-  'avatarIndex': 0,
-  'createdAt': '2026-01-01T00:00:00.000Z',
-  'updatedAt': '2026-01-01T00:00:00.000Z',
-};
 
 void main() {
   late UserDatabase db;
@@ -186,7 +44,7 @@ void main() {
 
   group('DataExportImportService.importData — minimal payload', () {
     test('completes without error on fully-empty payload', () async {
-      final json = jsonEncode(minimalPayload());
+      final json = jsonEncode(exportPayloadMap());
       await expectLater(service.importData(json), completes);
     });
 
@@ -210,7 +68,7 @@ void main() {
         // in the payload — include profile 1 so it's in scope, then import
         // with an empty curriculumTracks section. The pre-existing row for
         // profile 1 should still be wiped.
-        final payload = minimalPayload()
+        final payload = exportPayloadMap()
           ..['userProfiles'] = [userProfileMap(id: 1)]
           ..['learnerProfiles'] = [learnerProfileMap(id: 1, accountId: 1)];
         await service.importData(jsonEncode(payload));
@@ -227,7 +85,7 @@ void main() {
 
   group('DataExportImportService.importData — userProfiles', () {
     test('inserts account rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1, displayName: 'Alice')];
 
       await service.importData(jsonEncode(payload));
@@ -238,7 +96,7 @@ void main() {
     });
 
     test('uses placeholder email with original id', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 42)];
 
       await service.importData(jsonEncode(payload));
@@ -254,7 +112,7 @@ void main() {
     });
 
     test('imports multiple accounts', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [
           userProfileMap(id: 1, displayName: 'Alice'),
           userProfileMap(id: 2, displayName: 'Bob'),
@@ -273,7 +131,7 @@ void main() {
 
   group('DataExportImportService.importData — learnerProfiles', () {
     test('inserts learner profile rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [
           {
@@ -300,9 +158,9 @@ void main() {
 
   group('DataExportImportService.importData — curriculumTracks', () {
     test('inserts track rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
-        ..['curriculumTracks'] = [trackMap(id: 1, profileId: 1)];
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1, profileId: 1)];
 
       await service.importData(jsonEncode(payload));
 
@@ -313,11 +171,14 @@ void main() {
     });
 
     test('handles optional deactivatedAt and paceResetDate fields', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['curriculumTracks'] = [
+          // Drop `stateChangedAt` (the current-schema field) so importData()
+          // exercises its legacy back-compat fallback: it reads
+          // `stateChangedAt` from `deactivatedAt` when the former is absent.
           {
-            ...trackMap(id: 1),
+            ...(curriculumTrackMap(id: 1)..remove('stateChangedAt')),
             'deactivatedAt': '2026-06-01T00:00:00.000Z',
             'paceResetDate': '2026-04-01T00:00:00.000Z',
           },
@@ -337,10 +198,10 @@ void main() {
 
   group('DataExportImportService.importData — curriculumScopes', () {
     test('inserts curriculum scope rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
-        ..['curriculumTracks'] = [trackMap(id: 1, profileId: 1)]
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1, profileId: 1)]
         ..['curriculumScopes'] = [
           {
             'profileId': 1,
@@ -366,7 +227,7 @@ void main() {
 
   group('DataExportImportService.importData — profilePrograms', () {
     test('inserts profile program rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['profilePrograms'] = [
           {
@@ -392,11 +253,11 @@ void main() {
 
   group('DataExportImportService.importData — stageDefinitions', () {
     test('inserts stage definition rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
-        ..['curriculumTracks'] = [trackMap(id: 1)]
-        ..['stageDefinitions'] = [stageMap(trackId: 1)];
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
+        ..['stageDefinitions'] = [stageDefinitionMap(trackId: 1)];
 
       await service.importData(jsonEncode(payload));
 
@@ -412,9 +273,9 @@ void main() {
 
   group('DataExportImportService.importData — pointConfigs', () {
     test('inserts point config rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
-        ..['curriculumTracks'] = [trackMap(id: 1)]
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
         ..['pointConfigs'] = [pointConfigMap(trackId: 1)];
 
       await service.importData(jsonEncode(payload));
@@ -431,9 +292,9 @@ void main() {
 
   group('DataExportImportService.importData — studyDayConfigs', () {
     test('inserts study day config rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
-        ..['curriculumTracks'] = [trackMap(id: 1)]
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
         ..['studyDayConfigs'] = [
           {
             'profileId': 1,
@@ -461,7 +322,7 @@ void main() {
     test('inserts completion rows', () async {
       // W3.20: the old `completions` section is skipped on import;
       // use `completionEvents` section instead.
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
         ..['completionEvents'] = [
@@ -493,7 +354,7 @@ void main() {
 
   group('DataExportImportService.importData — completionEvents', () {
     test('inserts completion event rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
         ..['completionEvents'] = [
@@ -522,9 +383,9 @@ void main() {
 
   group('DataExportImportService.importData — dailyPlans', () {
     test('inserts daily plan rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
-        ..['curriculumTracks'] = [trackMap(id: 1)]
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
         ..['dailyPlans'] = [
           {
             'profileId': 1,
@@ -560,7 +421,7 @@ void main() {
 
   group('DataExportImportService.importData — learningLedger', () {
     test('inserts learning ledger rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
         ..['learningLedger'] = [
@@ -596,10 +457,10 @@ void main() {
 
   group('DataExportImportService.importData — bookmarks', () {
     test('inserts bookmark rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
-        ..['curriculumTracks'] = [trackMap(id: 1)]
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
         ..['bookmarks'] = [bookmarkMap(trackId: 1)];
 
       await service.importData(jsonEncode(payload));
@@ -616,7 +477,7 @@ void main() {
 
   group('DataExportImportService.importData — learningOrder', () {
     test('inserts learning order rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
         ..['learningOrder'] = [
@@ -637,10 +498,10 @@ void main() {
 
   group('DataExportImportService.importData — trackLearningOrder', () {
     test('inserts track learning order rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
-        ..['curriculumTracks'] = [trackMap(id: 1)]
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
         ..['trackLearningOrder'] = [
           {'trackId': 1, 'sefariaRef': 'Berakhot.2a', 'sortOrder': 1},
         ];
@@ -659,10 +520,10 @@ void main() {
 
   group('DataExportImportService.importData — goals', () {
     test('inserts goal rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
-        ..['curriculumTracks'] = [trackMap(id: 1)]
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
         ..['goals'] = [goalMap(trackId: 1)];
 
       await service.importData(jsonEncode(payload));
@@ -672,10 +533,10 @@ void main() {
     });
 
     test('handles optional targetDate field', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
-        ..['curriculumTracks'] = [trackMap(id: 1)]
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
         ..['goals'] = [
           {...goalMap(trackId: 1), 'targetDate': '2026-12-31T00:00:00.000Z'},
         ];
@@ -695,7 +556,8 @@ void main() {
   // Streak state is derived from streakEvents. Tests moved to streakEvents group.
   group('DataExportImportService.importData — streaks (legacy)', () {
     test('legacy streaks key is silently skipped', () async {
-      final payload = minimalPayload()..['streaks'] = [streakMap(profileId: 1)];
+      final payload = exportPayloadMap()
+        ..['streaks'] = [legacyStreakMap(profileId: 1)];
 
       await service.importData(jsonEncode(payload));
 
@@ -711,7 +573,7 @@ void main() {
 
   group('DataExportImportService.importData — streakEvents', () {
     test('inserts streak event rows', () async {
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
         ..['streakEvents'] = [
@@ -892,10 +754,10 @@ void main() {
 
     test('importData is idempotent when called twice', () async {
       // W3.37: old `streaks` section is skipped; use `streakEvents` instead.
-      final payload = minimalPayload()
+      final payload = exportPayloadMap()
         ..['userProfiles'] = [userProfileMap(id: 1)]
         ..['learnerProfiles'] = [learnerProfileMap()]
-        ..['curriculumTracks'] = [trackMap(id: 1)]
+        ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
         ..['streakEvents'] = [
           {
             'profileId': 1,

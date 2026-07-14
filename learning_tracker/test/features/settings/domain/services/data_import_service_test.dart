@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 
+import '../../../../helpers/data_export_fixtures.dart';
 import '../../../../helpers/drift_memory.dart';
 
 void main() {
@@ -55,19 +56,7 @@ void main() {
           appVersionFetcher: () async => '1.0.0',
         );
 
-        final payload = jsonEncode({
-          'exportedAt': '2026-01-01T00:00:00Z',
-          'appVersion': '1.0.0',
-          'userProfiles': <dynamic>[],
-          'curriculumTracks': <dynamic>[],
-          'stageDefinitions': <dynamic>[],
-          'completions': <dynamic>[],
-          'goals': <dynamic>[],
-          'bookmarks': <dynamic>[],
-          'learningOrder': <dynamic>[],
-          'streaks': <dynamic>[],
-          'pointConfigs': <dynamic>[],
-        });
+        final payload = jsonEncode(exportPayloadMap()..remove('formatVersion'));
 
         expect(
           () => service.importData(payload),
@@ -88,19 +77,7 @@ void main() {
         );
 
         // Missing 'completions' section.
-        final payload = jsonEncode({
-          'formatVersion': 'schemaV1',
-          'exportedAt': '2026-01-01T00:00:00Z',
-          'appVersion': '1.0.0',
-          'userProfiles': <dynamic>[],
-          'curriculumTracks': <dynamic>[],
-          'stageDefinitions': <dynamic>[],
-          'goals': <dynamic>[],
-          'bookmarks': <dynamic>[],
-          'learningOrder': <dynamic>[],
-          'streaks': <dynamic>[],
-          'pointConfigs': <dynamic>[],
-        });
+        final payload = jsonEncode(exportPayloadMap()..remove('completions'));
 
         expect(
           () => service.importData(payload),
@@ -121,38 +98,9 @@ void main() {
       );
 
       // Build a minimal valid payload with one user profile (no FK deps).
-      final payload = jsonEncode({
-        'formatVersion': 'schemaV1',
-        'exportedAt': '2026-01-01T00:00:00Z',
-        'appVersion': '1.0.0',
-        'userProfiles': [
-          {
-            'id': 1,
-            'profileId': 1,
-            'displayName': 'Test User',
-            'tier': 'localBorn',
-            'createdAt': '2026-01-01T00:00:00.000Z',
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
-        ],
-        'learnerProfiles': <dynamic>[],
-        'curriculumTracks': <dynamic>[],
-        'curriculumScopes': <dynamic>[],
-        'profilePrograms': <dynamic>[],
-        'stageDefinitions': <dynamic>[],
-        'pointConfigs': <dynamic>[],
-        'studyDayConfigs': <dynamic>[],
-        'completions': <dynamic>[],
-        'completionEvents': <dynamic>[],
-        'dailyPlans': <dynamic>[],
-        'learningLedger': <dynamic>[],
-        'bookmarks': <dynamic>[],
-        'learningOrder': <dynamic>[],
-        'trackLearningOrder': <dynamic>[],
-        'goals': <dynamic>[],
-        'streaks': <dynamic>[],
-        'streakEvents': <dynamic>[],
-      });
+      final payload = jsonEncode(
+        exportPayloadMap(userProfiles: [userProfileMap()]),
+      );
 
       await service.importData(payload);
 
@@ -171,38 +119,9 @@ void main() {
         appVersionFetcher: () async => '1.0.0',
       );
 
-      Map<String, dynamic> buildPayload(String displayName) => {
-        'formatVersion': 'schemaV1',
-        'exportedAt': '2026-01-01T00:00:00Z',
-        'appVersion': '1.0.0',
-        'userProfiles': [
-          {
-            'id': 1,
-            'profileId': 1,
-            'displayName': displayName,
-            'tier': 'localBorn',
-            'createdAt': '2026-01-01T00:00:00.000Z',
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
-        ],
-        'learnerProfiles': <dynamic>[],
-        'curriculumTracks': <dynamic>[],
-        'curriculumScopes': <dynamic>[],
-        'profilePrograms': <dynamic>[],
-        'stageDefinitions': <dynamic>[],
-        'pointConfigs': <dynamic>[],
-        'studyDayConfigs': <dynamic>[],
-        'completions': <dynamic>[],
-        'completionEvents': <dynamic>[],
-        'dailyPlans': <dynamic>[],
-        'learningLedger': <dynamic>[],
-        'bookmarks': <dynamic>[],
-        'learningOrder': <dynamic>[],
-        'trackLearningOrder': <dynamic>[],
-        'goals': <dynamic>[],
-        'streaks': <dynamic>[],
-        'streakEvents': <dynamic>[],
-      };
+      Map<String, dynamic> buildPayload(String displayName) => exportPayloadMap(
+        userProfiles: [userProfileMap(displayName: displayName)],
+      );
 
       await service.importData(jsonEncode(buildPayload('First')));
       await service.importData(jsonEncode(buildPayload('Second')));
@@ -258,19 +177,9 @@ void main() {
         appVersionFetcher: () async => '1.0.0',
       );
 
-      final bad = jsonEncode({
-        'formatVersion': 'schemaV1',
-        'exportedAt': '2026-01-01T00:00:00Z',
-        'appVersion': '1.0.0',
+      final bad = jsonEncode(<String, dynamic>{
+        ...exportPayloadMap(),
         'userProfiles': 'not-a-list', // wrong type
-        'curriculumTracks': <dynamic>[],
-        'stageDefinitions': <dynamic>[],
-        'completions': <dynamic>[],
-        'goals': <dynamic>[],
-        'bookmarks': <dynamic>[],
-        'learningOrder': <dynamic>[],
-        'streaks': <dynamic>[],
-        'pointConfigs': <dynamic>[],
       });
 
       expect(

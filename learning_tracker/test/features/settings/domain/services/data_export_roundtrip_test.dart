@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 
+import '../../../../helpers/data_export_fixtures.dart';
 import '../../../../helpers/drift_memory.dart';
 
 void main() {
@@ -168,7 +169,11 @@ void main() {
   // ── importData ────────────────────────────────────────────────────────────
 
   group('DataExportImportService.importData', () {
-    /// Build a minimal valid import payload.
+    /// Build a minimal valid import payload as a JSON string.
+    ///
+    /// Thin wrapper over the shared [exportPayloadMap] fixture
+    /// (AUD-t-settings-08) restricted to the sections this file's tests
+    /// populate.
     String buildImportJson({
       List<Map<String, dynamic>> userProfiles = const [],
       List<Map<String, dynamic>> learnerProfiles = const [],
@@ -180,31 +185,20 @@ void main() {
       List<Map<String, dynamic>> pointConfigs = const [],
       List<Map<String, dynamic>> bookmarks = const [],
       List<Map<String, dynamic>> learningOrder = const [],
-    }) {
-      return jsonEncode({
-        'formatVersion': 'schemaV1',
-        'exportedAt': '2026-01-01T00:00:00.000Z',
-        'appVersion': '1.0.0',
-        'userProfiles': userProfiles,
-        'learnerProfiles': learnerProfiles,
-        'curriculumTracks': curriculumTracks,
-        'curriculumScopes': <dynamic>[],
-        'profilePrograms': <dynamic>[],
-        'stageDefinitions': stageDefinitions,
-        'pointConfigs': pointConfigs,
-        'studyDayConfigs': <dynamic>[],
-        'completions': completions,
-        'completionEvents': <dynamic>[],
-        'dailyPlans': <dynamic>[],
-        'learningLedger': <dynamic>[],
-        'bookmarks': bookmarks,
-        'learningOrder': learningOrder,
-        'trackLearningOrder': <dynamic>[],
-        'goals': goals,
-        'streaks': streaks,
-        'streakEvents': <dynamic>[],
-      });
-    }
+    }) => jsonEncode(
+      exportPayloadMap(
+        userProfiles: userProfiles,
+        learnerProfiles: learnerProfiles,
+        curriculumTracks: curriculumTracks,
+        stageDefinitions: stageDefinitions,
+        pointConfigs: pointConfigs,
+        completions: completions,
+        bookmarks: bookmarks,
+        learningOrder: learningOrder,
+        goals: goals,
+        streaks: streaks,
+      ),
+    );
 
     test('importData on empty payload clears DB and leaves it empty', () async {
       // Pre-insert a track so DB is not empty.
@@ -224,26 +218,8 @@ void main() {
       // setUp) so it's in scope, with otherwise-empty data sections.
       await service.importData(
         buildImportJson(
-          userProfiles: [
-            {
-              'id': 1,
-              'displayName': 'Test User',
-              'tier': 'localBorn',
-              'createdAt': '2026-01-01T00:00:00.000Z',
-              'updatedAt': '2026-01-01T00:00:00.000Z',
-            },
-          ],
-          learnerProfiles: [
-            {
-              'id': 1,
-              'accountId': 1,
-              'displayName': 'Test User',
-              'mode': 'adult',
-              'avatarIndex': 0,
-              'createdAt': '2026-01-01T00:00:00.000Z',
-              'updatedAt': '2026-01-01T00:00:00.000Z',
-            },
-          ],
+          userProfiles: [userProfileMap()],
+          learnerProfiles: [learnerProfileMap()],
         ),
       );
 
@@ -253,19 +229,7 @@ void main() {
 
     test('importData imports curriculum tracks', () async {
       final payload = buildImportJson(
-        curriculumTracks: [
-          {
-            'id': 1,
-            'profileId': 1,
-            'curriculumId': 'mishnayos',
-            'trackType': 'personal',
-            'isActive': true,
-            'activatedAt': '2026-01-01T00:00:00.000Z',
-            'deactivatedAt': null,
-            'paceResetDate': null,
-            'deletedAt': null,
-          },
-        ],
+        curriculumTracks: [curriculumTrackMap(curriculumId: 'mishnayos')],
       );
 
       await service.importData(payload);
@@ -278,57 +242,10 @@ void main() {
     test('importData imports goals', () async {
       // First import a track (goals have trackId FK).
       final payload = buildImportJson(
-        userProfiles: [
-          {
-            'id': 1,
-            'displayName': 'Test',
-            'tier': 'localBorn',
-            'createdAt': '2026-01-01T00:00:00.000Z',
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
-        ],
-        learnerProfiles: [
-          {
-            'id': 1,
-            'accountId': 1,
-            'displayName': 'Test',
-            'mode': 'adult',
-            'avatarIndex': 0,
-            'createdAt': '2026-01-01T00:00:00.000Z',
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
-        ],
-        curriculumTracks: [
-          {
-            'id': 1,
-            'profileId': 1,
-            'curriculumId': 'mishnayos',
-            'trackType': 'personal',
-            'isActive': true,
-            'activatedAt': '2026-01-01T00:00:00.000Z',
-            'deactivatedAt': null,
-            'paceResetDate': null,
-            'deletedAt': null,
-          },
-        ],
-        goals: [
-          {
-            'id': 1,
-            'profileId': 1,
-            'curriculumId': 'mishnayos',
-            'trackId': 1,
-            'targetPercent': 100.0,
-            'targetDate': null,
-            'description': '',
-            'dateType': 'gregorian',
-            'goalType': 'deadline',
-            'paceValue': null,
-            'pacePeriod': null,
-            'paceGranularity': null,
-            'createdAt': '2026-01-01T00:00:00.000Z',
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
-        ],
+        userProfiles: [userProfileMap(displayName: 'Test')],
+        learnerProfiles: [learnerProfileMap(displayName: 'Test')],
+        curriculumTracks: [curriculumTrackMap(curriculumId: 'mishnayos')],
+        goals: [goalMap(curriculumId: 'mishnayos', targetPercent: 100.0)],
       );
 
       await service.importData(payload);
@@ -341,48 +258,11 @@ void main() {
     test('importData imports bookmarks', () async {
       // Insert a track first so the bookmark FK is valid.
       final trackPayload = buildImportJson(
-        userProfiles: [
-          {
-            'id': 1,
-            'displayName': 'Test',
-            'tier': 'localBorn',
-            'createdAt': '2026-01-01T00:00:00.000Z',
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
-        ],
-        learnerProfiles: [
-          {
-            'id': 1,
-            'accountId': 1,
-            'displayName': 'Test',
-            'mode': 'adult',
-            'avatarIndex': 0,
-            'createdAt': '2026-01-01T00:00:00.000Z',
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
-        ],
-        curriculumTracks: [
-          {
-            'id': 1,
-            'profileId': 1,
-            'curriculumId': 'mishnayos',
-            'trackType': 'personal',
-            'isActive': true,
-            'activatedAt': '2026-01-01T00:00:00.000Z',
-            'deactivatedAt': null,
-            'paceResetDate': null,
-            'deletedAt': null,
-          },
-        ],
+        userProfiles: [userProfileMap(displayName: 'Test')],
+        learnerProfiles: [learnerProfileMap(displayName: 'Test')],
+        curriculumTracks: [curriculumTrackMap(curriculumId: 'mishnayos')],
         bookmarks: [
-          {
-            'id': 1,
-            'profileId': 1,
-            'curriculumId': 'mishnayos',
-            'trackId': 1,
-            'sefariaRef': 'Berakhot.1.1',
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
+          bookmarkMap(curriculumId: 'mishnayos', sefariaRef: 'Berakhot.1.1'),
         ],
       );
 
@@ -398,35 +278,14 @@ void main() {
       // Payload must include a learnerProfile so the FK is satisfied after
       // the import clears all existing rows.
       final payload = buildImportJson(
-        userProfiles: [
-          {
-            'id': 1,
-            'displayName': 'Test',
-            'tier': 'localBorn',
-            'createdAt': '2026-01-01T00:00:00.000Z',
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
-        ],
-        learnerProfiles: [
-          {
-            'id': 1,
-            'accountId': 1,
-            'displayName': 'Test',
-            'mode': 'adult',
-            'avatarIndex': 0,
-            'createdAt': '2026-01-01T00:00:00.000Z',
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
-        ],
+        userProfiles: [userProfileMap(displayName: 'Test')],
+        learnerProfiles: [learnerProfileMap(displayName: 'Test')],
         learningOrder: [
-          {
-            'id': 1,
-            'profileId': 1,
-            'curriculumId': 'mishnayos',
-            'sefariaRef': 'Berakhot',
-            'userSortOrder': 0,
-            'updatedAt': '2026-01-01T00:00:00.000Z',
-          },
+          learningOrderMap(
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Berakhot',
+            userSortOrder: 0,
+          ),
         ],
       );
 
@@ -445,44 +304,17 @@ void main() {
         // Payload must include a learnerProfile so the FK is satisfied.
         const ts = '2026-03-20T00:00:00.000Z';
         final payload = buildImportJson(
-          userProfiles: [
-            {
-              'id': 1,
-              'displayName': 'Test',
-              'tier': 'localBorn',
-              'createdAt': '2026-01-01T00:00:00.000Z',
-              'updatedAt': '2026-01-01T00:00:00.000Z',
-            },
-          ],
-          learnerProfiles: [
-            {
-              'id': 1,
-              'accountId': 1,
-              'displayName': 'Test',
-              'mode': 'adult',
-              'avatarIndex': 0,
-              'createdAt': '2026-01-01T00:00:00.000Z',
-              'updatedAt': '2026-01-01T00:00:00.000Z',
-            },
-          ],
-          streaks: [
-            // Legacy format — should be silently ignored.
-            {'id': 1, 'profileId': 1, 'currentStreak': 7, 'maxStreak': 14},
-          ],
+          userProfiles: [userProfileMap(displayName: 'Test')],
+          learnerProfiles: [learnerProfileMap(displayName: 'Test')],
+          // Legacy format — should be silently ignored.
+          streaks: [legacyStreakMap()],
         );
 
         // Also build a payload that includes streakEvents.
         final payloadWithEvents = jsonEncode({
           ...jsonDecode(payload) as Map<String, dynamic>,
           'streakEvents': [
-            {
-              'id': 1,
-              'profileId': 1,
-              'eventType': 'completion',
-              'dayUtc': ts,
-              'eventTimestamp': ts,
-              'createdAt': ts,
-            },
+            streakEventMap(dayUtc: ts, eventTimestamp: ts, createdAt: ts),
           ],
         });
 

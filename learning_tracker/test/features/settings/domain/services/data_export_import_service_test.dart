@@ -5,37 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 
-void main() {
-  /// Build a minimal valid export JSON string.
-  String buildValidJson({
-    List<Map<String, dynamic>> completions = const [],
-    List<Map<String, dynamic>> goals = const [],
-    List<Map<String, dynamic>> stageDefinitions = const [],
-    List<Map<String, dynamic>> streaks = const [],
-    List<Map<String, dynamic>> pointConfigs = const [],
-    List<Map<String, dynamic>> bookmarks = const [],
-    List<Map<String, dynamic>> learningOrder = const [],
-    List<Map<String, dynamic>> activeCurricula = const [],
-    List<Map<String, dynamic>> curriculumTracks = const [],
-    List<Map<String, dynamic>> userProfiles = const [],
-  }) {
-    return json.encode({
-      'formatVersion': '1',
-      'exportedAt': '2026-01-01T00:00:00.000Z',
-      'appVersion': '1.0.0',
-      'completions': completions,
-      'goals': goals,
-      'stageDefinitions': stageDefinitions,
-      'streaks': streaks,
-      'pointConfigs': pointConfigs,
-      'bookmarks': bookmarks,
-      'learningOrder': learningOrder,
-      'activeCurricula': activeCurricula,
-      'curriculumTracks': curriculumTracks,
-      'userProfiles': userProfiles,
-    });
-  }
+import '../../../../helpers/data_export_fixtures.dart';
 
+void main() {
   group('validateAndPreview', () {
     late UserDatabase db;
     late DataExportImportService service;
@@ -53,14 +25,16 @@ void main() {
     });
 
     test('parses valid JSON and returns correct counts', () {
-      final jsonStr = buildValidJson(
-        completions: [
-          {'id': 1},
-          {'id': 2},
-        ],
-        goals: [
-          {'id': 1},
-        ],
+      final jsonStr = json.encode(
+        exportPayloadMap(
+          completions: [
+            {'id': 1},
+            {'id': 2},
+          ],
+          goals: [
+            {'id': 1},
+          ],
+        ),
       );
 
       final preview = service.validateAndPreview(jsonStr);
@@ -88,19 +62,8 @@ void main() {
     });
 
     test('throws FormatException when formatVersion is missing', () {
-      final jsonStr = json.encode({
-        'completions': <dynamic>[],
-        'goals': <dynamic>[],
-        'stageDefinitions': <dynamic>[],
-        'rewards': <dynamic>[],
-        'streaks': <dynamic>[],
-        'pointConfigs': <dynamic>[],
-        'bookmarks': <dynamic>[],
-        'learningOrder': <dynamic>[],
-        'activeCurricula': <dynamic>[],
-        'curriculumTracks': <dynamic>[],
-        'userProfiles': <dynamic>[],
-      });
+      final data = exportPayloadMap()..remove('formatVersion');
+      final jsonStr = json.encode(data);
 
       expect(
         () => service.validateAndPreview(jsonStr),
@@ -134,19 +97,9 @@ void main() {
     });
 
     test('throws FormatException when a section is not a list', () {
-      final data = {
-        'formatVersion': '1',
+      final data = <String, dynamic>{
+        ...exportPayloadMap(),
         'completions': 'not a list',
-        'goals': <dynamic>[],
-        'stageDefinitions': <dynamic>[],
-        'rewards': <dynamic>[],
-        'streaks': <dynamic>[],
-        'pointConfigs': <dynamic>[],
-        'bookmarks': <dynamic>[],
-        'learningOrder': <dynamic>[],
-        'activeCurricula': <dynamic>[],
-        'curriculumTracks': <dynamic>[],
-        'userProfiles': <dynamic>[],
       };
 
       expect(
@@ -162,41 +115,43 @@ void main() {
     });
 
     test('totalRecords sums all section counts', () {
-      final jsonStr = buildValidJson(
-        completions: [
-          {'id': 1},
-        ],
-        goals: [
-          {'id': 1},
-        ],
-        stageDefinitions: [
-          {'id': 1},
-        ],
-        streaks: [
-          {'id': 1},
-        ],
-        pointConfigs: [
-          {'id': 1},
-        ],
-        bookmarks: [
-          {'id': 1},
-        ],
-        learningOrder: [
-          {'id': 1},
-        ],
-        activeCurricula: [
-          {'id': 1},
-        ],
-        curriculumTracks: [
-          {'id': 1},
-        ],
-        userProfiles: [
-          {'id': 1},
-        ],
+      final jsonStr = json.encode(
+        exportPayloadMap(
+          completions: [
+            {'id': 1},
+          ],
+          goals: [
+            {'id': 1},
+          ],
+          stageDefinitions: [
+            {'id': 1},
+          ],
+          streaks: [
+            {'id': 1},
+          ],
+          pointConfigs: [
+            {'id': 1},
+          ],
+          bookmarks: [
+            {'id': 1},
+          ],
+          learningOrder: [
+            {'id': 1},
+          ],
+          curriculumTracks: [
+            {'id': 1},
+          ],
+          userProfiles: [
+            {'id': 1},
+          ],
+        ),
       );
 
       final preview = service.validateAndPreview(jsonStr);
-      // activeCurricula section is now ignored (removed from schema v9)
+      // 9 sections counted in ImportPreview.totalRecords, 1 record each.
+      // `activeCurricula` is not part of the real schema (removed in v9,
+      // AUD-t-settings-08) and is deliberately not part of the shared
+      // exportPayloadMap fixture.
       expect(preview.totalRecords, 9);
     });
   });
