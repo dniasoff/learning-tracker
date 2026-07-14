@@ -9898,13 +9898,17 @@
     {
       "id": "AUD-t-dashboard-05",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace DateTime.now() with a fixed clock in dashboard_providers_test's streak fixture",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "acb6edf377fdca3c0cb408486c37b87c78ae8efb"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-dashboard-05 AC1 OK: greps for DateTime.now(), '.now(', and spacing-tolerant 'DateTime.now' all exit 1 (no match) in dashboard_providers_test.dart"
+      ],
+      "notes": "Re-verified: at 4018a91c file had 1 DateTime.now() call (matches sites:1). Tree drifted: 33cf6658 added 2 more. AC is file-scoped ('zero calls'), so all 3 fixed: fixed DateTime.utc(2026,5,20) replaces DateTime.now(), injected via FakeLocalDayClock seam so SUT's 'today' is also deterministic."
     },
     {
       "id": "AUD-t-dashboard-04",
