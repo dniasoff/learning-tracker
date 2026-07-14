@@ -2353,13 +2353,19 @@
     {
       "id": "AUD-t-scheduler-03",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Replace fixed Future.delayed sleeps with a deterministic await in scheduler provider tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "5a26a4cfff6cae8a47c4b56990d3ebe8153fe297"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-scheduler-03 AC1 OK: only remaining Future.delayed in glob is line 56 slow-mock (AC2); all 26 listen+delay pairs now await debugReadyForTest",
+        "AUD-t-scheduler-03 AC2 OK: new test slows getAll() 400ms, awaits debugReadyForTest not timer, asserts state ['ref_X','ref_Y']; passes isolated",
+        "AUD-t-scheduler-03 AC2 non-vacuous OK: no-op getter mutation FAILS test 'Actual: Set:[]'; restore git diff clean vs HEAD"
+      ],
+      "notes": "Re-verified 25 sites; tree drifted (8e2f34c0 added 26th identical site DL1b), included per AC1 glob. Added @visibleForTesting debugReadyForTest getter on SkippedTasks; replaced all 26 listen+delayed pairs. AC2: new red-first slow-store test proves time-independent sync; mutation-checked."
     },
     {
       "id": "AUD-core-sync-15",
