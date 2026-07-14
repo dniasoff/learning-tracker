@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'helpers/golden_font_loader.dart';
@@ -27,14 +26,22 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   await loadFonts();
   await loadHebrewFont();
 
-  // Suppress residual "font not found" errors for any font variants not yet
-  // bundled — they are cosmetic rendering issues, not test logic failures.
-  final savedOnError = FlutterError.onError;
-  FlutterError.onError = (details) {
-    final msg = details.exception.toString();
-    if (msg.contains('GoogleFonts') || msg.contains('google_fonts')) return;
-    savedOnError?.call(details);
-  };
+  // NOTE (AUD-t-cross-81): a `FlutterError.onError` override used to be
+  // installed here to filter out font-not-found errors. It never worked:
+  // `TestWidgetsFlutterBinding._runTest()` saves whatever handler is
+  // installed at that point and unconditionally overwrites
+  // `FlutterError.onError` with its own handler for the duration of each
+  // individual test body, restoring the saved handler only afterwards (in
+  // `postTest()`). An override installed once here, before any individual
+  // test runs, is exactly the handler `_runTest()` swaps away — it is never
+  // active while a test body (including any `pumpWidget`/`pumpAndSettle`) is
+  // actually executing, so it could never have suppressed an error raised
+  // mid-pump. See `test/flutter_test_config_error_filter_test.dart` for the
+  // regression proof. A handful of individual test files (e.g.
+  // `test/core/navigation/app_shell_test.dart`) install an equivalent filter
+  // correctly, from *inside* the test body/`setUp()`, where it does run
+  // inside `_runTest()`'s window — that per-test pattern is the one that
+  // actually works.
 
   await testMain();
 }
