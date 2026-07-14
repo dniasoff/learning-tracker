@@ -5,12 +5,14 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 // ContentVersionCheckService removed — content is now bundled
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
+import 'package:learning_tracker/features/learning/domain/use_cases/manual_completion_use_case.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/curriculum_import_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
@@ -44,6 +46,9 @@ class _InMemoryContentRepo implements SchedulerContentRepository {
   Future<List<SchedulerContentItem>> getLeafItems(CurriculumId id) async =>
       items;
 }
+
+class _MockLearningLedgerRepository extends Mock
+    implements LearningLedgerRepository {}
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
@@ -1300,23 +1305,16 @@ void main() {
           expect(p2MishnahGoals.length, 0);
         });
 
-        test('rewards are isolated between profiles', () async {
-          final p1 = await profileRepo.createProfile(
-            accountId: 1,
-            displayName: 'Child1',
-            mode: 'child',
-          );
-          final p2 = await profileRepo.createProfile(
-            accountId: 1,
-            displayName: 'Child2',
-            mode: 'child',
-          );
-
-          // Rewards removed from V1 — this subtest was a reward-isolation
-          // assertion. Profile isolation is still tested by the other
-          // per-table checks in this group (completions, bookmarks, goals).
-          expect(p1.id, isNot(p2.id));
-        });
+        test(
+          'rewards are isolated between profiles',
+          skip:
+              'Rewards removed from V1 (f0538740: drop rewards, xp_events, '
+              'test_scores; simplify to core loop) — there is no reward '
+              'table/state left to assert isolation over. Profile isolation '
+              'is still tested by the other per-table checks in this group '
+              '(completions, bookmarks, goals).',
+          () async {},
+        );
 
         test('active curricula are isolated between profiles', () async {
           final p1 = await profileRepo.createProfile(
@@ -2892,12 +2890,26 @@ void main() {
     // AC 5: Role-based permissions
     group('AC: role-based permissions', () {
       test('child cannot self-mark manual completion via use case', () async {
-        // Tested in manual_completion_use_case_test.dart
-        // Here we just verify the exception type exists
-        expect(
-          () => throw const ChildSelfMarkException(),
+        final repository = _MockLearningLedgerRepository();
+        final useCase = ManualCompletionUseCase(
+          repository: repository,
+          activeProfileId: 42,
+          activeProfileMode: ProfileMode.child,
+        );
+
+        await expectLater(
+          () => useCase(
+            curriculumId: 'mishnayos',
+            entryScope: 'masechta',
+            unitIdentifier: 'Berakhot',
+            unitDisplayNameHe: 'ברכות',
+            unitDisplayNameEn: 'Berakhot',
+            trackType: 'personal',
+          ),
           throwsA(isA<ChildSelfMarkException>()),
         );
+        // The use case must reject before ever touching the repository.
+        verifyZeroInteractions(repository);
       });
     });
 

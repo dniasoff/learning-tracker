@@ -3,8 +3,13 @@
 library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart'
+    hide expect, group, setUp, setUpAll, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart';
@@ -22,6 +27,14 @@ import '../helpers/test_database.dart';
 /// Inline copy of milestone logic to avoid importing Flutter-dependent widget.
 const _milestoneThresholds = [7, 14, 30, 50, 100, 180, 365];
 bool _isMilestone(int streak) => _milestoneThresholds.contains(streak);
+
+/// Minimal MaterialApp harness for pumping standalone widgets under test.
+Widget _harness(Widget child) {
+  return MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: Scaffold(body: Center(child: child)),
+  );
+}
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
@@ -1001,17 +1014,32 @@ void main() {
     });
 
     // AC-6: Zero count badge behavior
-    test('AC-6: ReviewCountBadge with count 0 produces no visible widget', () {
-      // This is a unit-level assertion on the badge logic.
-      // The badge returns SizedBox.shrink() when count <= 0.
-      expect(0 <= 0, isTrue); // Badge guard condition
-    });
+    testWidgets(
+      'AC-6: ReviewCountBadge with count 0 produces no visible widget',
+      (tester) async {
+        await tester.pumpWidget(_harness(const ReviewCountBadge(count: 0)));
+        await tester.pumpAndSettle();
+        // count <= 0 renders SizedBox.shrink() — no Text child at all.
+        expect(find.byType(ReviewCountBadge), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(ReviewCountBadge),
+            matching: find.byType(Text),
+          ),
+          findsNothing,
+        );
+      },
+    );
 
     // AC-4: Badge display for completed items
-    test('AC-4: ReviewCountBadge formats count as "Nx"', () {
-      // Badge shows "${count}x" for count > 0
-      expect('${11}x', '11x');
-      expect('${150}x', '150x');
+    testWidgets('AC-4: ReviewCountBadge formats count as "Nx"', (tester) async {
+      await tester.pumpWidget(_harness(const ReviewCountBadge(count: 11)));
+      await tester.pumpAndSettle();
+      expect(find.text('11x'), findsOneWidget);
+
+      await tester.pumpWidget(_harness(const ReviewCountBadge(count: 150)));
+      await tester.pumpAndSettle();
+      expect(find.text('150x'), findsOneWidget);
     });
   });
   // ── Story 16.5: Onboarding Goal & Study Day Steps ─────────────────────
@@ -1065,28 +1093,16 @@ void main() {
       // AC-4: Study days phase appears after learning process wizard
       test(
         'AC-4: studyDays enum is between learningProcessWizard and scopeSelection',
-        () {
-          const phases = [
-            'profileCreation',
-            'languageSelection',
-            'selection',
-            'importing',
-            'learningProcessWizard',
-            'studyDays',
-            'scopeSelection',
-            'bulkMark',
-            'goalSetup',
-            'rewardsSetup',
-            'handoff',
-            'done',
-            'error',
-          ];
-          final wizardIdx = phases.indexOf('learningProcessWizard');
-          final studyDaysIdx = phases.indexOf('studyDays');
-          final scopeIdx = phases.indexOf('scopeSelection');
-          expect(studyDaysIdx, wizardIdx + 1);
-          expect(scopeIdx, studyDaysIdx + 1);
-        },
+        skip:
+            'Onboarding was slimmed to _ScreenPhase '
+            '(profileCreation/parentPinSetup/intentChooser/addTrack/'
+            'addAnotherPrompt/permissionPrompt/handoff/done) — the '
+            'learningProcessWizard/studyDays/scopeSelection/... phase list '
+            'this test asserted against no longer exists anywhere in lib/. '
+            'Per-track step ordering (incl. study days) now lives in '
+            'AddTrackFlowState (add_track_flow_state.dart), a different '
+            'flow not covered by this story.',
+        () {},
       );
 
       // AC-5: Study days configured per curriculum
@@ -1127,24 +1143,17 @@ void main() {
       });
 
       // AC-7: State persistence includes new phase
-      test('AC-7: studyDays phase name serializes correctly', () {
-        const phases = [
-          'profileCreation',
-          'languageSelection',
-          'selection',
-          'importing',
-          'learningProcessWizard',
-          'studyDays',
-          'scopeSelection',
-          'bulkMark',
-          'goalSetup',
-          'rewardsSetup',
-          'handoff',
-          'done',
-          'error',
-        ];
-        expect(phases.contains('studyDays'), isTrue);
-      });
+      test(
+        'AC-7: studyDays phase name serializes correctly',
+        skip:
+            'Onboarding was slimmed to _ScreenPhase '
+            '(profileCreation/parentPinSetup/intentChooser/addTrack/'
+            'addAnotherPrompt/permissionPrompt/handoff/done), persisted '
+            "via OnboardingResumeStore — there is no 'studyDays' phase to "
+            'serialize any more. Study-day step state now lives in '
+            'AddTrackFlowState, a different flow not covered by this story.',
+        () {},
+      );
 
       // AC-8: Skip defaults all days to study
       test('AC-8: skip leaves defaults (all days = study)', () async {
@@ -1218,12 +1227,44 @@ void main() {
       });
 
       // AC-2: Animated progress bars
-      test('AC-2: AnimatedProgressBar accepts color and duration', () {
-        // AnimatedProgressBar exists at core/widgets and accepts color,
-        // backgroundColor, duration, curve parameters.
-        // Verified by the fact that CurriculumSummaryCard and _CurriculumCard
-        // both use it with curriculum-specific colors.
-        expect(const Duration(milliseconds: 800).inMilliseconds, 800);
+      testWidgets('AC-2: AnimatedProgressBar accepts color and duration', (
+        tester,
+      ) async {
+        const barColor = Color(0xFF123456);
+        await tester.pumpWidget(
+          _harness(
+            const SizedBox(
+              width: 200,
+              child: AnimatedProgressBar(
+                value: 0.5,
+                color: barColor,
+                duration: Duration(milliseconds: 10),
+              ),
+            ),
+          ),
+        );
+
+        // Constructor wiring: the widget instance carries the values given.
+        final widget = tester.widget<AnimatedProgressBar>(
+          find.byType(AnimatedProgressBar),
+        );
+        expect(widget.color, barColor);
+        expect(widget.duration, const Duration(milliseconds: 10));
+
+        // Behavioral: after the animation settles, the filled segment's
+        // width factor reflects the given value and the given color.
+        await tester.pumpAndSettle();
+        final fraction = tester.widget<FractionallySizedBox>(
+          find.byType(FractionallySizedBox),
+        );
+        expect(fraction.widthFactor, closeTo(0.5, 0.01));
+        final fillContainer = tester.widget<Container>(
+          find.descendant(
+            of: find.byType(FractionallySizedBox),
+            matching: find.byType(Container),
+          ),
+        );
+        expect(fillContainer.color, barColor);
       });
 
       // AC-3: Streak milestone celebrations
@@ -1246,19 +1287,24 @@ void main() {
       });
 
       // AC-5: Adult mode satisfaction cues
-      test('AC-5: satisfaction message varies by streak', () {
-        // Message logic: 1 -> "Great start!", 7+ -> "Consistent learner",
-        // 30+ -> "Remarkable dedication"
-        // These are unit-verifiable string values.
-        expect(1 >= 1, isTrue); // triggers "Great start!"
-        expect(7 >= 7, isTrue); // triggers "Consistent learner"
-        expect(30 >= 30, isTrue); // triggers "Remarkable dedication"
-      });
+      test(
+        'AC-5: satisfaction message varies by streak',
+        skip:
+            'SatisfactionCueWidget was deleted in f0538740 '
+            '(refactor(v1): drop rewards, xp_events, test_scores; simplify '
+            'to core loop) — no production symbol remains that surfaces '
+            '"Great start!"/"Consistent learner"/"Remarkable dedication".',
+        () {},
+      );
 
-      test('AC-5: zero streak shows no cue', () {
-        // SatisfactionCueWidget returns SizedBox.shrink() when streak <= 0
-        expect(0 <= 0, isTrue);
-      });
+      test(
+        'AC-5: zero streak shows no cue',
+        skip:
+            'SatisfactionCueWidget was deleted in f0538740 (same V1 '
+            'rewards-removal refactor) — there is no cue widget left to '
+            'assert a zero-streak hidden state against.',
+        () {},
+      );
 
       // AC-6: Dashboard layout polish
       test('AC-6: visual hierarchy order is correct', () {
@@ -1288,16 +1334,19 @@ void main() {
       });
 
       // AC-7: Animation durations
-      test('AC-7: animation durations match spec', () {
-        // Task completion: 300ms slide+fade
-        expect(const Duration(milliseconds: 300).inMilliseconds, 300);
-        // Progress bars: 800ms ease-out
-        expect(const Duration(milliseconds: 800).inMilliseconds, 800);
-        // Milestone fade-in: 300ms (controller duration)
-        expect(const Duration(milliseconds: 300).inMilliseconds, 300);
-        // Milestone auto-dismiss: 4 seconds
-        expect(const Duration(seconds: 4).inSeconds, 4);
-      });
+      test(
+        'AC-7: animation durations match spec',
+        skip:
+            'Spec drifted from current lib/: there is no task-completion '
+            'slide+fade animation or milestone fade-in/auto-dismiss '
+            'controller in the codebase (streak_milestone_overlay.dart was '
+            'deleted in f0538740, same V1 rewards-removal refactor as '
+            'SatisfactionCueWidget); AnimatedProgressBar itself now '
+            'defaults to 600ms (700ms at its dashboard call sites), not '
+            "800ms, and is covered for real by this file's AC-2 "
+            '(AnimatedProgressBar accepts color and duration) widget test.',
+        () {},
+      );
     },
   );
 }
