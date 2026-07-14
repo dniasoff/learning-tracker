@@ -3314,13 +3314,17 @@
   {
    "id": "AUD-t-onboarding-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Add Locale('he') cases to onboarding_steps_overflow_test.dart's four overflow guards",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "20877be5f7c262cec7ce6c70cf4d352aaec3dc7f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-onboarding-01 AC1 OK: all 4 calls parametrized over [en,he]; 8/8 pass incl 4 (he) variants; harness sets MaterialApp.locale so he renders RTL"
+   ],
+   "notes": "Re-verified: all 4 calls lacked a locale override (default en). Parametrized each over [en, he] via for-loop (mirrors decline_invite_screen_overflow_test.dart). 8/8 tests pass incl. 4 new Hebrew variants - no overflow bug found, no prod code changed. AC met verbatim."
   },
   {
    "id": "AUD-t-parent_mode-02",
