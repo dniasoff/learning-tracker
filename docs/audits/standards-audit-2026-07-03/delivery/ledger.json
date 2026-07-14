@@ -8093,13 +8093,17 @@
   {
    "id": "AUD-t-cross-90",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace tautological isNotNull assertion on non-nullable testConfig field in learning_program_service_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "67196a27382c9fc8e3474af6805b1fd47a495372"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-90 AC1 OK: broke source (testConfig:'') -> test RED; reverted -> GREEN 23/23. isNotEmpty can fail; prior isNotNull was a tautology."
+   ],
+   "notes": "Replaced tautological isNotNull with isNotEmpty on testConfig, scheduler test:193-199. Finding path was stale (merged by AUD-t-cross-76); same defect survived, fixed not refuted. Red-first: broke source -> RED; reverted -> GREEN 23/23."
   },
   {
    "id": "AUD-core-email-02",
