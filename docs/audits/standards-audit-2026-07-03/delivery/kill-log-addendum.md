@@ -235,3 +235,83 @@ finding, appended as it happens.
 - **Delivery disposition:** `skipped-refuted` (merge-lane w4r1c3, 2026-07-14).
 - **Basis — already fixed by prior commit, independently confirmed:** commit `81fa3635` (`fix(notifications): AUD-notifications-01, AUD-notifications-02, AUD-notifications-03 - AsyncNotifier preference providers, SM-4 guards, family StreakAlertService`), an ancestor of this branch's current `HEAD`, converted `ReminderEnabled`/`ReminderTime`/`StreakAlertEnabled`/`StreakAlertTime`/`RewardNotificationEnabled` from synchronous `Notifier<T>` to `AsyncNotifier<T>` and, as part of that rewrite, replaced every real-wall-clock `Future<void>.delayed(Duration(milliseconds: ...))` wait in this finding's 4 listed test files with a deterministic `await <provider>.future` signal (e.g. `await c1.read(reminderTimeProvider.future)`, `await c4.read(streakAlertEnabledProvider.future)`). Independently re-verified against the current tree: `grep -n "delayed\|Duration(milliseconds"` across all 4 files (`reminder_enabled_cold_start_test.dart`, `reminder_time_cold_start_test.dart`, `notification_providers_deep_test.dart`, `notification_providers_test.dart`) returns zero matches. This finding's single acceptance criterion (none of the 4 files contain `Future.delayed` combined with a millisecond `Duration` literal) is fully met. No code change made.
 - **Logged by:** merge-lane w4r1c3 agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-notifications-01 — Override reminderSyncEffectProvider/streakAlertSyncEffectProvider in notifications_screen_test.dart and ws5_two_layers_test.dart to stop opening a real Drift database
+
+- **Wave:** 4
+- **Severity:** P2
+- **Delivery disposition:** `blocked` (wave4-chunk07 engine run, 2026-07-14, terminated at no-progress cap / loop end). Ledger row was found stuck at stale `todo` by this reconciliation pass and reclassified to match the engine outcome.
+- **Basis — verified-looking fix commit found, never merged:** two worktree branches each carry an identical commit — `623798dc` on `worktree-wf_1a1fc4a3-128-41` and `7239ce09` on `worktree-wf_1a1fc4a3-128-2` (byte-identical diffs) — titled `fix(tests/notifications): AUD-t-notifications-01 - hermetic NotificationsScreen widget tests`. It adds no-op overrides for `reminderSyncEffectProvider`/`streakAlertSyncEffectProvider` to both files' `ProviderScope`, plus a new `tool/check_notifications_sync_effect_overrides.dart` Rule-0 checker wired into `make audit` (claimed check 62) and its unit test; the commit message claims the checker exits 0, `flutter test --concurrency=2 test/features/notifications/` is 182/182 passing with zero Drift "created ... multiple times" warnings, and `flutter analyze` is clean. **Neither commit is an ancestor of this branch's current `HEAD`** (`git merge-base --is-ancestor <sha> HEAD` fails for both). Independently re-verified against the current tree: `grep -n "reminderSyncEffectProvider\|streakAlertSyncEffectProvider" test/features/notifications/presentation/screens/notifications_screen_test.dart test/features/notifications/ws5_two_layers_test.dart` returns zero matches — the overrides are genuinely absent from `dev`. Per the engine outcome this id is `blocked`, not `merged`; the ledger row's `commits: []` already reflected that nothing is merged, and its `status`/`notes` were updated to match. Left uninvestigated: why the merge lane never landed either copy — not recoverable from any persisted artifact found.
+- **Logged by:** wave4-chunk07 ledger reconciliation agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-notifications-03 — Deduplicate the MockNotificationGateway class shared verbatim by notifications_screen_test.dart and ws5_two_layers_test.dart
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `blocked` (wave4-chunk07 engine run, 2026-07-14, terminated at no-progress cap / loop end). Ledger row was found stuck at stale `todo` by this reconciliation pass and reclassified to match the engine outcome.
+- **Basis — verified-looking fix commit found, never merged:** two worktree branches each carry an identical commit — `bd46e2ec` on `worktree-wf_1a1fc4a3-128-41` and `a5c9e109` on `worktree-wf_1a1fc4a3-128-2` (byte-identical diffs) — titled `fix(tests/notifications): AUD-t-notifications-03 - dedup MockNotificationGateway`. It moves the shared `class MockNotificationGateway extends Mock implements NotificationGateway {}` to a new `test/features/notifications/support/mock_notification_gateway.dart` and has both files import it, plus a new `tool/check_notifications_duplicate_test_classes.dart` Rule-0 checker (claimed check 63) and its unit test; the commit message claims 182/182 tests passing and `flutter analyze` clean. **Neither commit is an ancestor of this branch's current `HEAD`**. Independently re-verified against the current tree: `grep -rn "class MockNotificationGateway" test/features/notifications/` still shows the class independently redeclared in both `notifications_screen_test.dart` and `ws5_two_layers_test.dart` (plus two further pre-existing declarations the commit itself flagged as an out-of-scope ratchet baseline). Per the engine outcome this id is `blocked`, not `merged`; the ledger row's `commits: []` already reflected that nothing is merged, and its `status`/`notes` were updated to match.
+- **Logged by:** wave4-chunk07 ledger reconciliation agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-notifications-04 — Register needs_flutter/notifications/notifications_screen_l1 tags in dart_test.yaml to silence unknown-tag warnings
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `blocked` (wave4-chunk07 engine run, 2026-07-14, terminated at no-progress cap / loop end). Ledger row was found stuck at stale `todo` by this reconciliation pass and reclassified to match the engine outcome.
+- **Basis — verified-looking fix commit found, never merged:** two worktree branches each carry an identical commit — `5ffcaa60` on `worktree-wf_1a1fc4a3-128-41` and `a85ada4e` on `worktree-wf_1a1fc4a3-128-2` (byte-identical diffs) — titled `fix(tests/notifications): AUD-t-notifications-04 - register notifications tags in dart_test.yaml`. It registers `needs_flutter`, `notifications`, `notifications_screen_l1`, `aud_notifications_12`, and `unit` in `dart_test.yaml`'s `tags:` block; the commit message claims the same 182 tests still pass with zero unknown-tag warnings afterward. **Neither commit is an ancestor of this branch's current `HEAD`**. Independently re-verified against the current tree: `grep -n "needs_flutter:\|notifications:\|notifications_screen_l1:" dart_test.yaml` returns zero matches — the tags remain unregistered on `dev`. Per the engine outcome this id is `blocked`, not `merged`; the ledger row's `commits: []` already reflected that nothing is merged, and its `status`/`notes` were updated to match.
+- **Logged by:** wave4-chunk07 ledger reconciliation agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-notifications-05 — Rename the 'shows three Switch widgets' test in notifications_screen_l1_test.dart to match its findsNWidgets(4) assertion
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `blocked` (wave4-chunk07 engine run, 2026-07-14, terminated at no-progress cap / loop end). Ledger row was found stuck at stale `todo` by this reconciliation pass and reclassified to match the engine outcome.
+- **Basis — verified-looking fix commit found, never merged:** two worktree branches each carry an identical commit — `a98c26e9` on `worktree-wf_1a1fc4a3-128-41` and `28da72d0` on `worktree-wf_1a1fc4a3-128-2` (byte-identical diffs) — titled `fix(tests/notifications): AUD-t-notifications-05 - fix stale test name in notifications_screen_l1_test.dart`. It renames the test to `'shows four Switch widgets (reminder, streak alert, reward, device toggle)'`, assertion unchanged; the commit message claims 39/39 tests pass. **Neither commit is an ancestor of this branch's current `HEAD`**. Independently re-verified against the current tree: `grep -n "shows three Switch widgets\|shows four Switch widgets" test/features/notifications/presentation/screens/notifications_screen_l1_test.dart` still shows the stale `'shows three Switch widgets (reminder, streak alert, reward)'` name at line 236. Per the engine outcome this id is `blocked`, not `merged`; the ledger row's `commits: []` already reflected that nothing is merged, and its `status`/`notes` were updated to match.
+- **Logged by:** wave4-chunk07 ledger reconciliation agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-notifications-08 — Stop relying on find.byKey(...).last for time-row lookups in notifications_screen_l1_test.dart and notifications_screen_test.dart
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `blocked` (wave4-chunk07 engine run, 2026-07-14, terminated at no-progress cap / loop end). Ledger row was found stuck at stale `todo` by this reconciliation pass and reclassified to match the engine outcome.
+- **Basis — verified-looking fix commit found, never merged:** two worktree branches each carry an identical commit — `f88bc263` on `worktree-wf_1a1fc4a3-128-41` and `44c3ad7e` on `worktree-wf_1a1fc4a3-128-2` (byte-identical diffs) — titled `fix(tests/notifications): AUD-t-notifications-08 - stop using find.byKey(...).last for time-row lookups`. It replaces all 8 `find.byKey(...).last` call sites with `find.widgetWithText(ListTile, <row title>)`; the commit message claims 44/44 tests pass and `flutter analyze` clean. **Neither commit is an ancestor of this branch's current `HEAD`**. Independently re-verified against the current tree: `grep -c "\.last" test/features/notifications/presentation/screens/notifications_screen_test.dart` still returns a nonzero count — the `.last` usage remains on `dev`. Per the engine outcome this id is `blocked`, not `merged`; the ledger row's `commits: []` already reflected that nothing is merged, and its `status`/`notes` were updated to match.
+- **Logged by:** wave4-chunk07 ledger reconciliation agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-learning-01 — Override userDatabaseProvider/coarsePacedTrackIdsProvider/contentIndexProvider in LearningScreen widget tests — real Drift DB is being constructed on every pump
+
+- **Wave:** 4
+- **Severity:** P1
+- **Delivery disposition:** `blocked` (wave4-chunk07 engine run, 2026-07-14, terminated at no-progress cap / loop end). Ledger row was found stuck at stale `todo` by this reconciliation pass and reclassified to match the engine outcome.
+- **Basis — verified-looking fix commit found, never merged:** two worktree branches each carry an identical commit — `c513ef84` on `worktree-wf_1a1fc4a3-128-50` and `7f8ca629` on `worktree-wf_1a1fc4a3-128-1` (byte-identical diffs) — titled `fix(learning): AUD-t-learning-01 - override userDatabaseProvider/coarsePacedTrackIdsProvider/contentIndexProvider in LearningScreen widget tests`. It overrides `coarsePacedTrackIdsProvider`/`contentIndexProvider` with inert empty-value stubs plus `userDatabaseProvider` with a shared in-memory `UserDatabase` closed once via `tearDownAll`, and adds a new `make audit` Rule-0 check (claimed 62/62) that fails the build if `'WARNING (drift)'` appears in `test/features/learning/presentation/screens/` output; the commit message claims a RED (26 occurrences) → GREEN (0 occurrences) demonstration and 31/31 tests passing. **Neither commit is an ancestor of this branch's current `HEAD`**. Independently re-verified against the current tree: `grep -n "userDatabaseProvider\|coarsePacedTrackIdsProvider\|contentIndexProvider" test/features/learning/presentation/screens/learning_screen_l1_test.dart` returns zero matches — the overrides are genuinely absent from `dev`. Per the engine outcome this id is `blocked`, not `merged`; the ledger row's `commits: []` already reflected that nothing is merged, and its `status`/`notes` were updated to match.
+- **Logged by:** wave4-chunk07 ledger reconciliation agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-learning-02 — Delete or merge stale learning_screen_test.dart into learning_screen_l1_test.dart
+
+- **Wave:** 4
+- **Severity:** P2
+- **Delivery disposition:** `blocked` (wave4-chunk07 engine run, 2026-07-14, terminated at no-progress cap / loop end). Ledger row was found stuck at stale `todo` by this reconciliation pass and reclassified to match the engine outcome.
+- **Basis — verified-looking fix commit sequence found, never merged:** two worktree branches each carry an identical 2-commit sequence — `3c7a3820`+`dd5ad6bf` on `worktree-wf_1a1fc4a3-128-50` and `7de83aa6`+`ff646d9c` on `worktree-wf_1a1fc4a3-128-1` (byte-identical net diffs). The first commit deleted `learning_screen_test.dart` outright and moved its one non-duplicate test into `test/core/widgets/app_error_view_test.dart`; the second commit reverted course after discovering that broke the AG-5 test-mirroring ratchet (`tool/check_test_mirroring.dart`, `make audit` check 29/40 in the commit's numbering) and instead restored `learning_screen_test.dart` pruned to hold only the `AppErrorView` test, reverting the `app_error_view_test.dart` addition. The final commit message claims the AG-5 ratchet passes clean and 36 tests pass. **Neither tip commit is an ancestor of this branch's current `HEAD`**. Independently re-verified against the current tree: `find test/features/learning/presentation/screens -iname learning_screen_test.dart` still finds the file present and unpruned (still contains its original duplicate/stale `LearningScreen` tests, not reduced to only the `AppErrorView` test) — the stale-mirror defect this finding targets is unfixed on `dev`. Per the engine outcome this id is `blocked`, not `merged`; the ledger row's `commits: []` already reflected that nothing is merged, and its `status`/`notes` were updated to match.
+- **Logged by:** wave4-chunk07 ledger reconciliation agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-learning-04 — Extract a shared pump helper in learning_screen_l1_test.dart instead of 4 inline MaterialApp/localizationsDelegates blocks
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `blocked` (wave4-chunk07 engine run, 2026-07-14, terminated at no-progress cap / loop end). Ledger row was found stuck at stale `todo` by this reconciliation pass and reclassified to match the engine outcome.
+- **Basis — verified-looking fix commit found, never merged:** two worktree branches each carry an identical commit — `f5d87e45` on `worktree-wf_1a1fc4a3-128-1` and `c252b2ca` on `worktree-wf_1a1fc4a3-128-50` (byte-identical diffs) — titled `test(learning): AUD-t-learning-04 - extract shared pump helper in learning_screen_l1_test.dart`. It routes all 4 inline `MaterialApp`/`localizationsDelegates` construction sites through the file's existing `_buildScreen` helper via two new optional parameters (`streakStream`, `router`); the commit message claims exactly one `MaterialApp(` construction site remains and 28/28 tests pass. **Neither commit is an ancestor of this branch's current `HEAD`**. Independently re-verified against the current tree: `grep -n "MaterialApp(" test/features/learning/presentation/screens/learning_screen_l1_test.dart | wc -l` still returns 4 — the duplication this finding targets is unfixed on `dev`. Per the engine outcome this id is `blocked`, not `merged`; the ledger row's `commits: []` already reflected that nothing is merged, and its `status`/`notes` were updated to match.
+- **Logged by:** wave4-chunk07 ledger reconciliation agent (sonnet), 2026-07-14.

@@ -727,13 +727,13 @@
     {
       "id": "AUD-t-learning-01",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Override userDatabaseProvider/coarsePacedTrackIdsProvider/contentIndexProvider in LearningScreen widget tests \u2014 real Drift DB is being constructed on every pump",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - c513ef84 (worktree-wf_1a1fc4a3-128-50) and 7f8ca629 (worktree-wf_1a1fc4a3-128-1); neither is an ancestor of dev HEAD; current tree confirmed learning_screen_l1_test.dart still has no coarsePacedTrackIdsProvider/contentIndexProvider overrides. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
     },
     {
       "id": "AUD-tracks-02",
@@ -1794,13 +1794,13 @@
     {
       "id": "AUD-t-learning-02",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Delete or merge stale learning_screen_test.dart into learning_screen_l1_test.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged 2-commit sequences found (delete-then-restore-pruned) - 3c7a3820+dd5ad6bf (worktree-wf_1a1fc4a3-128-50) and 7de83aa6+ff646d9c (worktree-wf_1a1fc4a3-128-1); neither tip is an ancestor of dev HEAD; current tree confirmed learning_screen_test.dart is still present unpruned (stale AG-5 mirror). Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
     },
     {
       "id": "AUD-t-profiles-02",
@@ -5144,13 +5144,13 @@
     {
       "id": "AUD-t-notifications-01",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Override reminderSyncEffectProvider/streakAlertSyncEffectProvider in notifications_screen_test.dart and ws5_two_layers_test.dart to stop opening a real Drift database",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - 623798dc (worktree-wf_1a1fc4a3-128-41) and 7239ce09 (worktree-wf_1a1fc4a3-128-2); neither is an ancestor of dev HEAD (git merge-base --is-ancestor fails for both); current tree confirmed still missing the reminderSyncEffectProvider/streakAlertSyncEffectProvider overrides. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
     },
     {
       "id": "AUD-onboarding-07",
@@ -6696,13 +6696,13 @@
     {
       "id": "AUD-t-notifications-08",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Stop relying on find.byKey(...).last for time-row lookups in notifications_screen_l1_test.dart and notifications_screen_test.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - f88bc263 (worktree-wf_1a1fc4a3-128-41) and 44c3ad7e (worktree-wf_1a1fc4a3-128-2); neither is an ancestor of dev HEAD; current tree confirmed find.byKey(...).last usage remains in notifications_screen_test.dart. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
     },
     {
       "id": "AUD-core-domain-07",
@@ -7062,13 +7062,13 @@
     {
       "id": "AUD-t-learning-04",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Extract a shared pump helper in learning_screen_l1_test.dart instead of 4 inline MaterialApp/localizationsDelegates blocks",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - f5d87e45 (worktree-wf_1a1fc4a3-128-1) and c252b2ca (worktree-wf_1a1fc4a3-128-50); neither is an ancestor of dev HEAD; current tree confirmed learning_screen_l1_test.dart still has 4 separate inline MaterialApp/localizationsDelegates blocks. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
     },
     {
       "id": "AUD-t-notifications-06",
@@ -7560,13 +7560,13 @@
     {
       "id": "AUD-t-notifications-04",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Register needs_flutter/notifications/notifications_screen_l1 tags in dart_test.yaml to silence unknown-tag warnings",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - 5ffcaa60 (worktree-wf_1a1fc4a3-128-41) and a85ada4e (worktree-wf_1a1fc4a3-128-2); neither is an ancestor of dev HEAD; current tree confirmed dart_test.yaml still lacks needs_flutter/notifications/notifications_screen_l1 tag registrations. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
     },
     {
       "id": "AUD-onboarding-13",
@@ -8745,24 +8745,24 @@
     {
       "id": "AUD-t-notifications-05",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Rename the 'shows three Switch widgets' test in notifications_screen_l1_test.dart to match its findsNWidgets(4) assertion",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - a98c26e9 (worktree-wf_1a1fc4a3-128-41) and 28da72d0 (worktree-wf_1a1fc4a3-128-2); neither is an ancestor of dev HEAD; current tree confirmed the stale 'shows three Switch widgets' test name is still present at notifications_screen_l1_test.dart:236. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
     },
     {
       "id": "AUD-t-notifications-03",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Deduplicate the MockNotificationGateway class shared verbatim by notifications_screen_test.dart and ws5_two_layers_test.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk07 ledger reconciliation, 2026-07-14). Ledger showed todo but engine outcome classifies this id blocked. Two identical unmerged commits found - bd46e2ec (worktree-wf_1a1fc4a3-128-41) and a5c9e109 (worktree-wf_1a1fc4a3-128-2); neither is an ancestor of dev HEAD; current tree confirmed MockNotificationGateway is still redeclared in both notifications_screen_test.dart and ws5_two_layers_test.dart. Reclassified todo->blocked to match engine outcome. See kill-log-addendum.md for full evidence trail."
     },
     {
       "id": "AUD-t-onboarding-05",
