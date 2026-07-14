@@ -335,7 +335,7 @@ void main() {
 
   group('TrackManagementBody — empty state', () {
     testWidgets(
-      '2. shows icon, "No active tracks" text, and "Add Track" button',
+      '2. shows icon, "No tracks yet" text, and "Add Your First Track" button',
       (tester) async {
         await tester.pumpWidget(
           _buildBodyApp(router: router, tracks: const []),
@@ -343,8 +343,8 @@ void main() {
         await _settle(tester);
 
         expect(find.byIcon(Icons.library_books_outlined), findsOneWidget);
-        expect(find.text('No active tracks'), findsOneWidget);
-        expect(find.text('Add Track'), findsOneWidget);
+        expect(find.text('No tracks yet'), findsOneWidget);
+        expect(find.text('Add Your First Track'), findsOneWidget);
 
         await _teardown(tester);
       },
@@ -431,7 +431,7 @@ void main() {
       );
       await _settle(tester);
 
-      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsNothing);
+      expect(find.byIcon(Icons.arrow_back), findsNothing);
 
       await _teardown(tester);
     });
@@ -443,7 +443,7 @@ void main() {
       );
       await _settle(tester);
 
-      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
 
       await _teardown(tester);
     });
@@ -499,8 +499,17 @@ void main() {
     testWidgets(
       '5. long-press opens delete dialog with Cancel / Archive / Wipe actions',
       (tester) async {
-        final track = _track();
-        await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
+        final db = inMemoryDb();
+        await seedProfile(db);
+        final trackId = await seedTrack(db, profileId: _kProfileId);
+        // TS-16: seed a second curriculum so trackDeletionAllowed returns
+        // true and all three dialog actions are shown.
+        await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
+        final track = _track(id: trackId);
+
+        await tester.pumpWidget(
+          _buildBodyApp(router: router, tracks: [track], db: db),
+        );
         await _settle(tester);
 
         await tester.longPress(find.byType(InkWell).first);
@@ -512,6 +521,7 @@ void main() {
         expect(find.text('Archive (keep history)'), findsOneWidget);
         expect(find.text('Delete and wipe history'), findsOneWidget);
 
+        await db.close();
         await _teardown(tester);
       },
     );
@@ -555,10 +565,13 @@ void main() {
       final db = inMemoryDb();
       await seedProfile(db);
       final trackId = await seedTrack(db, profileId: _kProfileId);
+      // TS-16: seed a second curriculum so trackDeletionAllowed returns true
+      // and the "Archive (keep history)" action is shown.
+      await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
       final track = _track(id: trackId);
 
       // Stub the activation service so deactivate() succeeds without
-      // needing a second active curriculum in the DB (avoids
+      // needing a real curriculum-activation round trip (avoids
       // LastActiveCurriculumException while still exercising the
       // "archive" branch of _showDeleteDialog).
       final mockActivationService = _MockCurriculumActivationService();
@@ -620,6 +633,9 @@ void main() {
       final db = inMemoryDb();
       await seedProfile(db);
       final trackId = await seedTrack(db, profileId: _kProfileId);
+      // TS-16: seed a second curriculum so trackDeletionAllowed returns true
+      // and the "Delete and wipe history" action is shown.
+      await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
       final track = _track(id: trackId);
 
       await tester.pumpWidget(

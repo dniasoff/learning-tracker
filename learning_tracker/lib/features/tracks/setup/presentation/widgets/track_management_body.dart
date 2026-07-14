@@ -18,20 +18,42 @@ import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// Shared body widget for both parent and child track-management screens.
+/// TS-16: Returns true when Archive/Delete operations are allowed for the
+/// track (i.e., the profile has more than one active curriculum).
 ///
-/// Both screens are structurally identical. The only role-specific difference
-/// is whether the [AppBar] renders a back button — pass [showBackButton] = true
-/// for the parent-mode screen (which is pushed onto the nav stack) and false for
-/// the child-mode hub screen (which is a root tab destination).
+/// When [activeCurriculumCount] <= 1, the track is the last active curriculum
+/// and destructive actions must be gated rather than offered optimistically.
+///
+/// AUD-t-story-acceptance-04: this is the single source of truth for the
+/// guard — TrackManagementHubScreen delegates its entire body to
+/// [TrackManagementBody] rather than re-declaring this function.
+bool trackDeletionAllowed({required int activeCurriculumCount}) {
+  return activeCurriculumCount > 1;
+}
+
+/// Shared body widget for the track-management screens.
+///
+/// Wired into TrackManagementHubScreen (the child-mode, tab-root hub) via
+/// `showBackButton: true` — the hub always renders an explicit back
+/// affordance (pop to the caller when possible, otherwise navigate to
+/// [LearningRoute]) so users are never stranded in track setup. A future
+/// pushed-route caller that genuinely needs no leading affordance can pass
+/// `showBackButton: false` (the default).
 class TrackManagementBody extends ConsumerStatefulWidget {
-  const TrackManagementBody({super.key, this.showBackButton = false});
+  const TrackManagementBody({
+    super.key,
+    this.showBackButton = false,
+    this.startAdding = false,
+  });
 
   /// Whether to render a leading back-navigation button in the [AppBar].
-  ///
-  /// Set to `true` for parent-mode (pushed route); leave `false` for the
-  /// child-mode hub (tab root, no stack pop needed).
   final bool showBackButton;
+
+  /// Whether to show [AddTrackFlow] immediately on first build, bypassing
+  /// the track list. Used by deep-link entry points (e.g. the
+  /// empty-dashboard and skipped-onboarding CTAs that route to
+  /// `TrackManagementHubRoute(startAdding: true)`).
+  final bool startAdding;
 
   @override
   ConsumerState<TrackManagementBody> createState() =>
@@ -39,7 +61,7 @@ class TrackManagementBody extends ConsumerStatefulWidget {
 }
 
 class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
-  bool _addingTrack = false;
+  late bool _addingTrack = widget.startAdding;
 
   @override
   Widget build(BuildContext context) {
@@ -64,11 +86,21 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
         elevation: 0,
         centerTitle: false,
         automaticallyImplyLeading: false,
+        // Explicit back control: a tab-root hub previously had no leading
+        // affordance, stranding the user in track setup with no way back to
+        // learning. Pop to the caller when possible; otherwise go to the
+        // Learning view.
         leading: widget.showBackButton
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                color: AppTheme.brandBlueDeep,
-                onPressed: () => context.maybePop(),
+                icon: const Icon(Icons.arrow_back),
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                onPressed: () {
+                  if (context.router.canPop()) {
+                    context.router.maybePop();
+                  } else {
+                    context.router.navigate(const LearningRoute());
+                  }
+                },
               )
             : null,
         title: Text(
@@ -194,10 +226,10 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
               color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
-            Text(l10n.noActiveTracks, style: theme.textTheme.headlineSmall),
+            Text(l10n.noTracksYet, style: theme.textTheme.headlineSmall),
             const SizedBox(height: 8),
             Text(
-              l10n.manageTracksDetail,
+              l10n.firstTrackPrompt,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -207,7 +239,7 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
             FilledButton.icon(
               onPressed: () => setState(() => _addingTrack = true),
               icon: const Icon(Icons.add),
-              label: Text(l10n.addTrack),
+              label: Text(l10n.addYourFirstTrack),
             ),
           ],
         ),
@@ -225,59 +257,88 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
   }
 
   Future<void> _showDeleteDialog(CurriculumTrack track) async {
-    final curriculum = CurriculumId.values
-        .where((c) => c.storageKey == track.curriculumId)
-        .firstOrNull;
-
     final l10n = AppLocalizations.of(context)!;
+
+    // TS-16: Pre-check whether Archive/Delete is allowed before showing the
+    // dialog. When this track is the only active curriculum, surfacing the
+    // destructive actions would only produce a post-commit error snackbar.
+    final activeCurricula = await ref
+        .read(userDatabaseProvider)
+        .activeCurriculumDao
+        .getActiveCurriculaByProfile(track.profileId);
+    if (!mounted) return;
+
+    final canDelete = trackDeletionAllowed(
+      activeCurriculumCount: activeCurricula.length,
+    );
 
     // 'archive' = keep history; 'wipe' = hard-delete completions; null = cancel
     final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.deleteTrackArchiveTitle),
-        content: Text(l10n.deleteTrackArchiveBody),
+        content: Text(
+          canDelete
+              ? l10n.deleteTrackArchiveBody
+              : l10n.cannotDeactivateLastCurriculum,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.actionCancel),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, 'archive'),
-            child: Text(l10n.deleteTrackArchive),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
+          if (canDelete) ...[
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'archive'),
+              child: Text(l10n.deleteTrackArchive),
             ),
-            onPressed: () => Navigator.pop(ctx, 'wipe'),
-            child: Text(l10n.deleteTrackWipe),
-          ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error,
+              ),
+              onPressed: () => Navigator.pop(ctx, 'wipe'),
+              child: Text(l10n.deleteTrackWipe),
+            ),
+          ],
         ],
       ),
     );
 
     if (choice == null || !mounted) return;
 
-    if (curriculum != null && choice == 'archive') {
-      try {
-        await ref
-            .read(curriculumActivationServiceProvider)
-            .deactivate(curriculum);
-        await onTrackChanged(ref, track.profileId);
-      } on LastActiveCurriculumException {
-        if (!mounted) return;
-        _showLastCurriculumError(l10n);
+    // Every profile must keep at least one active curriculum. Use deactivate
+    // (which throws LastActiveCurriculumException for the last curriculum)
+    // rather than calling the DAO directly to bypass the invariant.
+    if (choice == 'archive') {
+      final curriculum = CurriculumId.values
+          .where((c) => c.storageKey == track.curriculumId)
+          .firstOrNull;
+      if (curriculum != null) {
+        try {
+          await ref
+              .read(curriculumActivationServiceProvider)
+              .deactivate(curriculum);
+          await onTrackChanged(ref, track.profileId);
+        } on LastActiveCurriculumException {
+          if (!mounted) return;
+          _showLastCurriculumError(l10n);
+        }
+        return;
       }
-    } else {
-      final dao = ref.read(userDatabaseProvider).trackDao;
-      if (choice == 'wipe') {
-        await dao.purgeHistory(track.id);
-      } else {
-        await dao.deleteTrackAndData(track.id);
-      }
-      await onTrackChanged(ref, track.profileId);
     }
+
+    // Wipe path: use the already-fetched active count (canDelete was true
+    // since the dialog showed the wipe option). Defensive guard kept for
+    // safety.
+    if (!canDelete) {
+      if (!mounted) return;
+      _showLastCurriculumError(l10n);
+      return;
+    }
+
+    final dao = ref.read(userDatabaseProvider).trackDao;
+    await dao.purgeHistory(track.id);
+    await onTrackChanged(ref, track.profileId);
   }
 
   void _showLastCurriculumError(AppLocalizations l10n) {
