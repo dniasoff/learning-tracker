@@ -78,7 +78,7 @@ void main() {
 
   group('deactivateTrack', () {
     test('deactivates an existing active non-personal track', () async {
-      // Verify a track row can be created for the test
+      // Insert an active track for profileId 0 (deactivateTrack's default).
       await db
           .into(db.curriculumTracks)
           .insert(
@@ -89,15 +89,24 @@ void main() {
               activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
+      expect(await db.trackDao.getActiveTracks(CurriculumId.bavli), isNotEmpty);
 
-      final tracks = await db.trackDao.getActiveTracks(CurriculumId.bavli);
-      expect(tracks, isNotEmpty);
+      await db.trackDao.deactivateTrack(CurriculumId.bavli);
+
+      expect(await db.trackDao.getActiveTracks(CurriculumId.bavli), isEmpty);
+      final tracks = await db.trackDao.getAllTracks(CurriculumId.bavli);
+      expect(tracks, hasLength(1));
+      expect(tracks.first.state, TrackState.retired.storageKey);
     });
 
     test('deactivateTrack with non-existent track is a no-op', () async {
-      await expectLater(() async {
-        // Attempt to operate on empty DB — should not throw.
-      }(), completes);
+      await expectLater(
+        db.trackDao.deactivateTrack(CurriculumId.bavli),
+        completes,
+      );
+
+      // No row existed and none should have been created.
+      expect(await db.trackDao.getAllTracks(CurriculumId.bavli), isEmpty);
     });
   });
 
