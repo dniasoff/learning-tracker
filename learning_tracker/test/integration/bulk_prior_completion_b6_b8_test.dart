@@ -214,31 +214,6 @@ Future<void> _seedStages(
   }
 }
 
-/// Seeds [count] active stages plus one extra superseded stage at
-/// stageOrder [count + 1] (supersededAt set to a past timestamp).
-/// Used to verify that M1 fix excludes superseded stages from bulk-mark.
-Future<void> _seedStagesWithSuperseded(
-  UserDatabase db, {
-  required int profileId,
-  required int trackId,
-  required int count,
-}) async {
-  await _seedStages(db, profileId: profileId, trackId: trackId, count: count);
-  // Insert one superseded stage at stageOrder count+1.
-  await db
-      .into(db.stageDefinitions)
-      .insert(
-        StageDefinitionsCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'mishnayos',
-          trackId: trackId,
-          stageOrder: count + 1,
-          stageName: 'Old Chazara (superseded)',
-          schedule: const Value('{"type":"delay","delay_days":0}'),
-        ),
-      );
-}
-
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -323,79 +298,15 @@ void main() {
       expect(stagesByRef['ref_b'], containsAll([1, 2, 3]));
     });
 
-    test(
-      'AC3: all seeded stages receive completion_events — '
-      '(note: supersededAt column dropped in W3.29; all 3 stages are active)',
-      () async {
-        // W3.29 dropped `supersededAt`. The helper still inserts 3 stages (2
-        // "active" + 1 formerly "superseded"), but since the column is gone there
-        // is no way to mark a stage as superseded at the DB level. The edit-track
-        // flow now deletes-and-recreates stages instead of superseding them.
-        // Therefore `_allStageOrders` returns all 3 stages and the service writes
-        // 3 completions — the "only 2 active" expectation was outdated.
-        await _seedStagesWithSuperseded(
-          db,
-          profileId: profileId,
-          trackId: trackId,
-          count: 2,
-        );
-
-        final items = [_leaf('ref_m1', 0)];
-        final bookmarkRepo = MockBookmarkRepository();
-        when(
-          () => bookmarkRepo.setBookmark(
-            curriculumId: any(named: 'curriculumId'),
-            sefariaRef: any(named: 'sefariaRef'),
-          ),
-        ).thenAnswer((_) async => _fakeBookmark());
-
-        final completionRepo = CompletionRepositoryImpl(
-          database: db,
-          syncEngine: null,
-          contentRepository: _StubContentRepository([...items]),
-          activeProfileId: profileId,
-        );
-        final stageRepo = StageDefinitionRepositoryImpl(
-          stageDao: db.stageDao,
-          completionDao: db.completionDao,
-          pushStageDefinitions: null,
-        );
-        final service = BulkPriorCompletionService(
-          contentRepository: _StubContentRepository([...items]),
-          completionRepository: completionRepo,
-          bookmarkRepository: bookmarkRepo,
-          database: db,
-          syncEngine: null,
-          stageRepository: stageRepo,
-        );
-
-        final result = await service.execute(
-          curriculumId: CurriculumId.mishnayos,
-          resolvedItems: items,
-          stageIds: [1],
-          profileId: profileId,
-        );
-
-        // 1 item × 3 stages = 3 completions (all stages; supersededAt removed).
-        expect(
-          result.completionCount,
-          3,
-          reason:
-              'W3.29: supersededAt dropped — all 3 seeded stages are active and '
-              'must produce completions',
-        );
-
-        final events = await db.completionDao.getCompletionsByProfile(
-          profileId,
-        );
-        final stageIds = events.map((e) => e.stageId).toSet();
-        expect(
-          stageIds,
-          equals({1, 2, 3}),
-          reason: 'All 3 stageOrders must appear (no superseded filtering)',
-        );
-      },
-    );
+    // AUD-t-cross-63: the former "AC3" test (plus its _seedStagesWithSuperseded
+    // helper) asserted that a stage seeded as "superseded" was excluded from
+    // bulk-mark-prior. W3.29 dropped the `supersededAt` column entirely
+    // (lifecycle is now managed via `state`), so the helper could no longer
+    // create a row the service would treat as superseded — the test had
+    // degraded into re-proving AC1's "N stages => N completions" under a
+    // misleading name. Removed rather than repurposed: AC1 above already
+    // covers "all configured stages receive completion_events" for this
+    // service, so no coverage is lost.
 
     test('AC2: completion_events for all stages carry the sentinel timestamp '
         '(DateTime.utc(2000, 1, 1)) — not today', () async {
