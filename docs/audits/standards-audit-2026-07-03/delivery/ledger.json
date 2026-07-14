@@ -4202,13 +4202,18 @@
   {
    "id": "AUD-t-cross-29",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Give new_listener_coverage_test.dart a real seam into SyncOrchestratorImpl._channelToKind instead of a hand-copied duplicate switch",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "33fd86b415b3c445dd5f774e43c5b1942b9b79f3"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-29 AC1 OK: test has no _channelToKind; only SyncOrchestratorImpl.channelToKind calls (test:121/296/323); prod method public+@visibleForTesting (:1497)",
+    "AUD-t-cross-29 AC2 OK: added unrouted channel to openChannels() -> invariant test went red vs real prod channelToKind; reverted clean"
+   ],
+   "notes": "Test hand-maintained a duplicate _channelToKind switch vs private prod method. Made channelToKind public+@visibleForTesting; test now calls it directly, duplicate deleted (AC1). AC2 spot-checked w/ temp bogus channel: suite failed, reverted clean. Assertions 13/13 unchanged (TQ-7)."
   },
   {
    "id": "AUD-t-cross-43",
