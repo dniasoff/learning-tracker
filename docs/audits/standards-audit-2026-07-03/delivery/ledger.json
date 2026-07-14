@@ -2905,13 +2905,23 @@
   {
    "id": "AUD-t-gamification-03",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "reward_milestone_service_test.dart duplicates test coverage within itself and against reward_milestone_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "86e5b165318762b8a34e75975150819d56f3f9a0"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-gamification-03 AC1 OK: grep -c for removeMilestone / stripStockTemplateMilestones / mergeCloudPayload groups each =1 in the file",
+    "AUD-t-gamification-03 AC2 OK: green (+92 exit 0), count 86->70, each deleted scenario traced to retained equal-or-stronger equivalent",
+    "AUD-t-gamification-03 removeMilestone OK: kept group L364 covers remove-by-id (stronger selective assert) + no-op-on-unknown-id",
+    "AUD-t-gamification-03 stripStock OK: merged group L846 keeps empty/single-ladder/legacy-50-150-300/stock-vs-custom/non-stock; dups removed",
+    "AUD-t-gamification-03 mergeCloudPayload OK: kept group L922 null/empty assert post-state (stronger than deleted completes-only); -05 regressions intact",
+    "AUD-t-gamification-03 model round-trip OK: 5 deleted model tests fully covered in reward_milestone_test.dart plus extra edge cases",
+    "AUD-t-gamification-03 import OK: removed date_utils was only DateTimeFactory ref (grep=none); analyze shows no unused elements"
+   ],
+   "notes": "Confirmed all 4 duplicate incidents present (removeMilestone, stripStockTemplateMilestones, mergeCloudPayload under renamed group, model round-trip vs dedicated file). Merged/removed dupes, kept strongest assertions; regression tests untouched. grep -c for named groups now =1 each. Tests 86->70."
   },
   {
    "id": "AUD-profiles-06",
