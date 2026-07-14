@@ -199,6 +199,14 @@ const _zeroStreak = (currentStreak: 0, maxStreak: 0);
 /// [tutorPerms]     — non-null → active tutor session with these permissions.
 /// [locale]         — test locale; defaults to 'en'.
 /// [disableRetry]   — pass true so FutureProvider errors surface (not loop).
+/// [streakStream]   — AUD-t-learning-04: overrides [dashboardStreakProvider]'s
+///                   stream directly (loading/error/custom-controller
+///                   scenarios the [tasks]/[curricula] params can't express).
+///                   Defaults to an immediate zero-streak value.
+/// [router]         — AUD-t-learning-04: when supplied, wraps [LearningScreen]
+///                   in a [StackRouterScope] bound to this controller (for
+///                   tests that verify navigation calls) instead of a bare
+///                   [Scaffold].
 Widget _buildScreen({
   List<CurriculumId>? curricula,
   bool curriculaError = false,
@@ -208,6 +216,8 @@ Widget _buildScreen({
   TutorPermissions? tutorPerms,
   Locale locale = const Locale('en'),
   bool disableRetry = false,
+  Stream<({int currentStreak, int maxStreak})>? streakStream,
+  StackRouter? router,
 }) {
   final overrides = <Override>[
     useHebrewTermsProvider.overrideWith(
@@ -230,8 +240,11 @@ Widget _buildScreen({
       }
       return Stream.value(curricula);
     }),
-    // Streak (safe default — loading state is fine for most tests)
-    dashboardStreakProvider.overrideWith((ref) => Stream.value(_zeroStreak)),
+    // Streak — defaults to an immediate zero-streak value; pass
+    // [streakStream] for loading/error/custom-timing scenarios.
+    dashboardStreakProvider.overrideWith(
+      (ref) => streakStream ?? Stream.value(_zeroStreak),
+    ),
     // Daily tasks — use factory to avoid pre-creating Future.error() in zone.
     allDailyTasksProvider.overrideWith(
       (ref) => tasksFactory != null ? tasksFactory() : Future.value(tasks),
@@ -275,7 +288,13 @@ Widget _buildScreen({
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const Scaffold(body: LearningScreen()),
+      home: router == null
+          ? const Scaffold(body: LearningScreen())
+          : StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: const Scaffold(body: LearningScreen()),
+            ),
     ),
   );
 }
@@ -945,46 +964,13 @@ void main() {
   testWidgets(
     'R6-4 regression: streak provider in AsyncLoading — renders without NPE, streak defaults to 0',
     (tester) async {
-      // Use a Completer so the stream never emits — provider stays in loading.
+      // Use a StreamController so the stream never emits — provider stays in
+      // loading.
       final ctrl = StreamController<({int currentStreak, int maxStreak})>();
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            useHebrewTermsProvider.overrideWith(_HebrewTermsOff.new),
-            currentTransliterationVariantProvider.overrideWithValue(
-              TransliterationVariant.ashkenazi,
-            ),
-            dashboardActiveCurriculaStreamProvider.overrideWith(
-              (ref) => Stream.value([CurriculumId.mishnayos]),
-            ),
-            // Streak provider stays in AsyncLoading — stream never emits.
-            dashboardStreakProvider.overrideWith((ref) => ctrl.stream),
-            allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
-            selectedProfileProvider.overrideWith(
-              (ref) => Future.value(_adultProfile()),
-            ),
-            activeTutoredProfileSelectionProvider.overrideWith(
-              _FakeNoTutorSession.new,
-            ),
-            // AUD-t-learning-01 — see the file-level doc comment above.
-            coarsePacedTrackIdsProvider.overrideWith(
-              (ref) => Future.value(const <int>{}),
-            ),
-            contentIndexProvider.overrideWith(
-              (ref) => Future.value(ContentIndex.fromCurricula(const {})),
-            ),
-            userDatabaseProvider.overrideWithValue(_testUserDb),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: LearningScreen()),
-          ),
+        _buildScreen(
+          curricula: [CurriculumId.mishnayos],
+          streakStream: ctrl.stream,
         ),
       );
       await tester.pump();
@@ -1005,46 +991,14 @@ void main() {
     'R6-4 regression: streak provider in AsyncError — renders without NPE, streak defaults to 0',
     (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          retry: (_, __) => null, // disable retry so error state persists
-          overrides: [
-            useHebrewTermsProvider.overrideWith(_HebrewTermsOff.new),
-            currentTransliterationVariantProvider.overrideWithValue(
-              TransliterationVariant.ashkenazi,
-            ),
-            dashboardActiveCurriculaStreamProvider.overrideWith(
-              (ref) => Stream.value([CurriculumId.mishnayos]),
-            ),
-            // Streak provider emits an error.
-            dashboardStreakProvider.overrideWith(
-              (ref) =>
-                  Stream.error(Exception('streak DB error'), StackTrace.empty),
-            ),
-            allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
-            selectedProfileProvider.overrideWith(
-              (ref) => Future.value(_adultProfile()),
-            ),
-            activeTutoredProfileSelectionProvider.overrideWith(
-              _FakeNoTutorSession.new,
-            ),
-            // AUD-t-learning-01 — see the file-level doc comment above.
-            coarsePacedTrackIdsProvider.overrideWith(
-              (ref) => Future.value(const <int>{}),
-            ),
-            contentIndexProvider.overrideWith(
-              (ref) => Future.value(ContentIndex.fromCurricula(const {})),
-            ),
-            userDatabaseProvider.overrideWithValue(_testUserDb),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: LearningScreen()),
+        _buildScreen(
+          curricula: [CurriculumId.mishnayos],
+          // disable retry so the error state persists
+          disableRetry: true,
+          // Streak provider emits an error.
+          streakStream: Stream.error(
+            Exception('streak DB error'),
+            StackTrace.empty,
           ),
         ),
       );
@@ -1087,54 +1041,8 @@ void main() {
 
       // Use a single-curriculum screen so the first Browse card is always
       // chumash (first value in CurriculumId.values).
-      final overrides = <Override>[
-        useHebrewTermsProvider.overrideWith(_HebrewTermsOff.new),
-        currentTransliterationVariantProvider.overrideWithValue(
-          TransliterationVariant.ashkenazi,
-        ),
-        dashboardActiveCurriculaStreamProvider.overrideWith(
-          (ref) => Stream.value([CurriculumId.chumash]),
-        ),
-        dashboardStreakProvider.overrideWith(
-          (ref) => Stream.value(_zeroStreak),
-        ),
-        allDailyTasksProvider.overrideWith(
-          (ref) => Future.value(const <DailyTask>[]),
-        ),
-        selectedProfileProvider.overrideWith(
-          (ref) => Future.value(_adultProfile()),
-        ),
-        activeTutoredProfileSelectionProvider.overrideWith(
-          _FakeNoTutorSession.new,
-        ),
-        // AUD-t-learning-01 — see the file-level doc comment above.
-        coarsePacedTrackIdsProvider.overrideWith(
-          (ref) => Future.value(const <int>{}),
-        ),
-        contentIndexProvider.overrideWith(
-          (ref) => Future.value(ContentIndex.fromCurricula(const {})),
-        ),
-        userDatabaseProvider.overrideWithValue(_testUserDb),
-      ];
-
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: overrides,
-          child: MaterialApp(
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: StackRouterScope(
-              controller: router,
-              stateHash: 0,
-              child: const Scaffold(body: LearningScreen()),
-            ),
-          ),
-        ),
+        _buildScreen(curricula: [CurriculumId.chumash], router: router),
       );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
