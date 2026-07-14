@@ -3077,13 +3077,20 @@
     {
       "id": "AUD-t-cross-40",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Rewrite AN-6/AN-8 regression tests to exercise real app_shell.dart / persistent_switcher_scaffold.dart instead of hand-copied replicas",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "d9672deb490dd7a4a57ada44460beef01e7dcb85"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-40 AC1 OK: an6 test imports AppShellScreen (line 50), pumps real shell, asserts findsOneWidget (347); replica deleted",
+        "AUD-t-cross-40 AC1 red-first OK: I reverted _ShellNavItem padding/margin to pre-fix -> RED (didExceedMaxLines Expected false Actual true); restored green",
+        "AUD-t-cross-40 AC2 OK: an8 test imports persistent_switcher_scaffold.dart (32), asserts literal names vs production const persistentSwitcherAuthRouteNames",
+        "AUD-t-cross-40 AC2 red-first OK: I removed SignInRoute from real const -> RED (Expected true Actual false, SignInRoute must suppress bar); restored green"
+      ],
+      "notes": "Both vacuous tests confirmed present. AN-8: extracted auth-route set to @visibleForTesting const; test imports real file. AN-6: rewrote to pump real AppShellScreen, real didExceedMaxLines check. Red-first verified for both (revert=red, restore=green)."
     },
     {
       "id": "AUD-t-cross-23",
