@@ -6784,13 +6784,18 @@
   {
    "id": "AUD-t-cross-59",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "De-duplicate the InvalidTrackOperationException.toString and W3.22 deactivate smoke tests across 3 track_dao test files",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "0f5c2b3d8273822edd3427dfa23ba526b602e42f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-59 AC1 OK: toString tested in exactly 1 file (track_dao_deactivate_test.dart:45); dao_invariant_error_test toString tests target a different class",
+    "AUD-t-cross-59 AC2 OK: W3.22 activate-then-deactivateTrack smoke test in exactly 1 file (track_dao_test.dart:48), sole grep match in dir"
+   ],
+   "notes": "Re-verified all 4 evidence sites present, tree undrifted since 4018a91c. Removed dup toString test and dup W3.22 smoke test from track_dao_delete_test.dart; canonical copies kept in track_dao_deactivate_test.dart / track_dao_test.dart. Mechanical dup finding - AC checked via grep."
   },
   {
    "id": "AUD-t-cross-92",
