@@ -9236,13 +9236,17 @@
   {
    "id": "AUD-t-cross-69",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix migration_test_helper.dart's doc comment — claims post-migration schemaVersion 19, actual is 32",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "38d2aebba0e7263b828d8b997cf14c0888ebdbaa"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-69 AC1 OK: helper:12 now 'DB is now at UserDatabase.schemaVersion'; grep v19|v32|v36 no match; symbol exists user_database.dart:209"
+   ],
+   "notes": "Re-verified: docstring line 12 still said 'DB is now at v19'; actual schemaVersion is now 36 (drifted further past the finding's cited 32, reconfirming the defect). Replaced literal with reference to UserDatabase.schemaVersion per recommendation. AC verified via grep -n 'v19|v32|v36' -> no match."
   },
   {
    "id": "AUD-guardrails-37",
