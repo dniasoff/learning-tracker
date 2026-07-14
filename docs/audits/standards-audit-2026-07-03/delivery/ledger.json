@@ -2581,13 +2581,20 @@
     {
       "id": "AUD-t-story-acceptance-17",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Replace tautological literal-vs-literal assertions in epic_15/epic_16 story-acceptance tests with real checks against the code under test",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "5998b6c2b85eb990f866d9ceb0a1cb521e53a8b2"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-17 AC1 OK: 4 real fixes assert against ReviewCountBadge/AnimatedProgressBar/ManualCompletionUseCase, verified against lib source",
+        "AUD-t-story-acceptance-17 AC1 OK: 6 skips verified - SatisfactionCueWidget/streak_milestone_overlay/rewards tables absent; _ScreenPhase enum matches; f0538740 confirmed",
+        "AUD-t-story-acceptance-17 AC2 OK: grep of story_acceptance/ finds no literal-vs-literal tautology in epic_15/16 (other hits are out-of-scope epic_01/21/27)",
+        "AUD-t-story-acceptance-17 AC3 OK: no checker required (AC=code review); real-fix LHS trace to lib/ symbols; skipped tests have empty bodies"
+      ],
+      "notes": "10 sites fixed. Badge/ProgressBar tests pump real widgets; manual-completion test calls real use case w/ mocked repo. Rest skip:-wrapped, reason given (feature deleted, verified via git log). Red-first: broke each prod symbol, confirmed test failed, reverted. AC-3 wants code review not a checker."
     },
     {
       "id": "AUD-t-cross-21",
