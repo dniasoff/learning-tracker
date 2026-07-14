@@ -4243,19 +4243,20 @@
   {
    "id": "AUD-t-profiles-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Add AN-2 PIN-guard regression tests for switch-account, add-profile, and switch-to-adult-profile",
    "commits": [
-    "17ce2d2ec1c2229e6bb7983569877d4efc604591"
+    "17ce2d2ec1c2229e6bb7983569877d4efc604591",
+    "1f3068d42572e6541ace3ac0ebb27f944cf1a396"
    ],
-   "reviewRounds": 1,
+   "reviewRounds": 2,
    "acVerified": [
     "AUD-t-profiles-01 AC1 OK: tests for switch-account/add-profile/switch-to-adult each pinGuardRequired=true assert 'Enter Parent PIN' findsOneWidget; 336/336 pass",
     "AUD-t-profiles-01 AC2 OK: independent probe bypassing _guardEscalating turned all 3 new tests RED; production file git-restored clean, no residue",
     "AUD-t-profiles-01 AC3 OK: header L11-17 lists all 5 escalating actions; testWidgets descriptions match those 5 exactly plus a guard=false control"
    ],
-   "notes": "Confirmed gap: only edit/delete tested. Added 3 tests for switch-account/add-profile/switch-to-adult. Red-first: stripped guard from all 3 sites, 3 new tests failed; reverted, reran green 7/7. Header already lists all 5 actions. Commit b237f075. | REOPENED 100% AC audit 2026-07-14: ledger claimed 336/336 tests for switch-account/add-profile/switch-to-adult PIN-guard but those 3 tests were NEVER written (cited commit only did profiles-02 pumpApp). Prod guards exist (profile_switcher_sheet.dart 161/196/254); regression tests missing."
+   "notes": "Confirmed gap: only edit/delete tested. Added 3 tests for switch-account/add-profile/switch-to-adult. Red-first: stripped guard from all 3 sites, 3 new tests failed; reverted, reran green 7/7. Header already lists all 5 actions. Commit b237f075. | REOPENED 100% AC audit 2026-07-14: ledger claimed 336/336 tests for switch-account/add-profile/switch-to-adult PIN-guard but those 3 tests were NEVER written (cited commit only did profiles-02 pumpApp). Prod guards exist (profile_switcher_sheet.dart 161/196/254); regression tests missing. | COMPLETED 1f3068d4: 3 PIN-guard tests added (switch-account/add-profile/switch-to-adult), each red-first proven; 7 tests pass."
   },
   {
    "id": "AUD-t-scheduler-02",
