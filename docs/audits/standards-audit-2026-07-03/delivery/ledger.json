@@ -5978,13 +5978,17 @@
     {
       "id": "AUD-t-story-acceptance-09",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Fix inverted guard in epic_26_story_15's 'isComposite returns false for leaf curricula' test \u2014 it cannot fail",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "0fedcb97609930fcdd130baeb5067e55bc6d4fb2"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-09 AC1 OK: forced isComposite=true, leaf-curricula test FAILED (Expected:false Actual:true); reverted, 18/18 green"
+      ],
+      "notes": "Confirmed present (verified at 4018a91c, no drift). Red-first: injected regression (isComposite always-true) - unfixed test still PASSED. Removed inverted guard; expect() now unconditional. Re-ran vs regression: FAILED as expected. Reverted regression cleanly; fixed test passes green."
     },
     {
       "id": "AUD-repo-01",
