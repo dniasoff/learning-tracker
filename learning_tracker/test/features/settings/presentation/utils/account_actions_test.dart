@@ -44,7 +44,6 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -69,8 +68,9 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
     show currentAccountIdProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -176,7 +176,8 @@ Widget _buildApp({
   List<Override> extra = const [],
   Locale locale = const Locale('en'),
 }) {
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       routerProvider.overrideWithValue(router),
       authRepositoryProvider.overrideWithValue(authRepo),
@@ -190,17 +191,7 @@ Widget _buildApp({
       authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
       ...extra,
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: child,
-    ),
+    child: child,
   );
 }
 

@@ -23,8 +23,6 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -49,9 +47,10 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/manage
     show incomingTutorGrantsProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
     show pendingTutorInvitesProvider;
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 // ─── Mocks / fakes ───────────────────────────────────────────────────────────
 
@@ -189,7 +188,8 @@ Widget _buildSettings({
   bool pinAuthForProfile = false,
   int profileId = 1,
 }) {
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     retry: (_, __) => null,
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
@@ -223,20 +223,10 @@ Widget _buildSettings({
       pinServiceProvider.overrideWithValue(pinService),
       syncWriteFacadeProvider.overrideWithValue(null),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: const Scaffold(body: SettingsScreen()),
-      ),
+    child: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: const Scaffold(body: SettingsScreen()),
     ),
   );
 }

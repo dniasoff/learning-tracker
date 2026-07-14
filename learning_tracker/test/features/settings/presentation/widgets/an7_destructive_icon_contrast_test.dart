@@ -20,7 +20,6 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
@@ -42,8 +41,9 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
     show currentAccountIdProvider, profileListStreamProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/account_actions_sheet.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 // ─── Fakes / mocks ────────────────────────────────────────────────────────────
 
@@ -104,7 +104,7 @@ Widget _buildApp({
   required _MockAccountManagementService service,
   required DeviceRegistryDatabase registry,
 }) {
-  return ProviderScope(
+  return pumpApp(
     overrides: [
       routerProvider.overrideWithValue(router),
       authRepositoryProvider.overrideWithValue(authRepo),
@@ -118,16 +118,7 @@ Widget _buildApp({
       activeProfileIdProvider.overrideWith(() => _ActiveProfileIdOverride()),
       profileListStreamProvider.overrideWith((ref) => Stream.value(const [])),
     ],
-    child: const MaterialApp(
-      localizationsDelegates: [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: _SheetHost(),
-    ),
+    child: const _SheetHost(),
   );
 }
 

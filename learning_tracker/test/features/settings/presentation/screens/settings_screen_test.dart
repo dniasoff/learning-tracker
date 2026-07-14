@@ -1,7 +1,5 @@
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -22,9 +20,10 @@ import 'package:learning_tracker/features/tracks/domain/services/curriculum_acti
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -97,7 +96,7 @@ void main() {
           );
         }
 
-        return ProviderScope(
+        return pumpApp(
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
             userDatabaseProvider.overrideWithValue(database),
@@ -132,16 +131,7 @@ void main() {
               ),
             ],
           ],
-          child: const MaterialApp(
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: SettingsScreen(),
-          ),
+          child: const SettingsScreen(),
         );
       },
     );
