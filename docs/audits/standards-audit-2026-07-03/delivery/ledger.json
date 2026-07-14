@@ -8951,13 +8951,18 @@
   {
    "id": "AUD-t-cross-64",
    "wave": 4,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete sync_rework_engine_test.dart — all 5 groups are skip-only placeholders with zero assertions",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c11, 2026-07-14). review agent lost (quota); fix commit a7b84e2b (test(sync): AUD-t-cross-64 - delete skip-only sync_rework_engine_test.dart) built on worktree branch worktree-wf_638063e4-8d4-20 was never reviewed/merged before the review agent was lost. Internal process blocker, not an external blocker. Worktree checkout removed; branch retained unmerged (git cherry dev shows +a7b84e2b, no patch-equivalent commit on dev) pending a future harvest pass."
+   "commits": [
+    "ed0134df371aefc8be0693814488ec33bb3529e3"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-64 AC1 OK: sync_rework_engine_test.dart removed from repo",
+    "AUD-t-cross-64 AC2 OK: flutter test --concurrency=2 test/sync/ test/core/sync/ test/migration/ -> 1033 passed post-merge, no reduction in real (non-skip) test count from the deletion"
+   ],
+   "notes": "Resolution (2026-07-14, wave-4 gate-repair pass): the prior 'blocked' status was an internal process blocker only (review agent lost to quota mid-review of worktree branch worktree-wf_638063e4-8d4-20), not an AC or content problem — the underlying fix (commit a7b84e2b) was already complete and verified. Cherry-picked a7b84e2b onto dev as ed0134df (file-for-file identical diff, confirmed against the stray branch before deleting it). Re-verified post-merge: flutter test --concurrency=2 test/sync/ test/core/sync/ test/migration/ -> 1033 passed, 6 accurate skips, 0 failed; flutter analyze -> No issues found; make audit -> 59/59 PASSED; dart format --set-exit-if-changed on touched files -> 0 changes needed. Stray branch worktree-wf_638063e4-8d4-20 deleted (content fully landed on dev)."
   },
   {
    "id": "AUD-t-cross-91",
@@ -9243,10 +9248,12 @@
    "status": "blocked",
    "severity": "P3",
    "title": "Delete or reactivate the dead tautological placeholders in v15_to_v16_test.dart's skipped group",
-   "commits": [],
+   "commits": [
+    "38be8603e1696dbf078bfbf4528364ff1ece97f8"
+   ],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c9, 2026-07-14). AC1 (zero grep hits) fully met: deleted both dead tests. AC2 (both named tests unskipped) half met: dedup test unskipped+passes; backfill test, unskipped, hits a real pre-existing UserDatabase.onUpgrade duplicate-col bug, unrelated, out of scope. Left skipped w/ accurate reason; noted as follow-up."
+   "notes": "blocked (merge-lane w4r1c9, 2026-07-14). AC1 (zero grep hits) fully met: deleted both dead tests. AC2 (both named tests unskipped) half met: dedup test unskipped+passes; backfill test, unskipped, hits a real pre-existing UserDatabase.onUpgrade duplicate-col bug, unrelated, out of scope. Left skipped w/ accurate reason; noted as follow-up. Residue harvest (2026-07-14, wave-4 gate-repair pass): this finding's status/AC were never the gate's blocking reason (only AUD-t-cross-64 and AUD-t-cross-81 were blocked for the internal quota/review-agent-lost reason) — this block is a legitimate, correctly-scoped unmet-AC call per TQ-7 (no weakening the test to paper over the real out-of-scope migration bug) and is left as-is. However its fix commit (fb07b033, on stray worktree branch worktree-wf_638063e4-8d4-17) was still unmerged residue from the same lost-review-agent incident, so it was cherry-picked onto dev as 38be8603 (file-for-file identical diff, confirmed before deleting the stray branch) rather than left stranded. Re-verified post-merge: flutter test test/migration/v15_to_v16_test.dart -> 1 passed, 1 accurate skip; flutter analyze -> No issues found; make audit -> 59/59 PASSED. Status remains 'blocked' — AC2 is still genuinely unmet pending the unrelated migration-bug follow-up."
   },
   {
    "id": "AUD-t-cross-86",
@@ -9262,13 +9269,18 @@
   {
    "id": "AUD-t-cross-81",
    "wave": 4,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove flutter_test_config.dart's FlutterError.onError GoogleFonts filter — TestWidgetsFlutterBinding never lets it run during a test",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c23, 2026-07-14). review agent lost (quota); fix commit e87d4524 (fix(test-infra): AUD-t-cross-81 - remove dead GoogleFonts onError filter) built on worktree branch worktree-wf_638063e4-8d4-47 was never reviewed/merged before the review agent was lost. Internal process blocker, not an external blocker. Worktree checkout removed; branch retained unmerged (git cherry dev shows +e87d4524, no patch-equivalent commit on dev) pending a future harvest pass."
+   "commits": [
+    "d271bd4f668aa20034e69bf6bf9c1cce2878d608"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-81 AC1 OK: regression test flutter_test_config_error_filter_test.dart proves via WidgetTester.takeException() (a mechanism that runs inside _runTest's window) that a mid-pump GoogleFonts FlutterError is not suppressed",
+    "AUD-t-cross-81 AC2 OK: dead onError override + misleading comment removed from flutter_test_config.dart, replaced with a NOTE explaining why it never worked and pointing at the regression test and the working per-test pattern"
+   ],
+   "notes": "Resolution (2026-07-14, wave-4 gate-repair pass): the prior 'blocked' status was an internal process blocker only (review agent lost to quota mid-review of worktree branch worktree-wf_638063e4-8d4-47), not an AC or content problem — the underlying fix (commit e87d4524) was already complete and verified. Cherry-picked e87d4524 onto dev as d271bd4f (file-for-file identical diff, confirmed against the stray branch before deleting it). Re-verified post-merge: flutter test test/flutter_test_config_error_filter_test.dart test/flutter_test_config_font_loading_test.dart test/core/navigation/app_shell_test.dart -> all passed (per-test filters unaffected); flutter analyze -> No issues found; make audit -> 59/59 PASSED; dart format --set-exit-if-changed on touched files -> 0 changes needed. Stray branch worktree-wf_638063e4-8d4-47 deleted (content fully landed on dev)."
   },
   {
    "id": "AUD-t-cross-69",
