@@ -24,21 +24,3 @@ class CurriculumFixtures {
   static List<String> get allStorageKeys =>
       CurriculumId.values.map((c) => c.storageKey).toList();
 }
-
-/// Stage constants for testing
-class StageFixtures {
-  /// Default stage IDs (match stage_definitions seed data)
-  static const int learnStageId = 1;
-  static const int chazara1StageId = 2;
-  static const int chazara2StageId = 3;
-
-  /// Default stage names (Hebrew)
-  static const String learnStageName = 'לימוד';
-  static const String chazara1StageName = 'חזרה א׳';
-  static const String chazara2StageName = 'חזרה ב׳';
-
-  /// Default delay days
-  static const int learnDelayDays = 0;
-  static const int chazara1DelayDays = 1;
-  static const int chazara2DelayDays = 7;
-}
