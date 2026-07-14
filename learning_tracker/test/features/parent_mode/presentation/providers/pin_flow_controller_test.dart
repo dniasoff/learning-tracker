@@ -425,6 +425,7 @@ void main() {
       when(() => ps.verifyProfilePin(1, '1234')).thenAnswer((_) async => true);
 
       final container = _makeContainer(pinService: ps);
+      addTearDown(container.dispose);
       container
           .read(pinFlowControllerProvider.notifier)
           .reset(PinFlowMode.verify);
@@ -435,7 +436,6 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 200));
 
       expect(container.read(pinFlowControllerProvider).completed, isTrue);
-      container.dispose();
     });
 
     test('wrong PIN → errorMessage is set, digits cleared', () async {
@@ -443,6 +443,7 @@ void main() {
       when(() => ps.verifyProfilePin(1, '0000')).thenAnswer((_) async => false);
 
       final container = _makeContainer(pinService: ps);
+      addTearDown(container.dispose);
       container
           .read(pinFlowControllerProvider.notifier)
           .reset(PinFlowMode.verify);
@@ -454,7 +455,6 @@ void main() {
       expect(s.completed, isFalse);
       expect(s.error, isNotNull);
       expect(s.digits, isEmpty);
-      container.dispose();
     });
 
     test('lockout → lockedOut == true', () async {
@@ -464,6 +464,7 @@ void main() {
       ).thenThrow(const PinLockoutException(5));
 
       final container = _makeContainer(pinService: ps);
+      addTearDown(container.dispose);
       container
           .read(pinFlowControllerProvider.notifier)
           .reset(PinFlowMode.verify);
@@ -474,7 +475,6 @@ void main() {
       final s = container.read(pinFlowControllerProvider);
       expect(s.lockedOut, isTrue);
       expect(s.lockoutMinutes, 5);
-      container.dispose();
     });
   });
 
@@ -580,6 +580,7 @@ void main() {
     test('4 digits in enterNew → transitions to confirm step', () async {
       final ps = _MockPinService();
       final container = _makeContainer(pinService: ps);
+      addTearDown(container.dispose);
       container
           .read(pinFlowControllerProvider.notifier)
           .reset(PinFlowMode.setup);
@@ -599,12 +600,12 @@ void main() {
         container.read(pinFlowControllerProvider).step,
         PinFlowStep.confirm,
       );
-      container.dispose();
     });
 
     test('mismatched confirm → errorMessage set, back to enterNew', () async {
       final ps = _MockPinService();
       final container = _makeContainer(pinService: ps);
+      addTearDown(container.dispose);
       container
           .read(pinFlowControllerProvider.notifier)
           .reset(PinFlowMode.setup);
@@ -625,7 +626,6 @@ void main() {
       final s = container.read(pinFlowControllerProvider);
       expect(s.error, isNotNull);
       expect(s.step, PinFlowStep.enterNew);
-      container.dispose();
     });
   });
 }
