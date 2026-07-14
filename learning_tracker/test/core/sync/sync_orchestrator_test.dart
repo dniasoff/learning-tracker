@@ -16,6 +16,10 @@
 ///   - onFirstSyncComplete callback fires once after the first successful pull
 ///   - offline-first: sync never blocks (pull errors are swallowed at call site)
 ///   - goals subcollection known gap: pull *does* call pullGoals (current behaviour)
+///
+/// Also covers the retired legacy-SyncEngine invariant S8 (pullOnLaunch
+/// once-per-launch guard); see sync_rework_engine_test.dart's history
+/// (deleted, AUD-t-cross-64) for the original W2.35 invariant name.
 library;
 
 import 'dart:async';

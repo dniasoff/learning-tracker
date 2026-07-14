@@ -25,6 +25,11 @@
 ///
 /// AG-5 (AUD-app-05): relocated from
 /// test/sync/merge/completions_roundtrip_test.dart to its mirrored path.
+///
+/// Also covers the retired legacy-SyncEngine invariants S6 (completions
+/// merge dedups already-present completions) and I6 (snake_case remote
+/// completion merges); see sync_rework_engine_test.dart's history (deleted,
+/// AUD-t-cross-64) for the original W2.35 invariant names.
 @Tags(['unit', 'sync'])
 library;
 

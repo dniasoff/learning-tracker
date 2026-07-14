@@ -1,5 +1,10 @@
 /// Tests for OutboxProcessor — covers drain() dispatch logic with a fake
 /// PushPipeline and in-memory OutboxDao.
+///
+/// Covers the retired legacy-SyncEngine invariants S5 (concurrent background
+/// flush drains exactly once) and I1 (debounced completions snapshot
+/// survives an in-flight merge); see sync_rework_engine_test.dart's history
+/// (deleted, AUD-t-cross-64) for the original W2.35 invariant names.
 library;
 
 import 'dart:async';
