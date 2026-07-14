@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 
 import '../helpers/test_database.dart' show seedProfile;
@@ -18,8 +19,8 @@ Future<int> _insertTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
+          stateChangedAt: DateTimeFactory.nowUtc(),
+          activatedAt: DateTimeFactory.nowUtc(),
         ),
       );
   return row.id;
