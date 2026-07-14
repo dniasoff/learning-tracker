@@ -6608,13 +6608,19 @@
     {
       "id": "AUD-t-settings-10",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Override the injectable LocalDayClock in backup_sync_section_l1_test.dart's relative-time assertions",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "3b44a13e9c1ae04e0ef73d570da874173b15eab6"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-settings-10 AC1 OK: 4 relative-time tests (lines 167,192,215,243) use useLocalDayClock(FakeLocalDayClock(_kFixedNow))+addTearDown, lastSynced from _kFixedNow",
+        "AUD-t-settings-10 AC1 OK: useLocalDayClock is right override - date_utils.dart:24 nowLocal() reads global currentLocalDayClock not the provider",
+        "AUD-t-settings-10 AC2 OK: 27/27 pass; other DateTime.now() @301/381/414/678/754/775 feed non-time-text asserts (Syncing/error/verifyNever/button/smoke)"
+      ],
+      "notes": "Re-verified: nowLocal() reads global currentLocalDayClock via useLocalDayClock, not the Riverpod provider. True site count is 4 not 5 (old line 657 asserts only verifyNever, no relative-time text). Fixed the 4 tests to use FakeLocalDayClock(_kFixedNow)+addTearDown(resetLocalDayClock). 27/27 pass."
     },
     {
       "id": "AUD-t-tracks-10",
