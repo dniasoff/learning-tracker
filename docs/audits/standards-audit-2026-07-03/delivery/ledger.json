@@ -1781,13 +1781,15 @@
   {
    "id": "AUD-t-gamification-02",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Stop testing RewardSaveNoTrack/RewardSaveDuplicateThreshold — both sealed variants are unreachable post-DEC-32/GA-3",
-   "commits": [],
-   "reviewRounds": 0,
+   "commits": [
+    "a6b42114"
+   ],
+   "reviewRounds": 1,
    "acVerified": [],
-   "notes": ""
+   "notes": "Re-verified: bootstrap() hardcodes tracks:const[], so usesGlobalLadder always true; 4 tests dead/misleading as quoted. Deleted the 2 sealed variants+dead guard+switch arms, removed 2 dead tests, renamed 1. AC1 grep and AC2 verified directly."
   },
   {
    "id": "AUD-t-learning-02",
@@ -6648,13 +6650,15 @@
   {
    "id": "AUD-t-gamification-04",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Close every in-memory Drift UserDatabase created by gamification test factories",
-   "commits": [],
-   "reviewRounds": 0,
+   "commits": [
+    "156a847f"
+   ],
+   "reviewRounds": 1,
    "acVerified": [],
-   "notes": ""
+   "notes": "Re-verified all 7 cited sites lacked close(); fixed with addTearDown. Built tool/check_inmemory_db_close.dart, wired into make audit (60/60). 201 pre-existing violations baselined by count (ratchet). Fires on broken fixture+revert, clean otherwise."
   },
   {
    "id": "AUD-t-settings-09",
