@@ -43,8 +43,8 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: 0,
             curriculumId: CurriculumId.mishnayos.storageKey,
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
+            stateChangedAt: DateTime.utc(2026, 5, 1),
+            activatedAt: DateTime.utc(2026, 5, 1),
           ),
         );
     mishnayosTrackId = mishnayosTrack.id;
@@ -55,8 +55,8 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: 0,
             curriculumId: CurriculumId.bavli.storageKey,
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
+            stateChangedAt: DateTime.utc(2026, 5, 1),
+            activatedAt: DateTime.utc(2026, 5, 1),
           ),
         );
 

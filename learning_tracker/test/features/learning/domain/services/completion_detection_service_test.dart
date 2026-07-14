@@ -66,8 +66,8 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: 1,
             curriculumId: _currId,
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
+            stateChangedAt: DateTime.utc(2026, 5, 1),
+            activatedAt: DateTime.utc(2026, 5, 1),
           ),
         );
     trackId = trackRow.id;
@@ -303,8 +303,8 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: _currId,
-                stateChangedAt: DateTime.now(),
-                activatedAt: DateTime.now(),
+                stateChangedAt: DateTime.utc(2026, 5, 1),
+                activatedAt: DateTime.utc(2026, 5, 1),
               ),
             );
         trackId = trackRow.id;
@@ -498,8 +498,8 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: CurriculumId.chumash.storageKey,
-                stateChangedAt: DateTime.now(),
-                activatedAt: DateTime.now(),
+                stateChangedAt: DateTime.utc(2026, 5, 1),
+                activatedAt: DateTime.utc(2026, 5, 1),
               ),
             );
 
@@ -604,8 +604,8 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: CurriculumId.mishnaBerurah.storageKey,
-              stateChangedAt: DateTime.now(),
-              activatedAt: DateTime.now(),
+              stateChangedAt: DateTime.utc(2026, 5, 1),
+              activatedAt: DateTime.utc(2026, 5, 1),
             ),
           );
 
