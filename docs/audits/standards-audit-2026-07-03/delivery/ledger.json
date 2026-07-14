@@ -1921,13 +1921,18 @@
   {
    "id": "AUD-t-progress-02",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Complete B18 in siyumim_timeline_and_lifetime_providers_test.dart to actually exercise the unmark-after-mark ledger conflict it documents",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "32cbdcbe3f2e542d328237f7eaa95e7fdc257704"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-progress-02 AC1 OK: test L1148-1168 has positive 'seder'+'unmark_seder'; I mutated builder L121 putIfAbsent->overwrite, B18 failed, reverted clean",
+    "AUD-t-progress-02 AC2 OK: builder L86-95 doc states precondition ledgerEntries MUST be newest-first by completedAt, ties putIfAbsent to DAO desc"
+   ],
+   "notes": "Confirmed: B18 had only positive seder entry; described unmark_seder entry was never written. Added missing entry (AC1) + doc comment on newest-first ordering precondition (AC2). Red-first: mutated putIfAbsent to overwrite, B18/B18b both failed; reverted; all 32 tests pass. Merged --no-ff onto dev (w4r1c5, mergeSha 32cbdcbe3f2e542d328237f7eaa95e7fdc257704). Post-rebase gate: make audit PASSED (65/65 clean), flutter analyze clean (No issues found!). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (merge-base f1a78c29ee120e3bd12a6ca7f3f49f966076178b; tip touched only lifetime_tree_builder.dart + siyumim_timeline_and_lifetime_providers_test.dart, dev touched only ledger.json + 2 unrelated profiles test files), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate. touchedStrings=false, arb-parity not run."
   },
   {
    "id": "AUD-scheduler-04",
