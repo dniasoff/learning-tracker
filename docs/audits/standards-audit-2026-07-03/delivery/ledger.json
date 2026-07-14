@@ -2421,13 +2421,19 @@
     {
       "id": "AUD-t-story-acceptance-08",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Extract a shared test helper for locating lib/ source files instead of 13 ad hoc reimplementations",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "94ad4d1d7e8664d50e4e4e4f6cd4bd0dc6621743"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-08 AC1 OK: test/helpers/lib_source.dart defines projectRoot/libFileExists/readLibSource; imported by all 5 files (story_16/20/31/6/7)",
+        "AUD-t-story-acceptance-08 AC2 OK: grep -c 'final candidates = [' = 0 in all 5 files; pattern only in shared helper _resolveLibFile",
+        "AUD-t-story-acceptance-08 AC3 OK: story_26_7 duplicate existence blocks collapse to _addTrackFlowDeleted() (lines 136,169); _src/_addTrackFlowLibPath still used"
+      ],
+      "notes": "Confirmed all 13 sites pre-fix. Added test/helpers/lib_source.dart (projectRoot/libFileExists/readLibSource, one failure mode); migrated all 13 sites. Collapsed AC3 byte-identical add_track_flow.dart blocks into shared _addTrackFlowDeleted(). AC1-3 self-checked: grep=0, helper imported."
     },
     {
       "id": "AUD-docs-15",
