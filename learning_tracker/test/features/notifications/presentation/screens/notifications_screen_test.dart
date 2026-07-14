@@ -27,7 +27,15 @@ void main() {
 
   Widget buildSubject() {
     return ProviderScope(
-      overrides: [notificationServiceProvider.overrideWithValue(mockService)],
+      overrides: [
+        notificationServiceProvider.overrideWithValue(mockService),
+        // AUD-t-notifications-01: NotificationsScreen.build() unconditionally
+        // watches these keepAlive sync-effect providers, which otherwise chain
+        // into a real drift_flutter-backed UserDatabase. Override with no-ops
+        // so this widget test never opens a real database.
+        reminderSyncEffectProvider.overrideWith((ref) async {}),
+        streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+      ],
       child: const MaterialApp(
         localizationsDelegates: [
           AppLocalizations.delegate,

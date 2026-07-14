@@ -31,6 +31,12 @@ Widget _buildWithProviders({
     overrides: [
       if (gatewayOverride != null)
         notificationServiceProvider.overrideWithValue(gatewayOverride),
+      // AUD-t-notifications-01: NotificationsScreen.build() unconditionally
+      // watches these keepAlive sync-effect providers, which otherwise chain
+      // into a real drift_flutter-backed UserDatabase. Override with no-ops
+      // so this widget test never opens a real database.
+      reminderSyncEffectProvider.overrideWith((ref) async {}),
+      streakAlertSyncEffectProvider.overrideWith((ref) async {}),
     ],
     child: MaterialApp(
       localizationsDelegates: const [
