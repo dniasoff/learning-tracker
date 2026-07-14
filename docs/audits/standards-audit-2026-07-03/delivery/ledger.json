@@ -7084,13 +7084,17 @@
     {
       "id": "AUD-t-onboarding-04",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Consolidate duplicate onboarding test coverage instead of maintaining parallel suites",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "963f6fbf79c8d9bcd4fa4821bc49df1fb73944bd"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-onboarding-04 AC1 OK: wizard 33->21, screen 5->1; all 17 removals covered by surviving equal/stronger tests; no lib coverage regression"
+      ],
+      "notes": "Merged 4 dup group pairs in learning_process_wizard_service_test.dart (33->21 tests). onboarding_screen_test.dart: full deletion breaks AG-5 gate + flutter test's zero-test rule, so trimmed to 1 smoke test (5->1) per recommendation's alt option. 16 dup cases removed, no coverage regression."
     },
     {
       "id": "AUD-onboarding-14",
