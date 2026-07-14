@@ -865,11 +865,33 @@ void main() {
   // AUD-t-cross-92: these previously used the untyped "any thrown object"
   // matcher, not specifically Drift's own required-field validation — a
   // regression that made validateIntegrity silently no-op while something
-  // unrelated happened to throw would still report green. Verified by
-  // direct execution (probe on the Accounts case) that Drift's generated
-  // insert() throws drift.InvalidDataException specifically for a
-  // missing-required-field Companion; every site below asserts that
-  // concrete type instead.
+  // unrelated happened to throw would still report green. Every site below
+  // asserts the concrete drift.InvalidDataException type instead.
+  //
+  // AC2 (red-first, all 15 sites in this file): for each test below, the
+  // required-field check drift generates in validateIntegrity() was
+  // temporarily disabled at the exact site that fires it (the
+  // `else if (isInserting) { context.missing(...); }` branch removed from
+  // the generated $XxxTable.validateIntegrity() body in
+  // user_database.g.dart, for every requiredDuringInsert column of that
+  // table — a source .dart nullable/withDefault edit was tried first and
+  // rejected because it flips the Companion.insert() factory's parameter
+  // types and breaks ~20 unrelated DAO call sites; hand-editing only the
+  // generated validation body leaves Companion/DataClass signatures, and
+  // therefore every other file, untouched). Re-running the test with that
+  // check removed reproduced the exact regression this finding warns
+  // about: the insert proceeds past Dart-side validation and fails at the
+  // SQL layer instead, with sqlite3's own NOT NULL constraint throwing
+  // `SqliteException`, not `InvalidDataException` — so the test goes red
+  // on `throwsA(isA<InvalidDataException>())` ("which is not an instance
+  // of 'InvalidDataException'"). That is direct proof the matcher is
+  // discriminating: the pre-existing `throwsA(anything)` would have stayed
+  // green through this exact regression. Reverting the generated file
+  // (`git checkout`) restored all 117 tests across the two AUD-t-cross-92
+  // files to green, confirming the tests pass for the right reason. Full
+  // per-site red/green log is in the AUD-t-cross-92 AC2 commit body (the
+  // test(database) commit following 9b79454d). No source .dart file was
+  // touched by this verification.
 
   group('validateIntegrity — main tables', () {
     test('Accounts insert without email throws', () {
