@@ -72,25 +72,20 @@ class _FakeMergeStore implements MergeStore {
         syncedAt;
   }
 
+  // AUD-t-cross-68: delegates to the real DriftMergeStore algorithm instead
+  // of re-deriving it by hand, so this fake cannot drift from D15 semantics.
   @override
   bool remoteIsNewer({
     required DateTime? localUpdatedAt,
     required DateTime? remoteUpdatedAt,
     DateTime? localSyncedAt,
     DateTime? remoteSyncedAt,
-  }) {
-    if (remoteUpdatedAt == null) return false;
-    if (localUpdatedAt == null) return true;
-    final diff = remoteUpdatedAt.difference(localUpdatedAt).abs();
-    if (diff > const Duration(seconds: 5)) {
-      return remoteUpdatedAt.isAfter(localUpdatedAt);
-    }
-    if (remoteSyncedAt != null && localSyncedAt != null) {
-      if (remoteSyncedAt.isAfter(localSyncedAt)) return true;
-      if (localSyncedAt.isAfter(remoteSyncedAt)) return false;
-    }
-    return true;
-  }
+  }) => driftMergeStoreRemoteIsNewer(
+    localUpdatedAt: localUpdatedAt,
+    remoteUpdatedAt: remoteUpdatedAt,
+    localSyncedAt: localSyncedAt,
+    remoteSyncedAt: remoteSyncedAt,
+  );
 
   @override
   Future<void> upsert({
@@ -274,6 +269,39 @@ void main() {
         rows: [profileRow(displayName: 'Bob', updatedAt: _dt(2026))],
       );
       expect(store.upserted, isEmpty);
+    });
+
+    // AUD-t-cross-68: within DriftMergeStore.clockSkewTieBreakWindow (±5s)
+    // with no decisive synced_at on either side, the real store falls back
+    // to comparing raw updated_at and keeps the strictly-newer side (D15).
+    // The hand-rolled fake this test was migrated with unconditionally
+    // preferred remote once inside the window, which would silently clobber
+    // a newer, un-pushed local edit with an older remote value.
+    test('D15: within clock-skew window, older remote (no synced_at) does NOT '
+        'clobber a newer local edit', () async {
+      final localTime = DateTime.utc(2026, 1, 1, 12, 0, 0);
+      final remoteTime = localTime.subtract(const Duration(seconds: 2));
+
+      store.seedTimestamp(
+        kind: EntityKind.learnerProfile,
+        profileId: 1,
+        naturalKey: '1',
+        at: localTime,
+      );
+
+      await merger.merge(
+        profileId: 1,
+        rows: [profileRow(displayName: 'Clobbered?', updatedAt: remoteTime)],
+      );
+
+      expect(
+        store.upserted,
+        isEmpty,
+        reason:
+            'Older remote inside the clock-skew window must not overwrite '
+            'a newer un-pushed local edit (D15) when neither side has '
+            'synced_at',
+      );
     });
 
     test('falls back to profileId when row decode returns null', () async {
