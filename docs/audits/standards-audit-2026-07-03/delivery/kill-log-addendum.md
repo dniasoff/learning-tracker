@@ -135,3 +135,44 @@ finding, appended as it happens.
 - **Delivery disposition:** `skipped-refuted` (merge-lane w4r1c11, 2026-07-14).
 - **Basis — target file deleted whole, independently confirmed:** sibling commit `49cc7d73` (`test(database): AUD-t-cross-16 - delete tautological db.managers.* suite, exclude generated code from coverage`) removed the entire 676-line `learning_tracker/test/core/database/user_database_managers_refs_test.dart` outright, along with the rest of the 7-file `db.managers.*` suite, on the grounds that `db.managers.*` (the Drift-generated TableManager API under test) has no production caller (`grep -rl '\.managers\.' lib/` returns 0 files) — the app queries exclusively through the hand-written DAOs, which already carry real relationship-verifying assertion coverage. Independently re-verified: the cited vacuous assertions at lines 211 and 253 of the pre-delete blob (`git show 49cc7d73~1:learning_tracker/test/core/database/user_database_managers_refs_test.dart`) match the finding's evidence verbatim — `expect(manager, isNotNull);` inside `curriculumScopesRefs getter returns manager` (line ~211) and `pointConfigsRefs getter returns manager` (line ~253); the file is absent at current `HEAD` (`find learning_tracker/test -iname user_database_managers_refs_test.dart` returns nothing); commit `49cc7d73` remains an ancestor of this branch's current `HEAD`. This finding's target no longer exists to fix — moot, not a rewrite candidate. No code change made.
 - **Logged by:** merge-lane w4r1c11 agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-cross-28 — Flip scheduler_p1_test.dart's R-SC1/R-SC2 assertions to match the project's own confirm-bug-to-skip contract
+
+- **Wave:** 4
+- **Severity:** P2
+- **Delivery disposition:** `refuted` (wave-4-chunk04 engine run, 2026-07-14, terminated at no-progress cap / loop end).
+- **Evidence gap — read before trusting this disposition:** this reconciliation pass (ledger reconciliation, wave4-chunk04, 2026-07-14) was handed only the engine's summary verdict (`refuted`) for this id, with no accompanying rationale, review transcript, or write-up. None was found anywhere on disk (searched `_work/`, `delivery/`, this addendum file, and `git log --all` across every branch/worktree — zero commits reference `AUD-t-cross-28`, unlike sibling chunk ids `AUD-t-cross-31`/`46`/`50` below, each of which has worktree commits). Independently re-checking the current tree: the disposition is only half self-evidencing. **R-SC2 is moot** — `scheduler_p1_test.dart:912` now carries the comment `R-SC2 (resolved by AUD-scheduler-07): the never-rendered ComposedDailySchedule.summary field and its unlocalized _summaryForSection() builder were dead code and have been deleted`, confirmed by `git log --all --oneline | grep AUD-scheduler-07` (commit `ca9bc667`, an ancestor of this branch's current `HEAD`) — there is no assertion left to flip for that half. **R-SC1 remains open** — `scheduler_p1_test.dart:316-393` still asserts the hardcoded-English `'Select Hebrew date'` string as the expected, passing value with a plain `// confirmed bug` comment, not the skip-marked red-first pattern this finding's recommendation (and the `hebrew_rtl_p1_test.dart` R-OB7 precedent) calls for.
+- **Action required before wave-4 is certified:** the wave-4 closing-gate reviewer (opus, §4) must independently confirm this refutation with real evidence, or reopen R-SC1's half as `todo`/`blocked` for a real fix (flip the assertion + add `skip: 'BUG R-SC1: ...'`, per the finding's own acceptance criteria). Do not treat this entry as sufficient evidence on its own — it records that the disposition happened and that its rationale is only partially verified, nothing more.
+- **Logged by:** wave-4-chunk04 ledger reconciliation agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-cross-31 — Make E2E-516/E2E-922/E2E-416 actually pump Locale('he') instead of asserting a false harness limitation
+
+- **Wave:** 4
+- **Severity:** P2
+- **Delivery disposition:** `blocked` (wave-4-chunk04 engine run, 2026-07-14, terminated at no-progress cap / loop end).
+- **Basis — verified-looking fix commit found, never merged:** two worktree branches each carry an identical commit — `ab81cd4f` on `worktree-wf_cfdc1964-538-1` and `875da8b4` on `worktree-wf_cfdc1964-538-53` (same message, same diff shape) — titled `fix(tests): AUD-t-cross-31 - make E2E-516/E2E-922/E2E-416/E2E-812 actually pump Locale('he')`. It touches `scheduler_p1_test.dart`, `settings_p1_test.dart`, `tracks_p1_test.dart`, `progress_p1_test.dart`, and adds a new `tool/check_e2e_he_locale_coverage.dart` Rule-0 checker wired into `make audit` (57/57); the commit message claims `dart run tool/check_e2e_he_locale_coverage.dart` passes all 18 catalog rows, the four affected test files pass (`+46 ~4`), `make audit` is clean, and `flutter analyze` reports no issues. **Neither commit is an ancestor of this branch's current `HEAD`** (`git merge-base --is-ancestor <sha> HEAD` fails for both) — the merge lane never landed either copy before the wave-4-chunk04 engine run terminated at no-progress cap / loop end. Per the engine outcome this id is `blocked`, not `merged`; the ledger row was updated to reflect the branch's actual current state (`commits: []`, since nothing is merged), with this entry as the evidence trail for a future merge/harvest pass. Left uninvestigated: why the merge lane didn't land either copy (conflict, review rejection, or simply ran out of budget) — not recoverable from any persisted artifact found.
+- **Logged by:** wave-4-chunk04 ledger reconciliation agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-cross-46 — Un-skip hebrew_rtl_p1_test.dart E2E-1510 — R-OB7 onboarding hardcoded-English bug is already fixed
+
+- **Wave:** 4
+- **Severity:** P2
+- **Delivery disposition:** `blocked` (wave-4-chunk04 engine run, 2026-07-14, terminated at no-progress cap / loop end).
+- **Basis — verified-looking fix commit found, never merged:** two worktree branches each carry an identical commit — `c9c76868` on `worktree-wf_cfdc1964-538-1` and `cca963c5` on `worktree-wf_cfdc1964-538-53` — titled `fix(tests): AUD-t-cross-46 - un-skip hebrew_rtl_p1_test.dart E2E-1510 (R-OB7 fixed)`. It removes the stale `skip: true` and its confirmed-bug docstring from the E2E-1510 group, updates the docstring to `(FIXED)` per the file's own R-IC3 precedent, and strengthens the assertions to check that real Hebrew translations render; the commit message claims `flutter test ... --plain-name "E2E-1510"` passes. **Neither commit is an ancestor of this branch's current `HEAD`** (`git merge-base --is-ancestor <sha> HEAD` fails for both) — the merge lane never landed either copy before the wave-4-chunk04 engine run terminated at no-progress cap / loop end. Per the engine outcome this id is `blocked`, not `merged`; the ledger row was updated to reflect the branch's actual current state (`commits: []`), with this entry as the evidence trail for a future merge/harvest pass.
+- **Logged by:** wave-4-chunk04 ledger reconciliation agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-cross-50 — progress_p1_test.dart E2E-806 claims to verify the documented R-PG7 cross-profile access-control gap but never passes a differing profileId
+
+- **Wave:** 4
+- **Severity:** P2
+- **Delivery disposition:** `blocked` (wave-4-chunk04 engine run, 2026-07-14, terminated at no-progress cap / loop end).
+- **Basis — verified-looking fix commit found, never merged:** two worktree branches each carry an identical commit — `37de79f4` on `worktree-wf_cfdc1964-538-1` and `38b8c60c` on `worktree-wf_cfdc1964-538-53` — titled `fix(tests): AUD-t-cross-50 - progress_p1_test.dart E2E-806 add cross-profile R-PG7 sub-test`. It adds a second E2E-806 test that seeds a genuinely separate account + profile row into the harness's in-memory `UserDatabase`, then deep-links via `/journey?profileId=<other>` and asserts the other profile's real display name and a distinct milestone render — proving the cross-profile read actually happened; the commit message notes a red-first dead-end (`h.router.push(...)` hangs indefinitely) that was resolved by switching to a direct `pumpApp(path:)` deep link, and claims both the new sub-test and the full file pass. **Neither commit is an ancestor of this branch's current `HEAD`** (`git merge-base --is-ancestor <sha> HEAD` fails for both) — the merge lane never landed either copy before the wave-4-chunk04 engine run terminated at no-progress cap / loop end. Per the engine outcome this id is `blocked`, not `merged`; the ledger row was updated to reflect the branch's actual current state (`commits: []`), with this entry as the evidence trail for a future merge/harvest pass.
+- **Logged by:** wave-4-chunk04 ledger reconciliation agent (sonnet), 2026-07-14.
