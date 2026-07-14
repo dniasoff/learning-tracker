@@ -6485,13 +6485,17 @@
   {
    "id": "AUD-t-scheduler-04",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Collapse duplicate equality/hashCode/toString assertions inside delta_value_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "3e91d76cc8c69abf01c50549e810390b6cabbc12"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-scheduler-04 AC1 OK: parser found 48 test() bodies (was 50), 0 textually-identical pairs; both removed blocks have identical-body twins retained, zero coverage lost"
+   ],
+   "notes": "Script normalizing 50 test() bodies confirmed exactly 2 textual duplicate pairs (line27/31, line51/55), matching finding evidence. Deleted less-descriptive twin in each pair. Post-fix: 0 duplicates across 48 test() blocks (was 50), zero coverage lost."
   },
   {
    "id": "AUD-t-settings-10",
