@@ -23,7 +23,6 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/network/connectivity_gateway.dart';
@@ -34,8 +33,9 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/manage_learners_screen.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -133,7 +133,7 @@ Widget _buildApp({
     }
   }
 
-  return ProviderScope(
+  return pumpApp(
     retry: disableRetry ? (_, __) => null : null,
     overrides: [
       profileListStreamProvider.overrideWith((ref) => makeStream()),
@@ -143,20 +143,11 @@ Widget _buildApp({
       connectivityServiceProvider.overrideWithValue(mockConnectivity),
       selectedProfileIdProvider.overrideWith(() => _FixedSelectedProfileId(1)),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: const ManageLearnersScreen(),
-      ),
+    locale: locale,
+    child: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: const ManageLearnersScreen(),
     ),
   );
 }

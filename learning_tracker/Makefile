@@ -305,7 +305,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 61 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 62 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -923,7 +923,7 @@ audit: lint-rules-test ## Run all 61 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/inmemory_db_close_check.$$$$.log; \
 	fi; \
-	echo "61/61 — TQ-6: inner check 6's \"No DateTime.now() outside core/time\" extended to test/ — RATCHET, only a NEW (non-baselined) test/ file calling DateTime.now() fails the gate (AUD-t-cross-84)"; \
+	echo "61/62 — TQ-6: inner check 6's \"No DateTime.now() outside core/time\" extended to test/ — RATCHET, only a NEW (non-baselined) test/ file calling DateTime.now() fails the gate (AUD-t-cross-84)"; \
 	if ! dart run tool/check_tq6_test_wall_clock.dart > /tmp/tq6_test_wall_clock_check.$$$$.log 2>&1; then \
 	  cat /tmp/tq6_test_wall_clock_check.$$$$.log; \
 	  rm -f /tmp/tq6_test_wall_clock_check.$$$$.log; \
@@ -931,9 +931,17 @@ audit: lint-rules-test ## Run all 61 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/tq6_test_wall_clock_check.$$$$.log; \
 	fi; \
+	echo "62/62 — TQ-3 Rule-0: GlobalCupertinoLocalizations.delegate occurrence count outside test/helpers/ (hand-rolled MaterialApp delegate blocks not yet migrated onto pumpApp) — RATCHET, only growth above the tracked baseline fails the gate (AUD-t-profiles-02)"; \
+	if ! dart run tool/check_tq3_pump_app_migration.dart > /tmp/tq3_pump_app_migration_check.$$$$.log 2>&1; then \
+	  cat /tmp/tq3_pump_app_migration_check.$$$$.log; \
+	  rm -f /tmp/tq3_pump_app_migration_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/tq3_pump_app_migration_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 61 greps clean ==="; \
+	  echo "=== audit PASSED — all 62 greps clean ==="; \
 	fi

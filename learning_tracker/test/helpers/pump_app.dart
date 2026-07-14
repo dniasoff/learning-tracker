@@ -10,6 +10,10 @@
 // there is now a single place to update when a new l10n delegate or
 // supported-locales source is introduced.
 //
+// The profiles feature hand-rolled the identical block a further 13 times
+// across 4 files (AUD-t-profiles-02), which migrated onto this helper too
+// and added the second provider-wiring mode documented below.
+//
 // Usage:
 // ```dart
 //   await tester.pumpWidget(
@@ -20,15 +24,29 @@
 //     ),
 //   );
 // ```
+//
+// Two provider-wiring modes are supported:
+//   - the common case: pass [overrides] (and optionally [retry]) and
+//     [pumpApp] creates a fresh `ProviderScope` for you.
+//   - the shared-container case (tests that need to `container.read(...)`
+//     the SAME container the widget tree uses, e.g. across a pump/re-pump
+//     remount): pass an existing [container] and [pumpApp] wraps it in
+//     `UncontrolledProviderScope` instead. [overrides]/[retry] are ignored
+//     when [container] is supplied — the container already carries its own
+//     overrides.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// `Override` is part of Riverpod's public API but is only re-exported from
+// flutter_riverpod's `misc.dart` entrypoint (not the main
+// `flutter_riverpod.dart` barrel) — see riverpod.dev's package layout.
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// Wraps [child] in the standard L1 pump rig: a [ProviderScope] with
-/// [overrides], and a [MaterialApp] wired with the real l10n delegates +
+/// Wraps [child] in the standard L1 pump rig: a [ProviderScope] (or, when
+/// [container] is supplied, an [UncontrolledProviderScope] around that
+/// container) and a [MaterialApp] wired with the real l10n delegates +
 /// supported locales (so real screens/widgets render text instead of
 /// throwing or showing raw keys) and [locale].
 ///
@@ -39,19 +57,27 @@ Widget pumpApp({
   required Widget child,
   List<Override> overrides = const [],
   Locale locale = const Locale('en'),
+  // Matches ProviderContainer's `Retry` typedef (Duration? Function(int
+  // retryCount, Object error)) — spelled out because that typedef isn't
+  // re-exported from any flutter_riverpod public entrypoint.
+  Duration? Function(int retryCount, Object error)? retry,
+  ProviderContainer? container,
 }) {
-  return ProviderScope(
-    overrides: overrides,
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: child,
-    ),
+  final app = MaterialApp(
+    locale: locale,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: child,
   );
+
+  if (container != null) {
+    return UncontrolledProviderScope(container: container, child: app);
+  }
+
+  return ProviderScope(retry: retry, overrides: overrides, child: app);
 }
