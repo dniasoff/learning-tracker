@@ -21,6 +21,34 @@ import 'package:flutter_test/flutter_test.dart';
 /// Hebrew drives the RTL rendering.
 const List<Locale> _localeVariants = [Locale('en'), Locale('he')];
 
+/// One `(name, locale)` pair that [goldenTest] has registered a
+/// `testWidgets` entry for.
+///
+/// Story-acceptance suites assert against [registeredGoldenTests] instead
+/// of a local hardcoded copy of a shape/locale list, so the assertion
+/// tracks what this runner actually registers rather than a disconnected
+/// duplicate (AUD-t-story-acceptance-16).
+class GoldenTestRegistration {
+  const GoldenTestRegistration({required this.name, required this.locale});
+
+  /// The golden test's base name, before the ` [locale]` suffix.
+  final String name;
+
+  /// The locale this registration was pumped with.
+  final Locale locale;
+}
+
+/// Every `(name, locale)` pair [goldenTest] has registered, in
+/// registration order.
+///
+/// `package:test`/`flutter_test` build the full declaration tree
+/// (`group`/`test`/`testWidgets` calls) synchronously while `main()` runs,
+/// before any test body executes — so by the time any `test()` body reads
+/// this list, every `goldenTest()` call anywhere in the file (regardless
+/// of its position relative to the reader) has already appended its
+/// entries.
+final List<GoldenTestRegistration> registeredGoldenTests = [];
+
 /// Builder signature: receives the locale being exercised and returns
 /// the widget to render. Tests use the locale to swap content (Hebrew
 /// terms vs English glosses) when needed.
@@ -39,6 +67,9 @@ void goldenTest(
   bool skipGolden = false,
 }) {
   for (final locale in _localeVariants) {
+    registeredGoldenTests.add(
+      GoldenTestRegistration(name: name, locale: locale),
+    );
     testWidgets('$name [${locale.languageCode}]', (tester) async {
       await tester.binding.setSurfaceSize(surfaceSize);
       try {
