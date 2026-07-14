@@ -6,20 +6,26 @@
 ///   * AC2 — Structured log redaction: values for keys in
 ///           `PiiRedactor.sensitiveKeys` are replaced with `[REDACTED]`;
 ///           the `event` string is preserved verbatim (no substring scan).
-///   * AC3 — Bookmark-advance atomicity: when a completion insert and a
-///           bookmark advance share one Drift transaction, throwing in the
-///           bookmark step rolls back the completion.
+///   * AC3 — Bookmark-advance atomicity: the real `CompletionRepositoryImpl`
+///           wiring shares one Drift transaction between the completion
+///           insert and the bookmark advance, so an injected
+///           `BookmarkRepository` fake that throws rolls the completion
+///           back (AUD-t-story-acceptance-01).
 @Tags(['epic_27'])
 library;
 
-import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
-    hide expect, expectLater, group, setUp, tearDown, test;
+    hide expect, expectLater, group, setUp, setUpAll, tearDown, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:talker/talker.dart';
@@ -30,6 +36,21 @@ import '../helpers/drift_memory.dart' show seedProfile;
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
 class _MockSecureStorage extends Mock implements FlutterSecureStorage {}
+
+/// AC3 fake — stands in for the production `BookmarkRepository` injected
+/// into `CompletionRepositoryImpl`. Its `advanceBookmark` is stubbed per
+/// test (throw / succeed); every other member is intentionally left
+/// unstubbed because `markComplete`'s tested code path never calls it.
+class _MockBookmarkRepository extends Mock implements BookmarkRepository {}
+
+/// AC3 fake — `CompletionRepositoryImpl` requires a non-null
+/// `ContentRepository` at construction, but the `markComplete` path under
+/// test never reaches it: the injected `_MockBookmarkRepository` above
+/// satisfies `_advanceBookmark` directly, and `_completionDetectionService`
+/// is left null so the siyum-detection call site is skipped. Left entirely
+/// unstubbed on purpose — any unexpected call fails loudly via mocktail's
+/// `MissingStubError` rather than silently returning bogus content.
+class _MockContentRepository extends Mock implements ContentRepository {}
 
 /// In-memory secure-storage stub keyed by string. Mirrors the pattern from
 /// `test/features/parent_mode/pin_service_test.dart`.
@@ -236,30 +257,48 @@ void main() {
   // ── AC3: Bookmark advance atomicity ────────────────────────────────────────
   //
   // The bookmark advance must share one Drift transaction with the completion
-  // insert so a failure in the advance rolls the completion back. The
-  // production wire-up lives in `CompletionRepositoryImpl` (today the advance
-  // is *outside* the transaction — DNI-385 ratifies the invariant the wire-up
-  // must satisfy). The test below verifies Drift's primitive guarantee — once
-  // production code wraps `advanceBookmark` in `db.transaction(...)`, the
-  // same `Future.error` rollback behaviour kicks in.
+  // insert so a failure in the advance rolls the completion back. This drives
+  // the REAL production wire-up — `CompletionRepositoryImpl.markComplete`,
+  // constructed with an injected `BookmarkRepository` fake — instead of a
+  // hand-rolled `db.transaction()` that only proves Drift's rollback
+  // primitive (AUD-t-story-acceptance-01 / TQ-8).
 
   group(
     'Story 27.9 — AC3: bookmark advance atomicity (transaction rollback)',
     tags: ['story_27_9'],
     () {
       late UserDatabase db;
+      late int profileId;
+
+      const curriculumId = 'mishnayos';
+      const request = CompletionRequest(
+        curriculumId: curriculumId,
+        sefariaRef: 'Mishnah Berakhot 1',
+        stageId: 1,
+        trackType: 'personal',
+      );
+
+      setUpAll(() {
+        registerFallbackValue(CurriculumId.mishnayos);
+      });
 
       setUp(() async {
         db = UserDatabase(NativeDatabase.memory());
         await seedProfile(db);
-        // Insert one curriculum track row so the completion FK resolves —
-        // see DNI-336 (CompletionWriter) test for the same helper.
+        // seedProfile inserts exactly one account + one learner profile —
+        // its id is deterministic (autoincrement from a fresh in-memory db).
+        final profile = await db.select(db.learnerProfiles).getSingle();
+        profileId = profile.id;
+
+        // Curriculum track row so `CompletionRepositoryImpl._resolveTrackId`
+        // resolves — see DNI-336 (CompletionWriter) test for the same
+        // helper.
         await db
             .into(db.curriculumTracks)
             .insert(
               CurriculumTracksCompanion.insert(
-                profileId: 1,
-                curriculumId: 'mishnah_yomit',
+                profileId: profileId,
+                curriculumId: curriculumId,
                 stateChangedAt: DateTime.utc(2026, 5, 1),
                 activatedAt: DateTime.utc(2026, 5, 1),
               ),
@@ -267,64 +306,79 @@ void main() {
       });
       tearDown(() async => db.close());
 
-      Future<void> commitWithSimulatedBookmarkAdvance({
-        required bool bookmarkAdvanceThrows,
-      }) {
-        // One transaction wraps BOTH the completion insert AND the bookmark
-        // advance — the contract that production code must mirror.
-        return db.transaction(() async {
-          await db
-              .into(db.completionEvents)
-              .insert(
-                CompletionEventsCompanion.insert(
-                  profileId: 1,
-                  curriculumId: 'mishnah_yomit',
-                  sefariaRef: 'Mishnah Berakhot 1',
-                  stageId: 1,
-                  trackType: 'personal',
-                  trackId: const Value(1),
-                  eventTimestamp: DateTime.utc(2026, 5, 13, 12),
-                ),
-              );
-          if (bookmarkAdvanceThrows) {
-            throw StateError('simulated bookmark-advance failure');
-          }
-          // Real bookmark advance would happen here.
-        });
-      }
-
       Future<int> countCompletions() async {
         final rows = await db.select(db.completionEvents).get();
         return rows.length;
       }
 
-      test(
-        'completion is rolled back when the bookmark advance throws',
-        () async {
-          await expectLater(
-            commitWithSimulatedBookmarkAdvance(bookmarkAdvanceThrows: true),
-            throwsA(isA<StateError>()),
-          );
-          expect(
-            await countCompletions(),
-            equals(0),
-            reason:
-                'Drift must roll the completion insert back when any '
-                'statement inside the transaction throws — this is the '
-                'invariant the bookmark-advance wire-up depends on.',
-          );
-        },
-      );
+      /// Builds the real [CompletionRepositoryImpl] under test, wired with
+      /// [bookmarkRepo] the same way `completionRepositoryProvider` wires
+      /// its production `BookmarkRepository` — as the `bookmarkRepository`
+      /// constructor field, so `_advanceBookmark` uses it directly instead
+      /// of building an ad-hoc `BookmarkRepositoryImpl`.
+      CompletionRepositoryImpl buildRepository(
+        BookmarkRepository bookmarkRepo,
+      ) {
+        return CompletionRepositoryImpl(
+          database: db,
+          syncEngine: null,
+          contentRepository: _MockContentRepository(),
+          bookmarkRepository: bookmarkRepo,
+          activeProfileId: profileId,
+        );
+      }
 
-      test(
-        'completion is persisted when the bookmark advance succeeds',
-        () async {
-          await commitWithSimulatedBookmarkAdvance(
-            bookmarkAdvanceThrows: false,
-          );
-          expect(await countCompletions(), equals(1));
-        },
-      );
+      test('completion is rolled back when the real CompletionRepositoryImpl '
+          'bookmark-advance wiring throws', () async {
+        final bookmarkRepo = _MockBookmarkRepository();
+        when(
+          () => bookmarkRepo.advanceBookmark(
+            curriculumId: any(named: 'curriculumId'),
+            completedSefariaRef: any(named: 'completedSefariaRef'),
+          ),
+        ).thenThrow(StateError('simulated bookmark-advance failure'));
+
+        final repository = buildRepository(bookmarkRepo);
+
+        await expectLater(
+          repository.markComplete(request),
+          throwsA(isA<StateError>()),
+        );
+        expect(
+          await countCompletions(),
+          equals(0),
+          reason:
+              'CompletionRepositoryImpl.markComplete must roll the '
+              'completion insert back when the injected BookmarkRepository '
+              'throws during advanceBookmark — FR20 / Story 27.9\'s '
+              'atomicity invariant, exercised through the real production '
+              'wiring rather than a hand-rolled transaction.',
+        );
+      });
+
+      test('completion is persisted through the real CompletionRepositoryImpl '
+          'when the bookmark advance succeeds', () async {
+        final bookmarkRepo = _MockBookmarkRepository();
+        when(
+          () => bookmarkRepo.advanceBookmark(
+            curriculumId: any(named: 'curriculumId'),
+            completedSefariaRef: any(named: 'completedSefariaRef'),
+          ),
+        ).thenAnswer((_) async {});
+
+        final repository = buildRepository(bookmarkRepo);
+
+        final result = await repository.markComplete(request);
+
+        expect(result.completion.sefariaRef, equals(request.sefariaRef));
+        expect(await countCompletions(), equals(1));
+        verify(
+          () => bookmarkRepo.advanceBookmark(
+            curriculumId: CurriculumId.mishnayos,
+            completedSefariaRef: request.sefariaRef,
+          ),
+        ).called(1);
+      });
     },
   );
 }
