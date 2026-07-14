@@ -8245,13 +8245,18 @@
     {
       "id": "AUD-t-cross-99",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Use the existing useLocalDayClock seam instead of DateTime.now() in sync_orchestrator_test.dart resume-throttle tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "632cb57ef10461770c3474717db520d10f1a68a1"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-99 AC1 OK: grep 'DateTime.now()' in sync_orchestrator_test.dart = no matches; throttle tests derive ms from fixedNow (L646,663)",
+        "AUD-t-cross-99 AC2 OK: setUp pins useLocalDayClock(FakeLocalDayClock(utc 2026-03-15)); 34/34 pass; pin load-bearing (orch reads DateTimeFactory.nowUtc, L710)"
+      ],
+      "notes": "Confirmed tests still called DateTime.now(); orchestrator reads clock via DateTimeFactory.nowUtc()/useLocalDayClock. Pinned FakeLocalDayClock in group setUp/tearDown; derived offsets from it. Both ACs verified: no DateTime.now() remains; 34/34 tests pass with clock pinned."
     },
     {
       "id": "AUD-t-cross-94",
