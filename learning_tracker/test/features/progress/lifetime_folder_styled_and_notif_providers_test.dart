@@ -31,7 +31,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -43,34 +42,35 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../helpers/overflow_harness.dart';
+import '../../helpers/pump_app.dart';
 
 // ---------------------------------------------------------------------------
 // Shared widget-test pump helpers
 // ---------------------------------------------------------------------------
 
+// [TQ-3] Delegates the ProviderScope+MaterialApp shell to the shared
+// test/helpers/pump_app.dart helper (AUD-t-progress-04) instead of
+// hand-rolling the 4-delegate localizationsDelegates list. [theme] has no
+// pumpApp() equivalent (pumpApp doesn't expose a theme param — none of its
+// other 3 migrated call sites needed one), so the one dark-theme case in this
+// file wraps its child in a local [Theme] override, which is
+// context-equivalent to passing MaterialApp(theme:) since both resolve
+// through the same InheritedTheme lookup.
 Widget _wrap(
   Widget child, {
   Locale locale = const Locale('en'),
   ThemeData? theme,
 }) {
-  return ProviderScope(
+  final themedChild = theme == null ? child : Theme(data: theme, child: child);
+  return pumpApp(
     overrides: [
       useHebrewTermsProvider.overrideWithValue(locale.languageCode == 'he'),
     ],
-    child: MaterialApp(
-      locale: locale,
-      theme: theme ?? ThemeData.light(),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: SizedBox(width: 360, child: child)),
-    ),
+    locale: locale,
+    child: Scaffold(body: SizedBox(width: 360, child: themedChild)),
   );
 }
 
@@ -142,29 +142,23 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('renders in dark theme without overflow (en)', (tester) async {
-      final errors = <FlutterErrorDetails>[];
-      final prev = FlutterError.onError;
-      FlutterError.onError = (d) {
-        if (d.exception.toString().contains('overflowed'))
-          errors.add(d);
-        else
-          prev?.call(d);
-      };
-
-      await _pump(
-        tester,
-        _wrap(
-          const LifetimeFolderSurface(child: Text('dark test')),
-          theme: ThemeData.dark(),
-        ),
-      );
-
-      FlutterError.onError = prev;
-      expect(errors, isEmpty, reason: 'No overflow in dark theme');
-
-      await _tearDown(tester);
-    });
+    testWidgets(
+      'renders in dark theme without overflow (en), across the device matrix',
+      (tester) async {
+        // [TQ-3/AUD-t-progress-04] Matrix-checked via the shared
+        // expectNoOverflowAcrossDevices harness instead of a single-point
+        // hand-rolled FlutterError.onError capture — catches overflow at the
+        // tablet width / 2.0x text-scale corners too, not just this one size.
+        await expectNoOverflowAcrossDevices(
+          tester,
+          () => Theme(
+            data: ThemeData.dark(),
+            child: const LifetimeFolderSurface(child: Text('dark test')),
+          ),
+          overrides: [useHebrewTermsProvider.overrideWithValue(false)],
+        );
+      },
+    );
 
     testWidgets('uses custom gradient when provided', (tester) async {
       await _pump(
@@ -260,35 +254,20 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('he-locale: no overflow', (tester) async {
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      final errors = <FlutterErrorDetails>[];
-      final prev = FlutterError.onError;
-      FlutterError.onError = (d) {
-        if (d.exception.toString().contains('overflowed'))
-          errors.add(d);
-        else
-          prev?.call(d);
-      };
-
-      await _pump(
+    testWidgets('he-locale: no overflow across the device matrix', (
+      tester,
+    ) async {
+      // [TQ-3/AUD-t-progress-04] See LifetimeFolderSurface's dark-theme case
+      // above for why the matrix harness replaces the hand-rolled capture.
+      await expectNoOverflowAcrossDevices(
         tester,
-        _wrap(
-          const LifetimeFolderPageHeader(
-            title: 'ידע לכל החיים',
-            subtitle: 'כל הזמן',
-          ),
-          locale: const Locale('he'),
+        () => const LifetimeFolderPageHeader(
+          title: 'ידע לכל החיים',
+          subtitle: 'כל הזמן',
         ),
+        overrides: [useHebrewTermsProvider.overrideWithValue(true)],
+        locale: const Locale('he'),
       );
-
-      FlutterError.onError = prev;
-      expect(errors, isEmpty, reason: 'No overflow under Hebrew locale');
-
-      await _tearDown(tester);
     });
   });
 
@@ -338,31 +317,20 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('he-locale: no overflow', (tester) async {
-      final errors = <FlutterErrorDetails>[];
-      final prev = FlutterError.onError;
-      FlutterError.onError = (d) {
-        if (d.exception.toString().contains('overflowed'))
-          errors.add(d);
-        else
-          prev?.call(d);
-      };
-
-      await _pump(
+    testWidgets('he-locale: no overflow across the device matrix', (
+      tester,
+    ) async {
+      // [TQ-3/AUD-t-progress-04] See LifetimeFolderSurface's dark-theme case
+      // above for why the matrix harness replaces the hand-rolled capture.
+      await expectNoOverflowAcrossDevices(
         tester,
-        _wrap(
-          const LifetimeFolderFrostedHint(
-            title: 'טיפ',
-            subtitle: 'סמן מה שלמדת.',
-          ),
-          locale: const Locale('he'),
+        () => const LifetimeFolderFrostedHint(
+          title: 'טיפ',
+          subtitle: 'סמן מה שלמדת.',
         ),
+        overrides: [useHebrewTermsProvider.overrideWithValue(true)],
+        locale: const Locale('he'),
       );
-
-      FlutterError.onError = prev;
-      expect(errors, isEmpty);
-
-      await _tearDown(tester);
     });
   });
 
@@ -496,39 +464,25 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('he-locale: no overflow, renders without crash', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      final errors = <FlutterErrorDetails>[];
-      final prev = FlutterError.onError;
-      FlutterError.onError = (d) {
-        if (d.exception.toString().contains('overflowed'))
-          errors.add(d);
-        else
-          prev?.call(d);
-      };
-
-      await _pump(
-        tester,
-        _wrap(
-          const LifetimeCurriculumFolderRow(
+    testWidgets(
+      'he-locale: no overflow, renders without crash, across the device '
+      'matrix',
+      (tester) async {
+        // [TQ-3/AUD-t-progress-04] See LifetimeFolderSurface's dark-theme
+        // case above for why the matrix harness replaces the hand-rolled
+        // capture.
+        await expectNoOverflowAcrossDevices(
+          tester,
+          () => const LifetimeCurriculumFolderRow(
             curriculumId: CurriculumId.mishnayos,
             trailingPercent: '100%',
             showLearnedBadge: true,
           ),
+          overrides: [useHebrewTermsProvider.overrideWithValue(true)],
           locale: const Locale('he'),
-        ),
-      );
-
-      FlutterError.onError = prev;
-      expect(errors, isEmpty, reason: 'No overflow under Hebrew locale');
-
-      await _tearDown(tester);
-    });
+        );
+      },
+    );
 
     testWidgets(
       'he-locale with useHebrew=true: shows Hebrew name as secondary',
@@ -788,39 +742,24 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('he-locale: no overflow', (tester) async {
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      final errors = <FlutterErrorDetails>[];
-      final prev = FlutterError.onError;
-      FlutterError.onError = (d) {
-        if (d.exception.toString().contains('overflowed'))
-          errors.add(d);
-        else
-          prev?.call(d);
-      };
-
+    testWidgets('he-locale: no overflow across the device matrix', (
+      tester,
+    ) async {
+      // [TQ-3/AUD-t-progress-04] See LifetimeFolderSurface's dark-theme case
+      // above for why the matrix harness replaces the hand-rolled capture.
       final leaf = _leafNode(state: LifetimeNodeState.full);
-      await _pump(
+      await expectNoOverflowAcrossDevices(
         tester,
-        _wrap(
-          LifetimeFolderTreeNode(
-            node: leaf,
-            depth: 0,
-            nodeKey: 'leaf-he',
-            expandedNodes: {},
-            onExpandToggle: (_, __) {},
-          ),
-          locale: const Locale('he'),
+        () => LifetimeFolderTreeNode(
+          node: leaf,
+          depth: 0,
+          nodeKey: 'leaf-he',
+          expandedNodes: const {},
+          onExpandToggle: (_, __) {},
         ),
+        overrides: [useHebrewTermsProvider.overrideWithValue(true)],
+        locale: const Locale('he'),
       );
-
-      FlutterError.onError = prev;
-      expect(errors, isEmpty, reason: 'No overflow under Hebrew locale');
-
-      await _tearDown(tester);
     });
   });
 
@@ -1137,39 +1076,24 @@ void main() {
       }
     });
 
-    testWidgets('he-locale: no overflow', (tester) async {
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      final errors = <FlutterErrorDetails>[];
-      final prev = FlutterError.onError;
-      FlutterError.onError = (d) {
-        if (d.exception.toString().contains('overflowed'))
-          errors.add(d);
-        else
-          prev?.call(d);
-      };
-
-      await _pump(
+    testWidgets('he-locale: no overflow across the device matrix', (
+      tester,
+    ) async {
+      // [TQ-3/AUD-t-progress-04] See LifetimeFolderSurface's dark-theme case
+      // above for why the matrix harness replaces the hand-rolled capture.
+      await expectNoOverflowAcrossDevices(
         tester,
-        _wrap(
-          LifetimeMarkingScopeRow(
-            primary: 'פרק א׳',
-            secondary: 'משנה א׳',
-            visual: MarkingRowVisual.direct,
-            hasDrill: true,
-            onToggle: () {},
-            onDrill: () {},
-          ),
-          locale: const Locale('he'),
+        () => LifetimeMarkingScopeRow(
+          primary: 'פרק א׳',
+          secondary: 'משנה א׳',
+          visual: MarkingRowVisual.direct,
+          hasDrill: true,
+          onToggle: () {},
+          onDrill: () {},
         ),
+        overrides: [useHebrewTermsProvider.overrideWithValue(true)],
+        locale: const Locale('he'),
       );
-
-      FlutterError.onError = prev;
-      expect(errors, isEmpty, reason: 'No overflow under Hebrew locale');
-
-      await _tearDown(tester);
     });
   });
 
