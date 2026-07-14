@@ -25,6 +25,7 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_m
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/curriculum_picker_step.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
@@ -246,14 +247,23 @@ void main() {
       },
     );
 
-    test(
-      'BulkMarkScreen — type is exported and constructable from features',
-      () {
-        // Full BulkMarkScreen flow lives in story 27.5 / 27.6 because it
-        // needs the content-hierarchy provider stack + completion writer.
-        expect(BulkMarkScreen, isNotNull);
-      },
-    );
+    test('BulkMarkScreen — constructor surface exposes curriculumId and '
+        'optional scopeConstraints', () {
+      // Full flow lives in story 27.5/27.6 (needs the content-hierarchy
+      // provider stack). This checks the real constructor contract instead
+      // of the vacuous `expect(BulkMarkScreen, isNotNull)` — a bare type
+      // literal is never null, so that check couldn't fail either.
+      const withoutScope = BulkMarkScreen(curriculumId: CurriculumId.mishnayos);
+      expect(withoutScope.curriculumId, CurriculumId.mishnayos);
+      expect(withoutScope.scopeConstraints, isNull);
+
+      const withScope = BulkMarkScreen(
+        curriculumId: CurriculumId.mishnayos,
+        scopeConstraints: [ScopeEntry(level: 1, value: 'seder_zeraim')],
+      );
+      expect(withScope.scopeConstraints, hasLength(1));
+      expect(withScope.scopeConstraints!.single.value, 'seder_zeraim');
+    });
 
     testWidgets(
       'DraggableOrderItem — renders drag handle when showDragHandle is true',
@@ -338,27 +348,36 @@ void main() {
 
   group('Story 27.4 — AC structural verification', tags: ['story_27_4'], () {
     test('golden test for TrackCard covers exactly 4 data shapes', () {
-      // The 4 shapes are encoded in the goldenTest loop above.
-      // This documents intent; the real assertion is the number of
-      // testWidgets entries `goldenTest` emits, which `flutter test`
-      // makes visible in its output (8 entries: 4 shapes × en/he).
-      const shapes = [
-        'personal_no_progress',
-        'school_no_progress',
-        'advanced_with_progress',
-        'program_with_progress',
-      ];
-      expect(shapes, hasLength(4));
+      // Asserts against golden_runner.dart's own registration log, not a
+      // hardcoded copy of the shape names — a copy is disconnected from
+      // the loop above, so deleting a real shape wouldn't touch it.
+      final trackCardNames = registeredGoldenTests
+          .map((registration) => registration.name)
+          .where((name) => name.startsWith('track_card_'))
+          .toSet();
+      expect(trackCardNames, hasLength(4));
     });
 
     test('Hebrew variant ships for every golden widget', () {
-      // The `goldenTest()` helper emits exactly one en and one he entry
-      // per call (see test/helpers/golden_runner.dart). The fact that
-      // this group contains the goldenTest calls (above) is the proof.
-      // This sentinel test fails fast if someone ever changes the
-      // helper to skip the he variant.
-      const expectedLocales = ['en', 'he'];
-      expect(expectedLocales, contains('he'));
+      // Asserts against the registration log instead of a hardcoded
+      // `['en', 'he']` literal: if golden_runner.dart's `_localeVariants`
+      // ever drops Hebrew, no registration carries 'he' and this fails.
+      final localesByName = <String, Set<String>>{};
+      for (final registration in registeredGoldenTests) {
+        localesByName
+            .putIfAbsent(registration.name, () => <String>{})
+            .add(registration.locale.languageCode);
+      }
+      // Sanity: the registry is actually populated by the goldenTest()
+      // calls above — an empty registry would make the loop below
+      // vacuously pass.
+      expect(localesByName, isNotEmpty);
+
+      final missingHebrew = localesByName.entries
+          .where((entry) => !entry.value.contains('he'))
+          .map((entry) => entry.key)
+          .toList();
+      expect(missingHebrew, isEmpty);
     });
   });
 }
