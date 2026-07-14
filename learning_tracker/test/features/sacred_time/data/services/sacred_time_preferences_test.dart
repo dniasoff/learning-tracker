@@ -187,24 +187,4 @@ void main() {
       expect(SacredTimePreferences.readInIsrael(prefs), isFalse);
     });
   });
-
-  group('SacredTimePreferences.readInIsrael / writeInIsrael', () {
-    test('returns false when not set', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(SacredTimePreferences.readInIsrael(prefs), isFalse);
-    });
-
-    test('returns true after writeInIsrael(true)', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await SacredTimePreferences.writeInIsrael(prefs, true);
-      expect(SacredTimePreferences.readInIsrael(prefs), isTrue);
-    });
-
-    test('returns false after writeInIsrael(false)', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await SacredTimePreferences.writeInIsrael(prefs, true);
-      await SacredTimePreferences.writeInIsrael(prefs, false);
-      expect(SacredTimePreferences.readInIsrael(prefs), isFalse);
-    });
-  });
 }
