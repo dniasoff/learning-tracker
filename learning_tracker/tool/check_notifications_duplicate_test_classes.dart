@@ -102,7 +102,22 @@ void main() {
     final path = file.path.replaceAll(r'\', '/');
     if (_baseline.contains(path)) continue;
 
-    final lines = file.readAsLinesSync();
+    List<String> lines;
+    try {
+      lines = file.readAsLinesSync();
+    } on FileSystemException {
+      // Gate-repair robustness fix (wave-4 gate-repair, 2026-07-14): this
+      // tool's own test fixture and a sibling checker's test fixture
+      // (check_notifications_sync_effect_overrides_test.dart) both write
+      // short-lived temp files directly under test/features/notifications/
+      // — the same tree this scan walks. When both fixture tests run
+      // concurrently (e.g. the full suite with --concurrency>1), the
+      // directory listing above can capture a file that the OTHER test's
+      // cleanup has already deleted by the time we get here. A vanished
+      // file cannot contain a class declaration, so skip it rather than
+      // crash the whole checker on an unrelated test's teardown race.
+      continue;
+    }
     for (var i = 0; i < lines.length; i++) {
       final match = _topLevelClassDecl.firstMatch(lines[i]);
       if (match == null) continue;
