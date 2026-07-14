@@ -221,7 +221,7 @@ The only permitted call sites for `useHebrewTermsProvider` are `lib/core/labels/
 **Source:** drift.simonbinder.eu/dart_api/writes
 
 **DB-4 — Every `schemaVersion` bump ships three things together: a migration step, a committed schema export (`drift_schemas/drift_schema_v<N>.json` via `drift_dev schema dump`), and a generated migration test (`migrateAndValidate` per step plus a data-preservation case). Never modify a released migration or a committed schema JSON.**
-**Why:** the user DB is at schemaVersion 32 with real on-device data and no server backup — editing a shipped migration diverges installed devices from their history and corrupts silently on the next upgrade. Adopt the schema-export workflow first (no `drift_schemas/` directory exists yet).
+**Why:** the user DB is at schemaVersion 36 with real on-device data and no server backup — editing a shipped migration diverges installed devices from their history and corrupts silently on the next upgrade. The schema-export workflow is now adopted starting at v36 (`drift_schemas/drift_schema_v36.json`, AUD-t-cross-06); v1–v35 were not retroactively exported.
 **Enforce:** [Pending] extend `make schema-check` to require the matching schema JSON; CI diff-guard rejecting edits to existing `drift_schema_v*.json`; wire `test/generated_migrations/` into `make ci`; debug backstop `if (kDebugMode) await validateDatabaseSchema();` in `beforeOpen`.
 **Source:** drift.simonbinder.eu/migrations/exports, /migrations/tests
 
@@ -925,7 +925,7 @@ Live violations of the rules above, verified in the working tree on this date. E
 | custom_lint compile crash is fixed (AUD-guardrails-03) but the CLI still can't run: it needs an analysis_options.yaml marker that breaks the `dart analyze --fatal-infos` hard gate, so it silently discovers 0 projects; ~1,840 pre-existing violations across 8/9 rules were observed in a one-time manual scratch run and are not currently re-checkable via CLI/CI | Rule 0 | see "custom_lint toolchain status" under Enforcement above |
 | Two divergent Makefile audit sets; RTL grep only in root | AX-1, Rule 0 | consolidate into one authoritative target |
 | ~121 legacy Riverpod provider usages | SM-1 | migration backlog; diff-scoped enforcement meanwhile |
-| No `drift_schemas/` exports or generated migration tests (schemaVersion 32) | DB-4 | adopt `drift_dev schema dump` workflow |
+| `drift_schemas/` now has a committed export starting at v36 (`learning_tracker/drift_schemas/drift_schema_v36.json`, via `dart run drift_dev schema dump`, AUD-t-cross-06); earlier versions (v1–v35) were never exported and are not being retroactively backfilled, and no `drift_dev schema generate` step / `SchemaVerifier`-based generated migration test exists yet | DB-4 | adopt `drift_dev schema generate` + wire `test/generated_migrations/` into `make ci`; every future `schemaVersion` bump must commit its own `drift_schema_v<N>.json` alongside the migration step |
 | Audit checks 14–15 warn-only | Rules 1–2 | pre-existing violations pending cleanup wave |
 
 ---
