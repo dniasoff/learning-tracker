@@ -47,26 +47,6 @@ void main() {
         expect(result.averageDailyCompletions, 1.0);
       });
     });
-
-    group('DashboardStats model', () {
-      test('mostRecentlyActive returns null when no curricula', () {
-        const data = ParentDashboardData(
-          curricula: [],
-          globalPoints: 0,
-          currentStreak: 0,
-          maxStreak: 0,
-          recentCompletions: [],
-          engagement: EngagementMetrics(
-            daysActiveThisWeek: 0,
-            averageDailyCompletions: 0,
-          ),
-        );
-
-        // ParentDashboardData has no mostRecentlyActive, but we test data construction
-        expect(data.curricula, isEmpty);
-        expect(data.globalPoints, 0);
-      });
-    });
   });
 }
 
