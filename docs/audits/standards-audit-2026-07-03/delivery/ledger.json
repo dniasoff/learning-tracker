@@ -9333,13 +9333,17 @@
   {
    "id": "AUD-t-cross-66",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete the now-vestigial integration_test/.gitkeep placeholder",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "ecb063fc9b849f96df75fe9345a89a4eb6a462f5"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-66 AC1 OK: test -f integration_test/.gitkeep -> removed; git ls-files shows only app_test.dart (dir stays tracked); 0 grep refs to .gitkeep in sources"
+   ],
+   "notes": "Re-verified: integration_test/ held empty .gitkeep plus real app_test.dart - vestigial, confirmed not previously fixed. Deleted via git rm. AC verified: .gitkeep no longer exists. Mechanical hygiene finding; grep-for-refs + existence check served as checker."
   },
   {
    "id": "AUD-firebase-12",
