@@ -2,16 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+import '../../../../helpers/drift_memory.dart';
+
 void main() {
+  // AUD-t-learning-01: see the matching file-level doc comment in
+  // learning_screen_l1_test.dart for why a single, never-queried, in-memory
+  // db is safely shared read-only across every test in this file.
+  final testUserDb = inMemoryDb();
+  tearDownAll(() async {
+    await testUserDb.close();
+  });
+
   group('LearningScreen', () {
     Widget buildTestWidget() {
       return ProviderScope(
@@ -29,6 +41,18 @@ void main() {
             (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
           ),
           allDailyTasksProvider.overrideWith((ref) => Future.value([])),
+          // AUD-t-learning-01: LearningScreen also watches these two
+          // providers unconditionally; left un-overridden,
+          // coarsePacedTrackIdsProvider falls through to the real
+          // userDatabaseProvider (see the matching comment in
+          // learning_screen_l1_test.dart).
+          coarsePacedTrackIdsProvider.overrideWith(
+            (ref) => Future.value(const <int>{}),
+          ),
+          contentIndexProvider.overrideWith(
+            (ref) => Future.value(ContentIndex.fromCurricula(const {})),
+          ),
+          userDatabaseProvider.overrideWithValue(testUserDb),
         ],
         child: const MaterialApp(
           localizationsDelegates: [

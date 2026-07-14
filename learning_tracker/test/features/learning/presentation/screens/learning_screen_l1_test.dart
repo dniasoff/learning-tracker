@@ -47,9 +47,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -62,6 +64,35 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../helpers/drift_memory.dart';
+
+// AUD-t-learning-01: LearningScreen.build() unconditionally watches
+// coarsePacedTrackIdsProvider and contentIndexProvider. Left un-overridden,
+// coarsePacedTrackIdsProvider falls through to its real implementation,
+// which reads ref.watch(userDatabaseProvider).goalDao... — the real,
+// NAMED (on-disk) UserDatabase. Every ProviderScope pumped in this file
+// then opens its own connection to that SAME named database, which is
+// exactly the shared-mutable-state-across-tests hermeticity violation
+// TQ-6 forbids, and trips Drift's own "created ... multiple times"
+// collision warning on every pump after the first.
+//
+// The fix is two-layered, matching the finding's acceptance criteria:
+//   1. coarsePacedTrackIdsProvider and contentIndexProvider are overridden
+//      DIRECTLY below with inert stub values, so neither ever reaches its
+//      real implementation (and therefore never reaches userDatabaseProvider)
+//      in the first place.
+//   2. userDatabaseProvider is ALSO overridden — with a single anonymous
+//      in-memory UserDatabase — as defence-in-depth: it guarantees that even
+//      if some future provider LearningScreen starts watching quietly falls
+//      through to userDatabaseProvider, these tests still never touch the
+//      real named database. Because of (1), this db is never actually
+//      queried by anything in this file, so ONE instance is safely shared
+//      (read-only, in practice unread) across every test — closed once, in
+//      tearDownAll, per test/helpers/drift_memory.dart's inMemoryDb() close
+//      contract (AUD-t-gamification-04 Rule-0 checker: a per-test
+//      create+close pair is not needed for a database that's never mutated).
+final _testUserDb = inMemoryDb();
 
 // ── Mock router ───────────────────────────────────────────────────────────────
 
@@ -215,6 +246,21 @@ Widget _buildScreen({
           ? () => _FakeTutorSession(tutorPerms)
           : _FakeNoTutorSession.new,
     ),
+    // AUD-t-learning-01: stub the two providers LearningScreen watches that
+    // would otherwise reach the real userDatabaseProvider / real content
+    // asset scan. No test in this file exercises daf (coarse-pace) grouping
+    // or ref-breadcrumb resolution, so an always-empty result is inert and
+    // preserves every existing assertion.
+    coarsePacedTrackIdsProvider.overrideWith(
+      (ref) => Future.value(const <int>{}),
+    ),
+    contentIndexProvider.overrideWith(
+      (ref) => Future.value(ContentIndex.fromCurricula(const {})),
+    ),
+    // AUD-t-learning-01: defence-in-depth — see the file-level doc comment
+    // on _testUserDb for why a single, never-queried, in-memory db is safe
+    // to share across every test built by this helper.
+    userDatabaseProvider.overrideWithValue(_testUserDb),
   ];
 
   return ProviderScope(
@@ -241,6 +287,13 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     // E4 regression: register fallback values for mocktail router matchers.
     registerFallbackValue(_FakePageRouteInfo());
+  });
+
+  // AUD-t-learning-01 / AUD-t-gamification-04: close the single shared
+  // in-memory db created at file scope above (_testUserDb) once, after every
+  // test in this file has run.
+  tearDownAll(() async {
+    await _testUserDb.close();
   });
 
   // ── 1. Loading state ────────────────────────────────────────────────────────
@@ -913,6 +966,14 @@ void main() {
             activeTutoredProfileSelectionProvider.overrideWith(
               _FakeNoTutorSession.new,
             ),
+            // AUD-t-learning-01 — see the file-level doc comment above.
+            coarsePacedTrackIdsProvider.overrideWith(
+              (ref) => Future.value(const <int>{}),
+            ),
+            contentIndexProvider.overrideWith(
+              (ref) => Future.value(ContentIndex.fromCurricula(const {})),
+            ),
+            userDatabaseProvider.overrideWithValue(_testUserDb),
           ],
           child: const MaterialApp(
             localizationsDelegates: [
@@ -966,6 +1027,14 @@ void main() {
             activeTutoredProfileSelectionProvider.overrideWith(
               _FakeNoTutorSession.new,
             ),
+            // AUD-t-learning-01 — see the file-level doc comment above.
+            coarsePacedTrackIdsProvider.overrideWith(
+              (ref) => Future.value(const <int>{}),
+            ),
+            contentIndexProvider.overrideWith(
+              (ref) => Future.value(ContentIndex.fromCurricula(const {})),
+            ),
+            userDatabaseProvider.overrideWithValue(_testUserDb),
           ],
           child: const MaterialApp(
             localizationsDelegates: [
@@ -1038,6 +1107,14 @@ void main() {
         activeTutoredProfileSelectionProvider.overrideWith(
           _FakeNoTutorSession.new,
         ),
+        // AUD-t-learning-01 — see the file-level doc comment above.
+        coarsePacedTrackIdsProvider.overrideWith(
+          (ref) => Future.value(const <int>{}),
+        ),
+        contentIndexProvider.overrideWith(
+          (ref) => Future.value(ContentIndex.fromCurricula(const {})),
+        ),
+        userDatabaseProvider.overrideWithValue(_testUserDb),
       ];
 
       await tester.pumpWidget(
