@@ -7893,13 +7893,18 @@
     {
       "id": "AUD-t-settings-06",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Add a Hebrew/RTL locale test variant for the Lifetime Marking screens (TQ-3)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "34dc99322d9c59cd800e2cc18770c5de6498ccc1"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-settings-06 AC1 OK: lifetime_marking_screen_test.dart:89-120 pumps LifetimeMarkingScreen under Locale('he') via pumpApp(), asserts outerDir==rtl; test PASS 2/2",
+        "AUD-t-settings-06 AC1 non-vacuous: my deleted en-probe showed LTR, so RTL is locale-resolved not hard-coded"
+      ],
+      "notes": "Re-verified gap present. Added Locale('he') RTL-smoke test asserting Directionality.rtl on LifetimeMarkingScreen. Draft 1 hand-rolled MaterialApp - failed make audit's TQ-3 pumpApp ratchet; rewrote via pump_app.dart's pumpApp(). Sanity-flipped to ltr, saw real failure, reverted."
     },
     {
       "id": "AUD-settings-10",
