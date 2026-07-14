@@ -52,6 +52,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/core/sync/sync_identity_status.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
@@ -131,7 +132,7 @@ void main() {
         _buildHarness(
           syncStatus: SyncStatus.error(
             code: SyncErrorCode.permissionDenied,
-            failedAt: DateTime.now().toUtc(),
+            failedAt: DateTimeFactory.nowUtc(),
             debugDetail: rawMessage,
           ),
         ),
@@ -166,7 +167,7 @@ void main() {
         _buildHarness(
           syncStatus: SyncStatus.error(
             code: SyncErrorCode.permissionDenied,
-            failedAt: DateTime.now().toUtc(),
+            failedAt: DateTimeFactory.nowUtc(),
             debugDetail:
                 'FirestorePermissionDeniedException: FirebaseFirestore/'
                 'completions read [cloud_firestore/permission-denied]',

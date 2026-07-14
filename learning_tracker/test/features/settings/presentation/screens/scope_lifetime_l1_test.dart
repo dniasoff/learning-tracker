@@ -58,6 +58,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
@@ -391,8 +392,8 @@ Future<void> _seedProfile(UserDatabase db) async {
           email: 'test@example.com',
           tier: 'localBorn',
           displayName: 'Test User',
-          createdAt: DateTime.now().toUtc(),
-          updatedAt: DateTime.now().toUtc(),
+          createdAt: DateTimeFactory.nowUtc(),
+          updatedAt: DateTimeFactory.nowUtc(),
         ),
       );
   await db
@@ -402,8 +403,8 @@ Future<void> _seedProfile(UserDatabase db) async {
           accountId: accountId,
           displayName: 'Test User',
           mode: 'adult',
-          createdAt: DateTime.now().toUtc(),
-          updatedAt: DateTime.now().toUtc(),
+          createdAt: DateTimeFactory.nowUtc(),
+          updatedAt: DateTimeFactory.nowUtc(),
         ),
       );
 }
@@ -418,8 +419,8 @@ Future<int> _seedTrack(UserDatabase db, {required int profileId}) {
         CurriculumTracksCompanion.insert(
           profileId: profileId,
           curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now().toUtc(),
-          activatedAt: DateTime.now().toUtc(),
+          stateChangedAt: DateTimeFactory.nowUtc(),
+          activatedAt: DateTimeFactory.nowUtc(),
         ),
       );
 }

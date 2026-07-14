@@ -91,8 +91,6 @@ const _baseline = <String>{
   'test/features/settings/domain/services/account_management_service_test.dart',
   'test/features/settings/domain/services/curriculum_activation_service_test.dart',
   'test/features/settings/presentation/screens/aud_settings_02_no_latin_fragments_test.dart',
-  'test/features/settings/presentation/screens/scope_lifetime_l1_test.dart',
-  'test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart',
   'test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart',
   'test/features/settings/settings_utils_test.dart',
   'test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart',
