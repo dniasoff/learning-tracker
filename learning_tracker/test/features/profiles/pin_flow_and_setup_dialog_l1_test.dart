@@ -53,7 +53,6 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -66,8 +65,9 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../helpers/pump_app.dart';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
@@ -137,7 +137,7 @@ Widget _buildScreen(
   int? profileId = _kProfileId,
   Locale locale = const Locale('en'),
 }) {
-  return ProviderScope(
+  return pumpApp(
     retry: (_, __) => null,
     overrides: [
       pinServiceProvider.overrideWithValue(pinService),
@@ -146,20 +146,11 @@ Widget _buildScreen(
         () => _FixedSelectedProfileId(profileId),
       ),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: PinFlowScreen(mode: mode),
-      ),
+    locale: locale,
+    child: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: PinFlowScreen(mode: mode),
     ),
   );
 }
@@ -858,30 +849,21 @@ void main() {
       String? profileName,
       Locale locale = const Locale('en'),
     }) {
-      return ProviderScope(
+      return pumpApp(
         retry: (_, __) => null,
         overrides: [pinServiceProvider.overrideWithValue(ps)],
-        child: MaterialApp(
-          locale: locale,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Consumer(
-            builder: (ctx, ref, _) => Scaffold(
-              body: Center(
-                child: ElevatedButton(
-                  onPressed: () => showParentPinSetupDialog(
-                    ctx,
-                    ref,
-                    profileId: profileId,
-                    profileName: profileName,
-                  ),
-                  child: const Text('open'),
+        locale: locale,
+        child: Consumer(
+          builder: (ctx, ref, _) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showParentPinSetupDialog(
+                  ctx,
+                  ref,
+                  profileId: profileId,
+                  profileName: profileName,
                 ),
+                child: const Text('open'),
               ),
             ),
           ),
@@ -1212,21 +1194,12 @@ void main() {
         );
         addTearDown(container.dispose);
 
-        Widget app(Key key) => UncontrolledProviderScope(
+        Widget app(Key key) => pumpApp(
           container: container,
-          child: MaterialApp(
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: StackRouterScope(
-              controller: router,
-              stateHash: 0,
-              child: PinFlowScreen(key: key, mode: PinFlowMode.verify),
-            ),
+          child: StackRouterScope(
+            controller: router,
+            stateHash: 0,
+            child: PinFlowScreen(key: key, mode: PinFlowMode.verify),
           ),
         );
 
@@ -1299,16 +1272,9 @@ void main() {
       int profileId = _kProfileId,
       Locale locale = const Locale('en'),
     }) {
-      return MaterialApp(
+      return pumpApp(
         locale: locale,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
+        child: Builder(
           builder: (ctx) => Scaffold(
             body: Center(
               child: ElevatedButton(
@@ -1439,21 +1405,12 @@ void main() {
         addTearDown(container.dispose);
 
         await tester.pumpWidget(
-          UncontrolledProviderScope(
+          pumpApp(
             container: container,
-            child: MaterialApp(
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: StackRouterScope(
-                controller: router,
-                stateHash: 0,
-                child: const PinFlowScreen(mode: PinFlowMode.setup),
-              ),
+            child: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: const PinFlowScreen(mode: PinFlowMode.setup),
             ),
           ),
         );
@@ -1529,21 +1486,12 @@ void main() {
         addTearDown(container.dispose);
 
         await tester.pumpWidget(
-          UncontrolledProviderScope(
+          pumpApp(
             container: container,
-            child: MaterialApp(
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: StackRouterScope(
-                controller: router,
-                stateHash: 0,
-                child: const PinFlowScreen(mode: PinFlowMode.setup),
-              ),
+            child: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: const PinFlowScreen(mode: PinFlowMode.setup),
             ),
           ),
         );
@@ -1811,28 +1759,19 @@ void main() {
       /// Minimal harness for [showParentPinSetupDialog] (mirrors group D's
       /// buildDialogHarness, scoped locally here for the ArgumentError tests).
       Widget buildDialogHarness(_MockPinService pinService) {
-        return ProviderScope(
+        return pumpApp(
           retry: (_, __) => null,
           overrides: [pinServiceProvider.overrideWithValue(pinService)],
-          child: MaterialApp(
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Consumer(
-              builder: (ctx, ref, _) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    onPressed: () => showParentPinSetupDialog(
-                      ctx,
-                      ref,
-                      profileId: _kProfileId,
-                    ),
-                    child: const Text('open'),
+          child: Consumer(
+            builder: (ctx, ref, _) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () => showParentPinSetupDialog(
+                    ctx,
+                    ref,
+                    profileId: _kProfileId,
                   ),
+                  child: const Text('open'),
                 ),
               ),
             ),

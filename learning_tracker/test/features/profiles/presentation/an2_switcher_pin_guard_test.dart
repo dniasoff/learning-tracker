@@ -11,7 +11,6 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -20,8 +19,9 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../helpers/pump_app.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -50,7 +50,7 @@ Widget _buildSheet({
   StackRouter? router,
 }) {
   final mockRouter = router ?? _MockStackRouter();
-  return ProviderScope(
+  return pumpApp(
     overrides: [
       profileListStreamProvider.overrideWith((ref) => Stream.value(profiles)),
       selectedProfileIdProvider.overrideWith(
@@ -71,20 +71,10 @@ Widget _buildSheet({
         (ref) async => pinGuardRequired,
       ),
     ],
-    child: MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: mockRouter,
-        stateHash: 0,
-        child: const Scaffold(body: ProfileSwitcherSheet()),
-      ),
+    child: StackRouterScope(
+      controller: mockRouter,
+      stateHash: 0,
+      child: const Scaffold(body: ProfileSwitcherSheet()),
     ),
   );
 }

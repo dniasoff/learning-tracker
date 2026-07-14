@@ -12,7 +12,6 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -32,6 +31,7 @@ import 'package:learning_tracker/features/settings/presentation/widgets/user_pro
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../helpers/pump_app.dart';
 import '../../../helpers/test_database.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
@@ -61,7 +61,7 @@ Widget _wrap({
   StackRouter? router,
 }) {
   final mockRouter = router ?? _MockStackRouter();
-  return ProviderScope(
+  return pumpApp(
     overrides: [
       profileListStreamProvider.overrideWith((ref) => Stream.value(profiles)),
       selectedProfileIdProvider.overrideWith(
@@ -78,20 +78,10 @@ Widget _wrap({
         ),
       ),
     ],
-    child: MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: mockRouter,
-        stateHash: 0,
-        child: Scaffold(body: child),
-      ),
+    child: StackRouterScope(
+      controller: mockRouter,
+      stateHash: 0,
+      child: Scaffold(body: child),
     ),
   );
 }
@@ -122,7 +112,7 @@ void main() {
       when(() => mockAuth.currentUser).thenReturn(null);
 
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: [
             profileListStreamProvider.overrideWith(
               (ref) => Stream.value(profiles),
@@ -142,26 +132,16 @@ void main() {
               ),
             ),
           ],
-          child: const MaterialApp(
-            locale: Locale('en'),
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: UserProfileHeaderCard(
-                user: AppUser(
-                  uid: 'u1',
-                  email: 'avi@test.com',
-                  displayName: 'Avi',
-                  emailVerified: true,
-                  providers: ['password'],
-                ),
-                surface: UserProfileHeaderSurface.settings,
+          child: const Scaffold(
+            body: UserProfileHeaderCard(
+              user: AppUser(
+                uid: 'u1',
+                email: 'avi@test.com',
+                displayName: 'Avi',
+                emailVerified: true,
+                providers: ['password'],
               ),
+              surface: UserProfileHeaderSurface.settings,
             ),
           ),
         ),
@@ -263,7 +243,7 @@ void main() {
 
         late ProviderContainer container;
         await tester.pumpWidget(
-          ProviderScope(
+          pumpApp(
             overrides: [
               profileListStreamProvider.overrideWith(
                 (ref) => Stream.value(profiles),
@@ -282,24 +262,14 @@ void main() {
                 ),
               ),
             ],
-            child: MaterialApp(
-              locale: const Locale('en'),
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: StackRouterScope(
-                controller: mockRouter,
-                stateHash: 0,
-                child: Consumer(
-                  builder: (context, ref, _) {
-                    container = ProviderScope.containerOf(context);
-                    return const Scaffold(body: ProfileSwitcherSheet());
-                  },
-                ),
+            child: StackRouterScope(
+              controller: mockRouter,
+              stateHash: 0,
+              child: Consumer(
+                builder: (context, ref, _) {
+                  container = ProviderScope.containerOf(context);
+                  return const Scaffold(body: ProfileSwitcherSheet());
+                },
               ),
             ),
           ),
@@ -352,16 +322,8 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('en'),
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
+        pumpApp(
+          child: Scaffold(
             body: Builder(
               builder: (context) {
                 final l10n = AppLocalizations.of(context)!;
@@ -406,7 +368,7 @@ void main() {
       ).thenAnswer((_) async => _profile(id: 9, name: 'Newbie', mode: 'adult'));
 
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: [
             profileListStreamProvider.overrideWith(
               (ref) =>
@@ -429,23 +391,13 @@ void main() {
             currentAccountIdProvider.overrideWithValue(1),
             profileRepositoryProvider.overrideWithValue(repo),
           ],
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Builder(
-              builder: (ctx) => Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    key: const Key('open_switcher'),
-                    onPressed: () => showProfileSwitcherSheet(ctx),
-                    child: const Text('Open'),
-                  ),
+          child: Builder(
+            builder: (ctx) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const Key('open_switcher'),
+                  onPressed: () => showProfileSwitcherSheet(ctx),
+                  child: const Text('Open'),
                 ),
               ),
             ),
