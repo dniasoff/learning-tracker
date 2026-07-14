@@ -86,6 +86,10 @@ Widget _buildHarness({
   ProfileModel? profile,
 }) {
   final db = createTestUserDatabase();
+  // AUD-t-gamification-04: this raw UserDatabase is handed to
+  // overrideWithValue below, not owned by the ProviderScope/widget tree, so
+  // nothing else closes it -- close it explicitly.
+  addTearDown(db.close);
   final resolvedProfile = profile ?? _kProfile;
 
   return ProviderScope(
@@ -270,6 +274,9 @@ void main() {
       (tester) async {
         setViewSize(tester);
         final db = createTestUserDatabase();
+        // AUD-t-gamification-04: see the matching comment on _buildHarness
+        // above.
+        addTearDown(db.close);
         await tester.pumpWidget(
           ProviderScope(
             retry: (_, __) => null,
@@ -295,6 +302,7 @@ void main() {
 
         // Rebuild with the actual unlocks via a second pumpWidget call
         final db2 = createTestUserDatabase();
+        addTearDown(db2.close);
         await tester.pumpWidget(
           ProviderScope(
             retry: (_, __) => null,

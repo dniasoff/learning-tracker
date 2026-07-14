@@ -305,7 +305,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 59 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -874,7 +874,7 @@ audit: lint-rules-test ## Run all 59 enforcement greps (NFR19) — exits non-zer
 	  echo "  WARN: the following sites hand-roll CurriculumTracksCompanion.insert(...) instead of calling seedTrack() — convert them (AUD-t-cross-37):"; \
 	  echo "$$CT37_HITS"; \
 	fi; \
-	echo "59/59 — Rule-0: every docs/planning/e2e-test-suite-plan.md row tagged dims=he has a matching Locale('he') usage in its test/e2e/journeys/*.dart section (AUD-t-cross-31)"; \
+	echo "59/60 — Rule-0: every docs/planning/e2e-test-suite-plan.md row tagged dims=he has a matching Locale('he') usage in its test/e2e/journeys/*.dart section (AUD-t-cross-31)"; \
 	if ! dart run tool/check_e2e_he_locale_coverage.dart > /tmp/e2e_he_locale_check.$$$$.log 2>&1; then \
 	  cat /tmp/e2e_he_locale_check.$$$$.log; \
 	  rm -f /tmp/e2e_he_locale_check.$$$$.log; \
@@ -882,9 +882,17 @@ audit: lint-rules-test ## Run all 59 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/e2e_he_locale_check.$$$$.log; \
 	fi; \
+	echo "60/60 — TQ-6 Rule-0: every inMemoryDb()/createTestUserDatabase() call site under test/ has a matching close() reachable from the same scope (AUD-t-gamification-04)"; \
+	if ! dart run tool/check_inmemory_db_close.dart > /tmp/inmemory_db_close_check.$$$$.log 2>&1; then \
+	  cat /tmp/inmemory_db_close_check.$$$$.log; \
+	  rm -f /tmp/inmemory_db_close_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/inmemory_db_close_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 59 greps clean ==="; \
+	  echo "=== audit PASSED — all 60 greps clean ==="; \
 	fi

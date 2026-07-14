@@ -165,6 +165,11 @@ Widget _buildFake({
   required _FakeController fake,
 }) {
   final db = inMemoryDb();
+  // AUD-t-gamification-04: this raw UserDatabase is handed to
+  // overrideWithValue below, not owned by the ProviderScope/widget tree, so
+  // nothing else closes it -- close it explicitly (see
+  // test/helpers/drift_memory.dart's inMemoryDb() doc comment).
+  addTearDown(db.close);
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [

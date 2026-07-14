@@ -80,6 +80,13 @@ ProviderContainer _makeContainer({
   String profileMode = 'adult',
 }) {
   final db = inMemoryDb();
+  // AUD-t-gamification-04: ProviderContainer.dispose() (called via
+  // addTearDown(c.dispose) at each call site) disposes Riverpod's
+  // providers, not this raw UserDatabase handed to overrideWithValue below
+  // -- close it explicitly or the native sqlite3 connection stays open
+  // until the test file's isolate exits (test/helpers/drift_memory.dart's
+  // inMemoryDb() doc comment).
+  addTearDown(db.close);
   return ProviderContainer(
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
