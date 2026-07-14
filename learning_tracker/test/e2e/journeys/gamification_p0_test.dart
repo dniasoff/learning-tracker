@@ -2,7 +2,6 @@
 ///
 /// Journeys implemented:
 ///   E2E-601  Parent creates a reward and child redeems it
-///            SKIP — BUG R-GA-boot (see group skip comment below)
 ///   E2E-602  Parent fulfils a pending redemption — happy path
 ///   E2E-603  Parent declines a redemption — refund path
 ///   E2E-604  Parent configures point values per curriculum
@@ -11,14 +10,15 @@
 ///
 /// ## Drift stream timer-leak note (R-GA-stream)
 ///
-/// `pendingRedemptionsProvider` and `activeTracksProvider` are both
-/// Drift-backed `StreamProvider`s. When a Drift reactive stream is cancelled
-/// on ProviderScope disposal, `StreamQueryStore.markAsClosed` creates a
-/// zero-duration timer for cleanup. In headless `flutter test` (fake async)
-/// `_verifyInvariants` runs before `addTearDown` callbacks, so the timer
-/// fires outside the test window — triggering a false "pending timer" error.
+/// `pendingRedemptionsProvider`, `activeTracksProvider`, and
+/// `childRedemptionBalanceProvider` are all Drift-backed `StreamProvider`s.
+/// When a Drift reactive stream is cancelled on ProviderScope disposal,
+/// `StreamQueryStore.markAsClosed` creates a zero-duration timer for cleanup.
+/// In headless `flutter test` (fake async) `_verifyInvariants` runs before
+/// `addTearDown` callbacks, so the timer fires outside the test window —
+/// triggering a false "pending timer" error.
 ///
-/// Fix: override both providers with non-reactive factories using
+/// Fix: override the providers with non-reactive factories using
 /// `Stream.fromFuture` (one-shot query, no Drift reactive subscription, no
 /// cleanup timer). The overridden `pendingRedemptionsProvider` still responds
 /// correctly to `ref.invalidate` — each invalidation re-runs the factory,
@@ -28,6 +28,7 @@ library;
 
 import 'package:drift/drift.dart' show InsertMode, Value;
 import 'package:flutter/material.dart' show Icons, TextField;
+import 'package:flutter/widgets.dart' show Scrollable;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
@@ -136,77 +137,77 @@ void main() {
 
   // ── E2E-601 ─────────────────────────────────────────────────────────────────
 
-  group(
-    'E2E-601 — Parent creates a reward and child redeems it',
-    // BUG R-GA-boot: RewardConfigurationScreen.initState calls
-    // `unawaited(ref.read(rewardConfigControllerProvider.notifier).bootstrap())`
-    // which synchronously assigns `state = state.copyWith(...)` before the
-    // widget tree finishes its first build. Riverpod 3.x forbids modifying
-    // provider state during build, raising:
-    //   "Tried to modify a provider while the widget tree was building."
-    // Fix: wrap the state assignment in `Future(() { state = ...; })` inside
-    // bootstrap(), or move the logic into the Notifier's `build()` method so
-    // it runs synchronously before the first frame.
-    skip:
-        'BUG R-GA-boot: RewardConfigController.bootstrap() sets state in '
-        'initState — Riverpod build-phase mutation error',
-    () {
-      testWidgets('parent opens RewardConfigurationScreen, creates a reward, '
-          'child opens ChildRedemptionScreen and sees it (happy path)', (
-        tester,
-      ) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'parent601@test.com',
-          displayName: 'Parent601',
-          profileMode: 'child',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
+  group('E2E-601 — Parent creates a reward and child redeems it', () {
+    testWidgets('parent opens RewardConfigurationScreen, creates a reward, '
+        'child opens ChildRedemptionScreen and sees it (happy path)', (
+      tester,
+    ) async {
+      final identity = E2EIdentity.localBorn(
+        email: 'parent601@test.com',
+        displayName: 'Parent601',
+        profileMode: 'child',
+      );
+      final h = E2EHarness(tester, identity: identity);
+      addTearDown(h.dispose);
 
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: _dashboardSilence(h),
-        );
+      // Include the one-shot childRedemptionBalanceProvider override to avoid
+      // a Drift reactive-stream timer leak (R-GA-stream) — ChildRedemptionScreen
+      // (visited below) watches it via _BalanceCard.
+      await h.pumpApp(
+        path: '/dashboard',
+        extraOverrides: [
+          ..._dashboardSilence(h),
+          childRedemptionBalanceOneShotOverride(),
+        ],
+      );
 
-        h.markPinAuthenticated();
+      h.markPinAuthenticated();
 
-        await navigateTo(h, const RewardConfigurationRoute());
+      await navigateTo(h, const RewardConfigurationRoute());
 
-        h.expectOnScreen(
-          'Reward Configuration',
-          routeName: 'RewardConfigurationScreen',
-        );
-        h.expectOnScreen('Configure New Reward');
+      h.expectOnScreen(
+        'Reward Configuration',
+        routeName: 'RewardConfigurationScreen',
+      );
+      h.expectOnScreen('Configure New Reward');
 
-        // Fill the reward form with a name and a point cost.
-        await h.enterText(
-          find.widgetWithText(TextField, 'e.g., Bronze Star').first,
-          'Golden Trophy',
-        );
-        await h.pump();
-        await h.enterText(
-          find.widgetWithText(TextField, 'e.g., 500').first,
-          '50',
-        );
-        await h.pump();
+      // Fill the reward form with a name and a point cost.
+      await h.enterText(
+        find.widgetWithText(TextField, 'e.g., Bronze Star').first,
+        'Golden Trophy',
+      );
+      await h.pump();
+      await h.enterText(
+        find.widgetWithText(TextField, 'e.g., 500').first,
+        '50',
+      );
+      await h.pump();
 
-        // Scroll to Save Reward (it may be below the 800×600 viewport).
-        await tester.scrollUntilVisible(find.text('Save Reward'), 100.0);
-        await h.tapText('Save Reward');
-        await h.pump(const Duration(milliseconds: 500));
-        await h.pump();
+      // Scroll to Save Reward (it may be below the 800×600 viewport). The
+      // screen has two Scrollables — the form's outer SingleChildScrollView
+      // and AvatarPickerRow's inner horizontal ListView — so the default
+      // `find.byType(Scrollable)` scrollable finder is ambiguous ("Too many
+      // elements"). `.first` resolves to the outer (ancestor) Scrollable,
+      // found first in tree-order.
+      await tester.scrollUntilVisible(
+        find.text('Save Reward'),
+        100.0,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await h.tapText('Save Reward');
+      await h.pump(const Duration(milliseconds: 500));
+      await h.pump();
 
-        h.expectOnScreen('Reward created');
-        await h.tapText('OK');
-        await h.pump(const Duration(milliseconds: 300));
+      h.expectOnScreen('Reward created');
+      await h.tapText('OK');
+      await h.pump(const Duration(milliseconds: 300));
 
-        // Navigate to ChildRedemptionScreen and verify the new reward.
-        await navigateTo(h, const ChildRedemptionRoute());
-        h.expectOnScreen('Redeem Prizes', routeName: 'ChildRedemptionScreen');
-        h.expectOnScreen('Golden Trophy');
-      });
-    },
-  );
+      // Navigate to ChildRedemptionScreen and verify the new reward.
+      await navigateTo(h, const ChildRedemptionRoute());
+      h.expectOnScreen('Redeem Prizes', routeName: 'ChildRedemptionScreen');
+      h.expectOnScreen('Golden Trophy');
+    });
+  });
 
   // ── E2E-602 ─────────────────────────────────────────────────────────────────
 

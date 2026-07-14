@@ -22,6 +22,8 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart'
+    show childRedemptionBalanceProvider;
 import 'package:learning_tracker/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart'
     show pendingRedemptionsProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -178,5 +180,17 @@ Override pendingRedemptionsOneShotOverride() {
     return Stream.fromFuture(
       db.pointsBalanceDao.getPendingRedemptions(profileId),
     );
+  });
+}
+
+/// One-shot (non-reactive) override for [childRedemptionBalanceProvider] —
+/// same Drift cleanup-timer rationale as [activeTracksOneShotOverride].
+/// Needed by any journey that reaches `ChildRedemptionScreen`, which watches
+/// this provider (backed by `PointsBalanceDao.watchBalance`) via `_BalanceCard`.
+Override childRedemptionBalanceOneShotOverride() {
+  return childRedemptionBalanceProvider.overrideWith((ref) {
+    final db = ref.watch(userDatabaseProvider);
+    final profileId = ref.watch(activeProfileIdProvider);
+    return Stream.fromFuture(db.pointsBalanceDao.getBalance(profileId));
   });
 }
