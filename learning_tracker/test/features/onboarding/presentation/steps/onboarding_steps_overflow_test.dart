@@ -72,77 +72,93 @@ void _noopCreated({
 }) {}
 
 void main() {
-  testWidgets('OnboardingHandoffStep does not overflow across devices', (
-    tester,
-  ) async {
-    await expectNoOverflowAcrossDevices(
-      tester,
-      () => const OnboardingHandoffStep(
-        profileName: 'Yael',
-        onStartLearning: _noop,
-        onAddAnotherTrack: _noop,
-        onAddAnotherLearner: _noop,
-      ),
-    );
-  });
-
-  testWidgets(
-    'OnboardingAddAnotherPromptStep does not overflow across devices',
-    (tester) async {
+  // Every case below runs at both Locale('en') and Locale('he') (AUD-t-onboarding-01):
+  // Hebrew strings routinely run a different length than English, so an
+  // LTR-only overflow guard misses RTL-only layout breaks.
+  for (final locale in const [Locale('en'), Locale('he')]) {
+    testWidgets('OnboardingHandoffStep does not overflow across devices '
+        '(${locale.languageCode})', (tester) async {
       await expectNoOverflowAcrossDevices(
         tester,
-        () => const OnboardingAddAnotherPromptStep(
-          trackCount: 2,
-          lastTrackLabel: 'Mishnayos — Berakhos',
+        () => const OnboardingHandoffStep(
+          profileName: 'Yael',
           onStartLearning: _noop,
           onAddAnotherTrack: _noop,
+          onAddAnotherLearner: _noop,
         ),
+        locale: locale,
       );
-    },
-  );
+    });
 
-  testWidgets('WizardChooseMethodStep does not overflow across devices', (
-    tester,
-  ) async {
-    await expectNoOverflowAcrossDevices(
-      tester,
-      () => Consumer(
-        builder: (context, ref, _) => WizardChooseMethodStep(
-          curriculumId: CurriculumId.mishnayos,
-          presets: [_preset(1), _preset(2)],
-          isChildMode: true,
-          childName: 'Yael',
-          onComplete: (_) {},
-        ).build(context, ref, _ctx()),
-      ),
-      overrides: [
-        useHebrewTermsProvider.overrideWith(_FalseUseHebrewTerms.new),
-      ],
+    testWidgets(
+      'OnboardingAddAnotherPromptStep does not overflow across devices '
+      '(${locale.languageCode})',
+      (tester) async {
+        await expectNoOverflowAcrossDevices(
+          tester,
+          () => const OnboardingAddAnotherPromptStep(
+            trackCount: 2,
+            lastTrackLabel: 'Mishnayos — Berakhos',
+            onStartLearning: _noop,
+            onAddAnotherTrack: _noop,
+          ),
+          locale: locale,
+        );
+      },
     );
-  });
 
-  testWidgets(
-    'OnboardingProfileCreationStep does not overflow on tablet/landscape '
-    'with keyboard-compressed height',
-    (tester) async {
-      // Regression guard: on a 2560×1600 landscape tablet the soft keyboard
-      // raises the bottom inset to y=776, shrinking the scrollable viewport to
-      // ~640 dip. The "Create Profile" CTA must remain SCROLLABLE (not clipped)
-      // so the user can reach it — the SingleChildScrollView wrapper inside
-      // the step ensures this. If the step overflows instead of scrolling at
-      // this size the CTA becomes unreachable (zero-height in accessibility
-      // tree), reproducing the tablet regression reported in loop-iter8.
+    testWidgets('WizardChooseMethodStep does not overflow across devices '
+        '(${locale.languageCode})', (tester) async {
       await expectNoOverflowAcrossDevices(
         tester,
-        () => const OnboardingProfileCreationStep(onCreated: _noopCreated),
-        // Test only the keyboard-compressed tablet viewport and the classic
-        // small-phone corner; the full matrix is covered by the other guards.
-        sizes: const [
-          Size(768, 640), // landscape tablet at ~60% height (keyboard visible)
-          Size(320, 568), // small phone, the classic overflow offender
+        () => Consumer(
+          builder: (context, ref, _) => WizardChooseMethodStep(
+            curriculumId: CurriculumId.mishnayos,
+            presets: [_preset(1), _preset(2)],
+            isChildMode: true,
+            childName: 'Yael',
+            onComplete: (_) {},
+          ).build(context, ref, _ctx()),
+        ),
+        overrides: [
+          useHebrewTermsProvider.overrideWith(_FalseUseHebrewTerms.new),
         ],
-        textScales: const [1.0, 1.3],
+        locale: locale,
       );
-    },
-  );
+    });
+
+    testWidgets(
+      'OnboardingProfileCreationStep does not overflow on tablet/landscape '
+      'with keyboard-compressed height (${locale.languageCode})',
+      (tester) async {
+        // Regression guard: on a 2560×1600 landscape tablet the soft keyboard
+        // raises the bottom inset to y=776, shrinking the scrollable viewport to
+        // ~640 dip. The "Create Profile" CTA must remain SCROLLABLE (not clipped)
+        // so the user can reach it — the SingleChildScrollView wrapper inside
+        // the step ensures this. If the step overflows instead of scrolling at
+        // this size the CTA becomes unreachable (zero-height in accessibility
+        // tree), reproducing the tablet regression reported in loop-iter8.
+        //
+        // Guarded at Locale('he') too: interpolated names and the
+        // un-localized "profile already exists" error routinely run longer
+        // in Hebrew, and this keyboard-compressed corner is exactly where
+        // that extra length is most likely to newly overflow.
+        await expectNoOverflowAcrossDevices(
+          tester,
+          () => const OnboardingProfileCreationStep(onCreated: _noopCreated),
+          // Test only the keyboard-compressed tablet viewport and the classic
+          // small-phone corner; the full matrix is covered by the other guards.
+          sizes: const [
+            Size(
+              768,
+              640,
+            ), // landscape tablet at ~60% height (keyboard visible)
+            Size(320, 568), // small phone, the classic overflow offender
+          ],
+          textScales: const [1.0, 1.3],
+          locale: locale,
+        );
+      },
+    );
+  }
 }
