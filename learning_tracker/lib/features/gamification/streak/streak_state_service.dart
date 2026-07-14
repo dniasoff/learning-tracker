@@ -21,14 +21,35 @@ import 'package:learning_tracker/features/gamification/streak/streak_reducer.dar
 import 'package:learning_tracker/features/gamification/streak/streak_restorer.dart';
 
 class StreakStateService {
-  StreakStateService({required UserDatabase db, required LocalDayClock clock})
-    : _db = db,
-      _clock = clock,
-      _restorer = StreakRestorer(db);
+  StreakStateService({
+    required UserDatabase db,
+    required LocalDayClock clock,
+    @visibleForTesting DateTime Function(DateTime)? dayOf,
+  }) : _db = db,
+       _clock = clock,
+       _dayOf = dayOf,
+       _restorer = StreakRestorer(db);
 
   final UserDatabase _db;
   final LocalDayClock _clock;
+
+  /// AUD-t-cross-79: mirrors [StreakReducer.reduce]'s own injectable
+  /// `dayOf` seam. When null (production default), day-bucketing goes
+  /// through [LocalDayClock.today] exactly as before — zero behavior
+  /// change. Tests can inject a fixed, TZ-independent bucketing function
+  /// here so pass/fail can't depend on the host machine's timezone (both
+  /// `LocalDayClock.today()` and the reducer's default `dayOf` resolve
+  /// through `DateTime.toLocal()`, which reads the executing machine's TZ).
+  final DateTime Function(DateTime)? _dayOf;
   final StreakRestorer _restorer;
+
+  /// The "today" bucket used to anchor a reduce: the pinned [_dayOf] seam
+  /// applied to the clock's raw UTC instant when injected, otherwise the
+  /// clock's own (TZ-dependent) `today()` — unchanged production behavior.
+  DateTime _today() {
+    final dayOf = _dayOf;
+    return dayOf == null ? _clock.today() : dayOf(_clock.nowUtc());
+  }
 
   /// Returns the raw [StreakLogEvent] list for [profileId].
   ///
@@ -63,7 +84,7 @@ class StreakStateService {
     );
     // D16: anchor on the LOCAL day (`today()`), not the UTC instant, so the
     // headline streak agrees with the local-day calendar dots.
-    return const StreakReducer().reduce(events, today: _clock.today());
+    return const StreakReducer().reduce(events, today: _today(), dayOf: _dayOf);
   }
 
   /// Reactive read — re-emits whenever `streak_events` for the profile
@@ -84,7 +105,7 @@ class StreakStateService {
 
     // D16/D17: recompute against the CURRENT local day on every signal.
     StreakState compute() =>
-        const StreakReducer().reduce(latest, today: _clock.today());
+        const StreakReducer().reduce(latest, today: _today(), dayOf: _dayOf);
 
     controller.onListen = () async {
       // D17 fix: an exception thrown inside this async `onListen` body (e.g.
