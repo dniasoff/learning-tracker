@@ -4599,13 +4599,19 @@
     {
       "id": "AUD-t-story-acceptance-13",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Make reader-purity and onboarding-prefs story tests check the files they claim to guard, not an unrelated proxy",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "0964934e88822d5ecbead058c3e7e6b66fcd0fa3"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-13 AC1 OK: red-first injected ref.invalidate( at tds.dart:1035 -> story_13 test FAILED; restored->pass. Reads real file not proxy.",
+        "AUD-t-story-acceptance-13 AC2 OK: Makefile check 67 greps tds.dart; injection -> make audit exit 2 (flags 1035); green exit 0. Checker exists+fires.",
+        "AUD-t-story-acceptance-13 AC3 OK: story_11 reads onboarding_screen.dart+steps/*.dart, isNot(contains(key)); inline key -> test FAILED; toString proxy removed."
+      ],
+      "notes": "Confirmed both tests were fake proxies. Replaced with real file-grep assertions vs. actual source, added make audit check 67/67. Red-first: injected a real ref.invalidate( call and a hand-inlined dead-key literal - both new assertions + audit check failed correctly, reverted to green. All 3 ACs met."
     },
     {
       "id": "AUD-t-story-acceptance-07",
