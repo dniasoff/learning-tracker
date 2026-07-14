@@ -6124,13 +6124,21 @@
   {
    "id": "AUD-t-cross-76",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Merge duplicate LearningProgramRepository test suites (learning_program_repository_test.dart + learning_program_service_test.dart)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "3e5b7436ac0ad4d750138f6a970ac45561ead09f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-76 AC1 OK: merged suite is only LP-Repository subject-suite; both core/services dupes deleted; other refs use .instance as collaborator",
+    "AUD-t-cross-76 AC1 OK: AG-5 mirrored; baseline entry removed; check_test_mirroring.dart 0 new violations (exit 0)",
+    "AUD-t-cross-76 AC2 OK: flutter test 24/24 green (+23 final)",
+    "AUD-t-cross-76 AC2 OK: all 14+27 assertions mapped onto merge incl daf_yomi/bavli literals, testConfig/displayName field checks, singleton same(), id bounds",
+    "AUD-t-cross-76 AC2 OK: count+1 subsumed by count(valid)+count+100(null) via single id>length guard; mishnayos subsumed by loop-over-types; no unique loss"
+   ],
+   "notes": "Re-verified both duplicate suites still existed (14+27 tests, overlapping, daf_yomi/bavli literals only in one). Merged into one 24-test file at the AG-5 mirrored path, keeping all unique cases incl. literals; deleted originals; burned down stale AG-5 baseline entry. Merged via w4r1c21 merge commit 3e5b7436. Post-rebase gate: make audit 59/59 clean, flutter analyze clean (no issues). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate. touchedStrings=false, so make arb-parity was not run."
   },
   {
    "id": "AUD-t-cross-78",
