@@ -190,9 +190,13 @@ void main() {
       }
     });
 
-    test('testConfig is never null', () {
+    test('testConfig is never empty', () {
+      // testConfig is a non-nullable String, so isNotNull is a tautology
+      // (the type system already guarantees it). isNotEmpty actually
+      // exercises the '{}' fallback applied for seeds that omit
+      // test_config (learning_program_service.dart:_buildPrograms).
       for (final p in repo.getAllPrograms()) {
-        expect(p.testConfig, isNotNull);
+        expect(p.testConfig, isNotEmpty);
       }
     });
   });
