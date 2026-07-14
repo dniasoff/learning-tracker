@@ -22,8 +22,6 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -33,8 +31,9 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/permis
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -96,7 +95,8 @@ Widget _buildApp({
   bool useHebrewTerms = false,
   TransliterationVariant variant = TransliterationVariant.ashkenazi,
 }) {
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       notificationServiceProvider.overrideWithValue(notifGateway),
       sacredLocationProvider.overrideWith(() => locationNotifier),
@@ -107,20 +107,10 @@ Widget _buildApp({
         () => _FixedVariant(variant),
       ),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: PermissionPromptScreen(isOnboarding: isOnboarding),
-      ),
+    child: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: PermissionPromptScreen(isOnboarding: isOnboarding),
     ),
   );
 }
