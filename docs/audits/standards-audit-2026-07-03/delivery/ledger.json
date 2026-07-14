@@ -9167,13 +9167,17 @@
   {
    "id": "AUD-t-cross-55",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Assert the actual curriculum chip, not generic Container count, in tracks_studydays_and_content_hierarchy_l1_test.dart test #20",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "2cddda0c9fa349018fd18ba3cb48117598d041ef"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-55 AC1 OK: temp-removed _RootCurriculumChip -> test #20 RED at line 789 'Found 0 widgets type CurriculumLabel'; reverted -> GREEN 28/28"
+   ],
+   "notes": "Verify-note correction confirmed accurate; narrower gap (content-blind assertion) stands. Tightened test #20 to assert find.byType(CurriculumLabel) + find.text('Mishnayos'). AC verified: temp-removed chip -> new assertion RED, reverted (clean diff) -> GREEN."
   },
   {
    "id": "AUD-t-cross-62",
