@@ -5,10 +5,58 @@
 /// with a profile-scoped payload triggers a profile switch.
 library;
 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:timezone/data/latest_all.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
+
+/// Mocks [FlutterLocalNotificationsPlugin] at the plugin boundary so the
+/// per-profile payload-format tests below drive the real
+/// [NotificationGateway] and capture what it actually sends, instead of
+/// re-deriving the expected payload string independently
+/// (AUD-t-notifications-07 — a self-computed comparison can never go red
+/// when the gateway's payload format changes).
+class _MockNotificationPlugin extends Mock
+    implements FlutterLocalNotificationsPlugin {}
+
+/// Stubs [FlutterLocalNotificationsPlugin.zonedSchedule] on [mock] so it
+/// completes without error.
+void _stubZonedSchedule(_MockNotificationPlugin mock) {
+  when(
+    () => mock.zonedSchedule(
+      id: any<int>(named: 'id'),
+      scheduledDate: any<tz.TZDateTime>(named: 'scheduledDate'),
+      notificationDetails: any<NotificationDetails>(
+        named: 'notificationDetails',
+      ),
+      androidScheduleMode: any<AndroidScheduleMode>(
+        named: 'androidScheduleMode',
+      ),
+      title: any<String>(named: 'title'),
+      body: any<String>(named: 'body'),
+      payload: any<String>(named: 'payload'),
+      matchDateTimeComponents: any<DateTimeComponents>(
+        named: 'matchDateTimeComponents',
+      ),
+    ),
+  ).thenAnswer((_) async {});
+}
 
 void main() {
+  setUpAll(() {
+    tz_data.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('America/New_York'));
+    // TQ-6: a fixed constant, not a wall-clock read — this only needs to be
+    // *some* TZDateTime so mocktail has a fallback value for the untyped
+    // `any` matcher; the value itself is never asserted on.
+    registerFallbackValue(tz.TZDateTime(tz.UTC, 2024));
+    registerFallbackValue(const NotificationDetails());
+    registerFallbackValue(AndroidScheduleMode.exactAllowWhileIdle);
+    registerFallbackValue(DateTimeComponents.time);
+  });
+
   group('WS5.per-profile — per-profile notification ID allocation', () {
     test('profile 0 gets dailyReminderId 0', () {
       expect(dailyReminderIdForProfile(0), equals(0));
@@ -64,22 +112,92 @@ void main() {
       expect(dailyReminderPayload, equals('daily_reminder'));
     });
 
-    test('per-profile payload format is daily_reminder:<profileId>', () {
-      const profileId = 42;
-      // The gateway embeds profileId in the payload for per-profile scheduling.
-      // The tap handler splits on ':' to extract the profileId.
-      const payload = '$dailyReminderPayload:$profileId';
+    test('per-profile payload format is daily_reminder:<profileId>', () async {
+      final plugin = _MockNotificationPlugin();
+      final gateway = NotificationGateway(plugin: plugin);
+      _stubZonedSchedule(plugin);
+
+      // Drives the real gateway method instead of re-deriving the
+      // expected string, so this fails if the gateway's payload format
+      // ever changes.
+      await gateway.scheduleDailyReminderForProfile(
+        profileId: 42,
+        hour: 8,
+        minute: 0,
+        title: 'T',
+        body: 'B',
+      );
+
+      final payloadsCaptured = verify(
+        () => plugin.zonedSchedule(
+          id: any<int>(named: 'id'),
+          scheduledDate: any<tz.TZDateTime>(named: 'scheduledDate'),
+          notificationDetails: any<NotificationDetails>(
+            named: 'notificationDetails',
+          ),
+          androidScheduleMode: any<AndroidScheduleMode>(
+            named: 'androidScheduleMode',
+          ),
+          title: any<String>(named: 'title'),
+          body: any<String>(named: 'body'),
+          payload: captureAny<String>(named: 'payload'),
+          matchDateTimeComponents: any<DateTimeComponents>(
+            named: 'matchDateTimeComponents',
+          ),
+        ),
+      ).captured;
+
+      final payload = payloadsCaptured.single as String;
       expect(payload, equals('daily_reminder:42'));
 
-      const parts = ['daily_reminder', '42'];
+      // The tap handler splits on ':' to extract the profileId — verify
+      // that parsing works against what the gateway actually produced.
+      final parts = payload.split(':');
       expect(parts.length, equals(2));
-      expect(int.tryParse(parts[1]), equals(profileId));
+      expect(int.tryParse(parts[1]), equals(42));
     });
 
-    test('profile B payload does not match profile A payload', () {
-      const payloadA = '$dailyReminderPayload:1';
-      const payloadB = '$dailyReminderPayload:2';
-      expect(payloadA, isNot(equals(payloadB)));
+    test('profile B payload does not match profile A payload', () async {
+      final plugin = _MockNotificationPlugin();
+      final gateway = NotificationGateway(plugin: plugin);
+      _stubZonedSchedule(plugin);
+
+      await gateway.scheduleDailyReminderForProfile(
+        profileId: 1,
+        hour: 8,
+        minute: 0,
+        title: 'T',
+        body: 'B',
+      );
+      await gateway.scheduleDailyReminderForProfile(
+        profileId: 2,
+        hour: 8,
+        minute: 0,
+        title: 'T',
+        body: 'B',
+      );
+
+      final payloadsCaptured = verify(
+        () => plugin.zonedSchedule(
+          id: any<int>(named: 'id'),
+          scheduledDate: any<tz.TZDateTime>(named: 'scheduledDate'),
+          notificationDetails: any<NotificationDetails>(
+            named: 'notificationDetails',
+          ),
+          androidScheduleMode: any<AndroidScheduleMode>(
+            named: 'androidScheduleMode',
+          ),
+          title: any<String>(named: 'title'),
+          body: any<String>(named: 'body'),
+          payload: captureAny<String>(named: 'payload'),
+          matchDateTimeComponents: any<DateTimeComponents>(
+            named: 'matchDateTimeComponents',
+          ),
+        ),
+      ).captured;
+
+      expect(payloadsCaptured, hasLength(2));
+      expect(payloadsCaptured[0], isNot(equals(payloadsCaptured[1])));
     });
   });
 }
