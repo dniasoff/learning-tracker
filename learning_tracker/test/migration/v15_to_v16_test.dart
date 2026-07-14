@@ -1,15 +1,20 @@
 /// C1 migration gate — schema v15 → v16.
 ///
 /// Verifies:
-///   1. completions table has the derived_from_events column (default false).
-///   2. New completions written via CompletionWriter get derived_from_events=true.
-///   3. Backfill: existing completions whose natural key matches a
-///      completion_events row are marked derived_from_events=true by the
-///      migration SQL.
-///   4. Legacy completions with no matching event keep derived_from_events=false.
+///   1. CompletionWriter dedups a duplicate commit via the UNIQUE constraint
+///      on completion_events instead of writing a second event row.
+///   2. Backfill: rows seeded under the v15 schema survive the full
+///      migration chain up to the current schema version. Currently skipped
+///      (test-level) — see the AUD-t-cross-62 comment on the test itself for
+///      the unrelated migration bug it is blocked on.
+///
+/// W3.22 dropped the derived_from_events column from completion_events; the
+/// two tests that asserted its schema default and CompletionWriter tagging
+/// were deleted rather than skipped (AUD-t-cross-62) — the column's
+/// replacement (`CompletionDao._fromView` hardcoding `derivedFromEvents:
+/// true` for every view row) leaves no per-row invariant left to test.
 library;
 
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -21,171 +26,95 @@ import '../helpers/drift_memory.dart';
 import '../helpers/migration_test_helper.dart';
 
 void main() {
-  group(
-    'v15→v16: derived_from_events column',
-    // W3.22: derived_from_events column removed from completion_events; skip.
-    skip: 'W3.22: derived_from_events removed from schema',
-    () {
-      // ── 1. Schema state: column exists with correct default ─────────────────
+  group('v15→v16: CompletionWriter dedup and migration backfill', () {
+    // ── 1. CompletionWriter idempotency via completion_events (UNIQUE) ───────
 
-      test(
-        'completions table has derived_from_events with default false',
-        () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-          await seedProfile(db);
+    test(
+      'duplicate commit returns isNew=false without writing a second event',
+      () async {
+        final db = inMemoryDb();
+        addTearDown(db.close);
+        await seedProfile(db);
 
-          final trackId = await db
-              .into(db.curriculumTracks)
-              .insert(
-                CurriculumTracksCompanion.insert(
-                  profileId: 1,
-                  curriculumId: CurriculumId.mishnayos.storageKey,
-                  stateChangedAt: DateTimeFactory.nowUtc(),
-                  activatedAt: DateTimeFactory.nowUtc(),
-                ),
-              );
+        final trackId = await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: 1,
+                curriculumId: CurriculumId.mishnayos.storageKey,
+                stateChangedAt: DateTimeFactory.nowUtc(),
+                activatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
 
-          // Insert directly into the completions table (bypasses CompletionWriter
-          // and completion_events) to simulate a legacy row that predates C1.
-          await db
-              .into(db.completionEvents)
-              .insert(
-                CompletionEventsCompanion.insert(
-                  profileId: 1,
-                  curriculumId: CurriculumId.mishnayos.storageKey,
-                  sefariaRef: 'Berakhot 1:1',
-                  stageId: 1,
-                  trackType: 'personal',
-                  trackId: Value(trackId),
-                  eventTimestamp: DateTime.utc(2026, 5, 1),
-                  // derivedFromEvents not provided → uses default (false)
-                ),
-              );
+        final cmd = CompletionCommand(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Berakhot 3:1',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: trackId,
+          completedAt: DateTimeFactory.nowUtc(),
+          points: 5,
+        );
 
-          final rows = await db.select(db.completionEvents).get();
-          expect(rows, hasLength(1));
-          expect(
-            true, // W3.22: derivedFromEvents removed — placeholder
-            isFalse,
-            reason: 'rows not written by the new writer must default to false',
-          );
-        },
-      );
+        final writer = CompletionWriter(db);
+        await writer.commit(cmd);
+        final second = await writer.commit(cmd);
 
-      // ── 2. New CompletionWriter rows get derived_from_events = true ─────────
+        expect(second.isNew, isFalse);
 
-      test(
-        'CompletionWriter sets derived_from_events = true on new writes',
-        () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-          await seedProfile(db);
+        final events = await db.completionEventDao.getEventsByProfile(1);
+        expect(
+          events,
+          hasLength(1),
+          reason: 'C1: dedup must prevent a second event row',
+        );
+      },
+    );
 
-          final trackId = await db
-              .into(db.curriculumTracks)
-              .insert(
-                CurriculumTracksCompanion.insert(
-                  profileId: 1,
-                  curriculumId: CurriculumId.mishnayos.storageKey,
-                  stateChangedAt: DateTimeFactory.nowUtc(),
-                  activatedAt: DateTimeFactory.nowUtc(),
-                ),
-              );
+    // ── 2. Migration backfill: openDbAtVersion simulates v15 → v16 ──────────
+    //
+    // Note: this exercises the FULL migration path from v15 (C1 setup) through
+    // the current schema version. The partial schema in v15SchemaForC1() means
+    // later migrations that touch other tables (streakEvents, learningLedger,
+    // etc.) will skip gracefully — those tables don't exist and alterTable
+    // creates them fresh. What we verify is that the seeded rows survive the
+    // chain.
+    //
+    // AUD-t-cross-62 verification (2026-07-14): unskipping this test exposes a
+    // genuine, pre-existing bug in UserDatabase.migration's onUpgrade, unrelated
+    // to derived_from_events: the `from < 25` branch calls
+    // `m.createTable(pointsLedger)` using the *current* PointsLedger table
+    // definition, which already declares `ulid` (added v27) and
+    // `syncEnqueuedAt` (added v29) as ordinary columns. The subsequent
+    // `from < 27` / `from < 29` branches then call `m.addColumn(pointsLedger,
+    // pointsLedger.ulid)` / `.syncEnqueuedAt` on a table that already has those
+    // columns, raising `SqliteException: duplicate column name: ulid`. Any
+    // real device upgrading from a schema below v25 straight to the current
+    // version would hit this. Fixing it is out of scope for this test-hygiene
+    // finding (AUD-t-cross-62 is about the file's dead placeholder assertions,
+    // not the migration strategy) — filed as a candidate follow-up rather than
+    // fixed as a drive-by here. Left skipped (test-level, not the whole group)
+    // until that migration bug is fixed.
+    test(
+      'migration backfill: seeded completion_events rows survive the v15 → current migration chain',
+      skip:
+          'blocked on a pre-existing points_ledger/reward_redemptions '
+          'duplicate-column migration bug when upgrading from < v25 '
+          '(see comment above) — unrelated to AUD-t-cross-62; candidate '
+          'follow-up, not fixed here',
+      () async {
+        final db = openDbAtVersion(15, v15SchemaForC1());
+        addTearDown(db.close);
 
-          final writer = CompletionWriter(db);
-          final result = await writer.commit(
-            CompletionCommand(
-              profileId: 1,
-              curriculumId: CurriculumId.mishnayos.storageKey,
-              sefariaRef: 'Berakhot 2:1',
-              stageId: 1,
-              trackType: 'personal',
-              trackId: trackId,
-              completedAt: DateTimeFactory.nowUtc(),
-              points: 5,
-            ),
-          );
+        // Trigger the first open (which runs migrations).
+        final rows = await db.select(db.completionEvents).get();
+        expect(rows, hasLength(2));
 
-          expect(result.isNew, isTrue);
-          expect(
-            true, // W3.22: derivedFromEvents removed — placeholder
-            isTrue,
-            reason:
-                'C1: CompletionWriter must tag derived rows as event-sourced',
-          );
-        },
-      );
-
-      // ── 3. CompletionWriter idempotency via completion_events (UNIQUE) ───────
-
-      test(
-        'duplicate commit returns isNew=false without writing a second event',
-        () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-          await seedProfile(db);
-
-          final trackId = await db
-              .into(db.curriculumTracks)
-              .insert(
-                CurriculumTracksCompanion.insert(
-                  profileId: 1,
-                  curriculumId: CurriculumId.mishnayos.storageKey,
-                  stateChangedAt: DateTimeFactory.nowUtc(),
-                  activatedAt: DateTimeFactory.nowUtc(),
-                ),
-              );
-
-          final cmd = CompletionCommand(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            sefariaRef: 'Berakhot 3:1',
-            stageId: 1,
-            trackType: 'personal',
-            trackId: trackId,
-            completedAt: DateTimeFactory.nowUtc(),
-            points: 5,
-          );
-
-          final writer = CompletionWriter(db);
-          await writer.commit(cmd);
-          final second = await writer.commit(cmd);
-
-          expect(second.isNew, isFalse);
-
-          final events = await db.completionEventDao.getEventsByProfile(1);
-          expect(
-            events,
-            hasLength(1),
-            reason: 'C1: dedup must prevent a second event row',
-          );
-        },
-      );
-
-      // ── 4. Migration backfill: openDbAtVersion simulates v15 → v16 ──────────
-      //
-      // Note: this exercises the FULL migration path from v15 (C1 setup) through
-      // v19 (current). The partial schema in v15SchemaForC1() means later
-      // migrations that touch other tables (streakEvents, learningLedger, etc.)
-      // will skip gracefully — those tables don't exist and alterTable creates
-      // them fresh. What we verify is the C1 backfill result on the seeded rows.
-
-      test(
-        'migration backfill: existing completion + event gets derived=true; orphan stays false',
-        () async {
-          final db = openDbAtVersion(15, v15SchemaForC1());
-          addTearDown(db.close);
-
-          // Trigger the first open (which runs migrations).
-          final rows = await db.select(db.completionEvents).get();
-          expect(rows, hasLength(2));
-
-          // W3.22: berakhot2a/2b derivedFromEvents removed; verify rows exist.
-          expect(rows.any((r) => r.sefariaRef == 'Berakhot 2a'), isTrue);
-          expect(rows.any((r) => r.sefariaRef == 'Berakhot 2b'), isTrue);
-        },
-      );
-    },
-  );
+        expect(rows.any((r) => r.sefariaRef == 'Berakhot 2a'), isTrue);
+        expect(rows.any((r) => r.sefariaRef == 'Berakhot 2b'), isTrue);
+      },
+    );
+  });
 }
