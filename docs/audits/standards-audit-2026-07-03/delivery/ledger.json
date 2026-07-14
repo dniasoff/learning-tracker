@@ -7200,13 +7200,17 @@
   {
    "id": "AUD-t-cross-85",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace DateTime.now() with fixed timestamps in bookmark_dao_test.dart for full hermeticity",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "10d68f3fde73144787e5b1e4a4ad884fb8b31428"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-85 AC1 OK: grep DateTime.now() on bookmark_dao_test.dart exits 1 (zero matches); all 5 sites now DateTime.utc(2026,3,15) per sibling convention"
+   ],
+   "notes": "Verified: bookmark_dao_test.dart had 5 DateTime.now() calls (lines 33/52/79/106/125, matching sites:5), none asserted on exact value. Replaced all 5 with fixed DateTime.utc(2026,3,15), matching sibling bookmark_dao_extra_test.dart's convention. grep DateTime.now() now returns zero matches (exit 1)."
   },
   {
    "id": "AUD-t-cross-84",
