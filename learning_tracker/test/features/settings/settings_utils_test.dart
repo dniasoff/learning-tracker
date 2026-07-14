@@ -29,7 +29,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -41,6 +44,27 @@ import 'package:talker/talker.dart';
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
 class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
+
+// ─── A1/A2: stub AuthStateNotifiers for showDeleteLocalAccountFlow ────────────
+
+/// Signed-out (non-localBorn) auth state — drives A1.
+class _SignedOutAuthStateNotifier extends AuthStateNotifier {
+  @override
+  AuthState build() => const AuthState.signedOut();
+}
+
+/// Signed-in, localBorn auth state — drives A2.
+class _LocalBornAuthStateNotifier extends AuthStateNotifier {
+  @override
+  AuthState build() => const AuthState.signedIn(
+    user: AuthUser(
+      profileId: 1,
+      email: 'local@example.com',
+      displayName: 'Local User',
+    ),
+    tier: Tier.localBorn,
+  );
+}
 
 // ─── Minimal host for pumping dialogs/snackbars ───────────────────────────────
 
@@ -87,6 +111,44 @@ class _SendLogsHost extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A host that calls showDeleteLocalAccountFlow when the button is tapped.
+class _DeleteLocalAccountHost extends ConsumerWidget {
+  const _DeleteLocalAccountHost();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      body: ElevatedButton(
+        onPressed: () => showDeleteLocalAccountFlow(context, ref),
+        child: const Text('trigger-delete-local'),
+      ),
+    );
+  }
+}
+
+/// Host for [_DeleteLocalAccountHost] with the given [authStateNotifier]
+/// overriding [authStateProvider].
+Widget _buildDeleteLocalAccountHost({
+  required AuthStateNotifier Function() authStateNotifier,
+  Locale locale = const Locale('en'),
+}) {
+  return ProviderScope(
+    retry: (_, __) => null,
+    overrides: [authStateProvider.overrideWith(authStateNotifier)],
+    child: MaterialApp(
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const _DeleteLocalAccountHost(),
+    ),
+  );
 }
 
 // ─── Teardown helper ─────────────────────────────────────────────────────────
@@ -567,6 +629,53 @@ void main() {
 
     expect(capturedData, isNotNull);
     expect(capturedData!['window_minutes'], equals(10));
+
+    await _teardown(tester);
+  });
+
+  // ── A1: non-localBorn auth state → exits immediately ─────────────────────
+
+  testWidgets('A1: showDeleteLocalAccountFlow — non-localBorn auth state exits '
+      'immediately with no dialog shown', (tester) async {
+    await tester.pumpWidget(
+      _buildDeleteLocalAccountHost(
+        authStateNotifier: () => _SignedOutAuthStateNotifier(),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('trigger-delete-local'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(AlertDialog), findsNothing);
+
+    await _teardown(tester);
+  });
+
+  // ── A2: localBorn → delete-confirmation dialog shown ─────────────────────
+
+  testWidgets('A2: showDeleteLocalAccountFlow — localBorn auth state shows the '
+      'delete-confirmation dialog', (tester) async {
+    await tester.pumpWidget(
+      _buildDeleteLocalAccountHost(
+        authStateNotifier: () => _LocalBornAuthStateNotifier(),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('trigger-delete-local'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // showDeleteAccountDialog's type-DELETE confirmation dialog is shown.
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+
+    // Dismiss via Cancel — this test only asserts the dialog appears; the
+    // confirmed deletion path is covered by AccountLifecycleService and
+    // AccountManagementService's own unit tests.
+    await tester.tap(find.text('Cancel'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     await _teardown(tester);
   });
