@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+import 'package:learning_tracker/core/sync/merge/local_track_id_resolver.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 /// Concrete [MergeStore] implementation backed by Drift DAOs.
@@ -520,16 +521,11 @@ class DriftMergeStore implements MergeStore {
       return;
     }
 
-    final defaultTrackId = fields['track_id'] as int? ?? 0;
-
-    // Bug 3: resolve the LOCAL track id from (profile, curriculum) so stage
-    // rows under a tutored mirror bind to the mirror's local track id rather
-    // than the remote id (which never matches). No-op for own-data sync.
-    final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
-      profileId,
-      curriculumId,
-    );
-
+    // AUD-t-cross-43 / Bug 3: resolve the LOCAL track id from (profile,
+    // curriculum) via the shared helper so stage rows under a tutored mirror
+    // bind to the mirror's local track id rather than the remote id (which
+    // never matches). No-op for own-data sync.
+    //
     // AUD-core-sync-07: stage_definitions.trackId is a FK into
     // curriculum_tracks. If this settings snapshot merges before its track's
     // own snapshot (independent per-collection listeners, or a first-launch
@@ -539,16 +535,17 @@ class DriftMergeStore implements MergeStore {
     // page, not just this one document. Skip instead; the next pull
     // re-merges idempotently once the track exists (mirrors the guard
     // already applied to bookmark/gamification_settings/study_day_config).
-    final resolvedTrackId = localTrack?.id ?? defaultTrackId;
-    if (localTrack == null &&
-        await _db.trackDao.getById(resolvedTrackId) == null) {
+    final localTrackId = await resolveLocalTrackId(
+      _db,
+      profileId: profileId,
+      curriculumId: curriculumId,
+    );
+    if (localTrackId == null) {
       _fireSkipped(kind: EntityKind.settings, reason: 'track_not_yet_synced');
       return;
     }
 
     final companions = stagesList.cast<Map<String, dynamic>>().map((s) {
-      final trackId =
-          localTrack?.id ?? (s['track_id'] as int? ?? defaultTrackId);
       final stageOrder = s['stage_order'] as int? ?? 0;
       final stageName = s['stage_name'] as String? ?? '';
       final isDefault = s['is_default'] as bool? ?? false;
@@ -560,7 +557,7 @@ class DriftMergeStore implements MergeStore {
       return StageDefinitionsCompanion.insert(
         profileId: profileId,
         curriculumId: curriculumId,
-        trackId: trackId,
+        trackId: localTrackId,
         stageOrder: stageOrder,
         stageName: stageName,
         isDefault: Value(isDefault),
@@ -594,25 +591,26 @@ class DriftMergeStore implements MergeStore {
       return;
     }
 
-    // Bug 3: resolve the LOCAL track id from (profile, curriculum). The stored
-    // track_id is the remote id; under a tutored mirror the track row was
-    // re-inserted with a different local autoincrement id, so binding stages
-    // to the remote id leaves getStagesByTrack(localTrackId) empty and the
-    // scheduler projection computes nothing. Resolving by (profile, curriculum)
+    // AUD-t-cross-43 / Bug 3: resolve the LOCAL track id from (profile,
+    // curriculum) via the shared helper. The stored track_id is the remote
+    // id; under a tutored mirror the track row was re-inserted with a
+    // different local autoincrement id, so binding stages to the remote id
+    // leaves getStagesByTrack(localTrackId) empty and the scheduler
+    // projection computes nothing. Resolving by (profile, curriculum)
     // realigns the FK and is a no-op for own-data sync.
-    final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
-      profileId,
-      curriculumId,
-    );
-    final trackId = localTrack?.id ?? remoteTrackId;
-
-    // AUD-core-sync-07: guard against this row's track not having synced
-    // locally yet — inserting would violate the stage_definitions →
+    //
+    // AUD-core-sync-07: when no local track is found, skip rather than
+    // insert — inserting would violate the stage_definitions →
     // curriculum_tracks FK (SqliteException 787) and abort merging the
     // whole page. Skip; the next pull re-merges idempotently once the
     // track exists (mirrors the guard already applied to
     // bookmark/gamification_settings/study_day_config).
-    if (localTrack == null && await _db.trackDao.getById(trackId) == null) {
+    final trackId = await resolveLocalTrackId(
+      _db,
+      profileId: profileId,
+      curriculumId: curriculumId,
+    );
+    if (trackId == null) {
       _fireSkipped(
         kind: EntityKind.stageDefinition,
         reason: 'track_not_yet_synced',

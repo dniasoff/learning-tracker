@@ -18,6 +18,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/study_day_config_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+import 'package:learning_tracker/core/sync/merge/local_track_id_resolver.dart';
 
 class StudyDayConfigMerger implements EntityMerger {
   StudyDayConfigMerger(
@@ -59,13 +60,12 @@ class StudyDayConfigMerger implements EntityMerger {
             : decoded.profileId;
         if (docProfileId != profileId) continue;
 
-        // study_day_configs.trackId is a FK into curriculum_tracks. The stored
-        // track_id is the REMOTE id; under a tutored mirror the track was
-        // re-inserted with a different local autoincrement id, so the remote id
-        // never matches and the row would be dropped (the FK-existence guard
-        // below fails) — leaving the scheduler with no study-day pattern and a
-        // 0-due projection (Bug 3). Resolve the LOCAL track by (profile,
-        // curriculum) and bind the config to it. No-op for own-data sync.
+        // AUD-t-cross-43: study_day_configs.trackId is a FK into
+        // curriculum_tracks. The stored track_id is the REMOTE id; under a
+        // tutored mirror the track was re-inserted with a different local
+        // autoincrement id, so the remote id never matches. Resolve the
+        // LOCAL track by (profile, curriculum) via the shared helper and
+        // bind the config to it (Bug 3). No-op for own-data sync.
         //
         // If the referenced track is not present locally yet (e.g. this listener
         // snapshot merged before the curriculum_tracks snapshot), inserting would
@@ -73,17 +73,12 @@ class StudyDayConfigMerger implements EntityMerger {
         // channel merge — which in turn triggers a dashboard rebuild storm. Skip
         // the row; the next full pull re-merges it (LWW, idempotent) once the
         // track exists.
-        final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
-          profileId,
-          decoded.curriculumId,
+        final trackId = await resolveLocalTrackId(
+          _db,
+          profileId: profileId,
+          curriculumId: decoded.curriculumId,
         );
-        final trackId = localTrack?.id ?? decoded.trackId;
-        final trackExists =
-            localTrack ??
-            await (_db.select(
-              _db.curriculumTracks,
-            )..where((t) => t.id.equals(trackId))).getSingleOrNull();
-        if (trackExists == null) continue;
+        if (trackId == null) continue;
 
         // Natural key is scoped by the REMOTE track id (decoded.trackId), not
         // the locally-resolved [trackId] above — matches the codec's own
