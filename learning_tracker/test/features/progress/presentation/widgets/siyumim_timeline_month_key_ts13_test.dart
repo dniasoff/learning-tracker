@@ -85,10 +85,15 @@ void main() {
       'en-US locale renders the locale-aware month header for January 2026',
       (tester) async {
         final date = DateTime(2026, 1, 15);
-        // Compute the expected header via DateFormat — same mechanism the fixed
-        // code must use.  If the old hardcoded array is still in place, the
-        // header renders "January 2026" (same as DateFormat for en-US), so we
-        // rely on the fr-FR test below to catch the regression.
+        // Compute the expected header via DateFormat — same mechanism the
+        // fixed code must use. Note this en-US assertion by itself already
+        // differs from the old hardcoded array's "January 2026" output
+        // (DateFormat.yMMM abbreviates to "Jan 2026" — see the
+        // format-string test below for that direct comparison). What it
+        // does NOT prove is that the header is locale-aware rather than
+        // English-only; the Hebrew-locale test further below renders under
+        // Locale('he') and asserts a Hebrew-formatted header to close that
+        // gap.
         final expected = DateFormat.yMMM('en_US').format(date);
 
         await tester.pumpWidget(_host(viewModel: _vmWithDate(date)));
@@ -168,6 +173,37 @@ void main() {
 
         expect(find.text(header1), findsOneWidget);
         expect(find.text(header2), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'he locale renders a Hebrew-formatted month header, not the old '
+      'hardcoded English form',
+      (tester) async {
+        // This is the actual locale-switch regression test: it renders under
+        // a non-English locale and asserts the header follows suit, which is
+        // what the old hardcoded English `months` array could never do (it
+        // would render "January 2026" regardless of the active locale).
+        final date = DateTime(2026, 1, 15);
+
+        await tester.pumpWidget(
+          _host(viewModel: _vmWithDate(date), locale: const Locale('he')),
+        );
+        await tester.pumpAndSettle();
+
+        // Compute the expected header only after pumping — the Hebrew intl
+        // locale data is registered as a side effect of loading the 'he'
+        // localizations delegate, the same pattern used elsewhere in this
+        // codebase (see siyumim_grouped_view_test.dart's Hebrew-locale case).
+        final expected = DateFormat.yMMM('he').format(date);
+
+        // The rendered month header must match the Hebrew-locale-aware
+        // DateFormat form …
+        expect(find.text(expected), findsOneWidget);
+        // … and must NOT be the old hardcoded English form, which a
+        // locale-blind implementation would still produce even when the
+        // active locale is Hebrew.
+        expect(find.text('January 2026'), findsNothing);
       },
     );
   });
