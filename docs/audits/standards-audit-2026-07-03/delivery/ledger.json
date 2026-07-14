@@ -1699,13 +1699,18 @@
     {
       "id": "AUD-t-cross-06",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Add profileId to TrackLearningOrder \u2014 the one user_database table with a bare autoincrement PK, and make audit's claimed profileId check doesn't exist",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "BLOCKED (wave4-chunk03 engine outcome, ledger reconciliation, 2026-07-14): not a never-attempted case \u2014 real build work exists but never merged. Two unmerged worktree commits found, same title, both off dev: c39ad7e5 (branch worktree-wf_a24050cb-ac8-4, 2026-07-13 22:08) and a later df3daa2a (branch worktree-wf_a24050cb-ac8-58, 2026-07-13 23:13), both 'fix(database): AUD-t-cross-06 - add profileId FK to track_learning_order + Rule-0 checker' with the commit's own message citing a red-first migration test, make audit 51/51, flutter analyze clean, and full test suite green. Neither commit is an ancestor of dev's current HEAD; nothing merged. Engine's terminal verdict for this chunk places the id in blocked (not unprocessed), consistent with a no-progress cap hit at review/merge rather than at the build stage. Ledger-only correction (todo -> blocked) to match engine outcome; no code merged by this reconciliation pass. Left for a future harvest/relaunch pass."
+      "commits": [
+        "a1c060d1febb9592b1743a1ee1fbdf6649030df7"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-06 AC1 OK: schema v36 adds profileId (FK -> learner_profiles, cascade delete) to track_learning_order, folded into uniqueKeys with trackId/sefariaRef; migration backfills from the owning curriculum_tracks row and drops unrecoverable orphans",
+        "AUD-t-cross-06 AC2 OK: new tool/check_profile_id_in_pk.dart is deny-by-default over every table in UserDatabase's tables: [...] list, wired in as make audit check 56/56"
+      ],
+      "notes": "MERGED (gate-repair harvest, 2026-07-14): real, fully-verified build work existed on unmerged worktree commit df3daa2a (branch worktree-wf_a24050cb-ac8-58) but was never merged onto dev (see the wave4-chunk03 reconciliation note this replaces). Required manual reconciliation, not a clean cherry-pick: (1) the Makefile's new profileId-in-PK audit check was renumbered to land after 3 checks added by other, later-merged findings; (2) a modify/delete conflict on 5 test/core/database/user_database_managers_*_test.dart files - AUD-t-cross-16 (already merged) deleted that entire 7-file suite as tautological (474+ tests asserting only hasLength(1), zero production caller for db.managers.*) after this worktree commit's branch point; took the deletion rather than resurrecting the suite with profileId assertions grafted in, since real profileId coverage for track_learning_order now lives in the dedicated DAO test, the migration test, and the checker's own test, none of which depend on the deleted managers suite. Landed onto dev as a1c060d1. Verification (re-run post-merge): flutter analyze -> No issues found!; flutter test across all touched/new test files -> 139 passed, 0 failed; dart run tool/gen_arch_tables.dart --check -> matches freshly-generated counts; make audit -> 56/56 clean."
     },
     {
       "id": "AUD-t-cross-11",
@@ -2459,13 +2464,18 @@
     {
       "id": "AUD-t-cross-21",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Extract the E2E journey files' byte-identical duplicated override helpers into one shared module",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "BLOCKED (wave4-chunk03 engine outcome, ledger reconciliation, 2026-07-14): not a never-attempted case — real build work exists but never merged. Two unmerged worktree commits found, same title, both off dev: 00fcd22c (branch worktree-wf_a24050cb-ac8-5, 2026-07-13 22:13) and a later 7eea3800 (branch worktree-wf_a24050cb-ac8-50, 2026-07-13 23:02), both 'test(e2e): AUD-t-cross-21 - extract shared E2E override/stub helpers into one module' with the commit's own message citing a directory-wide sweep of ~26 journey files, a zero-match grep proof, flutter analyze clean, dart format clean, and the full touched-file test batch green. Neither commit is an ancestor of dev's current HEAD; nothing merged. Engine's terminal verdict for this chunk places the id in blocked (not unprocessed), consistent with a no-progress cap hit at review/merge rather than at the build stage. Ledger-only correction (todo -> blocked) to match engine outcome; no code merged by this reconciliation pass. Left for a future harvest/relaunch pass."
+      "commits": [
+        "ca7c450339ae5857e334e64e07d7ebeb07ebbc79"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-21 AC1 OK: one canonical definition each for the sacred-window/tutor-grant/connectivity/track-stub/navigate-to helpers in test/e2e/harness/e2e_common_overrides.dart, imported by the affected files instead of redefined",
+        "AUD-t-cross-21 AC2 OK: grep -rn for every duplicated helper name across test/e2e/journeys/*.dart returns zero matches"
+      ],
+      "notes": "MERGED (gate-repair harvest, 2026-07-14): real, fully-verified build work existed on unmerged worktree commit 7eea3800 (branch worktree-wf_a24050cb-ac8-50) but was never merged onto dev (see the wave4-chunk03 reconciliation note this replaces). Required manual reconciliation, not a clean cherry-pick: dev had independently merged AUD-t-cross-20 (a separate finding covering an overlapping-but-not-identical subset of the same journey-file duplication) into test/e2e/helpers/e2e_overrides.dart for exactly the 5 files this commit's diff conflicted on. Reconciled by keeping cross-20's already-merged helpers where they cover the same symbol, importing only this finding's genuinely new helper (stubTrack) with a `show` combinator to avoid an ambiguous_import collision between the two shared modules, and dropping a resulting unused date_utils.dart import. Landed onto dev as ca7c4503 (24 journey files + new test/e2e/harness/e2e_common_overrides.dart). Verification (re-run post-merge): flutter analyze test/e2e -> No issues found!; flutter test test/e2e/journeys/ -> 284 passed, 87 pre-existing skips, 0 failed; make audit clean."
     },
     {
       "id": "AUD-docs-16",
@@ -2570,13 +2580,18 @@
     {
       "id": "AUD-t-cross-13",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Delete or merge user_database_dataclass_core_test.dart \u2014 it wholesale duplicates user_database_dataclass_test.dart's 8 DataClass groups",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "BLOCKED (wave4-chunk03 engine outcome, ledger reconciliation, 2026-07-14): not a never-attempted case \u2014 real build work exists but never merged. Two unmerged worktree commits found, same title, both off dev: 185f5e75 (branch worktree-wf_a24050cb-ac8-4, 2026-07-13 22:14) and a later 66ac8005 (branch worktree-wf_a24050cb-ac8-58, 2026-07-13 23:13), both 'test(database): AUD-t-cross-13 - delete duplicate dataclass test file + dedup managers/companion tests' with the commit's own message citing zero coverage loss (1598-test suite green before and after), flutter analyze clean, and make audit 51/51. Neither commit is an ancestor of dev's current HEAD; nothing merged. Engine's terminal verdict for this chunk places the id in blocked (not unprocessed), consistent with a no-progress cap hit at review/merge rather than at the build stage. Ledger-only correction (todo -> blocked) to match engine outcome; no code merged by this reconciliation pass. Left for a future harvest/relaunch pass."
+      "commits": [
+        "a14f2b442a86a500ca2212408912c234ebde5d86"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-13 AC1 OK: user_database_dataclass_core_test.dart (wholesale duplicate of user_database_dataclass_test.dart's 8 DataClass groups) deleted",
+        "AUD-t-cross-13 AC2 OK: zero coverage loss - full database test suite green before and after"
+      ],
+      "notes": "MERGED (gate-repair harvest, 2026-07-14): real, fully-verified build work existed on unmerged worktree commit 66ac8005 (branch worktree-wf_a24050cb-ac8-58) but was never merged onto dev (see the wave4-chunk03 reconciliation note this replaces). Cherry-picked cleanly onto dev with no conflicts as a14f2b44. Verification (re-run post-merge): flutter analyze -> No issues found!; make audit clean."
     },
     {
       "id": "AUD-core-domain-05",
@@ -4650,13 +4665,18 @@
     {
       "id": "AUD-t-cross-17",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Delete the dead app_database_test.dart.skip and dao_merge_methods_test.dart.skip",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "BLOCKED (wave4-chunk03 engine outcome, ledger reconciliation, 2026-07-14): not a never-attempted case — real build work exists but never merged. Two unmerged worktree commits found, same title, both off dev: 8ee3a107 (branch worktree-wf_a24050cb-ac8-29, 2026-07-13 22:50) and a later 687e8547 (branch worktree-wf_a24050cb-ac8-70, 2026-07-13 23:55), both 'fix(tests): AUD-t-cross-17 - delete dead app_database_test.dart.skip / dao_merge_methods_test.dart.skip' with the commit's own message citing a new make audit *.skip ratchet check (51/51), flutter analyze clean, a 1661-test database suite green, and arb-parity OK. Neither commit is an ancestor of dev's current HEAD; nothing merged. Engine's terminal verdict for this chunk places the id in blocked (not unprocessed), consistent with a no-progress cap hit at review/merge rather than at the build stage. Ledger-only correction (todo -> blocked) to match engine outcome; no code merged by this reconciliation pass. Left for a future harvest/relaunch pass."
+      "commits": [
+        "74749633a22f0962d83f5935ca5761aa999fa60c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-17 AC1 OK: test/core/database/app_database_test.dart.skip and dao_merge_methods_test.dart.skip deleted (1038 lines of dead/uncompiled test code)",
+        "AUD-t-cross-17 AC2 OK: new make audit AG-6 *.skip ratchet check (56/56 post-merge) fails on any NEW *.skip file under test/, allowlisting only the 2 pre-existing tracked legacy files"
+      ],
+      "notes": "MERGED (gate-repair harvest, 2026-07-14): real, fully-verified build work existed on unmerged worktree commit 687e8547 (branch worktree-wf_a24050cb-ac8-70) but was never merged onto dev (see the wave4-chunk03 reconciliation note this replaces). Cherry-picked onto dev as 74749633; the new AG-6 audit check was renumbered from 54/54 to 55/56 to land after 3 audit checks added by other, later-merged findings (AUD-t-cross-12/15/22/03) that postdate the worktree's branch point. Verification (re-run post-merge): flutter analyze -> No issues found!; make audit -> 56/56 clean."
     },
     {
       "id": "AUD-core-labels-02",
@@ -5290,13 +5310,18 @@
     {
       "id": "AUD-t-cross-07",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Add the tutor point-permission assertion gamification_p1_test.dart E2E-608 Part 2 claims but never checks",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "BLOCKED (wave4-chunk03 engine outcome, ledger reconciliation, 2026-07-14): not a never-attempted case — real build work exists but never merged. Two unmerged worktree commits found, same title, both off dev: 7c91922a (branch worktree-wf_a24050cb-ac8-5, 2026-07-13 21:43) and a later 8350300f (branch worktree-wf_a24050cb-ac8-50, 2026-07-13 22:56), both 'test(gamification): AUD-t-cross-07 - assert E2E-608 increment control is actually disabled' with the commit's own message citing a red-first proof (hardcoded canEdit=true, saw the new assertion fail, reverted) and a clean flutter analyze/flutter test run. Neither commit is an ancestor of dev's current HEAD; nothing merged. Engine's terminal verdict for this chunk places the id in blocked (not unprocessed), consistent with a no-progress cap hit at review/merge rather than at the build stage. Ledger-only correction (todo -> blocked) to match engine outcome; no code merged by this reconciliation pass. Left for a future harvest/relaunch pass."
+      "commits": [
+        "abe7b4156fcfe16b54ae247d1c4c020f921b1a31"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-07 AC1 OK: gamification_p1_test.dart E2E-608 Part 2 now asserts the tutor increment control is actually disabled (was previously unchecked)",
+        "AUD-t-cross-07 AC2 OK: red-first proof - hardcoded canEdit=true, reran, saw the new assertion fail, reverted"
+      ],
+      "notes": "MERGED (gate-repair harvest, 2026-07-14): real, fully-verified build work existed on unmerged worktree commit 8350300f (branch worktree-wf_a24050cb-ac8-50) but was never merged onto dev (see the wave4-chunk03 reconciliation note this replaces). Cherry-picked cleanly onto dev with no conflicts as abe7b415. Verification (re-run post-merge): flutter test test/e2e/journeys/gamification_p1_test.dart -> passed; make audit clean."
     },
     {
       "id": "AUD-t-cross-49",
