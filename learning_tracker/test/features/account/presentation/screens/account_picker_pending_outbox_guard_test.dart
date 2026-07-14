@@ -28,7 +28,6 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -39,7 +38,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+import '../../../../mocks/mock_repositories.dart';
 
 class _StubAuthStateNotifier extends AuthStateNotifier {
   _StubAuthStateNotifier(this._initial);
@@ -76,7 +75,7 @@ final _kNow = DateTime.utc(2026, 1, 1);
 
 Future<Widget> _buildSubject({required DeviceRegistryDatabase registry}) async {
   SharedPreferences.setMockInitialValues({});
-  final auth = _MockAuthRepository();
+  final auth = MockAuthRepository();
   when(() => auth.currentUser).thenReturn(null);
   final userDb = UserDatabase(NativeDatabase.memory());
   addTearDown(userDb.close);

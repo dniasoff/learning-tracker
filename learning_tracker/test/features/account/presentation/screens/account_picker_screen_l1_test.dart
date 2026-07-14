@@ -42,7 +42,6 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -54,9 +53,9 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
+import '../../../../mocks/mock_repositories.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+// ── Mocks ────────────────────────────────────────────────────────────────────
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -138,7 +137,7 @@ class _Fixture {
 
   final DeviceRegistryDatabase registry;
   final UserDatabase userDb;
-  final _MockAuthRepository auth;
+  final MockAuthRepository auth;
   final _MockStackRouter router;
 
   /// Seed a matching local-born account row in userDb so that
@@ -231,7 +230,7 @@ Future<_Fixture> _buildFixture() async {
   SharedPreferences.setMockInitialValues({});
   final registry = DeviceRegistryDatabase(NativeDatabase.memory());
   final userDb = UserDatabase(NativeDatabase.memory());
-  final auth = _MockAuthRepository();
+  final auth = MockAuthRepository();
   final router = _MockStackRouter();
 
   when(() => auth.currentUser).thenReturn(null);

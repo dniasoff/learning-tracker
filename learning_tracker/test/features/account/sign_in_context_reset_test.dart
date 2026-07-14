@@ -46,7 +46,6 @@ import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -66,14 +65,14 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../mocks/mock_repositories.dart';
+
 class _StubPinService implements PinService {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 // ── Wiring-group mocks / fakes ───────────────────────────────────────────────
-
-class _MockAuthRepository extends Mock implements AuthRepository {}
 
 class _MockInternetConnectionChecker extends Mock
     implements InternetConnectionChecker {}
@@ -286,7 +285,7 @@ void main() {
           ),
         );
 
-        final authRepo = _MockAuthRepository();
+        final authRepo = MockAuthRepository();
         final checker = _MockInternetConnectionChecker();
         final tutorGrantRepo = _MockTutorGrantRepository();
         final db = UserDatabase(NativeDatabase.memory());
@@ -432,7 +431,7 @@ void main() {
         );
       });
 
-      final authRepo = _MockAuthRepository();
+      final authRepo = MockAuthRepository();
       final checker = _MockInternetConnectionChecker();
       when(() => authRepo.signOut()).thenAnswer((_) async {});
       // Offline — takes the DIRECT local branch (no cloud-upgrade finalize
@@ -520,7 +519,7 @@ void main() {
 
       final registry = DeviceRegistryDatabase(NativeDatabase.memory());
       final userDb = UserDatabase(NativeDatabase.memory());
-      final auth = _MockAuthRepository();
+      final auth = MockAuthRepository();
       final router = _MockStackRouter();
 
       when(() => auth.currentUser).thenReturn(cloudUser);
@@ -625,7 +624,7 @@ void main() {
 
       final registry = DeviceRegistryDatabase(NativeDatabase.memory());
       final userDb = UserDatabase(NativeDatabase.memory());
-      final auth = _MockAuthRepository();
+      final auth = MockAuthRepository();
       final router = _MockStackRouter();
 
       when(() => auth.currentUser).thenReturn(null);

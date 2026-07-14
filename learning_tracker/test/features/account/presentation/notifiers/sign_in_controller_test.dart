@@ -18,9 +18,9 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────────
+import '../../../../mocks/mock_repositories.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+// ── Mocks ─────────────────────────────────────────────────────────────────────
 
 /// AUD-account-14: used by the guard-structural-guarantee regression test
 /// below to inject an unexpected failure at a call site with no dedicated
@@ -207,7 +207,7 @@ void main() {
 
   group('SignInController — initial state', () {
     test('starts as SignInIdle', () {
-      final mockAuth = _MockAuthRepository();
+      final mockAuth = MockAuthRepository();
       when(() => mockAuth.currentUser).thenReturn(null);
       when(
         () => mockAuth.onAuthStateChanged(),
@@ -237,7 +237,7 @@ void main() {
     test(
       'returns to SignInIdle when GoogleSignInException(canceled) is thrown',
       () async {
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         when(() => mockAuth.signInWithGoogle()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.canceled,
@@ -261,7 +261,7 @@ void main() {
     test(
       'returns to SignInIdle when GoogleSignInException(interrupted) is thrown',
       () async {
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         when(() => mockAuth.signInWithGoogle()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.interrupted,
@@ -290,7 +290,7 @@ void main() {
       'transitions to SignInError when signInWithGoogle() succeeds but '
       'currentUser is null — DG-GAUTH-01 silent-failure regression',
       () async {
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         // signInWithGoogle() completes without throwing (no user-cancel).
         when(() => mockAuth.signInWithGoogle()).thenAnswer((_) async {});
         // currentUser is null immediately after — simulates a silent JWT
@@ -332,7 +332,7 @@ void main() {
     test(
       'transitions to SignInError for non-cancel GoogleSignInException',
       () async {
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         when(() => mockAuth.signInWithGoogle()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.unknownError,
@@ -363,7 +363,7 @@ void main() {
     test(
       'transitions to SignInError for generic exception during Google sign-in',
       () async {
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         // Throw a Firebase-style exception with a code embedded in toString.
         when(
           () => mockAuth.signInWithGoogle(),
@@ -386,7 +386,7 @@ void main() {
     test('state is SignInSubmitting during signInWithGoogle '
         '(observed via listener before throw resolves)', () async {
       // Use a completer-based throw to capture the in-flight state.
-      final mockAuth = _MockAuthRepository();
+      final mockAuth = MockAuthRepository();
       final states = <SignInState>[];
 
       // Track every state change.
@@ -431,7 +431,7 @@ void main() {
   group('SignInController — autoDispose mid-await safety (AUD-account-02)', () {
     test('signInWithGoogle: disposing the container mid-await does not let '
         'UnmountedRefException escape', () async {
-      final mockAuth = _MockAuthRepository();
+      final mockAuth = MockAuthRepository();
       final completer = Completer<void>();
       when(
         () => mockAuth.signInWithGoogle(),
@@ -464,7 +464,7 @@ void main() {
 
     test('signInWithGoogle: a GoogleSignInException thrown after the container '
         'is disposed does not let UnmountedRefException escape', () async {
-      final mockAuth = _MockAuthRepository();
+      final mockAuth = MockAuthRepository();
       final completer = Completer<void>();
       when(
         () => mockAuth.signInWithGoogle(),
@@ -500,7 +500,7 @@ void main() {
       String firebaseCode,
       String Function(AppLocalizations) expected,
     ) async {
-      final mockAuth = _MockAuthRepository();
+      final mockAuth = MockAuthRepository();
       // Embed the Firebase code in the exception's toString.
       when(
         () => mockAuth.signInWithGoogle(),
@@ -538,7 +538,7 @@ void main() {
     test('plugin-prefixed wrong-password ([firebase_auth/wrong-password]) '
         'is decoded and maps to authErrWrongPassword (regression: the prefix '
         'previously broke code extraction → generic error)', () async {
-      final mockAuth = _MockAuthRepository();
+      final mockAuth = MockAuthRepository();
       when(
         () => mockAuth.signInWithGoogle(),
       ).thenThrow(Exception('[firebase_auth/wrong-password] bad password'));
@@ -556,7 +556,7 @@ void main() {
 
     test('plugin-prefixed invalid-credential is decoded and maps to '
         'authErrWrongPassword', () async {
-      final mockAuth = _MockAuthRepository();
+      final mockAuth = MockAuthRepository();
       when(
         () => mockAuth.signInWithGoogle(),
       ).thenThrow(Exception('[firebase_auth/invalid-credential] bad creds'));
@@ -607,7 +607,7 @@ void main() {
     test(
       'exception with no embedded code maps to authErrSignInGeneric',
       () async {
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         when(
           () => mockAuth.signInWithGoogle(),
         ).thenThrow(Exception('no code here'));
@@ -651,7 +651,7 @@ void main() {
     test(
       '_showError callback is invoked when signInWithGoogle errors',
       () async {
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         when(() => mockAuth.signInWithGoogle()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.unknownError,
@@ -682,7 +682,7 @@ void main() {
     test(
       '_showError is NOT called when GoogleSignInException is canceled',
       () async {
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         when(() => mockAuth.signInWithGoogle()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.canceled,
@@ -878,7 +878,7 @@ void main() {
     () {
       test('state sequence is Idle → Submitting → SignInError '
           'for a non-cancel exception', () async {
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         when(() => mockAuth.signInWithGoogle()).thenThrow(
           const GoogleSignInException(
             code: GoogleSignInExceptionCode.unknownError,
@@ -926,7 +926,7 @@ void main() {
     test('an unexpected exception from a call with no dedicated try/catch '
         '(registry.findByEmail) still resolves to SignInError — never left '
         'at SignInSubmitting or silently reset to SignInIdle', () async {
-      final mockAuth = _MockAuthRepository();
+      final mockAuth = MockAuthRepository();
       when(() => mockAuth.signInWithGoogle()).thenAnswer((_) async {});
       const googleUser = AppUser(
         uid: 'fb-uid-guard-test',

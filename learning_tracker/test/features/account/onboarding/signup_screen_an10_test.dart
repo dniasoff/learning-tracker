@@ -31,7 +31,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -39,11 +38,11 @@ import 'package:learning_tracker/features/account/presentation/providers/connect
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../mocks/mock_repositories.dart';
+
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 class _MockStackRouter extends Mock implements StackRouter {}
-
-class _MockAuthRepository extends Mock implements AuthRepository {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
@@ -54,7 +53,7 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 /// layout rather than a structural replica.
 Widget _buildRealSignupScreen() {
   final router = _MockStackRouter();
-  final authRepo = _MockAuthRepository();
+  final authRepo = MockAuthRepository();
 
   when(() => router.replace(any())).thenAnswer((_) async => null);
   when(

@@ -37,7 +37,6 @@ import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
@@ -46,9 +45,9 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+import '../../../../mocks/mock_repositories.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 class _MockPinService extends Mock implements PinService {}
 
@@ -169,7 +168,7 @@ void main() {
           );
           addTearDown(() async => db.close());
 
-          final mockAuth = _MockAuthRepository();
+          final mockAuth = MockAuthRepository();
           // signOut() throws the emulator platform exception.
           when(() => mockAuth.signOut()).thenThrow(
             PlatformException(
