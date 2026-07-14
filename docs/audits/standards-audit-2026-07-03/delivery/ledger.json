@@ -2210,13 +2210,19 @@
   {
    "id": "AUD-t-settings-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Add the showDeleteLocalAccountFlow tests settings_utils_test.dart's docstring claims already exist",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "55a9a5cb4fbee6590c33c856ea64df02c43653d9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-settings-01 AC1 OK: A1+A2 call showDeleteLocalAccountFlow(context,ref) directly (test line 124); both pass (flutter test +12/+13)",
+    "AUD-t-settings-01 AC2 OK: grep -rn showDeleteLocalAccountFlow test/ hits real test body at line 124, not just docstring comment",
+    "AUD-t-settings-01 non-vacuity OK: mutation M1(guard removed) reds A1; M2(dialog removed) reds A2; restored via git checkout"
+   ],
+   "notes": "Re-verified: grep only matched the docstring before this fix. Added A1/A2 widget tests exercising showDeleteLocalAccountFlow directly. Verified non-vacuous by breaking guard/dialog in prod code, confirming each test reds, then restoring to green. Both AC bullets satisfied."
   },
   {
    "id": "AUD-t-cross-30",
