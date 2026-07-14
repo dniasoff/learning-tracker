@@ -349,11 +349,13 @@ void main() {
     });
 
     testWidgets('FAB is visible even when 10 profiles exist', (tester) async {
-      // BUG: ManageLearnersScreen does not visually disable the FAB or show
-      // a UI cap indicator when 10 profiles exist. The cap is enforced only
-      // in the repo (MaxProfilesExceededException), but no proactive UI
-      // feedback is shown to the user before they attempt to add. This is a
-      // UX bug — the FAB should be disabled or hidden at cap.
+      // BUG (DNI-414): ManageLearnersScreen does not visually disable the FAB
+      // or show a UI cap indicator when 10 profiles exist. The cap is
+      // enforced only in the repo (MaxProfilesExceededException), but no
+      // proactive UI feedback is shown to the user before they attempt to
+      // add. This is a UX bug — the FAB should be disabled or hidden at cap.
+      // This test is an intentional characterization test of the current
+      // (buggy) behavior; see DNI-414 for the fix.
       final profiles = List.generate(
         10,
         (i) => _profile(id: i + 1, name: 'Profile ${i + 1}', mode: 'adult'),
