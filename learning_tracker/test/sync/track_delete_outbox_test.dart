@@ -13,6 +13,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 
 import '../helpers/drift_memory.dart' show inMemoryDb, seedProfile;
 
@@ -36,7 +37,10 @@ void main() {
 
     await deviceA.trackDao.deleteTrackAndData(trackId);
 
-    final outboxRows = await deviceA.outboxDao.getPendingByKind('track', 1);
+    final outboxRows = await deviceA.outboxDao.getPendingByKind(
+      OutboxEntityKind.track,
+      1,
+    );
     expect(
       outboxRows.any((r) => r.entityKey.contains('track_delete')),
       isTrue,
