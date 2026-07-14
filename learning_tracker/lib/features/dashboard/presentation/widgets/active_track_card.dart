@@ -26,22 +26,6 @@ CurriculumId _curriculumIdForTrack(CurriculumTrack track) {
   );
 }
 
-/// Drops the top-level seder segment from a breadcrumb string so the
-/// curriculum chip (already visible above) is not duplicated in the pill.
-///
-/// The breadcrumb separator produced by [renderedDisplayForRef] is ` › `
-/// (space + U+203A + space). When there are 2+ segments, the first is
-/// removed. Single-segment labels (e.g. a top-level tractate with no
-/// sub-units) are returned unchanged.
-///
-/// Example: "קודשים › חולין › דף יד › עמוד א" → "חולין › דף יד › עמוד א"
-String _trimSederFromBreadcrumb(String breadcrumb) {
-  const sep = ' › ';
-  final idx = breadcrumb.indexOf(sep);
-  if (idx == -1) return breadcrumb; // single segment — nothing to trim
-  return breadcrumb.substring(idx + sep.length);
-}
-
 /// Active track card: program (task metrics) vs self-paced (completion) layouts.
 class ActiveTrackCard extends ConsumerWidget {
   final CurriculumTrack track;
@@ -117,7 +101,7 @@ class ActiveTrackCard extends ConsumerWidget {
       final seeded = programUnitDayLabel(task, useHebrew: useHebrew);
       if (seeded != null) return seeded;
       final r = task.contentItemSefariaRef;
-      final rendered = _trimSederFromBreadcrumb(
+      final rendered = trimSederFromBreadcrumb(
         ref.watch(renderedDisplayForRefProvider(r)).asData?.value ?? r,
       );
       // Program tracks collapse amud → daf; self-paced keeps its leaf.
@@ -169,7 +153,7 @@ class ActiveTrackCard extends ConsumerWidget {
         );
       final rendered = <String>[
         for (final t in orderedTasks)
-          _trimSederFromBreadcrumb(
+          trimSederFromBreadcrumb(
             ref
                     .watch(
                       renderedDisplayForRefProvider(t.contentItemSefariaRef),

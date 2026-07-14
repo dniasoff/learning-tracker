@@ -15,6 +15,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 // points_summary_widget.dart was deleted (dead-code purge, AUD-dashboard-04).
 // curriculum_summary_card.dart was deleted (dead-code purge, AUD-dashboard-03).
+import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_helpers.dart'
+    show trimSederFromBreadcrumb;
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
@@ -202,17 +204,27 @@ void main() {
       },
     );
 
-    test('points summary is excluded from state when userMode is adult', () {
-      // The dashboard provider filters points based on UserMode.
-      // In adult mode, the points section should not be shown.
-      // This is a logic test — the provider returns UserMode, and the
-      // screen conditionally renders points.
-      const userMode = ProfileMode.adult;
-      expect(userMode == ProfileMode.child, isFalse);
+    test(
+      'ProfileMode equality: adult is not child, child is child '
+      '(the real points-visibility gate is covered by '
+      'dashboardGlobalPointsProvider tests, not here — see '
+      'dashboard_providers_test.dart "dashboardGlobalPointsProvider" group)',
+      () {
+        // AUD-t-story-acceptance-19: this test only checks ProfileMode enum
+        // equality — true/false by enum definition, regardless of any
+        // dashboard logic. It does NOT touch the dashboard provider or
+        // screen that actually decides whether points are shown for a given
+        // mode. That real gating (dashboardGlobalPointsProvider: adult -> 0,
+        // child -> stored balance) is covered by
+        // test/features/dashboard/presentation/providers/
+        // dashboard_providers_test.dart, group 'dashboardGlobalPointsProvider'.
+        const userMode = ProfileMode.adult;
+        expect(userMode == ProfileMode.child, isFalse);
 
-      const childMode = ProfileMode.child;
-      expect(childMode == ProfileMode.child, isTrue);
-    });
+        const childMode = ProfileMode.child;
+        expect(childMode == ProfileMode.child, isTrue);
+      },
+    );
 
     test(
       'today tasks count correctly sums pending tasks across all curricula',
@@ -345,10 +357,20 @@ void main() {
       },
     );
 
-    test('pull-to-refresh triggers provider invalidation pattern', () {
-      // This tests the invalidation pattern — in the real app, ref.invalidate()
-      // is called on pull-to-refresh, causing all dashboard providers to refetch.
-      // We verify the aggregator produces updated results when given new data.
+    test('CrossCurriculumAggregator.aggregate() is pure: same-shape input with '
+        'different values produces different output (the real '
+        'ref.invalidate() pull-to-refresh wiring is covered by '
+        'DashboardScreen tests, not here — see dashboard_screen_test.dart '
+        '"re-reads dashboard data when sync transitions to synced")', () {
+      // AUD-t-story-acceptance-19: this test never calls ref.invalidate() or
+      // touches any Riverpod provider — it only calls the pure
+      // CrossCurriculumAggregator.aggregate() function twice with different
+      // literal inputs, which trivially returns different output. The real
+      // pull-to-refresh / ref.invalidate() wiring
+      // (DashboardScreen.invalidateDashboardData, shared by the manual
+      // RefreshIndicator.onRefresh and the auto-refresh-on-sync listener) is
+      // covered by test/features/dashboard/presentation/screens/
+      // dashboard_screen_test.dart.
       final before = aggregator.aggregate(
         activeCurricula: [CurriculumId.mishnayos],
         completionPercentages: {CurriculumId.mishnayos: 0.5},
@@ -1136,36 +1158,33 @@ void main() {
   // ── Issue-8b regression — breadcrumb seder trimming ────────────────────────
 
   group('Issue-8b — top-level seder trimmed from breadcrumb', () {
-    /// Mirror of the private `_trimSederFromBreadcrumb` function in
-    /// `active_track_card.dart`. Kept here as a pure-logic unit test so the
-    /// display contract is documented and verified independently of widgets.
-    String trimSeder(String breadcrumb) {
-      const sep = ' › ';
-      final idx = breadcrumb.indexOf(sep);
-      if (idx == -1) return breadcrumb;
-      return breadcrumb.substring(idx + sep.length);
-    }
+    // AUD-t-story-acceptance-19: this group used to assert against a
+    // hand-copied mirror of `_trimSederFromBreadcrumb`, so a regression in
+    // the real (private) function in `active_track_card.dart` went
+    // undetected. The function was extracted to the public
+    // `trimSederFromBreadcrumb` in `dashboard_helpers.dart` (imported below)
+    // so these tests now drive the actual production code.
 
     test('multi-segment breadcrumb: first segment is dropped', () {
-      expect(trimSeder('א › ב › ג'), equals('ב › ג'));
+      expect(trimSederFromBreadcrumb('א › ב › ג'), equals('ב › ג'));
     });
 
     test('two-segment breadcrumb: only second segment remains', () {
-      expect(trimSeder('קודשים › חולין'), equals('חולין'));
+      expect(trimSederFromBreadcrumb('קודשים › חולין'), equals('חולין'));
     });
 
     test('single-segment breadcrumb: returned unchanged', () {
-      expect(trimSeder('ברכות'), equals('ברכות'));
+      expect(trimSederFromBreadcrumb('ברכות'), equals('ברכות'));
     });
 
     test('four-segment breadcrumb: first segment removed, rest preserved', () {
       const full = 'קודשים › חולין › דף יד › עמוד א';
       const expected = 'חולין › דף יד › עמוד א';
-      expect(trimSeder(full), equals(expected));
+      expect(trimSederFromBreadcrumb(full), equals(expected));
     });
 
     test('empty string: returned unchanged', () {
-      expect(trimSeder(''), equals(''));
+      expect(trimSederFromBreadcrumb(''), equals(''));
     });
   });
 }
