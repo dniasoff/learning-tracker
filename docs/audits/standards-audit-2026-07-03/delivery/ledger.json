@@ -5407,13 +5407,18 @@
   {
    "id": "AUD-t-cross-47",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "infrastructure_test.dart's 'database is isolated between tests' only proves two objects aren't identical(), not that data is isolated",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "4cc68b0e6b60be36b0cfe75e9586b04cd945c31a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-47 AC1 OK: test:149-154 seedProfile(db1)+expect(db2Accounts,isEmpty), identical() gone; red-first: shared-executor variant failed isEmpty",
+    "AUD-t-cross-47 AC2 OK: setUpAll dontWarnAboutMultipleDatabases=true; grep of test output = no Drift warning"
+   ],
+   "notes": "Confirmed identical(db1,db2) was the only check; Drift warning still fired. Replaced with real isolation assert (seed db1, absent from db2) + driftRuntimeOptions flag. Red-first: shared executor made new assert fail as expected; isolated setup reran green, warning gone. Merged --no-ff onto dev (w4r1c17, mergeSha 4cc68b0e6b60be36b0cfe75e9586b04cd945c31a). Post-rebase gate: make audit 58/58 clean, flutter analyze clean (touchedStrings=false, arb-parity skipped). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (only learning_tracker/test/infrastructure_test.dart touched, no overlap with dev's changed paths since merge-base edd87788a9d2ec17aae438e8c38a6b23e3437d45), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-guardrails-04",
