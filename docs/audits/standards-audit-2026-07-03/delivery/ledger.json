@@ -9173,13 +9173,17 @@
   {
    "id": "AUD-t-cross-63",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete or rewrite bulk_prior_completion_b6_b8_test.dart's stale AC3 test now that supersededAt was dropped",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "f16efdafc414faf221d4c8a7355a777e39cf68c2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-63 AC1 OK: helper+AC3 test removed; grep 'supersed' matches only comment L301-305; schema drop stage_definitions.dart:16; coverage subsumed by AC1 L242"
+   ],
+   "notes": "Re-verified: supersededAt still absent (W3.29), stale AC3 test + helper still present as described. Removed both per recommendation option 1; added explanatory comment. AC1 already covers the assertion, no coverage lost. AC self-checked via grep."
   },
   {
    "id": "AUD-t-cross-55",
