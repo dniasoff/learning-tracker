@@ -155,7 +155,9 @@ void main() {
       () {
         test('AC1: each account gets isolated data in its own DB', () async {
           final aliceDb = UserDatabase(NativeDatabase.memory());
+          addTearDown(aliceDb.close);
           final bobDb = UserDatabase(NativeDatabase.memory());
+          addTearDown(bobDb.close);
 
           final aliceAuth = LocalAuthService(
             dao: aliceDb.userProfileDao,
@@ -190,9 +192,6 @@ void main() {
           );
           expect(bobProfiles, hasLength(1));
           expect(bobProfiles.first.email, 'bob@test.local');
-
-          await aliceDb.close();
-          await bobDb.close();
         });
       },
     );
@@ -347,6 +346,7 @@ void main() {
           'AC2: offline path creates local-born with argon2id hash',
           () async {
             final db = UserDatabase(NativeDatabase.memory());
+            addTearDown(db.close);
             final service = LocalAuthService(
               dao: db.userProfileDao,
               hasher: PasswordHasher(params: Argon2idParams.test),
@@ -361,13 +361,12 @@ void main() {
             expect(profile.tier, 'localBorn');
             expect(profile.passwordHash, isNotNull);
             expect(profile.email, 'offline@test.local');
-
-            await db.close();
           },
         );
 
         test('AC4: duplicate email throws DuplicateEmailException', () async {
           final db = UserDatabase(NativeDatabase.memory());
+          addTearDown(db.close);
           final service = LocalAuthService(
             dao: db.userProfileDao,
             hasher: PasswordHasher(params: Argon2idParams.test),
@@ -387,8 +386,6 @@ void main() {
             ),
             throwsA(isA<DuplicateEmailException>()),
           );
-
-          await db.close();
         });
       },
     );
@@ -397,6 +394,7 @@ void main() {
     group('Story 21.7 — Sign-In Smart Routing', tags: ['story_21_7'], () {
       test('AC1: local-born sign-in via argon2id', () async {
         final db = UserDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
         final service = LocalAuthService(
           dao: db.userProfileDao,
           hasher: PasswordHasher(params: Argon2idParams.test),
@@ -413,12 +411,11 @@ void main() {
           password: 'mypassword',
         );
         expect(profile.tier, 'localBorn');
-
-        await db.close();
       });
 
       test('AC8: wrong password throws InvalidCredentialsException', () async {
         final db = UserDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
         final service = LocalAuthService(
           dao: db.userProfileDao,
           hasher: PasswordHasher(params: Argon2idParams.test),
@@ -435,8 +432,6 @@ void main() {
               service.signIn(email: 'local@test.local', password: 'wrongpass'),
           throwsA(isA<InvalidCredentialsException>()),
         );
-
-        await db.close();
       });
     });
 
@@ -444,6 +439,7 @@ void main() {
     group('Story 21.9 — Account Picker', tags: ['story_21_9'], () {
       test('AC7: accounts ordered by lastUsedAt descending', () async {
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
 
         await registry.addAccount(
           DeviceAccountsCompanion.insert(
@@ -471,8 +467,6 @@ void main() {
         final accounts = await registry.getAllAccounts();
         expect(accounts.first.accountId, 'acc-new');
         expect(accounts.last.accountId, 'acc-old');
-
-        await registry.close();
       });
     });
 
@@ -480,6 +474,7 @@ void main() {
     group('Story 21.10 — Sign-Out Routing', tags: ['story_21_10'], () {
       test('registry count determines post-signout destination', () async {
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
 
         await registry.addAccount(
           DeviceAccountsCompanion.insert(
@@ -511,8 +506,6 @@ void main() {
         await registry.removeAccount('acc-2');
         accounts = await registry.getAllAccounts();
         expect(accounts.isEmpty, isTrue); // → welcome
-
-        await registry.close();
       });
     });
 
@@ -520,6 +513,7 @@ void main() {
     group('Story 21.11 — Add Account from Picker', tags: ['story_21_11'], () {
       test('AC2: at capacity (5 accounts), addAccount throws', () async {
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
 
         for (var i = 0; i < 5; i++) {
           await registry.addAccount(
@@ -552,8 +546,6 @@ void main() {
           ),
           throwsA(isA<MaxAccountsReachedException>()),
         );
-
-        await registry.close();
       });
     });
 
@@ -561,6 +553,7 @@ void main() {
     group('Story 21.12 — Upgrade Multi-Account', tags: ['story_21_12'], () {
       test('AC1: updateAccountTier updates registry', () async {
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
 
         await registry.addAccount(
           DeviceAccountsCompanion.insert(
@@ -583,8 +576,6 @@ void main() {
         final updated = await registry.findById('acc-local');
         expect(updated!.tier, 'cloudBorn');
         expect(updated.firebaseUid, 'new-fb-uid');
-
-        await registry.close();
       });
 
       test('AC3: cloud-born account does not show upgrade option', () {
@@ -605,7 +596,9 @@ void main() {
     group('Story 21.13 — Remove Cloud from Device', tags: ['story_21_13'], () {
       test('AC2: removal deletes file + registry entry', () async {
         final tempDir = await Directory.systemTemp.createTemp('epic21_test_');
+        addTearDown(() => tempDir.delete(recursive: true));
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
 
         await registry.addAccount(
           DeviceAccountsCompanion.insert(
@@ -632,9 +625,6 @@ void main() {
 
         expect(File('${tempDir.path}/user_acc_cloud.db').existsSync(), isFalse);
         expect(await registry.findById('acc-cloud'), isNull);
-
-        await registry.close();
-        await tempDir.delete(recursive: true);
       });
 
       test(
@@ -642,7 +632,9 @@ void main() {
         'AND lastActiveAccountId (no ghost row / dangling pointer)',
         () async {
           final tempDir = await Directory.systemTemp.createTemp('epic21_d19_');
+          addTearDown(() => tempDir.delete(recursive: true));
           final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+          addTearDown(registry.close);
 
           await registry.addAccount(
             DeviceAccountsCompanion.insert(
@@ -674,14 +666,12 @@ void main() {
             isEmpty,
             reason: 'deleted account must not reappear in the picker',
           );
-
-          await registry.close();
-          await tempDir.delete(recursive: true);
         },
       );
 
       test('AC5: local-born rejects removeCloudFromDevice', () async {
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
 
         await registry.addAccount(
           DeviceAccountsCompanion.insert(
@@ -704,8 +694,6 @@ void main() {
           () => service.removeCloudFromDevice('acc-local'),
           throwsA(isA<StateError>()),
         );
-
-        await registry.close();
       });
     });
 
@@ -713,7 +701,9 @@ void main() {
     group('Story 21.14 — Delete Local Account', tags: ['story_21_14'], () {
       test('AC2: deletion removes file + registry entry', () async {
         final tempDir = await Directory.systemTemp.createTemp('epic21_test_');
+        addTearDown(() => tempDir.delete(recursive: true));
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
 
         await registry.addAccount(
           DeviceAccountsCompanion.insert(
@@ -739,14 +729,13 @@ void main() {
         expect(File('${tempDir.path}/user_acc_local.db').existsSync(), isFalse);
         expect(await registry.findById('acc-local'), isNull);
         expect(await registry.getAllAccounts(), isEmpty);
-
-        await registry.close();
-        await tempDir.delete(recursive: true);
       });
 
       test('AC5: deletion works offline (no network calls)', () async {
         final tempDir = await Directory.systemTemp.createTemp('epic21_test_');
+        addTearDown(() => tempDir.delete(recursive: true));
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
 
         await registry.addAccount(
           DeviceAccountsCompanion.insert(
@@ -769,13 +758,11 @@ void main() {
 
         await service.deleteLocalAccount('acc-local');
         expect(await registry.getAllAccounts(), isEmpty);
-
-        await registry.close();
-        await tempDir.delete(recursive: true);
       });
 
       test('cloud-born rejects deleteLocalAccount', () async {
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
 
         await registry.addAccount(
           DeviceAccountsCompanion.insert(
@@ -799,8 +786,6 @@ void main() {
           () => service.deleteLocalAccount('acc-cloud'),
           throwsA(isA<StateError>()),
         );
-
-        await registry.close();
       });
     });
 
@@ -811,6 +796,7 @@ void main() {
       () {
         test('cloud-born without firebaseUid rejects deletion', () async {
           final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+          addTearDown(registry.close);
 
           await registry.addAccount(
             DeviceAccountsCompanion.insert(
@@ -833,8 +819,6 @@ void main() {
             () => service.deleteCloudAccount('acc-broken'),
             throwsA(isA<StateError>()),
           );
-
-          await registry.close();
         });
       },
     );
@@ -845,6 +829,7 @@ void main() {
         'full lifecycle: create → persist session → resolve on restart',
         () async {
           final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+          addTearDown(registry.close);
           SharedPreferences.setMockInitialValues({});
           final prefs = await SharedPreferences.getInstance();
           final sessionService = SessionPersistenceService(
@@ -872,14 +857,14 @@ void main() {
           final account = await registry.findById(resolved!);
           expect(account!.email, 'lifecycle@test.local');
           expect(account.dbFileName, 'user_acc_lifecycle.db');
-
-          await registry.close();
         },
       );
 
       test('account removal + session cleanup falls back', () async {
         final tempDir = await Directory.systemTemp.createTemp('epic21_test_');
+        addTearDown(() => tempDir.delete(recursive: true));
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+        addTearDown(registry.close);
         SharedPreferences.setMockInitialValues({});
         final prefs = await SharedPreferences.getInstance();
         final sessionService = SessionPersistenceService(
@@ -913,9 +898,6 @@ void main() {
         // Resolve should fall back to acc-b
         final resolved = await sessionService.resolveActiveAccountId();
         expect(resolved, 'acc-b');
-
-        await registry.close();
-        await tempDir.delete(recursive: true);
       });
     });
 
@@ -934,6 +916,7 @@ void main() {
           'switching active account leaves both accounts in registry',
           () async {
             final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+            addTearDown(registry.close);
             SharedPreferences.setMockInitialValues({});
             final prefs = await SharedPreferences.getInstance();
             final sessionService = SessionPersistenceService(
@@ -998,8 +981,6 @@ void main() {
               'acc-bob',
               reason: 'Active account is now Bob',
             );
-
-            await registry.close();
           },
         );
 
@@ -1007,6 +988,7 @@ void main() {
           'switching does not remove the previously active account',
           () async {
             final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+            addTearDown(registry.close);
             SharedPreferences.setMockInitialValues({});
             final prefs = await SharedPreferences.getInstance();
             final sessionService = SessionPersistenceService(
@@ -1038,8 +1020,6 @@ void main() {
                 reason: 'All 3 accounts must survive switch to $id',
               );
             }
-
-            await registry.close();
           },
         );
       },
