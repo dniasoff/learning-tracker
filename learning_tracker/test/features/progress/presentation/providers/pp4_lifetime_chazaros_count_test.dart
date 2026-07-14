@@ -22,6 +22,20 @@
 /// the buggy/fixed formula inline in the test (which never touched
 /// `lifetimeHeaderCountersProvider` and so could never catch a regression to
 /// its source).
+///
+/// weaken-ok: the previous version additionally asserted
+/// `completions.length == 7` / `completions.where(...).length == 2` /
+/// `fixedCount != buggyCount` as LOCAL variables, and separately
+/// constructed a bare `LifetimeHeaderCounters(...)` to check the model's
+/// field passthrough. Those assertions never read
+/// `lifetimeHeaderCountersProvider` at all (they duplicated its formula, or
+/// its constructor, inline) — AUD-t-progress-05's entire point — so they
+/// are dropped rather than carried forward: the single
+/// `counters.totalChazaros` assertion against the REAL provider below
+/// (verified red-first by reverting the provider's fix line — see the
+/// finding's evidence) is what actually detects the regression they could
+/// not. The `hasLength(7)` sanity check on the raw seed is kept as it
+/// verifies the fixture setup, not the fix.
 @Tags(['unit', 'progress', 'lifetime', 'pp4'])
 library;
 
