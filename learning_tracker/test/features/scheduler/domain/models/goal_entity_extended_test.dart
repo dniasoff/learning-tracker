@@ -1,9 +1,17 @@
 /// Extended tests for GoalEntity covering branches not exercised by
 /// goal_entity_test.dart:
 /// - DeadlineTarget.hashCode and toString
-/// - PacePeriodTarget.hashCode and toString
+/// - PacePeriodTarget.hashCode, toString and equality
 /// - GoalEntity.firestoreId
-/// - GoalEntity.fromFirestore error path (unknown curriculumId)
+/// - GoalEntity.fromFirestore error path (unknown curriculumId) and
+///   paceGranularity mapping (including the null and round-trip cases)
+/// - GoalEntity.paceTarget edge cases
+///
+/// AUD-t-scheduler-01: this file absorbs the union of distinct assertions
+/// formerly split across this file and the now-deleted
+/// goal_entity_extra_test.dart, which duplicated most of the
+/// DeadlineTarget/PacePeriodTarget/firestoreId/fromFirestore coverage below
+/// under the same group names.
 library;
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -87,6 +95,18 @@ void main() {
       const target = PacePeriodTarget(rate: 1, period: 'per_day');
       // ignore: unrelated_type_equality_checks
       expect(target == target, isTrue);
+    });
+
+    test('not equal when only rate differs', () {
+      const a = PacePeriodTarget(rate: 3, period: 'per_week');
+      const b = PacePeriodTarget(rate: 4, period: 'per_week');
+      expect(a, isNot(equals(b)));
+    });
+
+    test('not equal when only period differs', () {
+      const a = PacePeriodTarget(rate: 3, period: 'per_week');
+      const b = PacePeriodTarget(rate: 3, period: 'per_day');
+      expect(a, isNot(equals(b)));
     });
   });
 
@@ -192,6 +212,33 @@ void main() {
       expect(entity.rawLearningUnit, isNull);
     });
 
+    test('null paceGranularity produces null enum and rawLearningUnit', () {
+      final entity = GoalEntity.fromFirestore({
+        'curriculumId': 'mishnayos',
+        'paceGranularity': null,
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'updatedAt': '2026-01-01T00:00:00.000Z',
+      });
+      expect(entity.paceGranularity, isNull);
+      expect(entity.rawLearningUnit, isNull);
+    });
+
+    test('round-trip preserves paceGranularity daf', () {
+      final original = GoalEntity(
+        curriculumId: CurriculumId.bavli,
+        goalType: 'pace',
+        paceValue: 2,
+        pacePeriod: 'per_day',
+        paceGranularity: PaceGranularity.daf,
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      );
+      final map = original.toFirestore();
+      final restored = GoalEntity.fromFirestore(map);
+      expect(restored.paceGranularity, PaceGranularity.daf);
+      expect(restored.paceGranularityKey, 'daf');
+    });
+
     test('defaults targetPercent to 100.0 when missing', () {
       final entity = GoalEntity.fromFirestore({
         'curriculumId': 'mishnayos',
@@ -220,6 +267,45 @@ void main() {
         'updatedAt': '2026-01-01T00:00:00.000Z',
       });
       expect(entity.targetDate, isNull);
+    });
+  });
+
+  // ── GoalEntity.paceTarget edge cases ───────────────────────────────────────
+
+  group('GoalEntity.paceTarget edge cases', () {
+    test('returns null for deadline type without targetDate', () {
+      final entity = GoalEntity(
+        curriculumId: CurriculumId.mishnayos,
+        goalType: 'deadline',
+        // targetDate intentionally absent
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      );
+      expect(entity.paceTarget, isNull);
+    });
+
+    test('returns null for pace type without paceValue', () {
+      final entity = GoalEntity(
+        curriculumId: CurriculumId.mishnayos,
+        goalType: 'pace',
+        pacePeriod: 'per_day',
+        // paceValue intentionally absent
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      );
+      expect(entity.paceTarget, isNull);
+    });
+
+    test('returns null for pace type without pacePeriod', () {
+      final entity = GoalEntity(
+        curriculumId: CurriculumId.mishnayos,
+        goalType: 'pace',
+        paceValue: 5,
+        // pacePeriod intentionally absent
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      );
+      expect(entity.paceTarget, isNull);
     });
   });
 }

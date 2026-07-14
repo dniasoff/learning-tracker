@@ -305,7 +305,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 65 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 66 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -962,7 +962,7 @@ audit: lint-rules-test ## Run all 65 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/notifications_sync_effect_check.$$$$.log; \
 	fi; \
-	echo "65/65 — AG-4 candidate: no duplicate top-level class name defined in more than one file under test/features/notifications/ (AUD-t-notifications-03)"; \
+	echo "65/66 — AG-4 candidate: no duplicate top-level class name defined in more than one file under test/features/notifications/ (AUD-t-notifications-03)"; \
 	if ! dart run tool/check_notifications_duplicate_test_classes.dart > /tmp/notifications_dup_classes_check.$$$$.log 2>&1; then \
 	  cat /tmp/notifications_dup_classes_check.$$$$.log; \
 	  rm -f /tmp/notifications_dup_classes_check.$$$$.log; \
@@ -970,9 +970,17 @@ audit: lint-rules-test ## Run all 65 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/notifications_dup_classes_check.$$$$.log; \
 	fi; \
+	echo "66/66 — TQ-7/Fowler candidate: no two files under test/features/scheduler/ share an identical test name or a >=80%-similar test body under the same group name (AUD-t-scheduler-01)"; \
+	if ! dart run tool/check_scheduler_test_duplication.dart > /tmp/scheduler_test_dup_check.$$$$.log 2>&1; then \
+	  cat /tmp/scheduler_test_dup_check.$$$$.log; \
+	  rm -f /tmp/scheduler_test_dup_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/scheduler_test_dup_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 65 greps clean ==="; \
+	  echo "=== audit PASSED — all 66 greps clean ==="; \
 	fi

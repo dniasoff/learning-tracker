@@ -1,14 +1,19 @@
-/// Tests for [SchedulerContentItem] and [SchedulerContentRepositoryImpl].
+/// Tests for [SchedulerContentItem.coarseUnitKey].
 ///
 /// Covers:
 ///  - [SchedulerContentItem.coarseUnitKey] for all hierarchy depth scenarios
-///  - [SchedulerContentRepositoryImpl.getLeafItems] filtering and sorting
+///
+/// AUD-t-scheduler-01: [SchedulerContentRepositoryImpl.getLeafItems]
+/// filtering/sorting coverage used to be duplicated here as well as in
+/// test/features/scheduler/data/repositories/scheduler_content_repository_impl_test.dart
+/// — that suite now lives solely in the data/repositories/ file, which is
+/// the AG-5-correct mirrored home for
+/// lib/features/scheduler/data/repositories/scheduler_content_repository_impl.dart.
+/// This file keeps only the coarseUnitKey coverage, which is not exercised
+/// anywhere else.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_content_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_content_repository.dart';
 
 void main() {
@@ -66,106 +71,6 @@ void main() {
     test('returns null when all level fields are null', () {
       const item = SchedulerContentItem(sefariaRef: 'ref-1', sortOrder: 0);
       expect(item.coarseUnitKey, isNull);
-    });
-  });
-
-  // ─── SchedulerContentRepositoryImpl ──────────────────────────────────────
-
-  group('SchedulerContentRepositoryImpl.getLeafItems', () {
-    /// Helper to build a [ContentItem] for testing.
-    ContentItem makeItem({
-      required String sefariaRef,
-      required bool isLeaf,
-      required int sortOrder,
-      String level1 = 'Zeraim',
-      String? level2,
-      String? level3,
-      String? level4,
-    }) {
-      return ContentItem(
-        sefariaRef: sefariaRef,
-        displayNameEn: sefariaRef,
-        displayNameHe: sefariaRef,
-        sortOrder: sortOrder,
-        curriculumId: CurriculumId.mishnayos.storageKey,
-        isLeaf: isLeaf,
-        level1: level1,
-        level2: level2,
-        level3: level3,
-        level4: level4,
-      );
-    }
-
-    test('filters out non-leaf items and returns only leaves', () async {
-      final repo = SchedulerContentRepositoryImpl(
-        getContent: (_) async => [
-          makeItem(sefariaRef: 'container', isLeaf: false, sortOrder: 1),
-          makeItem(sefariaRef: 'leaf-1', isLeaf: true, sortOrder: 2),
-          makeItem(sefariaRef: 'leaf-2', isLeaf: true, sortOrder: 3),
-        ],
-      );
-
-      final items = await repo.getLeafItems(CurriculumId.mishnayos);
-      expect(items, hasLength(2));
-      expect(items.map((i) => i.sefariaRef).toList(), ['leaf-1', 'leaf-2']);
-    });
-
-    test('sorts leaf items by sortOrder ascending', () async {
-      final repo = SchedulerContentRepositoryImpl(
-        getContent: (_) async => [
-          makeItem(sefariaRef: 'leaf-3', isLeaf: true, sortOrder: 3),
-          makeItem(sefariaRef: 'leaf-1', isLeaf: true, sortOrder: 1),
-          makeItem(sefariaRef: 'leaf-2', isLeaf: true, sortOrder: 2),
-        ],
-      );
-
-      final items = await repo.getLeafItems(CurriculumId.mishnayos);
-      expect(items.map((i) => i.sefariaRef).toList(), [
-        'leaf-1',
-        'leaf-2',
-        'leaf-3',
-      ]);
-    });
-
-    test('returns empty list when content has no leaf items', () async {
-      final repo = SchedulerContentRepositoryImpl(
-        getContent: (_) async => [
-          makeItem(sefariaRef: 'container-only', isLeaf: false, sortOrder: 1),
-        ],
-      );
-
-      final items = await repo.getLeafItems(CurriculumId.mishnayos);
-      expect(items, isEmpty);
-    });
-
-    test('returns empty list when content is empty', () async {
-      final repo = SchedulerContentRepositoryImpl(getContent: (_) async => []);
-
-      final items = await repo.getLeafItems(CurriculumId.mishnayos);
-      expect(items, isEmpty);
-    });
-
-    test('passes level fields through to SchedulerContentItem', () async {
-      final repo = SchedulerContentRepositoryImpl(
-        getContent: (_) async => [
-          makeItem(
-            sefariaRef: 'Berakhot.1.1',
-            isLeaf: true,
-            sortOrder: 1,
-            level1: 'Zeraim',
-            level2: 'Berakhot',
-            level3: '1',
-            level4: '1',
-          ),
-        ],
-      );
-
-      final items = await repo.getLeafItems(CurriculumId.mishnayos);
-      expect(items, hasLength(1));
-      expect(items.first.level1, 'Zeraim');
-      expect(items.first.level2, 'Berakhot');
-      expect(items.first.level3, '1');
-      expect(items.first.level4, '1');
     });
   });
 }

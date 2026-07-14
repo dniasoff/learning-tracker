@@ -1,5 +1,12 @@
 /// Extended tests for DailyTaskGenerator.generateAll — not covered by
 /// daily_task_generator_test.dart.
+///
+/// AUD-t-scheduler-01: this file absorbs the distinct
+/// isStudyDayMap/priorlyShownRefsMap/paceGranularityMap coverage formerly
+/// split off into the now-deleted daily_task_generator_generate_all_test.dart,
+/// which duplicated this file's 'returns empty list for empty curricula
+/// list' and 'tasks are sorted by priority across curricula' tests under
+/// the same group and (for the former) the same test name.
 library;
 
 import 'package:drift/drift.dart';
@@ -242,6 +249,48 @@ void main() {
         expect(tasks, isA<List<DailyTask>>());
       },
     );
+
+    test('isStudyDayMap=false for the only requested curriculum yields an '
+        'empty result', () async {
+      // Complementary to the multi-curriculum non-study-day case above:
+      // with a single curriculum and no completions seeded, a non-study
+      // day suppresses new learning entirely and there is no overdue/
+      // chazara backlog, so the whole result is empty.
+      final tasks = await generator.generateAll(
+        [mishnayos],
+        now,
+        trackIds: {mishnayos: trackIdMishnayos},
+        trackLabels: {mishnayos: 'personal'},
+        isStudyDayMap: {mishnayos: false},
+      );
+      expect(tasks, isEmpty);
+    });
+
+    test('priorlyShownRefsMap is forwarded to engine per curriculum', () async {
+      // Should complete without error when priorlyShownRefsMap references a
+      // curriculum in the request.
+      final tasks = await generator.generateAll(
+        [mishnayos],
+        now,
+        trackIds: {mishnayos: trackIdMishnayos},
+        trackLabels: {mishnayos: 'personal'},
+        priorlyShownRefsMap: {
+          mishnayos: {'M_0', 'M_1'},
+        },
+      );
+      expect(tasks, isA<List<DailyTask>>());
+    });
+
+    test('paceGranularityMap is accepted without error', () async {
+      final tasks = await generator.generateAll(
+        [mishnayos],
+        now,
+        trackIds: {mishnayos: trackIdMishnayos},
+        trackLabels: {mishnayos: 'personal'},
+        paceGranularityMap: {mishnayos: 'perek'},
+      );
+      expect(tasks, isA<List<DailyTask>>());
+    });
   });
 
   // ── generate skipped-refs filter ─────────────────────────────────────────
