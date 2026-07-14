@@ -63,13 +63,11 @@ void main() {
       test('isComposite returns false for leaf curricula', () {
         for (final id in CurriculumId.values) {
           if (id.storageKey == 'tanach') continue;
-          // Only registered composites return true.
-          if (!CompositeCurriculumStrategy.isComposite(id.storageKey)) {
-            expect(
-              CompositeCurriculumStrategy.isComposite(id.storageKey),
-              isFalse,
-            );
-          }
+          expect(
+            CompositeCurriculumStrategy.isComposite(id.storageKey),
+            isFalse,
+            reason: 'only tanach should be composite',
+          );
         }
       });
 
