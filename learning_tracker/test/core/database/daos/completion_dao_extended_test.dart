@@ -1,6 +1,7 @@
 /// Extended tests for [CompletionDao] covering batch operations and track-scoped
 /// query methods not exercised by completion_dao_test.dart:
-///  - insertCompletionsBatch: empty list (no-op), single item, multiple items
+///  - seedCompletionsBatch (test-only seeding helper, not a CompletionDao
+///    method) + reads: empty list (no-op), single item, multiple items
 ///  - getExistingSefariaRefsForBulkStage: empty refs, existing refs, non-existent
 ///  - getCompletionsForRefsBulkStage
 ///  - getCompletionsByTrack / getCompletionsByTrackAndProfile
@@ -121,9 +122,13 @@ void main() {
     points: const Value(10),
   );
 
-  // ─── insertCompletionsBatch ───────────────────────────────────────────────
+  // ─── seeding + getCompletionsByProfile ─────────────────────────────────────
+  // NOTE: CompletionDao has no insertCompletionsBatch method — write paths were
+  // removed (see completion_dao.dart's class doc comment). These groups seed
+  // rows via the test-only seedCompletionsBatch helper (test/helpers/
+  // drift_memory.dart) and assert against CompletionDao's read methods.
 
-  group('insertCompletionsBatch', () {
+  group('seeding + getCompletionsByProfile', () {
     test('does nothing for empty list (no-op)', () async {
       await seedCompletionsBatch(db, []);
       final all = await db.completionDao.getCompletionsByProfile(1);
@@ -153,7 +158,7 @@ void main() {
     });
   });
 
-  group('CompletionDao.insertCompletionsBatch', () {
+  group('seeding + getCompletionsByTrack', () {
     test('inserts multiple completions in one call', () async {
       await seedCompletionsBatch(db, [
         _completion(sefariaRef: 'Berakhot.2a'),
