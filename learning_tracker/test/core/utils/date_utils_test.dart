@@ -1,16 +1,20 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 void main() {
   group('DateTimeFactory', () {
-    test('nowUtc returns current time in UTC', () {
+    test('nowUtc returns the instant from the injected LocalDayClock', () {
+      // AUD-t-cross-87: assert against a fixed/injected clock rather than
+      // reading the real wall clock, so the test is hermetic (TQ-6) and
+      // cannot flake under CI scheduling jitter/GC pauses.
+      final fixedInstant = DateTime.utc(2026, 2, 9, 12, 30, 45);
+      useLocalDayClock(FakeLocalDayClock(fixedInstant));
+      addTearDown(resetLocalDayClock);
+
       final now = DateTimeFactory.nowUtc();
       expect(now.isUtc, isTrue);
-
-      // Verify it's close to actual current time (within 1 second)
-      final actualNow = DateTime.now().toUtc();
-      final diff = now.difference(actualNow).abs();
-      expect(diff.inSeconds, lessThan(1));
+      expect(now, equals(fixedInstant));
     });
 
     test('utc factory creates UTC DateTime', () {
