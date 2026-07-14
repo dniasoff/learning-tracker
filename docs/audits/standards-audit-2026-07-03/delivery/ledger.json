@@ -3657,24 +3657,34 @@
     {
       "id": "AUD-t-story-acceptance-14",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Merge or clearly disambiguate epic_24_stop_bleeding_test.dart and epic_24_stop_the_bleeding_test.dart; make test-epic-24 run both",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "0d306032c85bda8df73351187360269c3a043716"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-14 AC1 OK: make test-epic-24 output emits Story 24.1, 24.4, 24.7, 24.8; 31/31 pass",
+        "AUD-t-story-acceptance-14 AC2 OK: old stop_the_bleeding file deleted; 3 files stop_bleeding/story_24_1_rules/story_24_4_crashlytics, none differ only by article"
+      ],
+      "notes": "Confirmed: names differed only by 'the'; test-epic-24 skipped 24.1/24.4. Split per-story like epic_25+: epic_24_story_24_1_rules_test.dart, epic_24_story_24_4_crashlytics_test.dart. Added targets; test-epic-24 now runs all 3 files, 31/31 pass, all 4 stories execute."
     },
     {
       "id": "AUD-t-story-acceptance-18",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Replace tautological verifyNever(mockFacade...) checks on a facade never injected into the repo under test in epic_24_stop_bleeding_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "0d306032c85bda8df73351187360269c3a043716"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-18 AC1 OK: tests 80-103 & 162-200 assert db daos + empty outbox; grep verifyNever -> none",
+        "AUD-t-story-acceptance-18 AC2 OK: mutated null-guard to insertOutboxRow -> Track test failed (Actual OutboxData entityKind track, line102), reverted"
+      ],
+      "notes": "Confirmed verifyNever(mockFacade) checked an object localRepo never had. Red-first: mutated prod null-guard to real OutboxSyncWriteFacade; old test stayed green (vacuity proven); new assertions failed under mutation (red); reverted, new tests pass (green)."
     },
     {
       "id": "AUD-t-story-acceptance-20",
