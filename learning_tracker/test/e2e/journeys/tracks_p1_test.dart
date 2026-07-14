@@ -17,7 +17,8 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:flutter/material.dart' show Scrollable;
+import 'package:flutter/material.dart'
+    show Directionality, Locale, Scrollable, TextDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +43,8 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
     show scopedItemCountProvider;
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
     show activeTracksProvider;
+import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart'
+    show TrackManagementHubScreen;
 import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart'
     show trackMasechtosOrderProvider, trackSedarimOrderProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart'
@@ -603,21 +606,25 @@ void main() {
   // ── E2E-416 ───────────────────────────────────────────────────────────────
 
   group('E2E-416 — Hebrew locale / RTL tracks flow', () {
-    // Journey: AddTrackFlow in Hebrew locale → curriculum names in Hebrew terms
-    // (useHebrewTermsProvider = true); no overflow.
+    // Journey: TrackManagementHubScreen pumped under the ACTUAL he
+    // MaterialApp locale (not just the useHebrewTermsProvider vocabulary
+    // toggle) — RTL layout + localised chrome + Hebrew curriculum terms, no
+    // overflow.
     //
-    // TrackManagementHubScreen navigated to with Hebrew terms enabled —
-    // curriculum labels appear in Hebrew script. Key assertions:
-    //   • Hub renders with active track; curriculum name in Hebrew.
+    // Locale WAS injectable via E2EHarness.pumpApp(locale:) all along — the
+    // former comment claiming a harness limitation was false (AUD-t-cross-31);
+    // this test now pumps Locale('he') directly, mirroring E2E-1503 in
+    // hebrew_rtl_p1_test.dart.
+    //
+    // Key assertions:
+    //   • Hub subtree lays out RTL under the he locale.
+    //   • AppBar title / section header render as their l10n Hebrew
+    //     translations (proving the he MaterialApp locale actually applied).
+    //   • Curriculum name renders in Hebrew script (Hebrew terms enabled).
     //   • No overflow (harness pump is non-golden, overflow guard is separate).
-    //
-    // R-TR5: EditTrackScreen._buildDeadlineEditor uses DateFormat.yMMMd
-    // not formatTrackDate, which ignores the Hebrew calendar pref. Asserted here
-    // as an absence-of-crash check — the date still renders (in English), which
-    // is the documented bug; the correct-behavior assertion is kept below.
     testWidgets(
-      'TrackManagementHubScreen with Hebrew terms enabled shows curriculum '
-      'name in Hebrew script (מסכתות/משניות family)',
+      'TrackManagementHubScreen lays out RTL and shows curriculum name in '
+      'Hebrew script under the he locale',
       (tester) async {
         final identity = E2EIdentity.localBorn(displayName: 'Gila416');
         final h = E2EHarness(tester, identity: identity);
@@ -632,6 +639,7 @@ void main() {
         // Use Hebrew terms so curriculum names appear in Hebrew script.
         await h.pumpApp(
           path: '/settings/tracks',
+          locale: const Locale('he'),
           extraOverrides: [
             activeTracksProvider.overrideWith((ref) => Stream.value([stub])),
             // Enable Hebrew terms — curriculum labels render in Hebrew script.
@@ -643,9 +651,20 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 300));
 
-        // The hub should render without overflow.
-        h.expectOnScreen('Manage Tracks');
-        h.expectOnScreen('Active Tracks');
+        // RTL layout under the he locale.
+        expect(
+          Directionality.of(
+            tester.element(find.byType(TrackManagementHubScreen)),
+          ),
+          TextDirection.rtl,
+        );
+
+        // AppBar title / section header render as l10n Hebrew translations
+        // of manageTracks / activeTracksLabel — proving the MaterialApp is
+        // genuinely running under he, not just en with Hebrew vocabulary
+        // terms.
+        h.expectOnScreen('ניהול מסלולים');
+        h.expectOnScreen('מסלולים פעילים');
 
         // With Hebrew terms enabled, Mishnayos renders as the Hebrew label.
         // The hub uses CurriculumLabelRenderer which returns the Hebrew name.

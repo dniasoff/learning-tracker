@@ -18,7 +18,8 @@
 library;
 
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/material.dart' show Icons, Locale, ValueKey;
+import 'package:flutter/material.dart'
+    show Directionality, Icons, Locale, TextDirection, ValueKey;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -41,6 +42,8 @@ import 'package:learning_tracker/features/scheduler/domain/models/study_day_conf
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart'
     show studyDayConfigsProvider;
+import 'package:learning_tracker/features/scheduler/presentation/screens/scheduler_screen.dart'
+    show SchedulerScreen;
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart'
     show scopedItemCountProvider;
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
@@ -920,71 +923,79 @@ void main() {
 
   group('E2E-516 — Hebrew (RTL) smoke — Scheduler and StudyDayConfig render '
       'without overflow', () {
-    // Journey: SchedulerScreen in he locale; no overflow; Hebrew curriculum
-    // term labels rendered.
+    // Journey: SchedulerScreen pumped under the ACTUAL he MaterialApp locale
+    // (not just the useHebrewTermsProvider vocabulary toggle) — RTL layout +
+    // localised chrome strings, no overflow.
     //
-    // R-SC1: HebrewDatePicker has hardcoded English strings.
+    // R-SC1 (fixed by AUD-scheduler-02): HebrewDatePicker's strings are now
+    //   routed through AppLocalizations — not exercised by this smoke test.
     // R-SC2 (resolved by AUD-scheduler-07): the never-rendered
     //   ComposedDailySchedule.summary field and its unlocalized
     //   _summaryForSection() builder were dead code and have been deleted.
     //
     // Key assertions:
-    //   • SchedulerScreen renders (Daily Tasks header visible — hardcoded
-    //     from l10n which IS translated in he).
+    //   • SchedulerScreen subtree lays out RTL under the he locale.
+    //   • "Daily Tasks" / "TODAY'S GOAL" headers render as their l10n Hebrew
+    //     translations (proving the he MaterialApp locale actually applied).
     //   • Task cards are visible (no overflow crash).
-    //   • StudyDayConfigScreen title visible in he locale.
     //
-    // Note: the harness boots with locale=en by default. For this smoke
-    // test we assert the screen renders without crash — proper RTL layout
-    // validation requires a device test.
-    testWidgets(
-      'SchedulerScreen renders without crash in he locale smoke test',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(displayName: 'IsabelHE516');
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
+    // Locale WAS injectable via E2EHarness.pumpApp(locale:) all along — the
+    // former comment claiming "the harness boots with locale=en by default
+    // ... proper RTL layout validation requires a device test" was false
+    // (AUD-t-cross-31); this test now pumps Locale('he') directly.
+    testWidgets('SchedulerScreen lays out RTL and renders Hebrew chrome '
+        'under the he locale', (tester) async {
+      final identity = E2EIdentity.localBorn(displayName: 'IsabelHE516');
+      final h = E2EHarness(tester, identity: identity);
+      addTearDown(h.dispose);
 
-        final task = _makeTask(trackId: 1, ref: 'Berakhot.2a');
+      final task = _makeTask(trackId: 1, ref: 'Berakhot.2a');
 
-        // Use Hebrew terms but English locale (harness limitation — no he
-        // MaterialApp locale in the headless harness).
-        // Build overrides manually (cannot use _schedulerOverrides here
-        // because that helper forces useHebrewTermsProvider=false, which
-        // would conflict with the true override below).
-        await h.pumpApp(
-          path: '/scheduler',
-          extraOverrides: [
-            dashboardActiveCurriculaStreamProvider.overrideWith(
-              (ref) => Stream.value(<CurriculumId>[]),
+      // Build overrides manually (cannot use _schedulerOverrides here
+      // because that helper forces useHebrewTermsProvider=false, which
+      // would conflict with the true override below).
+      await h.pumpApp(
+        path: '/scheduler',
+        locale: const Locale('he'),
+        extraOverrides: [
+          dashboardActiveCurriculaStreamProvider.overrideWith(
+            (ref) => Stream.value(<CurriculumId>[]),
+          ),
+          dashboardActiveTracksStreamProvider.overrideWith(
+            (ref) => Stream.value(<CurriculumTrack>[]),
+          ),
+          dashboardStreakProvider.overrideWith(
+            (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+          ),
+          dashboardStreakRecoveryProvider.overrideWith(
+            (ref) => Future.value(
+              const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
             ),
-            dashboardActiveTracksStreamProvider.overrideWith(
-              (ref) => Stream.value(<CurriculumTrack>[]),
-            ),
-            dashboardStreakProvider.overrideWith(
-              (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-            ),
-            dashboardStreakRecoveryProvider.overrideWith(
-              (ref) => Future.value(
-                const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
-              ),
-            ),
-            allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
-            // Hebrew terms enabled for this smoke test.
-            useHebrewTermsProvider.overrideWithValue(true),
-            effectiveUseHebrewTermsProvider.overrideWithValue(true),
-          ],
-        );
-        await tester.pump(const Duration(milliseconds: 500));
+          ),
+          allDailyTasksProvider.overrideWith((ref) => Future.value([task])),
+          // Hebrew terms enabled for this smoke test.
+          useHebrewTermsProvider.overrideWithValue(true),
+          effectiveUseHebrewTermsProvider.overrideWithValue(true),
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 500));
 
-        // Screen renders — no overflow crash.
-        h.expectOnScreen('Daily Tasks');
-        h.expectOnScreen('Berakhot.2a');
+      // RTL layout under the he locale.
+      expect(
+        Directionality.of(tester.element(find.byType(SchedulerScreen))),
+        TextDirection.rtl,
+      );
 
-        // R-SC2 (resolved): no section summary string exists anymore to
-        // assert against; just confirm the goal card renders without crash.
-        h.expectOnScreen("TODAY'S GOAL");
-      },
-    );
+      // Screen renders — no overflow crash. Headers are l10n Hebrew
+      // translations of dailyTasksTitle / schedulerTodaysGoal (proving the
+      // MaterialApp is genuinely running under he, not just en with Hebrew
+      // vocabulary terms).
+      h.expectOnScreen('משימות יומיות');
+      h.expectOnScreen('היעד של היום');
+      // The task's Sefaria ref is raw content data, not localised text — it
+      // renders unchanged regardless of locale.
+      h.expectOnScreen('Berakhot.2a');
+    });
   });
 
   // ── E2E-517 ───────────────────────────────────────────────────────────────

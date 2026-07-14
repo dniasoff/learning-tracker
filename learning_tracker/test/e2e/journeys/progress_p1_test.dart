@@ -7,8 +7,8 @@
 ///   E2E-809  Progress hub empty state — no active curricula
 ///   E2E-810  Recent Activity offline / stale data behavior
 ///   E2E-811  Recent Activity with chazara-enabled vs. learn-only track
-///   E2E-812  Hebrew locale (RTL) across progress screens — SKIPPED
-///            (harness hardcodes Locale('en'); he locale requires device)
+///   E2E-812  Hebrew locale (RTL) across progress screens — ProgressScreen
+///            lays out RTL with Hebrew lens-tile titles under Locale('he')
 ///   E2E-813  Completion committed → progress screens update without
 ///            pull-to-refresh
 ///   E2E-814  Curriculum Progress: pace indicator states
@@ -44,6 +44,8 @@ import 'package:learning_tracker/features/progress/domain/services/pace_calculat
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/screens/progress_screen.dart'
+    show ProgressScreen;
 
 import '../harness/e2e_common_overrides.dart' show stubTrack;
 import '../harness/e2e_harness.dart';
@@ -650,15 +652,44 @@ void main() {
 
   // ── E2E-812 ─────────────────────────────────────────────────────────────────
 
-  group('E2E-812 — Hebrew locale (RTL) across all progress screens', () {
+  group('E2E-812 — Hebrew locale (RTL) across progress screens', () {
+    // Locale WAS injectable via E2EHarness.pumpApp(locale:) all along — the
+    // former comment claiming "Harness hardcodes Locale('en') ... cannot be
+    // injected headlessly" was false (AUD-t-cross-31). This test now pumps
+    // Locale('he') directly, mirroring E2E-1505 in hebrew_rtl_p1_test.dart
+    // (which covers the same screen for the general RTL sweep) but living in
+    // this file per the catalog's own id/file mapping and additionally
+    // asserting the hub's three lens tiles render their Hebrew l10n titles.
     testWidgets(
-      // device/harness: Harness hardcodes Locale("en"); Hebrew-RTL locale
-      // cannot be injected headlessly. Run as device integration test with
-      // Locale("he") + TextDirection.rtl; use expectNoOverflowAcrossDevices
-      // sweep in Wave 3 (E2E-1512).
-      'Progress screens render in Hebrew locale — no overflow',
-      skip: true,
-      (tester) async {},
+      'ProgressScreen lays out RTL and shows Hebrew lens-tile titles under '
+      'the he locale',
+      (tester) async {
+        final identity = E2EIdentity.localBorn(displayName: 'Rivka812');
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
+
+        await h.pumpApp(
+          path: '/progress',
+          locale: const Locale('he'),
+          extraOverrides: [
+            ..._progressWithContentOverrides(h),
+            ..._counterRowSilenceOverrides(),
+          ],
+        );
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // RTL layout under the he locale.
+        expect(
+          Directionality.of(tester.element(find.byType(ProgressScreen))),
+          TextDirection.rtl,
+        );
+
+        // The three lens tiles render their l10n Hebrew translations —
+        // proves the MaterialApp is genuinely running under he, not just en.
+        h.expectOnScreen('פעילות אחרונה'); // tierLensRecentActivity
+        h.expectOnScreen('סיומים והישגים'); // tierLensSiyumimMilestones
+        h.expectOnScreen('ידע כולל'); // tierLensLifetimeKnowledge
+      },
     );
   });
 

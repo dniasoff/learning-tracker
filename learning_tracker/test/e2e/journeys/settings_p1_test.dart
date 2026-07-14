@@ -25,7 +25,8 @@ library;
 
 import 'dart:async' show unawaited;
 
-import 'package:flutter/material.dart' show ListView, Scrollable;
+import 'package:flutter/material.dart'
+    show Directionality, ListView, Locale, Scrollable, TextDirection;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart'
@@ -49,6 +50,8 @@ import 'package:learning_tracker/features/profiles/presentation/screens/parent_s
     show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart'
     show studyDayConfigsProvider;
+import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart'
+    show SettingsScreen;
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart'
     show SyncErrorCode;
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart'
@@ -891,26 +894,69 @@ void main() {
   // ── E2E-922 ─────────────────────────────────────────────────────────────────
 
   group('E2E-922 — Hebrew locale: SettingsScreen Hebrew Terms tile hidden', () {
-    // The harness hardcodes locale: const Locale('en') in _buildMaterialApp.
-    // There is no headless way to override the device locale for the full
-    // MaterialApp — the harness does not expose a localeOverride parameter.
+    // Locale WAS injectable via E2EHarness.pumpApp(locale:) all along — the
+    // former comment claiming "the harness hardcodes locale ... there is no
+    // headless way to override the device locale" was false (AUD-t-cross-31).
+    // This test now pumps Locale('he') directly.
     //
     // The per-locale hiding of the Hebrew Terms tile is driven by:
     //   Localizations.localeOf(context).languageCode != 'he'
-    // which always evaluates to 'en' != 'he' = true in the headless harness,
-    // so the Hebrew Terms tile is always SHOWN headlessly regardless of any
-    // provider override.
-    //
-    // The RTL rendering of a Hebrew-locale Settings screen must be verified
-    // on device where the locale can be set to 'he'.
+    // (settings_screen.dart _HebrewTermsTile gating) — under the he locale
+    // this tile must NOT be built at all (the interface is already Hebrew,
+    // so the "render Jewish terms in Hebrew script" toggle is redundant).
     testWidgets(
-      // device/harness: Hebrew locale RTL + tile hiding require the device
-      // locale to be "he", which the headless harness cannot supply
-      // (locale is hardcoded to "en" in _buildMaterialApp).
-      'skip: device/harness: Hebrew locale RTL and Hebrew Terms tile hiding '
-      'require the device locale to be set to "he"',
-      skip: true, // device/harness: locale hardcoded to "en" in harness
-      (tester) async {},
+      'SettingsScreen lays out RTL and hides the Hebrew Terms tile under '
+      'the he locale (already in Hebrew)',
+      (tester) async {
+        final identity = E2EIdentity.localBorn(
+          email: 'heset922@test.com',
+          displayName: 'HeSet922',
+          profileMode: 'adult',
+        );
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
+
+        await h.pumpApp(
+          path: '/dashboard',
+          locale: const Locale('he'),
+          extraOverrides: [
+            ..._settingsSilences(h),
+            // Fixed value — this test is about the LOCALE gate, not the
+            // toggle's own value; determinism only.
+            useHebrewTermsProvider.overrideWithValue(false),
+            effectiveUseHebrewTermsProvider.overrideWithValue(false),
+          ],
+        );
+
+        // Navigate directly via router push (not by tapping the bottom-nav
+        // tab's text, which is itself localised — l10n.tabBarSettings —
+        // and would require a locale-specific tap target).
+        unawaited(h.router.push(const SettingsRoute()));
+        await h.pump();
+        await h.pump(const Duration(milliseconds: 500));
+        await h.pump();
+
+        // RTL layout under the he locale.
+        expect(
+          Directionality.of(tester.element(find.byType(SettingsScreen))),
+          TextDirection.rtl,
+        );
+
+        // Hebrew Terms is in the PROFILE section — scroll to expose it (or
+        // confirm it is absent even after scrolling).
+        await _scrollSettingsToBottom(tester);
+        await h.pump(const Duration(milliseconds: 200));
+
+        // A neighbouring, always-visible tile (Calendar Preference) renders
+        // its l10n Hebrew translation — proves the MaterialApp is genuinely
+        // running under he, not silently still en.
+        h.expectOnScreen('העדפת לוח שנה');
+
+        // The Hebrew Terms tile itself must be entirely absent — not merely
+        // toggled — because the he locale gate skips building it at all.
+        h.expectNotOnScreen('מונחים בעברית');
+        h.expectNotOnScreen('Hebrew Terms');
+      },
     );
   });
 
