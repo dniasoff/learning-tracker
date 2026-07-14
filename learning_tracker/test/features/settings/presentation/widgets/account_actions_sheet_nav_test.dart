@@ -257,7 +257,7 @@ void main() {
   );
 
   testWidgets(
-    'Sign Out (single account) → root router.replaceAll([SignInRoute]) — no regression',
+    'Sign Out (single account) → root router.replaceAll([AccountPickerRoute])',
     (tester) async {
       await _seedAccount(registry, accountId: 'acc-only', email: 'solo@b.com');
       // Single account: getAllAccounts returns 1 → still AccountPicker path?
