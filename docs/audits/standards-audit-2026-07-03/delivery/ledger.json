@@ -10289,13 +10289,13 @@
   {
    "id": "AUD-t-progress-09",
    "wave": 4,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P3",
    "title": "Rename the top-level child() test helper in progress_widgets_test.dart",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "blocked (merge-lane w4r1c19, 2026-07-14). review agent lost (quota); fix commit eb660d61 (fix(tests): AUD-t-progress-09 - rename child() test helper in progress_widgets_test.dart) built on worktree branch worktree-wf_9438f433-5f0-39 was never reviewed/merged before the review agent was lost. Internal process blocker, not an external blocker. Worktree checkout removed; branch retained unmerged (git cherry dev shows +eb660d61, no patch-equivalent commit on dev) pending a future harvest pass."
   },
   {
    "id": "AUD-tracks-25",
