@@ -6463,13 +6463,18 @@
   {
    "id": "AUD-t-sacred_time-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete the duplicate readInIsrael/writeInIsrael test group in sacred_time_preferences_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "7f214a199af29fd3058f7329b3d4baf0447abf31"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-sacred_time-01 AC1 OK: grep shows exactly one group covering readInIsrael/writeInIsrael (line 171); duplicate group removed",
+    "AUD-t-sacred_time-01 AC2 OK: deleted 3 tests behaviorally identical to surviving group@171 (default-false; write(true)->true; write(true,false)->false); no assertion lost"
+   ],
+   "notes": "Verified: group@191 duplicated all 3 scenarios of group@171, name-only diffs. Deleted 191-209. AC1: single group remains. AC2: diff shows only dup block removed, surviving group unchanged, no assertions lost. Tests 16->13 pass."
   },
   {
    "id": "AUD-scheduler-23",
