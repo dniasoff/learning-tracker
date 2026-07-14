@@ -6023,13 +6023,17 @@
     {
       "id": "AUD-t-cross-96",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Use FakeLocalDayClock instead of wall-clock (SystemLocalDayClock/DateTime.now()) in test/sync hermetic tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "f68eec12ff1d6d06f4df05a6e3e9930c41aeadf4"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-96 AC1 OK: grep 'SystemLocalDayClock\\|DateTime.now()' over both files exits 1 (no matches); 2 clock sites->FakeLocalDayClock, 4 fillers->fixed ISO literal"
+      ],
+      "notes": "Verified: 2 SystemLocalDayClock sites confirmed; tutored_listener_supervisor_test.dart drifted to 4 DateTime.now() sites (finding cited 3) - more evidence, not refutation. Fixed both files to FakeLocalDayClock(DateTime.utc(2026,5,21)) / fixed ISO literal. AC grep now empty."
     },
     {
       "id": "AUD-tracks-19",
