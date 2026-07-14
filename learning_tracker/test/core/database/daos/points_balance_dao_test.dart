@@ -80,45 +80,39 @@ void main() {
 
     // ── watchBalance — reactive stream (DG-DASH-02 iter-1 re-verify) ──────────
 
-    test('watchBalance emits updated balance reactively after creditCompletion '
-        'without requiring an explicit invalidation '
-        '(iter-1 re-verify: dashboard balance stream must stay live)', () async {
-      final emissions = <int>[];
-      final sub = db.pointsBalanceDao.watchBalance(1).listen(emissions.add);
-      addTearDown(sub.cancel);
+    test(
+      'watchBalance emits updated balance reactively after creditCompletion '
+      'without requiring an explicit invalidation '
+      '(iter-1 re-verify: dashboard balance stream must stay live)',
+      () async {
+        // Register the matcher BEFORE the mutating calls and let it wait for
+        // the actual emissions — deterministic, no fixed-millisecond sleep
+        // racing the reactive query stream (TQ-6; matches
+        // profile_dao_test.dart's watchProfilesByAccount pattern).
+        expect(
+          db.pointsBalanceDao.watchBalance(1),
+          emitsInOrder([
+            0, // initial emission: no balance row yet
+            50, // after creditCompletion(1, 50) — no explicit invalidation
+            70, // after a second creditCompletion(1, 20)
+          ]),
+        );
 
-      // Initial emission: 0 (no balance row yet).
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-      expect(
-        emissions,
-        contains(0),
-        reason: 'initial balance must be 0 before any credit',
-      );
+        // Yield one event-loop turn (no fixed-millisecond wait — TQ-6) so the
+        // stream's initial query fetch is dispatched before the write, the
+        // same ordering guard profile_dao_test.dart's watchProfilesByAccount
+        // test uses ahead of its own mutating call.
+        await Future<void>.delayed(Duration.zero);
 
-      // Credit points — watchBalance must emit the new value without any
-      // manual ref.invalidate() call.
-      await db.pointsBalanceDao.creditCompletion(1, 50);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+        // Credit points — watchBalance must emit the new value without any
+        // manual ref.invalidate() call. If this hangs, the provider is a
+        // one-shot FutureProvider (stale dashboard balance, D2 regression).
+        await db.pointsBalanceDao.creditCompletion(1, 50);
 
-      expect(
-        emissions.last,
-        50,
-        reason:
-            'watchBalance must reactively emit 50 after creditCompletion(50) '
-            'without explicit invalidation — if this fails the provider is '
-            'a one-shot FutureProvider (stale dashboard balance, D2 regression)',
-      );
-
-      // Second credit — stream must emit again.
-      await db.pointsBalanceDao.creditCompletion(1, 20);
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-
-      expect(
-        emissions.last,
-        70,
-        reason: 'watchBalance must emit 70 after a second creditCompletion(20)',
-      );
-    });
+        // Second credit — stream must emit again.
+        await db.pointsBalanceDao.creditCompletion(1, 20);
+      },
+    );
 
     test(
       'watchBalance emits updated balance reactively after declineRedemption '
@@ -134,25 +128,25 @@ void main() {
         // Balance is 60 after debit.
         expect(await db.pointsBalanceDao.getBalance(1), 60);
 
-        final emissions = <int>[];
-        final sub = db.pointsBalanceDao.watchBalance(1).listen(emissions.add);
-        addTearDown(sub.cancel);
-
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-        // Initial emission must include 60.
-        expect(emissions, contains(60));
-
-        // Decline → refund 40 → balance becomes 100.
-        await db.pointsBalanceDao.declineRedemption(redemption!.id);
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-
+        // Register the matcher BEFORE the mutating decline call and let it
+        // wait for the actual emissions — deterministic, no fixed-millisecond
+        // sleep racing the reactive query stream (TQ-6; matches
+        // profile_dao_test.dart's watchProfilesByAccount pattern).
         expect(
-          emissions.last,
-          100,
-          reason:
-              'watchBalance must emit 100 after declineRedemption refund '
-              'without explicit invalidation',
+          db.pointsBalanceDao.watchBalance(1),
+          emitsInOrder([
+            60, // initial emission must include the post-debit balance
+            100, // after declineRedemption refund — no explicit invalidation
+          ]),
         );
+
+        // Yield one event-loop turn (no fixed-millisecond wait — TQ-6) so
+        // the stream's initial query fetch is dispatched before the write.
+        await Future<void>.delayed(Duration.zero);
+
+        // Decline → refund 40 → balance becomes 100. If this hangs, the
+        // stream failed to emit 100 without explicit invalidation.
+        await db.pointsBalanceDao.declineRedemption(redemption!.id);
       },
     );
 
