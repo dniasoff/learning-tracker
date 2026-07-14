@@ -6038,13 +6038,18 @@
     {
       "id": "AUD-t-cross-53",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Assert digit interpolation in he.todaysLearning(5) test \u2014 it only checks isNotEmpty while the EN counterpart checks contains('3')",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "ff0933560181c35d0f3a016165262d1693f81653"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-53 AC1 OK: test line 81 asserts contains('5'), strictly stronger than old isNotEmpty (no TQ-7 weakening)",
+        "AUD-t-cross-53 AC2 OK: dropping $count in generated he.todaysLearning made test fail 'does not contain 5'; reverted clean"
+      ],
+      "notes": "Evidence confirmed current. Changed line 81 to expect(he.todaysLearning(5), contains('5')). Red-first: broke generated he.todaysLearning() to drop {count} -> test failed 'does not contain 5'; reverted, re-ran green (30/30). Both ACs met."
     },
     {
       "id": "AUD-t-cross-87",
