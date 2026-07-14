@@ -4252,9 +4252,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get milestone => 'Milestone';
 
   @override
-  String get milestoneAggregate => 'Milestones';
-
-  @override
   String get trackProgress => 'Track progress';
 
   @override
@@ -4262,9 +4259,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lifetimeLabel => 'Lifetime';
-
-  @override
-  String get recentActivityShort => 'Recent Activity';
 
   @override
   String get streakLabel => 'Streak';

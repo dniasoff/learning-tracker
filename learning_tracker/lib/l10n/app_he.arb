@@ -2117,10 +2117,6 @@
   "@milestone": {
     "description": "Canonical vocabulary: umbrella term for any achievement."
   },
-  "milestoneAggregate": "הישגים",
-  "@milestoneAggregate": {
-    "description": "Canonical vocabulary: plural of milestone."
-  },
   "trackProgress": "התקדמות מסלול",
   "@trackProgress": {
     "description": "Canonical vocabulary: per-track progress percentage."
@@ -2132,10 +2128,6 @@
   "lifetimeLabel": "ידע כולל",
   "@lifetimeLabel": {
     "description": "Canonical vocabulary: lifetime label for dual-track-label dashboards."
-  },
-  "recentActivityShort": "פעילות אחרונה",
-  "@recentActivityShort": {
-    "description": "Short form of recent activity label."
   },
   "today": "היום",
   "@today": {
