@@ -57,6 +57,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/content/content_tree.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -777,9 +778,16 @@ void main() {
       );
       await _settle(tester);
 
-      // The curriculum chip always renders a Container with the label.
-      // At root level there should be no nav stack so only the chip is shown.
-      expect(find.byType(Container), findsAtLeastNWidgets(1));
+      // AUD-t-cross-55: assert the actual curriculum chip, not a generic
+      // Container count (any Scaffold/AppBar screen has unrelated Containers,
+      // so that assertion didn't tie to the chip at all). CurriculumLabel is
+      // rendered exactly once on this screen — inside _RootCurriculumChip;
+      // the breadcrumb trail below uses CurriculumLabelRenderer strings
+      // directly, not the CurriculumLabel widget — so this uniquely
+      // identifies the chip. Also assert the rendered text so the test would
+      // fail if the chip's curriculum label came out wrong or empty.
+      expect(find.byType(CurriculumLabel), findsOneWidget);
+      expect(find.text('Mishnayos'), findsOneWidget);
       await _teardown(tester);
     });
   });
