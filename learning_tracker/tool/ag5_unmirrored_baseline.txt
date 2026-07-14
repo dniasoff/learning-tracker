@@ -385,7 +385,6 @@ lib/features/scheduler/domain/services/calendar_program_registry.dart
 lib/features/scheduler/domain/services/calendar_program_service.dart
 lib/features/scheduler/domain/services/cross_curriculum_aggregator.dart
 lib/features/scheduler/domain/services/daily_schedule_composer.dart
-lib/features/scheduler/domain/services/learning_program_service.dart
 lib/features/scheduler/presentation/providers/study_day_config_providers.dart
 lib/features/scheduler/presentation/screens/goal_setup_screen.dart
 lib/features/scheduler/presentation/screens/study_day_config_screen.dart
