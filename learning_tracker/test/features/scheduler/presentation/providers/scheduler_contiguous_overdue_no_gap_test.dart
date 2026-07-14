@@ -205,7 +205,7 @@ void main() {
     final c = _container(db, clock: today);
     addTearDown(c.dispose);
     c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
     final tasks = await c.read(allDailyTasksProvider.future);
 

@@ -1,5 +1,4 @@
-import 'dart:async';
-
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
@@ -181,11 +180,26 @@ const _previouslySkippedRefsKey = 'skipped_tasks_previous_refs';
 /// priority boost (see [previouslySkippedRefsProvider]).
 @riverpod
 class SkippedTasks extends _$SkippedTasks {
+  /// The in-flight (or settled) [_loadFromPrefs] load kicked off by [build].
+  /// Captured so tests can await it deterministically instead of guessing a
+  /// fixed delay — see [debugReadyForTest].
+  Future<void>? _loadFuture;
+
   @override
   Set<String> build() {
-    unawaited(_loadFromPrefs());
+    _loadFuture = _loadFromPrefs();
     return {};
   }
+
+  /// Resolves once the initial prefs load kicked off by [build] has
+  /// settled — i.e. [state] reflects persisted data (or the empty/reset
+  /// default) rather than the transient `{}` [build] returns synchronously.
+  ///
+  /// Tests await this instead of a fixed `Future.delayed` guess to
+  /// synchronize with the async `_loadFromPrefs()` call (AUD-t-scheduler-03,
+  /// TQ-6: hermetic tests never rely on wall-clock timing).
+  @visibleForTesting
+  Future<void> get debugReadyForTest => _loadFuture ?? Future<void>.value();
 
   Future<void> _loadFromPrefs() async {
     try {
