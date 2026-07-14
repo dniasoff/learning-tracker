@@ -32,8 +32,8 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'bavli',
-                stateChangedAt: DateTime.now(),
-                activatedAt: DateTime.now(),
+                stateChangedAt: DateTime.utc(2026, 1, 1),
+                activatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
       });
@@ -46,7 +46,7 @@ void main() {
         'goals table has goal_type, pace_value, pace_unit columns',
         () async {
           // Insert a goal using the current schema.
-          final now = DateTime.now().toUtc();
+          final now = DateTime.utc(2026, 1, 1);
           await db.goalDao.insertGoal(
             GoalsCompanion.insert(
               profileId: 1,
@@ -69,7 +69,7 @@ void main() {
       );
 
       test('goal with pace fields persists correctly', () async {
-        final now = DateTime.now().toUtc();
+        final now = DateTime.utc(2026, 1, 1);
         await db.goalDao.insertGoal(
           GoalsCompanion.insert(
             profileId: 1,
@@ -93,7 +93,7 @@ void main() {
       });
 
       test('goal with per_week pace unit persists correctly', () async {
-        final now = DateTime.now().toUtc();
+        final now = DateTime.utc(2026, 1, 1);
         await db.goalDao.insertGoal(
           GoalsCompanion.insert(
             profileId: 1,
@@ -115,7 +115,7 @@ void main() {
       });
 
       test('deadline goal has null pace fields by default', () async {
-        final now = DateTime.now().toUtc();
+        final now = DateTime.utc(2026, 1, 1);
         final targetDate = DateTime.utc(2026, 12, 31);
         await db.goalDao.insertGoal(
           GoalsCompanion.insert(

@@ -40,7 +40,7 @@ void main() {
     // -------------------------------------------------------------------------
 
     test('learner_profiles table exists and accepts inserts', () async {
-      final now = DateTime.now().toUtc();
+      final now = DateTime.utc(2026, 1, 1);
       // Accounts row is needed because LearnerProfiles.accountId is a FK.
       final accountId = await db
           .into(db.accounts)
@@ -77,7 +77,7 @@ void main() {
     // -------------------------------------------------------------------------
 
     test('accounts table exists and accepts inserts', () async {
-      final now = DateTime.now().toUtc();
+      final now = DateTime.utc(2026, 1, 1);
       final id = await db
           .into(db.accounts)
           .insert(
@@ -108,8 +108,8 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              stateChangedAt: DateTime.now().toUtc(),
-              activatedAt: DateTime.now().toUtc(),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
+              activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
 
@@ -123,7 +123,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
           trackId: Value(trackId),
-          eventTimestamp: DateTime.now().toUtc(),
+          eventTimestamp: DateTime.utc(2026, 1, 1),
         ),
       );
       expect(id, greaterThan(0));
@@ -140,12 +140,12 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              stateChangedAt: DateTime.now().toUtc(),
-              activatedAt: DateTime.now().toUtc(),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
+              activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
 
-      final now = DateTime.now().toUtc();
+      final now = DateTime.utc(2026, 1, 1);
       final id = await db.goalDao.insertGoal(
         GoalsCompanion.insert(
           profileId: 1,
@@ -174,8 +174,8 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              stateChangedAt: DateTime.now().toUtc(),
-              activatedAt: DateTime.now().toUtc(),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
+              activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
 
@@ -185,7 +185,7 @@ void main() {
           curriculumId: 'bavli',
           trackId: trackId,
           sefariaRef: 'Berakhot 2a',
-          updatedAt: DateTime.now().toUtc(),
+          updatedAt: DateTime.utc(2026, 1, 1),
         ),
       );
       expect(id, greaterThan(0));
@@ -202,8 +202,8 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              stateChangedAt: DateTime.now().toUtc(),
-              activatedAt: DateTime.now().toUtc(),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
+              activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
 
@@ -214,7 +214,7 @@ void main() {
           curriculumId: 'bavli',
           trackId: trackId,
           sefariaRef: 'Berakhot 3a',
-          updatedAt: DateTime.now().toUtc(),
+          updatedAt: DateTime.utc(2026, 1, 1),
         ),
       );
       final row = await db.bookmarkDao.getBookmarkById(id);
@@ -232,8 +232,8 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 7,
               curriculumId: 'mishnayos',
-              stateChangedAt: DateTime.now().toUtc(),
-              activatedAt: DateTime.now().toUtc(),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
+              activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
       final row = await (db.select(
@@ -271,7 +271,7 @@ void main() {
     // -------------------------------------------------------------------------
 
     test('learner_profiles.avatarIndex defaults to 0', () async {
-      final now = DateTime.now().toUtc();
+      final now = DateTime.utc(2026, 1, 1);
       final accountId = await db
           .into(db.accounts)
           .insert(

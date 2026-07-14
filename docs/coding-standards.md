@@ -478,7 +478,7 @@ The offline account model (credential-less local account, converted on reconnect
 
 **TQ-6 — Tests are hermetic: no network, no wall-clock (`clockProvider`/fixed `DateTimeFactory` only), no unseeded randomness, no shared mutable state; CI runs with randomized test ordering.**
 **Why:** order- and time-dependent tests fail nondeterministically under parallel runs — and agents respond to flakes by weakening or disabling the test.
-**Enforce:** [Enforced] inner check 6 keeps `DateTime.now()` out of `lib/`. [Pending] extend to `test/`; grep for real HTTP clients in `test/`; add `--test-randomize-ordering-seed=random` to CI.
+**Enforce:** [Enforced] inner check 6 keeps `DateTime.now()` out of `lib/`. [Enforced] inner check 60 (`tool/check_tq6_test_wall_clock.dart`, AUD-t-cross-84) extends this to `test/` as a ratchet — a pre-existing backlog is baselined, but no NEW `DateTime.now()` call may land in a `test/` file. [Pending] grep for real HTTP clients in `test/`; add `--test-randomize-ordering-seed=random` to CI.
 **Source:** martinfowler.com/articles/nonDeterminism.html
 
 **TQ-7 — Never weaken or delete a test to make a suite pass. Removing an assertion requires an explicit `// weaken-ok: <reason>` marker in the diff; deleting a test file requires the reason in the commit message.**

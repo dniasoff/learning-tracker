@@ -51,8 +51,8 @@ void main() {
             CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'bavli',
-              stateChangedAt: DateTime.now(),
-              activatedAt: DateTime.now(),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
+              activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
     });
@@ -120,8 +120,8 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'bavli',
-                stateChangedAt: DateTime.now(),
-                activatedAt: DateTime.now(),
+                stateChangedAt: DateTime.utc(2026, 1, 1),
+                activatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
         mishnayosTrackId = await db
@@ -130,8 +130,8 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'mishnayos',
-                stateChangedAt: DateTime.now(),
-                activatedAt: DateTime.now(),
+                stateChangedAt: DateTime.utc(2026, 1, 1),
+                activatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
         mbTrackId = await db
@@ -140,8 +140,8 @@ void main() {
               CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'mishna_berurah',
-                stateChangedAt: DateTime.now(),
-                activatedAt: DateTime.now(),
+                stateChangedAt: DateTime.utc(2026, 1, 1),
+                activatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
       });
