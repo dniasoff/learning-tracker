@@ -40,6 +40,8 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/pump_app.dart';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 RewardMilestone _milestone({
@@ -132,7 +134,8 @@ Widget _buildApp({
 }) {
   final achievementsVal = achievementsState ?? AsyncData(_emptyOverview());
 
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     retry: disableRetry ? (_, __) => null : null,
     overrides: [
       achievementsOverviewProvider.overrideWith((ref) {
@@ -141,7 +144,7 @@ Widget _buildApp({
             return Future.value(value);
           case AsyncError(:final error, :final stackTrace):
             return Future.error(error, stackTrace);
-          case _:
+          case AsyncLoading():
             return Completer<AchievementsOverview>().future;
         }
       }),
@@ -156,17 +159,7 @@ Widget _buildApp({
       globalPointsProvider.overrideWith((ref) => Stream.value(0)),
       curriculumBreakdownProvider.overrideWith((ref) async => {}),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: const Scaffold(body: GamificationScreen()),
-    ),
+    child: const Scaffold(body: GamificationScreen()),
   );
 }
 

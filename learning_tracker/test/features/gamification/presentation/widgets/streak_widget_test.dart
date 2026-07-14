@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 void main() {
   Widget buildWidget({
@@ -12,16 +12,9 @@ void main() {
     required ProfileMode userMode,
     Locale locale = const Locale('en'),
   }) {
-    return MaterialApp(
+    return pumpApp(
       locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
+      child: Scaffold(
         body: StreakWidget(
           currentStreak: currentStreak,
           maxStreak: maxStreak,

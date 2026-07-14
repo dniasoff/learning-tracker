@@ -39,6 +39,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/pump_app.dart';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -78,24 +79,15 @@ Future<int> _seedPendingRedemption(
 
 /// Standard test pump widget — uses the real in-memory DB.
 Widget _buildScreen(UserDatabase db, {Locale locale = const Locale('en')}) {
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
       activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
       // Suppress outbox sync facade (local-born account — no cloud push).
       outboxSyncWriteFacadeProvider.overrideWithValue(null),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: const ParentPendingRedemptionsScreen(),
-    ),
+    child: const ParentPendingRedemptionsScreen(),
   );
 }
 
@@ -748,20 +740,16 @@ void main() {
       await db.close();
     });
 
-    Widget buildWithRouter() => ProviderScope(
+    Widget buildWithRouter() => pumpApp(
       overrides: [
         userDatabaseProvider.overrideWithValue(db),
         activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
         outboxSyncWriteFacadeProvider.overrideWithValue(null),
       ],
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: StackRouterScope(
-          controller: router,
-          stateHash: 0,
-          child: const ParentPendingRedemptionsScreen(),
-        ),
+      child: StackRouterScope(
+        controller: router,
+        stateHash: 0,
+        child: const ParentPendingRedemptionsScreen(),
       ),
     );
 

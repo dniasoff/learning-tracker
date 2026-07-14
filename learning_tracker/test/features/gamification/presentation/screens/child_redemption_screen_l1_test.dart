@@ -38,6 +38,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/pump_app.dart';
 
 // ─── Mock router for AppBar-back tests ────────────────────────────────────────
 
@@ -112,7 +113,8 @@ Future<void> _pumpScreen(
   if (db == null) addTearDown(database.close);
 
   await tester.pumpWidget(
-    ProviderScope(
+    pumpApp(
+      locale: locale,
       overrides: [
         // Supply balance synchronously so the balance card shows immediately.
         childRedemptionBalanceProvider.overrideWith(
@@ -131,17 +133,7 @@ Future<void> _pumpScreen(
           isTutoredSession ? _TutorSession.new : _NoTutorSession.new,
         ),
       ],
-      child: MaterialApp(
-        locale: locale,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: const ChildRedemptionScreen(),
-      ),
+      child: const ChildRedemptionScreen(),
     ),
   );
   // First pump triggers build; second settles the async providers.
@@ -166,7 +158,7 @@ Future<void> _pumpScreenWithRouter(
   // AUD-t-gamification-04: see the matching comment in _pumpScreen above.
   addTearDown(database.close);
   await tester.pumpWidget(
-    ProviderScope(
+    pumpApp(
       overrides: [
         childRedemptionBalanceProvider.overrideWith(
           (ref) => Stream.value(balance),
@@ -177,19 +169,10 @@ Future<void> _pumpScreenWithRouter(
         outboxSyncWriteFacadeProvider.overrideWithValue(null),
         activeTutoredProfileSelectionProvider.overrideWith(_NoTutorSession.new),
       ],
-      child: MaterialApp(
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: StackRouterScope(
-          controller: router,
-          stateHash: 0,
-          child: const ChildRedemptionScreen(),
-        ),
+      child: StackRouterScope(
+        controller: router,
+        stateHash: 0,
+        child: const ChildRedemptionScreen(),
       ),
     ),
   );

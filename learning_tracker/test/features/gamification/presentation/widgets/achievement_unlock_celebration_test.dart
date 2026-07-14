@@ -20,7 +20,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,9 +29,9 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/achi
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../helpers/pump_app.dart';
 import '../../../../helpers/test_database.dart';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -75,7 +74,10 @@ RewardUnlockRecord _makeUnlock({
 /// The harness overrides:
 ///   • [userDatabaseProvider]  → in-memory [UserDatabase]
 ///   • [activeProfileIdProvider] → [_kProfileId]
-///   • [selectedProfileProvider] → resolves to [_kProfile]
+///   • [selectedProfileProvider] → resolves to [_kProfile] (or [profile] if
+///     given, or `null` when [profileMissing] is set — used by the
+///     name-fallback test, which needs [selectedProfileProvider] to resolve
+///     to `null` rather than to any concrete [ProfileModel])
 ///
 /// The DB is pre-seeded so [_resolveTrackLabel] queries don't crash; because
 /// the test track id is 99 (not seeded), `getTrackById` returns null and
@@ -84,6 +86,7 @@ Widget _buildHarness({
   required List<RewardUnlockRecord> unlocks,
   Locale locale = const Locale('en'),
   ProfileModel? profile,
+  bool profileMissing = false,
 }) {
   final db = createTestUserDatabase();
   // AUD-t-gamification-04: this raw UserDatabase is handed to
@@ -92,26 +95,19 @@ Widget _buildHarness({
   addTearDown(db.close);
   final resolvedProfile = profile ?? _kProfile;
 
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     retry: (_, __) => null,
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
       activeProfileIdProvider.overrideWithValue(_kProfileId),
       selectedProfileProvider.overrideWith(
-        (_) => Future<ProfileModel?>.value(resolvedProfile),
+        (_) => Future<ProfileModel?>.value(
+          profileMissing ? null : resolvedProfile,
+        ),
       ),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: _TriggerPage(unlocks: unlocks),
-    ),
+    child: _TriggerPage(unlocks: unlocks),
   );
 }
 
@@ -273,57 +269,13 @@ void main() {
       'dialog uses name-fallback "friend" when selectedProfile returns null',
       (tester) async {
         setViewSize(tester);
-        final db = createTestUserDatabase();
-        // AUD-t-gamification-04: see the matching comment on _buildHarness
-        // above.
-        addTearDown(db.close);
         await tester.pumpWidget(
-          ProviderScope(
-            retry: (_, __) => null,
-            overrides: [
-              userDatabaseProvider.overrideWithValue(db),
-              activeProfileIdProvider.overrideWithValue(_kProfileId),
-              selectedProfileProvider.overrideWith(
-                (_) => Future<ProfileModel?>.value(null),
-              ),
-            ],
-            child: const MaterialApp(
-              localizationsDelegates: [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: _TriggerPage(unlocks: []),
-            ),
-          ),
+          _buildHarness(unlocks: const [], profileMissing: true),
         );
 
-        // Rebuild with the actual unlocks via a second pumpWidget call
-        final db2 = createTestUserDatabase();
-        addTearDown(db2.close);
+        // Rebuild with the actual unlocks via a second pumpWidget call.
         await tester.pumpWidget(
-          ProviderScope(
-            retry: (_, __) => null,
-            overrides: [
-              userDatabaseProvider.overrideWithValue(db2),
-              activeProfileIdProvider.overrideWithValue(_kProfileId),
-              selectedProfileProvider.overrideWith(
-                (_) => Future<ProfileModel?>.value(null),
-              ),
-            ],
-            child: MaterialApp(
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: _TriggerPage(unlocks: [_makeUnlock()]),
-            ),
-          ),
+          _buildHarness(unlocks: [_makeUnlock()], profileMissing: true),
         );
         await tester.pump();
 
