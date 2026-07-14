@@ -1,3 +1,32 @@
+/// AG-5 mirror file for [lib/features/onboarding/presentation/screens/
+/// onboarding_screen.dart].
+///
+/// AUD-t-onboarding-04: this file previously held the pre-L1 "Slim Flow"
+/// widget suite (5 testWidgets: starts-at-profileCreation, Create Profile
+/// disabled with empty name, Child Mode shows ACTIVE badge, and the two
+/// childAwareText cases). The L1 rewrite (onboarding_bulk_l1_test.dart)
+/// replaced every one of those scenarios line-for-line and the pre-L1
+/// suite was never deleted, leaving two suites to keep in sync on every
+/// future OnboardingScreen change (TQ-1, Fowler duplication). 4 of the 5
+/// confirmed-duplicate cases were removed; one minimal smoke test is kept
+/// below so this file still exercises the widget directly, since
+/// `flutter test` fails a file that declares zero tests and AG-5
+/// (`tool/check_test_mirroring.dart`) requires this path to keep existing
+/// as the 1:1 mirror of onboarding_screen.dart.
+///
+/// OnboardingScreen's full behavioral coverage lives at:
+///   - onboarding_bulk_l1_test.dart — profileCreation phase, mode pills,
+///     Create Profile enable/disable, ACTIVE badge, childAwareText helper,
+///     auth bounce, resume-from-saved-state, intentChooser, addAnotherPrompt,
+///     handoff phase, RTL smoke.
+///   - onboarding_screen_l1_test.dart — parentPinSetup, intentChooser
+///     transitions, profileCreation/addAnotherPrompt navigation, handoff
+///     "Add Another Learner", done phase, per-phase AppBar titles,
+///     kOnboardingComplete bookkeeping, RTL smoke.
+/// Add new tests to whichever of those two files already owns that phase —
+/// not here.
+library;
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -19,6 +48,7 @@ void main() {
     mockRouter = MockStackRouter();
     when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
     when(() => mockRouter.maybePop()).thenAnswer((_) async => true);
+    SharedPreferences.setMockInitialValues({});
   });
 
   Widget createTestWidget() {
@@ -54,68 +84,16 @@ void main() {
     );
   }
 
-  group('OnboardingScreen Slim Flow', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({});
-    });
-
-    testWidgets('starts at combined new profile phase', (tester) async {
+  testWidgets(
+    'OnboardingScreen mounts without throwing (AG-5 mirror smoke test — '
+    'full phase coverage lives in onboarding_bulk_l1_test.dart / '
+    'onboarding_screen_l1_test.dart)',
+    (tester) async {
       await tester.pumpWidget(createTestWidget());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('New Profile'), findsNothing);
-      expect(find.text('What should we call you?'), findsOneWidget);
-      expect(find.text('Child Mode'), findsOneWidget);
-      expect(find.text('Adult Mode'), findsOneWidget);
-      expect(find.text('Create Profile'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
-    });
-
-    testWidgets('Create Profile disabled with empty name', (tester) async {
-      await tester.pumpWidget(createTestWidget());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      final button = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Create Profile'),
-      );
-      expect(button.onPressed, isNull);
-    });
-
-    testWidgets('child mode shows ACTIVE on Child Mode card', (tester) async {
-      await tester.pumpWidget(createTestWidget());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      await tester.tap(find.text('Child Mode'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text('ACTIVE'), findsOneWidget);
-    });
-
-    testWidgets('childAwareText returns adult text in adult mode', (
-      tester,
-    ) async {
-      final result = childAwareText(
-        'Choose your curricula',
-        "Choose {name}'s curricula",
-        'David',
-      );
-      expect(result, 'Choose your curricula');
-    });
-
-    testWidgets('childAwareText returns child text in child mode', (
-      tester,
-    ) async {
-      final result = childAwareText(
-        'Choose your curricula',
-        "Choose {name}'s curricula",
-        'David',
-        isChildMode: true,
-      );
-      expect(result, "Choose David's curricula");
-    });
-  });
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+    },
+  );
 }
