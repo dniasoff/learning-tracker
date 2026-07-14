@@ -18,6 +18,8 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+import '../../../../helpers/pump_app.dart';
+
 void main() {
   testWidgets(
     'LifetimeMarkingScreen renders the title and the new tier-policy subtitle',
@@ -75,4 +77,46 @@ void main() {
       );
     },
   );
+
+  // ── he-RTL smoke (AUD-t-settings-06 / TQ-3) ─────────────────────────────
+  //
+  // The settings feature's convention (curriculum_settings_screen_l1_test.dart)
+  // is that key screens carry a Hebrew/RTL smoke test. LifetimeMarkingScreen
+  // had none, so Hebrew rendering and RTL layout were unverified. Pumps via
+  // the shared test/helpers/pump_app.dart rig (TQ-3 Rule-0 — new call sites
+  // must not hand-roll another MaterialApp(localizationsDelegates: [...])
+  // block) under Locale('he') and asserts the resolved Directionality is RTL.
+  group('LifetimeMarkingScreen — RTL smoke (he)', () {
+    testWidgets('renders under Hebrew locale without crash and sets RTL '
+        'text direction', (tester) async {
+      await tester.pumpWidget(
+        pumpApp(
+          locale: const Locale('he'),
+          overrides: [
+            lifetimeSummariesProvider.overrideWith((ref, profileId) async {
+              return const [];
+            }),
+          ],
+          child: const LifetimeMarkingScreen(),
+        ),
+      );
+      // Settle the FutureProvider override.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.byType(Scaffold), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
+
+      final dirFinders = find.byType(Directionality);
+      expect(dirFinders, findsWidgets);
+      final outerDir = tester.widget<Directionality>(dirFinders.first);
+      expect(
+        outerDir.textDirection,
+        TextDirection.rtl,
+        reason:
+            'Under the he locale the resolved Directionality must be RTL so '
+            'Hebrew layout mirrors correctly.',
+      );
+    });
+  });
 }
