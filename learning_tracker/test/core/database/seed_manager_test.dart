@@ -88,6 +88,18 @@ bool _hasEvent(Talker talker, String event) =>
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 void main() {
+  // Several tests below compute `bundledSeedVersion - 1` to build an
+  // "old version" fixture. That arithmetic is only meaningful while
+  // bundledSeedVersion stays above 1 (see AUD-t-cross-89): if it ever drops
+  // to 1 or 0, those tests must fail loudly here rather than silently
+  // executing zero assertions via a per-test early-return guard.
+  assert(
+    bundledSeedVersion > 1,
+    'seed_manager_test.dart assumes bundledSeedVersion > 1 so that '
+    'bundledSeedVersion - 1 fixtures stay valid; update the affected '
+    'tests (see AUD-t-cross-89) before lowering bundledSeedVersion.',
+  );
+
   late Directory tmp;
   late Talker talker;
   late AppLogger logger;
@@ -173,10 +185,6 @@ void main() {
     test('old DB preserved after rollback when bundled > installed', () async {
       // Install a DB with an old version.
       const oldVersion = bundledSeedVersion - 1;
-      if (oldVersion <= 0) {
-        // Unlikely, but skip gracefully if bundledSeedVersion == 1.
-        return;
-      }
       await _buildContentDb('${tmp.path}/content.db', version: oldVersion);
 
       // Extract fails (no rootBundle) → rollback restores old DB.
@@ -198,7 +206,6 @@ void main() {
       'logs seed_manager_replacing_content_db when version mismatch',
       () async {
         const oldVersion = bundledSeedVersion - 1;
-        if (oldVersion <= 0) return;
         await _buildContentDb('${tmp.path}/content.db', version: oldVersion);
 
         final mgr = SeedManager(dbDirectory: tmp.path, logger: logger);
@@ -210,7 +217,6 @@ void main() {
 
     test('logs seed_manager_upgrade_failed on extract failure', () async {
       const oldVersion = bundledSeedVersion - 1;
-      if (oldVersion <= 0) return;
       await _buildContentDb('${tmp.path}/content.db', version: oldVersion);
 
       final mgr = SeedManager(dbDirectory: tmp.path, logger: logger);
@@ -221,7 +227,6 @@ void main() {
 
     test('logs seed_manager_extract_failed on extract failure', () async {
       const oldVersion = bundledSeedVersion - 1;
-      if (oldVersion <= 0) return;
       await _buildContentDb('${tmp.path}/content.db', version: oldVersion);
 
       final mgr = SeedManager(dbDirectory: tmp.path, logger: logger);
@@ -234,7 +239,6 @@ void main() {
       'logs seed_manager_rolled_back_to_previous_version on rollback',
       () async {
         const oldVersion = bundledSeedVersion - 1;
-        if (oldVersion <= 0) return;
         await _buildContentDb('${tmp.path}/content.db', version: oldVersion);
 
         final mgr = SeedManager(dbDirectory: tmp.path, logger: logger);
@@ -692,8 +696,6 @@ void main() {
       () async {
         // Install version exactly one less than bundled.
         const oldVersion = bundledSeedVersion - 1;
-        if (oldVersion <= 0) return;
-
         await _buildContentDb('${tmp.path}/content.db', version: oldVersion);
 
         final mgr = SeedManager(dbDirectory: tmp.path, logger: logger);
@@ -756,8 +758,6 @@ void main() {
         // Install a version-mismatched DB (< bundled). Extract fails, rollback
         // restores it. Result: old DB preserved, NO throw.
         const oldVersion = bundledSeedVersion - 1;
-        if (oldVersion <= 0) return;
-
         await _buildContentDb('${tmp.path}/content.db', version: oldVersion);
 
         final mgr = SeedManager(dbDirectory: tmp.path, logger: logger);
