@@ -4640,13 +4640,15 @@
     {
       "id": "AUD-t-story-acceptance-10",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Fix or rename AT-19.3.6 \u2014 it never exercises SeedManager's first-launch gzip decompression",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "93828f0c9d06bdcdbafce691e3d70efc786079e5"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Confirmed test only hit no-op branch, never gzip decompress. Rewrote it: mocked flutter/assets with real gzip fixture, asserted byte-identical round-trip via real first-launch path. Red-first: corrupted decompress, test failed at exact byte offset; reverted, green again."
     },
     {
       "id": "AUD-t-cross-46",
