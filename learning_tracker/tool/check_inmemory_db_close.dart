@@ -145,8 +145,6 @@ const _baseline = <String, int>{
       1,
   'test/features/onboarding/domain/services/learning_process_wizard_service_test.dart':
       1,
-  'test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart':
-      1,
   'test/features/parent_mode/domain/services/parent_dashboard_aggregator_extended_test.dart':
       1,
   'test/features/parent_mode/domain/services/parent_dashboard_aggregator_migration_test.dart':
