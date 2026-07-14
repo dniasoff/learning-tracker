@@ -8551,13 +8551,17 @@
     {
       "id": "AUD-t-gamification-05",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Fix stale 'flagged as BUG (no UI lock)' header comment in parent_pending_redemptions_screen_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a4e7f4e9f71d5a4d2e5fc8f364ebd6056e2e9a7c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-gamification-05 AC1 OK: header (test lines 12-14) now describes _busy guard; grep 'flagged as BUG' exits 1; claim true - guard real at screen 205-213,269,292"
+      ],
+      "notes": "Verified: header claimed Approve double-tap 'flagged as BUG (no UI lock)' but screen has a _busy flag guarding Fulfil/Decline (lines 205-213/269/292); file's own later comment already documented it correctly. Header was stale; updated it. grep for 'flagged as BUG' now exits 1."
     },
     {
       "id": "AUD-learning-10",
