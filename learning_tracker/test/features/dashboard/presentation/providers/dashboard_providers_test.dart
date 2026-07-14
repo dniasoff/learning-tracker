@@ -669,18 +669,41 @@ void main() {
     });
 
     test('emits streak >= 1 after a streak event for today', () async {
-      final today = DateTime.now().toUtc();
+      // AUD-t-dashboard-05 (TQ-6): a fixed instant, not the real wall clock,
+      // both seeds the event's day AND anchors the provider's own "today"
+      // (via the FakeLocalDayClock override below) — so the two reads can
+      // never straddle a real UTC-midnight rollover and flake.
+      final fixedToday = DateTime.utc(2026, 5, 20);
       await db.streakEventDao.appendEvent(
         StreakEventsCompanion.insert(
           profileId: _profileId,
           eventType: 'completion',
-          dayUtc: DateTime.utc(today.year, today.month, today.day),
-          eventTimestamp: today,
+          dayUtc: DateTime.utc(
+            fixedToday.year,
+            fixedToday.month,
+            fixedToday.day,
+          ),
+          eventTimestamp: fixedToday,
           clientDeviceId: const Value(null),
         ),
       );
 
-      final container = _makeContainer(db);
+      final container = _makeContainer(
+        db,
+        extraOverrides: [
+          streakStateProvider.overrideWithValue(
+            StreakStateService(
+              db: db,
+              clock: FakeLocalDayClock(fixedToday),
+              dayOf: (dt) => DateTime.utc(
+                dt.toUtc().year,
+                dt.toUtc().month,
+                dt.toUtc().day,
+              ),
+            ),
+          ),
+        ],
+      );
       addTearDown(container.dispose);
 
       final sub = container.listen(dashboardStreakProvider, (_, __) {});
@@ -719,13 +742,20 @@ void main() {
         await _seedProfile(
           overrideDb,
         ); // creates learner_profiles(id=1, mode='adult') — FK for streak_events
-        final today = DateTime.now().toUtc();
+        // AUD-t-dashboard-05 (TQ-6): a fixed instant, not the real wall
+        // clock, both seeds the event's day AND anchors the override
+        // service's own "today" — see the identical rationale above.
+        final fixedToday = DateTime.utc(2026, 5, 20);
         await overrideDb.streakEventDao.appendEvent(
           StreakEventsCompanion.insert(
             profileId: _profileId,
             eventType: 'completion',
-            dayUtc: DateTime.utc(today.year, today.month, today.day),
-            eventTimestamp: today,
+            dayUtc: DateTime.utc(
+              fixedToday.year,
+              fixedToday.month,
+              fixedToday.day,
+            ),
+            eventTimestamp: fixedToday,
             clientDeviceId: const Value(null),
           ),
         );
@@ -736,7 +766,12 @@ void main() {
             streakStateProvider.overrideWithValue(
               StreakStateService(
                 db: overrideDb,
-                clock: const SystemLocalDayClock(),
+                clock: FakeLocalDayClock(fixedToday),
+                dayOf: (dt) => DateTime.utc(
+                  dt.toUtc().year,
+                  dt.toUtc().month,
+                  dt.toUtc().day,
+                ),
               ),
             ),
           ],
@@ -813,13 +848,20 @@ void main() {
         await _seedChildProfile(
           overrideDb,
         ); // id=2 — FK for streak_events(profile_id=2)
-        final today = DateTime.now().toUtc();
+        // AUD-t-dashboard-05 (TQ-6): a fixed instant, not the real wall
+        // clock, both seeds the event's day AND anchors the override
+        // service's own "today" — see the identical rationale above.
+        final fixedToday = DateTime.utc(2026, 5, 20);
         await overrideDb.streakEventDao.appendEvent(
           StreakEventsCompanion.insert(
             profileId: _childProfileId,
             eventType: 'completion',
-            dayUtc: DateTime.utc(today.year, today.month, today.day),
-            eventTimestamp: today,
+            dayUtc: DateTime.utc(
+              fixedToday.year,
+              fixedToday.month,
+              fixedToday.day,
+            ),
+            eventTimestamp: fixedToday,
             clientDeviceId: const Value(null),
           ),
         );
@@ -829,7 +871,19 @@ void main() {
           profileId: _childProfileId,
           extraOverrides: [
             streakServiceProvider.overrideWithValue(
-              StreakService(overrideDb, profileId: _childProfileId),
+              StreakService(
+                overrideDb,
+                profileId: _childProfileId,
+                streakStateProvider: StreakStateService(
+                  db: overrideDb,
+                  clock: FakeLocalDayClock(fixedToday),
+                  dayOf: (dt) => DateTime.utc(
+                    dt.toUtc().year,
+                    dt.toUtc().month,
+                    dt.toUtc().day,
+                  ),
+                ),
+              ),
             ),
           ],
         );
