@@ -1587,13 +1587,21 @@
   {
    "id": "AUD-t-scheduler-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Deduplicate near-identical scheduler test files added across separate fix waves",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "7fc436635f215a219b33db6ce1d87f018be00d22"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-scheduler-01 AC1 OK: make audit check 66/66 green + direct run exit 0; Rule-0 checker check_scheduler_test_duplication.dart shipped, wired into Makefile",
+    "AUD-t-scheduler-01 AC1 OK: fixture test subprocess-invokes checker, proves it FIRES (exit 1) on identical-name AND >=80%-similar-body, no false-positive on distinct tests",
+    "AUD-t-scheduler-01 AC1 OK: manual spot-check of all 3 pairs — union of distinct assertions ported to survivors, only exact dups deleted",
+    "AUD-t-scheduler-01 AC2 OK: scheduler suite +620 pre-fix -> +593 post-fix (27-test drop, ~matches builder 103->76)",
+    "AUD-t-scheduler-01 AC2 OK: coverage before/after IDENTICAL — goal_entity 75/75, content_repo_impl 14/14, content_repo 5/5, daily_task_generator 23/23"
+   ],
+   "notes": "Re-verified live pre-fix. Merged all 3 pairs per recommendation (union of distinct assertions, fully-subsumed files deleted). Shipped+demonstrated the AC1 Rule-0 checker (make audit 66/66 + fixture test). AC2 test-count (103->76) and coverage diff (identical, 4 files) both verified concretely."
   },
   {
    "id": "AUD-app-03",
