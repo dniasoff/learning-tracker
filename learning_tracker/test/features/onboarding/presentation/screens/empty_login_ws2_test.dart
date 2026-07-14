@@ -88,41 +88,19 @@ void main() {
       (tester) async {
         var skipCalled = false;
         await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              authStateProvider.overrideWithValue(
-                const AuthState.signedIn(
-                  user: AuthUser(
-                    profileId: 0,
-                    email: 't@t.com',
-                    displayName: 'T',
-                  ),
-                  tier: Tier.localBorn,
-                ),
-              ),
-            ],
-            child: MaterialApp(
-              locale: const Locale('en'),
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(
-                body: OnboardingProfileCreationStep(
-                  onCreated:
-                      ({
-                        required profile,
-                        required isChildMode,
-                        required useHebrewCalendar,
-                        required useHebrewTerms,
-                        required showNikud,
-                        required transliterationVariant,
-                      }) {},
-                  onSkipProfileCreation: () => skipCalled = true,
-                ),
+          _wrapWithProviders(
+            child: Scaffold(
+              body: OnboardingProfileCreationStep(
+                onCreated:
+                    ({
+                      required profile,
+                      required isChildMode,
+                      required useHebrewCalendar,
+                      required useHebrewTerms,
+                      required showNikud,
+                      required transliterationVariant,
+                    }) {},
+                onSkipProfileCreation: () => skipCalled = true,
               ),
             ),
           ),
@@ -146,41 +124,19 @@ void main() {
       'OnboardingProfileCreationStep does NOT show "Skip for now" when callback is null',
       (tester) async {
         await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              authStateProvider.overrideWithValue(
-                const AuthState.signedIn(
-                  user: AuthUser(
-                    profileId: 0,
-                    email: 't@t.com',
-                    displayName: 'T',
-                  ),
-                  tier: Tier.localBorn,
-                ),
-              ),
-            ],
-            child: MaterialApp(
-              locale: const Locale('en'),
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(
-                body: OnboardingProfileCreationStep(
-                  onCreated:
-                      ({
-                        required profile,
-                        required isChildMode,
-                        required useHebrewCalendar,
-                        required useHebrewTerms,
-                        required showNikud,
-                        required transliterationVariant,
-                      }) {},
-                  // no onSkipProfileCreation — no button rendered
-                ),
+          _wrapWithProviders(
+            child: Scaffold(
+              body: OnboardingProfileCreationStep(
+                onCreated:
+                    ({
+                      required profile,
+                      required isChildMode,
+                      required useHebrewCalendar,
+                      required useHebrewTerms,
+                      required showNikud,
+                      required transliterationVariant,
+                    }) {},
+                // no onSkipProfileCreation — no button rendered
               ),
             ),
           ),
