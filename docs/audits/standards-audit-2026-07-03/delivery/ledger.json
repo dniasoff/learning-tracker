@@ -5092,13 +5092,13 @@
   {
    "id": "AUD-t-notifications-02",
    "wave": 4,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Test the real _persistNotificationSettingsToCloud signature logic, not a hand-copied reimplementation",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "blocked (merge-lane w4r1c3, 2026-07-14). review agent lost (quota) mid-review of the G1-G4 rewrite (worktree wf_1a1fc4a3-128-3, tip faf6947143cfdde2b907db6354b026095eb564b5, commit test(notifications): AUD-t-notifications-02 - couple G1-G4 to the real signature-building code, coupling notification_providers_deep_test.dart's G1-G4 to the real _persistNotificationSettingsToCloud signature-building code instead of a hand-copied reimplementation). No independent review confirmation exists, so the fix is not merged. Worktree wf_1a1fc4a3-128-3 removed by this same pass's cleanup step (payload.worktreesToRemove); the unreviewed commit is stranded on the deleted worktree branch pending a future re-review pass. Left todo->blocked rather than merging unreviewed."
   },
   {
    "id": "AUD-notifications-03",
@@ -7037,13 +7037,13 @@
   {
    "id": "AUD-t-notifications-06",
    "wave": 4,
-   "status": "todo",
+   "status": "skipped-refuted",
    "severity": "P3",
    "title": "Replace Future.delayed wall-clock waits with deterministic signals in notification cold-start tests (TQ-6)",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "skipped-refuted (merge-lane w4r1c3, 2026-07-14). Already fixed in code, independently confirmed: commit 81fa3635 (fix(notifications): AUD-notifications-01, AUD-notifications-02, AUD-notifications-03 - AsyncNotifier preference providers, SM-4 guards, family StreakAlertService), an ancestor of this branch's current HEAD, converted the 5 preference providers to AsyncNotifier<T> and replaced every real-wall-clock Future.delayed(ms) wait in the 4 finding-listed test files with deterministic await <provider>.future signals. Independently re-verified against the current tree: grep -n \"delayed|Duration(milliseconds\" across all 4 files (reminder_enabled_cold_start_test.dart, reminder_time_cold_start_test.dart, notification_providers_deep_test.dart, notification_providers_test.dart) returns zero matches. AC fully met. No code change made."
   },
   {
    "id": "AUD-t-onboarding-04",
