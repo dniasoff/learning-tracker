@@ -150,7 +150,10 @@ void main() {
                 '${entry.collection} listener must register an explicit '
                 'ordering field in FirestoreListenerSource.orderFields',
           );
-          expect(entry.orderField, equals(entry.orderField));
+          expect(
+            entry.orderField,
+            equals(FirestoreListenerSource.orderFields[entry.collection]),
+          );
         }
       },
     );
