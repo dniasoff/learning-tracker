@@ -7612,13 +7612,18 @@
     {
       "id": "AUD-t-cross-52",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Add Locale('he') RTL coverage for GoalSetupForm/GoalSetupScreen and StudyDaysReadOnly",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "c2adef7175372ab4a3b15f7a8cb99a8d8a7349fb"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-52 AC (ReadOnly): OK - test 14b:585-599 pumps Locale('he'), asserts find.byType(Scaffold) findsOneWidget; RTL via delegates; 28/28 pass",
+        "AUD-t-cross-52 AC (GoalSetup): OK - goal_setup_screen_test.dart:475-507 loops Locale('he'), asserts _expectPaceLabelsNotTruncated (equiv overflow); 19/19 pass"
+      ],
+      "notes": "Tree unchanged since 4018a91c. GoalSetupScreen part already covered by goal_setup_screen_test.dart:471-497 (re-ran 7/7 pass), matches register's verify note - no change there. StudyDaysReadOnly lacked a he test - added test 14b mirroring StudyDaysEditable test 9; 28/28 file tests pass."
     },
     {
       "id": "AUD-t-cross-60",
