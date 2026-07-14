@@ -3840,13 +3840,20 @@
     {
       "id": "AUD-t-cross-41",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Rewrite ConnectivityGateway's only test \u2014 it is tautologically true and hits the real network",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "130e83cd34e72a1b42be56422aa271354173c7c8"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-41 AC1 OK: test:23-26 isOnline isTrue for fake success; :32-40 isOnline isFalse for fake SocketException",
+        "AUD-t-cross-41 AC2 OK: all 3 constructions inject a fake lookup (no bare ctor in test) so zero real DNS; suite passed",
+        "AUD-t-cross-41 AC3 OK: connectivity_service_test.dart deleted, connectivity_gateway_test.dart added; no lingering refs",
+        "AUD-t-cross-41 red-first OK: merge-base source had no 'lookup' param, so new test could not compile pre-fix"
+      ],
+      "notes": "Evidence confirmed (tautological isNot(offline), real DNS call, no seam). Added injectable DnsLookup ctor param; rewrote test with hand-written fakes for true/SocketException/empty paths; renamed file (AC3). Red-first: compile error pre-fix, 3 green tests post-fix, zero network."
     },
     {
       "id": "AUD-t-cross-32",
