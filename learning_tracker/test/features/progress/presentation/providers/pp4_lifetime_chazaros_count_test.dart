@@ -11,27 +11,71 @@
 /// FIX: Count only chazara (stageId > 1) completions:
 ///   `totalChazaros: completions.where((c) => c.stageId > 1).length`
 ///
-/// RED test: verifies that the buggy formula gives the wrong number (7 instead
-/// of 2) for a dataset with 5 limud + 2 chazara events, proving the bug.
-/// GREEN test: verifies the fixed formula gives the correct number (2).
+/// RED test: seeds 5 limud + 2 chazara events and asserts the REAL
+/// `lifetimeHeaderCountersProvider` reports 2 (not 7 — the pre-fix
+/// `completions.length` value), so a regression that reverts the fix line
+/// makes this assertion fail red.
+/// GREEN test: a user with only limud completions must see 0 chazaros.
+///
+/// AUD-t-progress-05: rewritten to read the REAL provider via a
+/// [ProviderContainer] over a seeded in-memory DB, instead of recomputing
+/// the buggy/fixed formula inline in the test (which never touched
+/// `lifetimeHeaderCountersProvider` and so could never catch a regression to
+/// its source).
+///
+/// weaken-ok: the previous version additionally asserted
+/// `completions.length == 7` / `completions.where(...).length == 2` /
+/// `fixedCount != buggyCount` as LOCAL variables, and separately
+/// constructed a bare `LifetimeHeaderCounters(...)` to check the model's
+/// field passthrough. Those assertions never read
+/// `lifetimeHeaderCountersProvider` at all (they duplicated its formula, or
+/// its constructor, inline) — AUD-t-progress-05's entire point — so they
+/// are dropped rather than carried forward: the single
+/// `counters.totalChazaros` assertion against the REAL provider below
+/// (verified red-first by reverting the provider's fix line — see the
+/// finding's evidence) is what actually detects the regression they could
+/// not. The `hasLength(7)` sanity check on the raw seed is kept as it
+/// verifies the fixture setup, not the fix.
 @Tags(['unit', 'progress', 'lifetime', 'pp4'])
 library;
 
-import 'package:drift/drift.dart' show Value;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
 import '../../../../helpers/drift_memory.dart'
     show inMemoryDb, seedCompletion, seedProfile;
 
 // ---------------------------------------------------------------------------
+// Test doubles
+// ---------------------------------------------------------------------------
+
+/// `lifetimeHeaderCountersProvider`'s `totalChazaros` branch reads completion
+/// events directly and does not depend on curriculum content at all; its
+/// `itemsLearned` branch does, via `lifetimeSummariesProvider`, but that
+/// number is irrelevant to this PP-4 guard. Returning no content for every
+/// curriculum keeps the fixture minimal — `_safeLoadLeaves` treats an empty
+/// list as "skip this curriculum" (no exception), so `totalChazaros` is
+/// still computed correctly.
+class _EmptyContentRepository extends Fake implements ContentRepository {
+  @override
+  Future<List<ContentItem>> getContentForCurriculum(
+    CurriculumId curriculumId,
+  ) async => const [];
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 Future<void> _insertCompletion(
-  UserDatabase db,
-  int trackId, {
+  UserDatabase db, {
   String sefariaRef = 'Berakhot.1.1',
   required int stageId,
 }) => seedCompletion(
@@ -42,7 +86,6 @@ Future<void> _insertCompletion(
     sefariaRef: sefariaRef,
     stageId: stageId,
     trackType: 'mishna',
-    trackId: Value(trackId),
     eventTimestamp: DateTime(2024, 6, 15),
   ),
 );
@@ -52,121 +95,87 @@ Future<void> _insertCompletion(
 // ---------------------------------------------------------------------------
 
 void main() {
-  late UserDatabase db;
-  late int trackId;
-
-  setUp(() async {
-    db = inMemoryDb();
-    await seedProfile(db);
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: DateTime(2024, 1, 1),
-            activatedAt: DateTime(2024, 1, 1),
-          ),
-        );
-  });
-
-  tearDown(() async => db.close());
-
   group('PP-4 — totalChazaros must exclude limud (stageId == 1) completions', () {
-    test(
-      'PP-4 RED: completions.length (buggy) gives 7 for 5 limud + 2 review events '
-      '— proves the bug: limud events are falsely counted as chazaros',
-      () async {
-        // Seed: 5 limud completions + 2 review completions.
-        for (var i = 0; i < 5; i++) {
-          await _insertCompletion(
-            db,
-            trackId,
-            sefariaRef: 'Berakhot.1.$i',
-            stageId: 1,
-          );
-        }
-        await _insertCompletion(
-          db,
-          trackId,
-          sefariaRef: 'Berakhot.1.0',
-          stageId: 2,
-        );
-        await _insertCompletion(
-          db,
-          trackId,
-          sefariaRef: 'Berakhot.1.1',
-          stageId: 2,
-        );
+    test('PP-4 RED: lifetimeHeaderCountersProvider reports 2 chazaros for 5 '
+        'limud + 2 review events, not 7 (completions.length — the reverted-bug '
+        'value)', () async {
+      final db = inMemoryDb();
+      addTearDown(db.close);
+      await seedProfile(db);
 
-        final completions = await db.completionDao.getCompletionsByProfile(1);
-        expect(completions, hasLength(7));
+      // Seed: 5 limud completions + 2 review completions.
+      for (var i = 0; i < 5; i++) {
+        await _insertCompletion(db, sefariaRef: 'Berakhot.1.$i', stageId: 1);
+      }
+      await _insertCompletion(db, sefariaRef: 'Berakhot.1.0', stageId: 2);
+      await _insertCompletion(db, sefariaRef: 'Berakhot.1.1', stageId: 2);
 
-        // --- Demonstrate the bug ---
-        // The broken provider line: `totalChazaros: completions.length`
-        final buggyCount = completions.length;
-        expect(
-          buggyCount,
-          7,
-          reason:
-              'Bug: completions.length = 7 includes 5 limud events falsely '
-              'reported as chazaros. A user with no reviews sees "7 chazaros".',
-        );
+      final completions = await db.completionDao.getCompletionsByProfile(1);
+      expect(
+        completions,
+        hasLength(7),
+        reason: 'sanity: 7 raw completion-event rows seeded',
+      );
 
-        // --- Demonstrate the fix ---
-        // The correct line: `totalChazaros: completions.where((c) => c.stageId > 1).length`
-        final fixedCount = completions.where((c) => c.stageId > 1).length;
-        expect(
-          fixedCount,
-          2,
-          reason:
-              'Fix: counting only stageId > 1 events = 2 actual review completions.',
-        );
+      final container = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWith((ref) => db),
+          contentRepositoryProvider.overrideWithValue(
+            _EmptyContentRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        // The test that RED → GREEN is the assertion below:
-        // It FAILS if the provider still uses `completions.length` (buggy=7≠2),
-        // and PASSES after the fix (fixedCount=2==2).
-        expect(
-          fixedCount,
-          isNot(equals(buggyCount)),
-          reason:
-              'PP-4 bug confirmed: buggy count (7) != correct count (2). '
-              'Provider must use where(stageId > 1) not .length.',
-        );
-      },
-    );
+      final counters = await container.read(
+        lifetimeHeaderCountersProvider(1).future,
+      );
+
+      expect(
+        counters.totalChazaros,
+        2,
+        reason:
+            'PP-4: lifetimeHeaderCountersProvider.totalChazaros must count '
+            'only stageId > 1 review events (2), not every completion row '
+            '(7). A regression to `completions.length` would make this '
+            'assertion observe 7 and fail red — a user with no reviews '
+            'would see "7 chazaros" instead of 0.',
+      );
+    });
 
     test(
-      'PP-4 GREEN: user with 3 learned items and 0 reviews has totalChazaros == 0',
+      'PP-4 GREEN: user with 3 learned items and 0 reviews has totalChazaros '
+      '== 0 on the REAL provider',
       () async {
+        final db = inMemoryDb();
+        addTearDown(db.close);
+        await seedProfile(db);
+
         for (var i = 0; i < 3; i++) {
-          await _insertCompletion(
-            db,
-            trackId,
-            sefariaRef: 'Berakhot.1.$i',
-            stageId: 1,
-          );
+          await _insertCompletion(db, sefariaRef: 'Berakhot.1.$i', stageId: 1);
         }
 
-        final completions = await db.completionDao.getCompletionsByProfile(1);
+        final container = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWith((ref) => db),
+            contentRepositoryProvider.overrideWithValue(
+              _EmptyContentRepository(),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
 
-        // Fixed count: no chazaros (stageId > 1 → empty).
-        final fixedCount = completions.where((c) => c.stageId > 1).length;
+        final counters = await container.read(
+          lifetimeHeaderCountersProvider(1).future,
+        );
+
         expect(
-          fixedCount,
+          counters.totalChazaros,
           0,
           reason:
               'User with only limud completions (stageId==1) must show 0 '
               'total chazaros, not 3.',
         );
-
-        // Verify LifetimeHeaderCounters model wraps correctly.
-        final counters = LifetimeHeaderCounters(
-          itemsLearned: 3,
-          totalChazaros: fixedCount,
-        );
-        expect(counters.totalChazaros, 0);
-        expect(counters.itemsLearned, 3);
       },
     );
   });
