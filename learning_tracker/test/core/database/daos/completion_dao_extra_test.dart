@@ -1,5 +1,7 @@
-// Extra coverage for CompletionDao — insertCompletionsBatch,
-// getCompletionsByTrackAndProfile, getAggregateCountByTrack,
+// Extra coverage for CompletionDao — seeding via the test-only
+// seedCompletionsBatch helper (test/helpers/drift_memory.dart; CompletionDao
+// itself has no insertCompletionsBatch method, see completion_dao.dart's
+// class doc comment), getCompletionsByTrackAndProfile, getAggregateCountByTrack,
 // completionExistsByTrack, and getCompletionsByDateRangeAndTrack were not
 // exercised by the baseline test.
 import 'package:drift/drift.dart' show Value;
@@ -77,10 +79,11 @@ void main() {
   }
 
   // ---------------------------------------------------------------------------
-  // insertCompletionsBatch
+  // seeding + getCompletionsByTrack (via the test-only seedCompletionsBatch
+  // helper — CompletionDao itself has no insertCompletionsBatch method)
   // ---------------------------------------------------------------------------
 
-  group('CompletionDao.insertCompletionsBatch', () {
+  group('seeding + getCompletionsByTrack', () {
     test('inserts multiple completions in a single batch', () async {
       await seedCompletionsBatch(db, [
         makeCompletion(
