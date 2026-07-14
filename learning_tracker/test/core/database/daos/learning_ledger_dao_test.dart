@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/daos/dao_invariant_error.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:test/test.dart';
 
 import '../../../helpers/drift_memory.dart';
@@ -14,7 +15,7 @@ void main() {
   setUp(() async {
     db = inMemoryDb();
     await seedProfile(db);
-    final now = DateTime.now();
+    final now = DateTimeFactory.nowUtc();
     // Seed a second learner_profile and a curriculum_track for FK coverage.
     await db
         .into(db.learnerProfiles)

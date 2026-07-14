@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -20,8 +21,8 @@ void main() {
             email: 'test@example.com',
             tier: 'localBorn',
             displayName: 'Test Account',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
           ),
         );
     await database
@@ -31,8 +32,8 @@ void main() {
             email: 'test2@example.com',
             tier: 'localBorn',
             displayName: 'Test Account 2',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
           ),
         );
   });
@@ -48,7 +49,7 @@ void main() {
       String mode = 'adult',
       int avatarIndex = 0,
     }) {
-      final now = DateTime.now();
+      final now = DateTimeFactory.nowUtc();
       return ProfilesCompanion.insert(
         accountId: accountId,
         displayName: displayName,
@@ -114,7 +115,7 @@ void main() {
           mode: Value(profile.mode),
           avatarIndex: Value(profile.avatarIndex),
           createdAt: Value(profile.createdAt),
-          updatedAt: Value(DateTime.now()),
+          updatedAt: Value(DateTimeFactory.nowUtc()),
         ),
       );
       expect(updated, isTrue);

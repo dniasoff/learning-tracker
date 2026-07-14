@@ -588,6 +588,39 @@ audit: lint-rules-test ## Run all 60 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/analytics_catalog_check.$$$$.log; \
 	fi; \
+	echo "60/60 — TQ-6 Rule-0: no DateTime.now() wall-clock filler in the AUD-t-cross-88 DAO test fixture setup files — use DateTimeFactory.nowUtc() (AUD-t-cross-88)"; \
+	# Scoped to exactly the 8 files this finding named (completion_dao_test.dart, \
+	# completion_event_dao_test.dart, curriculum_scope_dao_test.dart, \
+	# goal_dao_test.dart, learning_ledger_dao_test.dart, point_config_dao_test.dart, \
+	# profile_dao_test.dart, stage_dao_test.dart) — a hard gate against regression \
+	# in this finding's own territory. bookmark_dao_test.dart, track_dao_test.dart, \
+	# and track_scoped_dao_test.dart in the same directory still carry raw \
+	# DateTime.now() calls but are the named territory of sibling findings \
+	# AUD-t-cross-85 and AUD-t-cross-83 (not yet fixed) — deliberately not swept \
+	# here, matching the AUD-t-cross-37 scope-note precedent (see that commit). \
+	# Positioned here (out of numeric sequence, before check 27) rather than at \
+	# the tail: appending it after check 27's SeedManager grep pattern (which \
+	# contains a literal unbalanced '(' in "SeedManager(" / "SeedManager({") \
+	# reproducibly corrupts GNU Make's recipe parsing — Make silently drops \
+	# every subsequent check with no error (verified in isolation; a pre-existing \
+	# latent issue in check 27, out of this finding's scope to fix). Placing this \
+	# check before check 27 avoids the interaction entirely; verified `make audit` \
+	# runs all 60 checks and reaches "audit PASSED" with this placement (see \
+	# commit message for the isolated repro). \
+	CROSS88_FILES="test/core/database/daos/completion_dao_test.dart \
+	  test/core/database/daos/completion_event_dao_test.dart \
+	  test/core/database/daos/curriculum_scope_dao_test.dart \
+	  test/core/database/daos/goal_dao_test.dart \
+	  test/core/database/daos/learning_ledger_dao_test.dart \
+	  test/core/database/daos/point_config_dao_test.dart \
+	  test/core/database/daos/profile_dao_test.dart \
+	  test/core/database/daos/stage_dao_test.dart"; \
+	CROSS88_HITS=$$(grep -n "DateTime\.now()" $$CROSS88_FILES 2>/dev/null); \
+	if [ -n "$$CROSS88_HITS" ]; then \
+	  echo "  DateTime.now() must not be reintroduced in these fixture-setup files — use DateTimeFactory.nowUtc() (AUD-t-cross-88):"; \
+	  echo "$$CROSS88_HITS"; \
+	  FAIL=1; \
+	fi; \
 	echo "27/40 — Every SeedManager( construction site in lib/ passes a logger: argument (AUD-app-07, EH-3)"; \
 	# A SeedManager built without a logger silently no-ops every one of its \
 	# ~13 internal _logger?.info/warning/error(...) diagnostic calls (first- \

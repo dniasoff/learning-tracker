@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -20,7 +21,7 @@ void main() {
       database,
       profileId: 1,
       curriculumId: 'mishnayos',
-      activatedAt: DateTime.now(),
+      activatedAt: DateTimeFactory.nowUtc(),
     );
   });
 
@@ -205,7 +206,7 @@ void main() {
         database,
         profileId: 1,
         curriculumId: 'bavli',
-        activatedAt: DateTime.now(),
+        activatedAt: DateTimeFactory.nowUtc(),
       );
 
       await database.curriculumScopeDao.setScopes(

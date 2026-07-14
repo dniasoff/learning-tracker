@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -9,7 +10,7 @@ void main() {
   setUp(() async {
     db = inMemoryDb();
     await seedProfile(db);
-    final now = DateTime.now();
+    final now = DateTimeFactory.nowUtc();
     await db
         .into(db.learnerProfiles)
         .insert(

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -24,15 +25,15 @@ void main() {
             accountId: 1,
             displayName: 'Test User 2',
             mode: 'adult',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
           ),
         );
     trackId = await seedTrack(
       database,
       profileId: 1,
       curriculumId: 'bavli',
-      activatedAt: DateTime.now(),
+      activatedAt: DateTimeFactory.nowUtc(),
     );
   });
 
@@ -253,13 +254,13 @@ void main() {
         database,
         profileId: 1,
         curriculumId: 'mishnayos',
-        activatedAt: DateTime.now(),
+        activatedAt: DateTimeFactory.nowUtc(),
       );
       final trackChild = await seedTrack(
         database,
         profileId: 2,
         curriculumId: 'mishnayos',
-        activatedAt: DateTime.now(),
+        activatedAt: DateTimeFactory.nowUtc(),
       );
 
       for (final tid in [trackAdult, trackChild]) {
