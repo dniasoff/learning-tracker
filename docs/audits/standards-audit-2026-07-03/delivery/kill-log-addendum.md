@@ -392,3 +392,13 @@ The wave-4 closing gate failed on these 3 findings: `AUD-t-profiles-03` and `AUD
 **Worktree/branch residue cleanup:** all 30 stray `.claude/worktrees/wf_9438f433-5f0-*` checkouts left behind by the wave4-chunk08 engine run (29 distinct tip commits — one pair, `worktree-wf_9438f433-5f0-2`/`-30`, shared a sha) were inventoried and their tip commit messages read: every one of the other 26 corresponds to a chunk08 finding (`AUD-t-progress-01/02/03/04/05/06/07/08/10`, `AUD-t-scheduler-01/02/03/04/05/06/07/09`, `AUD-t-settings-01/03`, `AUD-t-profiles-04/05/07`, `AUD-t-sacred_time-01`) already showing `merged` in the ledger with its own, differently-worded/differently-shaed commit on `dev` — i.e. superseded stale duplicates, not additional unlanded work; none referenced the still-`blocked` `AUD-t-cross-32`/`AUD-t-cross-62` (unrelated, out of this repair's scope, left untouched). Before deletion, all 29 distinct tips were bundled to `/home/daniel/gate-repair-bundles/wf_9438f433-5f0-worktrees-2026-07-14.bundle` (`git bundle verify` confirms a complete, self-contained history) as a recovery net. Then removed: the 30 worktree checkouts (`git worktree remove --force`) and the 6 named local branches among them — `worktree-wf_9438f433-5f0-13/-19/-2/-20/-43` (each had an active checkout) plus `worktree-wf_9438f433-5f0-39` (checkout already gone before this pass; branch-only, per its own ledger note) — via `git branch -D`. `git worktree list` / `.claude/worktrees/` confirmed empty of `wf_9438f433-*` entries afterward.
 
 - **Logged by:** wave-4 gate-repair agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-story-acceptance-03 — Back epic_27_story_27_8's tutor/rules security-boundary tests with real rule evaluation, not substring matching
+
+- **Wave:** 4
+- **Severity:** P2
+- **Delivery disposition:** `skipped-refuted` (merge-lane `w4r1c3`, 2026-07-14).
+- **Basis — already fixed pre-baseline, no code change required:** `firestore_rules.test.mjs` already asserts both the tutor-write-block and owner-write-success outcomes on completions via the real Firestore emulator (104/104 tests pass, verified against a live emulator run — not the substring-matching pattern the finding describes). CI already runs this suite unconditionally as a hard-fail step if the file is missing. Both the assertions and the CI wiring predate the audit baseline commit (`4018a91c`), so there is nothing here for delivery to fix; the finding described a defect that was not present in the tree at baseline time.
+- **Logged by:** merge-lane agent w4r1c3 (sonnet), 2026-07-14.
