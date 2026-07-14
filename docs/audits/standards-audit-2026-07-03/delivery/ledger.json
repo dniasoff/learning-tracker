@@ -1549,13 +1549,15 @@
     {
       "id": "AUD-t-progress-05",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Rewrite CP-02/ILP-01/PP-4 progress-provider regression guards to exercise the real provider instead of a hand-rewritten stand-in",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "ddc637613d1a3e46a631ecf8cde4a36c8c564546"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Fix lines intact in prod. Rewrote 3 test files to drive REAL providers over seeded in-memory DBs + fake repos, replacing stub-override/hand-rolled-formula tests. Red-first verified: reverted each fix line, saw test fail red, restored, saw green. AC3: no overrideWith on provider-under-test. gatePolicy=disjoint-skip (rebase file-disjoint vs dev at merge-base d5352d42c13d9247dcb2934bd11788c423a41753; make audit + flutter analyze clean)."
     },
     {
       "id": "AUD-sync-02",
