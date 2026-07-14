@@ -14,8 +14,10 @@
 /// announce "Hebrew Terms, Switch, on/off".
 ///
 /// TEST:
-///   S1.  The Switch widget within _HebrewTermsTile has a non-empty semantics
-///        label that references "Hebrew" or the Hebrew-Terms preference text.
+///   S1.  The Switch that is a descendant of the PreferenceListTile carrying
+///        l10n.hebrewTermsPreference (i.e. _HebrewTermsTile's own Switch,
+///        located specifically — not "any labelled Switch on the screen")
+///        has a semantics label equal to l10n.hebrewTermsPreference.
 @Tags(['settings', 'st3', 'a11y'])
 library;
 
@@ -24,6 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/widgets/preference_list_tile.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -32,6 +35,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -105,45 +109,66 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      // Find the Switch widgets in the settings screen.
-      final switches = find.byType(Switch);
-      if (switches.evaluate().isEmpty) {
-        // The Hebrew Terms tile is hidden when locale is 'he'; skip if locale
-        // forces the tile away.  Otherwise fail.
-        // In the default test locale (en) the tile must be visible.
-        fail(
-          'ST-3: No Switch widgets found in SettingsScreen — '
-          '_HebrewTermsTile must render a Switch in the en locale',
-        );
-      }
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsScreen)),
+      )!;
 
-      // Find ANY switch that has a non-empty semantics label.
-      var foundLabelledSwitch = false;
-      for (final element in switches.evaluate()) {
-        final semanticsNode = tester.getSemantics(
-          find.byWidget(element.widget),
-        );
-        if (semanticsNode.label.isNotEmpty) {
-          foundLabelledSwitch = true;
-          expect(
-            semanticsNode.label.isNotEmpty,
-            isTrue,
-            reason:
-                'ST-3: at least one Switch in SettingsScreen must have a '
-                'non-empty accessibility label',
-          );
-          break;
-        }
-      }
+      // SettingsScreen's outer ListView only builds/mounts elements near the
+      // viewport (Sliver lazy-build). _HebrewTermsTile sits below several
+      // earlier cards — including SacredTimeSettingsCard, which renders its
+      // OWN unrelated Switch higher up the list. Scroll it into view rather
+      // than assuming it (or its Switch) is already mounted: without this,
+      // `find.byType(Switch)` would find the Sacred-Time card's Switch
+      // instead (it merges its Row's text into a non-empty semantics label),
+      // which is precisely the "any labelled Switch" trap ST-3 must not
+      // fall into.
+      await tester.scrollUntilVisible(
+        find.text(l10n.hebrewTermsPreference),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
 
+      // Locate the *specific* PreferenceListTile that carries the
+      // Hebrew-Terms preference title — not any tile, not any switch.
+      final hebrewTermsTile = find.byWidgetPredicate(
+        (widget) =>
+            widget is PreferenceListTile &&
+            widget.title == l10n.hebrewTermsPreference,
+      );
       expect(
-        foundLabelledSwitch,
-        isTrue,
+        hebrewTermsTile,
+        findsOneWidget,
         reason:
-            'ST-3: _HebrewTermsTile Switch must have a Semantics label so '
-            'screen readers can announce it by name (e.g. "Hebrew Terms, '
-            'Switch, on/off"). Without the Semantics wrapper the Switch is '
-            'announced as an unlabeled control.',
+            'ST-3: SettingsScreen must render exactly one PreferenceListTile '
+            'titled l10n.hebrewTermsPreference (_HebrewTermsTile) in the en '
+            'locale — cannot isolate the Hebrew-Terms Switch without it.',
+      );
+
+      // Locate the Switch that is a descendant of THAT tile specifically —
+      // not "any Switch in the screen that happens to have a label".
+      final hebrewTermsSwitch = find.descendant(
+        of: hebrewTermsTile,
+        matching: find.byType(Switch),
+      );
+      expect(
+        hebrewTermsSwitch,
+        findsOneWidget,
+        reason:
+            'ST-3: The Hebrew-Terms PreferenceListTile must render exactly '
+            'one Switch as its trailing control.',
+      );
+
+      final semanticsNode = tester.getSemantics(hebrewTermsSwitch);
+      expect(
+        semanticsNode.label,
+        equals(l10n.hebrewTermsPreference),
+        reason:
+            'ST-3: _HebrewTermsTile\'s own Switch must carry a Semantics '
+            'label equal to l10n.hebrewTermsPreference so screen readers '
+            'announce it by name (e.g. "Hebrew Terms, Switch, on/off"). '
+            'This asserts the label on the Hebrew-Terms Switch specifically '
+            '— a labelled Switch elsewhere on SettingsScreen must NOT be '
+            'able to satisfy this check.',
       );
 
       await tester.pumpWidget(const SizedBox.shrink());
