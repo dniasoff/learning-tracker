@@ -1500,13 +1500,19 @@
     {
       "id": "AUD-t-story-acceptance-06",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Delete or replace compile-time-tautological assertions across Epic 1/2 acceptance tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a5c71dfc84cf7acebcefa2a263a11c88220d8cdb"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-06 AC1 OK: 0 `expect(X,isNotNull)` on non-nullable & 0 `expect(true,isTrue)`; remaining isNotNull are nullable bookmark checks (epic_02:464,943)",
+        "AUD-t-story-acceptance-06 AC2 OK: 46 sites now do real behavior (isA<>, singleton identity, DAO queries, outbox depth 0->1, ProviderContainer+mock verify); 72/72 pass",
+        "AUD-t-story-acceptance-06 mergedFrom OK: epic_02:876,890 now inspect db.allTables (isNot contains content_items/curriculum_hierarchy_config) vs old schemaVersion>=1"
+      ],
+      "notes": "Re-verified 46 sites unchanged vs register. Replaced tautological asserts in both files with real checks (isA<>, singleton identity, DAO queries, file/pubspec content, ProviderContainer+mock dispatch, allTables). AC1/AC2 confirmed. Red-first: inverted 3 asserts, confirmed fail, reverted green."
     },
     {
       "id": "AUD-core-sync-26",
