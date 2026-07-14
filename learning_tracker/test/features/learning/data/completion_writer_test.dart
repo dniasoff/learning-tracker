@@ -825,60 +825,15 @@ void main() {
   // ══════════════════════════════════════════════════════════════════════════
   // 7. Three-tier credit policy (CompletionSource semantics)
   // ══════════════════════════════════════════════════════════════════════════
-
-  group('three-tier credit policy (CompletionSource)', () {
-    test('CompletionSource.live.creditsEngagement is true', () {
-      expect(CompletionSource.live.creditsEngagement, isTrue);
-    });
-
-    test('CompletionSource.live.creditsAchievement is true', () {
-      expect(CompletionSource.live.creditsAchievement, isTrue);
-    });
-
-    test('CompletionSource.live.creditsLifetime is true', () {
-      expect(CompletionSource.live.creditsLifetime, isTrue);
-    });
-
-    test('CompletionSource.bulkInTrack.creditsEngagement is false', () {
-      expect(
-        CompletionSource.bulkInTrack.creditsEngagement,
-        isFalse,
-        reason: 'BulkInTrack must NOT credit engagement (no streak/points)',
-      );
-    });
-
-    test('CompletionSource.bulkInTrack.creditsAchievement is true', () {
-      expect(
-        CompletionSource.bulkInTrack.creditsAchievement,
-        isTrue,
-        reason: 'BulkInTrack MUST credit achievement (siyumim earn)',
-      );
-    });
-
-    test('CompletionSource.bulkInTrack.creditsLifetime is true', () {
-      expect(CompletionSource.bulkInTrack.creditsLifetime, isTrue);
-    });
-
-    test('CompletionSource.lifetimeOnly.creditsEngagement is false', () {
-      expect(CompletionSource.lifetimeOnly.creditsEngagement, isFalse);
-    });
-
-    test('CompletionSource.lifetimeOnly.creditsAchievement is false', () {
-      expect(
-        CompletionSource.lifetimeOnly.creditsAchievement,
-        isFalse,
-        reason: 'LifetimeOnly must NOT credit achievement (no siyumim)',
-      );
-    });
-
-    test('CompletionSource.lifetimeOnly.creditsLifetime is true', () {
-      expect(
-        CompletionSource.lifetimeOnly.creditsLifetime,
-        isTrue,
-        reason: 'Every source must credit lifetime',
-      );
-    });
-  });
+  //
+  // The full 3×3 matrix (CompletionSource.{live,bulkInTrack,lifetimeOnly} ×
+  // .{creditsEngagement,creditsAchievement,creditsLifetime}) is covered by
+  // the pure predicate tests in
+  // test/features/learning/domain/use_cases/mark_completion_use_case_b1_test.dart
+  // — see that file for the 9-fact matrix and structural invariants.
+  // weaken-ok: AUD-t-learning-03 — exact duplicate of that file's
+  // 'CompletionSourceX — tier predicates (3×3 matrix)' group; removed here to
+  // stop the two files drifting out of lockstep for one policy fact.
 
   // ══════════════════════════════════════════════════════════════════════════
   // 8. Sentinel completions in completions_view
