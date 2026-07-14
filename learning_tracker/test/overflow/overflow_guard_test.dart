@@ -7,7 +7,10 @@
 //   3. PASSES on the SHARED overflow-safe dialog (`showAppConfirmDialog` from
 //      `lib/core/widgets/app_dialog.dart`) with a very long title + message at
 //      the worst corner of the matrix.
-//   4. FAILS (self-test) on a deliberately-overflowing fixed Column at the
+//   4. PASSES on the real [StartingPositionCalendarMode] screen (the widget
+//      that shipped the original "BOTTOM OVERFLOWED BY 59 PIXELS" regression,
+//      see AUD-t-cross-34) across the whole device/text-scale matrix.
+//   5. FAILS (self-test) on a deliberately-overflowing fixed Column at the
 //      small viewport × 2.0 text — demonstrating the guard actually catches
 //      real "RenderFlex overflowed by N pixels" regressions.
 //
@@ -20,9 +23,44 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/providers/calendar_providers.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/drift_memory.dart';
 import '../helpers/overflow_harness.dart';
+
+// ── StartingPositionCalendarMode fixtures ───────────────────────────────────
+
+class _MockCalendarProgramService extends Mock
+    implements CalendarProgramService {}
+
+class _FalseUseHebrewTerms extends UseHebrewTerms {
+  @override
+  bool build() => false;
+}
+
+LearningProgramData _dafYomiProgram() => const LearningProgramData(
+  id: 1,
+  name: 'Daf Yomi',
+  displayName: 'Daf Yomi',
+  description: 'Test program',
+  curriculumType: 'bavli',
+  isActive: true,
+  hasTests: false,
+  stagesConfig: '',
+  testConfig: '',
+  apiSource: 'local',
+  apiProgramKey: 'daf_yomi',
+  isCalendarProgram: true,
+);
 
 /// A confirm-dialog content widget shaped like "Exit Track Setup?":
 /// a title, a long body message, and two action buttons in a Column.
@@ -191,6 +229,34 @@ void main() {
     'the device matrix',
     (tester) async {
       await expectNoOverflowAcrossDevices(tester, () => const _AppDialogHost());
+    },
+  );
+
+  testWidgets(
+    'StartingPositionCalendarMode (AUD-t-cross-34) does not overflow across '
+    'the device matrix',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final calendarSvc = _MockCalendarProgramService();
+      when(
+        () => calendarSvc.getEntry(any(), any()),
+      ).thenAnswer((_) async => null);
+
+      await expectNoOverflowAcrossDevices(
+        tester,
+        () => StartingPositionCalendarMode(
+          selectedProgram: _dafYomiProgram(),
+          onComplete: (_) {},
+        ),
+        overrides: [
+          userDatabaseProvider.overrideWithValue(inMemoryDb()),
+          calendarProgramServiceProvider.overrideWith(
+            (ref) => Future.value(calendarSvc),
+          ),
+          useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
+          syncWriteFacadeProvider.overrideWithValue(null),
+        ],
+      );
     },
   );
 

@@ -187,7 +187,16 @@ class _StartingPositionCalendarModeState
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(l10n.actionStartHereLabel),
+                // AUD-t-cross-34: at narrow viewports + large OS text scale
+                // (e.g. 320×568 @ 2.0x) the unconstrained label overflowed the
+                // button's Row by 43px. Flexible+ellipsis lets the label
+                // shrink instead of overflowing while the icon stays fixed.
+                Flexible(
+                  child: Text(
+                    l10n.actionStartHereLabel,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 const Icon(Icons.rocket_launch_rounded, size: 18),
               ],
