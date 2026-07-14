@@ -11,16 +11,12 @@ void main() {
   setUp(() async {
     database = inMemoryDb();
     await seedProfile(database);
-    trackId = await database
-        .into(database.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'bavli',
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
-          ),
-        );
+    trackId = await seedTrack(
+      database,
+      profileId: 1,
+      curriculumId: 'bavli',
+      activatedAt: DateTime.now(),
+    );
   });
 
   tearDown(() async {
@@ -167,16 +163,12 @@ void main() {
               updatedAt: now,
             ),
           ); // profile id=2
-      final track2 = await database
-          .into(database.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 2,
-              curriculumId: 'bavli',
-              stateChangedAt: now,
-              activatedAt: now,
-            ),
-          );
+      final track2 = await seedTrack(
+        database,
+        profileId: 2,
+        curriculumId: 'bavli',
+        activatedAt: now,
+      );
       await database.goalDao.insertGoal(
         GoalsCompanion.insert(
           profileId: 2,

@@ -27,16 +27,7 @@ void main() {
             updatedAt: now,
           ),
         );
-    await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishna',
-            stateChangedAt: now,
-            activatedAt: now,
-          ),
-        );
+    await seedTrack(db, profileId: 1, curriculumId: 'mishna', activatedAt: now);
   });
 
   tearDown(() async {

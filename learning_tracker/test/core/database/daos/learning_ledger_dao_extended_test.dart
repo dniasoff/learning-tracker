@@ -17,26 +17,18 @@ void main() {
     // Seed curriculum tracks so that trackId FK constraints are satisfied.
     // W3.22: UNIQUE constraint is (profileId, curriculumId); use different
     // curriculumId values to get two distinct track rows (ids 1 and 2).
-    await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-    await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'bavli',
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    await seedTrack(
+      db,
+      profileId: 1,
+      curriculumId: 'mishnayos',
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
+    await seedTrack(
+      db,
+      profileId: 1,
+      curriculumId: 'bavli',
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
   });
 
   tearDown(() async {

@@ -28,16 +28,12 @@ void main() {
     String trackType = 'personal',
     bool isActive = true,
   }) {
-    return db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    return seedTrack(
+      db,
+      profileId: profileId,
+      curriculumId: curriculumId,
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
   }
 
   // ---------------------------------------------------------------------------

@@ -25,16 +25,12 @@ void main() {
   setUp(() async {
     db = inMemoryDb();
     await seedProfile(db);
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    trackId = await seedTrack(
+      db,
+      profileId: 1,
+      curriculumId: 'mishnayos',
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
   });
 
   tearDown(() async {
@@ -133,16 +129,12 @@ void main() {
       'returns stages for the specified track ordered by stageOrder',
       () async {
         // Insert a second track.
-        final otherTrackId = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: 1,
-                curriculumId: 'bavli',
-                stateChangedAt: DateTime.utc(2026, 1, 1),
-                activatedAt: DateTime.utc(2026, 1, 1),
-              ),
-            );
+        final otherTrackId = await seedTrack(
+          db,
+          profileId: 1,
+          curriculumId: 'bavli',
+          activatedAt: DateTime.utc(2026, 1, 1),
+        );
 
         await insertStage(stageOrder: 3, stageName: 'Chazara 2', tid: trackId);
         await insertStage(stageOrder: 1, stageName: 'Learn', tid: trackId);
@@ -164,16 +156,12 @@ void main() {
 
   group('StageDao.deleteStagesForTrack', () {
     test('deletes only stages for the specified track', () async {
-      final otherTrackId = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final otherTrackId = await seedTrack(
+        db,
+        profileId: 1,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
 
       await insertStage(stageOrder: 1, tid: trackId);
       await insertStage(stageOrder: 2, tid: trackId);
@@ -245,16 +233,12 @@ void main() {
     });
 
     test('does not count stages from other tracks', () async {
-      final otherTrackId = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final otherTrackId = await seedTrack(
+        db,
+        profileId: 1,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
 
       await insertStage(stageOrder: 1, tid: trackId);
       await insertStage(stageOrder: 1, tid: otherTrackId);

@@ -28,16 +28,12 @@ void main() {
             updatedAt: DateTime.now(),
           ),
         );
-    trackId = await database
-        .into(database.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'bavli',
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
-          ),
-        );
+    trackId = await seedTrack(
+      database,
+      profileId: 1,
+      curriculumId: 'bavli',
+      activatedAt: DateTime.now(),
+    );
   });
 
   tearDown(() async {
@@ -253,26 +249,18 @@ void main() {
 
     test('seedDefaults uses only stages for the target track when multiple '
         'profiles share a curriculum', () async {
-      final trackAdult = await database
-          .into(database.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              stateChangedAt: DateTime.now(),
-              activatedAt: DateTime.now(),
-            ),
-          );
-      final trackChild = await database
-          .into(database.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 2,
-              curriculumId: 'mishnayos',
-              stateChangedAt: DateTime.now(),
-              activatedAt: DateTime.now(),
-            ),
-          );
+      final trackAdult = await seedTrack(
+        database,
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        activatedAt: DateTime.now(),
+      );
+      final trackChild = await seedTrack(
+        database,
+        profileId: 2,
+        curriculumId: 'mishnayos',
+        activatedAt: DateTime.now(),
+      );
 
       for (final tid in [trackAdult, trackChild]) {
         await database.stageDao.insertStageDefinition(

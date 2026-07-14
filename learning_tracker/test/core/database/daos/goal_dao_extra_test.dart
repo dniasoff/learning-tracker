@@ -42,16 +42,12 @@ void main() {
             updatedAt: DateTime.utc(2026, 1, 1),
           ),
         );
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'mishnayos',
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    trackId = await seedTrack(
+      db,
+      profileId: profileId,
+      curriculumId: 'mishnayos',
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
   });
 
   tearDown(() async {
@@ -100,16 +96,12 @@ void main() {
       await insertGoal(pid: 1);
       await insertGoal(pid: 1);
       // Insert for profile 2 — needs its own track.
-      final track2 = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 2,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final track2 = await seedTrack(
+        db,
+        profileId: 2,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
       await insertGoal(pid: 2, tId: track2, curriculumId: 'bavli');
 
       final goals1 = await db.goalDao.getGoalsByProfile(1);
@@ -148,16 +140,12 @@ void main() {
     });
 
     test('does not include goals from other tracks', () async {
-      final track2 = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final track2 = await seedTrack(
+        db,
+        profileId: profileId,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
       await insertGoal(); // track 1
       await insertGoal(tId: track2, curriculumId: 'bavli'); // track 2
 
@@ -188,16 +176,12 @@ void main() {
     });
 
     test('does not delete goals from other tracks', () async {
-      final track2 = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final track2 = await seedTrack(
+        db,
+        profileId: profileId,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
       await insertGoal(); // track 1
       await insertGoal(tId: track2, curriculumId: 'bavli'); // track 2
 
