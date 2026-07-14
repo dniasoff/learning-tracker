@@ -12,7 +12,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 
-import '../../../helpers/drift_memory.dart' show inMemoryDb, seedProfile;
+import '../../../helpers/drift_memory.dart'
+    show inMemoryDb, seedProfile, seedTrack;
 
 void main() {
   late UserDatabase db;
@@ -33,16 +34,12 @@ void main() {
     String trackType = 'personal',
     int profileId = 1,
     bool isActive = true,
-  }) => db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          stateChangedAt: DateTime.utc(2026, 1, 1),
-          activatedAt: DateTime.utc(2026, 1, 1),
-        ),
-      );
+  }) => seedTrack(
+    db,
+    profileId: profileId,
+    curriculumId: curriculumId,
+    activatedAt: DateTime.utc(2026, 1, 1),
+  );
 
   Future<int> insertGoal(int trackId) => db.goalDao.insertGoal(
     GoalsCompanion.insert(

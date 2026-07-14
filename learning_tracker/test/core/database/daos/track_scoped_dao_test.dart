@@ -35,28 +35,18 @@ void main() {
             updatedAt: now,
           ),
         );
-    final t1 = await db
-        .into(db.curriculumTracks)
-        .insertReturning(
-          CurriculumTracksCompanion.insert(
-            profileId: _p1,
-            curriculumId: 'mishnayos',
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
-          ),
-        );
-    track1Id = t1.id;
-    final t2 = await db
-        .into(db.curriculumTracks)
-        .insertReturning(
-          CurriculumTracksCompanion.insert(
-            profileId: _p2,
-            curriculumId: 'mishnayos',
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
-          ),
-        );
-    track2Id = t2.id;
+    track1Id = await seedTrack(
+      db,
+      profileId: _p1,
+      curriculumId: 'mishnayos',
+      activatedAt: DateTime.now(),
+    );
+    track2Id = await seedTrack(
+      db,
+      profileId: _p2,
+      curriculumId: 'mishnayos',
+      activatedAt: DateTime.now(),
+    );
   });
 
   tearDown(() => db.close());

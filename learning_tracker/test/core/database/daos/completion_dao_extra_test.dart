@@ -39,16 +39,12 @@ void main() {
             updatedAt: DateTime.utc(2026, 1, 1),
           ),
         );
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: 1,
-            curriculumId: 'bavli',
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    trackId = await seedTrack(
+      db,
+      profileId: 1,
+      curriculumId: 'bavli',
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
   });
 
   tearDown(() async {
@@ -140,16 +136,12 @@ void main() {
       await seedCompletion(db, makeCompletion(profileId: 1));
 
       // Insert a second track for profile 2.
-      final track2 = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 2,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final track2 = await seedTrack(
+        db,
+        profileId: 2,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
       await seedCompletion(
         db,
         makeCompletion(profileId: 2, overrideTrackId: track2),
@@ -203,16 +195,12 @@ void main() {
     });
 
     test('is scoped to the given profile', () async {
-      final track2 = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 2,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final track2 = await seedTrack(
+        db,
+        profileId: 2,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
       await seedCompletion(db, makeCompletion(profileId: 1));
       await seedCompletion(
         db,
@@ -333,16 +321,12 @@ void main() {
     test('is scoped to the given track', () async {
       // Use a different curriculumId to avoid the (profileId, curriculumId)
       // unique constraint — the setUp already created (1, 'bavli').
-      final other = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 1,
-              curriculumId: 'mishnayos',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final other = await seedTrack(
+        db,
+        profileId: 1,
+        curriculumId: 'mishnayos',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
 
       await seedCompletion(
         db,
