@@ -77,25 +77,20 @@ class _FakeMergeStore implements MergeStore {
         syncedAt;
   }
 
+  // AUD-t-cross-68: delegates to the real DriftMergeStore algorithm instead
+  // of re-deriving it by hand, so this fake cannot drift from D15 semantics.
   @override
   bool remoteIsNewer({
     required DateTime? localUpdatedAt,
     required DateTime? remoteUpdatedAt,
     DateTime? localSyncedAt,
     DateTime? remoteSyncedAt,
-  }) {
-    if (remoteUpdatedAt == null) return false;
-    if (localUpdatedAt == null) return true;
-    final diff = remoteUpdatedAt.difference(localUpdatedAt).abs();
-    if (diff > const Duration(seconds: 5)) {
-      return remoteUpdatedAt.isAfter(localUpdatedAt);
-    }
-    if (remoteSyncedAt != null && localSyncedAt != null) {
-      if (remoteSyncedAt.isAfter(localSyncedAt)) return true;
-      if (localSyncedAt.isAfter(remoteSyncedAt)) return false;
-    }
-    return true;
-  }
+  }) => driftMergeStoreRemoteIsNewer(
+    localUpdatedAt: localUpdatedAt,
+    remoteUpdatedAt: remoteUpdatedAt,
+    localSyncedAt: localSyncedAt,
+    remoteSyncedAt: remoteSyncedAt,
+  );
 
   @override
   Future<void> upsert({
