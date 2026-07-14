@@ -4,6 +4,13 @@
 
 /// L1 widget-behaviour tests for [SchedulerScreen].
 ///
+/// This is the sole test file exercising [SchedulerScreen] top-to-bottom
+/// (AUD-t-scheduler-05): a prior, near-fully-duplicate `scheduler_screen_test
+/// .dart` was deleted and this file — formerly `scheduler_screen_l1_test
+/// .dart` — was renamed to the AG-5-mirrored path (`test/.../
+/// scheduler_screen_test.dart` mirrors `lib/.../scheduler_screen.dart`) so
+/// the file that survives keeps satisfying the test-mirroring ratchet.
+///
 /// Covers:
 ///   1.  Empty state (no tasks at all) — celebration icon + copy present.
 ///   2.  Loading state — CircularProgressIndicator shown.
@@ -16,7 +23,8 @@
 ///   8.  Section filter — SchedulerTaskSection.review hides non-chazara tasks.
 ///   9.  Section filter — all filtered out → empty-state shown.
 ///  10.  View toggle button present; tapping it switches to GroupedDailyView.
-///  11.  Flat task list renders DailyTaskCard widgets.
+///  11.  Flat task list renders DailyTaskCard widgets, including the correct
+///       per-curriculum ref label for each task (e.g. Mishnah vs. Bavli).
 ///  12.  Skip (swipe-dismiss) shows snackbar with Undo action.
 ///  13.  No track-type labels ("Personal"/"Standard"/"Custom"/"אישי") shown.
 ///  14.  Hebrew (RTL) smoke — screen pumps without error under `he` locale.
@@ -366,6 +374,31 @@ void main() {
 
       await _tearDown(tester);
     });
+
+    // AUD-t-scheduler-05: folded from the deleted scheduler_screen_test.dart
+    // ("renders task cards when tasks exist") — the per-curriculum ref-label
+    // rendering it checked was not a strict duplicate: daily_task_card_test
+    // covers a Mishnayos ref in isolation, but nothing else exercises a
+    // Bavli ref, nor mixed curricula, at the SchedulerScreen level.
+    testWidgets(
+      'flat list renders the correct per-curriculum ref label for each task',
+      (tester) async {
+        final tasks = [
+          _task(ref: 'Mishnah_Berakhot_1.1'),
+          _task(curriculum: CurriculumId.bavli, ref: 'Bavli_Berakhot_2a'),
+        ];
+
+        await tester.pumpWidget(_buildScreen(tasks: tasks));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(find.byType(DailyTaskCard), findsNWidgets(2));
+        expect(find.text('Mishnah Berakhot 1.1'), findsOneWidget);
+        expect(find.text('Bavli Berakhot 2a'), findsOneWidget);
+
+        await _tearDown(tester);
+      },
+    );
   });
 
   // ── 6–9. Section filter ─────────────────────────────────────────────────────
