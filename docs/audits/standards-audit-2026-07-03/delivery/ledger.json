@@ -2406,13 +2406,18 @@
   {
    "id": "AUD-t-settings-02",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Extract a shared pumpApp test helper instead of duplicating ProviderScope/MaterialApp scaffolding across 9 settings test files",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "2c7d3790e6eeb30bae0b734506a105da9406bfe7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-settings-02 AC1 OK: pump_app.dart exists; all 9 evidence files import it (grep=1 each) and every named builder now calls pumpApp()",
+    "AUD-t-settings-02 AC1 OK: only residual scaffolding is out-of-scope scope_lifetime:866 error-state block + bare spinner at settings_screen_test:94"
+   ],
+   "notes": "Re-verified: pump_app.dart existed but 9 files still hand-rolled ProviderScope+MaterialApp (grep confirmed). Migrated all 9 files' builder fns to pumpApp(). Left 1 unnamed inline block (not in AC) as follow-up. Lowered TQ-3 ratchet baseline 269->239. Commit 3e2642f9."
   },
   {
    "id": "AUD-app-04",
@@ -5387,13 +5392,18 @@
   {
    "id": "AUD-t-settings-03",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace scope_lifetime_l1_test.dart's tautological lifetimeOnly-source test with one that drives the real _markSelections call",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "546cd5c34d31d7549fac3b20dfc1d32c5eb3b9ac"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-settings-03 AC1 OK green: 47/47 pass unmodified, incl new 'Save drives real _markSelections' test",
+    "AUD-t-settings-03 AC1 OK red: I mutated screen:592 to source: CompletionSource.live -> fails at assert line 1441; reverted clean"
+   ],
+   "notes": "Re-verified: test still called stub directly, not real screen. Red-first: new test drives real Save flow, captures real Invocation. Proved AC: temp source:.live in prod -> RED w/ exact mismatch; reverted -> GREEN. Fixed a containsKey-vs-value bug mid-check. Commit 6e5722eb."
   },
   {
    "id": "AUD-tracks-14",
