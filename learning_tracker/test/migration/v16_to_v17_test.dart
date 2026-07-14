@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import '../helpers/drift_memory.dart';
 
@@ -118,7 +119,7 @@ void main() {
               eventTimestamp: DateTimeFactory.nowUtc(),
             ),
           ),
-          throwsA(anything),
+          throwsA(isA<SqliteException>()),
           reason:
               'C2: FK enforcement must reject completion with non-existent profileId',
         );
