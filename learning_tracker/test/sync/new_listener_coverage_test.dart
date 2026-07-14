@@ -12,7 +12,7 @@
 ///     └── gateway stream (faked here)
 ///           └── ListenerSupervisor._handlePayload
 ///                 └── ListenerSupervisor._onEvent
-///                       └── SyncOrchestratorImpl._channelToKind
+///                       └── SyncOrchestratorImpl.channelToKind
 ///                             └── MergeRouter.dispatch(kind: ...)
 ///                                   └── EntityMerger.merge(...)  [recorded]
 ///
@@ -94,34 +94,6 @@ class _RecordingMerger implements EntityMerger {
   }
 }
 
-/// Mirrors `SyncOrchestratorImpl._channelToKind`. Public copy used by the
-/// supervisor's onEvent handler in this test. If the production switch
-/// changes, this duplicate will diverge — and the "every new channel maps
-/// to the expected kind" assertion below catches the drift.
-String? _channelToKind(String channel) => switch (channel) {
-  'completions' => EntityKind.completion,
-  'bookmarks' => EntityKind.bookmark,
-  'settings' => EntityKind.settings,
-  'streak_events' => EntityKind.streak,
-  'curriculum_tracks' => EntityKind.trackConfig,
-  'stage_definitions' => EntityKind.stageDefinition,
-  // Phase 1 — study-day config enrolment.
-  'study_day_configs' => EntityKind.studyDayConfig,
-  'goals' => EntityKind.goal,
-  'learning_ledger' => EntityKind.learningLedger,
-  'learning_order' => EntityKind.learningOrder,
-  'profile_programs' => EntityKind.profileProgram,
-  'learner_profiles' => EntityKind.learnerProfile,
-  'preferences/notification_settings' => EntityKind.notificationSettings,
-  'preferences/gamification_settings' => EntityKind.gamificationSettings,
-  'preferences/ui_preferences' => EntityKind.uiPreferences,
-  'tutor_grants' => EntityKind.tutorGrant,
-  // WS9 Wave-B (C#2) — points spend economy.
-  'points_ledger' => EntityKind.pointsLedger,
-  'reward_redemptions' => EntityKind.rewardRedemption,
-  _ => null,
-};
-
 void main() {
   group('Phase 2 — new listener channel → merger routing', () {
     late _DrivenGateway gateway;
@@ -146,7 +118,7 @@ void main() {
       supervisor = ListenerSupervisor(
         source: source,
         onEvent: (channel, payload) {
-          final kind = _channelToKind(channel);
+          final kind = SyncOrchestratorImpl.channelToKind(channel);
           if (kind == null) return;
           if (payload is List) {
             router.dispatch(
@@ -293,15 +265,15 @@ void main() {
       expect(mergers[EntityKind.tutorGrant]!.calls, 1);
     });
 
-    test('production SyncOrchestratorImpl._channelToKind matches the channel '
-        'list this test mirrors', () {
-      // This assertion does NOT exercise SyncOrchestratorImpl directly
-      // (the method is private). It documents the channel set the
-      // production switch covers — adding a new channel here without
-      // also touching SyncOrchestratorImpl produces a runtime null kind
-      // → no dispatch → the test for that channel would fail at the
-      // mergers[...]!.calls == 1 line above. So this group of tests is
-      // by construction a regression net for the production switch.
+    test('production SyncOrchestratorImpl.channelToKind matches the channel '
+        'list this test covers', () {
+      // AUD-t-cross-29: calls the real production mapping (exposed
+      // `@visibleForTesting`) directly — no hand-copied duplicate switch.
+      // Adding a new channel here without also touching
+      // SyncOrchestratorImpl produces a runtime null kind → no dispatch →
+      // the test for that channel would fail at the mergers[...]!.calls
+      // == 1 line above. So this group of tests is by construction a
+      // regression net for the production switch.
       const expectedChannels = {
         'completions',
         'bookmarks',
@@ -321,7 +293,7 @@ void main() {
       };
       for (final ch in expectedChannels) {
         expect(
-          _channelToKind(ch),
+          SyncOrchestratorImpl.channelToKind(ch),
           isNotNull,
           reason: '$ch must route to an EntityKind',
         );
@@ -342,14 +314,18 @@ void main() {
 
       // Every registered channel MUST map to a kind. A missing mapping
       // means the listener payload would be silently dropped at the
-      // orchestrator boundary — Phase 2 regression.
+      // orchestrator boundary — Phase 2 regression. Calls the real
+      // production mapping (AUD-t-cross-29) so a channel that is
+      // registered but not routed fails THIS suite, not just a stale
+      // local copy of the switch.
       for (final channel in channels.keys) {
         expect(
-          _channelToKind(channel),
+          SyncOrchestratorImpl.channelToKind(channel),
           isNotNull,
           reason:
               '$channel is registered in FirestoreListenerSource but '
-              'maps to null in _channelToKind — payloads would be dropped.',
+              'maps to null in SyncOrchestratorImpl.channelToKind — '
+              'payloads would be dropped.',
         );
       }
     });

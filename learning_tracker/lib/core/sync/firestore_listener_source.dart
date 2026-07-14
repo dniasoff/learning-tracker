@@ -33,7 +33,7 @@ import 'package:learning_tracker/core/sync/listener_supervisor.dart';
 ///   trigger a recovery pull for that collection.
 ///
 /// Channels exposed (each must have a matching entry in
-/// `SyncOrchestratorImpl._channelToKind` and an [EntityMerger]):
+/// `SyncOrchestratorImpl.channelToKind` and an [EntityMerger]):
 ///   completions                       — profile subcollection
 ///   bookmarks                         — profile subcollection
 ///   settings                          — profile subcollection
