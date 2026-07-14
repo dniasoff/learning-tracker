@@ -4315,13 +4315,15 @@
     {
       "id": "AUD-t-scheduler-02",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Make scheduler STUDYDAY-* regression tests exercise the real screen/provider code they claim to guard",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "3b7430472727c0eaebe09c1435f73819710e9f8e"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Re-verified, no drift. Extracted guard/ordering to testable study_day_toggle_service.dart; made gate provider public. Rewired the 3 named tests to drive real code. Red-first: reintroducing each original bug fails the new tests; reverted clean."
     },
     {
       "id": "AUD-settings-07",
