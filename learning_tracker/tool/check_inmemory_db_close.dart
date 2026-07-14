@@ -166,6 +166,8 @@ const _baseline = <String, int>{
       1,
   'test/features/progress/presentation/providers/recent_activity_reactivity_test.dart':
       1,
+  'test/features/progress/presentation/providers/track_dual_progress_reactivity_test.dart':
+      1,
   'test/features/progress/presentation/screens/curriculum_progress_screen_test.dart':
       1,
   'test/features/progress/presentation/screens/lifetime_knowledge_screen_test.dart':
