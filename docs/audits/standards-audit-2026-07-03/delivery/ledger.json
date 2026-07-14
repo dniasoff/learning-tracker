@@ -2209,13 +2209,18 @@
   {
    "id": "AUD-t-settings-05",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Tighten st3_settings_switch_a11y_test.dart to assert the Hebrew-Terms Switch specifically, not any labelled Switch",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "89dbe8ae1b0f36c86da09bfef16052ba39b8375a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-settings-05 AC1 OK: removed Hebrew Semantics wrapper + added labelled decoy Switch -> NEW test FAILED at line 162 (label equals), reverted -> green",
+    "AUD-t-settings-05 scoping OK: find.byWidgetPredicate(PreferenceListTile&&title==hebrewTermsPreference)->descendant(Switch); matches settings_screen.dart:388-405"
+   ],
+   "notes": "Rewrote S1 to target the Switch under the specific PreferenceListTile titled l10n.hebrewTermsPreference. Self-check: with prod Semantics wrapper removed, OLD test still passed (masked by SacredTimeSettingsCard's unrelated Switch); NEW test FAILED as required; reverted prod, new test passed."
   },
   {
    "id": "AUD-t-settings-01",
