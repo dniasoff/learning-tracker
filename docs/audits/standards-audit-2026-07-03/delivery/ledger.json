@@ -10041,13 +10041,17 @@
   {
    "id": "AUD-t-cross-77",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Narrow the swallow-all catch in gamification_p1_test.dart's _loadMilestones test helper",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "33e311f4b05481372ee0fad62024049913baf53d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-77 AC1 OK: line 138 now `} on FormatException {`; bare catch(_) removed, other exceptions propagate."
+   ],
+   "notes": "Evidence confirmed current (unchanged since 4018a91c; only line drift). Narrowed catch(_) to `on FormatException` in _loadMilestones so only corrupted prefs strings are swallowed; other exceptions now propagate. Red-first test added: failed 'emitted []' pre-fix, passes post-fix."
   },
   {
    "id": "AUD-t-cross-95",
