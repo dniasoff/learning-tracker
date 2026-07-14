@@ -18,6 +18,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+import 'package:learning_tracker/core/sync/merge/local_track_id_resolver.dart';
 
 class GoalMerger implements EntityMerger {
   GoalMerger(UserDatabase db, {required MergeStore store, AppLogger? logger})
@@ -56,24 +57,25 @@ class GoalMerger implements EntityMerger {
           continue;
         }
 
-        // Bug 3: resolve the LOCAL track id from (profile, curriculum). The
-        // stored track_id is the remote id; under a tutored mirror the track was
-        // re-inserted with a different local autoincrement id, so binding the
-        // goal to the remote id leaves getGoalByTrack(localTrackId) empty and the
+        // Bug 3 / AUD-t-cross-43: resolve the LOCAL track id from (profile,
+        // curriculum) via the shared helper. The stored track_id is the
+        // remote id; under a tutored mirror the track was re-inserted with a
+        // different local autoincrement id, so binding the goal to the
+        // remote id leaves getGoalByTrack(localTrackId) empty and the
         // scheduler projection skips the track. No-op for own-data sync.
-        final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
-          profileId,
-          curriculumId,
+        //
+        // AUD-core-sync-07: when no local track is found, skip rather than
+        // insert — inserting against the row's remote id would violate the
+        // goals → curriculum_tracks FK (SqliteException 787) and abort
+        // merging the whole page. Skip; the next pull re-merges idempotently
+        // once the track exists (mirrors the guard already applied to
+        // bookmark/gamification_settings/study_day_config).
+        final trackId = await resolveLocalTrackId(
+          _db,
+          profileId: profileId,
+          curriculumId: curriculumId,
         );
-        final trackId = localTrack?.id ?? remoteTrackId;
-
-        // AUD-core-sync-07: guard against this goal referencing a
-        // curriculum_tracks row that hasn't synced locally yet — inserting
-        // would violate the goals → curriculum_tracks FK (SqliteException 787)
-        // and abort merging the whole page. Skip; the next pull re-merges
-        // idempotently once the track exists (mirrors the guard already
-        // applied to bookmark/gamification_settings/study_day_config).
-        if (localTrack == null && await _db.trackDao.getById(trackId) == null) {
+        if (trackId == null) {
           continue;
         }
 

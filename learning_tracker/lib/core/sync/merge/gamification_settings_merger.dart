@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
+import 'package:learning_tracker/core/sync/merge/local_track_id_resolver.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -124,24 +125,27 @@ class GamificationSettingsMerger implements EntityMerger {
             continue;
           }
 
-          // Bug 3: point_configs.trackId FKs into curriculum_tracks. The stored
-          // track_id is the REMOTE id; under a tutored mirror the track was
-          // re-inserted with a different local autoincrement id, so inserting the
-          // remote id throws a FK violation (this is the tutored_pull_error /
-          // tutored_listener_merge_error for gamification_settings). Resolve the
-          // LOCAL track by (profile, curriculum); skip the row when no local
-          // track exists yet (it re-merges on the next pull). No-op for own-data.
-          final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
-            profileId,
-            curriculumId,
+          // Bug 3 / AUD-t-cross-43: point_configs.trackId FKs into
+          // curriculum_tracks. The stored track_id is the REMOTE id; under a
+          // tutored mirror the track was re-inserted with a different local
+          // autoincrement id, so inserting the remote id throws a FK
+          // violation (this is the tutored_pull_error /
+          // tutored_listener_merge_error for gamification_settings). Resolve
+          // the LOCAL track by (profile, curriculum) via the shared helper;
+          // skip the row when no local track exists yet (it re-merges on the
+          // next pull). No-op for own-data.
+          final localTrackId = await resolveLocalTrackId(
+            _db,
+            profileId: profileId,
+            curriculumId: curriculumId,
           );
-          if (localTrack == null) continue;
+          if (localTrackId == null) continue;
 
           await _db.pointConfigDao.upsertConfig(
             PointConfigsCompanion.insert(
               profileId: profileId,
               curriculumId: curriculumId,
-              trackId: localTrack.id,
+              trackId: localTrackId,
               stageOrder: stageOrder,
               points: points,
             ),
