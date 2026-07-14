@@ -8763,13 +8763,18 @@
     {
       "id": "AUD-t-onboarding-05",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Extract repeated MaterialApp/ProviderScope pump boilerplate in bulk_mark_screen_test.dart and empty_login_ws2_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "20b6d7a522f2700e661fbc9362771be4683bff03"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-onboarding-05 AC1 OK: bulk_mark grep MaterialApp(=0 (was 5); 5 pumpApp() sites; single MaterialApp now in test/helpers/pump_app.dart helper",
+        "AUD-t-onboarding-05 AC2 OK: empty_login 2 profile-creation tests at L91,L127 now call _wrapWithProviders; MaterialApp(=1 in file (helper def only)"
+      ],
+      "notes": "Re-verified: 5 raw MaterialApp blocks still in bulk_mark_screen_test.dart, 2 stray sites in empty_login_ws2_test.dart. Migrated 5 sites onto existing pump_app.dart pumpApp(); repointed 2 sites onto _wrapWithProviders. AC1: grep MaterialApp( count 0 (was 5). AC2: both tests call _wrapWithProviders."
     },
     {
       "id": "AUD-t-onboarding-03",
