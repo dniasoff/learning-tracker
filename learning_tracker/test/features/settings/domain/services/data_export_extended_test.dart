@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 
+import '../../../../helpers/data_export_fixtures.dart';
 import '../../../../helpers/drift_memory.dart';
 
 void main() {
@@ -222,73 +223,24 @@ void main() {
   // ── importData — curriculumScopes ─────────────────────────────────────────
 
   group('importData — curriculumScopes', () {
-    String payload({required List<Map<String, dynamic>> scopes}) => jsonEncode({
-      'formatVersion': 'schemaV1',
-      'exportedAt': '2026-01-01T00:00:00.000Z',
-      'appVersion': '1.0.0',
-      'userProfiles': [
-        {
-          'id': 1,
-          'displayName': 'Test',
-          'tier': 'localBorn',
-          'createdAt': '2026-01-01T00:00:00.000Z',
-          'updatedAt': '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      'learnerProfiles': [
-        {
-          'id': 1,
-          'accountId': 1,
-          'displayName': 'Test',
-          'mode': 'adult',
-          'avatarIndex': 0,
-          'createdAt': '2026-01-01T00:00:00.000Z',
-          'updatedAt': '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      'curriculumTracks': [
-        {
-          'id': 1,
-          'profileId': 1,
-          'curriculumId': 'mishnayos',
-          'trackType': 'personal',
-          'isActive': true,
-          'activatedAt': '2026-01-01T00:00:00.000Z',
-          'deactivatedAt': null,
-          'paceResetDate': null,
-          'deletedAt': null,
-        },
-      ],
-      'curriculumScopes': scopes,
-      'profilePrograms': <dynamic>[],
-      'stageDefinitions': <dynamic>[],
-      'pointConfigs': <dynamic>[],
-      'studyDayConfigs': <dynamic>[],
-      'completions': <dynamic>[],
-      'completionEvents': <dynamic>[],
-      'dailyPlans': <dynamic>[],
-      'learningLedger': <dynamic>[],
-      'bookmarks': <dynamic>[],
-      'learningOrder': <dynamic>[],
-      'trackLearningOrder': <dynamic>[],
-      'goals': <dynamic>[],
-      'streaks': <dynamic>[],
-      'streakEvents': <dynamic>[],
-    });
+    String payload({required List<Map<String, dynamic>> scopes}) => jsonEncode(
+      exportPayloadMap(
+        userProfiles: [userProfileMap(displayName: 'Test')],
+        learnerProfiles: [learnerProfileMap(displayName: 'Test')],
+        curriculumTracks: [curriculumTrackMap(curriculumId: 'mishnayos')],
+        curriculumScopes: scopes,
+      ),
+    );
 
     test('imports curriculum scopes', () async {
       await service.importData(
         payload(
           scopes: [
-            {
-              'id': 1,
-              'profileId': 1,
-              'curriculumId': 'mishnayos',
-              'trackId': 1,
-              'scopeLevel': 2,
-              'scopeValue': 'Nashim',
-              'createdAt': '2026-01-01T00:00:00.000Z',
-            },
+            curriculumScopeMap(
+              curriculumId: 'mishnayos',
+              scopeLevel: 2,
+              scopeValue: 'Nashim',
+            ),
           ],
         ),
       );
@@ -302,50 +254,14 @@ void main() {
   // ── importData — studyDayConfigs ──────────────────────────────────────────
 
   group('importData — studyDayConfigs', () {
-    String payload() => jsonEncode({
-      'formatVersion': 'schemaV1',
-      'exportedAt': '2026-01-01T00:00:00.000Z',
-      'appVersion': '1.0.0',
-      'userProfiles': <dynamic>[],
-      'learnerProfiles': <dynamic>[],
-      'curriculumTracks': [
-        {
-          'id': 1,
-          'profileId': 1,
-          'curriculumId': 'mishnayos',
-          'trackType': 'personal',
-          'isActive': true,
-          'activatedAt': '2026-01-01T00:00:00.000Z',
-          'deactivatedAt': null,
-          'paceResetDate': null,
-          'deletedAt': null,
-        },
-      ],
-      'curriculumScopes': <dynamic>[],
-      'profilePrograms': <dynamic>[],
-      'stageDefinitions': <dynamic>[],
-      'pointConfigs': <dynamic>[],
-      'studyDayConfigs': [
-        {
-          'profileId': 1,
-          'curriculumId': 'mishnayos',
-          'trackId': 1,
-          'dayOfWeek': 7,
-          'dayType': 'study',
-          'updatedAt': '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      'completions': <dynamic>[],
-      'completionEvents': <dynamic>[],
-      'dailyPlans': <dynamic>[],
-      'learningLedger': <dynamic>[],
-      'bookmarks': <dynamic>[],
-      'learningOrder': <dynamic>[],
-      'trackLearningOrder': <dynamic>[],
-      'goals': <dynamic>[],
-      'streaks': <dynamic>[],
-      'streakEvents': <dynamic>[],
-    });
+    String payload() => jsonEncode(
+      exportPayloadMap(
+        curriculumTracks: [curriculumTrackMap(curriculumId: 'mishnayos')],
+        studyDayConfigs: [
+          studyDayConfigMap(curriculumId: 'mishnayos', dayOfWeek: 7),
+        ],
+      ),
+    );
 
     test('imports study day configs', () async {
       await service.importData(payload());
@@ -360,57 +276,13 @@ void main() {
   // ── importData — streakEvents ─────────────────────────────────────────────
 
   group('importData — streakEvents', () {
-    String payload() => jsonEncode({
-      'formatVersion': 'schemaV1',
-      'exportedAt': '2026-01-01T00:00:00.000Z',
-      'appVersion': '1.0.0',
-      'userProfiles': [
-        {
-          'id': 1,
-          'displayName': 'Test',
-          'tier': 'localBorn',
-          'createdAt': '2026-01-01T00:00:00.000Z',
-          'updatedAt': '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      'learnerProfiles': [
-        {
-          'id': 1,
-          'accountId': 1,
-          'displayName': 'Test',
-          'mode': 'adult',
-          'avatarIndex': 0,
-          'createdAt': '2026-01-01T00:00:00.000Z',
-          'updatedAt': '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      'curriculumTracks': <dynamic>[],
-      'curriculumScopes': <dynamic>[],
-      'profilePrograms': <dynamic>[],
-      'stageDefinitions': <dynamic>[],
-      'pointConfigs': <dynamic>[],
-      'studyDayConfigs': <dynamic>[],
-      'completions': <dynamic>[],
-      'completionEvents': <dynamic>[],
-      'dailyPlans': <dynamic>[],
-      'learningLedger': <dynamic>[],
-      'bookmarks': <dynamic>[],
-      'learningOrder': <dynamic>[],
-      'trackLearningOrder': <dynamic>[],
-      'goals': <dynamic>[],
-      'streaks': <dynamic>[],
-      'streakEvents': [
-        {
-          'id': 1,
-          'profileId': 1,
-          'eventType': 'completion',
-          'dayUtc': '2026-01-05T00:00:00.000Z',
-          'eventTimestamp': '2026-01-05T10:00:00.000Z',
-          'clientDeviceId': null,
-          'createdAt': '2026-01-05T10:00:00.000Z',
-        },
-      ],
-    });
+    String payload() => jsonEncode(
+      exportPayloadMap(
+        userProfiles: [userProfileMap(displayName: 'Test')],
+        learnerProfiles: [learnerProfileMap(displayName: 'Test')],
+        streakEvents: [streakEventMap()],
+      ),
+    );
 
     test('imports streak events', () async {
       await service.importData(payload());
@@ -424,65 +296,15 @@ void main() {
   // ── importData — learningLedger ───────────────────────────────────────────
 
   group('importData — learningLedger', () {
-    String payload() => jsonEncode({
-      'formatVersion': 'schemaV1',
-      'exportedAt': '2026-01-01T00:00:00.000Z',
-      'appVersion': '1.0.0',
-      'userProfiles': [
-        {
-          'id': 1,
-          'displayName': 'Test',
-          'tier': 'localBorn',
-          'createdAt': '2026-01-01T00:00:00.000Z',
-          'updatedAt': '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      'learnerProfiles': [
-        {
-          'id': 1,
-          'accountId': 1,
-          'displayName': 'Test',
-          'mode': 'adult',
-          'avatarIndex': 0,
-          'createdAt': '2026-01-01T00:00:00.000Z',
-          'updatedAt': '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      'curriculumTracks': <dynamic>[],
-      'curriculumScopes': <dynamic>[],
-      'profilePrograms': <dynamic>[],
-      'stageDefinitions': <dynamic>[],
-      'pointConfigs': <dynamic>[],
-      'studyDayConfigs': <dynamic>[],
-      'completions': <dynamic>[],
-      'completionEvents': <dynamic>[],
-      'dailyPlans': <dynamic>[],
-      'learningLedger': [
-        {
-          'id': 1,
-          'profileId': 1,
-          'ulid': '01HZ000000000000000000001',
-          'curriculumId': 'mishnayos',
-          'entryScope': 'masechta',
-          'unitIdentifier': 'Berakhot',
-          'unitDisplayNameHe': 'ברכות',
-          'unitDisplayNameEn': 'Berakhot',
-          'trackType': 'personal',
-          'trackId': null,
-          'completedAt': '2026-01-01T00:00:00.000Z',
-          'completionNumber': 1,
-          'markedBy': 0,
-          'isManual': false,
-          'createdAt': '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      'bookmarks': <dynamic>[],
-      'learningOrder': <dynamic>[],
-      'trackLearningOrder': <dynamic>[],
-      'goals': <dynamic>[],
-      'streaks': <dynamic>[],
-      'streakEvents': <dynamic>[],
-    });
+    String payload() => jsonEncode(
+      exportPayloadMap(
+        userProfiles: [userProfileMap(displayName: 'Test')],
+        learnerProfiles: [learnerProfileMap(displayName: 'Test')],
+        learningLedger: [
+          learningLedgerMap(curriculumId: 'mishnayos', trackId: null),
+        ],
+      ),
+    );
 
     test('imports learning ledger entries', () async {
       await service.importData(payload());
@@ -496,60 +318,14 @@ void main() {
   // ── importData — trackLearningOrder ───────────────────────────────────────
 
   group('importData — trackLearningOrder', () {
-    String payload() => jsonEncode({
-      'formatVersion': 'schemaV1',
-      'exportedAt': '2026-01-01T00:00:00.000Z',
-      'appVersion': '1.0.0',
-      'userProfiles': [
-        {
-          'id': 1,
-          'displayName': 'Test User',
-          'tier': 'localBorn',
-          'createdAt': '2026-01-01T00:00:00.000Z',
-          'updatedAt': '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      'learnerProfiles': [
-        {
-          'id': 1,
-          'accountId': 1,
-          'displayName': 'Test Profile',
-          'mode': 'adult',
-          'createdAt': '2026-01-01T00:00:00.000Z',
-          'updatedAt': '2026-01-01T00:00:00.000Z',
-        },
-      ],
-      'curriculumTracks': [
-        {
-          'id': 1,
-          'profileId': 1,
-          'curriculumId': 'mishnayos',
-          'trackType': 'personal',
-          'isActive': true,
-          'activatedAt': '2026-01-01T00:00:00.000Z',
-          'deactivatedAt': null,
-          'paceResetDate': null,
-          'deletedAt': null,
-        },
-      ],
-      'curriculumScopes': <dynamic>[],
-      'profilePrograms': <dynamic>[],
-      'stageDefinitions': <dynamic>[],
-      'pointConfigs': <dynamic>[],
-      'studyDayConfigs': <dynamic>[],
-      'completions': <dynamic>[],
-      'completionEvents': <dynamic>[],
-      'dailyPlans': <dynamic>[],
-      'learningLedger': <dynamic>[],
-      'bookmarks': <dynamic>[],
-      'learningOrder': <dynamic>[],
-      'trackLearningOrder': [
-        {'id': 1, 'trackId': 1, 'sefariaRef': 'Berakhot', 'sortOrder': 0},
-      ],
-      'goals': <dynamic>[],
-      'streaks': <dynamic>[],
-      'streakEvents': <dynamic>[],
-    });
+    String payload() => jsonEncode(
+      exportPayloadMap(
+        userProfiles: [userProfileMap()],
+        learnerProfiles: [learnerProfileMap(displayName: 'Test Profile')],
+        curriculumTracks: [curriculumTrackMap(curriculumId: 'mishnayos')],
+        trackLearningOrder: [trackLearningOrderMap()],
+      ),
+    );
 
     test('imports track learning order entries', () async {
       await service.importData(payload());
