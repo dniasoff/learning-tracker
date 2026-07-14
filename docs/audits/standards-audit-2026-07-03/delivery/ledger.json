@@ -9018,13 +9018,17 @@
   {
    "id": "AUD-t-cross-91",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace the two raw DateTime.now() calls in tutored_pull_isolation_test.dart with DateTimeFactory.nowUtc()",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "eb1f9ed8b4ed67dd5f2ab4c58a5bd45a650ef39d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-91 AC1 OK: grep -n 'DateTime.now()' on tutored_pull_isolation_test.dart returns no matches (exit 1); both sites now DateTimeFactory.nowUtc() at lines 688,727"
+   ],
+   "notes": "Evidence verified (line nums drifted 662/701->688/727, content matched). Replaced both raw DateTime.now() with DateTimeFactory.nowUtc() in tutored_pull_isolation_test.dart, matching file's existing convention. AC grep now returns zero matches. Hygiene finding - AC grep is the checker."
   },
   {
    "id": "AUD-t-cross-98",
