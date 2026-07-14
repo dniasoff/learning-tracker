@@ -5,4 +5,4 @@
 # test/helpers/pump_app.dart's pumpApp() helper (AUD-t-profiles-02).
 # Lower this only by migrating more call sites onto pumpApp — do NOT
 # raise it to paper over a new hand-rolled MaterialApp delegate block.
-205
+204

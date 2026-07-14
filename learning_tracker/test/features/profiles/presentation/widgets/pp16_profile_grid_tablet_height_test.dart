@@ -28,14 +28,13 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_card.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_grid.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 List<ProfileModel> _profiles(int count) => List.generate(
   count,
@@ -51,23 +50,14 @@ List<ProfileModel> _profiles(int count) => List.generate(
 );
 
 Widget _buildGrid({required List<ProfileModel> profiles}) {
-  return ProviderScope(
-    child: MaterialApp(
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: ProfileGrid(
-          profiles: profiles,
-          isSelectingProfile: false,
-          onProfileTap: (_) {},
-          onProfileLongPress: (_, _) {},
-          onAddProfile: (_) {},
-        ),
+  return pumpApp(
+    child: Scaffold(
+      body: ProfileGrid(
+        profiles: profiles,
+        isSelectingProfile: false,
+        onProfileTap: (_) {},
+        onProfileLongPress: (_, _) {},
+        onAddProfile: (_) {},
       ),
     ),
   );
