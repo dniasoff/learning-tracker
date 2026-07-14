@@ -790,13 +790,21 @@
   {
    "id": "AUD-t-progress-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Update recent_activity_overflow_test.dart's hand-copied _AllTimeSummaryRow to match the shipped _AllTimeStatPhrase tile and exercise Hebrew locale",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "0704168980d49628f0ce7f62634523f2ee32d5a9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-progress-01 AC1 OK: test _AllTimeStatPhrase byte-identical to prod recent_activity_screen.dart:531-541; Hebrew case drives long ICU-plural phrase through it",
+    "AUD-t-progress-01 AC2 OK: two new testWidgets use locale Locale('he') with real Hebrew RTL fixtures (active-days phrase, term-done, yerushalmi label)",
+    "AUD-t-progress-01 AC3 OK: 'KEEP THESE COPIES IN SYNC WITH PRODUCTION' header + per-class doc comments name prod sources (recent_activity_screen, siyumim_timeline_view)",
+    "AUD-t-progress-01 fixtures OK: match app_he.arb (activeDaysCount other, allTimeTermDoneHebrew) and curriculum_id.dart:50-51 yerushalmi displayNameHe",
+    "AUD-t-progress-01 red-first OK: dropping Expanded wrap fails ONLY Hebrew test (RenderFlex 3.1px at 280x653@2.0x), English stays green - matches builder claim"
+   ],
+   "notes": "Added _AllTimeStatPhrase copy; wired into row's first slot; added 2 Locale('he') tests w/ real long Hebrew fixtures; sync comments (AC3). Red-first: dropped Expanded wrap -> only Hebrew test failed (overflow 3.1px); English stayed green. Restored & reran 5/5 green. ACs checked."
   },
   {
    "id": "AUD-settings-02",
