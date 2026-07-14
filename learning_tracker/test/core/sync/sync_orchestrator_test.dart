@@ -32,6 +32,7 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -626,10 +627,23 @@ void main() {
   // ── Resume-throttle ─────────────────────────────────────────────────────────
 
   group('pullOnLaunch — resume throttle', () {
+    // AUD-t-cross-99 (TQ-6): pin the clock the orchestrator itself reads
+    // (DateTimeFactory.nowUtc(), backed by useLocalDayClock) to an arbitrary
+    // fixed instant instead of deriving seeded timestamps from the real
+    // system clock. Matches the DateTimeFactory convention used elsewhere in
+    // the suite (see e.g. scheduler_providers_branches_test.dart).
+    final fixedNow = DateTime.utc(2026, 3, 15, 9, 30);
+
+    setUp(() {
+      useLocalDayClock(FakeLocalDayClock(fixedNow));
+    });
+
+    tearDown(resetLocalDayClock);
+
     test('skips pull when last sync was within 5 minutes', () async {
-      // Seed SharedPreferences with a last-sync timestamp just 30 seconds ago.
-      final recentMs =
-          DateTime.now().toUtc().millisecondsSinceEpoch - 30 * 1000;
+      // Seed SharedPreferences with a last-sync timestamp just 30 seconds
+      // before the pinned clock.
+      final recentMs = fixedNow.millisecondsSinceEpoch - 30 * 1000;
       SharedPreferences.setMockInitialValues({
         'sync_orchestrator_last_synced_at': recentMs,
       });
@@ -644,9 +658,9 @@ void main() {
     });
 
     test('runs pull when last sync was more than 5 minutes ago', () async {
-      // Seed SharedPreferences with a timestamp 10 minutes ago.
-      final oldMs =
-          DateTime.now().toUtc().millisecondsSinceEpoch - 10 * 60 * 1000;
+      // Seed SharedPreferences with a timestamp 10 minutes before the
+      // pinned clock.
+      final oldMs = fixedNow.millisecondsSinceEpoch - 10 * 60 * 1000;
       SharedPreferences.setMockInitialValues({
         'sync_orchestrator_last_synced_at': oldMs,
       });
