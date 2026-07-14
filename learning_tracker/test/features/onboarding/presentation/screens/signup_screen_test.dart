@@ -68,6 +68,7 @@ void main() {
     Locale locale = const Locale('en'),
   }) {
     final testRegistry = DeviceRegistryDatabase(NativeDatabase.memory());
+    addTearDown(() async => testRegistry.close());
     return pumpApp(
       locale: locale,
       overrides: [
