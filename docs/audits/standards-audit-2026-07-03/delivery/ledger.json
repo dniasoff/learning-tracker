@@ -7703,13 +7703,18 @@
   {
    "id": "AUD-t-cross-74",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Make E2E-1108 in infra_p1_test.dart exercise the real ReminderEnabled notifier instead of round-tripping SharedPreferences",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "b8f2cf44d9bfdc9908939d63f894a229652013a0"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-74 AC1 OK: reviewer broke build() to single key; E2E-1108 failed RED at infra_p1_test.dart:660; reverted clean",
+    "AUD-t-cross-74 AC2 OK: reminderSwitch() reads widget<Switch> under reminder_toggle for both A(:624 isTrue) and B(:660 isFalse)"
+   ],
+   "notes": "Evidence matched tree. Rewrote E2E-1108 to read Switch via widget tree for A, swap live activeProfileIdProvider A->B via notifier state, assert Switch shows B's value. Red-first: broke build() to ignore profile id, test failed as expected; reverted, green again."
   },
   {
    "id": "AUD-t-cross-52",
