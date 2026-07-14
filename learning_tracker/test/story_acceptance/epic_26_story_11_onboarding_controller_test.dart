@@ -12,6 +12,7 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -308,23 +309,46 @@ void main() {
       test(
         'onboarding SharedPreferences keys do not include hebrew_calendar or transliteration',
         () {
-          // The keys below were stored during onboarding resume in the old
-          // god-screen. They are deleted by this story.
+          // Structural check against the actual source files (AUD-t-story-
+          // acceptance-13): the previous version of this test stringified a
+          // freshly-created OnboardingControllerState and asserted the two
+          // deleted key literals were absent from it — a proxy that can
+          // never fail, since OnboardingControllerState never had a
+          // toString() representation containing SharedPreferences key
+          // names in the first place. This greps the files that would
+          // actually reintroduce the literals: onboarding_screen.dart (the
+          // former god-screen) and its OnboardingStep implementations. The
+          // keys still live inside OnboardingResumeStore — the extracted
+          // persistence class the god-screen delegates to — so this guards
+          // against a regression that re-inlines them directly into the
+          // screen or a step, bypassing that extraction.
           const deletedKeys = [
             'onboarding_use_hebrew_calendar',
             'onboarding_transliteration_variant',
           ];
 
-          // The new controller has no concept of per-key pref persistence
-          // during onboarding; the only keys it could write are step-level
-          // metadata. None of the deleted keys should appear in the current
-          // OnboardingController implementation.
-          for (final key in deletedKeys) {
-            // Keys should not appear in OnboardingControllerState or its API.
-            expect(
-              container.read(onboardingControllerProvider).toString(),
-              isNot(contains(key)),
-            );
+          final sourceFiles = [
+            'lib/features/onboarding/presentation/screens/onboarding_screen.dart',
+            ...Directory('lib/features/onboarding/presentation/steps')
+                .listSync()
+                .whereType<File>()
+                .where((f) => f.path.endsWith('.dart'))
+                .map((f) => f.path),
+          ];
+
+          for (final path in sourceFiles) {
+            final source = File(path).readAsStringSync();
+            for (final key in deletedKeys) {
+              expect(
+                source,
+                isNot(contains(key)),
+                reason:
+                    '$path must not hand-inline the SharedPreferences key '
+                    "'$key' — that key belongs to OnboardingResumeStore "
+                    '(the extraction this story performed), not the screen '
+                    'or a step',
+              );
+            }
           }
         },
       );
