@@ -6,6 +6,7 @@
 /// - In-memory database helper works
 library;
 
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
@@ -16,6 +17,14 @@ import 'mocks/mock_repositories.dart';
 import 'mocks/mock_services.dart';
 
 void main() {
+  setUpAll(() {
+    // This suite intentionally creates multiple in-memory UserDatabase
+    // instances (see 'database is isolated between tests' below) — matches
+    // the established repo convention (e.g. app_shell_test.dart,
+    // per_row_isolation_test.dart) for suites that do so on purpose.
+    driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+  });
+
   group('Test Infrastructure', () {
     group('Mocks', () {
       test('MockAuthRepository can be instantiated', () {
@@ -133,8 +142,16 @@ void main() {
         final db1 = createTestDatabase();
         final db2 = createTestDatabase();
 
-        // Different database instances
-        expect(identical(db1, db2), false);
+        // AUD-t-cross-47: identical(db1, db2) was always false for any two
+        // constructor calls, so it proved nothing about actual data
+        // isolation. Assert on real behavior instead: data written to db1
+        // must not be visible from db2.
+        await seedProfile(db1);
+
+        final db1Accounts = await db1.select(db1.accounts).get();
+        final db2Accounts = await db2.select(db2.accounts).get();
+        expect(db1Accounts, isNotEmpty);
+        expect(db2Accounts, isEmpty);
 
         await db1.close();
         await db2.close();
