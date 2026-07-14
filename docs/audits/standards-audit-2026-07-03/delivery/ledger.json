@@ -2039,13 +2039,19 @@
     {
       "id": "AUD-t-story-acceptance-04",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Confirm TrackManagementBody is wired into a real screen \u2014 it currently has zero callers in lib/",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "29baaeff4c86aa751dbeea7f67c6c5e9ddff3711"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-04 AC1 OK: grep TrackManagementBody( hits hub screen:24 inside build() of @RoutePage() TrackManagementHubScreen",
+        "AUD-t-story-acceptance-04 AC2 OK: new 26_22 group source-greps hubSource.contains('TrackManagementBody(')==true, 26.20-AC4 shape; passes",
+        "AUD-t-story-acceptance-04 AC3 OK: 'bool trackDeletionAllowed(' declared only at body.dart:30; grep -c in hub screen = 0 (single source)"
+      ],
+      "notes": "All 3 ACs green: (1) grep confirms hub screen's build() instantiates TrackManagementBody(. (2) new story-acceptance test source-greps hub for it, red-first proven. (3) trackDeletionAllowed exists only in track_management_body.dart, zero occurrences in hub screen."
     },
     {
       "id": "AUD-core-labels-03",
