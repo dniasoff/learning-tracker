@@ -40,6 +40,7 @@ import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
 import '../helpers/firestore_fake.dart';
+import '../helpers/no_op_firestore_gateway.dart';
 
 void main() {
   // ── Group A — Firestore rules ───────────────────────────────────────────
@@ -599,7 +600,15 @@ String _extractRuleBlock(String rules, String matchPattern) {
 ///
 /// Push attempts count against [pushAttempts]; index-based failure
 /// injection through [failOn] lets a single test verify the retry path.
-class _ToggleableFakeGateway implements FirestoreGateway {
+///
+/// Extends the shared [NoOpFirestoreGateway] test double (AUD-t-cross-19)
+/// instead of independently re-declaring the whole gateway interface
+/// (AUD-t-story-acceptance-07) — every method this fake cares about is
+/// still overridden below with its real toggleable/stateful behaviour, but
+/// the class no longer needs editing every time the interface grows a
+/// method; an un-overridden addition falls back to [NoOpFirestoreGateway]'s
+/// `UnimplementedError` default instead of a compile error.
+class _ToggleableFakeGateway extends NoOpFirestoreGateway {
   _ToggleableFakeGateway({
     required FakeFirebaseFirestore firestore,
     required this.uid,
@@ -869,12 +878,22 @@ class _ToggleableFakeGateway implements FirestoreGateway {
     required Map<String, dynamic> data,
   }) async {}
 
+  // NOTE: `limit` is `int?` (not `int`) on these four no-op listeners even
+  // though [FirestoreGateway] declares it as plain `int` — extending
+  // [NoOpFirestoreGateway] (a `Fake`-backed class, AUD-t-story-acceptance-07)
+  // means the compiler synthesizes a `noSuchMethod`-forwarding supertype
+  // signature for abstract members with no default value, and that
+  // synthesized signature widens undefaulted optional params to nullable.
+  // A concrete override must be contravariant with that synthesized
+  // supertype, not just with the original interface declaration — these
+  // stubs ignore `limit` entirely, so widening the param type is behavior-
+  // neutral.
   @override
   Stream<ListenerSnapshot> listenToCollection({
     required int profileId,
     required String collection,
     required String orderField,
-    int limit = 500,
+    int? limit = 500,
   }) => const Stream.empty();
 
   @override
@@ -885,11 +904,11 @@ class _ToggleableFakeGateway implements FirestoreGateway {
   }) => const Stream.empty();
 
   @override
-  Stream<ListenerSnapshot> listenToTutorGrants({int limit = 500}) =>
+  Stream<ListenerSnapshot> listenToTutorGrants({int? limit = 500}) =>
       const Stream.empty();
 
   @override
-  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
+  Stream<ListenerSnapshot> listenToLearnerProfiles({int? limit = 500}) =>
       const Stream.empty();
 
   @override
@@ -898,7 +917,7 @@ class _ToggleableFakeGateway implements FirestoreGateway {
     required String remoteProfileId,
     required String collection,
     required String orderField,
-    int limit = 500,
+    int? limit = 500,
   }) => const Stream.empty();
 
   @override
