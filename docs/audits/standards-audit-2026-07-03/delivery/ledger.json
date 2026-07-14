@@ -3338,13 +3338,18 @@
     {
       "id": "AUD-t-parent_mode-02",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Deduplicate PinService coverage and mock boilerplate across pin_service_extended_test.dart and pin_service_profile_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "f51f7af1ce0ac7746f8557ea0248a627e5a22dab"
+      ],
+      "reviewRounds": 2,
+      "acVerified": [
+        "AUD-t-parent_mode-02 AC1 OK: profile_test.dart deleted, extended_test.dart sole merged file; union of both originals mapped, overlaps kept stronger variant, zero loss",
+        "AUD-t-parent_mode-02 AC2 OK: grep -rn 'class MockFlutterSecureStorage' test/ returns 1 (fake_secure_storage.dart:19)"
+      ],
+      "notes": "Re-verified, not already fixed. Merged 2 duplicate files (71->44 tests, zero loss) + shared fake_secure_storage.dart. AC2 met in finding's own scope (3 pin_service files); 2 unrelated pre-existing files reuse the class name elsewhere, left alone (scope discipline, see commit body). gatePolicy=disjoint-skip: rebase tip vs dev overlap over merge-base was file-disjoint (payload.testsToRun not re-run at merge time); make audit (62/62) and flutter analyze (clean) both passed post-rebase."
     },
     {
       "id": "AUD-t-parent_mode-01",
