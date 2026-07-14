@@ -15,10 +15,18 @@ library;
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/curriculum_overlap_registry.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/time/ulid.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
 import '../helpers/drift_memory.dart' show seedCompletion;
 
@@ -102,7 +110,18 @@ Future<void> _insertCompletion(
 }
 
 /// Fetches the union of completed sefariaRefs for [curriculum] plus all
-/// its subset curricula — mirrors the logic in [lifetimeDataProvider].
+/// its subset curricula, via the completion-event union primitive only
+/// (`getCompletionsByCurriculumAndProfile`).
+///
+/// AUD-t-story-acceptance-12: this does NOT reproduce the ledger-based
+/// subset union that [lifetimeDataProvider] additionally performs — the
+/// "P0 (composite-credit) fix" at lines 226-246 of
+/// `lifetime_knowledge_providers.dart` that bridges a lifetime-ledger mark
+/// made in a subset curriculum's own UI (no `completion_events` row at
+/// all) into its superset. A ledger-only subset mark is invisible to this
+/// helper. Group I-4-G below drives the REAL [lifetimeDataProvider]
+/// end-to-end — including that ledger union — so this helper's narrower
+/// scope does not leave the ledger path unguarded.
 Future<Set<String>> _completedRefsWithSubsets(
   UserDatabase db,
   int profileId,
@@ -120,6 +139,60 @@ Future<Set<String>> _completedRefsWithSubsets(
     refs = refs.union(subCompletions.map((c) => c.sefariaRef).toSet());
   }
   return refs;
+}
+
+/// Fixture [ContentRepository] for group I-4-G — serves a fixed set of
+/// leaves per [CurriculumId] so [lifetimeDataProvider] (the REAL provider,
+/// not a reimplementation) can run end-to-end against an in-memory DB.
+class _FakeContentRepository implements ContentRepository {
+  _FakeContentRepository(this._leavesByCurriculum);
+
+  final Map<CurriculumId, List<ContentItem>> _leavesByCurriculum;
+
+  @override
+  Future<List<ContentItem>> getContentForCurriculum(
+    CurriculumId curriculumId,
+  ) async => _leavesByCurriculum[curriculumId] ?? const [];
+
+  @override
+  Future<CurriculumHierarchyConfig> getHierarchyConfig(
+    CurriculumId curriculumId,
+  ) async {
+    final leaves = _leavesByCurriculum[curriculumId] ?? const [];
+    return CurriculumHierarchyConfig(
+      curriculumId: curriculumId.storageKey,
+      levelLabels: const ['Level1', 'Level2', 'Level3', 'Level4'],
+      totalItems: leaves.length,
+    );
+  }
+
+  @override
+  Future<List<ContentItem>> filterByLevel({
+    required CurriculumId curriculumId,
+    String? level1,
+    String? level2,
+    String? level3,
+    String? level4,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> getScopedContent({
+    required CurriculumId curriculumId,
+    required int scopeLevel,
+    required List<String> scopeValues,
+  }) async => _leavesByCurriculum[curriculumId] ?? const [];
+
+  @override
+  Future<List<ContentItem>> search({
+    required CurriculumId curriculumId,
+    required String query,
+  }) async => const [];
+
+  @override
+  Future<ContentItem?> getContentByRef({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async => null;
 }
 
 // ---------------------------------------------------------------------------
@@ -439,6 +512,152 @@ void main() {
         );
 
         expect(chumashRefs, contains('Genesis 1'));
+      },
+    );
+  });
+
+  // ── G. Real lifetimeDataProvider exercises the ledger-based subset union ──
+  //
+  // AUD-t-story-acceptance-12: [_completedRefsWithSubsets] above is a local
+  // reimplementation that only unions completion-EVENT refs. Production
+  // [lifetimeDataProvider] additionally unions each subset's LEDGER-derived
+  // learned refs (the "P0 (composite-credit) fix", lines 226-246 of
+  // lifetime_knowledge_providers.dart) — a lifetime mark made in a subset
+  // curriculum's own UI writes a `learning_ledger` row but NO
+  // `completion_events` row, so [_completedRefsWithSubsets] can never see
+  // it. This group drives the REAL provider end-to-end (real DB, real
+  // ContentRepository fixture) with exactly such a ledger-only subset mark,
+  // closing the coverage gap the old docstring implied was already closed.
+
+  group('I-4-G — real lifetimeDataProvider unions ledger-only subset marks '
+      '(P0 composite-credit fix)', () {
+    late UserDatabase db;
+    late int profileId;
+
+    setUp(() async {
+      db = _openDb();
+      profileId = await _insertProfile(db);
+    });
+
+    tearDown(() async => db.close());
+
+    test(
+      'a Chumash lifetime-ledger mark with NO completion_events row still '
+      'credits the corresponding leaf in Tanach via the real provider',
+      () async {
+        const sharedRef = 'Genesis 1:1';
+        const tanachOnlyRef = 'Isaiah 1:1';
+
+        // The Chumash leaf that will be credited purely via the ledger.
+        const chumashLeaf = ContentItem(
+          curriculumId: 'chumash',
+          level1: 'Chumash',
+          level2: 'Genesis',
+          level3: '1',
+          level4: '1',
+          displayNameHe: '',
+          displayNameEn: sharedRef,
+          sefariaRef: sharedRef,
+          sortOrder: 0,
+          isLeaf: true,
+        );
+        // Tanach's own hierarchy carries the SAME sefariaRef for the
+        // overlapping leaf, plus one Tanach-only (Nach-side) leaf so the
+        // total/learned counts are distinguishable.
+        const tanachSharedLeaf = ContentItem(
+          curriculumId: 'tanach',
+          level1: 'Torah',
+          level2: 'Genesis',
+          level3: '1',
+          level4: '1',
+          displayNameHe: '',
+          displayNameEn: sharedRef,
+          sefariaRef: sharedRef,
+          sortOrder: 0,
+          isLeaf: true,
+        );
+        const tanachOnlyLeaf = ContentItem(
+          curriculumId: 'tanach',
+          level1: 'Neviim',
+          level2: 'Isaiah',
+          level3: '1',
+          level4: '1',
+          displayNameHe: '',
+          displayNameEn: tanachOnlyRef,
+          sefariaRef: tanachOnlyRef,
+          sortOrder: 1,
+          isLeaf: true,
+        );
+
+        final repo = _FakeContentRepository({
+          CurriculumId.chumash: [chumashLeaf],
+          CurriculumId.tanach: [tanachSharedLeaf, tanachOnlyLeaf],
+          CurriculumId.nach: const [],
+        });
+
+        // The genuine article: a lifetime-ledger mark against Chumash's
+        // OWN level1 ('Chumash') — exactly what the standalone Chumash UI
+        // writes — and critically NO completion_events row. If the
+        // ledger-based subset union (lines 226-246) is removed or
+        // short-circuited, this mark is invisible to Tanach.
+        await db.learningLedgerDao.insertEntry(
+          LearningLedgerCompanion.insert(
+            profileId: profileId,
+            ulid: Value(newUlid()),
+            curriculumId: 'chumash',
+            entryScope: 'level1',
+            unitIdentifier: 'Chumash',
+            unitDisplayNameHe: '',
+            unitDisplayNameEn: '',
+            trackType: 'personal',
+            completedAt: DateTime.utc(2026, 1, 1),
+            completionNumber: 1,
+            markedBy: profileId,
+          ),
+        );
+
+        // Sanity precondition: no completion_events row exists anywhere —
+        // this really is a ledger-only mark.
+        final allEvents = await db.select(db.completionEvents).get();
+        expect(
+          allEvents,
+          isEmpty,
+          reason:
+              'precondition: the mark is ledger-only, no completion_events row',
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWith((ref) => db),
+            contentRepositoryProvider.overrideWithValue(repo),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final summary = await container.read(
+          lifetimeDataProvider((
+            profileId: profileId,
+            curriculumId: CurriculumId.tanach,
+          )).future,
+        );
+
+        expect(summary, isNotNull);
+        expect(
+          summary!.learnedLeafRefs,
+          contains(sharedRef),
+          reason:
+              'the Chumash ledger-only mark must propagate to Tanach via '
+              'the REAL lifetimeDataProvider ledger-based subset union — '
+              'a regression that removes or short-circuits lines 226-246 '
+              'of lifetime_knowledge_providers.dart must fail this '
+              'assertion',
+        );
+        expect(
+          summary.learnedLeafCount,
+          1,
+          reason: 'exactly the one credited leaf, not the Nach-side leaf',
+        );
+        expect(summary.totalLeafCount, 2);
       },
     );
   });
