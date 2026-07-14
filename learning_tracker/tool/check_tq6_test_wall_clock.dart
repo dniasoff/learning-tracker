@@ -79,7 +79,6 @@ const _baseline = <String>{
   'test/features/learning/data/repositories/completion_repository_curriculum_dedup_test.dart',
   'test/features/learning/data/repositories/completion_repository_impl_test.dart',
   'test/features/learning/data/repositories/learning_ledger_repository_impl_test.dart',
-  'test/features/learning/domain/services/completion_detection_service_test.dart',
   'test/features/learning/domain/use_cases/bulk_mark_completion_use_case_test.dart',
   'test/features/notifications/domain/services/notification_gateway_test.dart',
   'test/features/notifications/domain/services/streak_alert_service_test.dart',

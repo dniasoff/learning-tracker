@@ -41,7 +41,7 @@ void main() {
     mockSyncEngine = MockSyncEngine();
     mockContentRepository = MockContentRepository();
 
-    final now = DateTime.now();
+    final now = DateTime.utc(2026, 5, 1);
     // Seed account row first — learner_profiles.account_id is a FK.
     await database
         .into(database.accounts)
@@ -518,7 +518,7 @@ void main() {
       const curriculumId = 'mishnayos';
       const ref1 = 'Mishnah Berachot 1:1';
       const ref2 = 'Mishnah Berachot 1:2';
-      final now = DateTime.now();
+      final now = DateTime.utc(2026, 5, 1);
 
       // A second profile, delegated-to (e.g. parent bulk-marking prior
       // learning for a child while the session's active profile is the
