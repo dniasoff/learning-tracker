@@ -17,11 +17,21 @@ void main() {
   late StreakStateService provider;
   const profileId = 1;
 
-  // Helper to insert a streak event.
-  Future<void> insertEvent(UserDatabase db, DateTime timestamp) async {
+  // Captured before insertEvent() below so its `profileId` parameter can
+  // default to the outer constant without being shadowed by its own name.
+  const defaultProfileId = profileId;
+
+  // Helper to insert a streak event. `profileId` defaults to the outer
+  // constant so most call sites don't need to pass it; callers that need a
+  // different profile (e.g. cross-profile isolation tests) can override it.
+  Future<void> insertEvent(
+    UserDatabase db,
+    DateTime timestamp, {
+    int? profileId,
+  }) async {
     await db.streakEventDao.appendEvent(
       StreakEventsCompanion.insert(
-        profileId: profileId,
+        profileId: profileId ?? defaultProfileId,
         eventType: 'completion',
         dayUtc: DateTime.utc(timestamp.year, timestamp.month, timestamp.day),
         eventTimestamp: timestamp,
@@ -110,15 +120,7 @@ void main() {
 
     test('does not count events from another profile', () async {
       // Insert event for profile 2.
-      await db.streakEventDao.appendEvent(
-        StreakEventsCompanion.insert(
-          profileId: 2,
-          eventType: 'completion',
-          dayUtc: DateTime.utc(2026, 5, 14),
-          eventTimestamp: DateTime.utc(2026, 5, 14),
-          clientDeviceId: const Value(null),
-        ),
-      );
+      await insertEvent(db, DateTime.utc(2026, 5, 14), profileId: 2);
 
       final state = await provider.read(profileId: profileId);
       expect(state.currentStreak, 0);
