@@ -1524,13 +1524,13 @@
   {
    "id": "AUD-t-cross-38",
    "wave": 4,
-   "status": "todo",
+   "status": "skipped-refuted",
    "severity": "P2",
    "title": "Replace vacuous isNotNull/isNotEmpty assertions in user_database_managers_refs_test.dart with relationship-verifying checks",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "skipped-refuted (merge-lane w4r1c11, 2026-07-14). Target file deleted whole (676 lines) by sibling commit 49cc7d73 (test(database): AUD-t-cross-16 - delete tautological db.managers.* suite, exclude generated code from coverage), removing the entire db.managers.* test suite (learning_tracker/test/core/database/user_database_managers_refs_test.dart) -- confirmed grep -rl '.managers.' lib/ returns 0 files, no production caller. Independently re-verified: the cited vacuous assertions at lines 211 and 253 of the pre-delete blob (49cc7d73~1) match the finding's evidence verbatim (`expect(manager, isNotNull);` inside `curriculumScopesRefs getter returns manager` and `pointConfigsRefs getter returns manager`); the file is absent at current HEAD (`find learning_tracker/test -iname user_database_managers_refs_test.dart` returns nothing); commit 49cc7d73 remains an ancestor of this branch's current HEAD. Finding is moot -- no code change made."
   },
   {
    "id": "AUD-t-progress-05",
