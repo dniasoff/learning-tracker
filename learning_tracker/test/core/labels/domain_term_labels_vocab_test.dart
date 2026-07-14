@@ -83,10 +83,13 @@ void main() {
         he: 'סיומים',
         read: (r) => domainTermLabels(r).siyumim,
       ),
-      // milestone, milestoneAggregate, streakLabel, today, trackProgress,
-      // lifetimeLabel — removed from DomainTermLabels (A2/A3 boundary fix).
-      // These are now structural strings served via AppLocalizations (ARB).
-      // They are tested through widget-level integration tests, not here.
+      // milestone, streakLabel, today, trackProgress, lifetimeLabel —
+      // removed from DomainTermLabels (A2/A3 boundary fix). These are now
+      // structural strings served via AppLocalizations (ARB). They are
+      // tested through widget-level integration tests, not here.
+      // (milestoneAggregate was also removed from DomainTermLabels here,
+      // but the ARB key itself was later dropped as dead — AUD-t-cross-67 —
+      // since no screen ever called it.)
     ];
     for (final c in cases) {
       testWidgets('${c.name} — Hebrew OFF returns Latin "${c.en}"', (
@@ -113,9 +116,13 @@ void main() {
   });
 
   // Three-lens labels (tierLensRecentActivity, tierLensSiyumimMilestones,
-  // tierLensLifetimeKnowledge, recentActivityShort) were removed from
-  // DomainTermLabels as part of the A2/A3 boundary fix. They are now
-  // served as structural strings via AppLocalizations (ARB).
+  // tierLensLifetimeKnowledge) were removed from DomainTermLabels as part
+  // of the A2/A3 boundary fix. They are now served as structural strings
+  // via AppLocalizations (ARB). (recentActivityShort was also removed from
+  // DomainTermLabels here, but the ARB key itself was later dropped as
+  // dead — AUD-t-cross-67 — since no screen ever called it; the equivalent
+  // "Recent Activity" text is served by `recentActivity`/
+  // `tierLensRecentActivity`.)
 
   // Tier counters (tierCounterStreakDays, tierCounterSiyumimEarned,
   // tierCounterLifetimeItems, tierCounterPoints) were removed from

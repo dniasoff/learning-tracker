@@ -4213,9 +4213,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get milestone => 'הישג';
 
   @override
-  String get milestoneAggregate => 'הישגים';
-
-  @override
   String get trackProgress => 'התקדמות מסלול';
 
   @override
@@ -4223,9 +4220,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get lifetimeLabel => 'ידע כולל';
-
-  @override
-  String get recentActivityShort => 'פעילות אחרונה';
 
   @override
   String get streakLabel => 'רצף';

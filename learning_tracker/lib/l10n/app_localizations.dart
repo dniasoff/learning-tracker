@@ -7185,12 +7185,6 @@ abstract class AppLocalizations {
   /// **'Milestone'**
   String get milestone;
 
-  /// Canonical vocabulary: plural of milestone. Used as a screen/section heading.
-  ///
-  /// In en, this message translates to:
-  /// **'Milestones'**
-  String get milestoneAggregate;
-
   /// Canonical vocabulary: per-track progress percentage (engagement + achievement). Distinct from `lifetimeLabel` which reflects all sources.
   ///
   /// In en, this message translates to:
@@ -7208,12 +7202,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lifetime'**
   String get lifetimeLabel;
-
-  /// Short form of `tierLensRecentActivity` for use in compact UI (e.g. breadcrumbs).
-  ///
-  /// In en, this message translates to:
-  /// **'Recent Activity'**
-  String get recentActivityShort;
 
   /// Title-case 'Streak' label — distinct from the existing all-caps `streak` key. Used in recent-activity screen section headers.
   ///
