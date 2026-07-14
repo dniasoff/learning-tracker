@@ -442,22 +442,25 @@ void main() {
         await h.pump();
 
         // The rename dialog must be open.
-        // l10n.rename or equivalent label for the rename option.
-        // ProfilePickerScreen shows a PopupMenuButton with 'Rename' option.
-        // If a bottom sheet or dialog appeared from long-press, check for it.
-        // The picker uses ModalBottomSheet on long-press of _ProfileCard.
-        // _showBottomSheet shows "Edit name" and "Delete" options.
-        // Tap "Edit name" (or "Rename" depending on l10n key).
+        // ProfilePickerScreen._showManageSheet shows a ModalBottomSheet with a
+        // 'Rename' tile (l10n.renameAction) and a 'Delete' tile. Some older
+        // designs/locales label the same affordance 'Edit name', so both
+        // selectors are checked — but AUD-t-cross-49: neither being found must
+        // fail the test loudly (not silently `return`), since this assertion
+        // group's whole point is exercising the rename→duplicate→snackbar path
+        // below. A silent bail-out here would let a renamed/removed/regressed
+        // affordance pass the test without ever reaching that assertion.
         final editNameFinder = find.textContaining('Edit name');
         final renameFinder = find.textContaining('Rename');
         final hasEditName = editNameFinder.evaluate().isNotEmpty;
         final hasRename = renameFinder.evaluate().isNotEmpty;
 
         if (!hasEditName && !hasRename) {
-          // The long-press rename path varies by implementation. Skip this
-          // sub-assertion if neither option appears — the add-dialog path above
-          // is the primary check for E2E-721.
-          return;
+          fail(
+            'rename affordance not found — check ProfilePickerScreen '
+            'long-press menu (expected "Edit name" or "Rename" text after '
+            "long-pressing 'Bob')",
+          );
         }
 
         if (hasEditName) {
