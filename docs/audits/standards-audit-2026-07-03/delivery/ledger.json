@@ -7057,13 +7057,19 @@
     {
       "id": "AUD-t-settings-08",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Extract one shared DataExportImportService test-fixture builder instead of 5 independently-drifting copies of the export/import schema",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "30113384d36e77a8594f90d28e0e469867d21e10"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-settings-08 AC1 OK: new data_export_fixtures.dart imported by all 5 files; hand-rolled envelopes replaced by exportPayloadMap(); only non-schema partials remain",
+        "AUD-t-settings-08 AC2 OK: grep 'formatVersion':'schemaV1' in services dir returns nothing (exit 1); sole literal is fixture line 51",
+        "AUD-t-settings-08 drift-removed OK: legacy activeCurricula/rewards keys deleted from data_export_import_service_test.dart"
+      ],
+      "notes": "Verified drift live (activeCurricula key). Created test/helpers/data_export_fixtures.dart; migrated all 5 files onto it, removing local schema literals. AC1+AC2 verified directly. Preserved legacy fallback test via explicit key removal before override."
     },
     {
       "id": "AUD-t-settings-12",
