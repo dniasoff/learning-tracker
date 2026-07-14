@@ -227,24 +227,27 @@ void main() {
 
     // ========== DNI-321: CrossProfileScope assertion tests ==========
 
-    test('getAllCompletions throws AssertionError in debug when scope is null '
-        '(bypassing type system via dynamic cast)', () async {
-      // `scope` is required and non-nullable at the API level, but the
-      // assert inside _assertCrossProfileScope guards against any future
-      // nullable path or dynamic invocation.  We simulate a null scope via
-      // a dynamic cast to verify the assert fires in debug mode.
-      CrossProfileScope? nullableScope;
-      expect(
-        () => database.completionDao.internalGetAllCompletionsCrossProfile(
-          // ignore: null_check_always_fails — intentional null for assert test
-          scope: nullableScope!,
-        ),
-        throwsA(isA<TypeError>()),
-        // In Dart, `nullableScope!` where nullableScope is null throws
-        // TypeError (Null check operator used on a null value) which is
-        // what the assert-equivalent runtime check produces.
-      );
-    });
+    // AUD-t-cross-93: no test exercises _assertCrossProfileScope's internal
+    // `assert(scope != null, ...)` directly, and none can. `scope` is a
+    // required, non-nullable `CrossProfileScope` parameter, so Dart's sound
+    // null safety makes a null scope unreachable through the typed public
+    // API — argument expressions are evaluated at the call site before the
+    // function body runs, so any attempt to pass null (e.g. the null-check
+    // operator on an uninitialized nullable local) throws before
+    // internalGetAllCompletionsCrossProfile is ever entered. There is no
+    // remaining seam to reach the internal assert without dynamic/mirror
+    // trickery that would just be re-testing the Dart runtime's own
+    // null-safety enforcement, not this DAO's guard.
+    //
+    // The test previously here asserted `throwsA(isA<TypeError>())` around
+    // `scope: nullableScope!` — a true assertion, but re-verification
+    // (temporarily deleting the DAO's `_assertCrossProfileScope(...)` call
+    // entirely and re-running this test) proved it still passed unchanged,
+    // confirming it provided zero regression coverage for the guard it
+    // claimed to protect. Removed rather than rewritten: there is nothing
+    // left to regress once the typed API already forbids the null case.
+    // The group below covers the guard's real, reachable behavior — every
+    // valid scope is accepted without error.
   });
 
   group('CrossProfileScope — debug guard', () {
