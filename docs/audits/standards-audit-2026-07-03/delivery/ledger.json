@@ -2326,13 +2326,19 @@
   {
    "id": "AUD-t-cross-48",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "overflow_sweep_p2_test.dart: 14 skipped overflow tests claim 'swept on device' coverage that does not exist anywhere in the repo",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "87f4a256151aa5387edd56b4b071685aa3361cc3"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-48 AC1 OK: all 14 skip reasons now say 'untested — DNI-404 tracks the on-device sweep'; DNI-404 confirmed real via Linear get_issue",
+    "AUD-t-cross-48 AC2 OK: grep -rn 'swept on device' learning_tracker/test/ returns 0 matches (exit 1) — no dangling false claim",
+    "AUD-t-cross-48 extra OK: doc header fixed — 14 screens moved from 'COVERED...no skip' to accurate 'SKIPPED...DNI-404' (lines 65-80)"
+   ],
+   "notes": "Re-verified 14 sites still false. Filed real Linear DNI-404 (verified via get_issue). Replaced false claim in all 14 skip comments with honest DNI-404 note; also fixed header's contradictory 'no skip' listing for same 14 screens. AC1: 14/14 replaced. AC2: grep now zero matches. Merged --no-ff onto dev (w4r1c18, mergeSha 87f4a256151aa5387edd56b4b071685aa3361cc3). Post-rebase gate: make audit 58/58 clean, flutter analyze clean (touchedStrings=false, arb-parity skipped). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (only learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart touched, no overlap with dev's changed paths since merge-base b77bafcaabea619fbd39426a3de3b241efb237f1), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-t-story-acceptance-08",
