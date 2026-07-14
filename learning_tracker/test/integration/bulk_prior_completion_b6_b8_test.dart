@@ -21,6 +21,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
@@ -490,13 +491,21 @@ void main() {
           syncEngine: null,
         );
 
-        final before = DateTime.now().toUtc();
+        // AUD-t-cross-39: pin the LocalDayClock seam that
+        // expungePriorCompletions reads purgedAt from
+        // (DateTimeFactory.nowUtc() -> core/time/local_day_clock.dart) to a
+        // fixed instant, so purgedAt can be asserted exactly instead of via
+        // a wall-clock before/after window (a real, if narrow, flake
+        // surface under slow/loaded CI).
+        final fixedNow = DateTime.utc(2026, 3, 1, 12, 0, 0);
+        useLocalDayClock(FakeLocalDayClock(fixedNow));
+        addTearDown(resetLocalDayClock);
+
         await service.expungePriorCompletions(
           profileId: profileId,
           sefariaRef: 'ref_target',
           curriculumId: CurriculumId.mishnayos,
         );
-        final after = DateTime.now().toUtc();
 
         final events = await (db.select(
           db.completionEvents,
@@ -504,20 +513,22 @@ void main() {
 
         // All 3 rows must be tombstoned.
         expect(events, hasLength(3));
+        // Compare by millisecondsSinceEpoch to avoid UTC vs. local DateTime
+        // mismatch introduced by SQLite's DATETIME column type (same
+        // pattern used elsewhere in this file, e.g. the B6 AC2 sentinel
+        // check above).
+        final fixedNowMs = fixedNow.millisecondsSinceEpoch;
         for (final e in events) {
           expect(
             e.purgedAt,
             isNotNull,
             reason: 'Prior-mark row (stage ${e.stageId}) must be tombstoned',
           );
-          // purgedAt must be between the before/after timestamps.
+          // purgedAt must equal the pinned clock instant exactly.
           expect(
-            e.purgedAt!.isAfter(before.subtract(const Duration(seconds: 1))),
-            isTrue,
-          );
-          expect(
-            e.purgedAt!.isBefore(after.add(const Duration(seconds: 1))),
-            isTrue,
+            e.purgedAt!.millisecondsSinceEpoch,
+            equals(fixedNowMs),
+            reason: 'purgedAt must equal the pinned clock instant exactly',
           );
         }
       },
@@ -1222,8 +1233,11 @@ void main() {
   });
 }
 
+// AUD-t-cross-39: fixed constant instead of a wall-clock read — this
+// value is never asserted on by any test, it only satisfies
+// BookmarkEntity's required field for the mocked bookmarkRepository return.
 BookmarkEntity _fakeBookmark() => BookmarkEntity(
   curriculumId: CurriculumId.mishnayos,
   sefariaRef: 'ref',
-  updatedAt: DateTime.now(),
+  updatedAt: DateTime.utc(2026, 1, 1),
 );
