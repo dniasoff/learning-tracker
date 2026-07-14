@@ -13,13 +13,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-/// Returns the project root regardless of cwd.
-Directory _projectRoot() {
-  for (final c in [Directory.current, Directory.current.parent]) {
-    if (Directory('${c.path}/lib').existsSync()) return c;
-  }
-  throw StateError('cannot locate project root');
-}
+import '../helpers/lib_source.dart';
 
 Iterable<File> _dartFilesUnder(Directory root) sync* {
   for (final e in root.listSync(recursive: true, followLinks: false)) {
@@ -31,7 +25,7 @@ void main() {
   late Directory featuresDir;
 
   setUpAll(() {
-    final root = _projectRoot();
+    final root = projectRoot();
     featuresDir = Directory('${root.path}/lib/features');
     if (!featuresDir.existsSync()) {
       throw StateError('lib/features/ not found under ${root.path}');
@@ -182,17 +176,8 @@ void main() {
     'Story 26.31 AC4 — directional replacements confirmed in key files',
     tags: ['story_26_31'],
     () {
-      String readFeatureFile(String relPath) {
-        final root = _projectRoot();
-        final candidates = [
-          File('${root.path}/lib/features/$relPath'),
-          File('lib/features/$relPath'),
-        ];
-        for (final f in candidates) {
-          if (f.existsSync()) return f.readAsStringSync();
-        }
-        throw StateError('File not found: $relPath');
-      }
+      String readFeatureFile(String relPath) =>
+          readLibSource('features/$relPath');
 
       test('daily_task_card.dart uses AlignmentDirectional.centerEnd', () {
         final src = readFeatureFile(
@@ -227,16 +212,9 @@ void main() {
         // add_track_flow.dart was deleted by DNI-353 (26.10); its content
         // was migrated to add_track_flow_screen.dart which already uses
         // AlignmentDirectional. The constraint is satisfied.
-        final root = _projectRoot();
-        final candidates = [
-          File(
-            '${root.path}/lib/features/tracks/setup/presentation/screens/add_track_flow.dart',
-          ),
-          File(
-            'lib/features/tracks/setup/presentation/screens/add_track_flow.dart',
-          ),
-        ];
-        final exists = candidates.any((f) => f.existsSync());
+        final exists = libFileExists(
+          'features/tracks/setup/presentation/screens/add_track_flow.dart',
+        );
         if (!exists) return; // file deleted — constraint satisfied by deletion
         final src = readFeatureFile(
           'track_setup/presentation/screens/add_track_flow.dart',

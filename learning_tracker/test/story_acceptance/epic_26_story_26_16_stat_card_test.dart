@@ -10,8 +10,6 @@
 @Tags(['epic_26'])
 library;
 
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, test;
@@ -19,6 +17,7 @@ import 'package:learning_tracker/core/widgets/stat_card.dart';
 import 'package:test/test.dart';
 
 import '../helpers/golden_runner.dart';
+import '../helpers/lib_source.dart';
 
 // ─── Harness ─────────────────────────────────────────────────────────────────
 
@@ -40,20 +39,10 @@ void main() {
     tags: ['story_26_16'],
     () {
       test('widget file is present at the expected path', () {
-        final candidates = [
-          File('lib/core/widgets/stat_card.dart'),
-          File('learning_tracker/lib/core/widgets/stat_card.dart'),
-        ];
-        final file = candidates.firstWhere(
-          (f) => f.existsSync(),
-          orElse: () => candidates.first,
-        );
         expect(
-          file.existsSync(),
+          libFileExists('core/widgets/stat_card.dart'),
           isTrue,
-          reason:
-              'stat_card.dart must exist under core/widgets/. '
-              'Looked for ${candidates.map((f) => f.path).join(", ")}',
+          reason: 'stat_card.dart must exist under core/widgets/.',
         );
       });
 
@@ -220,19 +209,9 @@ void main() {
       late String statBoxSource;
 
       setUpAll(() {
-        final candidates = [
-          File(
-            'lib/features/dashboard/presentation/widgets/task_category_stat_box.dart',
-          ),
-          File(
-            'learning_tracker/lib/features/dashboard/presentation/widgets/task_category_stat_box.dart',
-          ),
-        ];
-        final file = candidates.firstWhere(
-          (f) => f.existsSync(),
-          orElse: () => candidates.first,
+        statBoxSource = readLibSource(
+          'features/dashboard/presentation/widgets/task_category_stat_box.dart',
         );
-        statBoxSource = file.existsSync() ? file.readAsStringSync() : '';
       });
 
       test('imports stat_card.dart', () {

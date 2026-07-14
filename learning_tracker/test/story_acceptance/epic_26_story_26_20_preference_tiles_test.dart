@@ -14,13 +14,13 @@
 @Tags(['epic_26'])
 library;
 
-import 'dart:io';
-
 import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_terms_preference.dart';
 import 'package:learning_tracker/core/widgets/preference_list_tile.dart';
 import 'package:learning_tracker/core/widgets/preference_segmented_tile.dart';
 import 'package:test/test.dart';
+
+import '../helpers/lib_source.dart';
 
 void main() {
   // ── AC1: PreferenceListTile class exists and is importable ──────────────────
@@ -29,20 +29,10 @@ void main() {
     tags: ['story_26_20'],
     () {
       test('widget file is present at the expected path', () {
-        final candidates = [
-          File('lib/core/widgets/preference_list_tile.dart'),
-          File('learning_tracker/lib/core/widgets/preference_list_tile.dart'),
-        ];
-        final file = candidates.firstWhere(
-          (f) => f.existsSync(),
-          orElse: () => candidates.first,
-        );
         expect(
-          file.existsSync(),
+          libFileExists('core/widgets/preference_list_tile.dart'),
           isTrue,
-          reason:
-              'preference_list_tile.dart must exist under core/widgets/. '
-              'Looked for ${candidates.map((f) => f.path).join(", ")}',
+          reason: 'preference_list_tile.dart must exist under core/widgets/.',
         );
       });
 
@@ -60,22 +50,11 @@ void main() {
     tags: ['story_26_20'],
     () {
       test('widget file is present at the expected path', () {
-        final candidates = [
-          File('lib/core/widgets/preference_segmented_tile.dart'),
-          File(
-            'learning_tracker/lib/core/widgets/preference_segmented_tile.dart',
-          ),
-        ];
-        final file = candidates.firstWhere(
-          (f) => f.existsSync(),
-          orElse: () => candidates.first,
-        );
         expect(
-          file.existsSync(),
+          libFileExists('core/widgets/preference_segmented_tile.dart'),
           isTrue,
           reason:
-              'preference_segmented_tile.dart must exist under core/widgets/. '
-              'Looked for ${candidates.map((f) => f.path).join(", ")}',
+              'preference_segmented_tile.dart must exist under core/widgets/.',
         );
       });
 
@@ -94,19 +73,9 @@ void main() {
       late String settingsSource;
 
       setUpAll(() {
-        final candidates = [
-          File(
-            'lib/features/settings/presentation/screens/settings_screen.dart',
-          ),
-          File(
-            'learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart',
-          ),
-        ];
-        final file = candidates.firstWhere(
-          (f) => f.existsSync(),
-          orElse: () => candidates.first,
+        settingsSource = readLibSource(
+          'features/settings/presentation/screens/settings_screen.dart',
         );
-        settingsSource = file.existsSync() ? file.readAsStringSync() : '';
       });
 
       for (final className in ['_SettingsTile']) {
@@ -134,19 +103,9 @@ void main() {
       late String settingsSource;
 
       setUpAll(() {
-        final candidates = [
-          File(
-            'lib/features/settings/presentation/screens/settings_screen.dart',
-          ),
-          File(
-            'learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart',
-          ),
-        ];
-        final file = candidates.firstWhere(
-          (f) => f.existsSync(),
-          orElse: () => candidates.first,
+        settingsSource = readLibSource(
+          'features/settings/presentation/screens/settings_screen.dart',
         );
-        settingsSource = file.existsSync() ? file.readAsStringSync() : '';
       });
 
       test('imports PreferenceListTile', () {
@@ -220,19 +179,9 @@ void main() {
       late String onboardingSource;
 
       setUpAll(() {
-        final candidates = [
-          File(
-            'lib/features/onboarding/presentation/screens/onboarding_screen.dart',
-          ),
-          File(
-            'learning_tracker/lib/features/onboarding/presentation/screens/onboarding_screen.dart',
-          ),
-        ];
-        final file = candidates.firstWhere(
-          (f) => f.existsSync(),
-          orElse: () => candidates.first,
+        onboardingSource = readLibSource(
+          'features/onboarding/presentation/screens/onboarding_screen.dart',
         );
-        onboardingSource = file.existsSync() ? file.readAsStringSync() : '';
       });
 
       test('onboarding_screen.dart does not have a hebrewTerms phase', () {
