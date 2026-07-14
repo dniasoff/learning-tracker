@@ -4666,13 +4666,19 @@
   {
    "id": "AUD-t-cross-44",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Stop using app_localizations_coverage_test.dart's 1482 zero-assertion lines to pad the CI coverage floor over generated l10n code",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "9fe4e6d1b1fd1efba79a68b5f845d69598c43a68"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-44 AC1 OK: new Makefile lcov --remove glob excludes all 3 generated l10n SF on a real lcov.info, keeps real files; ci.yml:305 floor reads that filtered file",
+    "AUD-t-cross-44 AC1 OK: zero-assertion padding test deleted (0 expect, 1488 lines); real coverage remains in test/core/l10n/app_localizations_test.dart (30 expect)",
+    "AUD-t-cross-44 AC2 OK: standards:779 'generated files excluded' now matches CI (.g/.freezed/l10n excluded); AG-7 standards:533 treats generated l10n as generated"
+   ],
+   "notes": "Re-verified: still true. AUD-t-cross-16's lcov --remove never covered generated lib/l10n/app_localizations*.dart. Extended exclusion to those files; deleted the 1482-line zero-assertion padding test. Real l10n getter coverage remains in test/core/l10n/app_localizations_test.dart."
   },
   {
    "id": "AUD-core-content-01",
