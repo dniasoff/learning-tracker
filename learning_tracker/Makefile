@@ -842,7 +842,7 @@ audit: lint-rules-test ## Run all 59 enforcement greps (NFR19) — exits non-zer
 	  FAIL=1; \
 	fi; \
 	echo "55/57 — AG-6: no NEW *.skip test file under test/ — dead/uncompiled test code (outside flutter test's glob, zero CI signal — AUD-t-cross-17) is deleted, not parked; RATCHET like AG-5's check_test_mirroring.dart, only a file NOT in the tracked legacy list below fails the gate"; \
-	ALLOWED_SKIP_FILES="test/fixtures/completion_fixtures.dart.skip test/features/sync/data/sync_engine_test.dart.skip"; \
+	ALLOWED_SKIP_FILES="test/features/sync/data/sync_engine_test.dart.skip"; \
 	SKIP_HITS=$$(find test/ -name "*.skip" | sort); \
 	for f in $$SKIP_HITS; do \
 	  case " $$ALLOWED_SKIP_FILES " in \
