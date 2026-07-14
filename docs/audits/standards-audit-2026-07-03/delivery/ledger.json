@@ -1208,13 +1208,15 @@
   {
    "id": "AUD-t-story-acceptance-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P1",
    "title": "Point epic_27_integration_lockout_redaction_atomic_test.dart AC3 at CompletionRepositoryImpl instead of a hand-rolled transaction",
-   "commits": [],
-   "reviewRounds": 0,
+   "commits": [
+    "c03af12d00a50579cadc57f52f4102ab52ffead9"
+   ],
+   "reviewRounds": 1,
    "acVerified": [],
-   "notes": ""
+   "notes": "Re-verified unfixed at b1a50bf5. Moved _advanceBookmark() inside markComplete's transaction. Rewrote AC3 test to drive real CompletionRepositoryImpl with injected throwing/succeeding BookmarkRepository fake, asserting real completion count. Red-first: reverted fix, test failed; restored, green."
   },
   {
    "id": "AUD-t-cross-03",
