@@ -55,7 +55,7 @@ void main() {
           outboxDao: database.outboxDao,
           database: database,
           resolveProfileId: () => 1,
-          clock: const SystemLocalDayClock(),
+          clock: FakeLocalDayClock(DateTime.utc(2026, 5, 21)),
         );
 
         final repo = StageDefinitionRepositoryImpl(
@@ -115,7 +115,7 @@ void main() {
         outboxDao: database.outboxDao,
         database: database,
         resolveProfileId: () => 1,
-        clock: const SystemLocalDayClock(),
+        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 21)),
       );
 
       final repo = StageDefinitionRepositoryImpl(
