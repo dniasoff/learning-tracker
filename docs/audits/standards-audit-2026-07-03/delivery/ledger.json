@@ -875,13 +875,18 @@
     {
       "id": "AUD-t-story-acceptance-02",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Rewrite regression_invariants_test.dart N7 to call the production code it claims to guard",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "99b8ae5e51de4bf9b570df2cc579efb803d16264"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-02 AC1 OK: test:30 imports estimatedFinishDate; lines 432/436 invoke it, replacing the re-typed inline formula",
+        "AUD-t-story-acceptance-02 AC2 OK: probe reverting track_detail_screen.dart:89 to DateTime.now() makes N7 fail red (Exp 09-15 vs Act 09-22); reverted clean"
+      ],
+      "notes": "Re-verified: N7 re-typed the formula twice, no production call. Extracted estimatedFinishDate() (@visibleForTesting) from _estimatedFinish; N7 now calls it (AC1). Reverted anchor to nowLocal() to prove red (Expected 09-15, Actual 09-22), then reverted probe - green (AC2)."
     },
     {
       "id": "AUD-firebase-04",
