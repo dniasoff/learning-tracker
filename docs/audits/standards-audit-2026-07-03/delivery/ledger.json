@@ -7834,13 +7834,18 @@
   {
    "id": "AUD-t-cross-61",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete logger_extra_test.dart — near-total weak-assertion duplicate of logger_extended_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "217ca9f5555597ba59a6e6152a003c7f9989e90e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-61 AC1 OK: logger_extra_test.dart deleted (94-line deletion in diff; absent from ls of test/core/logging/)",
+    "AUD-t-cross-61 AC2 OK: wc -l test/core/logging=996 (was 1060); all methods still covered in logger_extended_test.dart, 2 unique shapes folded at lines 87 & 153"
+   ],
+   "notes": "Confirmed dup; all methods covered w/ stronger assertions elsewhere. 2 unique call shapes (critical+exc/stack, warningMsg+exc/stack) folded into logger_extended_test.dart before delete. Lines 1060->996, no coverage loss."
   },
   {
    "id": "AUD-core-analytics-03",
