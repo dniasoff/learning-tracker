@@ -116,6 +116,12 @@ Future<RewardMilestone> _seedMilestoneViaPrefs(
 }
 
 /// Returns all milestones for [profileId] from SharedPreferences.
+///
+/// Only a [FormatException] from [jsonDecode] (a corrupted/unparsable config
+/// string) is treated as "no data" and mapped to an empty list. Any other
+/// exception — e.g. a [RewardMilestone.fromJson] schema-mismatch bug — is a
+/// genuine defect and must propagate so the test fails loudly instead of
+/// silently reporting an empty milestone list (AUD-t-cross-77).
 Future<List<RewardMilestone>> _loadMilestones(int profileId) async {
   final prefs = await SharedPreferences.getInstance();
   final configKey = 'reward_milestones_config_v1_$profileId';
@@ -129,7 +135,7 @@ Future<List<RewardMilestone>> _loadMilestones(int profileId) async {
         .map(RewardMilestone.fromJson)
         .where((m) => m.profileId == profileId)
         .toList();
-  } catch (_) {
+  } on FormatException {
     return const [];
   }
 }
@@ -946,4 +952,41 @@ void main() {
       });
     },
   );
+
+  // ── _loadMilestones helper — exception handling (AUD-t-cross-77) ───────────
+
+  group('_loadMilestones helper does not swallow unexpected exceptions', () {
+    testWidgets('a stored config entry that fails RewardMilestone.fromJson '
+        '(schema mismatch, not corrupted JSON) propagates instead of '
+        'silently returning an empty list', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      const profileId = 9991;
+
+      // Valid JSON syntax (jsonDecode succeeds) but `is_enabled` holds a
+      // String instead of a bool, so RewardMilestone.fromJson's
+      // `json['is_enabled'] as bool?` cast throws a TypeError. This is the
+      // "genuine schema-mismatch bug" case from AUD-t-cross-77 — distinct
+      // from a corrupted/unparsable config string — and must not be
+      // swallowed into an empty list.
+      await prefs.setString(
+        'reward_milestones_config_v1_$profileId',
+        jsonEncode([
+          {
+            'id': 'rm_bad',
+            'profile_id': profileId,
+            'track_id': 0,
+            'title': 'Bad Reward',
+            'threshold_points': 100,
+            'is_enabled': 'not-a-bool',
+            'icon_index': 0,
+            'created_at': DateTimeFactory.nowUtc().toIso8601String(),
+            'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+          },
+        ]),
+      );
+
+      await expectLater(_loadMilestones(profileId), throwsA(isA<TypeError>()));
+    });
+  });
 }
