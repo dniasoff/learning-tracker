@@ -7923,13 +7923,18 @@
   {
    "id": "AUD-t-cross-70",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix misleading 'debitRedemption' test title in points_balance_dao_test.dart that never calls a method by that name",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "65f65adc0bc2a3668b39a7324b9fe70db6f45de7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-70 AC1 OK: test renamed to describe parentAdjust clamp-at-0 (test L57-60); matches DAO clamp at points_balance_dao.dart:107; rename allowed by AC",
+    "AUD-t-cross-70 AC2 OK: grep 'debitRedemption' across test file, DAO, whole learning_tracker/ tree = 0 matches"
+   ],
+   "notes": "Confirmed no debitRedemption method exists (grep). Renamed test (not deleted) since it's the ONLY test exercising the actual floor-clamp branch; adjacent 'clamped at 0' test never exceeds balance. Both ACs met: renamed to match body, zero remaining debitRedemption references."
   },
   {
    "id": "AUD-t-cross-89",
