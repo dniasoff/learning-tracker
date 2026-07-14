@@ -3298,13 +3298,13 @@
     {
       "id": "AUD-t-dashboard-02",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "dashboard_todays_missions_heading_test.dart: override trackHasChazaraProvider so ActiveTrackCard stops opening a real UserDatabase",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "not attempted: no-progress cap / loop end"
     },
     {
       "id": "AUD-t-onboarding-01",
@@ -4959,13 +4959,13 @@
     {
       "id": "AUD-t-dashboard-03",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "dashboard_todays_missions_heading_test.dart: remove the blind exception-drain loop in pumpAt (proven dead, masks any real regression in the pumped tree)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "not attempted: no-progress cap / loop end"
     },
     {
       "id": "AUD-gamification-06",
@@ -6880,13 +6880,13 @@
     {
       "id": "AUD-t-cross-92",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Replace throwsA(anything) with a typed matcher in 20 validateIntegrity insert tests",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "not attempted: no-progress cap / loop end"
     },
     {
       "id": "AUD-t-cross-82",
@@ -7242,13 +7242,13 @@
     {
       "id": "AUD-t-cross-84",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Replace DateTime.now() with a fixed clock in UserDatabase migration/smoke test setup",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (ledger reconciliation, wave4-chunk06, 2026-07-14). Mismatch found: engine outcome declared this id blocked, but the ledger row still showed status=todo with empty commits/notes - the merge lane had not touched this row. No persisted rationale for the block was found anywhere on disk (checked kill-log.json, kill-log-full.json, kill-log-addendum.md, frag-register.md, _RECOMMENDATIONS.md, delivery/findings/AUD-t-cross-84.json). Reconciled status to blocked to match the engine's authoritative outcome and keep the ledger terminal-state-consistent; the substantive block reason is not recoverable from disk and needs owner follow-up. Additional discovery (evidence, not acted on): two identical unmerged fix commits exist for this id on stray worktree branches - ca4a803f0d3778555cbc39291d67979d69e3c9bf on worktree-wf_e879ab38-761-54, and 7d96155093b4cdaa4c3cb5a0292c90c219457b4f on worktree-wf_e879ab38-761-13 - neither merged into dev. Same class of lost-review-agent residue documented on AUD-t-cross-62. Left untouched: this pass is ledger-metadata-only (no source or commit changes permitted). Flagging for a residue-harvest pass to evaluate cherry-picking, matching the AUD-t-cross-62 precedent."
     },
     {
       "id": "AUD-core-network-04",
@@ -8410,13 +8410,13 @@
     {
       "id": "AUD-t-dashboard-06",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "dart_test.yaml: register the dashboard and i18n @Tags used by dashboard_todays_missions_heading_test.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "not attempted: no-progress cap / loop end"
     },
     {
       "id": "AUD-gamification-17",
