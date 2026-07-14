@@ -1085,6 +1085,17 @@ void main() {
   // Replaced with the concrete type Drift's generated insert() actually
   // throws for a missing-required-field Companion
   // (drift.InvalidDataException).
+  //
+  // AC2 (red-first, all 3 sites in this file): verified the same way as the
+  // 15 sites in user_database_dataclass_test.dart — the required-field
+  // check was temporarily removed from each table's generated
+  // validateIntegrity() body (user_database.g.dart only; no source .dart
+  // table file touched), the test re-run to confirm it goes red (insert
+  // reaches sqlite3, which throws `SqliteException` for the NOT NULL
+  // column, not `InvalidDataException`), then the generated file was
+  // reverted and the test re-run to confirm green again. Full per-site
+  // red/green log is in the AUD-t-cross-92 AC2 commit body (the
+  // test(database) commit following 9b79454d).
 
   group('validateIntegrity — missing required fields', () {
     test('outbox missing entityKind triggers insert error', () async {
