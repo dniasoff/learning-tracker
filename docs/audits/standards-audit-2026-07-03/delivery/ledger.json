@@ -9723,13 +9723,18 @@
   {
    "id": "AUD-t-cross-72",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix the self-comparison assertion in firestore_listener_source_test.dart:153 — expect(x, equals(x)) always passes",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "2921f6826d57daaaf150f9557231e6a7e530d635"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-72 AC1 OK: test:153-156 now expect(entry.orderField, equals(orderFields[entry.collection])); tautology expect(x,equals(x)) gone (diff -1/+4).",
+    "AUD-t-cross-72 AC2 OK: my red probe hardcoded 'updated_at' for completions in coll() -> test failed red (Exp completed_at, Act updated_at); reverted, 12/12 green."
+   ],
+   "notes": "Confirmed tautology at line 153. Fixed to compare entry.orderField vs FirestoreListenerSource.orderFields[entry.collection]. Red-first: desynced source's 'completions' orderField, test failed red (Expected completed_at, Actual updated_at); reverted probe, reran green (12/12)."
   },
   {
    "id": "AUD-account-24",
