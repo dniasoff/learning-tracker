@@ -3006,18 +3006,19 @@
   {
    "id": "AUD-t-profiles-03",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Extract a shared pumpApp/l10n test harness — 25+ duplicated MaterialApp+delegate blocks across features/profiles/presentation tests",
    "commits": [
-    "b345050d"
+    "b345050d",
+    "80ee5e405fe5d0503cb28a613b9adee4132bec2a"
    ],
-   "reviewRounds": 1,
+   "reviewRounds": 2,
    "acVerified": [
     "AC1 met: all 15 named files import test/helpers/pump_app.dart and call pumpApp() (or its retry:/overrides:/container: variants) — verified post-cherry-pick",
     "AC2 met: grep -rc 'GlobalCupertinoLocalizations.delegate' test/features/profiles/presentation/ -> zero matches (was 1-9 occurrences per file pre-fix)"
    ],
-   "notes": "merged (wave-4 gate-repair, 2026-07-14). Previously blocked at 'no-progress cap / loop end' with the deliverable already built on worktree branches (fd12b480 on worktree-wf_9438f433-5f0-43, e8afe273 on worktree-wf_9438f433-5f0-2) but never landed. Selected fd12b480 (the newer of the two near-duplicate attempts, based on dev@12f52b9d which already carries AUD-t-profiles-04; e8afe273's older base predates several intervening profiles findings). Zero of the 15 target files, pump_app.dart, or tool/tq3_pump_app_delegate_baseline.txt were touched by dev commits between 12f52b9d and the current tip, so the cherry-pick (-x fd12b480) applied clean with no conflicts. Re-verified: flutter test test/features/profiles/ -> 760/760 pass; flutter analyze -> No issues found; dart format --set-exit-if-changed -> 0 changed. See also AUD-t-profiles-06 (companion finding, same source files) and the follow-up baseline-drift fix commit 7a2a0cf7. | REOPENED 100% AC audit 2026-07-14: AC2 (grep GlobalCupertinoLocalizations.delegate ->0 in profiles tests) NOT met - 1 residual in pp16_profile_grid_tablet_height_test.dart (still hand-rolls MaterialApp, never migrated to pumpApp)."
+   "notes": "merged (wave-4 gate-repair, 2026-07-14). Previously blocked at 'no-progress cap / loop end' with the deliverable already built on worktree branches (fd12b480 on worktree-wf_9438f433-5f0-43, e8afe273 on worktree-wf_9438f433-5f0-2) but never landed. Selected fd12b480 (the newer of the two near-duplicate attempts, based on dev@12f52b9d which already carries AUD-t-profiles-04; e8afe273's older base predates several intervening profiles findings). Zero of the 15 target files, pump_app.dart, or tool/tq3_pump_app_delegate_baseline.txt were touched by dev commits between 12f52b9d and the current tip, so the cherry-pick (-x fd12b480) applied clean with no conflicts. Re-verified: flutter test test/features/profiles/ -> 760/760 pass; flutter analyze -> No issues found; dart format --set-exit-if-changed -> 0 changed. See also AUD-t-profiles-06 (companion finding, same source files) and the follow-up baseline-drift fix commit 7a2a0cf7. | REOPENED 100% AC audit 2026-07-14: AC2 (grep GlobalCupertinoLocalizations.delegate ->0 in profiles tests) NOT met - 1 residual in pp16_profile_grid_tablet_height_test.dart (still hand-rolls MaterialApp, never migrated to pumpApp). | COMPLETED 80ee5e40: pp16 migrated to pumpApp (tablet sizing preserved), AC2 grep=0, ratchet 205->204."
   },
   {
    "id": "AUD-scheduler-03",
