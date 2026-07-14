@@ -87,7 +87,6 @@ const _baseline = <String>{
   'test/features/onboarding/presentation/screens/onboarding_bulk_l1_test.dart',
   'test/features/parent_mode/child_mode_guard_test.dart',
   'test/features/progress/data/repositories/progress_repository_test.dart',
-  'test/features/progress/domain/services/curriculum_progress_service_test.dart',
   'test/features/progress/recent_activity_and_hierarchy_panel_l1_test.dart',
   'test/features/settings/domain/services/account_management_service_test.dart',
   'test/features/settings/domain/services/curriculum_activation_service_test.dart',
