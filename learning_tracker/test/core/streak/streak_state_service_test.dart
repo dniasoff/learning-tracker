@@ -163,7 +163,7 @@ void main() {
 
       // Give the first emission time to arrive.
       await Future<void>.delayed(Duration.zero);
-      expect(states, isNotEmpty); // zero at start
+      expect(states.first, 0); // zero at start
 
       await insertEvent(db, DateTime.utc(2026, 5, 14));
       await Future<void>.delayed(Duration.zero);
