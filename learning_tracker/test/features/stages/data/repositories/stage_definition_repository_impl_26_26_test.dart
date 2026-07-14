@@ -51,8 +51,8 @@ _makeRealRepo() async {
         db.CurriculumTracksCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
+          stateChangedAt: DateTime.utc(2026, 1, 1),
+          activatedAt: DateTime.utc(2026, 1, 1),
         ),
       );
   final pushedSettings = <Map<String, dynamic>>[];
@@ -658,8 +658,8 @@ void main() {
             db.CurriculumTracksCompanion.insert(
               profileId: 1,
               curriculumId: 'mishnayos',
-              stateChangedAt: DateTime.now(),
-              activatedAt: DateTime.now(),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
+              activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
       final trackId2 = await database
@@ -668,8 +668,8 @@ void main() {
             db.CurriculumTracksCompanion.insert(
               profileId: 2,
               curriculumId: 'mishnayos',
-              stateChangedAt: DateTime.now(),
-              activatedAt: DateTime.now(),
+              stateChangedAt: DateTime.utc(2026, 1, 1),
+              activatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
 
@@ -787,8 +787,8 @@ void main() {
               db.CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'mishnayos',
-                stateChangedAt: DateTime.now(),
-                activatedAt: DateTime.now(),
+                stateChangedAt: DateTime.utc(2026, 1, 1),
+                activatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
 
@@ -800,8 +800,8 @@ void main() {
               db.CurriculumTracksCompanion.insert(
                 profileId: 1,
                 curriculumId: 'chumash',
-                stateChangedAt: DateTime.now(),
-                activatedAt: DateTime.now(),
+                stateChangedAt: DateTime.utc(2026, 1, 1),
+                activatedAt: DateTime.utc(2026, 1, 1),
               ),
             );
 

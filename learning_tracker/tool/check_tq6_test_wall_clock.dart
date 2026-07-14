@@ -93,7 +93,6 @@ const _baseline = <String>{
   'test/features/settings/presentation/screens/aud_settings_02_no_latin_fragments_test.dart',
   'test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart',
   'test/features/settings/settings_utils_test.dart',
-  'test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart',
   'test/features/sync/domain/models/sync_status_test.dart',
   'test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart',
   'test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart',
