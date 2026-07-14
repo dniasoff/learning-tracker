@@ -7222,13 +7222,19 @@
   {
    "id": "AUD-t-scheduler-09",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace the hardcoded trackId:1 literal with the captured track id in two scheduler tests",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "edc9bbd89b266ac4db469935697fc1bef8e5be6f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-scheduler-09 AC1 OK: grep 'trackId: 1,' in both files returns nothing (exit 1); all literals replaced with captured trackId var",
+    "AUD-t-scheduler-09 AC2 OK: daily_task_generator_test.dart:129 expect(task.trackId,trackId); scheduler_engine_integration_test.dart:130,166 expect(t.trackId,trackId)",
+    "AUD-t-scheduler-09 red-first genuine: DailyTask.trackId=config.trackId (engine 8 sites); prior seedTrack shifts trackId to 2, so trackId:1 gives Expected 2/Actual 1"
+   ],
+   "notes": "Red-first: seeded a prior track so captured trackId!=1, added trackId assertions, confirmed red (Expected:2 Actual:1), then replaced all trackId:1 literals (6+2 sites) with captured var. Both AC verified. Commit bb323261."
   },
   {
    "id": "AUD-t-scheduler-05",
@@ -7740,13 +7746,18 @@
   {
    "id": "AUD-t-scheduler-08",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace DateTime.now() with a fixed clock value in scheduler test fixture seeding",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "c5111272ae5197293ba6008b264a4e1958fa6377"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-scheduler-08 AC OK: grep 'DateTime.now()' across the 3 named files returns nothing (exit 1); seed inserts now use fixed DateTime.utc constants",
+    "AUD-t-scheduler-08 ratchet OK: check_tq6 baseline shrunk by the 3 now-clean files; checker still fires on any non-baselined test/ DateTime.now() (exit 0, 74 baselined)"
+   ],
+   "notes": "Verified no drift since 4018a91c. Replaced DateTime.now() with each file's fixed clock in 3 files' track inserts; shrank AUD-t-cross-84 ratchet baseline. AC grep verified clean. Commit 5a9f5029."
   },
   {
    "id": "AUD-scheduler-18",
