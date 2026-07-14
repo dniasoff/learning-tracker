@@ -110,7 +110,7 @@ void main() {
       database,
       profileId: profileId,
       curriculumId: curriculumId,
-      activatedAt: DateTime.now().toUtc(),
+      activatedAt: DateTime.utc(2026, 1, 1),
     );
 
     test(
@@ -247,7 +247,7 @@ void main() {
           stageId: 1,
           trackType: 'personal',
           trackId: Value(trackId),
-          eventTimestamp: DateTime.now().toUtc(),
+          eventTimestamp: DateTime.utc(2026, 1, 1),
         ),
       );
 
@@ -291,7 +291,7 @@ void main() {
       db,
       profileId: profileId,
       curriculumId: curriculumId,
-      activatedAt: DateTime.now().toUtc(),
+      activatedAt: DateTime.utc(2026, 1, 1),
     );
 
     /// Inserts a completion_event row that belongs to [trackId], [profileId],
@@ -314,7 +314,7 @@ void main() {
           stageId: stageId,
           trackType: trackType,
           trackId: Value(trackId),
-          eventTimestamp: DateTime.now().toUtc(),
+          eventTimestamp: DateTime.utc(2026, 1, 1),
         ),
       );
     }
