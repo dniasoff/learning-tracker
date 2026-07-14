@@ -76,6 +76,14 @@ void main() {
   });
 
   // ─── getPresetsForCurriculum ──────────────────────────────────────────────
+  //
+  // AUD-t-onboarding-04: was split across two duplicate group blocks
+  // ('getPresetsForCurriculum' / 'LearningProcessWizardService.
+  // getPresetsForCurriculum') left over from a rename; merged into one.
+  // Removed 3 confirmed-duplicate cases: "returns programs for the given
+  // curriculum" (a strict subset of "returns non-empty list for mishnayos
+  // curriculum" below) and the two "(F2 variant)" cases, which were
+  // near-line-for-line repeats of the two cases kept here.
 
   group('getPresetsForCurriculum', () {
     test('returns non-empty list for mishnayos curriculum', () {
@@ -94,15 +102,6 @@ void main() {
         }
       }
     });
-  });
-
-  group('LearningProcessWizardService.getPresetsForCurriculum', () {
-    test('returns programs for the given curriculum', () {
-      final presets = service.getPresetsForCurriculum(CurriculumId.mishnayos);
-      for (final p in presets) {
-        expect(p.curriculumType, CurriculumId.mishnayos.storageKey);
-      }
-    });
 
     test('returns empty list for a curriculum with no programs', () {
       // All 9 curricula should have at least some programs; but if not,
@@ -110,52 +109,18 @@ void main() {
       final presets = service.getPresetsForCurriculum(CurriculumId.mussar);
       expect(presets, isA<List<LearningProgramData>>());
     });
-
-    test('returns programs matching the curriculum type (F2 variant)', () {
-      final presets = service.getPresetsForCurriculum(CurriculumId.mishnayos);
-      expect(presets, isNotEmpty);
-      expect(presets.every((p) => p.curriculumType == 'mishnayos'), isTrue);
-    });
-
-    test(
-      'returns empty list for unknown curriculum with no seeds (F2 variant)',
-      () {
-        // CurriculumId.chumash seeds may or may not exist — we just assert type safety.
-        final presets = service.getPresetsForCurriculum(CurriculumId.bavli);
-        expect(presets, isA<List<LearningProgramData>>());
-      },
-    );
   });
 
   // ─── WizardChoice.noReview ────────────────────────────────────────────────
-
-  group('applyWizardResult — noReview', () {
-    test('creates single לימוד stage at order 1', () async {
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.noReview,
-      );
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages.length, 1);
-      expect(stages.first.stageName, 'לימוד');
-      expect(stages.first.stageOrder, 1);
-    });
-
-    test('replaces existing stages when called twice', () async {
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.noReview,
-      );
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-      // Should still be exactly 1 stage (not doubled).
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages.length, 1);
-    });
-  });
+  //
+  // AUD-t-onboarding-04: was split across two duplicate group blocks
+  // ('applyWizardResult — noReview' / 'LearningProcessWizardService —
+  // noReview') left over from a rename; merged into one. Removed 2
+  // confirmed-duplicate cases: "creates single לימוד stage at order 1" (a
+  // strict subset of "creates a single Learn stage only" below) and
+  // "replaces existing stages" (a strict subset of "replaces existing
+  // stages before creating new ones" below, which pre-populates 2 stages
+  // instead of 1 and is kept as the more specific assertion).
 
   group('LearningProcessWizardService — noReview', () {
     test('creates a single Learn stage only', () async {
@@ -173,18 +138,42 @@ void main() {
       expect(stages.first.schedule, contains('"delay_days":0'));
     });
 
-    test('replaces existing stages', () async {
-      // Pre-insert a stage.
+    test('replaces existing stages when called twice', () async {
+      const result = WizardResult(
+        curriculumId: CurriculumId.mishnayos,
+        choice: WizardChoice.noReview,
+      );
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
+
+      // Should still be exactly 1 stage (not doubled).
+      final stages = await db.stageDao.getStagesByTrack(trackId);
+      expect(stages.length, 1);
+    });
+
+    test('replaces existing stages before creating new ones', () async {
+      // Pre-populate two stages using mishnayos (tracks use mishnayos curriculumId).
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           profileId: 1,
           curriculumId: CurriculumId.mishnayos.storageKey,
           trackId: trackId,
           stageOrder: 1,
-          stageName: 'Old Stage',
+          stageName: 'old stage A',
           schedule: const Value('{"type":"delay","delay_days":0}'),
         ),
       );
+      await db.stageDao.insertStageDefinition(
+        StageDefinitionsCompanion.insert(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          trackId: trackId,
+          stageOrder: 2,
+          stageName: 'old stage B',
+          schedule: const Value('{"type":"delay","delay_days":7}'),
+        ),
+      );
+      expect(await db.stageDao.getStagesByTrack(trackId), hasLength(2));
 
       const result = WizardResult(
         curriculumId: CurriculumId.mishnayos,
@@ -194,54 +183,22 @@ void main() {
       await service.applyWizardResult(result, profileId: 1, trackId: trackId);
 
       final stages = await db.stageDao.getStagesByTrack(trackId);
-      // Old stage replaced; only the one Learn stage remains.
       expect(stages, hasLength(1));
       expect(stages.first.stageName, 'לימוד');
     });
-
-    test(
-      'replaces existing stages before creating new ones (F2 variant)',
-      () async {
-        // Pre-populate two stages using mishnayos (tracks use mishnayos curriculumId).
-        await db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: trackId,
-            stageOrder: 1,
-            stageName: 'old stage A',
-            schedule: const Value('{"type":"delay","delay_days":0}'),
-          ),
-        );
-        await db.stageDao.insertStageDefinition(
-          StageDefinitionsCompanion.insert(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos.storageKey,
-            trackId: trackId,
-            stageOrder: 2,
-            stageName: 'old stage B',
-            schedule: const Value('{"type":"delay","delay_days":7}'),
-          ),
-        );
-        expect(await db.stageDao.getStagesByTrack(trackId), hasLength(2));
-
-        const result = WizardResult(
-          curriculumId: CurriculumId.mishnayos,
-          choice: WizardChoice.noReview,
-        );
-
-        await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-        final stages = await db.stageDao.getStagesByTrack(trackId);
-        expect(stages, hasLength(1));
-        expect(stages.first.stageName, 'לימוד');
-      },
-    );
   });
 
   // ─── WizardChoice.custom ─────────────────────────────────────────────────
+  //
+  // AUD-t-onboarding-04: was split across two duplicate group blocks
+  // ('applyWizardResult — custom' / 'LearningProcessWizardService —
+  // custom') left over from a rename; merged into one. Removed 3
+  // confirmed-duplicate cases from the second group: "custom with empty
+  // customRounds only creates Learn stage" (a strict duplicate of "creates
+  // only לימוד when customRounds is empty" below) and the two "(F2
+  // variant)" cases (near-line-for-line repeats of cases kept below).
 
-  group('applyWizardResult — custom', () {
+  group('LearningProcessWizardService — custom', () {
     test('creates לימוד + custom chazarah rounds', () async {
       const result = WizardResult(
         curriculumId: CurriculumId.mishnayos,
@@ -437,9 +394,7 @@ void main() {
         expect(stages.first.stageName, 'Pre-existing Stage');
       },
     );
-  });
 
-  group('LearningProcessWizardService — custom', () {
     test('creates Learn stage + N custom chazarah rounds', () async {
       const result = WizardResult(
         curriculumId: CurriculumId.mishnayos,
@@ -512,70 +467,22 @@ void main() {
         expect(stages[1].schedule, contains('"type":"weekly"'));
       },
     );
-
-    test('custom with empty customRounds only creates Learn stage', () async {
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.custom,
-        customRounds: [],
-      );
-
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages, hasLength(1));
-      expect(stages.first.stageName, 'לימוד');
-    });
-
-    test('creates לימוד + custom chazarah rounds (F2 variant)', () async {
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.custom,
-        customRounds: [
-          CustomRound(
-            label: 'חזרה א',
-            scheduleType: ScheduleType.delay,
-            delayDays: 3,
-          ),
-          CustomRound(
-            label: 'חזרה ב',
-            scheduleType: ScheduleType.weekly,
-            daysOfWeek: [5, 6],
-          ),
-        ],
-      );
-
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages, hasLength(3));
-      expect(stages[0].stageName, 'לימוד');
-      expect(stages[0].stageOrder, 1);
-      expect(stages[1].stageName, 'חזרה א');
-      expect(stages[1].stageOrder, 2);
-      expect(stages[1].schedule, contains('"delay_days":3'));
-      expect(stages[2].stageName, 'חזרה ב');
-      expect(stages[2].stageOrder, 3);
-    });
-
-    test('custom with no rounds creates only לימוד (F2 variant)', () async {
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.custom,
-        customRounds: [],
-      );
-
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages, hasLength(1));
-      expect(stages.first.stageName, 'לימוד');
-    });
   });
 
   // ─── WizardChoice.preset ─────────────────────────────────────────────────
+  //
+  // AUD-t-onboarding-04: was split across two duplicate group blocks
+  // ('applyWizardResult — preset' / 'LearningProcessWizardService —
+  // preset') left over from a rename; merged into one. Removed 4
+  // confirmed-duplicate cases from the second group: "creates stages from
+  // the program stages_config" (duplicate of "creates stages from program
+  // stagesConfig" below) and "is a no-op (no stages) when programId does
+  // not exist" plus its "(F2 variant)" (both duplicates of "handles
+  // unknown programId gracefully" below), and "preset sets profile program
+  // association (F2 variant)" (duplicate of "stores the preset program
+  // association in profilePrograms" below).
 
-  group('applyWizardResult — preset', () {
+  group('LearningProcessWizardService — preset', () {
     test('creates stages from program stagesConfig', () async {
       final presets = service.getPresetsForCurriculum(CurriculumId.mishnayos);
       // Skip if no presets available for this curriculum.
@@ -610,30 +517,6 @@ void main() {
       final stages = await db.stageDao.getStagesByTrack(trackId);
       expect(stages, isEmpty);
     });
-  });
-
-  group('LearningProcessWizardService — preset', () {
-    test('creates stages from the program stages_config', () async {
-      // Use program ID 1 which must exist in learningProgramSeeds.
-      final programs = LearningProgramRepository.instance
-          .getActiveProgramsByCurriculumType(CurriculumId.mishnayos.storageKey);
-      // Skip the test if no mishnayos programs are seeded.
-      if (programs.isEmpty) return;
-
-      final program = programs.first;
-      final result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.preset,
-        programId: program.id,
-      );
-
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages, isNotEmpty);
-      // Stage orders start at 1.
-      expect(stages.first.stageOrder, 1);
-    });
 
     test('stores the preset program association in profilePrograms', () async {
       final programs = LearningProgramRepository.instance
@@ -653,19 +536,6 @@ void main() {
       expect(profilePrograms.any((p) => p.programId == program.id), isTrue);
     });
 
-    test('is a no-op (no stages) when programId does not exist', () async {
-      const result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.preset,
-        programId: 9999, // non-existent
-      );
-
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-      final stages = await db.stageDao.getStagesByTrack(trackId);
-      expect(stages, isEmpty);
-    });
-
     test('creates stages from program seeds (oraysa — id 1)', () async {
       // Program id=1 is 'oraysa': has 4 stages including rolling + weekly.
       const result = WizardResult(
@@ -682,45 +552,6 @@ void main() {
         expect(stages[0].stageName, 'לימוד');
       }
       // If no stages, the program ID may not exist for mishnayos — just don't throw.
-    });
-
-    test(
-      'no-op when programId does not exist in repository (F2 variant)',
-      () async {
-        const result = WizardResult(
-          curriculumId: CurriculumId.mishnayos,
-          choice: WizardChoice.preset,
-          programId: 99999, // non-existent
-        );
-
-        await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-        // Should not throw, stages list should be empty.
-        final stages = await db.stageDao.getStagesByTrack(trackId);
-        expect(stages, isEmpty);
-      },
-    );
-
-    test('preset sets profile program association (F2 variant)', () async {
-      final programs = LearningProgramRepository.instance
-          .getActiveProgramsByCurriculumType(CurriculumId.mishnayos.storageKey);
-      if (programs.isEmpty) return;
-
-      final program = programs.first;
-      final result = WizardResult(
-        curriculumId: CurriculumId.mishnayos,
-        choice: WizardChoice.preset,
-        programId: program.id,
-      );
-
-      await service.applyWizardResult(result, profileId: 1, trackId: trackId);
-
-      final prog = await db.profileProgramDao.getProgramForProfileAndCurriculum(
-        1,
-        CurriculumId.mishnayos.storageKey,
-      );
-      expect(prog, isNotNull);
-      expect(prog!.programId, program.id);
     });
   });
 
