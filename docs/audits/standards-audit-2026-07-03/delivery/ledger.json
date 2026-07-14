@@ -6773,13 +6773,15 @@
   {
    "id": "AUD-t-cross-58",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "De-duplicate near-identical CompletionDao test coverage between completion_dao_extended_test.dart and completion_dao_extra_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
+   "commits": [
+    "4214e2be5cc940d47a598fbd1d8065e870c47a0e"
+   ],
+   "reviewRounds": 1,
    "acVerified": [],
-   "notes": ""
+   "notes": "extra_test.dart (be671521, 15:33) is newer than extended_test.dart (88e2e690, 14:16). Per verify's correction (neither is a clean subset), added header doc in extra_test.dart stating per-group what it adds beyond extended_test.dart. Comment-only diff (grep-verified) so assertion counts unchanged."
   },
   {
    "id": "AUD-t-cross-59",
@@ -7887,13 +7889,15 @@
   {
    "id": "AUD-t-cross-71",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix test groups in completion_dao_extended_test.dart and completion_dao_extra_test.dart that reference the removed CompletionDao.insertCompletionsBatch method",
-   "commits": [],
-   "reviewRounds": 0,
+   "commits": [
+    "4214e2be5cc940d47a598fbd1d8065e870c47a0e"
+   ],
+   "reviewRounds": 1,
    "acVerified": [],
-   "notes": ""
+   "notes": "Confirmed insertCompletionsBatch was removed from CompletionDao (doc comment). Renamed stale group()s/doc-comments in both test files to describe what's actually tested (seedCompletionsBatch helper + reads). grep for group(.*insertCompletionsBatch -> no match. 42/42 tests pass, pure rename."
   },
   {
    "id": "AUD-t-cross-70",
