@@ -20,17 +20,37 @@
 //
 // The device width is DERIVED, not a hand-picked literal: `flutter test`'s
 // headless text renderer has no real font loaded (GoogleFonts fetching is
-// disabled in tests — see setUpAll below) and measures glyphs far wider than
-// the shipped PlusJakartaSans typeface does on a real device. A hardcoded
-// "375" would either never overflow under this fallback metric (giving the
-// same false confidence this finding exists to fix) or overflow regardless
-// of the fix. Instead we measure the ACTUAL rendered width of "DASHBOARD" at
-// 1.3x scale in THIS environment, then size the simulated device so the
+// disabled in tests — see setUpAll below), so the glyph metrics it produces
+// do not match the shipped PlusJakartaSans typeface on a real device. A
+// hardcoded "375" would either never overflow under this fallback metric
+// (giving the same false confidence this finding exists to fix) or overflow
+// regardless of the fix.
+//
+// AUD-t-cross-40 (second pass): the FIRST rewrite of this test (which added
+// the real-widget import) still derived its target device width from a
+// standalone `TextPainter` built with a bare `TextStyle` — not from the
+// widget tree itself. That TextPainter measured "DASHBOARD" at ~108.8px,
+// but the REAL `RenderParagraph` the widget actually lays out measures only
+// ~72.7px in this same test binding/style/scale (the ambient `Directionality`
+// / theme text style resolution the live widget goes through does not
+// exactly match a freestanding TextPainter). Sizing the device from the
+// inflated estimate made the "narrow" width wide enough that even the
+// PRE-FIX chrome (margin h:4 / padding h:6) never actually overflowed —
+// reverting the AN-6 fix left this test green. Proven by: temporarily
+// reverting `_ShellNavItem`'s padding/margin to the pre-fix values did NOT
+// turn the old version of this test red.
+//
+// Fix for THIS pass: measure the label from the REAL, live `RenderParagraph`
+// instead of a freestanding TextPainter. The test first pumps the actual
+// widget tree at a generously wide device width (1200px — wide enough that
+// no plausible chrome could clip a 4-9 character label), reads the "DASHBOARD"
+// `RenderParagraph`'s actual laid-out width off that live tree, then RESIZES
+// (not rebuilds) the same mounted tree down to a derived narrow width so the
 // FIXED per-item chrome (margin: horizontal 2, padding: horizontal 4) leaves
-// just enough content width to fit it with a small safety margin — the same
-// margin the PRE-FIX chrome (margin: horizontal 4, padding: horizontal 6)
-// consumes, so the two dimensions bracket the pass/fail boundary
-// symmetrically. Verified red-first: temporarily reverting
+// just enough content width to fit that measured label with a small safety
+// margin — the same margin the PRE-FIX chrome (margin: horizontal 4, padding:
+// horizontal 6) falls short by, so the two dimensions bracket the pass/fail
+// boundary symmetrically. Verified red-first: temporarily reverting
 // `_ShellNavItem`'s fixed padding/margin back to the pre-fix values turns
 // this test red (see commit message for the captured failure output);
 // restoring the fix turns it green again.
@@ -201,38 +221,23 @@ void _expectDashboardLabelNotTruncated(WidgetTester tester) {
 
 /// Derives a simulated device width that brackets the AN-6 pass/fail
 /// boundary in THIS test environment's font metrics (see file header for
-/// why a hardcoded width would not work). Measures the real "DASHBOARD"
-/// label at [textScale] with the same [TextStyle] `_ShellNavItem` uses, then
-/// sizes the device so the FIXED per-item chrome ([fixedItemChromeWidth])
-/// clears it by a safety margin equal to half the gap between
-/// [preFixItemChromeWidth] and [fixedItemChromeWidth] — the same margin by
-/// which the PRE-FIX chrome falls short, so the two dimensions land
-/// symmetrically on either side of the truncation boundary.
+/// why a hardcoded width would not work, and why [labelWidth] MUST come from
+/// the real, live `RenderParagraph` rather than a freestanding `TextPainter`
+/// estimate). Sizes the device so the FIXED per-item chrome
+/// ([fixedItemChromeWidth]) clears [labelWidth] by a safety margin equal to
+/// half the gap between [preFixItemChromeWidth] and [fixedItemChromeWidth] —
+/// the same margin by which the PRE-FIX chrome falls short, so the two
+/// dimensions land symmetrically on either side of the truncation boundary.
 double _deriveNarrowShellWidth({
-  required double textScale,
+  required double labelWidth,
   required double fixedItemChromeWidth,
   required double preFixItemChromeWidth,
   required int tabCount,
   required double outerHorizontalPadding,
 }) {
-  final labelPainter = TextPainter(
-    text: const TextSpan(
-      text: 'DASHBOARD',
-      style: TextStyle(
-        fontSize: 9,
-        letterSpacing: 0.4,
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-    textDirection: TextDirection.ltr,
-    textScaler: TextScaler.linear(textScale),
-    maxLines: 1,
-  )..layout();
-
   final chromeSwing = preFixItemChromeWidth - fixedItemChromeWidth;
   final safetyMargin = chromeSwing / 2;
-  final requiredItemWidth =
-      labelPainter.width + safetyMargin + fixedItemChromeWidth;
+  final requiredItemWidth = labelWidth + safetyMargin + fixedItemChromeWidth;
   return requiredItemWidth * tabCount + outerHorizontalPadding;
 }
 
@@ -286,21 +291,12 @@ void main() {
       'DASHBOARD label fits inside the real AppShell nav item at font_scale '
       '1.3 on a narrow simulated device width (AN-6 fixed)',
       (tester) async {
-        // See the file header for why this width is derived from a real
-        // text measurement instead of a hardcoded literal like "375".
-        final deviceWidth = _deriveNarrowShellWidth(
-          textScale: 1.3,
-          // Fix: _ShellNavItem's pill uses
-          // margin: horizontal 2, padding: horizontal 4 (app_shell.dart).
-          fixedItemChromeWidth: 2 * 2 + 4 * 2,
-          // Pre-fix: margin: horizontal 4, padding: horizontal 6.
-          preFixItemChromeWidth: 4 * 2 + 6 * 2,
-          tabCount: 4,
-          // bottomNavigationBuilder's outer
-          // Padding(EdgeInsets.fromLTRB(12, 10, 12, 10)).
-          outerHorizontalPadding: 12 * 2,
-        );
-        tester.view.physicalSize = Size(deviceWidth, 800);
+        // Start at a generously wide device width — wide enough that no
+        // plausible chrome (pre- or post-fix) could clip a short all-caps
+        // label — so the FIRST measurement below reflects the label's true
+        // unclipped size, not a truncated one.
+        const wideWidth = 1200.0;
+        tester.view.physicalSize = const Size(wideWidth, 800);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
@@ -349,6 +345,37 @@ void main() {
         expect(find.text('LEARN'), findsOneWidget);
         expect(find.text('PROGRESS'), findsOneWidget);
         expect(find.text('SETTINGS'), findsOneWidget);
+
+        // Measure the REAL, live "DASHBOARD" RenderParagraph — not a
+        // freestanding TextPainter (see file header for why that diverged
+        // from the widget's actual rendered size and made the old version of
+        // this test unable to catch the AN-6 regression).
+        final labelWidth = tester
+            .renderObject<RenderParagraph>(find.text('DASHBOARD'))
+            .size
+            .width;
+
+        // See the file header for why this width is derived from a real
+        // text measurement instead of a hardcoded literal like "375".
+        final deviceWidth = _deriveNarrowShellWidth(
+          labelWidth: labelWidth,
+          // Fix: _ShellNavItem's pill uses
+          // margin: horizontal 2, padding: horizontal 4 (app_shell.dart).
+          fixedItemChromeWidth: 2 * 2 + 4 * 2,
+          // Pre-fix: margin: horizontal 4, padding: horizontal 6.
+          preFixItemChromeWidth: 4 * 2 + 6 * 2,
+          tabCount: 4,
+          // bottomNavigationBuilder's outer
+          // Padding(EdgeInsets.fromLTRB(12, 10, 12, 10)).
+          outerHorizontalPadding: 12 * 2,
+        );
+
+        // Resize (not rebuild) the SAME mounted widget/provider tree down to
+        // the derived narrow width and relayout, so both measurements come
+        // from identical widget/provider state — only the device width
+        // changes.
+        tester.view.physicalSize = Size(deviceWidth, 800);
+        await tester.pump();
 
         _expectDashboardLabelNotTruncated(tester);
 
