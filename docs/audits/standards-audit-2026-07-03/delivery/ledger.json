@@ -9282,13 +9282,17 @@
   {
    "id": "AUD-t-cross-86",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace DateTime.now() with the DateTimeFactory clock seam in stage_sync_test.dart's track fixture",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "f88cedd30b4fa2c99bb5e100c5a5e0ccb3aeb82f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-86 AC1 OK: grep 'DateTime.now()' in stage_sync_test.dart = zero hits (exit 1); 2 sites now use DateTimeFactory.nowUtc() (date_utils.dart:19), import added"
+   ],
+   "notes": "Re-verified: lines 21-22 still called DateTime.now() (no drift since 4018a91c). Swapped to DateTimeFactory.nowUtc() (import added), matching sibling files. AC verified: grep 'DateTime.now()' in file returns zero hits (exit 1)."
   },
   {
    "id": "AUD-t-cross-81",
