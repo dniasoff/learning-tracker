@@ -3806,13 +3806,13 @@
   {
    "id": "AUD-t-cross-32",
    "wave": 4,
-   "status": "todo",
+   "status": "blocked",
    "severity": "P2",
    "title": "Make the 'All fetchers cover all 7 curricula' test verify against CurriculumId.values instead of a hand-maintained map",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "blocked (merge-lane w4r1c6, 2026-07-14). Re-verified accurate; AC1 proven red-first (fails: mishnehTorah lacks fetcher, isn't composite). AC2 unclosable: 'composite' false (not merged); 'real fetcher' = unverifiable code for dead Story-15.13 framework, already PO-parked for deletion (AUD-guardrails-09). Reverted probe; no commit."
   },
   {
    "id": "AUD-t-cross-15",
