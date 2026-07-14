@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -18,7 +17,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {
   group('DashboardScreen', () {
-    Widget buildTestWidget() {
+    Widget buildTestWidget({Locale? locale}) {
       return ProviderScope(
         overrides: [
           // DashboardScreen now listens to syncStatusProvider (auto-refresh on
@@ -51,15 +50,11 @@ void main() {
             (ref) => Stream.value(<CurriculumTrack>[]),
           ),
         ],
-        child: const MaterialApp(
-          localizationsDelegates: [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
+        child: MaterialApp(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: DashboardScreen(),
+          home: const DashboardScreen(),
         ),
       );
     }
@@ -69,6 +64,24 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.byType(Scaffold), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    // RTL regression guard (TQ-3). DashboardScreen is the app's home/hotspot
+    // screen in a bilingual RTL-first app, yet none of this file's pumps
+    // previously exercised Locale('he') — a Hebrew-layout regression on the
+    // dashboard's own scaffold could ship undetected by its own test file.
+    // Reuses the locale-pump pattern from active_tracks_carousel_rtl_test.dart.
+    testWidgets('renders without error or overflow under Locale(he) (RTL)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget(locale: const Locale('he')));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(Scaffold), findsOneWidget);
+      expect(tester.takeException(), isNull);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
@@ -118,12 +131,7 @@ void main() {
             ),
           ],
           child: const MaterialApp(
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: DashboardScreen(),
           ),
@@ -235,12 +243,7 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: const MaterialApp(
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: DashboardScreen(),
           ),
