@@ -9193,13 +9193,19 @@
   {
    "id": "AUD-t-scheduler-07",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix the sefaria_ref_matcher_test.dart sortOrder test that cannot verify its own claim",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "b6170bd9bd929c7a037ccf33707c1482ebd1ef35"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-scheduler-07 AC1 OK: test renamed to 'returns all matching leaf children regardless of sortOrder' (diff line 568); name now matches assertion = AC option-1 rename",
+    "AUD-t-scheduler-07 AC1 OK: source confirms rename correct - matcher.dart:323/338 returns Set<String> (.toSet erases order), line 284 caller re-sorts independently",
+    "AUD-t-scheduler-07 AC1 OK: containsAll -> unorderedEquals is a strengthening (exact set vs subset), not TQ-7 weakening; passes 116/116"
+   ],
+   "notes": "Repro confirmed: reversing sort in leafChildrenForContainer left old test green (containsAll ignores order). Reverted. Renamed test to match assertion, added comment, swapped containsAll for unorderedEquals. Verified new test catches real membership regressions."
   },
   {
    "id": "AUD-settings-13",
