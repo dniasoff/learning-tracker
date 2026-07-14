@@ -39,6 +39,17 @@ void main() {
     await seedProfile(db);
     await seedProfileZero(db);
 
+    // Seed an unrelated track first so the row under test does NOT land on
+    // id 1 by coincidence of insert order (AUD-t-scheduler-09) — this makes
+    // the `trackId` assertions below load-bearing: a hardcoded `trackId: 1`
+    // regression would now diverge from the captured id and fail.
+    await seedTrack(
+      db,
+      profileId: 99,
+      curriculumId: CurriculumId.bavli.storageKey,
+      activatedAt: now,
+    );
+
     final trackRow = await db
         .into(db.curriculumTracks)
         .insertReturning(
@@ -105,7 +116,7 @@ void main() {
     final tasks = await generator.generate(
       curriculum,
       now,
-      trackId: 1,
+      trackId: trackId,
       trackLabel: 'Test',
     );
 
@@ -115,6 +126,7 @@ void main() {
       expect(task.contentItemSefariaRef, isNotEmpty);
       expect(task.stageDefinitionId, greaterThan(0));
       expect(task.stageName, isNotEmpty);
+      expect(task.trackId, trackId);
     }
   });
 
@@ -156,7 +168,7 @@ void main() {
     final tasks = await generator.generate(
       curriculum,
       now,
-      trackId: 1,
+      trackId: trackId,
       trackLabel: 'Test',
     );
 
@@ -180,7 +192,7 @@ void main() {
     final tasks = await generator.generate(
       curriculum,
       now,
-      trackId: 1,
+      trackId: trackId,
       trackLabel: 'Test',
       skippedRefs: {'Mishnah_Berakhot_1.0'},
     );
@@ -215,7 +227,7 @@ void main() {
     final tasksToday = await generator.generate(
       curriculum,
       now,
-      trackId: 1,
+      trackId: trackId,
       trackLabel: 'Test',
     );
     // Item 0 should NOT have chazara due today (delay=1)
@@ -232,7 +244,7 @@ void main() {
     final tasksTomorrow = await generator.generate(
       curriculum,
       now.add(const Duration(days: 1)),
-      trackId: 1,
+      trackId: trackId,
       trackLabel: 'Test',
     );
     expect(
@@ -293,7 +305,7 @@ void main() {
     final tasks = await generator.generate(
       curriculum,
       now,
-      trackId: 1,
+      trackId: trackId,
       trackLabel: 'Test',
     );
 

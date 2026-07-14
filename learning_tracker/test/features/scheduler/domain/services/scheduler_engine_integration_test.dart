@@ -42,6 +42,18 @@ void main() {
       const curriculum = CurriculumId.mishnayos;
       final now = DateTime.utc(2026, 3, 15);
 
+      // Seed an unrelated track first so the row under test does NOT land
+      // on id 1 by coincidence of insert order (AUD-t-scheduler-09) — this
+      // makes the `trackId` assertions below load-bearing: a hardcoded
+      // `trackId: 1` regression would now diverge from the captured id and
+      // fail.
+      await seedTrack(
+        db,
+        profileId: 99,
+        curriculumId: CurriculumId.bavli.storageKey,
+        activatedAt: now,
+      );
+
       final trackRow = await db
           .into(db.curriculumTracks)
           .insertReturning(
@@ -102,7 +114,7 @@ void main() {
       // 4. Generate initial tasks (no completions yet)
       var config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
+        trackId: trackId,
         trackLabel: 'Test Track',
         goalDeadline: now.add(const Duration(days: 5)),
         currentDate: now,
@@ -114,6 +126,9 @@ void main() {
         tasks.where((t) => t.priority == DailyTaskPriority.newLearning).length,
         2,
       );
+      for (final t in tasks) {
+        expect(t.trackId, trackId);
+      }
 
       // 5. Mark completions for first 2 items (Learn stage)
       final stages = await db.stageDao.getStageDefinitionsByCurriculum(
@@ -140,13 +155,16 @@ void main() {
       // 6. Regenerate next day — should reflect updated state
       config = ScheduleConfig(
         curriculumId: curriculum,
-        trackId: 1,
+        trackId: trackId,
         trackLabel: 'Test Track',
         goalDeadline: now.add(const Duration(days: 5)),
         currentDate: now.add(const Duration(days: 1)),
       );
 
       tasks = await engine.generateDailyTasks(config);
+      for (final t in tasks) {
+        expect(t.trackId, trackId);
+      }
 
       // Chazara 1 (delayDays=1) should now be due for the 2 completed items
       final chazaraTasks = tasks.where(
