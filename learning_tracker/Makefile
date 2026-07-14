@@ -311,7 +311,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 66 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -984,9 +984,18 @@ audit: lint-rules-test ## Run all 66 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/scheduler_test_dup_check.$$$$.log; \
 	fi; \
+	echo "67/67 — TQ-8 Rule-0: text_display_screen.dart carries zero ref.invalidate( calls — completionCommittedProvider is the sole signal mechanism (AUD-t-story-acceptance-13)"; \
+	if grep -n "ref\.invalidate(" lib/features/content_browsing/presentation/screens/text_display_screen.dart \
+	    | grep -v ":[[:space:]]*//" | grep -q .; then \
+	  echo "  text_display_screen.dart must not reintroduce ref.invalidate() calls — Story 26.13 replaced 14 manual"; \
+	  echo "  invalidations with completionCommittedProvider; every consumer watches that counter instead:"; \
+	  grep -n "ref\.invalidate(" lib/features/content_browsing/presentation/screens/text_display_screen.dart \
+	    | grep -v ":[[:space:]]*//"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 66 greps clean ==="; \
+	  echo "=== audit PASSED — all 67 greps clean ==="; \
 	fi

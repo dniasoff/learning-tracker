@@ -6,6 +6,8 @@
 @Tags(['epic_26'])
 library;
 
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:test/test.dart';
@@ -99,20 +101,31 @@ void main() {
 
       test('text_display_screen.dart contains zero ref.invalidate() calls '
           '(reader purity)', () {
-        // This test is a compile-time / structural assertion checked via grep
-        // in CI. Here we verify the behaviour contract is in place by
-        // confirming the provider is the mechanism used to signal completions
-        // — no manual invalidation needed at call sites.
-        //
-        // The absence of ref.invalidate in text_display_screen.dart is
-        // enforced by the make lint / grep step in CI (Makefile target
-        // `audit`). This test documents the contract so reviewers know why.
+        // Structural check against the actual source file (AUD-t-story-
+        // acceptance-13): the previous version of this test only asserted
+        // `completionCommittedProvider` is non-null, which is trivially true
+        // regardless of what text_display_screen.dart contains and would not
+        // fail if ref.invalidate() calls were reintroduced. This grep is the
+        // real guardrail; `make audit` check 67/67 enforces the same
+        // constraint outside the Dart test runner.
+        final file = File(
+          'lib/features/content_browsing/presentation/screens/text_display_screen.dart',
+        );
+        // Full-comment lines are excluded (mirrors the `make audit` grep's
+        // own comment exclusion) so the doc comment above — which mentions
+        // "ref.invalidate() calls" in prose — cannot trip this check.
+        final hasInvalidateCall = file
+            .readAsLinesSync()
+            .where((line) => !line.trimLeft().startsWith('//'))
+            .any((line) => line.contains('ref.invalidate('));
         expect(
-          completionCommittedProvider,
-          isNotNull,
+          hasInvalidateCall,
+          isFalse,
           reason:
-              'completionCommittedProvider must exist as the single '
-              'signal mechanism replacing 14 manual invalidations',
+              'text_display_screen.dart must not reintroduce ref.invalidate() '
+              'calls — completionCommittedProvider is the single signal '
+              'mechanism replacing the 14 manual invalidations Story 26.13 '
+              'removed',
         );
       });
     },
