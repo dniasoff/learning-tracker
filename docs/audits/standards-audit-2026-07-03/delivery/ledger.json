@@ -3006,13 +3006,13 @@
     {
       "id": "AUD-t-profiles-03",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Extract a shared pumpApp/l10n test harness \u2014 25+ duplicated MaterialApp+delegate blocks across features/profiles/presentation tests",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk08 engine run, 2026-07-14, terminated at no-progress cap / loop end). Ledger row was found stuck at stale todo by this reconciliation pass and reclassified to match the engine outcome. Two worktree branches carry a verified-looking fix commit, never merged: fd12b480 (worktree-wf_9438f433-5f0-43) and e8afe273 (worktree-wf_9438f433-5f0-2), both titled 'test(profiles): AUD-t-profiles-03 - migrate 15 remaining files onto pumpApp'; migrates all 15 named files onto pumpApp() and lowers tool/tq3_pump_app_delegate_baseline.txt. Neither commit is an ancestor of dev HEAD (git merge-base --is-ancestor fails for both). Independently reverified against the current tree: all 15 named files still hand-roll MaterialApp( (1-9 occurrences each) with zero pumpApp( calls; tool/tq3_pump_app_delegate_baseline.txt is unchanged from AUD-t-profiles-02's commit (2c7d3790). Fix genuinely unlanded, not moot. See kill-log-addendum.md for full evidence."
     },
     {
       "id": "AUD-scheduler-03",
@@ -9082,13 +9082,13 @@
     {
       "id": "AUD-t-profiles-06",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Scope or ticket the FlutterError.onError overflow suppression in profile_picker_screen_l1_test.dart and rpr2_picker_offline_delete_test.dart he-locale tests",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave4-chunk08 engine run, 2026-07-14, terminated at no-progress cap / loop end). Ledger row was found stuck at stale todo by this reconciliation pass and reclassified to match the engine outcome. Two worktree branches carry a verified-looking fix commit, never merged: 7268e452 (worktree-wf_9438f433-5f0-43) and d37767a7 (worktree-wf_9438f433-5f0-2), both titled 'fix(profiles): AUD-t-profiles-06 - narrow FlutterError.onError overflow filters'; adds test/helpers/scoped_overflow_filter.dart's isKnownSmallOverflow() (magnitude-based, <=15 logical px) and swaps both production filters off the blanket contains('overflowed') substring check. Neither commit is an ancestor of dev HEAD (git merge-base --is-ancestor fails for both). Independently reverified against the current tree: both profile_picker_screen_l1_test.dart and rpr2_picker_offline_delete_test.dart still install the blanket contains('overflowed') filter; test/helpers/scoped_overflow_filter.dart does not exist on dev. Fix genuinely unlanded, not moot. See kill-log-addendum.md for full evidence."
     },
     {
       "id": "AUD-progress-13",
