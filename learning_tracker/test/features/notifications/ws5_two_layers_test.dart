@@ -21,7 +21,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class MockNotificationGateway extends Mock implements NotificationGateway {}
+import 'support/mock_notification_gateway.dart';
 
 Widget _buildWithProviders({
   required Widget child,
