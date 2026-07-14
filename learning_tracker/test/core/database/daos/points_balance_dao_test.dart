@@ -54,13 +54,15 @@ void main() {
       expect(balance, 8);
     });
 
-    test('debitRedemption returns false when balance is insufficient', () async {
+    test('parentAdjust clamps balance at 0 when the deduction exceeds the '
+        'current balance (AUD-t-cross-70: this is the only test that drives '
+        'the floor-clamp path — parentAdjust deducts points (clamped at 0) '
+        'above never deducts more than the balance holds)', () async {
       await db.pointsBalanceDao.creditCompletion(1, 5);
-      // Create a redemption first to satisfy foreign-key on the DAO call.
-      // Use parentAdjust as a proxy since debitRedemption needs a redemptionId.
       final currentBefore = await db.pointsBalanceDao.getBalance(1);
       expect(currentBefore, 5);
-      // Attempt a parent deduction larger than the balance — clamps at 0.
+      // Deduction (100) far exceeds the balance (5) — must clamp at 0
+      // rather than going negative.
       await db.pointsBalanceDao.parentAdjust(1, -100);
       final balanceAfter = await db.pointsBalanceDao.getBalance(1);
       expect(balanceAfter, 0);
