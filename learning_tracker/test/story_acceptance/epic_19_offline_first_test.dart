@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart' show ByteData, Uint8List;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
@@ -20,6 +22,8 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 import '../helpers/test_database.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   // ─── Story 19.1: Calendar Registry Bugs ──────────────────────────
   group('Story 19.1 — Calendar Registry Bugs Fixed', () {
     test('all 20 programs are registered', () {
@@ -323,7 +327,9 @@ void main() {
           } catch (_) {}
         });
 
-        // Build a small source seed DB on disk with a known version row.
+        // Build a small source seed DB on disk with a known version row —
+        // this is the plaintext content.db the gzipped asset must decompress
+        // into, byte-for-byte, once run through SeedManager.
         final sourcePath = '${tmp.path}/source.db';
         final source = ContentDatabase(NativeDatabase(File(sourcePath)));
         await source.customInsert(
@@ -339,20 +345,47 @@ void main() {
           ],
         );
         await source.close();
+        final sourceBytes = await File(sourcePath).readAsBytes();
 
-        // Verify SeedManager's path/backup plumbing without mocking the
-        // Flutter asset bundle: write a pre-seeded content.db into the
-        // target dir and check ensureContentDb returns its path as a
-        // no-op upgrade.
+        // Gzip-compress the plaintext seed with the same `dart:io` `gzip`
+        // codec SeedManager's `_decompressAndWrite` decodes with, and serve
+        // it from a mocked `flutter/assets` channel at the exact key
+        // SeedManager requests (`_seedAssetPath` ==
+        // 'assets/db/content.db.gz'). This exercises the real first-launch
+        // path end to end — `ensureContentDb` → `_extractSeedDb` →
+        // `rootBundle.load` → `compute(_decompressAndWrite)` →
+        // `gzip.decoder` — with nothing below the asset-bundle boundary
+        // mocked away.
+        final gzippedBytes = Uint8List.fromList(gzip.encode(sourceBytes));
+        const seedAssetKey = 'assets/db/content.db.gz';
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMessageHandler('flutter/assets', (ByteData? message) async {
+              final requestedKey = utf8.decode(message!.buffer.asUint8List());
+              if (requestedKey != seedAssetKey) return null;
+              return ByteData.view(gzippedBytes.buffer);
+            });
+        addTearDown(() {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMessageHandler('flutter/assets', null);
+        });
+
+        // No content.db in the target dir — this is the genuine first-launch
+        // branch (seed_manager.dart Step 2: `!dbFile.existsSync()`), not the
+        // "already installed, check version" no-op branch Step 3 covers.
         final contentDbPath = '${tmp.path}/content.db';
-        File(sourcePath).copySync(contentDbPath);
+        expect(File(contentDbPath).existsSync(), isFalse);
 
         final mgr = SeedManager(dbDirectory: tmp.path);
         final resolved = await mgr.ensureContentDb();
         expect(resolved, contentDbPath);
         expect(File(resolved).existsSync(), isTrue);
 
-        // The resolved DB must open and report the expected version.
+        // Byte-correct round trip: the decompressed content.db is byte-
+        // identical to the plaintext that was gzipped above.
+        final resolvedBytes = await File(resolved).readAsBytes();
+        expect(resolvedBytes, sourceBytes);
+
+        // The resolved DB must also open and report the expected version.
         final opened = ContentDatabase(NativeDatabase(File(resolved)));
         try {
           final meta = await opened.seedMetadataDao.getVersion();
