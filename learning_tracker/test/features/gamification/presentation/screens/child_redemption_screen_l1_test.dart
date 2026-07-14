@@ -106,6 +106,10 @@ Future<void> _pumpScreen(
   // Provide a dummy DB when the caller doesn't need a real one; the screen
   // reads userDatabaseProvider inside _confirmRedeem so it must be overridden.
   final database = db ?? inMemoryDb();
+  // AUD-t-gamification-04: only close it here when THIS function created it
+  // -- when the caller passed its own `db`, closing belongs to the caller
+  // (which may still want to query it after this pump for assertions).
+  if (db == null) addTearDown(database.close);
 
   await tester.pumpWidget(
     ProviderScope(
@@ -159,6 +163,8 @@ Future<void> _pumpScreenWithRouter(
   required List<RewardMilestone> rewards,
 }) async {
   final database = inMemoryDb();
+  // AUD-t-gamification-04: see the matching comment in _pumpScreen above.
+  addTearDown(database.close);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [

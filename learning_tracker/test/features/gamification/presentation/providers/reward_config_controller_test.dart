@@ -13,24 +13,35 @@
 ///  10. saveReward — invalid (negative text) → RewardSaveInvalidInput.
 ///  11. saveReward — valid add → RewardSaved(wasEditing=false), clears form.
 ///  12. saveReward — valid edit → RewardSaved(wasEditing=true).
-///  13. saveReward — duplicate threshold → RewardSaveDuplicateThreshold.
+///  13. saveReward — duplicate threshold (GA-3: constraint removed) — two
+///      rewards at the same cost both save.
 ///  14. saveReward — edit same milestone (exclude own id) → not a duplicate.
 ///  15. deleteMilestone — removes from SharedPreferences.
 ///  16. deleteMilestone — if editing that milestone, clears form.
 ///  17. toggleEnabled — flips isEnabled flag.
 ///  18. milestonesForCurrentLadder — global ladder.
-///  19. milestonesForCurrentLadder — no track selected → empty list.
+///  19. milestonesForCurrentLadder — no milestones seeded → empty list.
 ///  20. Product rule: adults have no points — adult profile, controller works fine.
 ///  21. usesGlobalLadder computed property: true when tracks empty.
-///  22. RewardSaveNoTrack — per-track ladder selected but no track chosen.
-///  23. SM-5 (AUD-gamification-10) — saveReward/toggleEnabled/deleteMilestone
+///  22. SM-5 (AUD-gamification-10) — saveReward/toggleEnabled/deleteMilestone
 ///      set state.error (and clear state.loading) when the underlying call
 ///      throws anything other than TutorWriteException; a TutorWriteException
 ///      is rethrown and does NOT set state.error.
-///  24. SM-4 (AUD-gamification-01) — disposing the container while
+///  23. SM-4 (AUD-gamification-01) — disposing the container while
 ///      saveReward()'s sync push is in flight must not throw an uncaught
 ///      disposed-ref exception; the notifier checks `ref.mounted` before
 ///      touching `state`/`ref` again after the await.
+///
+/// AUD-t-gamification-02: two items formerly in this list are gone.
+/// "setGlobalReward — allows non-global when tracks is non-empty" was a
+/// byte-for-byte duplicate of item 4's assertions (no real bootstrap path
+/// ever populates `tracks`, so the two tests exercised the identical
+/// tracks-empty branch under different names). "RewardSaveNoTrack — per-track
+/// ladder selected but no track chosen" never called `saveReward()` at all —
+/// it asserted directly on a hand-built `RewardForm`, and the result variant
+/// it claimed to produce could never be returned by the real controller (see
+/// reward_config_controller.dart's `RewardSaveResult` doc comment). Both
+/// were deleted rather than kept as dead-branch coverage.
 
 @Tags(['gamification', 'reward_config_controller'])
 library;
@@ -69,6 +80,13 @@ ProviderContainer _makeContainer({
   String profileMode = 'adult',
 }) {
   final db = inMemoryDb();
+  // AUD-t-gamification-04: ProviderContainer.dispose() (called via
+  // addTearDown(c.dispose) at each call site) disposes Riverpod's
+  // providers, not this raw UserDatabase handed to overrideWithValue below
+  // -- close it explicitly or the native sqlite3 connection stays open
+  // until the test file's isolate exits (test/helpers/drift_memory.dart's
+  // inMemoryDb() doc comment).
+  addTearDown(db.close);
   return ProviderContainer(
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
@@ -340,19 +358,14 @@ void main() {
       expect(_state(c).isGlobalReward, isTrue);
     });
 
-    test('allows non-global when tracks is non-empty', () async {
-      final c = _makeContainer();
-      addTearDown(c.dispose);
-
-      // Manually inject a track into the state so setGlobalReward respects
-      // the parameter. We can do this by mutating state via the notifier's
-      // exposed method path — but since RewardForm.tracks is only set in
-      // bootstrap(), we verify the guard logic directly:
-      // With empty tracks the guard always returns isGlobalReward=true.
-      // This test documents the invariant.
-      _notifier(c).setGlobalReward(false);
-      expect(_state(c).usesGlobalLadder, isTrue);
-    });
+    // AUD-t-gamification-02: a second test here ("allows non-global when
+    // tracks is non-empty") called this same `setGlobalReward(false)` on a
+    // freshly-bootstrapped (tracks-empty) container and asserted
+    // `usesGlobalLadder` is `true` — the identical assertion as the test
+    // above, under a name claiming the opposite outcome. No real bootstrap
+    // path ever populates `tracks`, so there was no way to exercise a
+    // genuine non-global branch; removed as a duplicate rather than kept as
+    // misleading dead-branch coverage.
   });
 
   // ── 5. setSelectedTrack ──────────────────────────────────────────────────────
@@ -962,21 +975,28 @@ void main() {
       expect(milestones.map((m) => m.id), containsAll(['ms-g1', 'ms-g2']));
     });
 
-    // ── 19. No track selected → empty ─────────────────────────────────────────
+    // ── 19. No milestones seeded → empty ──────────────────────────────────────
 
-    test('returns empty list when per-track mode but no track selected', () async {
-      final c = _makeContainer();
-      addTearDown(c.dispose);
+    // AUD-t-gamification-02: this test used to be named "returns empty list
+    // when per-track mode but no track selected", claiming to cover the
+    // `tid == null` branch inside `milestonesForCurrentLadder()`. It does
+    // not: `tracks` is always empty (no real bootstrap path populates it —
+    // DEC-32/GA-3), so `usesGlobalLadder` is always `true` and that method
+    // always takes the `svc.getGlobalMilestones()` branch, never the
+    // per-track one. What this test actually exercises — and legitimately —
+    // is the global-ladder branch when no milestones have been seeded.
+    // Renamed to match reality instead of deleted, since the empty-list
+    // assertion for a real, reachable case is still real coverage.
+    test(
+      'returns empty list on the global ladder when nothing is seeded',
+      () async {
+        final c = _makeContainer();
+        addTearDown(c.dispose);
 
-      // We can only test the null-track branch by ensuring usesGlobalLadder=false
-      // and selectedTrackId=null.  Since tracks.isEmpty forces usesGlobalLadder=true
-      // via the guard, we verify the documented invariant: if there are no tracks,
-      // usesGlobalLadder is true and the method returns global milestones (or empty).
-      // This test confirms that a freshly bootstrapped container with no seeded
-      // milestones returns an empty list.
-      final milestones = await _notifier(c).milestonesForCurrentLadder();
-      expect(milestones, isEmpty);
-    });
+        final milestones = await _notifier(c).milestonesForCurrentLadder();
+        expect(milestones, isEmpty);
+      },
+    );
 
     // AUD-gamification-11 (SM-7): milestonesForCurrentLadder() used to
     // construct its own `RewardMilestoneService(db, profileId: profileId)`
@@ -1104,39 +1124,15 @@ void main() {
     });
   });
 
-  // ── 22. RewardSaveNoTrack ────────────────────────────────────────────────────
-
-  group('saveReward() — RewardSaveNoTrack', () {
-    test(
-      'returns RewardSaveNoTrack when non-global but selectedTrackId is null',
-      () async {
-        final c = _makeContainer();
-        addTearDown(c.dispose);
-
-        // Force a state where usesGlobalLadder=false and selectedTrackId=null.
-        // We do this by directly testing the RewardForm computed property and
-        // confirming the controller branch.
-        // Since bootstrap() sets isGlobalReward=true and empty tracks always
-        // force usesGlobalLadder=true, the only way to trigger RewardSaveNoTrack
-        // is via a form state where isGlobalReward=false and tracks non-empty.
-        // That state is produced by applyMilestoneToForm with a per-track ms
-        // when the controller has tracks loaded. Since tracks loading requires
-        // real DB curriculum data, we instead test via the RewardForm model
-        // directly.
-        const form = RewardForm(
-          name: 'Star',
-          pointsText: '100',
-          isGlobalReward: false,
-          selectedTrackId: null,
-          tracks: [], // empty → usesGlobalLadder=true overrides the above
-        );
-        // When tracks is empty, usesGlobalLadder is true regardless.
-        // This documents: the guard in setGlobalReward prevents the NoTrack branch
-        // when tracks is empty.
-        expect(form.usesGlobalLadder, isTrue);
-      },
-    );
-  });
+  // AUD-t-gamification-02: a group here ("saveReward() — RewardSaveNoTrack")
+  // was removed. It never called `saveReward()` — its only assertion was
+  // `expect(form.usesGlobalLadder, isTrue)` on a hand-built `RewardForm`,
+  // which is the same assertion as "true when tracks is empty regardless of
+  // isGlobalReward" directly above, and the result variant it claimed to
+  // cover no longer exists (see reward_config_controller.dart's
+  // `RewardSaveResult` doc comment). TQ-8: a test must exercise the branch
+  // it claims to cover; this one exercised no branch of `saveReward()` at
+  // all.
 
   // ── Miscellaneous ────────────────────────────────────────────────────────────
 

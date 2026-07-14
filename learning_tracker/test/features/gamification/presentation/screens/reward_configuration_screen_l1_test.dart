@@ -8,18 +8,25 @@
 //   5. Valid name + positive points → saveReward called → "Reward created" dialog.
 //   6. "Reward created" dialog dismissed via OK button.
 //   7. Edit-mode (editingMilestoneId set): valid save → "Reward updated" dialog.
-//   8. Duplicate threshold → shows snackbar with l10n string.
-//   9. _openManageRewardsSheet: three-dot → popup "Manage rewards" item appears.
-//  10. Manage rewards sheet → empty label directs to the form (not "below").
-//  11. _confirmDelete: Delete Reward dialog appears with milestone title.
-//  12. _confirmDelete confirm → milestone deleted from DB.
-//  13. _confirmDelete cancel → milestone NOT deleted.
-//  14. Cancel button (clearForm) resets form state.
-//  15. Tutor canEditRewards=false: Save Reward tap shows permission-denied snackbar.
-//  16. He-RTL smoke: locale=he → screen renders without throwing.
-//  17. SM-5 (AUD-gamification-10, AC2): a generic (non-TutorWriteException)
+//   8. _openManageRewardsSheet: three-dot → popup "Manage rewards" item appears.
+//   9. Manage rewards sheet → empty label directs to the form (not "below").
+//  10. _confirmDelete: Delete Reward dialog appears with milestone title.
+//  11. _confirmDelete confirm → milestone deleted from DB.
+//  12. _confirmDelete cancel → milestone NOT deleted.
+//  13. Cancel button (clearForm) resets form state.
+//  14. Tutor canEditRewards=false: Save Reward tap shows permission-denied snackbar.
+//  15. He-RTL smoke: locale=he → screen renders without throwing.
+//  16. SM-5 (AUD-gamification-10, AC2): a generic (non-TutorWriteException)
 //      save failure renders the form.error branch instead of hanging or
 //      throwing past the test.
+//
+// AUD-t-gamification-02: the former item 8 ("duplicate threshold → shows
+// snackbar with l10n string") was removed. It drove `_FakeController` with a
+// save-result variant the real `RewardConfigController.saveReward` can never
+// return (GA-3 removed the duplicate-threshold uniqueness constraint), so it
+// only proved the screen renders a snackbar for a fake result — never real
+// controller behavior. See reward_config_controller.dart's `RewardSaveResult`
+// doc comment for the full rationale.
 //
 // PLURALIZATION:
 //   rewardConfigPointsPreview uses ICU plural — count==1 renders the singular
@@ -158,6 +165,11 @@ Widget _buildFake({
   required _FakeController fake,
 }) {
   final db = inMemoryDb();
+  // AUD-t-gamification-04: this raw UserDatabase is handed to
+  // overrideWithValue below, not owned by the ProviderScope/widget tree, so
+  // nothing else closes it -- close it explicitly (see
+  // test/helpers/drift_memory.dart's inMemoryDb() doc comment).
+  addTearDown(db.close);
   return ProviderScope(
     retry: (_, __) => null,
     overrides: [
@@ -367,31 +379,7 @@ void main() {
     await _tearDown(tester);
   });
 
-  // ── 8. Duplicate threshold → snackbar ─────────────────────────────────────
-
-  testWidgets('duplicate threshold → snackbar with l10n text', (tester) async {
-    _useTallViewport(tester);
-    final fake = _FakeController(
-      initialState: const RewardForm(name: 'Gold Star', pointsText: '100'),
-      saveResult: const RewardSaveDuplicateThreshold(),
-    );
-    await tester.pumpWidget(_buildFake(fake: fake));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    await tester.tap(find.text('Save Reward'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(
-      find.text('Another reward already uses this point value.'),
-      findsOneWidget,
-    );
-
-    await _tearDown(tester);
-  });
-
-  // ── 9. Three-dot menu → "Manage rewards" popup item ──────────────────────
+  // ── 8. Three-dot menu → "Manage rewards" popup item ──────────────────────
 
   testWidgets('three-dot menu shows "Manage rewards" popup item', (
     tester,
@@ -410,7 +398,7 @@ void main() {
     await _tearDown(tester);
   });
 
-  // ── 10. Manage rewards sheet shows empty label ────────────────────────────
+  // ── 9. Manage rewards sheet shows empty label ────────────────────────────
 
   testWidgets('manage rewards sheet shows empty label when no rewards', (
     tester,
@@ -501,7 +489,7 @@ void main() {
     await _tearDown(tester);
   });
 
-  // ── 11. _confirmDelete: dialog appears with title ─────────────────────────
+  // ── 10. _confirmDelete: dialog appears with title ─────────────────────────
   //
   // Uses _FakeControllerWithMilestones to avoid real Drift isolate queries in
   // fake-async widget tests (isolate I/O does not flush with pump()).
@@ -537,7 +525,7 @@ void main() {
     await _tearDown(tester);
   });
 
-  // ── 12. _confirmDelete confirm → deleteMilestone called ──────────────────
+  // ── 11. _confirmDelete confirm → deleteMilestone called ──────────────────
 
   testWidgets('_confirmDelete confirm → deleteMilestone called on notifier', (
     tester,
@@ -567,7 +555,7 @@ void main() {
     await _tearDown(tester);
   });
 
-  // ── 13. _confirmDelete cancel → deleteMilestone NOT called ───────────────
+  // ── 12. _confirmDelete cancel → deleteMilestone NOT called ───────────────
 
   testWidgets('_confirmDelete cancel → deleteMilestone NOT called', (
     tester,
@@ -597,7 +585,7 @@ void main() {
     await _tearDown(tester);
   });
 
-  // ── 14. Cancel button → clearForm ─────────────────────────────────────────
+  // ── 13. Cancel button → clearForm ─────────────────────────────────────────
 
   testWidgets('Cancel button calls clearForm — name field is cleared', (
     tester,
@@ -633,7 +621,7 @@ void main() {
     await _tearDown(tester);
   });
 
-  // ── 15. Tutor canEditRewards=false → permission-denied snackbar ───────────
+  // ── 14. Tutor canEditRewards=false → permission-denied snackbar ───────────
 
   testWidgets(
     'tutor canEditRewards=false: Save Reward shows permission-denied snackbar',
@@ -714,7 +702,7 @@ void main() {
     await _tearDown(tester);
   });
 
-  // ── 16. He-RTL smoke ──────────────────────────────────────────────────────
+  // ── 15. He-RTL smoke ──────────────────────────────────────────────────────
 
   testWidgets('he locale: screen renders without throwing', (tester) async {
     _useTallViewport(tester);
@@ -730,7 +718,7 @@ void main() {
     await _tearDown(tester);
   });
 
-  // ── 17. SM-5 (AUD-gamification-10, AC2): generic save failure ─────────────
+  // ── 16. SM-5 (AUD-gamification-10, AC2): generic save failure ─────────────
 
   testWidgets(
     'generic save failure (not TutorWriteException) renders the form.error '

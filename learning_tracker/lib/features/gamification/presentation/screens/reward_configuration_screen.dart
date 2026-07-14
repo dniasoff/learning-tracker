@@ -226,14 +226,6 @@ class _RewardConfigurationScreenState
       case RewardSaveInvalidInput():
         // Empty title / invalid points — no-op; button should be disabled.
         break;
-      case RewardSaveNoTrack():
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.rewardConfigNoActiveTracks)),
-        );
-      case RewardSaveDuplicateThreshold():
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.rewardConfigDuplicateThreshold)),
-        );
       case RewardSaveDuplicateName():
         ScaffoldMessenger.of(
           context,
