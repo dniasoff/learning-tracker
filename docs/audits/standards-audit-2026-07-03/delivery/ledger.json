@@ -1805,13 +1805,18 @@
   {
    "id": "AUD-t-profiles-02",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Extract a shared pumpApp test helper — profiles feature hand-rolls the 4-delegate MaterialApp wrapper 13 times",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "17ce2d2ec1c2229e6bb7983569877d4efc604591"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-profiles-02 AC1 OK: test/helpers/pump_app.dart exists; all 4 batch files import+use pumpApp (7/5/1/1 calls) with 0 delegate residue each",
+    "AUD-t-profiles-02 AC2 OK: count outside test/helpers dropped 283->269; checker wired make audit 62/62, baseline 269, probe->exit1 then clean->exit0"
+   ],
+   "notes": "Confirmed 13 hand-rolled delegate blocks, no pumpApp helper. Added test/helpers/pump_app.dart, migrated all 13 sites. Added Rule-0 ratchet checker (audit 62/62); count drops 283->269. Fire-then-pass demoed via probe file. Commit 1e4759a9."
   },
   {
    "id": "AUD-scheduler-09",
@@ -4220,13 +4225,19 @@
   {
    "id": "AUD-t-profiles-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Add AN-2 PIN-guard regression tests for switch-account, add-profile, and switch-to-adult-profile",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "17ce2d2ec1c2229e6bb7983569877d4efc604591"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-profiles-01 AC1 OK: tests for switch-account/add-profile/switch-to-adult each pinGuardRequired=true assert 'Enter Parent PIN' findsOneWidget; 336/336 pass",
+    "AUD-t-profiles-01 AC2 OK: independent probe bypassing _guardEscalating turned all 3 new tests RED; production file git-restored clean, no residue",
+    "AUD-t-profiles-01 AC3 OK: header L11-17 lists all 5 escalating actions; testWidgets descriptions match those 5 exactly plus a guard=false control"
+   ],
+   "notes": "Confirmed gap: only edit/delete tested. Added 3 tests for switch-account/add-profile/switch-to-adult. Red-first: stripped guard from all 3 sites, 3 new tests failed; reverted, reran green 7/7. Header already lists all 5 actions. Commit b237f075."
   },
   {
    "id": "AUD-t-scheduler-02",
