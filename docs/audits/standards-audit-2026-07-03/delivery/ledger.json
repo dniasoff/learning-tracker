@@ -6150,13 +6150,19 @@
   {
    "id": "AUD-t-cross-68",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix hand-rolled test _FakeMergeStore.remoteIsNewer implementations to match DriftMergeStore's clock-skew/D15 semantics",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "2307f8b4f907371bb31adc1ba16b6015fff0e28f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-68 AC1 OK (delegation): extracted driftMergeStoreRemoteIsNewer(); DriftMergeStore.remoteIsNewer + all 4 fakes call the SAME fn -> drift impossible",
+    "AUD-t-cross-68 AC1 OK (red-first): reverted learner_profile fake -> D15 test RED (upserted non-empty); delegating fake GREEN 120/120; asserts store.upserted not the mock",
+    "AUD-t-cross-68 lineage OK: mergers_test.dart gone (AUD-app-05 split); settings/track_config fakes were byte-identical buggy; round_trip fake now stronger"
+   ],
+   "notes": "mergers_test.dart(site1) split by AUD-app-05 into 3 files w/ byte-identical buggy fake; site2 unchanged. Still-live, not refuted. Extracted driftMergeStoreRemoteIsNewer(); all 4 fakes delegate. Red-first test added, failing then passing."
   },
   {
    "id": "AUD-account-22",
