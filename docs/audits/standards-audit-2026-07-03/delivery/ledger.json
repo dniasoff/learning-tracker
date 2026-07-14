@@ -2792,13 +2792,19 @@
   {
    "id": "AUD-t-cross-36",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace fixed-millisecond delay polling with emitsInOrder stream matchers in points_balance_dao_test.dart watchBalance tests",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "f7efb77d50f13cb5eac5454b280bd70b2eecca47"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-36 AC1 OK: both watchBalance tests use emitsInOrder([0,50,70])/[60,100]; only remaining delay is Duration.zero yield (test L83-115, L117-151)",
+    "AUD-t-cross-36 AC2 OK: 25/25 at --concurrency=2 and 25/25 at --concurrency=1 randomized; watchBalance-only 5/5 consecutive green",
+    "AUD-t-cross-36 AC3 OK: checker wired as make audit 57/57; RED on pre-fix L91/141 and on new probe, GREEN on fix; --report shows only 4 baseline files"
+   ],
+   "notes": "Confirmed both watchBalance tests used .listen()+fixed-ms delays. Rewrote to emitsInOrder per profile_dao_test.dart pattern. Shipped Rule-0 checker check_test_stream_delay_race.dart, wired into make audit (57/57); red (orig lines 91/141) -> green. Ratchets baseline of 4 unrelated pre-existing files."
   },
   {
    "id": "AUD-core-learning-01",
