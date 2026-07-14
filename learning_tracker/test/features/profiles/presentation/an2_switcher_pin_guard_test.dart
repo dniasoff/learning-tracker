@@ -2,9 +2,14 @@
 /// (edit, delete, add profile, switch account, switch to adult profile) behind
 /// a Parent PIN challenge when the active profile is a child and a PIN is set.
 ///
+/// Every one of the 5 escalating actions named above has its own testWidgets
+/// case below: edit, delete, switch account, add profile, and switch to a
+/// non-active adult profile.
+///
 /// RED → GREEN cycle:
-///   RED:  tapping edit/delete/add while active=child and pinGuardRequired=true
-///         fires the action directly — no PIN dialog shown.
+///   RED:  tapping edit/delete/add/switch-account/switch-to-adult while
+///         active=child and pinGuardRequired=true fires the action directly —
+///         no PIN dialog shown.
 ///   GREEN: the same taps show the Parent PIN verification dialog first.
 @Tags(['profiles', 'an2'])
 library;
@@ -169,6 +174,99 @@ void main() {
           reason:
               'AN-2: pressing delete while active=child (PIN guard required) '
               'must show the Parent PIN verification dialog first.',
+        );
+      },
+    );
+
+    testWidgets(
+      'switch account tile shows Parent PIN dialog when active=child and '
+      'guard=true',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSheet(
+            profiles: profiles,
+            activeProfileId: activeChildId,
+            pinGuardRequired: true,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        await tester.tap(find.text('Switch account'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // AN-2 fix: the Parent PIN verification dialog must appear.
+        expect(
+          find.text('Enter Parent PIN'),
+          findsOneWidget,
+          reason:
+              'AN-2: tapping Switch account while active=child (PIN guard '
+              'required) must show the Parent PIN verification dialog first.',
+        );
+      },
+    );
+
+    testWidgets(
+      'Add Profile tile shows Parent PIN dialog when active=child and '
+      'guard=true',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSheet(
+            profiles: profiles,
+            activeProfileId: activeChildId,
+            pinGuardRequired: true,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        await tester.tap(find.text('Add Profile'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // AN-2 fix: the Parent PIN verification dialog must appear instead
+        // of the Add Profile dialog firing directly.
+        expect(
+          find.text('Enter Parent PIN'),
+          findsOneWidget,
+          reason:
+              'AN-2: tapping Add Profile while active=child (PIN guard '
+              'required) must show the Parent PIN verification dialog first, '
+              'not open the create-profile flow directly.',
+        );
+      },
+    );
+
+    testWidgets(
+      'switching to a non-active adult profile shows Parent PIN dialog when '
+      'active=child and guard=true',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSheet(
+            profiles: profiles,
+            activeProfileId: activeChildId,
+            pinGuardRequired: true,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // adultProfile (id=1) is not the active profile (activeChildId=2) —
+        // tapping its row is the "switch to adult profile" escalating action.
+        await tester.tap(find.text(adultProfile.displayName));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // AN-2 fix: the Parent PIN verification dialog must appear instead
+        // of switching straight into the adult profile.
+        expect(
+          find.text('Enter Parent PIN'),
+          findsOneWidget,
+          reason:
+              'AN-2: switching to a non-active adult profile while '
+              'active=child (PIN guard required) must show the Parent PIN '
+              'verification dialog first.',
         );
       },
     );
