@@ -61,6 +61,7 @@ void main() {
   late GoalRepositoryImpl repo;
   late int trackId;
   late int bavliTrackId;
+  final now = DateTime.utc(2026, 1, 1);
 
   setUp(() async {
     db = createTestDatabase();
@@ -74,8 +75,8 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: 1,
             curriculumId: 'mishnayos',
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
+            stateChangedAt: now,
+            activatedAt: now,
           ),
         );
     trackId = trackRow.id;
@@ -86,8 +87,8 @@ void main() {
           CurriculumTracksCompanion.insert(
             profileId: 1,
             curriculumId: 'bavli',
-            stateChangedAt: DateTime.now(),
-            activatedAt: DateTime.now(),
+            stateChangedAt: now,
+            activatedAt: now,
           ),
         );
     bavliTrackId = bavliTrackRow.id;
