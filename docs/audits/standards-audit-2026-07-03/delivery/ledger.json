@@ -3733,13 +3733,15 @@
     {
       "id": "AUD-t-story-acceptance-12",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Make epic_28_curriculum_overlap_test.dart's subset-union helper exercise the real lifetimeDataProvider path instead of its diverged local duplicate",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "6122ea19e56b6e4827f856804916b8f9e977c0c2"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Evidence re-verified exact match. Added group I-4-G driving REAL lifetimeDataProvider with a Chumash ledger-only mark, asserting propagation to Tanach. Narrowed helper doc comment (AC2). Red-first: short-circuited prod union block, test failed as expected; reverted (diff clean), reran -> 21/21 pass."
     },
     {
       "id": "AUD-t-cross-33",
