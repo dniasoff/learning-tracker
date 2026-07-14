@@ -8242,13 +8242,17 @@
   {
    "id": "AUD-t-cross-94",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Strengthen PinEntryWidget's error-styling test to assert the border color, not just decoration non-null",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "22badfc8997f2fe6048b7bdb71a1896e69d4f788"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-94 AC1 OK: mutated ternary (pin_widget:273) to always-outline -> error test FAILED red at test:232; restored -> 15/15 green"
+   ],
+   "notes": "Test asserted only decoration!=null; widget ternary picks border color by hasError. Proved gap: hardcoded outline, old test still passed. Rewrote to compare border color vs colorScheme.error/.outline. Red-first: reverted ternary -> failed red; restored -> green."
   },
   {
    "id": "AUD-account-20",
