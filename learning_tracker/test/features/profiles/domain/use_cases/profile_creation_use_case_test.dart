@@ -223,8 +223,8 @@ void main() {
               accountId: 1,
               displayName: 'Profile $i',
               mode: 'adult',
-              createdAt: DateTime.now().toUtc(),
-              updatedAt: DateTime.now().toUtc(),
+              createdAt: DateTimeFactory.nowUtc(),
+              updatedAt: DateTimeFactory.nowUtc(),
             ),
           );
         }
@@ -274,8 +274,8 @@ void main() {
             accountId: 1,
             displayName: 'Profile $i',
             mode: 'adult',
-            createdAt: DateTime.now().toUtc(),
-            updatedAt: DateTime.now().toUtc(),
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
           ),
         );
       }
