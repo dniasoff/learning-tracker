@@ -11,7 +11,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_management_body.dart';
 
 void main() {
   group('TS-16 — trackDeletionAllowed guards last-active curriculum', () {
