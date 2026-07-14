@@ -1408,7 +1408,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // is a `List<Map<String, dynamic>>`.
     if (payload == null) return;
 
-    final kind = _channelToKind(channel);
+    final kind = channelToKind(channel);
     if (kind == null) return;
 
     List<Map<String, dynamic>> rows;
@@ -1482,7 +1482,19 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     _ => 'other',
   };
 
-  static String? _channelToKind(String channel) => switch (channel) {
+  /// Maps a listener channel key to the [EntityKind] its payloads merge into.
+  ///
+  /// `@visibleForTesting` (AUD-t-cross-29): this was previously a private
+  /// `_channelToKind`, which forced `new_listener_coverage_test.dart` to
+  /// hand-maintain its own duplicate switch as a "public copy" — a second
+  /// (and, counting `TutoredListenerSupervisor._channelToKind`, third)
+  /// independent copy of this table that could silently drift from the
+  /// production routing without failing any test. Exposing the real mapping
+  /// (same idiom as [PullPipeline.tutoredCollections]) lets that suite call
+  /// the production function directly, so a routing change here is the
+  /// change the regression suite observes — not a stale mirror of it.
+  @visibleForTesting
+  static String? channelToKind(String channel) => switch (channel) {
     'completions' => EntityKind.completion,
     'bookmarks' => EntityKind.bookmark,
     'settings' => EntityKind.settings,
