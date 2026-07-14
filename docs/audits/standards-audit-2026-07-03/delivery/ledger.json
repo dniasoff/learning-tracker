@@ -6738,13 +6738,17 @@
   {
    "id": "AUD-t-cross-83",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace DateTime.now() wall-clock filler with fixed dates in track_dao_test.dart and track_scoped_dao_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "39af90494a55d17a0543a33d124f5e5720e3cde8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-83 AC1 OK: grep 'DateTime.now' = 0 hits in both track_dao_test.dart and track_scoped_dao_test.dart; 12 sites now DateTime.utc(2026,1,1) matching sibling files"
+   ],
+   "notes": "Tree drifted (AUD-t-cross-37 moved calls into seedTrack args, 12 DateTime.now() sites survived). Confirmed 12 live sites; replaced all with DateTime.utc(2026,1,1) matching sibling-file convention. No test asserted the wall-clock value; grep 0-hit before/after served as AC checker."
   },
   {
    "id": "AUD-profiles-16",
