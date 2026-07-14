@@ -200,6 +200,41 @@ void main() {
     });
 
     // -------------------------------------------------------------------------
+    // Test 7 — bulkBaseline exceeds totalItems (over-marked prior learning)
+    // -------------------------------------------------------------------------
+    test('bulkBaseline > totalItems: requiredVelocity clamps to 0, no phantom '
+        'ahead/behind', () {
+      // Simulates a curriculum content set shrinking after the user already
+      // bulk-marked more items than now exist (totalItems=50 < bulkBaseline=80).
+      // Without the clamp at pace_calculator.dart:150, requiredVelocity would
+      // go negative: (50-80)/100 = -0.3.
+      final trackStart = today.subtract(const Duration(days: 10));
+      final targetDate = trackStart.add(const Duration(days: 100));
+
+      final calc = ProgressPaceCalculator.compute(
+        totalItems: 50,
+        bulkBaseline: 80,
+        liveProgress: 0,
+        trackStartDate: trackStart,
+        targetDate: targetDate,
+        today: today,
+      );
+
+      expect(
+        calc.requiredVelocity,
+        0.0,
+        reason:
+            'totalItems - bulkBaseline is negative (50-80=-30); must clamp '
+            'to 0, not go negative',
+      );
+      expect(calc.isInGraceWindow, isFalse);
+      // Must NOT be ahead or behind — an over-marked bulk baseline must not
+      // produce a phantom pace signal.
+      expect(calc.paceStatus, isNot(ProgressPaceStatus.ahead));
+      expect(calc.paceStatus, isNot(ProgressPaceStatus.behind));
+    });
+
+    // -------------------------------------------------------------------------
     // Additional edge case — onTrack boundary
     // -------------------------------------------------------------------------
     test(
