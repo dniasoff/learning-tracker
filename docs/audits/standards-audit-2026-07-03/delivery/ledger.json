@@ -2798,13 +2798,15 @@
     {
       "id": "AUD-t-story-acceptance-15",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Move DB/temp-dir cleanup into addTearDown across epic_21_multi_account_test.dart so failed assertions don't leak resources",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "002cae7f67493780332d27cafb8b9fcc76a558e5"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Evidence re-verified, no drift. Replaced trailing close/delete in 20 tests (26 sites) with addTearDown() after creation; 21.1/21.3/21.4 already correct, untouched. AC1: grep shows zero remaining trailing cleanup. AC2: throwaway probe showed OLD leaks on failing expect, NEW addTearDown cleans up."
     },
     {
       "id": "AUD-t-cross-10",
