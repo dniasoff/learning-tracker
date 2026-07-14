@@ -2,47 +2,11 @@
 @Tags(['story_10_1'])
 library;
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
-
-/// Simple in-memory secure storage backed by a Map, using mocktail stubs.
-MockFlutterSecureStorage createMockStorage() {
-  final mock = MockFlutterSecureStorage();
-  final store = <String, String>{};
-
-  when(
-    () => mock.write(
-      key: any(named: 'key'),
-      value: any(named: 'value'),
-    ),
-  ).thenAnswer((invocation) async {
-    final key = invocation.namedArguments[#key] as String;
-    final value = invocation.namedArguments[#value] as String?;
-    if (value == null) {
-      store.remove(key);
-    } else {
-      store[key] = value;
-    }
-  });
-
-  when(() => mock.read(key: any(named: 'key'))).thenAnswer((invocation) async {
-    final key = invocation.namedArguments[#key] as String;
-    return store[key];
-  });
-
-  when(() => mock.delete(key: any(named: 'key'))).thenAnswer((
-    invocation,
-  ) async {
-    final key = invocation.namedArguments[#key] as String;
-    store.remove(key);
-  });
-
-  return mock;
-}
+import '../../helpers/fake_secure_storage.dart';
 
 void main() {
   late MockFlutterSecureStorage storage;

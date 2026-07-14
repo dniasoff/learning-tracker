@@ -6,54 +6,22 @@
 /// - getTutorLockoutRemainingMinutes
 /// - getParentLockoutRemainingMinutes
 /// - clearParentPin
+///
+/// Merged from the former pin_service_profile_test.dart (AUD-t-parent_mode-02)
+/// — the two files independently re-tested the same PinService surface
+/// under different profileId constants and wording (~90% overlap). This
+/// file keeps the union of both: every distinct behavior either file
+/// covered still has exactly one test asserting it here.
 library;
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
-import 'package:mocktail/mocktail.dart';
 
-class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
-
-/// Simple in-memory secure storage backed by a Map.
-MockFlutterSecureStorage createMockStorage() {
-  final mock = MockFlutterSecureStorage();
-  final store = <String, String>{};
-
-  when(
-    () => mock.write(
-      key: any(named: 'key'),
-      value: any(named: 'value'),
-    ),
-  ).thenAnswer((invocation) async {
-    final key = invocation.namedArguments[#key] as String;
-    final value = invocation.namedArguments[#value] as String?;
-    if (value == null) {
-      store.remove(key);
-    } else {
-      store[key] = value;
-    }
-  });
-
-  when(() => mock.read(key: any(named: 'key'))).thenAnswer((invocation) async {
-    final key = invocation.namedArguments[#key] as String;
-    return store[key];
-  });
-
-  when(() => mock.delete(key: any(named: 'key'))).thenAnswer((
-    invocation,
-  ) async {
-    final key = invocation.namedArguments[#key] as String;
-    store.remove(key);
-  });
-
-  return mock;
-}
+import '../../helpers/fake_secure_storage.dart';
 
 void main() {
   late MockFlutterSecureStorage storage;
   late PinService service;
-  const profileId = 5;
 
   setUp(() {
     storage = createMockStorage();
@@ -72,8 +40,7 @@ void main() {
     });
 
     test('is a no-op when no PIN is set', () async {
-      // Should not throw.
-      await service.clearParentPin();
+      await expectLater(service.clearParentPin(), completes);
       expect(await service.hasParentPin(), isFalse);
     });
   });
@@ -102,7 +69,9 @@ void main() {
   // ── setProfilePin / verifyProfilePin ──────────────────────────────────────
 
   group('PinService profile PIN', () {
-    test('setProfilePin validates 4-digit numeric PIN', () async {
+    const profileId = 5;
+
+    test('setProfilePin rejects non-4-digit PINs', () async {
       // AUD-onboarding-16: PinService now throws a typed
       // InvalidPinFormatException (EH-2/EH-5) instead of ArgumentError.
       expect(
@@ -152,6 +121,16 @@ void main() {
 
       await service.clearProfilePin(profileId);
       expect(await service.hasProfilePin(profileId), isFalse);
+    });
+
+    test('profile PINs for different profiles are independent', () async {
+      await service.setProfilePin(1, '1111');
+      await service.setProfilePin(2, '2222');
+
+      expect(await service.verifyProfilePin(1, '2222'), isFalse);
+      expect(await service.verifyProfilePin(2, '1111'), isFalse);
+      expect(await service.verifyProfilePin(1, '1111'), isTrue);
+      expect(await service.verifyProfilePin(2, '2222'), isTrue);
     });
 
     test('setProfilePin resets lockout state', () async {
@@ -208,21 +187,27 @@ void main() {
       },
     );
 
-    test('profile PINs are scoped by profileId', () async {
-      const otherProfileId = 99;
-      await service.setProfilePin(profileId, '1111');
-      await service.setProfilePin(otherProfileId, '2222');
+    test('verifyProfilePin resets counter on success', () async {
+      await service.setProfilePin(profileId, '1234');
+      for (var i = 0; i < 3; i++) {
+        await service.verifyProfilePin(profileId, '0000');
+      }
+      await service.verifyProfilePin(profileId, '1234');
 
-      expect(await service.verifyProfilePin(profileId, '1111'), isTrue);
-      expect(await service.verifyProfilePin(otherProfileId, '2222'), isTrue);
-      // Cross-check: profile 5's PIN is not 2222
-      expect(await service.verifyProfilePin(profileId, '2222'), isFalse);
+      // After success, 4 more failures should not trigger lockout.
+      for (var i = 0; i < 4; i++) {
+        await service.verifyProfilePin(profileId, '0000');
+      }
+      // Should NOT throw — lockout requires 5 consecutive failures.
+      expect(await service.verifyProfilePin(profileId, '1234'), isTrue);
     });
   });
 
   // ── setTutorPin / verifyTutorPin ──────────────────────────────────────────
 
   group('PinService tutor PIN', () {
+    const profileId = 7;
+
     test('setTutorPin validates 4-digit numeric PIN', () async {
       // AUD-onboarding-16: PinService now throws a typed
       // InvalidPinFormatException (EH-2/EH-5) instead of ArgumentError.
@@ -312,18 +297,31 @@ void main() {
       expect(await service.verifyTutorPin(profileId, '1111'), isFalse);
     });
 
-    test('tutor PIN successful verification resets lockout counter', () async {
+    test(
+      'tutor PIN is independent from profile PIN (different namespace)',
+      () async {
+        await service.setProfilePin(profileId, '1111');
+        await service.setTutorPin(profileId, '2222');
+
+        // Knowing the tutor PIN should not grant profile PIN access.
+        expect(await service.verifyProfilePin(profileId, '2222'), isFalse);
+        expect(await service.verifyTutorPin(profileId, '1111'), isFalse);
+      },
+    );
+
+    test('verifyTutorPin resets counter on success', () async {
       await service.setTutorPin(profileId, '1234');
-      // 3 failures
       for (var i = 0; i < 3; i++) {
         await service.verifyTutorPin(profileId, '0000');
       }
-      // Correct PIN — should reset counter
       await service.verifyTutorPin(profileId, '1234');
 
-      // Now should be able to verify without lockout exception
-      final result = await service.verifyTutorPin(profileId, '1234');
-      expect(result, isTrue);
+      // After success, 4 more failures should not trigger lockout.
+      for (var i = 0; i < 4; i++) {
+        await service.verifyTutorPin(profileId, '0000');
+      }
+      // Should NOT throw — lockout requires 5 consecutive failures.
+      expect(await service.verifyTutorPin(profileId, '1234'), isTrue);
     });
   });
 }

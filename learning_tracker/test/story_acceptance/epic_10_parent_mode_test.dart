@@ -6,7 +6,6 @@ library;
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, tearDown, tearDownAll, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -27,43 +26,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
 import '../helpers/drift_memory.dart';
+import '../helpers/fake_secure_storage.dart';
 import '../helpers/test_database.dart';
-
-class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
-
-MockFlutterSecureStorage _createMockStorage() {
-  final mock = MockFlutterSecureStorage();
-  final store = <String, String>{};
-
-  when(
-    () => mock.write(
-      key: any(named: 'key'),
-      value: any(named: 'value'),
-    ),
-  ).thenAnswer((invocation) async {
-    final key = invocation.namedArguments[#key] as String;
-    final value = invocation.namedArguments[#value] as String?;
-    if (value == null) {
-      store.remove(key);
-    } else {
-      store[key] = value;
-    }
-  });
-
-  when(() => mock.read(key: any(named: 'key'))).thenAnswer((invocation) async {
-    final key = invocation.namedArguments[#key] as String;
-    return store[key];
-  });
-
-  when(() => mock.delete(key: any(named: 'key'))).thenAnswer((
-    invocation,
-  ) async {
-    final key = invocation.namedArguments[#key] as String;
-    store.remove(key);
-  });
-
-  return mock;
-}
 
 /// Creates a default curriculum track and returns its ID.
 Future<int> _insertTrack(UserDatabase db) async {
@@ -112,7 +76,7 @@ void main() {
     late PinService pinService;
 
     setUp(() {
-      storage = _createMockStorage();
+      storage = createMockStorage();
       pinService = PinService(storage);
     });
 
@@ -253,7 +217,7 @@ void main() {
     testWidgets('PinFlowScreen (setup) shows error on mismatched PINs', (
       tester,
     ) async {
-      final mockStorage = _createMockStorage();
+      final mockStorage = createMockStorage();
 
       await tester.pumpWidget(
         ProviderScope(
