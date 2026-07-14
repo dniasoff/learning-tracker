@@ -4634,13 +4634,19 @@
     {
       "id": "AUD-t-story-acceptance-16",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Replace epic_27_story_4_widget_golden_test.dart's 'AC structural verification' tautologies with real assertions",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "eed44179e5bc18d255c396a26257c397c6910d77"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-16 AC1 loop-half OK: removed 4th shape -> 'covers exactly 4 data shapes' failed red (Set len 3); reverted->green",
+        "AUD-t-story-acceptance-16 AC1 he-half OK: _localeVariants=[en] -> 'Hebrew variant ships' failed red (missingHebrew=8 names); reverted->green",
+        "AUD-t-story-acceptance-16 site3 OK: BulkMarkScreen expect(isNotNull) replaced by real ctor round-trip, epic_27_story_4 test:250-266"
+      ],
+      "notes": "Verified evidence matches code. Red-first: broke real loop+locale list; OLD asserts still passed (tautology confirmed). Fix: golden_runner logs registered (name,locale) pairs; tests now assert real state. Same breaks now fail red; reverted -> 24/24 green."
     },
     {
       "id": "AUD-t-story-acceptance-11",
