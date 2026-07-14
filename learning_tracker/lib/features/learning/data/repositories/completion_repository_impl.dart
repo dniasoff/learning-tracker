@@ -179,6 +179,21 @@ class CompletionRepositoryImpl implements CompletionRepository {
         priorMarkOnly: !awardGamificationPoints,
       );
 
+      // 6. Advance bookmark INSIDE the same transaction (FR20; Story 27.9 /
+      //    DNI-385; AUD-t-story-acceptance-01): a failure here must roll
+      //    back the completion insert, not leave a persisted completion
+      //    paired with an uncaught exception and a stale bookmark. This is
+      //    safe because `_advanceBookmark`'s `BookmarkRepository` (injected,
+      //    factory-built, or the ad-hoc fallback) is always constructed over
+      //    this same `_database` instance in production — see
+      //    `completionRepositoryProvider` / `bookmarkRepositoryProvider`,
+      //    which both watch `userDatabaseProvider` — so its queries
+      //    participate in this transaction instead of opening a second one.
+      await _advanceBookmark(
+        curriculumId: request.curriculumId,
+        completedSefariaRef: request.sefariaRef,
+      );
+
       return (completion: created, isNew: true);
     });
 
@@ -186,12 +201,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
     // Only run side effects for genuinely new completions
     if (isNew) {
-      // 6. Advance bookmark (outside transaction — uses content repo cache)
-      await _advanceBookmark(
-        curriculumId: request.curriculumId,
-        completedSefariaRef: request.sefariaRef,
-      );
-
       // 7. Auto-detect unit completions (fire-and-forget).
       // B1 three-tier policy: CompletionDetectionService creates siyum
       // ledger entries — an achievement-tier side-effect. Gate on
