@@ -6827,13 +6827,13 @@
   {
    "id": "AUD-t-cross-82",
    "wave": 4,
-   "status": "todo",
+   "status": "skipped-refuted",
    "severity": "P3",
    "title": "Rename the 2 duplicate-named test pairs inside crossref_filter_test.dart's 'Companion.toColumns with id present' group",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "skipped-refuted (merge-lane w4r1c24, 2026-07-14). Target file deleted whole by ancestor commit 49cc7d73 (test(database): AUD-t-cross-16 - delete tautological db.managers.* suite, exclude generated code from coverage), removing learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart wholesale as part of the 7-file db.managers.* suite deletion; commit 49cc7d73 is confirmed an ancestor of this branch's current HEAD. Independently re-verified: the pre-delete blob (49cc7d73^:...user_database_managers_crossref_filter_test.dart) matches the finding's evidence exactly -- duplicate-named test('CompletionEventsCompanion id present in toColumns') pairs at lines 287/302 and duplicate test('StreakEventsCompanion id present in toColumns') pairs at lines 365/371, inside the 'Companion.toColumns with id present' group. Repo-wide grep for these test names (grep -rn \"CompletionEventsCompanion id present in toColumns\\|StreakEventsCompanion id present in toColumns\" learning_tracker/) returns 0 hits, and find learning_tracker/test -iname \"*crossref_filter*\" returns nothing. Finding's target no longer exists to rename -- moot. No code change made. Payload notes this as the 3rd refutation pass on this id (2 prior); those prior passes are not independently re-derivable from this checkout's git log or kill-log-addendum.md (no prior AUD-t-cross-82 entry found in either), but this pass's own evidence stands on its own regardless."
   },
   {
    "id": "AUD-t-cross-75",
