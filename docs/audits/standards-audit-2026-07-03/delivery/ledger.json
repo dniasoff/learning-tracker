@@ -8993,13 +8993,18 @@
   {
    "id": "AUD-t-profiles-07",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Un-pin the FAB-always-visible-at-cap UX bug in manage_learners_screen_l1_test.dart or file it with a Linear id",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "27f47780fbfa68bb7340a508528a937af3c1208a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-profiles-07 AC1 OK: DNI-414 at lines 352 & 358; Linear MCP confirms a real Backlog issue on the FAB-cap gap, not a fabricated id",
+    "AUD-t-profiles-07 AC2 OK: grep BUG = single hit line 352 'BUG (DNI-414):' with adjacent DNI id; no untracked BUG comment remains"
+   ],
+   "notes": "Re-verified: test's BUG: comment had no Linear id nearby. Filed a REAL Linear issue via mcp__linear (DNI-414, team DNI) rather than fabricating an id, added '(DNI-414)' to the comment + characterization-test note. Both ACs satisfied."
   },
   {
    "id": "AUD-profiles-19",
