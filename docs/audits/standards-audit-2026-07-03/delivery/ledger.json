@@ -6577,13 +6577,18 @@
   {
    "id": "AUD-t-cross-73",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Import the shared MockAuthRepository from test/mocks/mock_repositories.dart instead of 7 duplicated private copies in the account test suite",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "fd07ae7b7cd8eae39352d366c4ca5b9f5d7aea07"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-73 AC1 OK: grep private mock in test/features/account -> 0 hits, exit 1 (19 remaining outside scope)",
+    "AUD-t-cross-73 AC2 OK: 7 evidence files import shared MockAuthRepository; 20-file test +165 ~2 passed; analyze 0 issues"
+   ],
+   "notes": "AC1 grep is dir-wide: 20 files under test/features/account had the private mock, not just the 7 evidence files. Fixed all 20: import shared MockAuthRepository, remove private class + now-unused auth_repository.dart import. Harness-recommendation prose skipped: not in acceptance_criteria."
   },
   {
    "id": "AUD-t-notifications-08",
