@@ -13,12 +13,19 @@ test: ## Run all tests with coverage instrumentation
 	@# calls db.managers.*) — strip it from the report so coverage reflects
 	@# real, reachable code. Skips gracefully if lcov isn't installed (local
 	@# dev machines); CI installs lcov before this target runs.
+	@# AUD-t-cross-44: lib/l10n/app_localizations*.dart (flutter gen-l10n
+	@# output, 5600+ lines each) is generated the same way and was never
+	@# added to this exclusion, so docs/coding-standards.md's "generated
+	@# files excluded" coverage-floor claim didn't hold for l10n — a
+	@# zero-assertion test existed purely to walk every getter and pad the
+	@# numerator with it. Exclude it here instead.
 	@if command -v lcov >/dev/null 2>&1; then \
 	  lcov --remove coverage/lcov.info '*.g.dart' '*.freezed.dart' \
+	    'lib/l10n/app_localizations*.dart' \
 	    --output-file coverage/lcov.info --ignore-errors unused >/dev/null; \
-	  echo "coverage/lcov.info: excluded *.g.dart and *.freezed.dart"; \
+	  echo "coverage/lcov.info: excluded *.g.dart, *.freezed.dart and lib/l10n/app_localizations*.dart"; \
 	else \
-	  echo "lcov not installed — coverage/lcov.info still includes generated .g.dart/.freezed.dart lines (install lcov to exclude them)"; \
+	  echo "lcov not installed — coverage/lcov.info still includes generated .g.dart/.freezed.dart/l10n lines (install lcov to exclude them)"; \
 	fi
 
 test-invariants: ## Run the N1–N7 quality-crisis invariant net
