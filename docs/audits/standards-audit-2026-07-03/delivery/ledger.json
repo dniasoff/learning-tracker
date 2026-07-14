@@ -3398,13 +3398,18 @@
   {
    "id": "AUD-t-cross-42",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Route two_device_sync_test.dart's S1/S3 through the real MergeRouter instead of hand-decoding outbox JSON",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "b69d340531556472ce421a83db445b3dc6ea1081"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-42 AC1 OK: only integration twin covers I-5 propagation via MergeRouter; new sync/track_delete_outbox_test.dart is a distinct outbox scenario",
+    "AUD-t-cross-42 AC2 OK: sole surviving two_device_sync_test.dart (integration) carries @Tags(['i5','two_device_sync']) L14; untagged sync twin deleted"
+   ],
+   "notes": "Evidence confirmed current. Deleted S1/S3 from test/sync/two_device_sync_test.dart (duplicated integration's real MergeRouter scenarios); relocated unique S2 to test/sync/track_delete_outbox_test.dart. AC1: only integration file keeps the name. AC2: it still carries the i5/two_device_sync tags."
   },
   {
    "id": "AUD-t-cross-05",
