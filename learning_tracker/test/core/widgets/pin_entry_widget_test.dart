@@ -207,6 +207,12 @@ void main() {
       expect(textField.controller!.text.length, lessThanOrEqualTo(1));
     });
 
+    // AUD-t-cross-94 (TQ-8): the old version of this test only asserted
+    // `decoration != null`, which is unconditionally true regardless of
+    // `hasError` — it never exercised the border-colour ternary in
+    // pin_entry_widget.dart. Reading the resolved border colour off
+    // `enabledBorder` proves the branch: if the ternary were deleted or
+    // inverted, one of these two tests would fail.
     testWidgets('should have error styling when error message is present', (
       tester,
     ) async {
@@ -214,15 +220,35 @@ void main() {
         _wrap(PinEntryWidget(onPinComplete: (_) {}, errorMessage: 'Error')),
       );
 
-      // Find TextField widgets to verify error styling is applied
       final textFields = find.byType(TextField);
       expect(textFields, findsWidgets);
 
-      // The error styling is applied through decoration, which we can't easily test
-      // but we verify the structure is correct
       final firstField = tester.widget<TextField>(textFields.first);
-      expect(firstField.decoration, isNotNull);
+      final theme = Theme.of(tester.element(textFields.first));
+      final borderColor =
+          (firstField.decoration!.enabledBorder! as OutlineInputBorder)
+              .borderSide
+              .color;
+      expect(borderColor, equals(theme.colorScheme.error));
     });
+
+    testWidgets(
+      'should use the outline border color when no error message is present',
+      (tester) async {
+        await tester.pumpWidget(_wrap(PinEntryWidget(onPinComplete: (_) {})));
+
+        final textFields = find.byType(TextField);
+        expect(textFields, findsWidgets);
+
+        final firstField = tester.widget<TextField>(textFields.first);
+        final theme = Theme.of(tester.element(textFields.first));
+        final borderColor =
+            (firstField.decoration!.enabledBorder! as OutlineInputBorder)
+                .borderSide
+                .color;
+        expect(borderColor, equals(theme.colorScheme.outline));
+      },
+    );
 
     testWidgets('should obscure PIN digits', (tester) async {
       await tester.pumpWidget(_wrap(PinEntryWidget(onPinComplete: (_) {})));
