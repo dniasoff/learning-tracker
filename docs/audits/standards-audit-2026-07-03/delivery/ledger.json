@@ -4549,13 +4549,18 @@
   {
    "id": "AUD-t-story-acceptance-05",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Deduplicate the two full 40-method FirestoreGateway fakes in epic_25_story_12_sync_decomp_part1_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "ee9da47b385e9e33910444fba22b46dd497871f1"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-story-acceptance-05 AC1 OK: both fakes now extend NoOpFirestoreGateway (lines 288,330), keep only their driven methods; 399 dup lines removed",
+    "AUD-t-story-acceptance-05 AC2 OK: base helper:26 extends Fake implements FirestoreGateway{} so new interface methods inherit, no per-fake edit"
+   ],
+   "notes": "Re-verified: only line numbers drifted (unrelated commit added a test group); both fakes unchanged - still valid. Both now extend the pre-existing NoOpFirestoreGateway helper (same pattern as sibling AUD-t-cross-19), keeping only overridden methods. File shrank 772->386 lines. Both ACs met."
   },
   {
    "id": "AUD-t-story-acceptance-13",
