@@ -9,7 +9,7 @@
 /// ```dart
 /// final db = openDbAtVersion(15, _v15Schema());
 /// addTearDown(db.close);
-/// // DB is now at v19 (all migrations ran).
+/// // DB is now at UserDatabase.schemaVersion (all migrations ran).
 /// // Verify post-migration state:
 /// final completions = await db.select(db.completionEvents).get();
 /// ```
