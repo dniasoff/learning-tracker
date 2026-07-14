@@ -3344,13 +3344,19 @@
   {
    "id": "AUD-t-parent_mode-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Deduplicate ParentDashboardAggregator.compute() coverage across _compute_test.dart and _extended_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "785b9c9309d715d9916b44c0e2549836d54e2eea"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-parent_mode-01 AC1 OK: 3 unique cases ported intact to extended_test.dart:218/247/273 (streak, paceStatus no-date, paceStatus w/date) - assertions preserved",
+    "AUD-t-parent_mode-01 AC1 OK: 5 deleted cases subsumed by existing extended @82,96,115,164,306 - no scenario loss",
+    "AUD-t-parent_mode-01 AC1 OK: compute() DB-path now one file; my run 22/22 green; ports are real DB-backed behavior tests"
+   ],
+   "notes": "Duplication re-verified live, matches evidence. Merged compute_test.dart into extended_test.dart: dropped 4 redundant cases (subsumed, no scenario lost), ported 3 unique scenarios (streak + 2 paceStatus). Deleted compute_test.dart + stale baseline entry. migration_test.dart untouched."
   },
   {
    "id": "AUD-profiles-05",
