@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
@@ -57,8 +58,11 @@ void main() {
   // ── Story 2.1: Content repository ─────────────────────────────
 
   group('Story 2.1 -- Content repository', tags: ['story_2_1'], () {
-    test('ContentRepository interface is importable', () {
-      expect(ContentRepository, isNotNull);
+    test('MockContentRepository implements ContentRepository', () {
+      // AUD-t-story-acceptance-06: `expect(ContentRepository, isNotNull)` on
+      // an abstract class Type literal is a compile-time tautology. Verify
+      // the actual runtime relationship on a concrete implementation.
+      expect(MockContentRepository(), isA<ContentRepository>());
     });
 
     test('ContentLoadException exists', () {
@@ -157,11 +161,19 @@ void main() {
     });
 
     test('content browsing provider uses family(curriculumId) per P3', () {
-      // curriculumContentProvider is a family provider keyed by CurriculumId
-      expect(curriculumContentProvider, isNotNull);
-      // It's callable with a CurriculumId argument
-      final provider = curriculumContentProvider(CurriculumId.mishnayos);
-      expect(provider, isNotNull);
+      // AUD-t-story-acceptance-06: both `curriculumContentProvider` (a
+      // non-nullable top-level provider constant) and its family-invocation
+      // result are compile-time non-null, so `isNotNull` on either is a
+      // tautology. Assert the actual family contract instead -- equal
+      // curriculumId arguments must resolve to the identical provider
+      // (Riverpod's per-argument caching), distinct arguments to distinct
+      // providers.
+      final mishnayos = curriculumContentProvider(CurriculumId.mishnayos);
+      final mishnayosAgain = curriculumContentProvider(CurriculumId.mishnayos);
+      final bavli = curriculumContentProvider(CurriculumId.bavli);
+
+      expect(mishnayos, equals(mishnayosAgain));
+      expect(mishnayos, isNot(equals(bavli)));
     });
 
     test('content loaded from in-memory ContentRepository, not SQLite', () {
@@ -236,8 +248,19 @@ void main() {
   // ── Story 2.3: Text display & caching ─────────────────────────
 
   group('Story 2.3 -- Text display & caching', tags: ['story_2_3'], () {
-    test('TextCacheRepository class exists', () {
-      expect(TextCacheRepository, isNotNull);
+    test('TextCacheRepository queries a real content database', () async {
+      // AUD-t-story-acceptance-06: `expect(TextCacheRepository, isNotNull)`
+      // on a Type literal is a compile-time tautology. Construct a real
+      // repository backed by an in-memory content database and exercise an
+      // actual method/return value.
+      final contentDb = createTestContentDatabase();
+      addTearDown(() => contentDb.close());
+      final repo = TextCacheRepository(
+        textCacheDao: contentDb.contentTextCacheDao,
+        dailyContentDao: contentDb.dailyContentDao,
+      );
+
+      expect(await repo.getCachedRefs(), isEmpty);
     });
 
     test('TextContent model has required fields', () {
@@ -740,26 +763,117 @@ void main() {
 
     // ── AC: Riverpod providers exist (family by curriculumId)
 
-    test('content providers are defined as family by curriculumId', () {
-      // Verify the providers exist and are the correct types
-      expect(contentRepositoryProvider, isNotNull);
-      expect(curriculumContentProvider, isNotNull);
-      expect(curriculumHierarchyConfigProvider, isNotNull);
-      expect(filteredContentProvider, isNotNull);
-      expect(contentSearchProvider, isNotNull);
-      expect(contentByRefProvider, isNotNull);
+    test('content providers are defined as family by curriculumId', () async {
+      // AUD-t-story-acceptance-06: every provider referenced here is a
+      // non-nullable top-level constant, so `isNotNull` on any of them is a
+      // compile-time tautology. Override the repository with a mock and
+      // read each provider through a real ProviderContainer instead,
+      // verifying it actually dispatches to the repository with the
+      // curriculumId (and other args) it was invoked with.
+      final mockRepo = MockContentRepository();
+      when(
+        () => mockRepo.getContentForCurriculum(any()),
+      ).thenAnswer((_) async => <ContentItem>[]);
+      when(() => mockRepo.getHierarchyConfig(any())).thenAnswer(
+        (_) async => const CurriculumHierarchyConfig(
+          curriculumId: 'test',
+          levelLabels: ['L1'],
+          totalItems: 0,
+        ),
+      );
+      when(
+        () => mockRepo.filterByLevel(
+          curriculumId: any(named: 'curriculumId'),
+          level1: any(named: 'level1'),
+          level2: any(named: 'level2'),
+          level3: any(named: 'level3'),
+          level4: any(named: 'level4'),
+        ),
+      ).thenAnswer((_) async => <ContentItem>[]);
+      when(
+        () => mockRepo.search(
+          curriculumId: any(named: 'curriculumId'),
+          query: any(named: 'query'),
+        ),
+      ).thenAnswer((_) async => <ContentItem>[]);
+      when(
+        () => mockRepo.getContentByRef(
+          curriculumId: any(named: 'curriculumId'),
+          sefariaRef: any(named: 'sefariaRef'),
+        ),
+      ).thenAnswer((_) async => null);
+
+      final container = ProviderContainer(
+        overrides: [contentRepositoryProvider.overrideWithValue(mockRepo)],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(contentRepositoryProvider), same(mockRepo));
+
+      await container.read(
+        curriculumContentProvider(CurriculumId.bavli).future,
+      );
+      verify(
+        () => mockRepo.getContentForCurriculum(CurriculumId.bavli),
+      ).called(1);
+
+      await container.read(
+        curriculumHierarchyConfigProvider(CurriculumId.bavli).future,
+      );
+      verify(() => mockRepo.getHierarchyConfig(CurriculumId.bavli)).called(1);
+
+      await container.read(
+        filteredContentProvider(curriculumId: CurriculumId.bavli).future,
+      );
+      verify(
+        () => mockRepo.filterByLevel(
+          curriculumId: CurriculumId.bavli,
+          level1: null,
+          level2: null,
+          level3: null,
+          level4: null,
+        ),
+      ).called(1);
+
+      await container.read(
+        contentSearchProvider(
+          curriculumId: CurriculumId.bavli,
+          query: 'x',
+        ).future,
+      );
+      verify(
+        () => mockRepo.search(curriculumId: CurriculumId.bavli, query: 'x'),
+      ).called(1);
+
+      await container.read(
+        contentByRefProvider(
+          curriculumId: CurriculumId.bavli,
+          sefariaRef: 'Mishnah Berachos 1.1',
+        ).future,
+      );
+      verify(
+        () => mockRepo.getContentByRef(
+          curriculumId: CurriculumId.bavli,
+          sefariaRef: 'Mishnah Berachos 1.1',
+        ),
+      ).called(1);
     });
 
     // ── AC: content_items table removed from Drift schema
 
     test('content_items table is not in Drift schema', () async {
+      // AUD-t-story-acceptance-06 (mergedFrom): `schemaVersion >= 1` never
+      // actually inspected the schema for the claimed table removal -- it's
+      // true regardless of whether content_items exists. Walk the actual
+      // set of live tables instead.
       final db = createTestDatabase();
       await seedProfile(db);
       addTearDown(() => db.close());
+      final tableNames = db.allTables.map((t) => t.actualTableName);
       // The database should not have content_items or
       // curriculum_hierarchy_config tables; they were removed in schema v3.
       // v10 adds deleted_at to curriculum_tracks (DNI-317).
-      expect(db.schemaVersion, greaterThanOrEqualTo(1));
+      expect(tableNames, isNot(contains('content_items')));
     });
 
     // ── AC: curriculum_hierarchy_config table removed from Drift schema
@@ -770,9 +884,10 @@ void main() {
         final db = createTestDatabase();
         await seedProfile(db);
         addTearDown(() => db.close());
+        final tableNames = db.allTables.map((t) => t.actualTableName);
         // Schema v3 drops these tables.
         // v10 adds deleted_at to curriculum_tracks (DNI-317).
-        expect(db.schemaVersion, greaterThanOrEqualTo(1));
+        expect(tableNames, isNot(contains('curriculum_hierarchy_config')));
       },
     );
 
@@ -921,9 +1036,25 @@ void main() {
       },
     );
 
-    test('TextDownloadService class exists', () {
-      expect(TextDownloadService, isNotNull);
-    });
+    test(
+      'TextDownloadService reports not-downloaded for a fresh profile',
+      () async {
+        // AUD-t-story-acceptance-06: `expect(TextDownloadService, isNotNull)`
+        // on a Type literal is a compile-time tautology. Construct a real
+        // service backed by an in-memory database and exercise an actual
+        // method/return value.
+        final db = createTestDatabase();
+        await seedProfile(db);
+        addTearDown(() => db.close());
+        final service = TextDownloadService(
+          textDownloadStatusDao: db.textDownloadStatusDao,
+        );
+
+        final downloaded = await service.isDownloaded(CurriculumId.mishnayos);
+
+        expect(downloaded, isFalse);
+      },
+    );
 
     test('seed_text_content.dart script exists', () {
       final script = File('tool/seed_text_content.dart');
