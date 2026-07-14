@@ -1968,13 +1968,17 @@
     {
       "id": "AUD-t-settings-04",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Replace upgrade_to_cloud_cancel_collision_test.dart's synthetic phase simulator with a test that drives the real _CollisionBlock",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a8b7020d286d5579207b54fe3ed8edf3c3c18068"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-settings-04 AC1 OK: pumps real UpgradeToCloudScreen; reverting onCancel to _PhaseCollision (screen:538) FAILED cancel test at test:240; restored, 3/3 pass"
+      ],
+      "notes": "Confirmed still-buggy synthetic test, not refuted. Rewrote to pump REAL screen: mocked createUserAccount to throw email-already-in-use via credential-less path -> real _PhaseCollision, tapped real Cancel. Red-first: pre-AN-5 revert failed the test; reverted back, 3 tests pass."
     },
     {
       "id": "AUD-tutoring-06",
