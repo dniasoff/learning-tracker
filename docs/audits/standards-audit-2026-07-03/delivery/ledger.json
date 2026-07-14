@@ -6972,13 +6972,17 @@
     {
       "id": "AUD-t-stages-01",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace DateTime.now() with a fixed clock in stage_definition_repository_impl_26_26_test.dart seed helpers",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a99c39e057a5c26f9bd9e217865bd2ef245312e9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-stages-01 AC1 OK: grep -n 'DateTime.now()' on the file returns nothing (exit 1); all 10 sites now DateTime.utc(2026,1,1)"
+      ],
+      "notes": "Re-verified: all 10 DateTime.now() sites still present, unfixed. Replaced with fixed DateTime.utc(2026,1,1) matching file's own _makeRow convention (TQ-6). Shrank check_tq6_test_wall_clock.dart ratchet baseline (72->71), removing this file -- that's the AC's checker."
     },
     {
       "id": "AUD-t-tracks-09",
