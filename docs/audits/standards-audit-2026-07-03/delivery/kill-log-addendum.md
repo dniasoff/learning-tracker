@@ -204,3 +204,13 @@ finding, appended as it happens.
 - **Delivery disposition:** `skipped-refuted` (merge-lane w4r1c3, 2026-07-14).
 - **Basis — target file deleted whole, independently confirmed:** same deletion commit `49cc7d73` as `AUD-t-cross-75` above — the dead `import 'package:learning_tracker/core/database/daos/profile_dao.dart';` at `user_database_managers_test.dart:12` was removed together with the whole file it lived in. Independently re-verified: `find learning_tracker/test -iname user_database_managers_test.dart` returns no results; `grep -rn profile_dao.dart learning_tracker/test/` shows only legitimate DAO-under-test imports in files that actually exercise `ProfileDao`, no dangling reference to the deleted file. Commit `49cc7d73` remains an ancestor of this branch's current `HEAD`. No code change needed; the finding's optional AC (add an `analysis_options.yaml` unused-import lint) was skipped as scope creep on a refuted finding.
 - **Logged by:** merge-lane w4r1c3 agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-cross-65 — Delete the dead nullService ternary in sy2_device_restore_idle_blank_test.dart's _buildHarness
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `skipped-refuted` (merge-lane w4r1c12, 2026-07-14).
+- **Basis — already fixed by sibling commit, independently confirmed:** commit `be105d82` (`test(restore): AUD-t-cross-23 - extract shared router/guard mock harness`), landed after this branch's register-verify checkpoint `4018a91c` and remains an ancestor of this branch's current `HEAD`, extracted the 4 copy-pasted `test/app/restore/*_test.dart` mock harnesses (including `sy2_device_restore_idle_blank_test.dart`'s `_buildHarness`) into a shared `test/app/restore/restore_test_harness.dart`, deleting the `nullService` ternary as part of that consolidation — the shared `buildRestoreHarness()` factory now passes the service straight through. Independently re-verified against the current tree: `grep -rn nullService learning_tracker/test/app/restore/` returns 0 matches. Finding's target no longer exists — moot. No code change needed.
+- **Logged by:** merge-lane w4r1c12 agent (sonnet), 2026-07-14.
