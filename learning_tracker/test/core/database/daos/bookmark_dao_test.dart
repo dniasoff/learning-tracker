@@ -30,7 +30,7 @@ void main() {
     });
 
     test('insertBookmark and getBookmarkById', () async {
-      final now = DateTime.now();
+      final now = DateTime.utc(2026, 3, 15);
       final id = await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
           profileId: 1,
@@ -49,7 +49,7 @@ void main() {
     });
 
     test('getBookmarkByCurriculumAndTrack returns matching bookmark', () async {
-      final now = DateTime.now();
+      final now = DateTime.utc(2026, 3, 15);
       await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
           profileId: 1,
@@ -76,7 +76,7 @@ void main() {
     );
 
     test('updateBookmark modifies existing bookmark', () async {
-      final now = DateTime.now();
+      final now = DateTime.utc(2026, 3, 15);
       final id = await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
           profileId: 1,
@@ -103,7 +103,7 @@ void main() {
     });
 
     test('deleteBookmark removes the bookmark', () async {
-      final now = DateTime.now();
+      final now = DateTime.utc(2026, 3, 15);
       final id = await database.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
           profileId: 1,
@@ -122,7 +122,7 @@ void main() {
     });
 
     test('upsertBookmark inserts when no existing bookmark', () async {
-      final now = DateTime.now();
+      final now = DateTime.utc(2026, 3, 15);
       await database.bookmarkDao.upsertBookmark(
         curriculumId: 'bavli',
         trackId: trackId,
