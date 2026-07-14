@@ -2041,13 +2041,19 @@
   {
    "id": "AUD-t-cross-27",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Fix track_dao_extended_test.dart's deactivateTrack group — neither test calls deactivateTrack",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "9fa4391475e0b4404e8f93617245275c00a44ffe"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-27 AC1 OK: both group tests now call db.trackDao.deactivateTrack (test file :94 and :103); group has exactly 2 tests, neither removed",
+    "AUD-t-cross-27 AC2 OK: flutter test track_dao_extended_test.dart --concurrency=2 => 19/19 passed",
+    "AUD-t-cross-27 load-bearing OK: post-deactivate asserts getActiveTracks empty + state==retired; retireTrack track_dao.dart:145-154 flips it; real inMemoryDb, no mocks"
+   ],
+   "notes": "Confirmed evidence current: neither test in 'deactivateTrack' group called db.trackDao.deactivateTrack. Rewrote both to call it and assert real row-state results. Proved assertions load-bearing by stubbing deactivateTrack to a no-op and watching the test fail, then reverted cleanly."
   },
   {
    "id": "AUD-core-utils-01",
