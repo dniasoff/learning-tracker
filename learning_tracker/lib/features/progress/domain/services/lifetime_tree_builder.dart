@@ -82,6 +82,17 @@ class LifetimeTreeBuilder {
   ///    leaves.
   ///
   /// Unmark entries (prefixed 'unmark_') remove refs from the learned set.
+  ///
+  /// **Precondition:** [ledgerEntries] MUST be ordered newest-first by
+  /// `completedAt`. Per-unit conflicts (e.g. a positive `seder` mark and an
+  /// `unmark_seder` for the same unit) are resolved with `putIfAbsent`,
+  /// i.e. first-write-wins — so the caller's ordering IS the tie-break rule:
+  /// whichever entry for a given unit appears first in the list determines
+  /// the outcome, and it must be the most recently completed one for
+  /// "latest ledger action wins" to hold. `LearningLedgerDao.getEntriesByCurriculum`
+  /// and `LearningLedgerDao.getEntriesByProfile` already provide this
+  /// ordering (`OrderingTerm.desc(completedAt)`); a caller that supplies
+  /// entries in a different order will silently get the wrong winner.
   Set<String> computeLearnedLeafRefs({
     required List<ContentItem> leaves,
     required Set<String> completedRefs,

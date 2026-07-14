@@ -1119,53 +1119,68 @@ void main() {
 
     // ── B18 computeLearnedLeafRefs — unmark prefix ────────────────────────
 
-    test('B18 — computeLearnedLeafRefs: unmark_ prefix removes a ledger-credited '
-        'ref (not present in completedRefs)', () {
-      // The unmark path removes refs that were credited via a POSITIVE ledger
-      // scope entry. It does NOT override live/bulk completion events that
-      // arrive in completedRefs — those are kept regardless.
-      //
-      // To test the unmark path: first credit via a positive seder entry, then
-      // revoke via unmark_seder for a DIFFERENT leaf in the same seder. Only
-      // the unmarked leaf should be absent; the leaf not covered by the unmark
-      // should remain.
-      //
-      // Simpler: pass completedRefs={} so the ref is ONLY credited via the
-      // positive ledger entry, then the unmark removes it.
-      const builder = LifetimeTreeBuilder();
-      final leaves = [_leaf(level1: 'Zeraim', sefariaRef: 'Berakhot 1:1')];
+    test(
+      'B18 — computeLearnedLeafRefs: unmark_ prefix removes a ledger-credited '
+      'ref (not present in completedRefs)',
+      () {
+        // The unmark path removes refs that were credited via a POSITIVE ledger
+        // scope entry. It does NOT override live/bulk completion events that
+        // arrive in completedRefs — those are kept regardless.
+        //
+        // To test the unmark path: first credit via a positive seder entry, then
+        // append an unmark_seder entry for the SAME seder — FIRST-WRITE WINS
+        // per putIfAbsent, so the positive mark placed first takes priority
+        // and the unmark entry is ignored. This mirrors B18b's assertion in
+        // the opposite entry order.
+        //
+        // Simpler: pass completedRefs={} so the ref is ONLY credited via the
+        // positive ledger entry — the leaf's learned/unlearned state after
+        // both entries have been applied is therefore driven entirely by
+        // putIfAbsent's first-write-wins semantics.
+        const builder = LifetimeTreeBuilder();
+        final leaves = [_leaf(level1: 'Zeraim', sefariaRef: 'Berakhot 1:1')];
 
-      final learned = builder.computeLearnedLeafRefs(
-        leaves: leaves,
-        // No direct completedRefs — leaf only credited via the positive seder
-        // ledger entry below, then revoked by the unmark entry.
-        completedRefs: {},
-        ledgerEntries: [
-          // Positive seder mark first.
-          _fakeLedgerData(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            unitIdentifier: 'Zeraim',
-            entryScope: 'seder',
-          ),
-          // Then unmark the same seder — FIRST-WRITE WINS per putIfAbsent,
-          // so the positive mark placed first takes priority.
-          // NOTE: the builder uses putIfAbsent, so a second entry for the
-          // same key is ignored. We verify that the first (positive) mark
-          // is the one that persists (i.e. the ref IS learned).
-        ],
-      );
+        final learned = builder.computeLearnedLeafRefs(
+          leaves: leaves,
+          // No direct completedRefs — leaf only credited via the positive seder
+          // ledger entry below, then (attempted) revoked by the unmark entry.
+          completedRefs: {},
+          ledgerEntries: [
+            // Positive seder mark first.
+            _fakeLedgerData(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              unitIdentifier: 'Zeraim',
+              entryScope: 'seder',
+            ),
+            // Then unmark the same seder — FIRST-WRITE WINS per putIfAbsent,
+            // so the positive mark placed first takes priority and this
+            // entry is ignored. If putIfAbsent semantics regress to
+            // last-write-wins (or any overwrite), this second entry would
+            // flip level1Actions['Zeraim'] to false and the assertion below
+            // would fail.
+            _fakeLedgerData(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              unitIdentifier: 'Zeraim',
+              entryScope: 'unmark_seder',
+            ),
+          ],
+        );
 
-      // The positive mark lands in level1Actions['Zeraim'] = true.
-      // The leaf (level1='Zeraim') matches → credited.
-      expect(
-        learned,
-        contains('Berakhot 1:1'),
-        reason:
-            'A ledger seder mark credits all leaves in that seder '
-            '(putIfAbsent means first entry wins)',
-      );
-    });
+        // The positive mark lands in level1Actions['Zeraim'] = true and the
+        // later unmark_seder entry for the same key is ignored by putIfAbsent.
+        // The leaf (level1='Zeraim') matches → credited.
+        expect(
+          learned,
+          contains('Berakhot 1:1'),
+          reason:
+              'A ledger seder mark credits all leaves in that seder; a later '
+              'unmark_seder entry for the same seder must NOT revoke it '
+              '(putIfAbsent means first entry wins)',
+        );
+      },
+    );
 
     test('B18b — computeLearnedLeafRefs: unmark_ entry placed BEFORE the mark is '
         'the winner (putIfAbsent first-write-wins)', () {
