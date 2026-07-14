@@ -7005,13 +7005,21 @@
     {
       "id": "AUD-t-cross-54",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Assert real toggle/selection state (not just tapped-label presence) in progress_p0_test.dart and scheduler_p0_test.dart chip/segment tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "21e5a3833fdc2016ef99a022bcf818e91506b44e"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-54 AC1 site1 OK: progress_p0_test asserts AnimatedContainer color flips transparent->AppColors.blueMid on Last 30 Days tap; weak expectOnScreen removed",
+        "AUD-t-cross-54 AC1 site2 OK: progress_p0_test asserts SegmentedButton semantics isSelected flips false->true (Track learning only), All sources->false",
+        "AUD-t-cross-54 AC1 site3 OK: scheduler_p0_test asserts SegmentedButton.selected=={'daf'}; Bavli default is 'amud' (goal_setup_screen:110/127) so non-tautological",
+        "AUD-t-cross-54 red-first OK: sites1&2 assert opposite state pre-tap; commit body shows exact no-op failures blueMid/true/{'daf'} matching analysis",
+        "AUD-t-cross-54 sites4->3 OK: 4th evidence is a different FilterChip cited as proof not a test site; finding's own verify sets 3 sites, all fixed"
+      ],
+      "notes": "Verified 3 sites (verify note corrects sites:4->3; 4th was proof of another widget). Replaced label-presence checks with real state: pill color, SegmentedButton isSelected semantics, SegmentedButton.selected set. Red-first shown via temp no-op handlers, reverted pre-commit."
     },
     {
       "id": "AUD-guardrails-27",
