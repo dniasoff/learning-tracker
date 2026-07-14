@@ -492,7 +492,9 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           locale: locale,
           theme: AppTheme.lightTheme(),
-          home: Scaffold(body: SingleChildScrollView(child: child(level))),
+          home: Scaffold(
+            body: SingleChildScrollView(child: _hostedLevelCard(level)),
+          ),
         ),
       );
     }
@@ -591,5 +593,10 @@ void main() {
 }
 
 /// Wraps [HierarchyProgressCard] for the rendering-contract group above.
-Widget child(HierarchyLevelProgress level) =>
+///
+/// Named `_hostedLevelCard` (AUD-t-progress-09) rather than `child` — a
+/// free function named `child` collides with the ubiquitous Flutter
+/// `child:` named parameter used throughout this file, forcing readers to
+/// disambiguate "parameter or function?" at every call site.
+Widget _hostedLevelCard(HierarchyLevelProgress level) =>
     HierarchyProgressCard(level: level);
