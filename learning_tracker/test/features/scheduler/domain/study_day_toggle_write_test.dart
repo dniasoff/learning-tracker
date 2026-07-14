@@ -10,16 +10,22 @@
 /// i.e. synchronously, before `upsertDayConfig` resolved. This caused the
 /// scheduler to rebuild from stale data.
 ///
-/// Fix: in `study_day_config_screen.dart:_toggleDay`, move
-/// `ref.invalidate(allDailyTasksProvider)` INSIDE the `.then()` closure
-/// immediately after `await db.studyDayConfigDao.upsertDayConfig(...)`.
-/// The test below proves the DB write is durable (prerequisite for the
-/// invalidation to read fresh data), and documents the ordering fix.
+/// Fix: `study_day_config_screen.dart:_toggleDay` now awaits
+/// `writeThenInvalidate` (`study_day_toggle_service.dart`), which runs
+/// `invalidate` only once `write` has resolved.
+///
+/// AUD-t-scheduler-02: the STUDYDAY-TOGGLE-RACE-14 group below drives
+/// `writeThenInvalidate` itself — the exact function `_toggleDay` calls —
+/// rather than re-simulating the ordering with two DAO reads. If a future
+/// edit reintroduces `invalidate` before `write` resolves, this test fails.
 @Tags(['scheduler', 'study_day', 'studyday_toggle_write_09'])
 library;
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/study_day_toggle_service.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -139,48 +145,72 @@ void main() {
   //
   // The race was: _toggleDay called ref.invalidate BEFORE the async DB write
   // completed, causing the scheduler to rebuild from stale study-day data.
-  //
-  // The fix ensures the invalidation happens inside the .then() closure,
-  // AFTER upsertDayConfig resolves. This test documents the ordering
-  // invariant at the DAO level: the DB write is immediately visible to
-  // getConfigsByTrack, proving the invalidate-after-write ordering is correct.
+  // The fix extracted the ordering into `writeThenInvalidate`
+  // (study_day_toggle_service.dart), which `_toggleDay` now awaits. These
+  // tests drive that exact function — not a re-derivation of the ordering —
+  // so a future edit that reintroduces the race is caught here.
 
   group(
-    'STUDYDAY-TOGGLE-RACE-14: write ordering — DB reflects toggle before scheduler rebuild',
+    'STUDYDAY-TOGGLE-RACE-14: writeThenInvalidate ordering — the real function _toggleDay calls',
     () {
-      test('upsertDayConfig result is immediately visible to getConfigsByTrack '
-          '(prerequisite: invalidate-after-write is correct)', () async {
+      test('invalidate is not called until the awaited write resolves, using a '
+          'real DB write', () async {
         final trackId = await seedTrack(db, profileId: 1);
+        var invalidateCalled = false;
 
-        // Simulate the scenario: read BEFORE write, write, read AFTER write.
-        final configsBefore = await db.studyDayConfigDao.getConfigsByTrack(
-          trackId,
-        );
-        expect(configsBefore, isEmpty, reason: 'no config yet');
-
-        await db.studyDayConfigDao.upsertDayConfig(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          trackId: trackId,
-          dayOfWeek: 3,
-          dayType: 'review',
+        await writeThenInvalidate(
+          write: () => db.studyDayConfigDao.upsertDayConfig(
+            profileId: 1,
+            curriculumId: 'mishnayos',
+            trackId: trackId,
+            dayOfWeek: 3,
+            dayType: 'review',
+          ),
+          invalidate: () => invalidateCalled = true,
         );
 
-        // Immediately after await, the config is visible (synchronous Drift
-        // read returns the written row — this is the "after write" read that
-        // the scheduler invalidation triggers when correctly ordered).
-        final configsAfter = await db.studyDayConfigDao.getConfigsByTrack(
-          trackId,
-        );
+        // By the time writeThenInvalidate resolves, the DB write must
+        // already be durable AND invalidate must have already fired.
+        final configs = await db.studyDayConfigDao.getConfigsByTrack(trackId);
         expect(
-          configsAfter.map((c) => c.dayType).toList(),
+          configs.map((c) => c.dayType).toList(),
           contains('review'),
           reason:
-              'STUDYDAY-TOGGLE-RACE-14: the DB write must be visible '
-              'before any downstream read (e.g. scheduler rebuild). '
-              'If the invalidation fires before the write completes, '
-              'the scheduler reads stale data.',
+              'the write must have completed before writeThenInvalidate '
+              'returns',
         );
+        expect(invalidateCalled, isTrue);
+      });
+
+      test('invalidate never fires before an in-flight write resolves '
+          '(would reintroduce the stale-scheduler race)', () async {
+        final events = <String>[];
+        final writeCompleter = Completer<void>();
+
+        final future = writeThenInvalidate(
+          write: () async {
+            await writeCompleter.future;
+            events.add('write');
+          },
+          invalidate: () => events.add('invalidate'),
+        );
+
+        // Give the event loop a turn without resolving the write. If
+        // invalidate fired synchronously/early (the STUDYDAY-TOGGLE-RACE-14
+        // bug), it would already be recorded here.
+        await Future<void>.delayed(Duration.zero);
+        expect(
+          events,
+          isEmpty,
+          reason:
+              'STUDYDAY-TOGGLE-RACE-14: invalidate must not fire before '
+              'the awaited write completes.',
+        );
+
+        writeCompleter.complete();
+        await future;
+
+        expect(events, equals(['write', 'invalidate']));
       });
     },
   );
