@@ -9077,13 +9077,17 @@
   {
    "id": "AUD-t-progress-07",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Add a PaceCalculator regression test for bulkBaseline exceeding totalItems",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "eb8cb7ab25bf8a90c6780198a08bb86bbce276aa"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-progress-07 AC1 OK: mutated line150 clamp to allow negatives -> Test 7 failed red (Expected 0.0, Actual -0.3); reverted, suite 10/10 green"
+   ],
+   "notes": "Confirmed no existing test built bulkBaseline > totalItems. Added Test 7 (50/80/0) asserting requiredVelocity==0.0, paceStatus not ahead/behind. Red-first: widened clamp.dart:150 to allow negatives -> test failed (Expected 0.0, Actual -0.3); reverted (zero prod diff); suite reran green 10/10."
   },
   {
    "id": "AUD-t-progress-10",
