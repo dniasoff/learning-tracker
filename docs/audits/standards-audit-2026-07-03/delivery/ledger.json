@@ -4665,13 +4665,18 @@
     {
       "id": "AUD-t-story-acceptance-11",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Import the real childAwareText instead of re-implementing it inline in epic_18_track_overhaul_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c13, 2026-07-14). Review agent lost to quota exhaustion mid-review of worktree branch worktree-wf_f6e224d4-b73-23 (tip a19971bf5353ae5b0f1018a26599b47fef9b66cb); fix left unmerged per doctrine (never merge unreviewed). No commit made to dev."
+      "commits": [
+        "ee8bb146f4ffce04452a3f1e4f7130fffbef83d4"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-11 AC1 OK: test/story_acceptance/epic_18_track_overhaul_test.dart:18 imports package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart and lines 325/331/342 call the imported childAwareText directly; inline closure and its 'simulate the logic' comment deleted.",
+        "AUD-t-story-acceptance-11 AC2 OK: grep -n 'String childAwareText' learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart -> no match (exit 1)."
+      ],
+      "notes": "gate-repair 2026-07-14 (wave-4 GATE-REPAIR): prior blocked note ('Review agent lost to quota exhaustion ... fix left unmerged ... No commit to dev') was a non-genuine blocker per TQ-7/gate policy — a reviewable fix already existed complete and correct on worktree branch worktree-wf_f6e224d4-b73-23 (tip a19971bf5353ae5b0f1018a26599b47fef9b66cb) and was simply never delivered. Reviewed the diff (single-file, 1 insertion/12 deletions, imports the real public childAwareText from onboarding_screen.dart:32 in place of a frozen private-closure reimplementation), cherry-picked cleanly onto dev with no conflicts as ee8bb146. Verified independently post-merge: flutter test test/story_acceptance/epic_18_track_overhaul_test.dart --concurrency=2 -> 00:00 +21: All tests passed; dart analyze -> No issues found; learning_tracker/ make audit -> all 67 greps clean. Both ACs re-verified directly (see acVerified)."
     },
     {
       "id": "AUD-t-story-acceptance-10",
