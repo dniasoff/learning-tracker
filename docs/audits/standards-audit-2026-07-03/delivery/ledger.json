@@ -5394,13 +5394,18 @@
     {
       "id": "AUD-t-cross-49",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "profiles_tutoring_p2_test.dart E2E-721 rename sub-test silently no-ops via bare `return` instead of failing when its UI selector isn't found",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "2a9f5e1dbdd219343d84b19c5838e91b03cae1d0"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-49 AC1 OK: test:458-464 now fail(...) not return; my run confirms test fails when no 'Edit name'/'Rename' found",
+        "AUD-t-cross-49 AC2 OK: I temp-broke src label profile_picker_screen.dart:229 -> E2E-721 rename FAILED (-1) w/ exact fail() msg; reverted, baseline GREEN"
+      ],
+      "notes": "Re-verified at shifted lines (456/460 vs register 503/507, benign drift; quotes exact match). Replaced silent return with fail(...). Red-first: pre-fix, breaking source rename label still showed All tests passed! (false-green bug); post-fix, same break FAILED. Reverted; baseline green."
     },
     {
       "id": "AUD-t-cross-45",
