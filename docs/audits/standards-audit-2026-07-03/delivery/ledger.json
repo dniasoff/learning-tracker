@@ -7064,13 +7064,17 @@
     {
       "id": "AUD-t-settings-12",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Use DateTimeFactory.nowUtc() instead of raw DateTime.now() in scope_lifetime_l1_test.dart and backup_sync_error_l10n_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "39d4855b4f79cbb379283eae0b9ba9599022d966"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-settings-12 AC1 OK: grep DateTime.now() empty in both files; 8 sites now DateTimeFactory.nowUtc() (UTC via injectable clock, equiv to removed .toUtc())"
+      ],
+      "notes": "Verified all 8 DateTime.now().toUtc() sites present (lines drifted slightly, same 6+2 sites). AUD-t-cross-84's TQ-6 ratchet had baselined both files as tolerated backlog, but that doesn't moot this finding's own AC. Replaced all 8 with DateTimeFactory.nowUtc(); shrank ratchet baseline."
     },
     {
       "id": "AUD-tracks-23",
