@@ -9,7 +9,6 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 
 import '../../../helpers/drift_memory.dart'
@@ -300,24 +299,9 @@ void main() {
     );
   });
 
-  // ── deactivateTrack ──────────────────────────────────────────────────────
-
-  group('TrackDao.deactivateTrack', () {
-    test('retires (no longer throws) — W3.22', () async {
-      // W3.22: deactivateTrack now delegates to retireTrack instead of
-      // throwing InvalidTrackOperationException. Verify it completes cleanly.
-      await db.trackDao.activateTrack(CurriculumId.mishnayos);
-
-      await expectLater(
-        db.trackDao.deactivateTrack(CurriculumId.mishnayos),
-        completes,
-      );
-    });
-
-    test('InvalidTrackOperationException.toString contains message', () {
-      const e = InvalidTrackOperationException('test message');
-      expect(e.toString(), contains('test message'));
-      expect(e.toString(), contains('InvalidTrackOperationException'));
-    });
-  });
+  // Note: the deactivateTrack W3.22 smoke test and the
+  // InvalidTrackOperationException.toString test both duplicated coverage
+  // that already lives in track_dao_test.dart and
+  // track_dao_deactivate_test.dart respectively (AUD-t-cross-59) — removed
+  // here rather than triplicated.
 }
