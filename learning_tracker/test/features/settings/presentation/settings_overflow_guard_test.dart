@@ -190,6 +190,7 @@ class _AccountActionsSheetHostState
 
 List<Override> _sheetOverrides({
   required DeviceRegistryDatabase registry,
+  required UserDatabase userDb,
   required AuthRepository authRepo,
   required AccountManagementService service,
   required AppRouter router,
@@ -198,9 +199,7 @@ List<Override> _sheetOverrides({
     routerProvider.overrideWithValue(router),
     authRepositoryProvider.overrideWithValue(authRepo),
     accountManagementServiceProvider.overrideWithValue(service),
-    userDatabaseProvider.overrideWithValue(
-      UserDatabase(NativeDatabase.memory()),
-    ),
+    userDatabaseProvider.overrideWithValue(userDb),
     deviceRegistryProvider.overrideWithValue(registry),
     currentAccountIdProvider.overrideWith((ref) => 1),
     authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
@@ -245,6 +244,8 @@ void main() {
     (tester) async {
       final registry = DeviceRegistryDatabase(NativeDatabase.memory());
       addTearDown(registry.close);
+      final userDb = UserDatabase(NativeDatabase.memory());
+      addTearDown(userDb.close);
       final authRepo = _MockAuthRepository();
       final service = _MockAccountManagementService();
       final router = _MockAppRouter();
@@ -258,6 +259,7 @@ void main() {
         () => const _SignOutHost(),
         overrides: _sheetOverrides(
           registry: registry,
+          userDb: userDb,
           authRepo: authRepo,
           service: service,
           router: router,
@@ -273,6 +275,8 @@ void main() {
     (tester) async {
       final registry = DeviceRegistryDatabase(NativeDatabase.memory());
       addTearDown(registry.close);
+      final userDb = UserDatabase(NativeDatabase.memory());
+      addTearDown(userDb.close);
       final authRepo = _MockAuthRepository();
       final service = _MockAccountManagementService();
       final router = _MockAppRouter();
@@ -288,6 +292,7 @@ void main() {
         () => const _AccountActionsSheetHost(),
         overrides: _sheetOverrides(
           registry: registry,
+          userDb: userDb,
           authRepo: authRepo,
           service: service,
           router: router,

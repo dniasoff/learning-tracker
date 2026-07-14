@@ -103,15 +103,14 @@ Widget _buildApp({
   required _MockAuthRepository authRepo,
   required _MockAccountManagementService service,
   required DeviceRegistryDatabase registry,
+  required UserDatabase userDb,
 }) {
   return pumpApp(
     overrides: [
       routerProvider.overrideWithValue(router),
       authRepositoryProvider.overrideWithValue(authRepo),
       accountManagementServiceProvider.overrideWithValue(service),
-      userDatabaseProvider.overrideWithValue(
-        UserDatabase(NativeDatabase.memory()),
-      ),
+      userDatabaseProvider.overrideWithValue(userDb),
       deviceRegistryProvider.overrideWithValue(registry),
       currentAccountIdProvider.overrideWith((ref) => 1),
       authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
@@ -129,6 +128,7 @@ void main() {
   late _MockAuthRepository authRepo;
   late _MockAccountManagementService service;
   late DeviceRegistryDatabase registry;
+  late UserDatabase userDb;
 
   setUpAll(() {
     registerFallbackValue(_FakePageRouteInfo());
@@ -140,6 +140,7 @@ void main() {
     authRepo = _MockAuthRepository();
     service = _MockAccountManagementService();
     registry = DeviceRegistryDatabase(NativeDatabase.memory());
+    userDb = UserDatabase(NativeDatabase.memory());
 
     when(
       () => router.replaceAll(any<List<PageRouteInfo>>()),
@@ -155,6 +156,7 @@ void main() {
 
   tearDown(() async {
     await registry.close();
+    await userDb.close();
   });
 
   Future<void> openSheet(WidgetTester tester) async {
@@ -175,6 +177,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await openSheet(tester);
@@ -216,6 +219,7 @@ void main() {
           authRepo: authRepo,
           service: service,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await openSheet(tester);

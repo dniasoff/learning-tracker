@@ -173,6 +173,7 @@ Widget _buildApp({
   required _MockAccountManagementService service,
   required _MockConnectivityGateway connectivity,
   required DeviceRegistryDatabase registry,
+  required UserDatabase userDb,
   List<Override> extra = const [],
   Locale locale = const Locale('en'),
 }) {
@@ -183,9 +184,7 @@ Widget _buildApp({
       authRepositoryProvider.overrideWithValue(authRepo),
       accountManagementServiceProvider.overrideWithValue(service),
       connectivityServiceProvider.overrideWithValue(connectivity),
-      userDatabaseProvider.overrideWithValue(
-        UserDatabase(NativeDatabase.memory()),
-      ),
+      userDatabaseProvider.overrideWithValue(userDb),
       deviceRegistryProvider.overrideWithValue(registry),
       currentAccountIdProvider.overrideWith((ref) => 1),
       authStateProvider.overrideWith(() => _StubAuthStateNotifier()),
@@ -203,6 +202,7 @@ void main() {
   late _MockAccountManagementService service;
   late _MockConnectivityGateway connectivity;
   late DeviceRegistryDatabase registry;
+  late UserDatabase userDb;
 
   setUpAll(() {
     registerFallbackValue(_FakePageRouteInfo());
@@ -215,6 +215,7 @@ void main() {
     service = _MockAccountManagementService();
     connectivity = _MockConnectivityGateway();
     registry = DeviceRegistryDatabase(NativeDatabase.memory());
+    userDb = UserDatabase(NativeDatabase.memory());
 
     when(
       () => router.replaceAll(any<List<PageRouteInfo>>()),
@@ -230,6 +231,7 @@ void main() {
 
   tearDown(() async {
     await registry.close();
+    await userDb.close();
   });
 
   // ── showSignOutConfirmation — Dialog content ─────────────────────────────────
@@ -243,6 +245,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
       ),
     );
     await tester.pump();
@@ -267,6 +270,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
       ),
     );
     await tester.pump();
@@ -293,6 +297,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
       ),
     );
     await tester.pump();
@@ -314,6 +319,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
       ),
     );
     await tester.pump();
@@ -339,6 +345,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -370,6 +377,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -401,6 +409,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -434,6 +443,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
       ),
     );
     await tester.pump();
@@ -467,6 +477,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -500,6 +511,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
         locale: const Locale('he'),
       ),
     );
@@ -526,6 +538,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
       ),
     );
     await tester.pump();
@@ -555,6 +568,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
       ),
     );
     await tester.pump();
@@ -585,6 +599,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -613,6 +628,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -648,6 +664,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
       ),
     );
     await tester.pump();
@@ -683,6 +700,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
       ),
     );
     await tester.pump();
@@ -719,6 +737,7 @@ void main() {
         service: service,
         connectivity: connectivity,
         registry: registry,
+        userDb: userDb,
       ),
     );
     await tester.pump();
@@ -758,6 +777,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -795,6 +815,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -839,6 +860,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -879,6 +901,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -922,6 +945,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -967,6 +991,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -1013,6 +1038,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
         ),
       );
       await tester.pump();
@@ -1061,6 +1087,7 @@ void main() {
           service: service,
           connectivity: connectivity,
           registry: registry,
+          userDb: userDb,
           locale: const Locale('he'),
         ),
       );
