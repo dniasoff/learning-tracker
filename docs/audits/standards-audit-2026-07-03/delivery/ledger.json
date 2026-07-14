@@ -4629,13 +4629,13 @@
     {
       "id": "AUD-t-story-acceptance-11",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Import the real childAwareText instead of re-implementing it inline in epic_18_track_overhaul_test.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (merge-lane w4r1c13, 2026-07-14). Review agent lost to quota exhaustion mid-review of worktree branch worktree-wf_f6e224d4-b73-23 (tip a19971bf5353ae5b0f1018a26599b47fef9b66cb); fix left unmerged per doctrine (never merge unreviewed). No commit made to dev."
     },
     {
       "id": "AUD-t-story-acceptance-10",
