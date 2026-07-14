@@ -253,6 +253,32 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
   }
 }
 
+/// Builds the canonical settings signature used by [_persistNotificationSettingsToCloud]'s
+/// M2 no-op-skip check (below) to decide whether the notification settings
+/// have changed since the last cloud push.
+///
+/// `@visibleForTesting` (AUD-t-notifications-02): extracted from an inline
+/// string interpolation inside [_persistNotificationSettingsToCloud] so
+/// tests can assert against the REAL signature-building logic instead of
+/// hand-copying its format. A hand-copied literal in a test file stays
+/// green even if this function drops a field or changes its separator,
+/// silently breaking the no-op-skip contract the client-clock LWW fix
+/// (FB-2) depends on.
+@visibleForTesting
+String buildNotificationSettingsSignature({
+  required bool reminderEnabled,
+  required int reminderHour,
+  required int reminderMinute,
+  required bool streakEnabled,
+  required int streakHour,
+  required int streakMinute,
+  required bool rewardEnabled,
+}) {
+  return 'r:$reminderEnabled:$reminderHour:$reminderMinute|'
+      's:$streakEnabled:$streakHour:$streakMinute|'
+      'w:$rewardEnabled';
+}
+
 /// Persist the current notification preference set to Firestore for
 /// cloud-born accounts. Local-born accounts remain local-only.
 ///
@@ -328,10 +354,15 @@ Future<void> _persistNotificationSettingsToCloud(
       ) ??
       true;
 
-  final signature =
-      'r:$reminderEnabled:$reminderHour:$reminderMinute|'
-      's:$streakEnabled:$streakHour:$streakMinute|'
-      'w:$rewardEnabled';
+  final signature = buildNotificationSettingsSignature(
+    reminderEnabled: reminderEnabled,
+    reminderHour: reminderHour,
+    reminderMinute: reminderMinute,
+    streakEnabled: streakEnabled,
+    streakHour: streakHour,
+    streakMinute: streakMinute,
+    rewardEnabled: rewardEnabled,
+  );
   final lastPushed = prefs.getString(
     NotificationPreferencesRepository.lastPushedSettingsHashKey(profileId),
   );

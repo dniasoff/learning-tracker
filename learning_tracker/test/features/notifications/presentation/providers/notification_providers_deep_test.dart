@@ -459,42 +459,76 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('G. Cloud-sync signature format', () {
+    // AUD-t-notifications-02 (TQ-8): G1-G4 call the REAL
+    // buildNotificationSettingsSignature — extracted `@visibleForTesting`
+    // from _persistNotificationSettingsToCloud — instead of hand-copying its
+    // format. A hand-copied literal here would stay green even if the real
+    // signature-building code dropped a field or changed its separator,
+    // silently breaking the M2 no-op-skip contract the client-clock LWW fix
+    // depends on. (Mutation-check evidence for this coupling is in the fix
+    // commit message.)
     test('G1. canonical signature format matches expected template', () {
-      // The signature is built inside _persistNotificationSettingsToCloud.
-      // We test the format contract by reconstructing it — the format must NOT
-      // change without a deliberate migration.
-      const enabled = true;
-      const hour = 19;
-      const minute = 0;
-      const streakEnabled = true;
-      const streakHour = 21;
-      const streakMinute = 0;
-      const rewardEnabled = true;
-
-      const signature =
-          'r:$enabled:$hour:$minute|'
-          's:$streakEnabled:$streakHour:$streakMinute|'
-          'w:$rewardEnabled';
+      final signature = buildNotificationSettingsSignature(
+        reminderEnabled: true,
+        reminderHour: 19,
+        reminderMinute: 0,
+        streakEnabled: true,
+        streakHour: 21,
+        streakMinute: 0,
+        rewardEnabled: true,
+      );
 
       expect(signature, 'r:true:19:0|s:true:21:0|w:true');
     });
 
     test('G2. changing reminderHour changes the signature', () {
-      String sig(int h) => 'r:true:$h:0|s:true:21:0|w:true';
+      String sig(int hour) => buildNotificationSettingsSignature(
+        reminderEnabled: true,
+        reminderHour: hour,
+        reminderMinute: 0,
+        streakEnabled: true,
+        streakHour: 21,
+        streakMinute: 0,
+        rewardEnabled: true,
+      );
 
       expect(sig(19), isNot(equals(sig(20))));
     });
 
     test('G3. changing streakEnabled changes the signature', () {
-      const sigEnabled = 'r:true:19:0|s:true:21:0|w:true';
-      const sigDisabled = 'r:true:19:0|s:false:21:0|w:true';
-      expect(sigEnabled, isNot(equals(sigDisabled)));
+      String sig({required bool streakEnabled}) =>
+          buildNotificationSettingsSignature(
+            reminderEnabled: true,
+            reminderHour: 19,
+            reminderMinute: 0,
+            streakEnabled: streakEnabled,
+            streakHour: 21,
+            streakMinute: 0,
+            rewardEnabled: true,
+          );
+
+      expect(
+        sig(streakEnabled: true),
+        isNot(equals(sig(streakEnabled: false))),
+      );
     });
 
     test('G4. changing rewardEnabled changes the signature', () {
-      const sigEnabled = 'r:true:19:0|s:true:21:0|w:true';
-      const sigDisabled = 'r:true:19:0|s:true:21:0|w:false';
-      expect(sigEnabled, isNot(equals(sigDisabled)));
+      String sig({required bool rewardEnabled}) =>
+          buildNotificationSettingsSignature(
+            reminderEnabled: true,
+            reminderHour: 19,
+            reminderMinute: 0,
+            streakEnabled: true,
+            streakHour: 21,
+            streakMinute: 0,
+            rewardEnabled: rewardEnabled,
+          );
+
+      expect(
+        sig(rewardEnabled: true),
+        isNot(equals(sig(rewardEnabled: false))),
+      );
     });
 
     test(
