@@ -149,18 +149,11 @@ const _baseline = <String, int>{
       1,
   'test/features/parent_mode/domain/services/parent_dashboard_aggregator_migration_test.dart':
       1,
-  'test/features/progress/domain/services/chart_data_service_extended_test.dart':
-      1,
-  'test/features/progress/domain/services/chart_data_service_extra_test.dart':
-      1,
   'test/features/progress/domain/services/chart_data_service_migration_test.dart':
       1,
   'test/features/progress/domain/services/chart_data_service_recent_activity_test.dart':
       1,
-  'test/features/progress/domain/services/chart_data_service_sentinel_test.dart':
-      1,
   'test/features/progress/domain/services/chart_data_service_test.dart': 1,
-  'test/features/progress/domain/services/chart_data_service_w1b_test.dart': 1,
   'test/features/progress/domain/services/track_dual_progress_migration_test.dart':
       1,
   'test/features/progress/presentation/providers/curriculum_pace_status_provider_test.dart':

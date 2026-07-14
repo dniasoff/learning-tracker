@@ -53,6 +53,27 @@ void main() {
     ),
   );
 
+  Future<void> insertGoal({
+    String curriculumId = 'mishnayos',
+    DateTime? createdAt,
+    DateTime? targetDate,
+    DateTime? updatedAt,
+  }) {
+    final now = DateTime.utc(2026, 1, 1);
+    return db
+        .into(db.goals)
+        .insert(
+          GoalsCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            trackId: trackId,
+            createdAt: createdAt ?? now,
+            updatedAt: updatedAt ?? now,
+            targetDate: Value(targetDate),
+          ),
+        );
+  }
+
   group('ChartDataService', () {
     group('getDailyCompletions', () {
       test('returns zero-filled entries for empty range', () async {
@@ -219,6 +240,163 @@ void main() {
         expect(result.contains(DateTime(2026, 3, 1)), isTrue);
         expect(result.contains(DateTime(2026, 3, 3)), isTrue);
       });
+    });
+
+    // Consolidated from chart_data_service_extended_test.dart +
+    // chart_data_service_extra_test.dart (AUD-t-progress-03): both files
+    // independently reimplemented the same getTargetLine coverage with
+    // their own setUp/insertGoal copies (Fowler duplication / AG-5 — one
+    // mirrored test suite per source file). extra_test.dart's one
+    // genuinely unique case (baselineCount excludes pre-goal completions)
+    // is folded in below; both source files are deleted.
+    group('getTargetLine', () {
+      test('returns null when no goals for curriculum', () async {
+        final result = await service.getTargetLine(
+          curriculumId: 'mishnayos',
+          startDate: DateTime(2026, 5, 1),
+          endDate: DateTime(2026, 5, 14),
+        );
+        expect(result, isNull);
+      });
+
+      test('returns null when goal has no targetDate', () async {
+        await insertGoal(curriculumId: 'mishnayos', targetDate: null);
+
+        final result = await service.getTargetLine(
+          curriculumId: 'mishnayos',
+          startDate: DateTime(2026, 5, 1),
+          endDate: DateTime(2026, 5, 14),
+        );
+        expect(result, isNull);
+      });
+
+      test(
+        'returns null when goal targetDate is same as createdAt (0 days)',
+        () async {
+          final d = DateTime.utc(2026, 5, 14);
+          await insertGoal(
+            curriculumId: 'mishnayos',
+            createdAt: d,
+            targetDate: d, // totalDays == 0 → null
+          );
+
+          final result = await service.getTargetLine(
+            curriculumId: 'mishnayos',
+            startDate: DateTime(2026, 5, 1),
+            endDate: DateTime(2026, 5, 14),
+          );
+          expect(result, isNull);
+        },
+      );
+
+      test(
+        'returns target line points when goal and targetDate are set',
+        () async {
+          final goalCreatedAt = DateTime.utc(2026, 5, 1);
+          final goalTargetDate = DateTime.utc(2026, 5, 31);
+
+          await insertGoal(
+            curriculumId: 'mishnayos',
+            createdAt: goalCreatedAt,
+            targetDate: goalTargetDate,
+          );
+          await insertCompletion(
+            curriculumId: 'mishnayos',
+            completedAt: DateTime.utc(2026, 5, 10),
+          );
+
+          final result = await service.getTargetLine(
+            curriculumId: 'mishnayos',
+            startDate: DateTime(2026, 5, 5),
+            endDate: DateTime(2026, 5, 10),
+          );
+
+          expect(result, isNotNull);
+          expect(result!.isNotEmpty, isTrue);
+          // Should have one entry per day: May 5–10 = 6 days.
+          expect(result.length, 6);
+        },
+      );
+
+      test(
+        'target line is monotonically non-decreasing within range',
+        () async {
+          final goalCreated = DateTime.utc(2026, 1, 1);
+          final goalTarget = DateTime.utc(2026, 12, 31);
+
+          await insertGoal(
+            curriculumId: 'mishnayos',
+            createdAt: goalCreated,
+            targetDate: goalTarget,
+          );
+          for (var i = 1; i <= 10; i++) {
+            await insertCompletion(
+              curriculumId: 'mishnayos',
+              sefariaRef: 'Berakhot 1:$i',
+              completedAt: DateTime.utc(2026, 5, i),
+            );
+          }
+
+          final result = await service.getTargetLine(
+            curriculumId: 'mishnayos',
+            startDate: DateTime(2026, 5, 1),
+            endDate: DateTime(2026, 5, 10),
+          );
+
+          expect(result, isNotNull);
+          for (var i = 1; i < result!.length; i++) {
+            expect(
+              result[i].expectedTotal,
+              greaterThanOrEqualTo(result[i - 1].expectedTotal),
+            );
+          }
+        },
+      );
+
+      // Unique case from chart_data_service_extra_test.dart — not
+      // reimplemented by extended_test.dart.
+      test(
+        'baselineCount excludes completions before goal.createdAt',
+        () async {
+          // Insert 3 completions before the goal was created.
+          for (var i = 1; i <= 3; i++) {
+            await insertCompletion(
+              curriculumId: 'mishnayos',
+              sefariaRef: 'pre_goal_$i',
+              completedAt: DateTime.utc(2025, 12, i),
+            );
+          }
+
+          final goalCreated = DateTime.utc(2026, 1, 1);
+          final goalEnd = DateTime.utc(2026, 1, 11);
+          await insertGoal(
+            curriculumId: 'mishnayos',
+            createdAt: goalCreated,
+            targetDate: goalEnd,
+          );
+
+          // 2 completions within the goal window.
+          for (var i = 1; i <= 2; i++) {
+            await insertCompletion(
+              curriculumId: 'mishnayos',
+              sefariaRef: 'in_window_$i',
+              completedAt: DateTime.utc(2026, 1, i),
+            );
+          }
+
+          final result = await service.getTargetLine(
+            curriculumId: 'mishnayos',
+            startDate: goalCreated,
+            endDate: goalEnd,
+          );
+
+          expect(result, isNotNull);
+          // First point (at start date) should reflect the baseline offset.
+          // Baseline = 3 (pre-goal completions). At t=0, fraction=0, so
+          // expectedTotal = baselineCount + totalCompletions * 0 = 3.
+          expect(result!.first.expectedTotal, greaterThanOrEqualTo(3.0));
+        },
+      );
     });
   });
 }
