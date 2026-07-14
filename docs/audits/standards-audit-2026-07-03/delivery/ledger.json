@@ -5223,13 +5223,17 @@
   {
    "id": "AUD-t-cross-34",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Register StartingPositionCalendarMode with the shared expectNoOverflowAcrossDevices harness instead of the ad hoc single-viewport check",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "d1384a423587ba46774a771dfef65370a885732f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-34 AC1 OK: overflow_guard_test.dart:235 pumps StartingPositionCalendarMode via expectNoOverflowAcrossDevices, default matrix; 8/8 pass"
+   ],
+   "notes": "Verified gap real. Added testWidgets case via expectNoOverflowAcrossDevices; red-first run caught a genuine 43px overflow at 320x568@2.0x on 'Start Here' button, an untested corner. Fixed via Flexible(overflow:ellipsis). Kept old test too. All tests pass; analyze/audit clean."
   },
   {
    "id": "AUD-tutoring-05",
