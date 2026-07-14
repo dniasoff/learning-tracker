@@ -184,3 +184,23 @@ finding, appended as it happens.
 - **Logged by:** wave-4-chunk04 ledger reconciliation agent (sonnet), 2026-07-14.
 - **Resolution (2026-07-14, wave-4 gate-repair pass):** cherry-picked `37de79f4` (from `worktree-wf_cfdc1964-538-1`) onto dev via `git cherry-pick -x`. Clean, no conflicts (co-existed with `AUD-t-cross-31`'s separate rewrite of the same file's E2E-812 group). Verified post-merge: `flutter test test/e2e/journeys/progress_p1_test.dart` → all passed, new cross-profile R-PG7 sub-test green; `flutter analyze` clean. Commit `5d2a5e6c` on dev. Ledger row reclassified `blocked` → `merged`.
 - **Logged by:** wave-4 gate-repair agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-cross-75 — Merge duplicate Completion/CompletionEvent DataClass groups in user_database_managers_test.dart
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `skipped-refuted` (merge-lane w4r1c3, 2026-07-14).
+- **Basis — target file deleted whole, independently confirmed:** `user_database_managers_test.dart` was deleted wholesale by ancestor commit `49cc7d73` (`test(database): AUD-t-cross-16 - delete tautological db.managers.* suite, exclude generated code from coverage`), which predates this branch's register-verify checkpoint `4018a91c` and remains an ancestor of this branch's current `HEAD`. Pre-deletion content matched this finding's evidence exactly: `git show 49cc7d73^:learning_tracker/test/core/database/user_database_managers_test.dart` shows sibling groups `Completion DataClass + managers` (line 431) and `CompletionEvent DataClass + managers` (line 493) — the exact duplicate pair this finding names. Independently re-verified against the current tree: `grep -rn "group('Completion" learning_tracker/test/` returns 0 matches for either group name repo-wide (the surviving `Completion DataClass`/`CompletionEvent DataClass` groups in `user_database_dataclass_extended_test.dart` are a distinct, non-duplicate pair — one group per class, not two per class). This finding's target no longer exists to merge — moot. No code change needed.
+- **Logged by:** merge-lane w4r1c3 agent (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-cross-80 — Remove dead ProfileDao import in user_database_managers_test.dart:12
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `skipped-refuted` (merge-lane w4r1c3, 2026-07-14).
+- **Basis — target file deleted whole, independently confirmed:** same deletion commit `49cc7d73` as `AUD-t-cross-75` above — the dead `import 'package:learning_tracker/core/database/daos/profile_dao.dart';` at `user_database_managers_test.dart:12` was removed together with the whole file it lived in. Independently re-verified: `find learning_tracker/test -iname user_database_managers_test.dart` returns no results; `grep -rn profile_dao.dart learning_tracker/test/` shows only legitimate DAO-under-test imports in files that actually exercise `ProfileDao`, no dangling reference to the deleted file. Commit `49cc7d73` remains an ancestor of this branch's current `HEAD`. No code change needed; the finding's optional AC (add an `analysis_options.yaml` unused-import lint) was skipped as scope creep on a refuted finding.
+- **Logged by:** merge-lane w4r1c3 agent (sonnet), 2026-07-14.

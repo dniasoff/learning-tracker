@@ -6817,13 +6817,13 @@
   {
    "id": "AUD-t-cross-75",
    "wave": 4,
-   "status": "todo",
+   "status": "skipped-refuted",
    "severity": "P3",
    "title": "Merge duplicate Completion/CompletionEvent DataClass groups in user_database_managers_test.dart",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "skipped-refuted (merge-lane w4r1c3, 2026-07-14). Already fixed in code, independently confirmed: user_database_managers_test.dart was deleted wholesale by ancestor commit 49cc7d73 (test(database): AUD-t-cross-16 - delete tautological db.managers.* suite, exclude generated code from coverage), which predates this branch's register-verify checkpoint 4018a91c and remains an ancestor of this branch's current HEAD. Pre-deletion content matched this finding's evidence exactly: git show 49cc7d73^:<path> shows sibling groups 'Completion DataClass + managers' (line 431) and 'CompletionEvent DataClass + managers' (line 493) in the deleted file. Independently re-verified against the current tree: grep -rn \"group('Completion\" learning_tracker/test/ returns 0 matches for either group name repo-wide. This finding's target no longer exists to merge -- moot. No code change needed."
   },
   {
    "id": "AUD-core-exceptions-01",
@@ -9573,13 +9573,13 @@
   {
    "id": "AUD-t-cross-80",
    "wave": 4,
-   "status": "todo",
+   "status": "skipped-refuted",
    "severity": "P3",
    "title": "Remove dead ProfileDao import in user_database_managers_test.dart:12",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": ""
+   "notes": "skipped-refuted (merge-lane w4r1c3, 2026-07-14). Already fixed in code, independently confirmed: same deletion commit 49cc7d73 as AUD-t-cross-75 -- the dead import 'package:learning_tracker/core/database/daos/profile_dao.dart'; at user_database_managers_test.dart:12 was removed together with the whole file it lived in. Independently re-verified: find learning_tracker/test -iname user_database_managers_test.dart returns no results; grep -rn profile_dao.dart learning_tracker/test/ shows only legitimate DAO-under-test imports in files that actually use ProfileDao. Commit 49cc7d73 remains an ancestor of this branch's current HEAD. No code change needed; the optional AC (an analysis_options.yaml unused-import lint) was skipped as scope creep on a refuted finding."
   },
   {
    "id": "AUD-core-database-11",
