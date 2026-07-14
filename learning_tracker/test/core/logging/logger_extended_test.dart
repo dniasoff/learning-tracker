@@ -81,6 +81,21 @@ void main() {
       expect(msg, isNot(contains('abc123')));
     });
 
+    // ─── AUD-t-cross-61: folded from deleted logger_extra_test.dart — this
+    // exact call shape (critical with exception + stackTrace, no fields)
+    // wasn't exercised anywhere else in the suite.
+    test('critical with exception and stackTrace forwards to talker', () {
+      logger.critical(
+        event: 'auth_failure_fatal',
+        exception: Exception('boom'),
+        stackTrace: StackTrace.current,
+      );
+      expect(
+        talker.history.last.generateTextMessage(),
+        contains('auth_failure_fatal'),
+      );
+    });
+
     test('info with null fields does not crash', () {
       logger.info(event: 'startup_completed');
       expect(
@@ -130,6 +145,21 @@ void main() {
     test('warningMsg with exception does not throw', () {
       logger.warningMsg('timeout', Exception('net error'));
       expect(talker.history, isNotEmpty);
+    });
+
+    // ─── AUD-t-cross-61: folded from deleted logger_extra_test.dart — this
+    // exact call shape (warningMsg with an explicit stackTrace, not just an
+    // exception) wasn't exercised anywhere else in the suite.
+    test('warningMsg with exception and stackTrace forwards to talker', () {
+      logger.warningMsg(
+        'connection retry',
+        Exception('net error'),
+        StackTrace.current,
+      );
+      expect(
+        talker.history.last.generateTextMessage(),
+        contains('connection retry'),
+      );
     });
 
     test('errorMsg logs the message', () {
