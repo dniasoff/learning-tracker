@@ -1699,18 +1699,19 @@
   {
    "id": "AUD-t-cross-06",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Add profileId to TrackLearningOrder — the one user_database table with a bare autoincrement PK, and make audit's claimed profileId check doesn't exist",
    "commits": [
-    "a1c060d1febb9592b1743a1ee1fbdf6649030df7"
+    "a1c060d1febb9592b1743a1ee1fbdf6649030df7",
+    "9c5fd108d809aaeb300d6c788d37c79c7ec843cf"
    ],
-   "reviewRounds": 1,
+   "reviewRounds": 2,
    "acVerified": [
     "AUD-t-cross-06 AC1 OK: schema v36 adds profileId (FK -> learner_profiles, cascade delete) to track_learning_order, folded into uniqueKeys with trackId/sefariaRef; migration backfills from the owning curriculum_tracks row and drops unrecoverable orphans",
     "AUD-t-cross-06 AC2 OK: new tool/check_profile_id_in_pk.dart is deny-by-default over every table in UserDatabase's tables: [...] list, wired in as make audit check 56/56"
    ],
-   "notes": "MERGED (gate-repair harvest, 2026-07-14): real, fully-verified build work existed on unmerged worktree commit df3daa2a (branch worktree-wf_a24050cb-ac8-58) but was never merged onto dev (see the wave4-chunk03 reconciliation note this replaces). Required manual reconciliation, not a clean cherry-pick: (1) the Makefile's new profileId-in-PK audit check was renumbered to land after 3 checks added by other, later-merged findings; (2) a modify/delete conflict on 5 test/core/database/user_database_managers_*_test.dart files - AUD-t-cross-16 (already merged) deleted that entire 7-file suite as tautological (474+ tests asserting only hasLength(1), zero production caller for db.managers.*) after this worktree commit's branch point; took the deletion rather than resurrecting the suite with profileId assertions grafted in, since real profileId coverage for track_learning_order now lives in the dedicated DAO test, the migration test, and the checker's own test, none of which depend on the deleted managers suite. Landed onto dev as a1c060d1. Verification (re-run post-merge): flutter analyze -> No issues found!; flutter test across all touched/new test files -> 139 passed, 0 failed; dart run tool/gen_arch_tables.dart --check -> matches freshly-generated counts; make audit -> 56/56 clean. | REOPENED by 100% AC audit 2026-07-14: substantive work (profileId col, v35->v36 migration+test, check_profile_id_in_pk checker) verified done, but AC1 committed-drift-schema-export clause unmet (no drift_schemas/ dump); coding-standards.md:928 DB-4 gap still open."
+   "notes": "MERGED (gate-repair harvest, 2026-07-14): real, fully-verified build work existed on unmerged worktree commit df3daa2a (branch worktree-wf_a24050cb-ac8-58) but was never merged onto dev (see the wave4-chunk03 reconciliation note this replaces). Required manual reconciliation, not a clean cherry-pick: (1) the Makefile's new profileId-in-PK audit check was renumbered to land after 3 checks added by other, later-merged findings; (2) a modify/delete conflict on 5 test/core/database/user_database_managers_*_test.dart files - AUD-t-cross-16 (already merged) deleted that entire 7-file suite as tautological (474+ tests asserting only hasLength(1), zero production caller for db.managers.*) after this worktree commit's branch point; took the deletion rather than resurrecting the suite with profileId assertions grafted in, since real profileId coverage for track_learning_order now lives in the dedicated DAO test, the migration test, and the checker's own test, none of which depend on the deleted managers suite. Landed onto dev as a1c060d1. Verification (re-run post-merge): flutter analyze -> No issues found!; flutter test across all touched/new test files -> 139 passed, 0 failed; dart run tool/gen_arch_tables.dart --check -> matches freshly-generated counts; make audit -> 56/56 clean. | REOPENED by 100% AC audit 2026-07-14: substantive work (profileId col, v35->v36 migration+test, check_profile_id_in_pk checker) verified done, but AC1 committed-drift-schema-export clause unmet (no drift_schemas/ dump); coding-standards.md:928 DB-4 gap still open. | COMPLETED 938decee/9c5fd108: drift_schemas/drift_schema_v36.json exported (drift_dev schema dump), DB-4 rows updated; AC1 met."
   },
   {
    "id": "AUD-t-cross-11",
