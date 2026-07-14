@@ -4057,13 +4057,18 @@
   {
    "id": "AUD-t-gamification-01",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace wall-clock Future.delayed synchronization with deterministic waits in gamification staleness tests",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "7840c83ae812cd0e5aab84a36041d22a97f1dc55"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-gamification-01 AC1 OK: grep for Future<void>.delayed/delayed in both files returns exit 1, 0 matches",
+    "AUD-t-gamification-01 AC2 OK: 20/20 randomized-seed runs green (pass=20 fail=0); logs show all 4 tests ran + 'All tests passed!'"
+   ],
+   "notes": "Confirmed all 7 evidence sites still present pre-fix. Replaced each Future<void>.delayed with pumpEventQueue(), matching codebase's existing deterministic-wait pattern. AC1: grep for Future<void>.delayed = 0 matches. AC2: 20 consecutive randomized-seed runs, all green, no flake."
   },
   {
    "id": "AUD-learning-07",
