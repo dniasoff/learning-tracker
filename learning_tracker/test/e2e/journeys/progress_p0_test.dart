@@ -27,11 +27,15 @@
 @Tags(['e2e', 'journey'])
 library;
 
-import 'package:flutter/material.dart' show Scrollable;
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart'
+    show AnimatedContainer, BoxDecoration, Color, Colors, Scrollable;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart'
@@ -321,11 +325,42 @@ void main() {
           );
 
           await h.tapText('Recent Activity');
+
+          // AUD-t-cross-54: the time-range pill is a custom
+          // GestureDetector + AnimatedContainer (not a FilterChip), whose
+          // background flips between AppColors.blueMid (selected) and
+          // Colors.transparent (unselected) based on `_timeRange`. Both
+          // labels always render regardless of selection, so a no-op
+          // onTap would leave identical text on screen post-tap — assert
+          // the actual selected pill's color, not label presence.
+          Color pillColor(String label) =>
+              (tester
+                          .widget<AnimatedContainer>(
+                            find.ancestor(
+                              of: find.text(label),
+                              matching: find.byType(AnimatedContainer),
+                            ),
+                          )
+                          .decoration!
+                      as BoxDecoration)
+                  .color!;
+
+          // Before the tap: "Last 7 Days" is the default selection.
+          expect(pillColor('Last 7 Days'), AppColors.blueMid);
+          expect(pillColor('Last 30 Days'), Colors.transparent);
+
           // Tap "Last 30 Days" chip to change the range.
           await h.tapText('Last 30 Days');
 
-          // The chip label is still visible (toggle rendered without crash).
-          h.expectOnScreen('Last 30 Days');
+          // After the tap: the selection must have actually flipped.
+          expect(
+            pillColor('Last 30 Days'),
+            AppColors.blueMid,
+            reason:
+                'tapping "Last 30 Days" must select that range, not just '
+                'render the label',
+          );
+          expect(pillColor('Last 7 Days'), Colors.transparent);
           // The screen title still present.
           h.expectOnScreen('Recent Activity');
         },
@@ -511,13 +546,41 @@ void main() {
             ],
           );
 
+          // AUD-t-cross-54: the toggle is a SegmentedButton whose two
+          // segments both always render regardless of which is selected —
+          // Flutter's SegmentedButton marks the selected segment's
+          // semantics node with `selected: true` (see
+          // segmented_button.dart), so assert that flag rather than mere
+          // label presence, which a no-op onSelectionChanged would not
+          // move.
+          final handle = tester.ensureSemantics();
+
+          bool segmentSelected(String label) =>
+              tester
+                  .getSemantics(find.text(label))
+                  .getSemanticsData()
+                  .flagsCollection
+                  .isSelected ==
+              ui.Tristate.isTrue;
+
+          // Before the tap: "All sources" is the default selection.
+          expect(segmentSelected('All sources'), isTrue);
+          expect(segmentSelected('Track learning only'), isFalse);
+
           // Tap the "Track learning only" toggle (R-PG4 — re-select inside
           // each test because local state resets on navigation).
           await h.tapText('Track learning only');
 
-          // Toggle label still visible (no crash, state updated).
-          h.expectOnScreen('Track learning only');
-          h.expectOnScreen('All sources');
+          // After the tap: the selection must have actually flipped.
+          expect(
+            segmentSelected('Track learning only'),
+            isTrue,
+            reason:
+                'tapping "Track learning only" must select that source '
+                'filter, not just render the label',
+          );
+          expect(segmentSelected('All sources'), isFalse);
+          handle.dispose();
         },
       );
     },

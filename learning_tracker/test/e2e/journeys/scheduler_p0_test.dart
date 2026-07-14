@@ -14,6 +14,7 @@
 library;
 
 import 'package:flutter/foundation.dart' show ValueKey;
+import 'package:flutter/material.dart' show SegmentedButton;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -421,8 +422,24 @@ void main() {
         await h.tapText('Dafim', settle: const Duration(milliseconds: 300));
         await tester.pump(const Duration(milliseconds: 300));
 
-        // After selecting Dafim, the pace input label should reference "Dafim".
-        h.expectOnScreen('Dafim');
+        // AUD-t-cross-54: both "Amudim" and "Dafim" always render as
+        // SegmentedButton segments regardless of which is selected, so a
+        // no-op onSelectionChanged would leave 'amud' selected while both
+        // labels remain on screen. Assert the widget's actual `selected`
+        // set instead of label presence.
+        final unitPicker = tester.widget<SegmentedButton<String>>(
+          find.ancestor(
+            of: find.text('Dafim'),
+            matching: find.byType(SegmentedButton<String>),
+          ),
+        );
+        expect(
+          unitPicker.selected,
+          {'daf'},
+          reason:
+              'tapping "Dafim" must select the daf granularity, not just '
+              'render the label',
+        );
         // Create Goal button still present.
         h.expectOnScreen('Create Goal');
       },
