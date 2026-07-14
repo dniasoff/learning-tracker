@@ -74,11 +74,17 @@ import '../../../../helpers/test_database.dart';
 ///  - syncWriteFacadeProvider → null (local-born, no sync)
 ///  - achievementsOverviewProvider stubbed to a dummy value
 ///
-/// Pass [profileMode] as 'child' or 'adult' to test profile-type branching.
-ProviderContainer _makeContainer({
-  int profileId = 1,
-  String profileMode = 'adult',
-}) {
+/// AUD-t-gamification-09: this factory used to also accept a `profileMode`
+/// parameter whose doc comment claimed it drove "profile-type branching",
+/// but the body never read it — [RewardConfigController] itself has no
+/// profile-mode branch to wire up (child-vs-adult gating happens in the
+/// screen/widget layer, e.g. `gamification_route_push_guard.dart`, never
+/// inside this controller). Wiring a stub override that nothing downstream
+/// consumes would have fabricated a behavioral distinction that doesn't
+/// exist, so the dead parameter was removed instead. Callers that need a
+/// specific profile mode seed a real profile row via [seedProfileWithIds]
+/// (see the "product rule: adults have no points" group below).
+ProviderContainer _makeContainer({int profileId = 1}) {
   final db = inMemoryDb();
   // AUD-t-gamification-04: ProviderContainer.dispose() (called via
   // addTearDown(c.dispose) at each call site) disposes Riverpod's
@@ -1055,7 +1061,7 @@ void main() {
   // ── 20. Product rule: adults have no points ──────────────────────────────────
 
   group('product rule: adults have no points', () {
-    test('controller works for adult profile (profileMode=adult)', () async {
+    test('controller works for adult profile (seeded mode=adult)', () async {
       // Adults have no points — but the RewardConfigController is used by
       // parents/admins to configure the reward catalogue for children.
       // The product rule is: child profiles earn points; adults do not.
@@ -1063,7 +1069,10 @@ void main() {
       // that gating happens at the UI/gamification screen layer.
       // This test verifies the controller functions for an adult profile ID
       // (which is the typical use case: an adult configures child rewards).
-      final c = _makeContainer(profileId: 1, profileMode: 'adult');
+      // The 'adult' mode comes from the real profile row seeded below via
+      // seedProfileWithIds — _makeContainer itself has no profile-mode
+      // parameter (AUD-t-gamification-09: it never drove any behavior).
+      final c = _makeContainer(profileId: 1);
       addTearDown(c.dispose);
       await seedProfileWithIds(
         c.read(userDatabaseProvider),
