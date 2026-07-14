@@ -26,6 +26,8 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart'
+    show estimatedFinishDate;
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
@@ -391,28 +393,61 @@ void main() {
     // ── N7 — pace-goal projected finish anchors to createdAt, not now ────────
 
     group('N7: pace-goal projected finish anchors to createdAt, not now', () {
+      // AUD-t-story-acceptance-02: this test now calls the REAL production
+      // formula (estimatedFinishDate, extracted from
+      // _TrackDetailScreenState._estimatedFinish in track_detail_screen.dart)
+      // instead of re-typing its date math inline. The original version built
+      // two independent copies of the same formula and asserted they agreed
+      // with each other — it could never fail no matter what production code
+      // did, so a regression that re-anchored the projection to "now" would
+      // ship undetected. Verified manually: temporarily reverting
+      // estimatedFinishDate()'s anchor to DateTimeFactory.nowLocal() (the F1
+      // bug shape) makes this test fail red; anchoring to goal.createdAt
+      // makes it pass.
+      Goal paceGoal({required DateTime createdAt}) => Goal(
+        id: 1,
+        profileId: 1,
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        trackId: 1,
+        targetPercent: 100.0,
+        description: '',
+        dateType: 'gregorian',
+        goalType: 'pace',
+        paceValue: 10,
+        pacePeriod: 'per_week',
+        createdAt: createdAt,
+        updatedAt: createdAt,
+      );
+
       test(
         'projected finish uses goal.createdAt as anchor — stable across days',
         () {
           final createdAt = DateTime.now().subtract(const Duration(days: 7));
+          final goal = paceGoal(createdAt: createdAt);
 
-          const pacePerWeek = 10;
           const totalItems = 100;
           const completedItems = 0;
           const itemsRemaining = totalItems - completedItems; // 100
 
-          final daysNeeded = (itemsRemaining / pacePerWeek * 7).ceil(); // 70
-
-          final projected1 = createdAt.toLocal().add(
-            Duration(days: daysNeeded),
+          final projected1 = estimatedFinishDate(
+            goal: goal,
+            remainingInPaceUnit: itemsRemaining,
           );
-          final projected2 = createdAt.toLocal().add(
-            Duration(days: daysNeeded),
+          final projected2 = estimatedFinishDate(
+            goal: goal,
+            remainingInPaceUnit: itemsRemaining,
           );
 
           expect(
             projected1,
-            equals(createdAt.toLocal().add(const Duration(days: 70))),
+            isNotNull,
+            reason:
+                'N7: a pace goal with positive remaining scope must '
+                'produce a projected finish date',
+          );
+          expect(
+            projected1,
+            equals(createdAt.add(const Duration(days: 70))),
             reason:
                 'N7: projected finish must be createdAt + 70 days for '
                 '100 items at 10/week',
@@ -420,7 +455,7 @@ void main() {
 
           final nowBased = DateTime.now().add(const Duration(days: 70));
           final differenceMillis =
-              (projected1.millisecondsSinceEpoch -
+              (projected1!.millisecondsSinceEpoch -
                       nowBased.millisecondsSinceEpoch)
                   .abs();
           expect(
@@ -434,13 +469,12 @@ void main() {
           );
 
           expect(
-            projected1.year == projected2.year &&
-                projected1.month == projected2.month &&
-                projected1.day == projected2.day,
-            isTrue,
+            projected1,
+            equals(projected2),
             reason:
                 'N7: computing the projected finish twice must yield the '
-                'same calendar day — createdAt is fixed, so there is no drift',
+                'exact same instant — createdAt is fixed, so there is no '
+                'drift from calling estimatedFinishDate() again',
           );
         },
       );
