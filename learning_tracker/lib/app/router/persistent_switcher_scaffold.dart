@@ -7,6 +7,26 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
+/// AN-8: route names classified as authentication surfaces (sign-in, signup,
+/// account-picker, onboarding intro). [_PersistentSwitcherScaffoldState
+/// ._isAuthSurface] suppresses the persistent switcher bar whenever the top
+/// route's name is in this set — a signed-in account chip must never overlay
+/// one of these unauthenticated surfaces.
+///
+/// `@visibleForTesting` (AUD-t-cross-40): exposed so the AN-8 regression test
+/// asserts against this SAME production set instead of hand-copying its own
+/// literal duplicate. A hand-copied duplicate stays green even if this real
+/// set silently loses an entry (regressing AN-8); importing the production
+/// constant means an edit here is the edit the test observes.
+@visibleForTesting
+const persistentSwitcherAuthRouteNames = {
+  'SignInRoute',
+  'SignupRoute',
+  'AccountPickerRoute',
+  'IntroRoute',
+  'OnboardingRoute',
+};
+
 /// Global persistent profile/role switcher layer.
 ///
 /// Product rule (feedback_profile_switcher_top): the tappable role label MUST
@@ -90,14 +110,7 @@ class _PersistentSwitcherScaffoldState
   bool _isAuthSurface() {
     final topName = ref.read(routerProvider).topRoute.name;
     // These route names come from auto_route @RoutePage annotations.
-    const authRouteNames = {
-      'SignInRoute',
-      'SignupRoute',
-      'AccountPickerRoute',
-      'IntroRoute',
-      'OnboardingRoute',
-    };
-    return authRouteNames.contains(topName);
+    return persistentSwitcherAuthRouteNames.contains(topName);
   }
 
   @override
