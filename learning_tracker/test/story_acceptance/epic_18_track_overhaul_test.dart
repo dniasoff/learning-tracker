@@ -15,6 +15,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
+import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
@@ -315,21 +316,9 @@ void main() {
         test(
           'childAwareText returns child template with name substitution',
           () {
-            // Import the helper function indirectly by testing its logic
             const adultText = "You're all set!";
             const childTemplate = "{name}'s learning is all set up!";
             const childName = 'Sarah';
-
-            // Simulate the childAwareText logic
-            String childAwareText(
-              String adult,
-              String template,
-              String? name, {
-              bool isChildMode = false,
-            }) {
-              if (!isChildMode || name == null) return adult;
-              return template.replaceAll('{name}', name);
-            }
 
             // Adult mode returns adult text
             expect(
