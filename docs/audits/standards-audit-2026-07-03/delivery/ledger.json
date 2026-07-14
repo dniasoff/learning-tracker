@@ -9051,13 +9051,19 @@
     {
       "id": "AUD-t-cross-98",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Use the OutboxEntityKind.track constant instead of the 'track' string literal in two_device_sync_test.dart:109",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "9c065557db031d8ce54d59e45c4eefb4794e5005"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-cross-98 AC1 OK: orig file deleted by ancestor f9069434; scenario now track_delete_outbox_test.dart:41 = OutboxEntityKind.track; no 'track' literal left in test/",
+        "AUD-t-cross-98: git show f9069434^ old line109 getPendingByKind('track',1) matches finding quote char-for-char (faithful path-drift, not refutation)",
+        "AUD-t-cross-98: OutboxEntityKind.track=='track' (outbox_processor.dart:24) so behavior preserved; expect assertion unchanged, no TQ-7"
+      ],
+      "notes": "Cited file was deleted by earlier fix AUD-t-cross-42 (f9069434), which relocated the scenario verbatim to track_delete_outbox_test.dart. git show f9069434^ confirms old line 109 matches finding's quote - defect moved, not fixed/wrong. Fixed at new site: OutboxEntityKind.track."
     },
     {
       "id": "AUD-t-track_setup-02",
