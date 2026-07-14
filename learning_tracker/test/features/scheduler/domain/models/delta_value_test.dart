@@ -24,10 +24,6 @@ void main() {
       expect(const DateDelta(5), isNot(const DateDelta(3)));
     });
 
-    test('equality: not equal to different type', () {
-      expect(const DateDelta(5) == const PaceDelta(5), isFalse);
-    });
-
     test('equality: DateDelta != PaceDelta with same numeric value', () {
       expect(const DateDelta(5) == const PaceDelta(5), isFalse);
     });
@@ -49,10 +45,6 @@ void main() {
     });
 
     test('toString includes days value', () {
-      expect(const DateDelta(7).toString(), contains('7'));
-    });
-
-    test('toString contains the days value', () {
       expect(const DateDelta(7).toString(), contains('7'));
     });
 
