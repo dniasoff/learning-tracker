@@ -38,14 +38,13 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
 import 'package:learning_tracker/features/account/domain/services/upgrade_to_cloud_service.dart';
 import 'package:mocktail/mocktail.dart';
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
+import '../../../../mocks/mock_repositories.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+// ── Mocks ────────────────────────────────────────────────────────────────────
 
 class _MockPasswordHasher extends Mock implements PasswordHasher {}
 
@@ -135,7 +134,7 @@ Future<void> _seedRegistry(DeviceRegistryDatabase registry) async {
 /// [verify] call.
 UpgradeToCloudService _buildService({
   required UserProfileDao dao,
-  required _MockAuthRepository auth,
+  required MockAuthRepository auth,
   required _MockPasswordHasher hasher,
   bool verifyResult = true,
   DeviceRegistryDatabase? registry,
@@ -179,14 +178,14 @@ class _RealShapeFirebaseException implements Exception {
 void main() {
   late UserDatabase db;
   late DeviceRegistryDatabase registry;
-  late _MockAuthRepository auth;
+  late MockAuthRepository auth;
   late _MockPasswordHasher hasher;
   late UserProfileDao dao;
 
   setUp(() {
     db = UserDatabase(NativeDatabase.memory());
     registry = DeviceRegistryDatabase(NativeDatabase.memory());
-    auth = _MockAuthRepository();
+    auth = MockAuthRepository();
     hasher = _MockPasswordHasher();
     dao = UserProfileDao(db);
   });

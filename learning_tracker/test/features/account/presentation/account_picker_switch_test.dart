@@ -25,7 +25,6 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
@@ -34,7 +33,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+import '../../../mocks/mock_repositories.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -56,14 +55,14 @@ void main() {
 
   late DeviceRegistryDatabase registry;
   late UserDatabase userDb;
-  late _MockAuthRepository auth;
+  late MockAuthRepository auth;
   late _MockStackRouter router;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     registry = DeviceRegistryDatabase(NativeDatabase.memory());
     userDb = UserDatabase(NativeDatabase.memory());
-    auth = _MockAuthRepository();
+    auth = MockAuthRepository();
     router = _MockStackRouter();
 
     when(() => auth.currentUser).thenReturn(null);

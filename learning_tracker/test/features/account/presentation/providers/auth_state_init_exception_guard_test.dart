@@ -27,12 +27,11 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+import '../../../../mocks/mock_repositories.dart';
 
 /// DAO that throws on [findByTier] — simulates a DB read failure during
 /// _init()'s local-born restore step (AUD-account-11's "and separately from
@@ -83,11 +82,11 @@ Future<AuthState> _settledStateOrTimeout(
 void main() {
   group('AUD-account-03: reloadCurrentUser() throws (offline cold start)', () {
     late UserDatabase userDb;
-    late _MockAuthRepository auth;
+    late MockAuthRepository auth;
 
     setUp(() {
       userDb = UserDatabase(NativeDatabase.memory());
-      auth = _MockAuthRepository();
+      auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(_cloudUser());
       // Simulates User.reload() throwing FirebaseAuthException(
       // network-request-failed) on an offline device — an ordinary
@@ -145,11 +144,11 @@ void main() {
 
   group('AUD-account-11: DAO throws during the local-born restore step', () {
     late _ThrowingDaoUserDatabase userDb;
-    late _MockAuthRepository auth;
+    late MockAuthRepository auth;
 
     setUp(() {
       userDb = _ThrowingDaoUserDatabase(NativeDatabase.memory());
-      auth = _MockAuthRepository();
+      auth = MockAuthRepository();
       // No Firebase session at all — _init() should go straight to the
       // local-born restore path, which is where the DAO throws.
       when(() => auth.currentUser).thenReturn(null);

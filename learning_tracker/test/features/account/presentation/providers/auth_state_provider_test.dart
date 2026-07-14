@@ -33,12 +33,11 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:mocktail/mocktail.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+import '../../../../mocks/mock_repositories.dart';
 
 const _uid = 'fb-uid-live-session';
 
@@ -52,7 +51,7 @@ AppUser _cloudUser() => const AppUser(
 
 void main() {
   late UserDatabase userDb;
-  late _MockAuthRepository auth;
+  late MockAuthRepository auth;
   late StreamController<AppUser?> sessionController;
 
   setUp(() async {
@@ -70,7 +69,7 @@ void main() {
           ),
         );
 
-    auth = _MockAuthRepository();
+    auth = MockAuthRepository();
     sessionController = StreamController<AppUser?>.broadcast();
 
     when(() => auth.currentUser).thenReturn(_cloudUser());

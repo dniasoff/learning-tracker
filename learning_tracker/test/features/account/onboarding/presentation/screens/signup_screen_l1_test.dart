@@ -28,7 +28,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -37,11 +36,11 @@ import 'package:learning_tracker/features/account/presentation/providers/connect
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../../mocks/mock_repositories.dart';
+
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 class _MockStackRouter extends Mock implements StackRouter {}
-
-class _MockAuthRepository extends Mock implements AuthRepository {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
@@ -53,14 +52,14 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 /// [authRepo] defaults to a stub that records calls.
 Widget _buildApp({
   _MockStackRouter? router,
-  _MockAuthRepository? authRepo,
+  MockAuthRepository? authRepo,
   bool online = true,
   Locale locale = const Locale('en'),
   String? prefilledName,
   String? prefilledEmail,
 }) {
   final r = router ?? _MockStackRouter();
-  final auth = authRepo ?? _MockAuthRepository();
+  final auth = authRepo ?? MockAuthRepository();
 
   // Safe defaults so un-expected calls don't crash.
   when(() => r.replace(any())).thenAnswer((_) async => null);
@@ -309,7 +308,7 @@ void main() {
     debugResetLastKnownOnline();
     addTearDown(debugResetLastKnownOnline);
 
-    final auth = _MockAuthRepository();
+    final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
     final router = _MockStackRouter();
     when(() => router.replace(any())).thenAnswer((_) async => null);
@@ -551,7 +550,7 @@ void main() {
   testWidgets(
     'tapping Sign Up with valid data shows CircularProgressIndicator',
     (tester) async {
-      final auth = _MockAuthRepository();
+      final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
 
       // Block the signUp call so the loading state persists
@@ -586,7 +585,7 @@ void main() {
   );
 
   testWidgets('while loading, form fields are disabled', (tester) async {
-    final auth = _MockAuthRepository();
+    final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
 
     final completer = Completer<void>();
@@ -628,7 +627,7 @@ void main() {
   testWidgets(
     'cloud signup happy path: calls signUp + sendEmailVerification + signOut',
     (tester) async {
-      final auth = _MockAuthRepository();
+      final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
       when(() => auth.signUp(any(), any(), any())).thenAnswer((_) async {});
       when(() => auth.sendEmailVerification()).thenAnswer((_) async {});
@@ -671,7 +670,7 @@ void main() {
   testWidgets('cloud signup happy path: shows verification email snackbar', (
     tester,
   ) async {
-    final auth = _MockAuthRepository();
+    final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
     when(() => auth.signUp(any(), any(), any())).thenAnswer((_) async {});
     when(() => auth.sendEmailVerification()).thenAnswer((_) async {});
@@ -710,7 +709,7 @@ void main() {
   testWidgets(
     'cloud signup happy path: navigates to SignInRoute via router.replace',
     (tester) async {
-      final auth = _MockAuthRepository();
+      final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
       when(() => auth.signUp(any(), any(), any())).thenAnswer((_) async {});
       when(() => auth.sendEmailVerification()).thenAnswer((_) async {});
@@ -752,7 +751,7 @@ void main() {
   testWidgets(
     'cloud signup: DuplicateEmailException shows "account already exists" snackbar',
     (tester) async {
-      final auth = _MockAuthRepository();
+      final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
       when(
         () => auth.signUp(any(), any(), any()),
@@ -784,7 +783,7 @@ void main() {
     'cloud signup: InvalidInputException resolves code via AppLocalizations '
     '(AUD-account-17) — never shows the raw English reason',
     (tester) async {
-      final auth = _MockAuthRepository();
+      final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
       when(() => auth.signUp(any(), any(), any())).thenThrow(
         const InvalidInputException(
@@ -824,7 +823,7 @@ void main() {
   testWidgets(
     'cloud signup: [email-already-in-use] error maps to friendly message',
     (tester) async {
-      final auth = _MockAuthRepository();
+      final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
       when(() => auth.signUp(any(), any(), any())).thenThrow(
         Exception(
@@ -855,7 +854,7 @@ void main() {
   testWidgets('cloud signup: [weak-password] error maps to friendly message', (
     tester,
   ) async {
-    final auth = _MockAuthRepository();
+    final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
     when(() => auth.signUp(any(), any(), any())).thenThrow(
       Exception('[weak-password] Password should be at least 6 characters.'),
@@ -883,7 +882,7 @@ void main() {
   testWidgets('cloud signup: [invalid-email] error maps to friendly message', (
     tester,
   ) async {
-    final auth = _MockAuthRepository();
+    final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
     when(() => auth.signUp(any(), any(), any())).thenThrow(
       Exception('[invalid-email] The email address is badly formatted.'),
@@ -919,7 +918,7 @@ void main() {
     'cloud signup: [account-exists-with-different-credential] error maps '
     'to an actionable message (not the generic fallback)',
     (tester) async {
-      final auth = _MockAuthRepository();
+      final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
       when(() => auth.signUp(any(), any(), any())).thenThrow(
         Exception('[account-exists-with-different-credential] collision'),
@@ -948,7 +947,7 @@ void main() {
   testWidgets('cloud signup: generic error shows fallback snackbar message', (
     tester,
   ) async {
-    final auth = _MockAuthRepository();
+    final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
     when(
       () => auth.signUp(any(), any(), any()),
@@ -988,7 +987,7 @@ void main() {
   testWidgets('Sign Up with Google button disabled while loading', (
     tester,
   ) async {
-    final auth = _MockAuthRepository();
+    final auth = MockAuthRepository();
     when(() => auth.currentUser).thenReturn(null);
 
     // Block signUp to hold loading state

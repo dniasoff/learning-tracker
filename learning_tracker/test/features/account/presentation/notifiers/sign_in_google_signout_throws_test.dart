@@ -30,16 +30,15 @@ import 'package:learning_tracker/core/database/registry/device_registry_database
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+import '../../../../mocks/mock_repositories.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 /// Minimal no-op router. These error paths return before any navigation call,
 /// so no StackRouter methods are exercised.
@@ -116,7 +115,7 @@ void main() {
         addTearDown(registry.close);
         await _seedAccounts(registry, kMaxDeviceAccounts);
 
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         when(() => mockAuth.signInWithGoogle()).thenAnswer((_) async {});
         // After Google sign-in, currentUser returns the Google account.
         when(() => mockAuth.currentUser).thenReturn(_googleUser);
@@ -213,7 +212,7 @@ void main() {
           ),
         );
 
-        final mockAuth = _MockAuthRepository();
+        final mockAuth = MockAuthRepository();
         when(() => mockAuth.signInWithGoogle()).thenAnswer((_) async {});
         when(() => mockAuth.currentUser).thenReturn(_googleUser);
         // Local conflict → signOut() to clean up; it throws.

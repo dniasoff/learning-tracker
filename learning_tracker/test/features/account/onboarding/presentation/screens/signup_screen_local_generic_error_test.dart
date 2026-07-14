@@ -40,7 +40,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart'
     show userDatabaseProvider;
 import 'package:learning_tracker/core/providers/registry_provider.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/onboarding/presentation/screens/signup_screen.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -49,11 +48,11 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../../mocks/mock_repositories.dart';
+
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
 class _MockStackRouter extends Mock implements StackRouter {}
-
-class _MockAuthRepository extends Mock implements AuthRepository {}
 
 class _MockDeviceRegistry extends Mock implements DeviceRegistryDatabase {}
 
@@ -120,7 +119,7 @@ void main() {
       final userDb = UserDatabase(NativeDatabase.memory());
       addTearDown(() async => userDb.close());
 
-      final auth = _MockAuthRepository();
+      final auth = MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
 
       final router = _MockStackRouter();

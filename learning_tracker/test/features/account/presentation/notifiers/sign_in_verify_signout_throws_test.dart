@@ -23,16 +23,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+import '../../../../mocks/mock_repositories.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 /// An unverified password-provider Firebase user.
 const _unverifiedUser = AppUser(
@@ -62,7 +61,7 @@ void main() {
       test(
         'returns false (not throw) and logs warning — not propagating exception',
         () async {
-          final mockAuth = _MockAuthRepository();
+          final mockAuth = MockAuthRepository();
 
           // User is signed in but email unverified.
           when(() => mockAuth.currentUser).thenReturn(_unverifiedUser);

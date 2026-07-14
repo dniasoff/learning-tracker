@@ -58,7 +58,6 @@ import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
@@ -70,9 +69,9 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ── Mocks ─────────────────────────────────────────────────────────────────────
+import '../../../../mocks/mock_repositories.dart';
 
-class _MockAuthRepository extends Mock implements AuthRepository {}
+// ── Mocks ─────────────────────────────────────────────────────────────────────
 
 class _MockInternetConnectionChecker extends Mock
     implements InternetConnectionChecker {}
@@ -173,7 +172,7 @@ Future<DeviceAccount> _seedCloudAccount(
 /// so overrideWith() is used (overrideWithValue() would give a non-mutable
 /// _SyncValueProviderElement and cause a type-cast failure).
 ProviderContainer _makeContainer({
-  required _MockAuthRepository authRepo,
+  required MockAuthRepository authRepo,
   required DeviceRegistryDatabase registry,
   required _MockInternetConnectionChecker checker,
   required _MockTutorGrantRepository tutorGrantRepo,
@@ -240,7 +239,7 @@ void main() {
           final registry = DeviceRegistryDatabase(NativeDatabase.memory());
           await _seedCloudAccount(registry);
 
-          final authRepo = _MockAuthRepository();
+          final authRepo = MockAuthRepository();
           final checker = _MockInternetConnectionChecker();
           final tutorGrantRepo = _MockTutorGrantRepository();
           final db = _InMemoryUserDatabase();
@@ -327,7 +326,7 @@ void main() {
           final registry = DeviceRegistryDatabase(NativeDatabase.memory());
           await _seedCloudAccount(registry);
 
-          final authRepo = _MockAuthRepository();
+          final authRepo = MockAuthRepository();
           final checker = _MockInternetConnectionChecker();
           final tutorGrantRepo = _MockTutorGrantRepository();
           final db = _InMemoryUserDatabase();
@@ -398,7 +397,7 @@ void main() {
           final registry = DeviceRegistryDatabase(NativeDatabase.memory());
           await _seedCloudAccount(registry);
 
-          final authRepo = _MockAuthRepository();
+          final authRepo = MockAuthRepository();
           final checker = _MockInternetConnectionChecker();
           final tutorGrantRepo = _MockTutorGrantRepository();
 
@@ -519,7 +518,7 @@ void main() {
             firebaseUid: 'fb-uid-unverified',
           );
 
-          final authRepo = _MockAuthRepository();
+          final authRepo = MockAuthRepository();
           final checker = _MockInternetConnectionChecker();
           final tutorGrantRepo = _MockTutorGrantRepository();
 
@@ -623,7 +622,7 @@ void main() {
       final registry = DeviceRegistryDatabase(NativeDatabase.memory());
       await _seedCloudAccount(registry);
 
-      final authRepo = _MockAuthRepository();
+      final authRepo = MockAuthRepository();
       final checker = _MockInternetConnectionChecker();
       final tutorGrantRepo = _MockTutorGrantRepository();
       final db = _InMemoryUserDatabase();
