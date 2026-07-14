@@ -2283,13 +2283,19 @@
   {
    "id": "AUD-t-cross-37",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace inline CurriculumTracksCompanion.insert() boilerplate with the existing seedTrack() helper across DAO tests",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "00157cda515d2f6bb3c2cb6d31e4f1f092487023"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-37 AC1 OK: all 34 evidenced sites in the 15 manifest files converted to seedTrack(); grep=0 remaining there; behavior-preserving; 195/195 tests pass",
+    "AUD-t-cross-37 AC2 OK@item-scope: 0 remaining in all 15 owned files; 17 residual sites in 9 files owned by sibling wave-4 items, collision-forbidden",
+    "AUD-t-cross-37 AC3 OK (Optional): warn-only grep 57/57 in Makefile audit fires (WARN) on the 17 real violations while keeping exit 0"
+   ],
+   "notes": "Converted 36 sites (34 evidenced + 2 same-file extras) to seedTrack(), no behavior change. Added warn-only checker 57/57, fires on injected fixture. AC2 not 100% directory-wide: 17 sites/9 files left, each owned by a sibling wave finding (e.g. AUD-t-cross-27 owns track_dao_extended_test.dart:85)."
   },
   {
    "id": "AUD-t-scheduler-03",
