@@ -23,7 +23,7 @@ void main() {
     db = inMemoryDb();
     // Seed two learner profiles so completions/stages satisfy profileId FK.
     await seedProfile(db);
-    final now = DateTime.now();
+    final now = DateTime.utc(2026, 1, 1);
     await db
         .into(db.learnerProfiles)
         .insert(
@@ -39,13 +39,13 @@ void main() {
       db,
       profileId: _p1,
       curriculumId: 'mishnayos',
-      activatedAt: DateTime.now(),
+      activatedAt: DateTime.utc(2026, 1, 1),
     );
     track2Id = await seedTrack(
       db,
       profileId: _p2,
       curriculumId: 'mishnayos',
-      activatedAt: DateTime.now(),
+      activatedAt: DateTime.utc(2026, 1, 1),
     );
   });
 
@@ -64,7 +64,7 @@ void main() {
             stageId: 1,
             trackType: 'personal',
             trackId: Value(trackId),
-            eventTimestamp: DateTime.now(),
+            eventTimestamp: DateTime.utc(2026, 1, 1),
           ),
         );
 
@@ -164,7 +164,7 @@ void main() {
 
   group('GoalDao track-scoped', () {
     test('getGoalByTrack returns only that track goal', () async {
-      final now = DateTime.now();
+      final now = DateTime.utc(2026, 1, 1);
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
           profileId: _p1,
@@ -190,7 +190,7 @@ void main() {
     });
 
     test('deleteGoalsForTrack removes only that track', () async {
-      final now = DateTime.now();
+      final now = DateTime.utc(2026, 1, 1);
       await db.goalDao.insertGoal(
         GoalsCompanion.insert(
           profileId: _p1,
@@ -267,7 +267,7 @@ void main() {
   group('CurriculumScopeDao track-scoped', () {
     test('getScopesByTrack returns only that track scopes', () async {
       // Insert scopes directly to avoid setScopes clearing by curriculum
-      final now = DateTime.now().toUtc();
+      final now = DateTime.utc(2026, 1, 1);
       await db
           .into(db.curriculumScopes)
           .insert(
@@ -411,7 +411,7 @@ void main() {
 
   group('LearningLedgerDao track-scoped', () {
     test('getEntriesByTrack returns only that track entries', () async {
-      final now = DateTime.now();
+      final now = DateTime.utc(2026, 1, 1);
       await db.learningLedgerDao.insertEntry(
         LearningLedgerCompanion.insert(
           profileId: _p1,
