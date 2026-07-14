@@ -7820,13 +7820,21 @@
   {
    "id": "AUD-t-cross-67",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Drop or wire up dead ARB keys milestoneAggregate/recentActivityShort pinned by b1_vocab_keys_present_test.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "e715ea5a188eddfec2e56bb4ecac024b2e397ad6"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-67 AC1 OK: both keys' value+@-block removed from app_en.arb AND app_he.arb (grep arb=0 matches; diff confirms both locales)",
+    "AUD-t-cross-67 AC1 OK: both keys removed from _b1VocabKeys list (Read L19-65); other 40 keys still asserted",
+    "AUD-t-cross-67 AC1 OK: grep 'milestoneAggregate|recentActivityShort' lib/ --include=*.dart = 0 call sites; removal branch valid (finding UPHELD)",
+    "AUD-t-cross-67 recommendation OK: stale comments in domain_term_labels_vocab_test.dart corrected (comment-only, no assertion removed)",
+    "AUD-t-cross-67 AG-7 OK: flutter gen-l10n reproduces committed app_localizations*.dart with zero git diff"
+   ],
+   "notes": "Re-verified: grep for both keys matched only generated app_localizations*.dart, no call site. Recent Activity already served via recentActivity/tierLensRecentActivity, so deletion was correct. Removed keys+@-blocks from both ARBs, regenerated l10n, dropped from list, fixed stale comments."
   },
   {
    "id": "AUD-core-analytics-04",
