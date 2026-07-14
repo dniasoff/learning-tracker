@@ -1,8 +1,6 @@
-/// Tests for [RewardMilestoneService] and [RewardMilestone] model.
+/// Tests for [RewardMilestoneService].
 ///
 /// Covers:
-///  - [RewardMilestone.fromJson] / [toJson] round-trip
-///  - [RewardUnlockRecord.fromJson] / [toJson] round-trip
 ///  - [RewardMilestoneService._matchesStockDefaultLadderEntry] (via defaultMilestoneLadder)
 ///  - [RewardMilestoneService.upsertMilestone] + [getAllMilestones]
 ///  - [RewardMilestoneService.removeMilestone]
@@ -10,13 +8,16 @@
 ///  - [RewardMilestoneService.getAllUnlocks]
 ///  - [RewardMilestoneService.mergeCloudPayload]
 ///  - [RewardMilestoneService.exportCloudPayload]
+///
+/// [RewardMilestone.fromJson]/[toJson] and [RewardUnlockRecord.fromJson]/
+/// [toJson] round-trip coverage lives in
+/// test/features/gamification/domain/models/reward_milestone_test.dart.
 library;
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -92,117 +93,10 @@ void main() {
     );
   }
 
-  // ─── RewardMilestone model ────────────────────────────────────────────────
-
-  group('RewardMilestone.fromJson / toJson', () {
-    test('round-trips all fields correctly', () {
-      final now = DateTime.utc(2026, 1, 15, 10, 30);
-      final milestone = RewardMilestone(
-        id: 'rm_1_123_456',
-        profileId: 2,
-        trackId: 5,
-        title: 'Bronze Star',
-        thresholdPoints: 500,
-        isEnabled: true,
-        iconIndex: 3,
-        createdAt: now,
-        updatedAt: now,
-      );
-
-      final json = milestone.toJson();
-      final restored = RewardMilestone.fromJson(json);
-
-      expect(restored.id, milestone.id);
-      expect(restored.profileId, milestone.profileId);
-      expect(restored.trackId, milestone.trackId);
-      expect(restored.title, milestone.title);
-      expect(restored.thresholdPoints, milestone.thresholdPoints);
-      expect(restored.isEnabled, milestone.isEnabled);
-      expect(restored.iconIndex, milestone.iconIndex);
-    });
-
-    test('fromJson handles numeric string profile_id', () {
-      final json = {
-        'id': 'rm_abc',
-        'profile_id': '3',
-        'track_id': '7',
-        'title': 'Gold Star',
-        'threshold_points': '1000',
-        'is_enabled': true,
-        'icon_index': 0,
-        'created_at': '2026-01-01T00:00:00.000Z',
-        'updated_at': '2026-01-01T00:00:00.000Z',
-      };
-      final milestone = RewardMilestone.fromJson(json);
-      expect(milestone.profileId, 3);
-      expect(milestone.trackId, 7);
-      expect(milestone.thresholdPoints, 1000);
-    });
-
-    test('fromJson handles missing is_enabled (defaults to true)', () {
-      final json = {
-        'id': 'rm_1',
-        'profile_id': 1,
-        'track_id': 1,
-        'title': 'Test',
-        'threshold_points': 100,
-        'icon_index': 0,
-        'created_at': '2026-01-01T00:00:00.000Z',
-        'updated_at': '2026-01-01T00:00:00.000Z',
-      };
-      final milestone = RewardMilestone.fromJson(json);
-      expect(milestone.isEnabled, isTrue);
-    });
-
-    test('copyWith updates specified fields', () {
-      final now = DateTimeFactory.utc(2026, 1, 1);
-      final original = RewardMilestone(
-        id: 'rm_1',
-        profileId: 1,
-        trackId: 1,
-        title: 'Original',
-        thresholdPoints: 100,
-        isEnabled: true,
-        createdAt: now,
-        updatedAt: now,
-      );
-      final updated = original.copyWith(
-        title: 'Updated',
-        thresholdPoints: 200,
-        isEnabled: false,
-      );
-      expect(updated.title, 'Updated');
-      expect(updated.thresholdPoints, 200);
-      expect(updated.isEnabled, isFalse);
-      expect(updated.id, original.id);
-      expect(updated.profileId, original.profileId);
-    });
-  });
-
-  group('RewardUnlockRecord.fromJson / toJson', () {
-    test('round-trips all fields correctly', () {
-      final unlockedAt = DateTime.utc(2026, 3, 10, 12);
-      final record = RewardUnlockRecord(
-        milestoneId: 'rm_1_abc',
-        profileId: profileId,
-        trackId: 5,
-        title: 'Bronze Star',
-        thresholdPoints: 500,
-        pointsAtUnlock: 550,
-        unlockedAt: unlockedAt,
-      );
-
-      final json = record.toJson();
-      final restored = RewardUnlockRecord.fromJson(json);
-
-      expect(restored.milestoneId, record.milestoneId);
-      expect(restored.profileId, record.profileId);
-      expect(restored.trackId, record.trackId);
-      expect(restored.title, record.title);
-      expect(restored.thresholdPoints, record.thresholdPoints);
-      expect(restored.pointsAtUnlock, record.pointsAtUnlock);
-    });
-  });
+  // RewardMilestone.fromJson/toJson and RewardUnlockRecord.fromJson/toJson
+  // round-trip coverage lives in the dedicated model test file:
+  // test/features/gamification/domain/models/reward_milestone_test.dart
+  // (AUD-t-gamification-03 — do not re-add model-level round-trip tests here).
 
   // ─── defaultMilestoneLadder ───────────────────────────────────────────────
 
@@ -466,33 +360,6 @@ void main() {
   });
 
   // ─── removeMilestone ──────────────────────────────────────────────────────
-
-  group('removeMilestone', () {
-    test('removes milestone by id', () async {
-      await service.upsertMilestone(
-        trackId: 1,
-        title: 'To Remove',
-        thresholdPoints: 100,
-        milestoneId: 'rm-id',
-      );
-      expect((await service.getAllMilestones()).length, 1);
-
-      await service.removeMilestone('rm-id');
-      expect((await service.getAllMilestones()).length, 0);
-    });
-
-    test('removeMilestone with unknown id is a no-op', () async {
-      await service.upsertMilestone(
-        trackId: 1,
-        title: 'Keep',
-        thresholdPoints: 100,
-        milestoneId: 'keep-id',
-      );
-
-      await service.removeMilestone('nonexistent');
-      expect((await service.getAllMilestones()).length, 1);
-    });
-  });
 
   group('RewardMilestoneService.removeMilestone', () {
     test('removes the milestone with the matching id', () async {
@@ -976,7 +843,7 @@ void main() {
 
   // ─── stripStockTemplateMilestones ────────────────────────────────────────
 
-  group('stripStockTemplateMilestones', () {
+  group('RewardMilestoneService.stripStockTemplateMilestones', () {
     test('returns false when no milestones exist', () async {
       final result = await service.stripStockTemplateMilestones();
       expect(result, isFalse);
@@ -995,52 +862,25 @@ void main() {
       expect((await service.getAllMilestones()).length, 0);
     });
 
-    test('removes legacy 50/150/300 triple-milestone group', () async {
-      await service.upsertMilestone(
-        trackId: 1,
-        title: 'Starter',
-        thresholdPoints: 50,
-        milestoneId: 'm50',
-      );
-      await service.upsertMilestone(
-        trackId: 1,
-        title: 'Intermediate',
-        thresholdPoints: 150,
-        milestoneId: 'm150',
-      );
-      await service.upsertMilestone(
-        trackId: 1,
-        title: 'Advanced',
-        thresholdPoints: 300,
-        milestoneId: 'm300',
-      );
+    test('removes legacy 50/150/300 tier set for a single track', () async {
+      final trackId = await insertTrackWithGoal();
+      for (final threshold in [50, 150, 300]) {
+        await service.upsertMilestone(
+          trackId: trackId,
+          title: 'Legacy $threshold',
+          thresholdPoints: threshold,
+        );
+      }
 
-      final result = await service.stripStockTemplateMilestones();
-      expect(result, isTrue);
-      expect((await service.getAllMilestones()).length, 0);
-    });
-
-    test('preserves non-stock custom milestones', () async {
-      await service.upsertMilestone(
-        trackId: 1,
-        title: 'My Custom Award',
-        thresholdPoints: 750,
-        milestoneId: 'custom',
-      );
-
-      final result = await service.stripStockTemplateMilestones();
-      expect(result, isFalse);
-      expect((await service.getAllMilestones()).length, 1);
-    });
-  });
-
-  group('RewardMilestoneService.stripStockTemplateMilestones', () {
-    test('returns false when no milestones exist', () async {
       final stripped = await service.stripStockTemplateMilestones();
-      expect(stripped, isFalse);
+      expect(stripped, isTrue);
+
+      final remaining = await service.getMilestonesForTrack(trackId);
+      expect(remaining, isEmpty);
     });
 
-    test('removes milestones matching the default ladder', () async {
+    test('removes stock milestones but preserves a custom milestone on the '
+        'same track', () async {
       final trackId = await insertTrackWithGoal();
       // Add a milestone matching the default ladder exactly.
       await service.upsertMilestone(
@@ -1063,77 +903,23 @@ void main() {
       expect(remaining.first.title, 'Custom Prize');
     });
 
-    test('removes legacy 50/150/300 tier set for a single track', () async {
-      final trackId = await insertTrackWithGoal();
-      for (final threshold in [50, 150, 300]) {
-        await service.upsertMilestone(
-          trackId: trackId,
-          title: 'Legacy $threshold',
-          thresholdPoints: threshold,
-        );
-      }
-
-      final stripped = await service.stripStockTemplateMilestones();
-      expect(stripped, isTrue);
-
-      final remaining = await service.getMilestonesForTrack(trackId);
-      expect(remaining, isEmpty);
-    });
-
-    test(
-      'removes milestones matching the default ladder (F2 variant)',
-      () async {
-        await service.upsertMilestone(
-          trackId: 10,
-          title: 'Bronze Star',
-          thresholdPoints: 500,
-          milestoneId: 'stock-1',
-        );
-
-        final result = await service.stripStockTemplateMilestones();
-
-        expect(result, isTrue);
-        expect(await service.getMilestonesForTrack(10), isEmpty);
-      },
-    );
-
-    test(
-      'removes the legacy 50/150/300 tier set when exactly 3 match',
-      () async {
-        for (final t in [50, 150, 300]) {
-          await service.upsertMilestone(
-            trackId: 7,
-            title: 'Legacy $t',
-            thresholdPoints: t,
-            milestoneId: 'leg-$t',
-          );
-        }
-
-        final result = await service.stripStockTemplateMilestones();
-
-        expect(result, isTrue);
-        expect(await service.getMilestonesForTrack(7), isEmpty);
-      },
-    );
-
-    test('keeps milestones that do not match stock entries', () async {
+    test('preserves non-stock custom milestones', () async {
       await service.upsertMilestone(
-        trackId: 10,
-        title: 'My Custom Reward',
-        thresholdPoints: 999,
+        trackId: 1,
+        title: 'My Custom Award',
+        thresholdPoints: 750,
         milestoneId: 'custom',
       );
 
       final result = await service.stripStockTemplateMilestones();
-
       expect(result, isFalse);
-      expect(await service.getMilestonesForTrack(10), hasLength(1));
+      expect((await service.getAllMilestones()).length, 1);
     });
   });
 
   // ─── mergeCloudPayload ───────────────────────────────────────────────────
 
-  group('mergeCloudPayload', () {
+  group('RewardMilestoneService.mergeCloudPayload', () {
     test('no-ops on null payload', () async {
       await service.mergeCloudPayload(null);
       expect((await service.getAllMilestones()).length, 0);
@@ -1267,7 +1053,11 @@ void main() {
     });
   });
 
-  // ─── exportCloudPayload / mergeCloudPayload (extended) ───────────────────
+  // ─── exportCloudPayload (extended) ────────────────────────────────────────
+  //
+  // mergeCloudPayload null/empty/newer/older-timestamp coverage lives solely
+  // in the 'RewardMilestoneService.mergeCloudPayload' group above — the
+  // duplicate copies formerly here were removed under AUD-t-gamification-03.
 
   group('RewardMilestoneService — cloud sync', () {
     test('exportCloudPayload includes milestones and unlocks', () async {
@@ -1285,83 +1075,6 @@ void main() {
       expect(payload.containsKey('updated_at'), isTrue);
       expect(payload['milestones'] as List, hasLength(1));
     });
-
-    test('mergeCloudPayload is a no-op when remote is null', () async {
-      // Should complete without error.
-      await expectLater(service.mergeCloudPayload(null), completes);
-    });
-
-    test('mergeCloudPayload is a no-op when remote is empty', () async {
-      await expectLater(service.mergeCloudPayload({}), completes);
-    });
-
-    test(
-      'mergeCloudPayload replaces local data when remote timestamp is newer',
-      () async {
-        // Set up a local milestone.
-        final trackId = await insertTrackWithGoal();
-        await service.upsertMilestone(
-          trackId: trackId,
-          title: 'Local Only',
-          thresholdPoints: 999,
-          milestoneId: 'local-1',
-        );
-
-        final remote = {
-          'updated_at': DateTime.utc(2099, 1, 1).toIso8601String(),
-          'milestones': [
-            {
-              'id': 'remote-1',
-              'profile_id': profileId,
-              'track_id': trackId,
-              'title': 'Remote Star',
-              'threshold_points': 777,
-              'is_enabled': true,
-              'icon_index': 0,
-              'created_at': '2026-01-01T00:00:00.000Z',
-              'updated_at': '2026-01-01T00:00:00.000Z',
-            },
-          ],
-          'unlocks': <Map<String, dynamic>>[],
-        };
-
-        await service.mergeCloudPayload(remote);
-
-        final milestones = await service.getAllMilestones();
-        // Remote data should have replaced local.
-        expect(milestones.any((m) => m.id == 'remote-1'), isTrue);
-      },
-    );
-
-    test(
-      'mergeCloudPayload is a no-op when remote timestamp is not newer',
-      () async {
-        final trackId = await insertTrackWithGoal();
-        await service.upsertMilestone(
-          trackId: trackId,
-          title: 'Local',
-          thresholdPoints: 100,
-          milestoneId: 'keep-me',
-        );
-
-        // Export to bump the local timestamp.
-        final exported = await service.exportCloudPayload();
-
-        final remote = {
-          'updated_at': DateTime.utc(2000, 1, 1).toIso8601String(), // very old
-          'milestones': <Map<String, dynamic>>[],
-          'unlocks': <Map<String, dynamic>>[],
-        };
-        await service.mergeCloudPayload(remote);
-
-        // Local milestone should still be there.
-        final milestones = await service.getAllMilestones();
-        expect(milestones.any((m) => m.id == 'keep-me'), isTrue);
-
-        // Suppress unused variable warning.
-        expect(exported.containsKey('updated_at'), isTrue);
-      },
-    );
   });
 
   // ─── exportCloudPayload ───────────────────────────────────────────────────
