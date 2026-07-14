@@ -51,6 +51,47 @@ String formatTrackDate({
   return DateFormat.yMMMd(locale).format(local);
 }
 
+/// Pure date-math core of [_TrackDetailScreenState._estimatedFinish].
+///
+/// `@visibleForTesting` (AUD-t-story-acceptance-02): extracted so the N7
+/// regression test (regression_invariants_test.dart) can call the REAL
+/// production formula instead of re-typing it inline. F1 was "pace-goal
+/// projected finish anchors to createdAt, not now" — a test that only
+/// re-types the same math never breaks when this anchor regresses back to
+/// [DateTimeFactory.nowLocal] (or any other "now"-based clock).
+///
+/// [goal] and [remainingInPaceUnit] mirror the parameters of
+/// [_TrackDetailScreenState._estimatedFinish]; formatting/localization is
+/// deliberately NOT part of this function so the anchor invariant can be
+/// asserted without needing an [Intl] locale or Hebrew-calendar conversion.
+///
+/// Returns null when [goal] is null, a deadline goal (deadline goals show
+/// their target date directly — see [_estimatedFinish]), or when the pace
+/// inputs required to compute a projection are missing or non-positive.
+@visibleForTesting
+DateTime? estimatedFinishDate({
+  required Goal? goal,
+  required int? remainingInPaceUnit,
+}) {
+  if (goal == null) return null;
+  // Deadline goals surface their date in the "Goal" row; skip here.
+  if (goal.goalType == 'deadline') return null;
+  if (goal.goalType == 'pace' &&
+      goal.paceValue != null &&
+      goal.pacePeriod != null &&
+      remainingInPaceUnit != null &&
+      remainingInPaceUnit > 0) {
+    final weeklyRate = goal.pacePeriod == 'per_day'
+        ? goal.paceValue! * 7
+        : goal.paceValue!;
+    if (weeklyRate > 0) {
+      final days = (remainingInPaceUnit / weeklyRate * 7).ceil();
+      return goal.createdAt.add(Duration(days: days));
+    }
+  }
+  return null;
+}
+
 final _trackGoalProvider = FutureProvider.autoDispose.family<Goal?, int>(
   (ref, trackId) =>
       ref.watch(userDatabaseProvider).goalDao.getGoalByTrack(trackId),
@@ -548,30 +589,21 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     String locale, {
     required bool useHebrewCalendar,
   }) {
-    if (goal == null) return null;
-    // Deadline goals surface their date in the "Goal" row; skip here.
-    if (goal.goalType == 'deadline') return null;
-    if (goal.goalType == 'pace' &&
-        goal.paceValue != null &&
-        goal.pacePeriod != null &&
-        remainingInPaceUnit != null &&
-        remainingInPaceUnit > 0) {
-      final weeklyRate = goal.pacePeriod == 'per_day'
-          ? goal.paceValue! * 7
-          : goal.paceValue!;
-      if (weeklyRate > 0) {
-        final days = (remainingInPaceUnit / weeklyRate * 7).ceil();
-        // TS-8 fix: route through formatTrackDate so the projected finish date
-        // is rendered in the Hebrew calendar when that preference is active,
-        // matching the activated-date and the rest of the card.
-        return formatTrackDate(
-          date: goal.createdAt.add(Duration(days: days)),
-          locale: locale,
-          useHebrewCalendar: useHebrewCalendar,
-        );
-      }
-    }
-    return null;
+    // AUD-t-story-acceptance-02: date math lives in the top-level, testable
+    // estimatedFinishDate() — this method only formats its result.
+    final finishDate = estimatedFinishDate(
+      goal: goal,
+      remainingInPaceUnit: remainingInPaceUnit,
+    );
+    if (finishDate == null) return null;
+    // TS-8 fix: route through formatTrackDate so the projected finish date
+    // is rendered in the Hebrew calendar when that preference is active,
+    // matching the activated-date and the rest of the card.
+    return formatTrackDate(
+      date: finishDate,
+      locale: locale,
+      useHebrewCalendar: useHebrewCalendar,
+    );
   }
 
   Widget _buildActionsCard(
