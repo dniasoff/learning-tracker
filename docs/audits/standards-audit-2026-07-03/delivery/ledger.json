@@ -6078,13 +6078,18 @@
   {
    "id": "AUD-t-cross-93",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Rewrite completion_dao_test.dart null-scope test — the null-check operator throws before the DAO method is ever called",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a9c93d5a43aeaabbde74baf8c94974c8a7c12de2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-93 AC1 OK: tautological null-scope test removed, replaced with comment explaining Dart null-safety unreachability (AC option 1)",
+    "AUD-t-cross-93 AC2 OK: test/ grep for nullableScope pattern matches only the comment, no live test; reachable debug-guard group untouched and genuinely calls the DAO"
+   ],
+   "notes": "Same tautological test confirmed live. Red-first: deleted DAO's internal guard, reran test alone, it still passed - zero regression coverage proved. Removed test per AC option 1, added comment explaining Dart null-safety makes the case unreachable. Grepped test/: no other test makes this claim."
   },
   {
    "id": "AUD-core-database-10",
@@ -6552,13 +6557,18 @@
   {
    "id": "AUD-t-cross-88",
    "wave": 4,
-   "status": "todo",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace raw DateTime.now() with DateTimeFactory.nowUtc() in DAO test fixture setup",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": ""
+   "commits": [
+    "a9c93d5a43aeaabbde74baf8c94974c8a7c12de2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-t-cross-88 AC1 OK: 0 DateTime.now() hits in the 8 named files; all diffs pure ->DateTimeFactory.nowUtc() (injectable clock, date_utils.dart:19)",
+    "AUD-t-cross-88 AC2 OK: Makefile check 60/60 exists+executes; injecting DateTime.now() in goal_dao_test.dart -> make audit exit 2 flagging exact line, exit 0 after restore"
+   ],
+   "notes": "Tree drifted since 4018a91c (30->20 sites, field renamed) but same defect live in all 8 named files; replaced DateTime.now() with DateTimeFactory.nowUtc(). Added audit check 60/60 scoped to these 8 files (not sibling-owned files); verified it fires on injected violation then passes clean."
   },
   {
    "id": "AUD-scheduler-19",
