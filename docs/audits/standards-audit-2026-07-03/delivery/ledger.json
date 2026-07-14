@@ -7248,13 +7248,21 @@
     {
       "id": "AUD-t-scheduler-05",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Delete scheduler_screen_test.dart \u2014 its scenarios duplicate scheduler_screen_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "a306a13e929b9cf6bf0a467d10a7ed2fd4869e46"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-scheduler-05 AC1 OK: git ls-tree HEAD shows l1 file deleted, scheduler_screen_test.dart is sole top-to-bottom file; grep confirms no *l1_test.dart",
+        "AUD-t-scheduler-05 AC1 OK: rename to AG-5 path keeps scheduler_screen.dart mirrored; check_test_mirroring.dart reports 0 new violations",
+        "AUD-t-scheduler-05 AC2 OK: diff(old l1,new) purely additive; new=41 l1 expects+3 folded=44 (grep -c); no l1 assertion removed",
+        "AUD-t-scheduler-05 AC2 OK: unique ref-label assertions folded in at test.dart:396-397 (Mishnah Berakhot 1.1 / Bavli Berakhot 2a)",
+        "AUD-t-scheduler-05 AC2 OK: all 14 expects of deleted file covered by superset (empty 164-176, counts 333/345, loading 205, error 228, snackbar 635, toggle 559)"
+      ],
+      "notes": "Confirmed 7/8 dup tests + 1 unique Bavli-ref assertion. Folded unique assertion into l1's flat-list test (green, 25 passing), deleted old duplicate, renamed l1 file to AG-5-mirrored path (plain deletion would've left scheduler_screen.dart unmirrored). Both ACs met: one file, no behavior lost. gatePolicy=disjoint-skip: rebase onto dev was file-disjoint (tip touched only scheduler_screen_l1_test.dart/scheduler_screen_test.dart; dev-side changes since merge-base touched no overlapping paths) so flutter test run was skipped per gate policy; make audit (66/66 clean) and flutter analyze (no issues) both ran and passed post-rebase."
     },
     {
       "id": "AUD-tutoring-15",
