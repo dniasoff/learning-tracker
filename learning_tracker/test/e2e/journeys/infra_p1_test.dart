@@ -44,12 +44,19 @@
 /// and assert the blocked subtitle text appears. R-IC4: extra pumps to settle.
 ///
 /// ### E2E-1108 — Per-profile notification prefs isolated on profile switch
-/// Seeds two profiles in SharedPreferences prefs (A=enabled, B=disabled) and
-/// verifies the per-profile keys are isolated. The prefs-layer isolation is
-/// confirmed directly via SharedPreferences without a live provider switch
-/// (provider rebuilds on activeProfileIdProvider are covered by the widget
-/// itself; the headless check confirms the key namespacing is correct).
-/// R-IC5: extra pump after each switch.
+/// Mounts /notifications for Profile A and reads the reminder toggle's
+/// rendered state through the widget tree (default = true). Persists
+/// Profile B's pref as explicitly disabled, then switches the live
+/// `activeProfileIdProvider` A → B mid-test by mutating the harness's
+/// installed notifier's `.state` directly (the harness already overrides
+/// `activeProfileIdProvider` once per test; a second `extraOverrides` entry
+/// would trip Riverpod's "provider overridden twice" assertion). The real
+/// [ReminderEnabled] notifier watches that provider and rebuilds under B's
+/// per-profile key; the Switch must re-render B's independently-loaded
+/// value, not A's cached state. AUD-t-cross-74: replaces the prior version,
+/// which only round-tripped two SharedPreferences keys directly and never
+/// built the real notifier or switched the live provider. R-IC5: extra pump
+/// after the switch.
 ///
 /// ### E2E-1111 — Device restore: local-born account skips restore
 /// The harness RestoreGuard is built with hasCloudAccount=false (harness default),
@@ -88,6 +95,7 @@ library;
 
 import 'package:flutter/material.dart'
     show Key, ListView, Row, Scrollable, Switch;
+import 'package:flutter_riverpod/flutter_riverpod.dart' show ProviderScope;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
@@ -108,6 +116,8 @@ import 'package:learning_tracker/features/notifications/presentation/providers/n
         notificationServiceProvider,
         reminderSyncEffectProvider,
         streakAlertSyncEffectProvider;
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart'
+    show activeProfileIdProvider;
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart'
     show LocationFetchSuccess, LocationService;
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart'
@@ -544,93 +554,123 @@ void main() {
 
   // ── E2E-1108 ─────────────────────────────────────────────────────────────────
 
-  group('E2E-1108 — Per-profile notification prefs isolated on profile switch', () {
-    // Key assertions (catalog §2 Area 11):
-    //  • Profile A (profileId=N): reminder enabled=true (default)
-    //  • Profile B (profileId=N+1): reminder explicitly disabled in prefs
-    //  • Per-profile key namespacing ensures the two prefs are isolated
-    //
-    // The ReminderEnabled notifier watches activeProfileIdProvider and calls
-    // _loadFromPrefs() on each rebuild. The prefs isolation is verified by
-    // reading each profile's key directly from SharedPreferences — headlessly
-    // safe and avoids the async provider rebuild race (R-IC5).
+  group(
+    'E2E-1108 — Per-profile notification prefs isolated on profile switch',
+    () {
+      // Key assertions (catalog §2 Area 11):
+      //  • Profile A (profileId=N): reminder enabled=true (default) — read
+      //    through the live widget tree (the Switch inside the
+      //    'reminder_toggle' row), not a direct SharedPreferences read.
+      //  • Profile B (profileId=N+1): reminder explicitly disabled in prefs.
+      //  • Switching the active profile mid-session rebuilds the real
+      //    ReminderEnabled AsyncNotifier (it watches activeProfileIdProvider,
+      //    R-IC5) and the widget re-renders B's independently-loaded value —
+      //    not A's cached state.
+      //
+      // AUD-t-cross-74: the prior version of this test only round-tripped two
+      // SharedPreferences keys directly (never building ReminderEnabled or
+      // switching the live activeProfileIdProvider), so it could not catch a
+      // regression where build() stopped watching activeProfileIdProvider or
+      // started reading a single shared key for every profile. This version
+      // drives the real notifier by mutating the harness's installed
+      // activeProfileIdProvider notifier's `.state` and reads the toggle's
+      // rendered state via the widget tree.
+      // weaken-ok: AUD-t-cross-74 — the direct-SharedPreferences assertions
+      // this replaces only proved the mock stores what it's told (SDK
+      // behavior, not app logic); the assertions below exercise the real
+      // ReminderEnabled notifier and widget tree instead, which is strictly
+      // more rigorous for the "per-profile isolation" contract this journey
+      // names.
 
-    testWidgets(
-      'Profile A and B notification prefs use isolated per-profile keys; '
-      'setting B to false does not affect A (key namespacing confirmed)',
-      (tester) async {
-        final identity = E2EIdentity.localBorn(
-          email: 'profswitch1108@test.com',
-          displayName: 'ProfileSwitchUser',
-        );
-        final h = E2EHarness(tester, identity: identity);
-        addTearDown(h.dispose);
+      testWidgets(
+        "Profile A's reminder toggle reads its default (true) through the "
+        'widget tree; switching to Profile B (persisted false) re-renders '
+        "B's independently-loaded value via the same widget",
+        (tester) async {
+          final identity = E2EIdentity.localBorn(
+            email: 'profswitch1108@test.com',
+            displayName: 'ProfileSwitchUser',
+          );
+          final h = E2EHarness(tester, identity: identity);
+          addTearDown(h.dispose);
 
-        final fakeGw = _FakeNotificationGateway();
+          final fakeGw = _FakeNotificationGateway();
 
-        await h.pumpApp(
-          path: '/dashboard',
-          extraOverrides: [
-            ..._infraSilences(h),
-            ..._notificationSilenceOverrides(fakeGw),
-          ],
-        );
-        await h.pump(const Duration(milliseconds: 300));
+          await h.pumpApp(
+            path: '/notifications',
+            extraOverrides: [
+              ..._infraSilences(h),
+              ..._notificationSilenceOverrides(fakeGw),
+            ],
+          );
+          await h.pump(const Duration(milliseconds: 300));
+          await h.pump();
 
-        final profileAId = identity.profileId;
-        final profileBId = profileAId + 1;
+          h.expectOnScreen('Notifications', routeName: 'NotificationsScreen');
 
-        final keyA = NotificationPreferencesRepository.reminderEnabledKey(
-          profileAId,
-        );
-        final keyB = NotificationPreferencesRepository.reminderEnabledKey(
-          profileBId,
-        );
+          final profileAId = identity.profileId;
+          final profileBId = profileAId + 1;
 
-        // Access the SharedPreferences mock singleton.
-        final prefs = await SharedPreferences.getInstance();
+          Switch reminderSwitch() => tester.widget<Switch>(
+            find.descendant(
+              of: find.byKey(const Key('reminder_toggle')),
+              matching: find.byType(Switch),
+            ),
+          );
 
-        // Profile A: not in prefs yet → default true.
-        // Profile B: explicitly disabled.
-        await prefs.setBool(keyB, false);
+          // Profile A has no stored pref -> ReminderEnabled.build() must
+          // resolve the default (true), rendered by the real Switch widget.
+          expect(
+            reminderSwitch().value,
+            isTrue,
+            reason:
+                "Profile A's reminder toggle must render the default (true) "
+                'through the widget tree',
+          );
 
-        // Confirm isolation: A's key is absent (reads as null → default true).
-        final aValue = prefs.getBool(keyA) ?? true;
-        final bValue = prefs.getBool(keyB) ?? true;
+          // Persist Profile B's reminder pref as explicitly disabled — this
+          // simulates B having configured it in an earlier session, before
+          // this test switches into it.
+          final keyB = NotificationPreferencesRepository.reminderEnabledKey(
+            profileBId,
+          );
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool(keyB, false);
 
-        expect(
-          aValue,
-          isTrue,
-          reason: 'Profile A reminder pref must be true (default)',
-        );
-        expect(
-          bValue,
-          isFalse,
-          reason: 'Profile B reminder pref must be false (explicitly disabled)',
-        );
+          // Swap the active profile A -> B by mutating the harness's own
+          // activeProfileIdProvider notifier directly (the harness already
+          // installs one override per profile-scoped provider — see
+          // E2EHarness._buildOverrides — so a *second* extraOverrides entry
+          // for activeProfileIdProvider would trip Riverpod's "provider
+          // overridden twice" assertion; mutating the installed notifier's
+          // `.state` from the container is the established pattern for
+          // driving a live profile switch — see
+          // sync_providers_test.dart's `container.read(activeProfileIdProvider
+          // .notifier).state = ...`). ReminderEnabled.build() watches
+          // activeProfileIdProvider (R-IC5), so this must rebuild the real
+          // notifier under B's key and the Switch must re-render B's value.
+          final container = ProviderScope.containerOf(
+            tester.element(find.byKey(const Key('reminder_toggle'))),
+          );
+          container.read(activeProfileIdProvider.notifier).state = profileBId;
+          await h.pump(const Duration(milliseconds: 300));
+          await h.pump();
 
-        // Verify that writing B does not affect A (keys are namespace-isolated).
-        await prefs.setBool(keyB, true); // flip B to true
-        await prefs.setBool(keyB, false); // flip back to false
-
-        final aAfter = prefs.getBool(keyA) ?? true;
-        final bAfter = prefs.getBool(keyB) ?? true;
-
-        expect(
-          aAfter,
-          isTrue,
-          reason:
-              'Profile A pref must still be true after mutating B (isolated)',
-        );
-        expect(
-          bAfter,
-          isFalse,
-          reason:
-              'Profile B pref must reflect the last write (false) — isolation confirmed',
-        );
-      },
-    );
-  });
+          expect(
+            reminderSwitch().value,
+            isFalse,
+            reason:
+                "Profile B's reminder toggle must render its own persisted "
+                'value (false) through the widget tree after the profile '
+                'switch — if ReminderEnabled.build() ignored '
+                'activeProfileIdProvider (e.g. reading a single shared key '
+                "instead of the per-profile key), this would still show A's "
+                'cached default (true) and this assertion would fail.',
+          );
+        },
+      );
+    },
+  );
 
   // ── E2E-1111 ─────────────────────────────────────────────────────────────────
 
