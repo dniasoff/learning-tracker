@@ -1,6 +1,7 @@
 // Regression test for AN-5: UpgradeToCloudScreen — collision-phase
-// "Cancel — keep offline account" button resets state to _PhaseCollision()
-// instead of _PhaseForm(), so the cancel appears to do nothing.
+// "Cancel — keep offline account" button must reset state to _PhaseForm(),
+// not _PhaseCollision(), so cancelling actually dismisses the collision UI
+// (before the fix it stayed in the collision UI with no observable change).
 //
 // Root cause: the onCancel callback in _CollisionBlock called
 //   setState(() => _phase = const _PhaseCollision())
@@ -8,166 +9,271 @@
 //   setState(() => _phase = const _PhaseForm())
 // mirroring _VerificationRequiredBlock.onCancel.
 //
-// Test strategy: since _PhaseCollision is reached only via argon2id
-// verification (which cannot complete in fake_async), we test the cancel
-// callback at the component level using the _UpgradeToCloudScreen's
-// observable behavior:
-//   1. A fresh screen starts in _PhaseForm (password field visible).
-//   2. We verify the l10n cancel label exists and is non-empty.
-//   3. We simulate the collision cancel callback by directly calling the
-//      widget's onCancel via a test wrapper, and verify the phase returns
-//      to _PhaseForm (password field re-appears).
+// [AUD-t-settings-04] The earlier version of this file pumped a
+// hand-written `_CollisionCancelSimulator` state machine that reimplemented
+// the phase-transition logic under test rather than exercising the real
+// UpgradeToCloudScreen — reverting the AN-5 fix in
+// upgrade_to_cloud_screen.dart would NOT have failed that suite, so it
+// provided zero regression protection despite its file header claiming
+// otherwise (TQ-8).
 //
-// Because we cannot instantiate private sealed classes from outside the
-// library, we test via a custom widget that exposes the phase transition
-// by wrapping the logic in a testable state machine.
+// This version drives the REAL _CollisionBlock inside the REAL
+// UpgradeToCloudScreen. _PhaseCollision is normally reached only via a
+// caught EmailCollisionException from UpgradeToCloudService. For the
+// password-verifying `_submit()` path that requires an argon2id hash check
+// that never completes inside flutter_test's fake_async zone (see the
+// ARCHITECTURE NOTE at the top of upgrade_to_cloud_screen_l1_test.dart).
+// The credential-less path (`_submitNewCredentials`, used by offline-born
+// accounts with a synthetic `@offline.local` email) has no such gate — it
+// calls AuthRepository.createUserAccount() directly — so mocking that call
+// to throw an `[firebase_auth/email-already-in-use]`-shaped exception drives
+// the screen into the real _PhaseCollision without touching argon2id at
+// all. This mirrors the working pattern already used by the
+// credential-less firebase-error-mapping tests in
+// upgrade_to_cloud_screen_l1_test.dart ("UpgradeToCloudScreen —
+// credential-less error mapping").
 
 @Tags(['settings', 'upgrade_to_cloud', 'an5'])
 library;
 
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
+import 'package:learning_tracker/features/settings/presentation/screens/upgrade_to_cloud_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:mocktail/mocktail.dart';
 
-// ── Minimal state-machine widget that replicates the AN-5 cancel logic ─────
+import '../../../../helpers/pump_app.dart';
 
-// Enum mirrors the private sealed class hierarchy inside upgrade_to_cloud_screen.dart
-enum _TestPhase { form, collision }
+// ── Mocks ────────────────────────────────────────────────────────────────────
 
-// A minimal widget that mimics the cancel callback in _CollisionBlock.
-// Before the fix: onCancel reset to collision phase.
-// After the fix: onCancel resets to form phase.
-//
-// This widget is used to demonstrate the bug (old behavior) vs the fix
-// (new behavior) independently of argon2id.
-class _CollisionCancelSimulator extends StatefulWidget {
-  const _CollisionCancelSimulator({required this.buggyBehavior});
+class _MockAuthRepository extends Mock implements AuthRepository {}
 
-  /// When true, simulates the PRE-FIX (buggy) behavior where cancel
-  /// resets to collision phase. When false, simulates the FIXED behavior.
-  final bool buggyBehavior;
+class _MockInternetConnectionChecker extends Mock
+    implements InternetConnectionChecker {}
 
-  @override
-  State<_CollisionCancelSimulator> createState() =>
-      _CollisionCancelSimulatorState();
+// ── Test constants ────────────────────────────────────────────────────────────
+
+const _enteredEmail = 'newowner@example.com';
+const _enteredPassword = 'a-strong-password-1';
+
+// A credential-less (offline-born) account: the synthetic @offline.local
+// email drives UpgradeToCloudScreen._isCredentialLess, routing submission
+// through _submitNewCredentials() — see file header for why this path
+// reaches the real _PhaseCollision without the argon2id Isolate limitation.
+const AuthState _credentialLessAuth = AuthState.signedIn(
+  user: AuthUser(
+    profileId: 1,
+    email: 'offline_abc123456789@offline.local',
+    displayName: 'Tester',
+  ),
+  tier: Tier.localBorn,
+);
+
+// ── Widget factory ────────────────────────────────────────────────────────────
+
+Widget _buildApp({
+  required UserDatabase db,
+  required DeviceRegistryDatabase registry,
+  required _MockAuthRepository authRepo,
+  required _MockInternetConnectionChecker checker,
+}) {
+  return pumpApp(
+    overrides: [
+      userDatabaseProvider.overrideWithValue(db),
+      deviceRegistryProvider.overrideWithValue(registry),
+      authRepositoryProvider.overrideWithValue(authRepo),
+      authStateProvider.overrideWithValue(_credentialLessAuth),
+      internetConnectionCheckerProvider.overrideWithValue(checker),
+      syncOrchestratorProvider.overrideWithValue(null),
+    ],
+    child: const UpgradeToCloudScreen(),
+  );
 }
 
-class _CollisionCancelSimulatorState extends State<_CollisionCancelSimulator> {
-  _TestPhase _phase = _TestPhase.collision; // Start in collision phase
-
-  void _onCancel() {
-    setState(() {
-      _phase = widget.buggyBehavior
-          ? _TestPhase
-                .collision // BUG: stays in collision
-          : _TestPhase.form; // FIX: returns to form
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return switch (_phase) {
-      _TestPhase.form => const Text('form-visible'),
-      _TestPhase.collision => Column(
-        children: [
-          const Text('collision-visible'),
-          TextButton(onPressed: _onCancel, child: const Text('Cancel')),
-        ],
-      ),
-    };
-  }
+/// Seeds the local-born account row the credential-less path looks up by
+/// [AuthUser.profileId] (1 — the first row inserted into a fresh in-memory
+/// DB gets auto-incremented id 1, matching `_credentialLessAuth`).
+Future<void> _seedLocalBornAccount(UserDatabase db) async {
+  await db
+      .into(db.accounts)
+      .insert(
+        AccountsCompanion.insert(
+          email: 'offline_abc123456789@offline.local',
+          tier: 'localBorn',
+          displayName: 'Tester',
+          createdAt: DateTime.utc(2026, 1, 1),
+          updatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 void main() {
-  group('AN-5 regression — upgrade_to_cloud collision cancel', () {
-    testWidgets(
-      'BUGGY behavior (before fix): cancel stays in collision phase (red baseline)',
-      (tester) async {
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: _CollisionCancelSimulator(buggyBehavior: true),
-            ),
-          ),
-        );
-        expect(find.text('collision-visible'), findsOneWidget);
-        expect(find.text('form-visible'), findsNothing);
+  late UserDatabase db;
+  late DeviceRegistryDatabase registry;
+  late _MockAuthRepository authRepo;
+  late _MockInternetConnectionChecker checker;
 
-        await tester.tap(find.text('Cancel'));
-        await tester.pump();
+  setUp(() async {
+    db = UserDatabase(NativeDatabase.memory());
+    registry = DeviceRegistryDatabase(NativeDatabase.memory());
+    authRepo = _MockAuthRepository();
+    checker = _MockInternetConnectionChecker();
 
-        // BUG: collision block still visible after cancel
-        expect(
-          find.text('collision-visible'),
-          findsOneWidget,
-          reason: 'BUGGY: stays in collision',
-        );
-        expect(
-          find.text('form-visible'),
-          findsNothing,
-          reason: 'BUGGY: form never shown',
-        );
-      },
+    when(() => checker.hasConnection).thenAnswer((_) async => true);
+    when(() => authRepo.currentUser).thenReturn(null);
+    when(
+      () => authRepo.onAuthStateChanged(),
+    ).thenAnswer((_) => const Stream.empty());
+    // Drives the real service into throwing EmailCollisionException (see
+    // UpgradeToCloudService.upgradeWithNewCredentials's catch block, which
+    // maps the '[firebase_auth/email-already-in-use]' code onto it) so the
+    // real screen enters the real _PhaseCollision.
+    when(() => authRepo.createUserAccount(any(), any())).thenThrow(
+      Exception(
+        '[firebase_auth/email-already-in-use] The email address is '
+        'already in use by another account.',
+      ),
     );
 
-    testWidgets(
-      // AN-5: This test FAILS on pre-fix code because cancel does not transition
-      // to form phase; PASSES on fixed code because cancel now goes to _PhaseForm.
-      'FIXED behavior (AN-5): cancel returns to form phase (form-visible appears)',
-      (tester) async {
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: _CollisionCancelSimulator(buggyBehavior: false),
+    await _seedLocalBornAccount(db);
+  });
+
+  tearDown(() async {
+    await db.close();
+    await registry.close();
+  });
+
+  group(
+    'AN-5 regression — upgrade_to_cloud collision cancel (real widget)',
+    () {
+      testWidgets(
+        'submitting a colliding email drives the REAL screen into the REAL '
+        'collision block',
+        (tester) async {
+          await tester.pumpWidget(
+            _buildApp(
+              db: db,
+              registry: registry,
+              authRepo: authRepo,
+              checker: checker,
             ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          final context = tester.element(find.byType(Scaffold));
+          final l10n = AppLocalizations.of(context)!;
+
+          await tester.enterText(
+            find.byType(TextFormField).at(0),
+            _enteredEmail,
+          );
+          await tester.enterText(
+            find.byType(TextFormField).at(1),
+            _enteredPassword,
+          );
+          await tester.pump();
+          await tester.tap(find.byType(FilledButton));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 50));
+
+          expect(
+            find.text(l10n.upgradeToCloudCollisionTitle),
+            findsOneWidget,
+            reason:
+                'The real UpgradeToCloudScreen must have entered the real '
+                '_PhaseCollision — this is the widget under test, not a '
+                'simulator',
+          );
+        },
+      );
+
+      testWidgets('AN-5: tapping "Cancel — keep offline account" from the REAL '
+          'collision block returns to the REAL form phase', (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            db: db,
+            registry: registry,
+            authRepo: authRepo,
+            checker: checker,
           ),
         );
-        expect(find.text('collision-visible'), findsOneWidget);
-        expect(find.text('form-visible'), findsNothing);
-
-        await tester.tap(find.text('Cancel'));
+        await tester.pump();
         await tester.pump();
 
-        // FIXED: form is visible after cancel
-        expect(
-          find.text('form-visible'),
-          findsOneWidget,
-          reason: 'Fixed: cancel transitions back to form',
+        final context = tester.element(find.byType(Scaffold));
+        final l10n = AppLocalizations.of(context)!;
+
+        await tester.enterText(find.byType(TextFormField).at(0), _enteredEmail);
+        await tester.enterText(
+          find.byType(TextFormField).at(1),
+          _enteredPassword,
         );
+        await tester.pump();
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // Sanity: we are actually in the collision block before cancelling.
+        expect(find.text(l10n.upgradeToCloudCollisionTitle), findsOneWidget);
+
+        await tester.tap(find.text(l10n.upgradeToCloudCancelKeepOffline));
+        await tester.pump();
+
+        // FIXED (AN-5): cancel dismisses the collision block and the form
+        // (email + password fields) is visible again.
         expect(
-          find.text('collision-visible'),
+          find.text(l10n.upgradeToCloudCollisionTitle),
           findsNothing,
           reason: 'Fixed: collision block dismissed by cancel',
         );
-      },
-    );
-
-    testWidgets(
-      'AN-5 — l10n cancel label is non-empty (the button is labeled correctly)',
-      (tester) async {
-        await tester.pumpWidget(
-          const MaterialApp(
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: SizedBox.shrink()),
-          ),
-        );
-        await tester.pump();
-        final context = tester.element(find.byType(Scaffold));
-        final l10n = AppLocalizations.of(context)!;
         expect(
-          l10n.upgradeToCloudCancelKeepOffline.isNotEmpty,
-          isTrue,
-          reason: 'Cancel button must have a non-empty label',
+          find.text(l10n.upgradeToCloudEmailLabel),
+          findsOneWidget,
+          reason:
+              'Fixed: cancel transitions back to the credential-less '
+              'form (email field re-appears)',
         );
-      },
-    );
-  });
+      });
+
+      testWidgets(
+        'AN-5 — l10n cancel label is non-empty (the button is labeled '
+        'correctly)',
+        (tester) async {
+          await tester.pumpWidget(
+            _buildApp(
+              db: db,
+              registry: registry,
+              authRepo: authRepo,
+              checker: checker,
+            ),
+          );
+          await tester.pump();
+
+          final context = tester.element(find.byType(Scaffold));
+          final l10n = AppLocalizations.of(context)!;
+          expect(
+            l10n.upgradeToCloudCancelKeepOffline.isNotEmpty,
+            isTrue,
+            reason: 'Cancel button must have a non-empty label',
+          );
+        },
+      );
+    },
+  );
 }
