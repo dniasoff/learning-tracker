@@ -1361,50 +1361,92 @@ void main() {
     );
 
     testWidgets(
-      'Completion-credit policy: recordCompletionsBatch default source is lifetimeOnly (not live)',
+      'Save drives the real _markSelections call — recordCompletionsBatch is '
+      'invoked with no explicit source override (repository default stays '
+      'lifetimeOnly)',
       (tester) async {
-        // Verify the repository contract: the default source for
-        // recordCompletionsBatch is CompletionSource.lifetimeOnly.
-        // This ensures the sentinel date (DateTime.utc(2000, 1, 1)) is used,
-        // so marks credit lifetime/siyum but NOT streak/engagement/points.
+        // AUD-t-settings-03: the previous version of this test never touched
+        // LifetimeCurriculumMarkingScreen — it built a standalone
+        // _MockLearningLedgerRepository and called
+        // stub.recordCompletionsBatch(const []) directly, so it asserted a
+        // fact about the test's own mock, not about production code (it
+        // would keep passing even if the real call site started passing an
+        // explicit `source: CompletionSource.live` override).
         //
-        // We verify this at the call site in LifetimeCurriculumMarkingScreen:
-        // _markSelections calls repo.recordCompletionsBatch(batchItems) with
-        // no explicit source, relying on the default of lifetimeOnly.
-        //
-        // The LearningLedgerRepository interface documents:
-        //   "Defaults to [CompletionSource.lifetimeOnly] so historical
-        //    imports never inflate streak, points, or recent-activity reads."
-        //
-        // We assert this by inspecting that the screen does NOT pass
-        // CompletionSource.live. Since we cannot easily drive the
-        // HierarchySelectionPanel selection in L1 widget tests, we verify
-        // via the repository signature and confirm the screen uses the default
-        // (no source: argument in the call at line 411 of lifetime_marking_screen.dart).
-
-        // Call the real repository interface to verify default source.
-        final stub = _MockLearningLedgerRepository();
-        CompletionSource? capturedSource;
+        // This version drives the REAL screen: taps "Select all in this
+        // list" to populate _selections from HierarchySelectionPanel's
+        // actual display items (loaded through the mocked content repo —
+        // contrary to this file's older comments elsewhere, the panel CAN
+        // be driven at L1 without GlobalKey drilling; see
+        // lifetime_marking_toggle_level_test.dart's IL-TOGGLE/IL-LEVEL
+        // tests, which tap the same button), then taps Save, and inspects
+        // the captured Invocation from the real
+        // lifetime_marking_screen.dart:592 call site.
+        final mockRepo = _MockLearningLedgerRepository();
+        Invocation? captured;
         when(
-          () => stub.recordCompletionsBatch(
+          () => mockRepo.recordCompletionsBatch(
             any<List<LedgerManualBatchItem>>(),
             source: any<CompletionSource>(named: 'source'),
           ),
         ).thenAnswer((inv) async {
-          capturedSource =
-              inv.namedArguments[#source] as CompletionSource? ??
-              CompletionSource.lifetimeOnly;
+          captured = inv;
           return [];
         });
 
-        // Call with no explicit source argument to simulate the screen's call.
-        await stub.recordCompletionsBatch(const []);
+        await _pump(
+          tester,
+          _buildCurriculumMarkingApp(db: _db, ledgerRepo: mockRepo),
+        );
+
+        await tester.tap(find.text('Select all in this list'));
+        await tester.pump();
+
+        final saveButtons = find.widgetWithText(FilledButton, 'Save');
+        final saveBtn = tester.widget<FilledButton>(saveButtons);
         expect(
-          capturedSource,
+          saveBtn.onPressed,
+          isNotNull,
+          reason:
+              '"Select all in this list" must populate a real selection so '
+              'Save becomes enabled — otherwise this test cannot reach the '
+              'real _markSelections call site',
+        );
+
+        await tester.tap(saveButtons);
+        await tester.pump();
+
+        verify(
+          () => mockRepo.recordCompletionsBatch(
+            any<List<LedgerManualBatchItem>>(),
+            source: any<CompletionSource>(named: 'source'),
+          ),
+        ).called(1);
+
+        expect(
+          captured,
+          isNotNull,
+          reason:
+              'recordCompletionsBatch must have been invoked by the real '
+              'Save flow, not skipped',
+        );
+        // NOTE: Dart resolves the `source` named parameter's default value
+        // (CompletionSource.lifetimeOnly) at the CALL SITE against the
+        // statically-typed LearningLedgerRepository interface, so the
+        // captured Invocation always carries a #source key — even though
+        // _markSelections's own source code omits `source:` entirely. The
+        // only way this test can distinguish "relying on the default" from
+        // "an explicit CompletionSource.live override" is by asserting on
+        // the captured VALUE, not on whether the key is present.
+        expect(
+          captured!.namedArguments[#source],
           equals(CompletionSource.lifetimeOnly),
           reason:
-              'Default source MUST be lifetimeOnly so bulk-mark credits '
-              'lifetime/siyum without leaking into streak/recent-activity',
+              'Completion-credit policy: the real Save flow '
+              '(lifetime_marking_screen.dart _markSelections) must resolve '
+              'to CompletionSource.lifetimeOnly — an explicit '
+              'CompletionSource.live override would inflate streak/points '
+              'from a lifetime bulk-mark',
         );
 
         await _tearDown(tester);
