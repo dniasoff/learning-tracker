@@ -565,21 +565,21 @@ void main() {
       expect(result, isNot(contains('Mishna 2.1')));
     });
 
-    test('sorts result by sortOrder ascending', () {
+    test('returns all matching leaf children regardless of sortOrder', () {
+      // leafChildrenForContainer returns Set<String>, which does not expose
+      // an ordering guarantee to callers — the internal sort exists only to
+      // make iteration deterministic before the Set conversion erases it.
+      // Callers that need real ordering (e.g. resolveIndexedUnitRefs) re-sort
+      // the result independently rather than relying on this function's
+      // insertion order, so this test asserts membership only. It must not
+      // claim to verify a sort order it cannot observe through Set<String>.
       final parent = _container(ref: 'Container', level1: 'L1');
       final a = _leaf(ref: 'C', level1: 'L1', sortOrder: 2);
       final b = _leaf(ref: 'A', level1: 'L1', sortOrder: 0);
       final c = _leaf(ref: 'B', level1: 'L1', sortOrder: 1);
 
-      final result = leafChildrenForContainer(parent, [
-        parent,
-        a,
-        b,
-        c,
-      ]).toList();
-      // Sets don't preserve insertion order, but the function sorts before
-      // converting to set — verify all three are present
-      expect(result, containsAll(['A', 'B', 'C']));
+      final result = leafChildrenForContainer(parent, [parent, a, b, c]);
+      expect(result, unorderedEquals(['A', 'B', 'C']));
     });
 
     test('excludes non-leaf items', () {
