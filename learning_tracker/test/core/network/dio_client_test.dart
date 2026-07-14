@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:talker/talker.dart';
+import 'package:talker_dio_logger/talker_dio_logger.dart';
 
 // ignore: avoid_relative_lib_imports
 import '../../../tool/lib/dio_client.dart';
@@ -47,12 +48,7 @@ void main() {
     test('returns a Dio instance with TalkerDioLogger interceptor', () {
       dio = createDioClient(talker: talker);
       expect(dio, isA<Dio>());
-      expect(
-        dio.interceptors.any(
-          (i) => i.runtimeType.toString() == 'TalkerDioLogger',
-        ),
-        isTrue,
-      );
+      expect(dio.interceptors.any((i) => i is TalkerDioLogger), isTrue);
     });
 
     test('logs HTTP request URL, method, and response status code', () async {
