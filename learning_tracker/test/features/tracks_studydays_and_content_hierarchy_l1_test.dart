@@ -22,6 +22,7 @@
 //    12.  All 7 day labels from kStepStudyDayLabels are rendered.
 //    13.  Continue button calls onContinue callback.
 //    14.  No track-type labels.
+//    14b. Hebrew locale smoke — renders without overflow.
 //
 //   ContentHierarchyScreen:
 //    15.  Unknown curriculumId → "Unknown Curriculum" AppBar + error icon.
@@ -576,6 +577,24 @@ void main() {
       expect(find.text('Standard'), findsNothing);
       expect(find.text('Custom'), findsNothing);
       expect(find.text('אישי'), findsNothing);
+      await _teardown(tester);
+    });
+
+    // AUD-t-cross-52 (TQ-3): StudyDaysReadOnly's sibling StudyDaysEditable
+    // (test 9 above) already has a Hebrew RTL smoke test; this one had none.
+    testWidgets('14b. Hebrew locale smoke — renders without overflow', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildStudyDaysReadOnlyApp(
+          programName: 'Daf Yomi',
+          onContinue: () {},
+          locale: const Locale('he'),
+        ),
+      );
+      await _settle(tester);
+
+      expect(find.byType(Scaffold), findsOneWidget);
       await _teardown(tester);
     });
   });
