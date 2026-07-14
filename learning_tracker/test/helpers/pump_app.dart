@@ -12,7 +12,9 @@
 //
 // The profiles feature hand-rolled the identical block a further 13 times
 // across 4 files (AUD-t-profiles-02), which migrated onto this helper too
-// and added the second provider-wiring mode documented below.
+// and added the second provider-wiring mode documented below. The
+// gamification feature hand-rolled it 8 more times across 6 files
+// (AUD-t-gamification-06), which migrated onto this helper as well.
 //
 // Usage:
 // ```dart

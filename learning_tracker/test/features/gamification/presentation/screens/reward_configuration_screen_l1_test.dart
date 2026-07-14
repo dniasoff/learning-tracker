@@ -38,8 +38,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -51,9 +49,9 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/rewa
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 
 import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/pump_app.dart';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -170,7 +168,8 @@ Widget _buildFake({
   // nothing else closes it -- close it explicitly (see
   // test/helpers/drift_memory.dart's inMemoryDb() doc comment).
   addTearDown(db.close);
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     retry: (_, __) => null,
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
@@ -186,17 +185,7 @@ Widget _buildFake({
       ),
       rewardConfigControllerProvider.overrideWith(() => fake),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: const RewardConfigurationScreen(),
-    ),
+    child: const RewardConfigurationScreen(),
   );
 }
 
