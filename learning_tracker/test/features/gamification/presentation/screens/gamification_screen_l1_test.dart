@@ -144,7 +144,7 @@ Widget _buildApp({
             return Future.value(value);
           case AsyncError(:final error, :final stackTrace):
             return Future.error(error, stackTrace);
-          case _:
+          case AsyncLoading():
             return Completer<AchievementsOverview>().future;
         }
       }),
