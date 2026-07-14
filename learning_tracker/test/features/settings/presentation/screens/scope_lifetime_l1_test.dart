@@ -70,6 +70,8 @@ import 'package:learning_tracker/features/sync/presentation/providers/sync_provi
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../../helpers/pump_app.dart';
+
 // ── Mocks ──────────────────────────────────────────────────────────────────────
 
 class _MockContentRepository extends Mock implements ContentRepository {}
@@ -249,7 +251,8 @@ Widget _buildScopeApp({
   TransliterationVariant variant = TransliterationVariant.ashkenazi,
 }) {
   final repo = contentRepo ?? _makeDefaultRepo();
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       userDatabaseProvider.overrideWith((ref) => db),
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
@@ -269,17 +272,7 @@ Widget _buildScopeApp({
           () => _VariantAshkenazi(),
         ),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: ScopeSelectionScreen(curriculumId: curriculum),
-    ),
+    child: ScopeSelectionScreen(curriculumId: curriculum),
   );
 }
 
@@ -293,7 +286,8 @@ Widget _buildLifetimeApp({
   Locale locale = const Locale('en'),
 }) {
   final repo = contentRepo ?? _makeDefaultRepo();
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       userDatabaseProvider.overrideWith((ref) => db),
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
@@ -307,17 +301,7 @@ Widget _buildLifetimeApp({
       else
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: const LifetimeMarkingScreen(),
-    ),
+    child: const LifetimeMarkingScreen(),
   );
 }
 
@@ -332,7 +316,8 @@ Widget _buildCurriculumMarkingApp({
   String curriculumId = 'mishnayos',
 }) {
   final repo = contentRepo ?? _makeDefaultRepo();
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       userDatabaseProvider.overrideWith((ref) => db),
       activeProfileIdProvider.overrideWith(() => _ProfileId1()),
@@ -346,17 +331,7 @@ Widget _buildCurriculumMarkingApp({
       else
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: LifetimeCurriculumMarkingScreen(curriculumId: curriculumId),
-    ),
+    child: LifetimeCurriculumMarkingScreen(curriculumId: curriculumId),
   );
 }
 

@@ -21,8 +21,6 @@ library;
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -34,10 +32,11 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -55,7 +54,7 @@ Widget _buildSettings({
   required UserDatabase db,
   required _MockAuthRepository authRepo,
 }) {
-  return ProviderScope(
+  return pumpApp(
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
       authRepositoryProvider.overrideWithValue(authRepo),
@@ -63,17 +62,8 @@ Widget _buildSettings({
       activeProfileIdProvider.overrideWith(() => _FakeActiveProfileId()),
       profileListStreamProvider.overrideWith((ref) => Stream.value(const [])),
     ],
-    child: const MaterialApp(
-      localizationsDelegates: [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      // Wrap in a Scaffold so the screen has a proper scaffold ancestor.
-      home: SettingsScreen(),
-    ),
+    // Wrap in a Scaffold so the screen has a proper scaffold ancestor.
+    child: const SettingsScreen(),
   );
 }
 

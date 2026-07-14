@@ -36,8 +36,6 @@ import 'dart:async';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
@@ -55,8 +53,9 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/upgrade_to_cloud_screen.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -123,7 +122,8 @@ Widget _buildApp({
   AuthState auth = _localBornAuth,
   Locale locale = const Locale('en'),
 }) {
-  return ProviderScope(
+  return pumpApp(
+    locale: locale,
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
       deviceRegistryProvider.overrideWithValue(registry),
@@ -132,17 +132,7 @@ Widget _buildApp({
       internetConnectionCheckerProvider.overrideWithValue(checker),
       syncOrchestratorProvider.overrideWithValue(null),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: const UpgradeToCloudScreen(),
-    ),
+    child: const UpgradeToCloudScreen(),
   );
 }
 

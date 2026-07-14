@@ -48,8 +48,6 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
@@ -59,8 +57,9 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
 
@@ -86,26 +85,20 @@ Widget _buildHarness({
   when(() => mockRouter.navigate(any())).thenAnswer((_) async {});
   when(() => mockRouter.canPop()).thenReturn(false);
 
-  return ProviderScope(
+  return pumpApp(
+    // pumpApp's `locale` is non-nullable (defaults to Locale('en')); this
+    // harness's own `locale` stays nullable so callers can omit it exactly
+    // as before, falling back to the same English default.
+    locale: locale ?? const Locale('en'),
     overrides: [
       authStateProvider.overrideWithValue(_kCloudUser),
       syncStatusProvider.overrideWith((_) => syncStatus),
       syncIdentityStatusProvider.overrideWithValue(identityStatus),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: mockRouter,
-        stateHash: 0,
-        child: const Scaffold(body: BackupSyncSection()),
-      ),
+    child: StackRouterScope(
+      controller: mockRouter,
+      stateHash: 0,
+      child: const Scaffold(body: BackupSyncSection()),
     ),
   );
 }
