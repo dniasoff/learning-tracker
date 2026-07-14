@@ -24,6 +24,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dar
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import '../../../../helpers/drift_memory.dart' as db_helper;
 
@@ -34,6 +35,27 @@ import '../../../../helpers/drift_memory.dart' as db_helper;
 class _ProfileId1 extends ActiveProfileId {
   @override
   int build() => 1;
+}
+
+// ---------------------------------------------------------------------------
+// AUD-t-scheduler-03 (AC2): a SharedPreferencesStorePlatform whose getAll()
+// resolves only after an artificial delay — proves debugReadyForTest
+// synchronizes on the real async prefs load, not a race against a guessed
+// sleep duration.
+// ---------------------------------------------------------------------------
+
+class _SlowSharedPreferencesStore extends InMemorySharedPreferencesStore {
+  _SlowSharedPreferencesStore(super.data) : super.withData();
+
+  @override
+  Future<Map<String, Object>> getAll() async {
+    // Deliberately longer than every fixed delay this finding replaced
+    // (100-200ms) — if synchronization were still time-based instead of
+    // awaiting the real load future, the assertion below would observe the
+    // stale initial `{}` state.
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    return super.getAll();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -297,7 +319,7 @@ void main() {
       // Keep provider alive with a listener (prevents auto-dispose between ops)
       // and wait for _loadFromPrefs to settle.
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       await c.read(skippedTasksProvider.notifier).skip('ref_A');
 
@@ -314,7 +336,7 @@ void main() {
 
       // Keep provider alive + await prefs load
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       await c.read(skippedTasksProvider.notifier).skip('ref_A');
       await c.read(skippedTasksProvider.notifier).skip('ref_B');
@@ -333,7 +355,7 @@ void main() {
       addTearDown(c.dispose);
 
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       await c.read(skippedTasksProvider.notifier).skip('ref_A');
       await c.read(skippedTasksProvider.notifier).skip('ref_B');
@@ -353,7 +375,7 @@ void main() {
       addTearDown(c.dispose);
 
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       await c.read(skippedTasksProvider.notifier).skip('ref_A');
       await c.read(skippedTasksProvider.notifier).undoSkip('ref_Z');
@@ -372,7 +394,7 @@ void main() {
       // Keep provider alive + trigger build (kicks off _loadFromPrefs async call)
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
       // Allow the async prefs read+write to complete
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       // Stale skips are cleared
       expect(c.read(skippedTasksProvider), isEmpty);
@@ -392,11 +414,44 @@ void main() {
 
       // Keep provider alive + trigger build, await prefs load
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       final state = c.read(skippedTasksProvider);
       expect(state, containsAll(['ref_X', 'ref_Y']));
     });
+
+    test(
+      'debugReadyForTest waits for a slow prefs resolution deterministically '
+      '(AUD-t-scheduler-03 AC2: no fixed-delay race)',
+      () async {
+        // Reset the SharedPreferences singleton/completer (the only public
+        // way to do so is setMockInitialValues) before installing the
+        // deliberately slow store below — otherwise a prior test's cached
+        // instance would short-circuit getInstance() and never touch it.
+        SharedPreferences.setMockInitialValues({});
+        SharedPreferencesStorePlatform.instance = _SlowSharedPreferencesStore({
+          'flutter.skipped_tasks_date': '2026-05-29',
+          'flutter.skipped_tasks_refs': ['ref_X', 'ref_Y'],
+        });
+        addTearDown(() => SharedPreferences.setMockInitialValues({}));
+
+        final c = _withClock(DateTime.utc(2026, 5, 29));
+        addTearDown(c.dispose);
+
+        c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
+        await c.read(skippedTasksProvider.notifier).debugReadyForTest;
+
+        expect(
+          c.read(skippedTasksProvider),
+          containsAll(['ref_X', 'ref_Y']),
+          reason:
+              'debugReadyForTest must await the real _loadFromPrefs future, '
+              'not a fixed timer — the store above deliberately resolves '
+              'getAll() after 400ms, longer than any of the old guessed '
+              'delays (100-200ms) this finding replaced.',
+        );
+      },
+    );
   });
 
   // ── previouslySkippedRefsProvider ─────────────────────────────────────────

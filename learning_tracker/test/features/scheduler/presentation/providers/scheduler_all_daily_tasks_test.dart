@@ -306,7 +306,7 @@ void main() {
 
       // Keep skippedTasks provider alive and settled.
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       final tasks = await c.read(allDailyTasksProvider.future);
 
@@ -353,7 +353,7 @@ void main() {
       addTearDown(c.dispose);
 
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       final tasks = await c.read(allDailyTasksProvider.future);
 
@@ -438,7 +438,7 @@ void main() {
       addTearDown(c.dispose);
 
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       final tasks = await c.read(allDailyTasksProvider.future);
       final refs = tasks.map((t) => t.contentItemSefariaRef).toSet();
@@ -520,7 +520,7 @@ void main() {
     addTearDown(c.dispose);
 
     c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
     final tasks = await c.read(allDailyTasksProvider.future);
 
@@ -580,7 +580,7 @@ void main() {
       addTearDown(c.dispose);
 
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 150));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       final tasks = await c.read(allDailyTasksProvider.future);
       final refs = tasks.map((t) => t.contentItemSefariaRef).toList();
@@ -619,7 +619,7 @@ void main() {
       addTearDown(c.dispose);
 
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 150));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       final tasks = await c.read(allDailyTasksProvider.future);
       final boosted = tasks
@@ -685,7 +685,7 @@ void main() {
       addTearDown(c.dispose);
 
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       final tasks = await c.read(allDailyTasksProvider.future);
 
@@ -711,7 +711,7 @@ void main() {
     addTearDown(c.dispose);
 
     c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
     final tasks = await c.read(allDailyTasksProvider.future);
 
@@ -791,7 +791,7 @@ void main() {
       addTearDown(c.dispose);
 
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
       final tasks = await c.read(allDailyTasksProvider.future);
 
@@ -886,7 +886,7 @@ void main() {
     addTearDown(c.dispose);
 
     c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
     final tasks = await c.read(allDailyTasksProvider.future);
     final overdue = tasks.where((t) => t.isOverdue).toList();
@@ -927,7 +927,7 @@ void main() {
     addTearDown(c.dispose);
 
     c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
-    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await c.read(skippedTasksProvider.notifier).debugReadyForTest;
 
     final tasks = await c.read(allDailyTasksProvider.future);
 
