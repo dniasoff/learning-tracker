@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 
 import '../../../helpers/drift_memory.dart'
-    show inMemoryDb, seedCompletion, seedProfile;
+    show inMemoryDb, seedCompletion, seedProfile, seedTrack;
 
 void main() {
   late UserDatabase db;
@@ -20,16 +20,12 @@ void main() {
     db = inMemoryDb();
     await seedProfile(db);
 
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculumId,
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    trackId = await seedTrack(
+      db,
+      profileId: profileId,
+      curriculumId: curriculumId,
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
 
     stageId = await db.stageDao.insertStageDefinition(
       StageDefinitionsCompanion.insert(
@@ -111,16 +107,12 @@ void main() {
 
     test('filters to correct trackId', () async {
       // Create a second track.
-      final otherTrackId = await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      final otherTrackId = await seedTrack(
+        db,
+        profileId: profileId,
+        curriculumId: 'bavli',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
       final otherStageId = await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
           profileId: profileId,

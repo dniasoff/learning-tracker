@@ -35,19 +35,12 @@ void main() {
   Future<int> insertTrack({
     CurriculumId curriculum = CurriculumId.bavli,
     int profileId = 0,
-  }) async {
-    final row = await db
-        .into(db.curriculumTracks)
-        .insertReturning(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: curriculum.storageKey,
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
-    return row.id;
-  }
+  }) => seedTrack(
+    db,
+    profileId: profileId,
+    curriculumId: curriculum.storageKey,
+    activatedAt: DateTime.utc(2026, 1, 1),
+  );
 
   Future<int> insertRawTrack({
     String curriculumId = 'bavli',
@@ -79,16 +72,12 @@ void main() {
   group('deactivateTrack', () {
     test('deactivates an existing active non-personal track', () async {
       // Insert an active track for profileId 0 (deactivateTrack's default).
-      await db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: 0,
-              curriculumId: CurriculumId.bavli.storageKey,
-              stateChangedAt: DateTime.utc(2026, 1, 1),
-              activatedAt: DateTime.utc(2026, 1, 1),
-            ),
-          );
+      await seedTrack(
+        db,
+        profileId: 0,
+        curriculumId: CurriculumId.bavli.storageKey,
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
       expect(await db.trackDao.getActiveTracks(CurriculumId.bavli), isNotEmpty);
 
       await db.trackDao.deactivateTrack(CurriculumId.bavli);

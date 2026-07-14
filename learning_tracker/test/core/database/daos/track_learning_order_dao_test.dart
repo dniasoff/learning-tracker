@@ -13,16 +13,12 @@ void main() {
     // AUD-t-cross-06: track_learning_order.profileId is now a real FK to
     // learner_profiles(id) — seed the owning profile (id = 1) first.
     await seedProfile(db);
-    trackId = await db
-        .into(db.curriculumTracks)
-        .insert(
-          CurriculumTracksCompanion.insert(
-            profileId: profileId,
-            curriculumId: 'bavli',
-            stateChangedAt: DateTime.utc(2026, 1, 1),
-            activatedAt: DateTime.utc(2026, 1, 1),
-          ),
-        );
+    trackId = await seedTrack(
+      db,
+      profileId: profileId,
+      curriculumId: 'bavli',
+      activatedAt: DateTime.utc(2026, 1, 1),
+    );
   });
 
   tearDown(() async {
@@ -197,16 +193,12 @@ void main() {
 
     group('deleteByTrack', () {
       test('removes all rows for the given track only', () async {
-        final otherTrackId = await db
-            .into(db.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion.insert(
-                profileId: profileId,
-                curriculumId: 'mishnayos',
-                stateChangedAt: DateTime.utc(2026, 1, 1),
-                activatedAt: DateTime.utc(2026, 1, 1),
-              ),
-            );
+        final otherTrackId = await seedTrack(
+          db,
+          profileId: profileId,
+          curriculumId: 'mishnayos',
+          activatedAt: DateTime.utc(2026, 1, 1),
+        );
         await db.trackLearningOrderDao.upsertOrder(profileId, trackId, [
           'a',
           'b',

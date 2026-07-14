@@ -4,7 +4,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 import '../../../helpers/drift_memory.dart'
-    show inMemoryDb, seedCompletion, seedProfile;
+    show inMemoryDb, seedCompletion, seedProfile, seedTrack;
 
 void main() {
   late UserDatabase database;
@@ -106,18 +106,12 @@ void main() {
       String curriculumId = 'bavli',
       String trackType = 'personal',
       int profileId = 0,
-    }) async {
-      return database
-          .into(database.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profileId,
-              curriculumId: curriculumId,
-              stateChangedAt: DateTime.now().toUtc(),
-              activatedAt: DateTime.now().toUtc(),
-            ),
-          );
-    }
+    }) => seedTrack(
+      database,
+      profileId: profileId,
+      curriculumId: curriculumId,
+      activatedAt: DateTime.now().toUtc(),
+    );
 
     test(
       'deleteTrackAndData sets deletedAt and does not hard-delete the row',
@@ -293,19 +287,12 @@ void main() {
       UserDatabase db, {
       required int profileId,
       required String curriculumId,
-    }) async {
-      final now = DateTime.now().toUtc();
-      return db
-          .into(db.curriculumTracks)
-          .insert(
-            CurriculumTracksCompanion.insert(
-              profileId: profileId,
-              curriculumId: curriculumId,
-              stateChangedAt: now,
-              activatedAt: now,
-            ),
-          );
-    }
+    }) => seedTrack(
+      db,
+      profileId: profileId,
+      curriculumId: curriculumId,
+      activatedAt: DateTime.now().toUtc(),
+    );
 
     /// Inserts a completion_event row that belongs to [trackId], [profileId],
     /// and [curriculumId], keyed on the given [sefariaRef]+[stageId]+[trackType].
