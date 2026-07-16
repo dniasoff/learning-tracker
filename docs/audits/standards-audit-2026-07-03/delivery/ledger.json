@@ -556,13 +556,19 @@
     {
       "id": "AUD-t-track_setup-01",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P1",
       "title": "Stop testing the stale copy of AddTrackFlowScreen._getSmartDefault in add_track_result_test.dart \u2014 it asserts pre-fix buggy behavior",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "22871821eb9a5f2ebbb743d2df1fcc698a406b75"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-track_setup-01 AC1 OK: private copies deleted; test calls real smartDefaultTrackName (screen l713) + AddTrackFlowStateX.hasProgramsForCurriculum (state l151)",
+        "AUD-t-track_setup-01 AC2 OK: test l130 asserts smartDefaultTrackName(mishnayos+scope)==displayNameHe, not last scope value; red-first in commit",
+        "AUD-t-track_setup-01 AC3 OK: grep _getSmartDefault = only prod file (def+call+doc) + 2 comment mentions; no private fn elsewhere"
+      ],
+      "notes": "Test had private stale _getSmartDefault/_hasProgramsForCurriculum copies. Red-first: asserted fixed expectation vs stale copy, captured failure. Extracted logic to smartDefaultTrackName(); _getSmartDefault() delegates. Deleted private copies; test calls real symbols. All 3 ACs verified via grep."
     },
     {
       "id": "AUD-tracks-08",
