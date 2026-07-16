@@ -4070,13 +4070,18 @@
   {
    "id": "AUD-core-domain-03",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Make ScheduleSpec's delayDays/daysOfWeek/rollingWindowSize getters exhaustive instead of using a `_` catch-all",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "7b2630baad19ec636a10d25e3eaa299893885b2f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-domain-03 AC1 OK: schedule_spec.dart:78-104 all 3 getters list DelaySchedule/WeeklySchedule/RollingSchedule explicitly, zero _/default arms",
+    "AUD-core-domain-03 AC2 OK: broken-arm (added 4th subtype) -> non_exhaustive_switch_expression on lines 78/89/100 via flutter analyze; reverted clean"
+   ],
+   "notes": "Made 3 getters exhaustive over DelaySchedule/WeeklySchedule/RollingSchedule, no wildcard. Proved compile-error guarantee via broken-arm experiment (non_exhaustive_switch_expression), reverted. Added 9-test file; 71 consumer tests green; analyze+audit clean."
   },
   {
    "id": "AUD-t-cross-41",
