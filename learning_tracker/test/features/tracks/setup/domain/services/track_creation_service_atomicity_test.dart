@@ -5,6 +5,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
@@ -128,6 +129,18 @@ void main() {
       stageRepository: stageRepo,
     );
 
+    // AUD-t-tracks-04 (TQ-6): freeze the clock the SUT reads via
+    // DateTimeFactory.nowUtc() (_parseProgramStartingRef) so the test's
+    // 'before' read and the SUT's internal 'now' read are the IDENTICAL
+    // instant. Without this, two independent real-clock reads straddling a
+    // whole-second boundary (SQLite's DateTimeColumn truncates to whole
+    // seconds) makes daysBack legitimately compute to 4 instead of 5 —
+    // reproduced deterministically with a >1s artificial delay between the
+    // reads before this fix.
+    final fixedNow = DateTime.utc(2026, 6, 15, 12);
+    useLocalDayClock(FakeLocalDayClock(fixedNow));
+    addTearDown(resetLocalDayClock);
+
     final before = DateTimeFactory.nowUtc();
     const result = AddTrackResult(
       curriculumId: CurriculumId.bavli,
@@ -138,6 +151,11 @@ void main() {
       // ProgramStartingPosition.toLegacyGrammar for a 5-day back-date.
       startingRef: 'offset:5',
     );
+
+    // Regression guard: with the clock frozen, an artificial delay between
+    // setup and the SUT invocation must be a no-op — proves the test no
+    // longer depends on two real-clock reads landing in the same tick.
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
 
     await service.createTrack(result: result, profileId: 1);
 
@@ -192,6 +210,13 @@ void main() {
       stageRepository: stageRepo,
     );
 
+    // AUD-t-tracks-04 (TQ-6): see the sibling positive-offset test above for
+    // why the clock must be frozen (both B3 tests are "sites" of the same
+    // finding).
+    final fixedNow = DateTime.utc(2026, 6, 15, 12);
+    useLocalDayClock(FakeLocalDayClock(fixedNow));
+    addTearDown(resetLocalDayClock);
+
     final before = DateTimeFactory.nowUtc();
     const result = AddTrackResult(
       curriculumId: CurriculumId.bavli,
@@ -200,6 +225,10 @@ void main() {
       studyDays: {1: 'study'},
       startingRef: 'offset:-5',
     );
+
+    // Regression guard: with the clock frozen, an artificial delay between
+    // setup and the SUT invocation must be a no-op.
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
 
     await service.createTrack(result: result, profileId: 1);
 
