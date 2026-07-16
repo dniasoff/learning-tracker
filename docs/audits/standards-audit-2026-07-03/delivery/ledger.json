@@ -7075,13 +7075,18 @@
     {
       "id": "AUD-t-tracks-09",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace wall-clock DateTime.now() calls in step_starting_position_l1_test.dart with fixed dates",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "85511cd1352ef337c5ba6881adc30ac3129ed2f8"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tracks-09 AC1 OK: grep 'DateTime.now(' on step_starting_position_l1_test.dart = 0 matches (exit 1); 6 sites now DateTime(2026,6,1)",
+        "AUD-t-tracks-09 AC2 OK: flutter test 47/47 pass with pinned date threaded into create(today:)/allowedWindow(today); no assertions altered"
+      ],
+      "notes": "Confirmed 6 DateTime.now() sites (787/811/834/848/861/880). Pure relative-date arithmetic; replaced with DateTime(2026,6,1) matching section D. Shrank ratchet baseline for this file. RED: checker --report showed 6 hits pre-fix. AC1: 0 remain. AC2: flutter test 47/47 green incl. the 6 fixed tests."
     },
     {
       "id": "AUD-t-story-acceptance-31",
