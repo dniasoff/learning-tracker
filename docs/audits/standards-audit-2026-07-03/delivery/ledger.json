@@ -5624,13 +5624,18 @@
     {
       "id": "AUD-t-tutoring-04",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Make ga5_resignation_childname_test.dart exercise the real manage_grants/decline_invite call sites it claims to guard",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "b76ce15189fca910d63b72b81f920cf5663fad9f"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-04 AC1 OK: 2 testWidgets pump real ManageGrants+DeclineInvite screens, capture childName via captureAny, assert real name not childProfileId (not the mock)",
+        "AUD-t-tutoring-04 AC2 OK: reverted both screens to childProfileId -> suite +6 -2, both new tests fail w/ GA-5 sig; restored via git checkout"
+      ],
+      "notes": "Confirmed only proxy fns were tested. Added 2 testWidgets pumping real screens, capturing childName via mocktail. Red-first: reverted fix -> 2 tests failed w/ GA-5 signature; restored -> 8/8 pass. Both ACs met."
     },
     {
       "id": "AUD-t-tutoring-01",
