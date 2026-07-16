@@ -7040,13 +7040,17 @@
     {
       "id": "AUD-t-story-acceptance-31",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Deduplicate the 6 copies of _insertTrack() in story_acceptance tests onto the existing shared seedTrack() helper",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c3, 2026-07-16). review agent lost (quota); fix commit 8884bc32 (fix(tests): AUD-t-story-acceptance-31 - dedupe _insertTrack onto seedTrack()) built on worktree branch worktree-wf_fbd1f0b0-a07-3 was never reviewed/merged before the review agent was lost. Internal process blocker, not an external blocker. Worktree checkout removed; branch retained unmerged (git cherry dev shows +8884bc32, no patch-equivalent commit on dev) pending a future harvest pass."
+      "commits": [
+        "5d74d8e83a32fba84c9cb76b82d7d72dcb4dbe34"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-31 AC OK: grep -rn 'Future<int> _insertTrack' test/story_acceptance/epic_09_onboarding_test.dart test/story_acceptance/epic_10_parent_mode_test.dart test/story_acceptance/epic_12_notifications_test.dart test/story_acceptance/epic_14_settings_test.dart test/story_acceptance/epic_15_multi_profile_test.dart test/story_acceptance/epic_16_pace_dashboard_test.dart -> no match (exit 1); all 6 call sites now use the shared seedTrack() helper."
+      ],
+      "notes": "gate-repair 2026-07-16 (wave-4 GATE-REPAIR): prior blocked note ('review agent lost (quota) ... Internal process blocker, not an external blocker') was a non-genuine blocker per TQ-7/gate policy - a reviewable, complete fix already existed on stray worktree branch worktree-wf_fbd1f0b0-a07-3 (commit 8884bc32) and was simply never delivered. Reviewed the diff (6 files, dedupes each file's private _insertTrack() onto the shared test/helpers/drift_memory.dart seedTrack(), which also closes the raw DateTime.now() landmine by stamping via the injectable DateTimeFactory.nowUtc() clock seam); cherry-picked cleanly onto dev with no conflicts as 5d74d8e8 (no other commit touched these 6 files between the branch's base and dev's tip). Verified independently post-merge: grep AC re-run (see acVerified), flutter analyze -> No issues found, flutter test --concurrency=2 on all 6 files -> All tests passed (no count regressions, pre-existing skips only), make audit -> all 67 greps clean, dart format --set-exit-if-changed -> 0 changed. Branch worktree-wf_fbd1f0b0-a07-3 deleted after harvest (see AUD-t-story-acceptance-46, same branch, same gate-repair pass)."
     },
     {
       "id": "AUD-guardrails-21",
@@ -7445,13 +7449,17 @@
     {
       "id": "AUD-t-story-acceptance-46",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace fixed 50ms Future.delayed polling with stream.first awaits in epic_15's curriculum-scope watch-stream test",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c3, 2026-07-16). review agent lost (quota); fix commit c4f30bbf (fix(tests): AUD-t-story-acceptance-46 - stream.first over fixed-delay polling) built on worktree branch worktree-wf_fbd1f0b0-a07-3 was never reviewed/merged before the review agent was lost. Internal process blocker, not an external blocker. Worktree checkout removed; branch retained unmerged (git cherry dev shows +c4f30bbf, no patch-equivalent commit on dev) pending a future harvest pass."
+      "commits": [
+        "a7c9b9770e11f2e5b8887d5fb25a808fc1424d80"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-46 AC OK: dart run tool/check_test_stream_delay_race.dart --report | grep epic_15 -> no output (clean); dart run tool/check_test_stream_delay_race.dart -> passed, 3 pre-existing baselined files tolerated (was 4) - epic_15_multi_profile_test.dart removed from the checker's baseline."
+      ],
+      "notes": "gate-repair 2026-07-16 (wave-4 GATE-REPAIR): prior blocked note ('review agent lost (quota) ... Internal process blocker, not an external blocker') was a non-genuine blocker per TQ-7/gate policy - a reviewable, complete fix already existed on stray worktree branch worktree-wf_fbd1f0b0-a07-3 (commit c4f30bbf) and was simply never delivered. Reviewed the diff (replaces the .listen()+four-fixed-50ms-delay wall-clock race in the 'scope watch stream emits on every change for provider reactivity' test with four sequential `await stream.first` reads on one retained stream handle, matching the deterministic sibling test's shape 100 lines above; same 4 asserted transitions preserved; removes epic_15_multi_profile_test.dart from tool/check_test_stream_delay_race.dart's baseline now that the pattern is gone); cherry-picked cleanly onto dev with no conflicts as a7c9b977 (built directly on top of AUD-t-story-acceptance-31's cherry-pick 5d74d8e8, same file, no conflicts - branch history applied in original order). Verified independently post-merge: checker re-run (see acVerified), flutter analyze test/story_acceptance/epic_15_multi_profile_test.dart -> No issues found, flutter test --concurrency=2 epic_15_multi_profile_test.dart -> All tests passed (117 passed, same count as before, pre-existing skips only), make audit -> all 67 greps clean, dart format --set-exit-if-changed -> 0 changed. Branch worktree-wf_fbd1f0b0-a07-3 deleted after harvest (git branch -D)."
     },
     {
       "id": "AUD-t-story-acceptance-25",
