@@ -71,21 +71,36 @@ sealed class ScheduleSpec {
   /// The `delay_days` column value for this spec.
   ///
   /// Non-zero only for [DelaySchedule]; other variants write 0.
+  ///
+  /// Exhaustive over every [ScheduleSpec] subtype (no `_`/`default` arm) so
+  /// that adding a new variant is a compile error here until this getter is
+  /// updated for it — see EH-6 in `docs/coding-standards.md`.
   int get delayDays => switch (this) {
     DelaySchedule(:final delayDays) => delayDays,
-    _ => 0,
+    WeeklySchedule() => 0,
+    RollingSchedule() => 0,
   };
 
   /// The `days_of_week` column value (JSON-encoded) for this spec, or null.
+  ///
+  /// Exhaustive over every [ScheduleSpec] subtype (no `_`/`default` arm) so
+  /// that adding a new variant is a compile error here until this getter is
+  /// updated for it — see EH-6 in `docs/coding-standards.md`.
   List<int>? get daysOfWeek => switch (this) {
     WeeklySchedule(:final daysOfWeek) => daysOfWeek,
-    _ => null,
+    DelaySchedule() => null,
+    RollingSchedule() => null,
   };
 
   /// The `rolling_window_size` column value for this spec, or null.
+  ///
+  /// Exhaustive over every [ScheduleSpec] subtype (no `_`/`default` arm) so
+  /// that adding a new variant is a compile error here until this getter is
+  /// updated for it — see EH-6 in `docs/coding-standards.md`.
   int? get rollingWindowSize => switch (this) {
     RollingSchedule(:final windowSize) => windowSize,
-    _ => null,
+    DelaySchedule() => null,
+    WeeklySchedule() => null,
   };
 }
 
