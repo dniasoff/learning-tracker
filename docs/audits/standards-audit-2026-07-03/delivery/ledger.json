@@ -3632,13 +3632,18 @@
     {
       "id": "AUD-t-tracks-01",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "De-duplicate the TrackDetailScreen dual-progress and bulk-prior-tile assertions shared by track_detail_screen_test.dart and edit_track_and_detail_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "54dce2b9ef1aaf2671b5aa4a337d1f09107f3085"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tracks-01 AC1 OK: only track_detail_screen_test.dart asserts 0% labels (L224-5) + bulk-tile shape/tileColor (L531-557); edit file has comments only",
+        "AUD-t-tracks-01 AC2 OK: 85 targeted tests pass; owner assertions equivalent-or-stronger, no coverage loss"
+      ],
+      "notes": "Confirmed literal duplicate (0%-value dual-progress labels + bulk-tile shape/tileColor) in both files. Removed duplicate testWidgets bodies from edit_track_and_detail_l1_test.dart w/ explanatory comment; track_detail_screen_test.dart is sole owner now. grep confirms; 85 targeted tests pass."
     },
     {
       "id": "AUD-t-cross-24",
@@ -6675,24 +6680,33 @@
     {
       "id": "AUD-t-tracks-10",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Tighten the granularity and pace-floor assertions in step_chazara_goal_l1_test.dart and edit_track_and_detail_l1_test.dart to match what their own titles/comments claim",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "54dce2b9ef1aaf2671b5aa4a337d1f09107f3085"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tracks-10 AC1 OK: granularity asserts equals('perek') (was isNotNull); default='mishna' (goal_helpers.dart:144-9) so now non-vacuous",
+        "AUD-t-tracks-10 AC2 OK(equiv): floor test asserts InkWell.onTap null@1 / non-null after increment; _StepperButton has no IconButton (edit_track_screen.dart:952-978)"
+      ],
+      "notes": "Both weak assertions confirmed vacuous. Tightened granularity to equals('perek'), red-verified via disabled tap. AC named IconButton but stepper is private _StepperButton>InkWell; used equivalent InkWell.onTap check, red-verified via removed prod floor guard, restored. Test-only fix."
     },
     {
       "id": "AUD-t-tracks-08",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Override localDayClockProvider in track_detail_screen_test.dart to remove its wall-clock dependency",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "54dce2b9ef1aaf2671b5aa4a337d1f09107f3085"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tracks-08 AC1 OK: _overridesFor now returns localDayClockProvider.overrideWithValue(FakeLocalDayClock(DateTime.utc(2026,5,30))), ~L99-101"
+      ],
+      "notes": "Confirmed _overridesFor lacked localDayClockProvider override though screen watches it (defaults real clock). Added FakeLocalDayClock(2026-05-30) override matching siblings. 7 tests pass; audit's TQ-6 wall-clock ratchet passes (reworded a comment to avoid its literal-substring grep)."
     },
     {
       "id": "AUD-t-story-acceptance-47",
