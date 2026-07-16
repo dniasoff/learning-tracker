@@ -6311,13 +6311,19 @@
     {
       "id": "AUD-t-story-acceptance-34",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Extract the 3x-duplicated 4-path file-candidate search in epic_25_story_25_20_locale_theme_test.dart into one helper",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "d663433f024d826254955861315236ce43c086aa"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-34 AC1 OK: grep File('lib/app/learning_tracker_app.dart')=1 (line45, in helper); other 4 candidate lists unrelated (onboarding/pubspec/font/theme)",
+        "AUD-t-story-acceptance-34 AC2 OK: both AC9 tests (L414,L428) call memoized _findAppEntrySource(), same as AC2/AC3 setUpAll (L135); _appEntrySourceCache = single disk read",
+        "AUD-t-story-acceptance-34 TQ-7 OK: removed expect(isNotNull) weaken-ok - helper is non-null/throws StateError (equally loud), contains() assertions preserved"
+      ],
+      "notes": "Confirmed 4-path candidate list duplicated at 3 sites (104/396/423) matching evidence. Factored into memoized helper _findAppEntrySource(); AC2/AC3 setUpAll + both AC9 tests now share it. grep count 3->1; all 21 tests pass; analyze clean; audit 67/67 clean. gatePolicy=disjoint-skip (rebase file-disjoint vs dev; post-rebase gate: make audit + flutter analyze both clean)."
     },
     {
       "id": "AUD-core-auth-05",
