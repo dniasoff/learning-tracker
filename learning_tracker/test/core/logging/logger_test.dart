@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:talker/talker.dart';
@@ -31,65 +30,6 @@ void main() {
       expect(talker, isA<Talker>());
       // After init(), rawTalker is the returned Talker.
       expect(identical(talker, AppLogger.rawTalker), isTrue);
-    });
-  });
-
-  group('AppLogger.setupFlutterErrorHandlers', () {
-    late FlutterExceptionHandler? originalOnError;
-    late bool Function(Object, StackTrace)? originalPlatformOnError;
-
-    setUp(() {
-      AppLogger.init();
-      originalOnError = FlutterError.onError;
-      originalPlatformOnError = PlatformDispatcher.instance.onError;
-    });
-
-    tearDown(() {
-      FlutterError.onError = originalOnError;
-      PlatformDispatcher.instance.onError =
-          originalPlatformOnError ?? (_, __) => false;
-    });
-
-    test('sets FlutterError.onError handler', () {
-      AppLogger.setupFlutterErrorHandlers();
-      expect(FlutterError.onError, isNotNull);
-    });
-
-    test('FlutterError.onError routes errors to Talker', () {
-      AppLogger.setupFlutterErrorHandlers();
-      final talker = AppLogger.instance.talker;
-      final historyBefore = talker.history.length;
-
-      FlutterError.onError!(
-        FlutterErrorDetails(
-          exception: Exception('test flutter error'),
-          stack: StackTrace.current,
-        ),
-      );
-
-      expect(talker.history.length, greaterThan(historyBefore));
-      expect(
-        talker.history.last.generateTextMessage(),
-        contains('test flutter error'),
-      );
-    });
-
-    test('PlatformDispatcher.instance.onError routes errors to Talker', () {
-      AppLogger.setupFlutterErrorHandlers();
-      final talker = AppLogger.instance.talker;
-      final historyBefore = talker.history.length;
-
-      final result = PlatformDispatcher.instance.onError!(
-        Exception('test platform error'),
-        StackTrace.current,
-      );
-
-      expect(result, isTrue);
-      expect(talker.history.length, greaterThan(historyBefore));
-      expect(
-        talker.history.last.generateTextMessage(),
-        contains('test platform error'),
-      );
     });
   });
 

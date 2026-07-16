@@ -81,18 +81,6 @@ class AppLogger {
     );
   }
 
-  /// Configures Flutter framework error handlers to route errors to Talker.
-  static void setupFlutterErrorHandlers() {
-    FlutterError.onError = (FlutterErrorDetails details) {
-      instance.handle(details.exception, details.stack);
-    };
-
-    PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-      instance.handle(error, stack);
-      return true;
-    };
-  }
-
   // ─── Structured API (preferred) ─────────────────────────────────────────────
 
   /// Log at INFO level. The [event] string is preserved verbatim;
