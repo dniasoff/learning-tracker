@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -34,8 +35,8 @@ Future<int> _insertTrack(UserDatabase db) async {
         CurriculumTracksCompanion.insert(
           profileId: 1,
           curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
+          stateChangedAt: DateTimeFactory.nowUtc(),
+          activatedAt: DateTimeFactory.nowUtc(),
         ),
       );
   return row.id;
@@ -129,8 +130,8 @@ void main() {
                   email: 'child@example.com',
                   tier: 'localBorn',
                   displayName: 'Test Child',
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
+                  createdAt: DateTimeFactory.nowUtc(),
+                  updatedAt: DateTimeFactory.nowUtc(),
                 ),
               );
           await db
@@ -140,8 +141,8 @@ void main() {
                   accountId: accountId,
                   displayName: 'Test Child',
                   mode: 'child',
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
+                  createdAt: DateTimeFactory.nowUtc(),
+                  updatedAt: DateTimeFactory.nowUtc(),
                 ),
               );
           await _insertTrack(db);
@@ -413,8 +414,8 @@ void main() {
                   CurriculumTracksCompanion.insert(
                     profileId: 1,
                     curriculumId: 'bavli',
-                    stateChangedAt: DateTime.now(),
-                    activatedAt: DateTime.now(),
+                    stateChangedAt: DateTimeFactory.nowUtc(),
+                    activatedAt: DateTimeFactory.nowUtc(),
                   ),
                 );
 
@@ -449,8 +450,8 @@ void main() {
                   CurriculumTracksCompanion.insert(
                     profileId: 1,
                     curriculumId: 'bavli',
-                    stateChangedAt: DateTime.now(),
-                    activatedAt: DateTime.now(),
+                    stateChangedAt: DateTimeFactory.nowUtc(),
+                    activatedAt: DateTimeFactory.nowUtc(),
                   ),
                 );
 

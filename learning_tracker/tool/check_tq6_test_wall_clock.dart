@@ -112,8 +112,6 @@ const _baseline = <String>{
   'test/story_acceptance/epic_14_settings_test.dart',
   'test/story_acceptance/epic_15_multi_profile_test.dart',
   'test/story_acceptance/epic_16_pace_dashboard_test.dart',
-  'test/story_acceptance/epic_18_track_overhaul_test.dart',
-  'test/story_acceptance/epic_19_offline_first_test.dart',
   'test/story_acceptance/epic_25_schema_core_test.dart',
   'test/story_acceptance/regression_invariants_test.dart',
   'test/sync/tutored_listener_supervisor_test.dart',

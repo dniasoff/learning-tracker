@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart'
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
@@ -89,8 +90,8 @@ void main() {
               email: 'test@test.local',
               tier: 'cloudBorn',
               displayName: 'Test User',
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
+              createdAt: DateTimeFactory.nowUtc(),
+              updatedAt: DateTimeFactory.nowUtc(),
             ),
           );
       final profiles = await userDb.select(userDb.accounts).get();
@@ -115,8 +116,8 @@ void main() {
                 tier: 'localBorn',
                 passwordHash: const Value(r'argon2id$placeholder'),
                 displayName: 'Local User',
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
               ),
             );
         final profile = await userDb.select(userDb.accounts).getSingle();
@@ -184,7 +185,7 @@ void main() {
     });
 
     test('AT-19.3.3 TextCache batch insert round-trips', () async {
-      final now = DateTime.now().toUtc();
+      final now = DateTimeFactory.nowUtc();
       await contentDb.transaction(() async {
         for (var i = 0; i < 100; i++) {
           await contentDb.customInsert(
