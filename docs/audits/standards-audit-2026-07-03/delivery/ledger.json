@@ -9638,13 +9638,17 @@
     {
       "id": "AUD-t-story-acceptance-35",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Fix epic_26_story_26_31 AC4's add_track_flow.dart check — dead branch references the deleted track_setup/ directory",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "89b26a88762628b523bb0a2322b84e6bbcd77c0d"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-35 AC1 OK: grep 'track_setup' on epic_26_story_26_31_rtl_audit_test.dart returns no match (exit 1); dead AC4 case removed, replaced by comment"
+      ],
+      "notes": "Re-verified stale track_setup/ path; target file deleted so bug is dead-but-latent. Confirmed test's claim (screen already uses AlignmentDirectional) is false via grep. Deleted dead case (option 1). AC verified: grep track_setup now 0 matches."
     },
     {
       "id": "AUD-t-story-acceptance-36",
