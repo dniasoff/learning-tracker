@@ -6674,13 +6674,18 @@
     {
       "id": "AUD-t-story-acceptance-28",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Consolidate the ad hoc MaterialApp test-wrap helpers in story_21 and story_25_9 into a shared pumpApp",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "04e9fb035b12faea298242e662d0aec156cf4c79"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-28 AC1 OK: pump_app.dart exists; wrap()+_wrap() both delegate to pumpApp, no hand-rolled MaterialApp left; analyze clean",
+        "AUD-t-story-acceptance-28 AC2 OK: new story_25_9 test uses AppLocalizations.of(context)!.appTitle, passes; old no-delegate wrapper empirically throws"
+      ],
+      "notes": "Confirmed live; neither file used existing pump_app.dart. Red-first test threw null-check error via old _wrap() (no delegates). Migrated both wrap()/_wrap() onto shared pumpApp(). Both files pass (19/19)."
     },
     {
       "id": "AUD-t-story-acceptance-29",
