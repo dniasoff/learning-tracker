@@ -28,7 +28,6 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -49,6 +48,8 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_
 import 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../helpers/pump_app.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -154,7 +155,7 @@ Widget _buildHarness({
   int? selectedProfileId,
   Locale locale = const Locale('en'),
 }) {
-  return ProviderScope(
+  return pumpApp(
     overrides: [
       authStateProvider.overrideWithValue(authState),
       selectedProfileIdProvider.overrideWith(
@@ -175,20 +176,11 @@ Widget _buildHarness({
       // so the re-fetch does not hit the real CF-backed body.
       pendingTutorInvitesProvider.overrideWith((ref) => []),
     ],
-    child: MaterialApp(
-      locale: locale,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: StackRouterScope(
-        controller: router,
-        stateHash: 0,
-        child: AcceptInviteScreen(token: token),
-      ),
+    locale: locale,
+    child: StackRouterScope(
+      controller: router,
+      stateHash: 0,
+      child: AcceptInviteScreen(token: token),
     ),
   );
 }
@@ -248,7 +240,7 @@ void main() {
       final pinService = _StubTutorPinService(hasPinResult: true);
 
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: [
             authStateProvider.overrideWithValue(_signedInState),
             selectedProfileIdProvider.overrideWith(
@@ -259,20 +251,10 @@ void main() {
             incomingTutorGrantsProvider.overrideWith((ref) => completer.future),
             pendingTutorInvitesProvider.overrideWith((ref) => []),
           ],
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: StackRouterScope(
-              controller: mockRouter,
-              stateHash: 0,
-              child: const AcceptInviteScreen(token: 'test-token'),
-            ),
+          child: StackRouterScope(
+            controller: mockRouter,
+            stateHash: 0,
+            child: const AcceptInviteScreen(token: 'test-token'),
           ),
         ),
       );
@@ -1236,7 +1218,7 @@ void main() {
 
         final pinService = _StubTutorPinService(hasPinResult: true);
         await tester.pumpWidget(
-          ProviderScope(
+          pumpApp(
             overrides: [
               authStateProvider.overrideWithValue(_signedInState),
               selectedProfileIdProvider.overrideWith(
@@ -1253,36 +1235,26 @@ void main() {
                 return Future.value(<TutorGrant>[]);
               }),
             ],
-            child: MaterialApp(
-              locale: const Locale('en'),
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: StackRouterScope(
-                controller: mockRouter,
-                stateHash: 0,
-                // A sibling consumer watches both grant-list providers so they
-                // stay alive — `invalidate` only eagerly re-runs a provider that
-                // currently has a listener. This mirrors the real app, where the
-                // tutored-children surfaces watch these providers continuously.
-                child: Column(
-                  children: [
-                    Consumer(
-                      builder: (context, ref, _) {
-                        ref.watch(incomingTutorGrantsProvider);
-                        ref.watch(pendingTutorInvitesProvider);
-                        return const SizedBox.shrink();
-                      },
-                    ),
-                    const Expanded(
-                      child: AcceptInviteScreen(token: 'test-token'),
-                    ),
-                  ],
-                ),
+            child: StackRouterScope(
+              controller: mockRouter,
+              stateHash: 0,
+              // A sibling consumer watches both grant-list providers so they
+              // stay alive — `invalidate` only eagerly re-runs a provider that
+              // currently has a listener. This mirrors the real app, where the
+              // tutored-children surfaces watch these providers continuously.
+              child: Column(
+                children: [
+                  Consumer(
+                    builder: (context, ref, _) {
+                      ref.watch(incomingTutorGrantsProvider);
+                      ref.watch(pendingTutorInvitesProvider);
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                  const Expanded(
+                    child: AcceptInviteScreen(token: 'test-token'),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1335,16 +1307,8 @@ void main() {
       // This documents what l10n provides and catches accidental key renames.
 
       // Load l10n via a tiny widget pump.
-      final testApp = MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
+      final testApp = pumpApp(
+        child: Scaffold(
           body: Builder(
             builder: (context) {
               final l10n = AppLocalizations.of(context)!;
