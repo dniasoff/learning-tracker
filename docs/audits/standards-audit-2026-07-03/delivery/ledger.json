@@ -6716,13 +6716,17 @@
     {
       "id": "AUD-t-story-acceptance-39",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Inject a fake clock instead of comparing against real DateTime.now() in completion/restore timing assertions",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "17588108406463e7983b977c1ff1416bf8e24636"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-39 AC1 OK: both asserts use isAtSameMomentAs(fixedNow=DateTime.utc(2026,6,1,12)) via FakeLocalDayClock; no now/nowUtc at assertion time; 16 passed"
+      ],
+      "notes": "Re-verified valid: both sites compared DB timestamps to real DateTime.now/nowUtc at assertion time. Prod code reads time via DateTimeFactory/LocalDayClock, so no prod change needed. Installed FakeLocalDayClock (torn down via addTearDown); replaced tolerance checks with isAtSameMomentAs equality."
     },
     {
       "id": "AUD-core-database-15",
