@@ -9558,13 +9558,13 @@
     {
       "id": "AUD-t-sync-02",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "local_data_upload_service_test.dart's 'existing completion is re-enqueued' test asserts nothing and contradicts its own name",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (wave-4 chunk11 reconciliation, 2026-07-16). Ledger mismatch found on reconciliation: row was left at status=todo (commits: [], reviewRounds: 0) even though the wave4-chunk11 engine outcome classifies this id as blocked. A candidate fix exists as commit 21bad53ceb4ee88787e3304c0f666deb25cf3182 (\"fix(tests/sync): AUD-t-sync-02 - assert idempotent no-reenqueue in local_data_upload_service_test\") on stray worktree branch worktree-wf_155489ba-7ba-20, touching test/features/sync/data/local_data_upload_service_test.dart, but it was never merged into dev (git cherry dev worktree-wf_155489ba-7ba-20 shows it unmerged) and no merge-lane cid/disposition note for this id was found anywhere on disk. No code change landed on dev. Branch retained (not patch-equivalent to dev) for a future gate-repair pass to re-review and land, per the AUD-t-tracks-05/AUD-t-tracks-07 precedent."
     },
     {
       "id": "AUD-t-cross-101",
