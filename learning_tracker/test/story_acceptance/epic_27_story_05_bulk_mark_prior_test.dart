@@ -164,9 +164,15 @@ void main() {
 
       // AC: derived streak state is zero in both fields.
       //
-      // Pinning the reducer directly against the empty event log
-      // is what NFR13 is really asking: replay over the events
-      // *attributable to the batch* must yield zero. The
+      // Replaying the reducer over `streakRows` — the rows this test
+      // just queried from the DB, not a hardcoded empty literal — is
+      // what NFR13 is really asking: replay over the events
+      // *attributable to the batch* must yield zero. Because this maps
+      // the real query result, a future regression that leaks a
+      // `streak_events` row from `bulkMarkComplete` would flow into the
+      // reduce and fail the assertions below (AUD-t-story-acceptance-32
+      // — a literal `const <StreakLogEvent>[]` here would pass
+      // regardless of what the DB actually holds). The
       // `StreakStateService` path additionally exercises
       // `StreakRestorer`, which is independently the subject of
       // Story 26.27 (and Story 27.6's cloud-restore test) — its
@@ -174,7 +180,14 @@ void main() {
       // not here, to keep this canary focused on the one bug it
       // exists to catch.
       final reducerState = const StreakReducer().reduce(
-        const <StreakLogEvent>[],
+        streakRows.map(
+          (r) => StreakLogEvent(
+            profileId: r.profileId,
+            eventType: r.eventType,
+            eventTimestamp: r.eventTimestamp,
+            clientDeviceId: r.clientDeviceId,
+          ),
+        ),
         today: today,
       );
       expect(reducerState.currentStreak, 0);
