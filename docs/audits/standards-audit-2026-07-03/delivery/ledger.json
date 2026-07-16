@@ -9696,13 +9696,18 @@
     {
       "id": "AUD-t-story-acceptance-45",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Rename or rewrite the crash_reported test in epic_27_story_14_analytics_test.dart to match its assertion",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "ca5416f649d9779a0c0b14ce65bc841f30dff5bf"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-45 AC1 OK: analytics_test.dart:448 renamed 'logCrashReported fatal=true fires with correct param'; matches countOf==1 & fatal:true asserts",
+        "AUD-t-story-acceptance-45 coverage OK: NullCrashlyticsService no-op covered by crashlytics_service_test.dart:37-43, 10/10 pass"
+      ],
+      "notes": "Re-verified: test named NOT fire crash_reported never built NullCrashlyticsService; called logCrashReported directly, asserted count==1 - opposite polarity. No-op covered separately by crashlytics_service_test.dart (10/10 pass). Renamed test to match assertion; fixed comment. TQ-8 hygiene fix."
     },
     {
       "id": "AUD-t-story-acceptance-43",
