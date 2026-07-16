@@ -402,3 +402,13 @@ The wave-4 closing gate failed on these 3 findings: `AUD-t-profiles-03` and `AUD
 - **Delivery disposition:** `skipped-refuted` (merge-lane `w4r1c3`, 2026-07-14).
 - **Basis — already fixed pre-baseline, no code change required:** `firestore_rules.test.mjs` already asserts both the tutor-write-block and owner-write-success outcomes on completions via the real Firestore emulator (104/104 tests pass, verified against a live emulator run — not the substring-matching pattern the finding describes). CI already runs this suite unconditionally as a hard-fail step if the file is missing. Both the assertions and the CI wiring predate the audit baseline commit (`4018a91c`), so there is nothing here for delivery to fix; the finding described a defect that was not present in the tree at baseline time.
 - **Logged by:** merge-lane agent w4r1c3 (sonnet), 2026-07-14.
+
+---
+
+## AUD-t-story-acceptance-30 — Deduplicate seedProfile/seedProfileZero between test/helpers/drift_memory.dart and test/helpers/test_database.dart
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `skipped-refuted` (merge-lane `w4r1c2`, 2026-07-16).
+- **Basis — already fixed by sibling commit, independently confirmed:** commit `2fb325a9` (`fix(test-helpers): AUD-t-cross-12 - deduplicate seedProfile/seedProfileZero between drift_memory.dart and test_database.dart`) is an ancestor of this branch's current `HEAD` and already did exactly what this finding recommends. Independently re-verified against the current tree: `grep -rn "seedProfile\b\|seedProfileZero"` shows both functions defined exactly once, in `learning_tracker/test/helpers/drift_memory.dart:50,105`; `test_database.dart:21` re-exports them (`export 'drift_memory.dart' show seedProfile, seedProfileZero;`) with a comment noting the AUD-t-cross-12 dedup, rather than redefining them. This finding is a duplicate of `AUD-t-cross-12`, already merged. No code change made.
+- **Logged by:** merge-lane w4r1c2 agent (sonnet), 2026-07-16.
