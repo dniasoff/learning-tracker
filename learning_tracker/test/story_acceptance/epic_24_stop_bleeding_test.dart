@@ -15,7 +15,6 @@ import 'package:learning_tracker/core/database/daos/track_dao.dart'
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
@@ -23,10 +22,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../helpers/test_database.dart' show seedProfile;
+import '../mocks/mock_repositories.dart' show MockContentRepository;
 
 class MockSyncWriteFacade extends Mock implements SyncWriteFacade {}
-
-class MockContentRepository extends Mock implements ContentRepository {}
 
 UserDatabase _createDb() => UserDatabase(NativeDatabase.memory());
 
