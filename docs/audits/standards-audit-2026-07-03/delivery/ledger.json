@@ -10675,13 +10675,18 @@
     {
       "id": "AUD-t-tutoring-11",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace ws3_3e_dual_role_fix_test.dart's naive method-body string slice with depth-matched brace extraction",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "c1a8d5d5fb1d422290d539209f513c2661a424dc"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-11 AC(depth-match) OK: extractMethodBody brace-depth counts (dart_method_body.dart:44-59); both sites test:54,:74 use it; no naive indexOf left",
+        "AUD-t-tutoring-11 AC(regression) OK: test:129-157 fixture nests if-brace at 2-space indent; red-first proven (naive=false, depth-matched=true); green"
+      ],
+      "notes": "Confirmed naive indexOf('\\n  }',...)+4 heuristic duplicated at AC1/AC2. Extracted shared helper dart_method_body.dart (depth counting), mirroring w3_41's _extractRuleBlock. Both call sites use it now. Added regression test w/ same-indent nested-block fixture; verified red-first then green."
     },
     {
       "id": "AUD-t-story-acceptance-24",
