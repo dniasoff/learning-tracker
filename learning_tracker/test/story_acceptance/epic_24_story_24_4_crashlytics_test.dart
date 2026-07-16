@@ -4,10 +4,12 @@
 @Tags(['epic_24'])
 library;
 
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, test;
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -54,32 +56,60 @@ void main() {
         },
       );
 
-      // AC3+AC4: setUserIdentifier uses numeric profileId — no PII
-      test(
-        'AC3: setUserIdentifier sends numeric profileId as string',
-        () async {
-          await service.setUserIdentifier(5);
-          expect(service.lastIdentifier, '5');
-        },
-      );
+      // AC3+AC4: setUserIdentifier uses numeric profileId — no PII.
+      //
+      // AUD-t-story-acceptance-21: these three tests exercise the REAL
+      // FirebaseCrashlyticsService.setUserIdentifier (via a mocked
+      // FirebaseCrashlytics SDK object) instead of a hand-duplicated
+      // ternary on the fake below. _CapturingCrashlyticsService.
+      // setUserIdentifier independently re-implements the same
+      // `profileId == null ? '' : '$profileId'` encoding as
+      // FirebaseCrashlyticsService -- if the real class's encoding ever
+      // diverged (e.g. an email fallback on a null check gone wrong), the
+      // fake's copy would keep this PII-safety suite green while the
+      // production Crashlytics identifier leaked PII.
+      group('AC3/AC4: setUserIdentifier — exercises the real service', () {
+        late MockFirebaseCrashlytics mockCrashlytics;
+        late FirebaseCrashlyticsService realService;
 
-      test(
-        'AC4: setUserIdentifier(null) clears identifier (no PII fallback)',
-        () async {
-          await service.setUserIdentifier(42); // simulate login
-          await service.setUserIdentifier(null); // simulate logout
-          expect(service.lastIdentifier, '');
-        },
-      );
+        setUp(() {
+          mockCrashlytics = MockFirebaseCrashlytics();
+          when(
+            () => mockCrashlytics.setUserIdentifier(any()),
+          ).thenAnswer((_) async {});
+          realService = FirebaseCrashlyticsService(mockCrashlytics);
+        });
 
-      test('AC4: no email or non-numeric PII in identifier', () async {
-        await service.setUserIdentifier(99);
-        final id = service.lastIdentifier!;
-        expect(
-          RegExp(r'^[0-9]*$').hasMatch(id),
-          isTrue,
-          reason: 'Identifier must be purely numeric. Got: "$id"',
+        test(
+          'AC3: setUserIdentifier sends numeric profileId as string',
+          () async {
+            await realService.setUserIdentifier(5);
+            verify(() => mockCrashlytics.setUserIdentifier('5')).called(1);
+          },
         );
+
+        test(
+          'AC4: setUserIdentifier(null) clears identifier (no PII fallback)',
+          () async {
+            await realService.setUserIdentifier(42); // simulate login
+            await realService.setUserIdentifier(null); // simulate logout
+            verify(() => mockCrashlytics.setUserIdentifier('42')).called(1);
+            verify(() => mockCrashlytics.setUserIdentifier('')).called(1);
+          },
+        );
+
+        test('AC4: no email or non-numeric PII in identifier', () async {
+          await realService.setUserIdentifier(99);
+          final captured = verify(
+            () => mockCrashlytics.setUserIdentifier(captureAny()),
+          ).captured;
+          final id = captured.single as String;
+          expect(
+            RegExp(r'^[0-9]*$').hasMatch(id),
+            isTrue,
+            reason: 'Identifier must be purely numeric. Got: "$id"',
+          );
+        });
       });
 
       // AC5: Crash is reported even before any sign-in (no identifier set)
@@ -119,9 +149,16 @@ void main() {
   );
 }
 
-/// A capturing [CrashlyticsService] that records every call made to it.
-/// Uses the same identifier encoding as [FirebaseCrashlyticsService] so
-/// PII-safety can be verified without touching the real Firebase SDK.
+/// A capturing [CrashlyticsService] that records every call made to it, for
+/// AC1/AC2/AC5 (collection toggling, error recording, pre-auth capture).
+///
+/// AUD-t-story-acceptance-21: [setUserIdentifier] is implemented only to
+/// satisfy the [CrashlyticsService] interface and to let AC5 assert that no
+/// identifier has been set yet (`lastIdentifier == null`) -- it is NOT used
+/// to verify the PII-safe encoding itself. That verification exercises the
+/// real [FirebaseCrashlyticsService] against a mocked [FirebaseCrashlytics]
+/// in the "AC3/AC4" group above, so a divergence in the real encoding logic
+/// cannot hide behind this fake's independent copy.
 class _CapturingCrashlyticsService implements CrashlyticsService {
   bool? collectionEnabled;
   final List<FlutterErrorDetails> flutterErrors = [];
@@ -152,3 +189,10 @@ class _CapturingCrashlyticsService implements CrashlyticsService {
     lastIdentifier = profileId == null ? '' : '$profileId';
   }
 }
+
+/// Mocks the Firebase Crashlytics SDK type so the real
+/// [FirebaseCrashlyticsService] implementation can be exercised in the
+/// AC3/AC4 identifier tests above without a live Firebase app, per
+/// AUD-t-story-acceptance-21 (mirrors the same pattern already used in
+/// test/core/logging/crashlytics_service_test.dart).
+class MockFirebaseCrashlytics extends Mock implements FirebaseCrashlytics {}
