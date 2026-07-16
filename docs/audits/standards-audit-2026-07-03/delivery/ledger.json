@@ -7430,13 +7430,18 @@
     {
       "id": "AUD-t-story-acceptance-25",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Align Story 21.12 AC3 and Story 21.10 assertions in epic_21_multi_account_test.dart with the UI-level claims their names/comments make",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "5b847f29fe1b7ff84a0621721e7c6e91778fb8f4"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-25 AC1 OK: 21.12 name now matches isLocalBorn==false assertion; pointer to backup_sync_section.dart:256 if(isLocalAuth) verified real",
+        "AUD-t-story-acceptance-25 AC2 OK: 21.10 pointer names showSignOutConfirmation isNotEmpty?picker:signin, real at account_actions.dart:198-201; assertions kept"
+      ],
+      "notes": "Verified against current tree. Story 21.12 AC3 test asserted only isLocalBorn; Story 21.10 comments asserted only registry-count. Renamed both to match assertion scope + added DEC-34-style pointer comments naming BackupSyncSection._buildLocalOnlyCard and account_actions.dart:showSignOutConfirmation."
     },
     {
       "id": "AUD-t-cross-54",
