@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/content/content_tree.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
@@ -302,7 +303,13 @@ class _ContentHierarchyScreenState
                           .asData
                           ?.value ??
                       false;
-                  final groupedItems = _groupItemsByNextLevel(items, variant);
+                  final groupedItems = groupItemsByNextLevel(
+                    items: items,
+                    currentDepth: _navigationStack.length,
+                    curriculumId: curriculum,
+                    variant: variant,
+                    maxBrowseDepth: CurriculumLabels.maxBrowseDepth(curriculum),
+                  );
 
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -343,84 +350,6 @@ class _ContentHierarchyScreenState
         ),
       ),
     );
-  }
-
-  /// Build the list of rows shown at the current drill-down depth.
-  ///
-  /// All display strings — every row's Hebrew and English title — flow
-  /// through `CurriculumLabelRenderer`. The screen no longer carries any
-  /// bespoke prefix-stripping or amud-letter mapping; the renderer is the
-  /// single source of truth.
-  ///
-  /// Browse depth is capped at `CurriculumLabels.maxBrowseDepth(curriculum)`
-  /// so no curriculum drills into pasuk / mishna / seif / halacha rows —
-  /// the perek-or-equivalent row opens the reader directly instead.
-  List<ContentItem> _groupItemsByNextLevel(
-    List<ContentItem> items,
-    TransliterationVariant variant,
-  ) {
-    final curriculum = _curriculumOrNull;
-    if (curriculum == null) return items;
-    final currentDepth = _navigationStack.length;
-    final maxBrowseDepth = CurriculumLabels.maxBrowseDepth(curriculum);
-
-    // When the navigation stack is at or beyond the max browse depth (e.g. the
-    // user arrived via a deep-link URL with more levels set), we still need to
-    // render the browse-terminal rows — the items at maxBrowseDepth — rather
-    // than returning empty.  Clamp the effective grouping depth to
-    // (maxBrowseDepth - 1) so that we always produce the "chapter-level" rows
-    // whose `_isChapterLevelRef` is true and which open the reader on tap.
-    //
-    // The old `>= maxBrowseDepth → return []` conflated "don't drill further"
-    // with "show nothing"; this fixes R5-6.
-    final effectiveDepth = currentDepth >= maxBrowseDepth
-        ? maxBrowseDepth - 1
-        : currentDepth;
-
-    final nextLevel = effectiveDepth + 1;
-    final uniqueItems = <String, ContentItem>{};
-
-    for (final item in items) {
-      final nextLevelValue = _getNextLevelValue(item, effectiveDepth);
-      if (nextLevelValue == null || uniqueItems.containsKey(nextLevelValue)) {
-        continue;
-      }
-
-      final renderedHe = CurriculumLabelRenderer.renderValue(
-        curriculumId: curriculum,
-        level: nextLevel,
-        rawValue: nextLevelValue,
-        useHebrew: true,
-        hebrewName: !item.isLeaf ? item.displayNameHe : null,
-        parentL1Value: item.level1,
-        transliterationVariant: variant,
-      );
-      final renderedEn = CurriculumLabelRenderer.renderValue(
-        curriculumId: curriculum,
-        level: nextLevel,
-        rawValue: nextLevelValue,
-        useHebrew: false,
-        hebrewName: !item.isLeaf ? item.displayNameHe : null,
-        parentL1Value: item.level1,
-        transliterationVariant: variant,
-      );
-
-      uniqueItems[nextLevelValue] = ContentItem(
-        curriculumId: item.curriculumId,
-        level1: item.level1,
-        level2: effectiveDepth >= 1 ? item.level2 : null,
-        level3: effectiveDepth >= 2 ? item.level3 : null,
-        level4: effectiveDepth >= 3 ? item.level4 : null,
-        displayNameHe: renderedHe,
-        displayNameEn: renderedEn,
-        sefariaRef: item.sefariaRef,
-        sortOrder: item.sortOrder,
-        isLeaf: item.isLeaf,
-      );
-    }
-
-    return uniqueItems.values.toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
   String? _getNextLevelValue(ContentItem item, int currentDepth) {

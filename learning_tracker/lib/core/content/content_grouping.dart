@@ -13,9 +13,16 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 /// [ContentItem.displayNameEn] and are safe to display directly — no further
 /// rendering is needed at call sites.
 ///
-/// Pass [maxBrowseDepth] to stop at a particular depth (Browse Content caps at
-/// `CurriculumLabels.maxBrowseDepth`). Omit it for uncapped drill-down (Bulk
-/// Mark, Scope selection, Lifetime Marking).
+/// Pass [maxBrowseDepth] to cap drill-down at a particular depth (Browse
+/// Content caps at `CurriculumLabels.maxBrowseDepth`). Omit it for uncapped
+/// drill-down (Bulk Mark, Scope selection, Lifetime Marking).
+///
+/// When [currentDepth] is at or beyond [maxBrowseDepth] — e.g. a deep-link
+/// URL pre-filled every level, landing the navigation stack past the browse
+/// cap — the effective grouping depth clamps to `maxBrowseDepth - 1` so the
+/// browse-terminal ("chapter-level") rows are still returned. Returning an
+/// empty list here would conflate "don't drill further" with "show nothing"
+/// (see docs/planning/bug-hunt-round5-findings-2026-05-31.md, R5-6).
 List<ContentItem> groupItemsByNextLevel({
   required List<ContentItem> items,
   required int currentDepth,
@@ -23,14 +30,17 @@ List<ContentItem> groupItemsByNextLevel({
   required TransliterationVariant variant,
   int? maxBrowseDepth,
 }) {
-  if (maxBrowseDepth != null && currentDepth >= maxBrowseDepth) return const [];
-  if (currentDepth >= 4) return items;
+  final effectiveDepth =
+      maxBrowseDepth != null && currentDepth >= maxBrowseDepth
+      ? maxBrowseDepth - 1
+      : currentDepth;
+  if (effectiveDepth >= 4) return items;
 
-  final nextLevel = currentDepth + 1; // 1-indexed level number
+  final nextLevel = effectiveDepth + 1; // 1-indexed level number
   final uniqueItems = <String, ContentItem>{};
 
   for (final item in items) {
-    final rawValue = _levelValueAt(item, currentDepth);
+    final rawValue = _levelValueAt(item, effectiveDepth);
     if (rawValue == null || uniqueItems.containsKey(rawValue)) continue;
 
     final renderedHe = CurriculumLabelRenderer.renderValue(
@@ -55,9 +65,9 @@ List<ContentItem> groupItemsByNextLevel({
     uniqueItems[rawValue] = ContentItem(
       curriculumId: item.curriculumId,
       level1: item.level1,
-      level2: currentDepth >= 1 ? item.level2 : null,
-      level3: currentDepth >= 2 ? item.level3 : null,
-      level4: currentDepth >= 3 ? item.level4 : null,
+      level2: effectiveDepth >= 1 ? item.level2 : null,
+      level3: effectiveDepth >= 2 ? item.level3 : null,
+      level4: effectiveDepth >= 3 ? item.level4 : null,
       displayNameHe: renderedHe,
       displayNameEn: renderedEn,
       sefariaRef: item.sefariaRef,
