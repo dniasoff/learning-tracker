@@ -4548,13 +4548,13 @@
     {
       "id": "AUD-t-tracks-05",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Make the TS-10 and TS-2 SelfPacedGoalStep regression tests pump the widget instead of only checking constructor storage",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (merge-lane w4r1c7, 2026-07-16). review agent lost (quota) mid-review; no independently-verified review completed for this finding. A candidate fix exists as commit 202174e51bd9f1564ea498d97f30146aaca940bd (\"fix(tests): AUD-t-tracks-05 - pump SelfPacedGoalStep TS-10/TS-2 regression tests\") on stray worktree branch worktree-wf_155489ba-7ba-7, touching test/features/tracks/setup/presentation/steps/goal_step_ts10_state_preserve_test.dart and self_paced_goal_step_scope_test.dart, but it was left un-merged pending re-review per this cid's payload (findingsMerged empty). No code change landed on dev. Branch retained (not patch-equivalent to dev) for a future gate-repair pass to re-review and land, per the AUD-t-cross-64/AUD-t-cross-81 precedent."
     },
     {
       "id": "AUD-t-tracks-06",
