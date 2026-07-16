@@ -20,6 +20,15 @@
 // too, and `tool/check_tq3_pump_app_migration.dart`'s ratchet baseline was
 // lowered accordingly.
 //
+// The tutoring feature's accept/decline-invite L1 + overflow tests
+// hand-rolled the block another 4 times across 4 files (AUD-t-tutoring-03).
+// Two of those sites (the "driven" success/error states in the overflow
+// tests) also needed a per-frame `MaterialApp.builder` to inject a
+// `TextScaler` override while looping the device/text-scale matrix — a need
+// this helper did not previously support — so [builder] and
+// [debugShowCheckedModeBanner] were added below (both optional, both
+// preserving every pre-existing call site's behavior via their defaults).
+//
 // Usage:
 // ```dart
 //   await tester.pumpWidget(
@@ -68,9 +77,19 @@ Widget pumpApp({
   // re-exported from any flutter_riverpod public entrypoint.
   Duration? Function(int retryCount, Object error)? retry,
   ProviderContainer? container,
+  // Forwarded straight to `MaterialApp.builder` — lets callers inject
+  // ancestor state (e.g. a `MediaQuery` carrying a `TextScaler` override for
+  // an overflow-matrix sweep) around `home` on every rebuild. `null` (the
+  // default) matches every pre-existing call site's behavior.
+  TransitionBuilder? builder,
+  // Forwarded straight to `MaterialApp.debugShowCheckedModeBanner`. Defaults
+  // to `true`, matching `MaterialApp`'s own default and every pre-existing
+  // `pumpApp` call site's behavior.
+  bool debugShowCheckedModeBanner = true,
 }) {
   final app = MaterialApp(
     locale: locale,
+    debugShowCheckedModeBanner: debugShowCheckedModeBanner,
     localizationsDelegates: const [
       AppLocalizations.delegate,
       GlobalMaterialLocalizations.delegate,
@@ -78,6 +97,7 @@ Widget pumpApp({
       GlobalCupertinoLocalizations.delegate,
     ],
     supportedLocales: AppLocalizations.supportedLocales,
+    builder: builder,
     home: child,
   );
 

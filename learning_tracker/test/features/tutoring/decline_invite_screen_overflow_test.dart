@@ -24,8 +24,6 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -43,6 +41,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/overflow_harness.dart';
+import '../../helpers/pump_app.dart';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -168,28 +167,17 @@ void main() {
       ).thenAnswer((_) async => result);
 
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: _overrides(useCase),
-          child: MaterialApp(
-            debugShowCheckedModeBanner: false,
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            builder: (context, child) {
-              final media = MediaQuery.of(context);
-              return MediaQuery(
-                data: media.copyWith(
-                  textScaler: TextScaler.linear(c.textScale),
-                ),
-                child: child!,
-              );
-            },
-            home: _screen(_stubbedRouter()),
-          ),
+          debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            return MediaQuery(
+              data: media.copyWith(textScaler: TextScaler.linear(c.textScale)),
+              child: child!,
+            );
+          },
+          child: _screen(_stubbedRouter()),
         ),
       );
       await tester.pumpAndSettle();
