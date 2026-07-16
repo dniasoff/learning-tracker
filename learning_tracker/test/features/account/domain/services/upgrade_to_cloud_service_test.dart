@@ -30,12 +30,15 @@
 @Tags(['account', 'upgrade_to_cloud'])
 library;
 
+import 'dart:io';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/account_tier.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
@@ -1311,6 +1314,69 @@ void main() {
           password: _password,
         ),
         throwsA(isA<StateError>()),
+      );
+    });
+  });
+
+  // ── AUD-core-domain-04 ───────────────────────────────────────────────────
+  //
+  // upgrade_to_cloud_service.dart hardcoded the raw literal 'cloudBorn' at
+  // all 4 of its registry.updateAccountTier(...) call sites instead of
+  // going through AccountTier.cloud.storageKey — the same typed accessor
+  // DeviceAccountX.accountTier (the read path) already uses. Two unlinked
+  // representations of the same storage key meant a future rename of the
+  // storage key in the VO would not be caught by the compiler here.
+  group('AUD-core-domain-04 — AccountTier.cloud.storageKey usage', () {
+    test('AccountTier.cloud.storageKey is the literal this service writes '
+        'to the registry (locks the coupling the fix relies on)', () {
+      expect(AccountTier.cloud.storageKey, 'cloudBorn');
+    });
+
+    test('source contains zero raw \'cloudBorn\'/\'localBorn\' string literals '
+        '— all go through AccountTier.*.storageKey', () {
+      final candidates = [
+        File(
+          'lib/features/account/domain/services/upgrade_to_cloud_service.dart',
+        ),
+        File(
+          '../lib/features/account/domain/services/upgrade_to_cloud_service.dart',
+        ),
+      ];
+      final file = candidates.firstWhere(
+        (f) => f.existsSync(),
+        orElse: () => throw TestFailure(
+          'Could not locate '
+          'lib/features/account/domain/services/upgrade_to_cloud_service.dart.',
+        ),
+      );
+
+      // Strip `//` line comments and `///` doc comments before scanning —
+      // this finding is about executable string literals, not the prose
+      // documentation that legitimately mentions the storage-key names
+      // (e.g. "flipped to `cloudBorn`" in a doc comment).
+      final codeOnly = file
+          .readAsLinesSync()
+          .map((line) => line.replaceFirst(RegExp(r'\s*//.*$'), ''))
+          .join('\n');
+
+      final hasRawCloudBornLiteral = codeOnly.contains("'cloudBorn'");
+      final hasRawLocalBornLiteral = codeOnly.contains("'localBorn'");
+
+      expect(
+        hasRawCloudBornLiteral,
+        isFalse,
+        reason:
+            "Found a raw 'cloudBorn' string literal outside comments — "
+            'must use AccountTier.cloud.storageKey instead '
+            '(AUD-core-domain-04).',
+      );
+      expect(
+        hasRawLocalBornLiteral,
+        isFalse,
+        reason:
+            "Found a raw 'localBorn' string literal outside comments — "
+            'must use AccountTier.local.storageKey instead '
+            '(AUD-core-domain-04).',
       );
     });
   });

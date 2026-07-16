@@ -31,6 +31,23 @@ void main() {
       });
     });
 
+    group(
+      'tryFromStorageKey (AUD-core-domain-04, EH-4 non-throwing accessor)',
+      () {
+        test('parses "adult"', () {
+          expect(ProfileMode.tryFromStorageKey('adult'), ProfileMode.adult);
+        });
+
+        test('parses "child"', () {
+          expect(ProfileMode.tryFromStorageKey('child'), ProfileMode.child);
+        });
+
+        test('returns null (does not throw) for an unknown key', () {
+          expect(ProfileMode.tryFromStorageKey('unknown'), isNull);
+        });
+      },
+    );
+
     group('accessors', () {
       test('isAdult true for adult', () {
         expect(ProfileMode.adult.isAdult, isTrue);
