@@ -35,11 +35,13 @@ import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_notification_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/manage_grants_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -694,6 +696,211 @@ void main() {
       expect(find.text('Talmid 49'), findsNothing);
 
       await tearDownWidget(tester);
+    },
+  );
+
+  // ── 15. AUD-t-tutoring-06: mirror wipe on successful resignation ────────────
+  //
+  // R4-M3 fires an unawaited buildTutoredMirrorWipeServiceFromWidget(...)
+  // .wipeMirrorForGrant(grantId) after a successful resign. No test asserted
+  // the Drift tutored-mirror row was actually deleted — a regression that
+  // silently dropped the unawaited(...) call, or broke the onWipe wiring,
+  // would ship undetected (the same stale-local-data bug class as
+  // DG-TUT-STALE-01 / iter10_outgoing_grants_stale_cache_test.dart).
+
+  testWidgets('AUD-t-tutoring-06: confirming resignation deletes the Drift '
+      'tutored-mirror row for the resigned grant', (tester) async {
+    final grant = _activeGrant();
+    when(
+      () => mockResignUseCase.call(grant: any(named: 'grant')),
+    ).thenAnswer((_) async => const TutorGrantSuccess());
+
+    final db = inMemoryDb();
+    final accountId = await db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            email: 'tutor@example.com',
+            tier: 'localBorn',
+            displayName: 'Test Tutor',
+            createdAt: _kNow,
+            updatedAt: _kNow,
+          ),
+        );
+    // Seed a tutored-mirror row keyed to this grantId — this is the row
+    // wipeMirrorForGrant must delete on a successful resignation.
+    await db.profileDao.upsertTutoredProfile(
+      accountId: accountId,
+      parentUid: grant.parentUid,
+      remoteChildProfileId: grant.childProfileId,
+      grantId: grant.grantId,
+      displayName: 'Mirrored Child',
+      mode: 'child',
+      now: _kNow,
+    );
+    final before = await db.profileDao.getTutoredMirrorsForAccount(accountId);
+    expect(
+      before,
+      hasLength(1),
+      reason: 'precondition: mirror row exists before resignation',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        retry: (_, __) => null,
+        overrides: [
+          incomingTutorGrantsProvider.overrideWith(
+            (ref) => Future.value([grant]),
+          ),
+          resignTutorGrantUseCaseProvider.overrideWithValue(mockResignUseCase),
+          authRepositoryProvider.overrideWithValue(mockAuthRepo),
+          tutorNotificationGatewayProvider.overrideWithValue(
+            mockNotificationGateway,
+          ),
+          userDatabaseProvider.overrideWithValue(db),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ManageGrantsScreen(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.text('Resign'));
+    await tester.pump();
+    await tester.tap(find.text('Resign').last);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    final after = await db.profileDao.getTutoredMirrorsForAccount(accountId);
+    expect(
+      after,
+      isEmpty,
+      reason:
+          'wipeMirrorForGrant must delete the tutored-mirror row for the '
+          'resigned grant',
+    );
+
+    await tearDownWidget(tester);
+    await db.close();
+  });
+
+  // ── 16. AUD-t-tutoring-06: active tutored session exits on resign ───────────
+  //
+  // When the resigned grant IS the tutor's currently-active tutored session
+  // (activeTutoredProfileSelectionProvider), the R4-M3 onWipe callback must
+  // call ActiveTutoredProfileSelection.exit() so the session clears
+  // immediately instead of leaving the tutor "inside" a talmid view whose
+  // backing grant no longer exists.
+
+  testWidgets(
+    'AUD-t-tutoring-06: confirming resignation for the active tutored '
+    'session clears activeTutoredProfileSelectionProvider',
+    (tester) async {
+      final grant = _activeGrant();
+      when(
+        () => mockResignUseCase.call(grant: any(named: 'grant')),
+      ).thenAnswer((_) async => const TutorGrantSuccess());
+
+      final db = inMemoryDb();
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'tutor@example.com',
+              tier: 'localBorn',
+              displayName: 'Test Tutor',
+              createdAt: _kNow,
+              updatedAt: _kNow,
+            ),
+          );
+      await db.profileDao.upsertTutoredProfile(
+        accountId: accountId,
+        parentUid: grant.parentUid,
+        remoteChildProfileId: grant.childProfileId,
+        grantId: grant.grantId,
+        displayName: 'Mirrored Child',
+        mode: 'child',
+        now: _kNow,
+      );
+
+      final container = ProviderContainer(
+        retry: (_, __) => null,
+        overrides: [
+          incomingTutorGrantsProvider.overrideWith(
+            (ref) => Future.value([grant]),
+          ),
+          resignTutorGrantUseCaseProvider.overrideWithValue(mockResignUseCase),
+          authRepositoryProvider.overrideWithValue(mockAuthRepo),
+          tutorNotificationGatewayProvider.overrideWithValue(
+            mockNotificationGateway,
+          ),
+          userDatabaseProvider.overrideWithValue(db),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Enter the resigned grant as the active tutored session.
+      container
+          .read(activeTutoredProfileSelectionProvider.notifier)
+          .enter(
+            TutoredProfileSelection(
+              profileId: grant.childProfileId,
+              ownerUid: grant.parentUid,
+              grantId: grant.grantId,
+              permissions: TutorPermissions.defaults(),
+            ),
+          );
+      expect(
+        container.read(activeTutoredProfileSelectionProvider),
+        isNotNull,
+        reason: 'precondition: tutored session must be active',
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ManageGrantsScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(find.text('Resign'));
+      await tester.pump();
+      await tester.tap(find.text('Resign').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        container.read(activeTutoredProfileSelectionProvider),
+        isNull,
+        reason:
+            'resigning from the active tutored session must call exit(), '
+            'clearing activeTutoredProfileSelectionProvider',
+      );
+
+      await tearDownWidget(tester);
+      await db.close();
     },
   );
 }
