@@ -6657,13 +6657,15 @@
     {
       "id": "AUD-t-story-acceptance-47",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace the tautological AuthRepository mock-shape test in epic_25_schema_core_test.dart with real coverage or delete it",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "ecb3aecd5a1065646e325cfab8d7d2aa030711df"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Verified evidence matched code. Removed 5 tautological expect() calls echoing mocktail stubs; reduced to compile-only shape check per AC (docstring-only option insufficient since AC forbids remaining echo-expects). Added TQ-7 weaken-ok marker. Commit ecb3aecd. All gates pass."
     },
     {
       "id": "AUD-t-story-acceptance-28",
@@ -9601,13 +9603,15 @@
     {
       "id": "AUD-t-story-acceptance-37",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Fix the two-call wall-clock race in epic_25_schema_core_test.dart's SystemLocalDayClock.today() test",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "f6c21a3ee79bf6a267bd2b3226da09c77497c36e"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Verified evidence matched code. Fixed two-call wall-clock race by bracketing clock.today() between before/after DateTime.now() reads instead of one independent read. Probabilistic race, no red-first repro without SUT mocking (out of scope). Commit f6c21a3e. All gates pass."
     },
     {
       "id": "AUD-t-story-acceptance-35",
