@@ -40,7 +40,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
@@ -49,7 +48,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
@@ -65,25 +63,15 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/drift_memory.dart';
+import 'setup/helpers/track_hub_test_helpers.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
-
-class _MockStackRouter extends Mock implements StackRouter {}
-
-class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
 class _MockTrackLearningOrderRepository extends Mock
     implements TrackLearningOrderRepository {}
 
 class _MockCurriculumActivationService extends Mock
     implements CurriculumActivationService {}
-
-// ── Hebrew Terms pinned to English ────────────────────────────────────────────
-
-class _HebrewTermsOff extends UseHebrewTerms {
-  @override
-  bool build() => false;
-}
 
 // ── Nusach pinned to Sephardi (for reorder-header transliteration test) ───────
 
@@ -100,19 +88,6 @@ const _kCurriculumId = CurriculumId.mishnayos;
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-CurriculumTrack _track({
-  int id = _kTrackId,
-  int profileId = _kProfileId,
-  String curriculumId = 'mishnayos',
-}) => CurriculumTrack(
-  id: id,
-  profileId: profileId,
-  curriculumId: curriculumId,
-  state: 'active',
-  stateChangedAt: DateTime.utc(2026, 1, 1),
-  activatedAt: DateTime.utc(2026, 1, 1),
-);
-
 LearningOrderItem _orderItem(String ref, int sortOrder) => LearningOrderItem(
   sefariaRef: ref,
   displayNameHe: ref,
@@ -120,35 +95,10 @@ LearningOrderItem _orderItem(String ref, int sortOrder) => LearningOrderItem(
   userSortOrder: sortOrder,
 );
 
-// ── Per-track provider overrides ──────────────────────────────────────────────
-
-List<Override> _perTrackOverrides(
-  List<CurriculumTrack> tracks, {
-  bool chazaraEnabled = false,
-}) {
-  final overrides = <Override>[];
-  for (final t in tracks) {
-    overrides.add(
-      dashboardTrackCompletionPercentageProvider(
-        t.id,
-      ).overrideWith((ref) async => 0.0),
-    );
-    overrides.add(
-      trackHasChazaraProvider(t.id).overrideWith((ref) async => chazaraEnabled),
-    );
-  }
-  overrides.add(
-    dashboardHasProgramEnrollmentProvider(
-      CurriculumId.mishnayos,
-    ).overrideWith((ref) async => false),
-  );
-  return overrides;
-}
-
 // ── TrackManagementBody app builder ───────────────────────────────────────────
 
 Widget _buildBodyApp({
-  required _MockStackRouter router,
+  required MockStackRouter router,
   required List<CurriculumTrack> tracks,
   UserDatabase? db,
   bool showBackButton = false,
@@ -164,8 +114,8 @@ Widget _buildBodyApp({
       ),
       userDatabaseProvider.overrideWith((ref) => database),
       activeTracksProvider.overrideWith((ref) => Stream.value(tracks)),
-      ..._perTrackOverrides(tracks, chazaraEnabled: chazaraEnabled),
-      useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+      ...perTrackOverrides(tracks, chazaraEnabled: chazaraEnabled),
+      useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
     ],
     child: MaterialApp(
       locale: locale,
@@ -217,7 +167,7 @@ Widget _buildOrderApp({
       overdueCountForCurriculumProvider(
         curriculumId,
       ).overrideWith((ref) async => 0),
-      useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+      useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
       if (sephardi)
         currentTransliterationVariantProvider.overrideWith(
           _SephardiVariant.new,
@@ -242,15 +192,13 @@ Widget _buildOrderApp({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-Future<void> _settle(WidgetTester tester) async {
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 300));
-}
-
-Future<void> _teardown(WidgetTester tester) async {
-  await tester.pumpWidget(const SizedBox.shrink());
-  await tester.pump(Duration.zero);
-}
+/// The sefariaRefs of every currently-rendered [DraggableOrderItem], read
+/// directly off the widget (not via rendered text, since [DraggableOrderItem]
+/// resolves its label asynchronously through `CurriculumLabel.local`).
+List<String> _renderedRefs(WidgetTester tester) => tester
+    .widgetList<DraggableOrderItem>(find.byType(DraggableOrderItem))
+    .map((w) => w.item.sefariaRef)
+    .toList();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tests
@@ -259,16 +207,16 @@ Future<void> _teardown(WidgetTester tester) async {
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
-    registerFallbackValue(_FakePageRouteInfo());
+    registerFallbackValue(FakePageRouteInfo());
     registerFallbackValue(<LearningOrderItem>[]);
     registerFallbackValue(CurriculumId.mishnayos);
   });
 
-  late _MockStackRouter router;
+  late MockStackRouter router;
   late _MockTrackLearningOrderRepository repo;
 
   setUp(() {
-    router = _MockStackRouter();
+    router = MockStackRouter();
     when(() => router.canPop()).thenReturn(true);
     when(
       () => router.maybePop<dynamic>(any<dynamic>()),
@@ -303,7 +251,7 @@ void main() {
             activeProfileIdProvider.overrideWithValue(_kProfileId),
             userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
             activeTracksProvider.overrideWith((ref) => completer.stream),
-            useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+            useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
           ],
           child: MaterialApp(
             locale: const Locale('en'),
@@ -329,7 +277,7 @@ void main() {
       completer.add([]);
       await tester.pump(const Duration(seconds: 1));
       await completer.close();
-      await _teardown(tester);
+      await teardown(tester);
     });
   });
 
@@ -340,76 +288,76 @@ void main() {
         await tester.pumpWidget(
           _buildBodyApp(router: router, tracks: const []),
         );
-        await _settle(tester);
+        await settle(tester);
 
         expect(find.byIcon(Icons.library_books_outlined), findsOneWidget);
         expect(find.text('No tracks yet'), findsOneWidget);
         expect(find.text('Add Your First Track'), findsOneWidget);
 
-        await _teardown(tester);
+        await teardown(tester);
       },
     );
 
     testWidgets('4a. FAB (ADD TRACK) is absent in empty state', (tester) async {
       await tester.pumpWidget(_buildBodyApp(router: router, tracks: const []));
-      await _settle(tester);
+      await settle(tester);
 
       // The FAB label uses trackAddLabel = "ADD TRACK"
       expect(find.text('ADD TRACK'), findsNothing);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
   });
 
   group('TrackManagementBody — populated state', () {
     testWidgets('3a. shows "Manage Tracks" AppBar title', (tester) async {
-      final track = _track();
+      final track = buildTrack();
       await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-      await _settle(tester);
+      await settle(tester);
 
       expect(find.text('Manage Tracks'), findsOneWidget);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('3b. shows "Active Tracks" section header', (tester) async {
-      final track = _track();
+      final track = buildTrack();
       await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-      await _settle(tester);
+      await settle(tester);
 
       expect(find.text('Active Tracks'), findsOneWidget);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('3c. count badge shows "1 RUNNING"', (tester) async {
-      final track = _track();
+      final track = buildTrack();
       await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-      await _settle(tester);
+      await settle(tester);
 
       expect(find.text('1 RUNNING'), findsOneWidget);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('3d. FAB (ADD TRACK) is present when tracks exist', (
       tester,
     ) async {
-      final track = _track();
+      final track = buildTrack();
       await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-      await _settle(tester);
+      await settle(tester);
 
       expect(find.text('ADD TRACK'), findsOneWidget);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets(
       '3e. tapping FAB switches to AddTrackFlow (Manage Tracks title disappears)',
       (tester) async {
-        final track = _track();
+        final track = buildTrack();
         await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-        await _settle(tester);
+        await settle(tester);
 
         await tester.tap(find.text('ADD TRACK'));
         await tester.pump();
@@ -418,34 +366,34 @@ void main() {
         // Once AddTrackFlow fills the scaffold, the list title is gone.
         expect(find.text('Manage Tracks'), findsNothing);
 
-        await _teardown(tester);
+        await teardown(tester);
       },
     );
   });
 
   group('TrackManagementBody — back button', () {
     testWidgets('9. showBackButton=false → no back icon', (tester) async {
-      final track = _track();
+      final track = buildTrack();
       await tester.pumpWidget(
         _buildBodyApp(router: router, tracks: [track], showBackButton: false),
       );
-      await _settle(tester);
+      await settle(tester);
 
       expect(find.byIcon(Icons.arrow_back), findsNothing);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('10. showBackButton=true → back icon present', (tester) async {
-      final track = _track();
+      final track = buildTrack();
       await tester.pumpWidget(
         _buildBodyApp(router: router, tracks: [track], showBackButton: true),
       );
-      await _settle(tester);
+      await settle(tester);
 
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
   });
 
@@ -463,7 +411,7 @@ void main() {
                 (ref) =>
                     Stream<List<CurriculumTrack>>.error(Exception('DB error')),
               ),
-              useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+              useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
             ],
             child: MaterialApp(
               locale: const Locale('en'),
@@ -490,7 +438,7 @@ void main() {
         expect(find.text('Something went wrong'), findsOneWidget);
         expect(find.text('Retry'), findsOneWidget);
 
-        await _teardown(tester);
+        await teardown(tester);
       },
     );
   });
@@ -505,12 +453,12 @@ void main() {
         // TS-16: seed a second curriculum so trackDeletionAllowed returns
         // true and all three dialog actions are shown.
         await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
-        final track = _track(id: trackId);
+        final track = buildTrack(id: trackId);
 
         await tester.pumpWidget(
           _buildBodyApp(router: router, tracks: [track], db: db),
         );
-        await _settle(tester);
+        await settle(tester);
 
         await tester.longPress(find.byType(InkWell).first);
         await tester.pump();
@@ -522,7 +470,7 @@ void main() {
         expect(find.text('Delete and wipe history'), findsOneWidget);
 
         await db.close();
-        await _teardown(tester);
+        await teardown(tester);
       },
     );
 
@@ -532,12 +480,12 @@ void main() {
       final db = inMemoryDb();
       await seedProfile(db);
       final trackId = await seedTrack(db, profileId: _kProfileId);
-      final track = _track(id: trackId);
+      final track = buildTrack(id: trackId);
 
       await tester.pumpWidget(
         _buildBodyApp(router: router, tracks: [track], db: db),
       );
-      await _settle(tester);
+      await settle(tester);
 
       await tester.longPress(find.byType(InkWell).first);
       await tester.pump();
@@ -556,7 +504,7 @@ void main() {
       );
 
       await db.close();
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('7. delete dialog — Archive → track no longer active in DB', (
@@ -568,7 +516,7 @@ void main() {
       // TS-16: seed a second curriculum so trackDeletionAllowed returns true
       // and the "Archive (keep history)" action is shown.
       await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
-      final track = _track(id: trackId);
+      final track = buildTrack(id: trackId);
 
       // Stub the activation service so deactivate() succeeds without
       // needing a real curriculum-activation round trip (avoids
@@ -586,11 +534,11 @@ void main() {
             activeProfileIdProvider.overrideWithValue(_kProfileId),
             userDatabaseProvider.overrideWith((ref) => db),
             activeTracksProvider.overrideWith((ref) => Stream.value([track])),
-            ..._perTrackOverrides([track]),
+            ...perTrackOverrides([track]),
             curriculumActivationServiceProvider.overrideWithValue(
               mockActivationService,
             ),
-            useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+            useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
           ],
           child: MaterialApp(
             locale: const Locale('en'),
@@ -609,7 +557,7 @@ void main() {
           ),
         ),
       );
-      await _settle(tester);
+      await settle(tester);
 
       await tester.longPress(find.byType(InkWell).first);
       await tester.pump();
@@ -624,7 +572,7 @@ void main() {
       ).called(1);
 
       await db.close();
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('8. delete dialog — Wipe → track no longer active in DB', (
@@ -636,12 +584,12 @@ void main() {
       // TS-16: seed a second curriculum so trackDeletionAllowed returns true
       // and the "Delete and wipe history" action is shown.
       await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
-      final track = _track(id: trackId);
+      final track = buildTrack(id: trackId);
 
       await tester.pumpWidget(
         _buildBodyApp(router: router, tracks: [track], db: db),
       );
-      await _settle(tester);
+      await settle(tester);
 
       await tester.longPress(find.byType(InkWell).first);
       await tester.pump();
@@ -659,7 +607,7 @@ void main() {
       );
 
       await db.close();
-      await _teardown(tester);
+      await teardown(tester);
     });
   });
 
@@ -667,27 +615,27 @@ void main() {
     testWidgets(
       '12. no "Personal"/"Standard"/"Custom"/"אישי" track-type label',
       (tester) async {
-        final track = _track();
+        final track = buildTrack();
         await tester.pumpWidget(_buildBodyApp(router: router, tracks: [track]));
-        await _settle(tester);
+        await settle(tester);
 
         expect(find.text('Personal'), findsNothing);
         expect(find.text('Standard'), findsNothing);
         expect(find.text('Custom'), findsNothing);
         expect(find.text('אישי'), findsNothing);
 
-        await _teardown(tester);
+        await teardown(tester);
       },
     );
 
     testWidgets(
       '13. chazara UI absent for a learn-only track (chazaraEnabled=false)',
       (tester) async {
-        final track = _track();
+        final track = buildTrack();
         await tester.pumpWidget(
           _buildBodyApp(router: router, tracks: [track], chazaraEnabled: false),
         );
-        await _settle(tester);
+        await settle(tester);
 
         expect(
           find.textContaining('chazara', findRichText: true),
@@ -697,18 +645,18 @@ void main() {
         // The track-progress label for a non-chazara track is "Track progress"
         expect(find.text('Track progress'), findsOneWidget);
 
-        await _teardown(tester);
+        await teardown(tester);
       },
     );
 
     testWidgets('14. chazara label present for a chazara-enabled track', (
       tester,
     ) async {
-      final track = _track();
+      final track = buildTrack();
       await tester.pumpWidget(
         _buildBodyApp(router: router, tracks: [track], chazaraEnabled: true),
       );
-      await _settle(tester);
+      await settle(tester);
 
       // When chazara is enabled the label becomes "Completion (with Chazara)"
       expect(
@@ -716,7 +664,7 @@ void main() {
         findsOneWidget,
       );
 
-      await _teardown(tester);
+      await teardown(tester);
     });
   });
 
@@ -724,7 +672,7 @@ void main() {
     testWidgets('15. Hebrew locale — populated body renders without overflow', (
       tester,
     ) async {
-      final track = _track();
+      final track = buildTrack();
       await tester.pumpWidget(
         _buildBodyApp(
           router: router,
@@ -732,13 +680,13 @@ void main() {
           locale: const Locale('he'),
         ),
       );
-      await _settle(tester);
+      await settle(tester);
 
       // TrackManagementBody itself contains a Scaffold; the outer wrapper also
       // adds one — so we find at least one without asserting an exact count.
       expect(find.byType(Scaffold), findsAtLeastNWidgets(1));
 
-      await _teardown(tester);
+      await teardown(tester);
     });
   });
 
@@ -760,7 +708,7 @@ void main() {
 
         completer.complete([]);
         await tester.pump(const Duration(seconds: 1));
-        await _teardown(tester);
+        await teardown(tester);
       },
     );
   });
@@ -783,7 +731,7 @@ void main() {
       // Two DraggableOrderItem widgets — one per sedarim item.
       expect(find.byType(DraggableOrderItem), findsNWidgets(2));
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('17b. AppBar title includes curriculum name', (tester) async {
@@ -799,7 +747,7 @@ void main() {
       // Title format: "<curriculum> • Reorder"
       expect(find.textContaining('Reorder'), findsOneWidget);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('17b-he. AppBar title is localized in Hebrew locale', (
@@ -819,7 +767,7 @@ void main() {
       expect(find.textContaining('Reorder'), findsNothing);
       expect(find.textContaining('סדר מחדש'), findsOneWidget);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     // 17c. The P2 fix: the L2 reorder section header is nusach-aware. In the
@@ -842,7 +790,7 @@ void main() {
       expect(find.text('Masechtos'), findsOneWidget);
       expect(find.text('Masekhtot'), findsNothing);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('17d. L2 section header switches to "Masekhtot" in Sephardi', (
@@ -863,7 +811,7 @@ void main() {
       expect(find.text('Masekhtot'), findsOneWidget);
       expect(find.text('Masechtos'), findsNothing);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('18a. reset icon button is present', (tester) async {
@@ -878,7 +826,7 @@ void main() {
 
       expect(find.byIcon(Icons.refresh), findsOneWidget);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('18b. tapping reset icon shows ResetOrderDialog', (
@@ -900,7 +848,7 @@ void main() {
       // ResetOrderDialog renders "Reset to Default Order" title.
       expect(find.text('Reset to Default Order'), findsOneWidget);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('18c. cancelling reset dialog → resetToDefault NOT called', (
@@ -924,7 +872,7 @@ void main() {
 
       verifyNever(() => repo.resetToDefault(any<int>()));
 
-      await _teardown(tester);
+      await teardown(tester);
     });
 
     testWidgets('18d. confirming reset dialog → resetToDefault called', (
@@ -959,7 +907,7 @@ void main() {
             overdueCountForCurriculumProvider(
               _kCurriculumId,
             ).overrideWith((ref) async => 0),
-            useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+            useHebrewTermsProvider.overrideWith(() => HebrewTermsOff()),
           ],
           child: const MaterialApp(
             locale: Locale('en'),
@@ -991,7 +939,7 @@ void main() {
 
       verify(() => repo.resetToDefault(_kTrackId)).called(1);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
   });
 
@@ -1025,61 +973,115 @@ void main() {
               repo.saveSedarimOrder(_kTrackId, any<List<LearningOrderItem>>()),
         ).called(1);
 
-        await _teardown(tester);
+        await teardown(tester);
       },
     );
   });
 
   group('TrackLearningOrderScreen — race-safety (_sedarimSaveSeq)', () {
     testWidgets(
-      '20. rapid successive reorders only persist the final order (seq guard)',
+      '20. a stale slow save resolving after a newer reorder must not '
+      'clobber the fresher masechtos state (seq guard)',
       (tester) async {
-        // Both reorders must complete before the slow first save resolves.
         final items = [
           _orderItem('Seder Zeraim', 0),
           _orderItem('Seder Moed', 1),
         ];
 
-        // First save is deliberately slow; second resolves immediately.
-        var saveCount = 0;
+        // Each saveSedarimOrder call gets its own Completer so the test
+        // — not a fixed delay racing a fixed pump duration — controls
+        // exactly which save "wins" and when.
+        final saveCompleters = <Completer<void>>[];
         when(
           () =>
               repo.saveSedarimOrder(any<int>(), any<List<LearningOrderItem>>()),
-        ).thenAnswer((_) async {
-          saveCount++;
-          if (saveCount == 1) {
-            // Slow first save — yields so the test can trigger a second reorder.
-            await Future<void>.delayed(const Duration(milliseconds: 200));
-          }
+        ).thenAnswer((_) {
+          final completer = Completer<void>();
+          saveCompleters.add(completer);
+          return completer.future;
         });
 
+        // Each masechtos read (the initial load, plus any post-save
+        // invalidate/refetch triggered from _persistSedarim) also gets its
+        // own Completer, so the test can tell a "fresh" refetch (triggered
+        // by the second, winning reorder) apart from a "stale" one
+        // (triggered by the first, slow reorder resolving late) — and prove
+        // the stale one never happens once the seq guard is in place.
+        final masechtosReads = <Completer<List<LearningOrderItem>>>[];
+        Future<List<LearningOrderItem>> masechtosFactory() {
+          final completer = Completer<List<LearningOrderItem>>();
+          masechtosReads.add(completer);
+          return completer.future;
+        }
+
         await tester.pumpWidget(
-          _buildOrderApp(repo: repo, sedarimFactory: () => Future.value(items)),
+          _buildOrderApp(
+            repo: repo,
+            sedarimFactory: () => Future.value(items),
+            masechtosFactory: masechtosFactory,
+          ),
         );
         await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+
+        // Resolve the initial masechtos load (the body stays behind the
+        // loading spinner — gated on BOTH sedarim and masechtos — until it
+        // does).
+        expect(masechtosReads, hasLength(1));
+        masechtosReads[0].complete([_orderItem('Masechtos Initial', 0)]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
 
         final listFinder = find.byType(ReorderableListView).first;
         final listWidget = tester.widget<ReorderableListView>(listFinder);
 
-        // First reorder (starts slow async save).
+        // First reorder — its save is left pending ("slow").
         listWidget.onReorderItem?.call(0, 1);
-        await tester.pump(const Duration(milliseconds: 10));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+        expect(saveCompleters, hasLength(1));
 
-        // Second reorder while first save is still in-flight.
+        // Second reorder fired while the first save is still in flight —
+        // its save is also left pending for now.
         listWidget.onReorderItem?.call(0, 1);
-        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+        expect(saveCompleters, hasLength(2));
 
-        // Both save calls are dispatched.
-        verify(
-          () =>
-              repo.saveSedarimOrder(_kTrackId, any<List<LearningOrderItem>>()),
-        ).called(2);
+        // The SECOND (fresher) save resolves first.
+        saveCompleters[1].complete();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
 
-        // The screen must still be mounted and showing the list without crash.
-        expect(find.byType(DraggableOrderItem), findsAtLeastNWidgets(1));
+        // Its post-save continuation invalidates + refetches masechtos —
+        // resolve that fresh read.
+        expect(masechtosReads, hasLength(2));
+        masechtosReads[1].complete([_orderItem('Masechtos Fresh', 0)]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
 
-        await _teardown(tester);
+        expect(_renderedRefs(tester), contains('Masechtos Fresh'));
+        expect(_renderedRefs(tester), isNot(contains('Masechtos Initial')));
+
+        // Now the FIRST (stale) save finally resolves, late.
+        saveCompleters[0].complete();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // The seq guard must suppress the stale continuation entirely: no
+        // extra masechtos invalidate/refetch fires, and the rendered order
+        // still reflects only the second (fresher) reorder's masechtos
+        // fetch — not a stale one clobbering it.
+        expect(
+          masechtosReads,
+          hasLength(2),
+          reason:
+              'a late-resolving stale save must not trigger another '
+              'masechtos invalidate/refetch once a newer reorder has '
+              'already landed — if it does, the seq guard has regressed',
+        );
+        expect(_renderedRefs(tester), contains('Masechtos Fresh'));
+
+        await teardown(tester);
       },
     );
   });
@@ -1099,7 +1101,7 @@ void main() {
 
       expect(find.byType(Scaffold), findsOneWidget);
 
-      await _teardown(tester);
+      await teardown(tester);
     });
   });
 }
