@@ -49,6 +49,15 @@ void main() {
     final today = DateTime.utc(2026, 5, 13, 9);
 
     setUp(() async {
+      // AUD-t-story-acceptance-41 / TQ-6: pin the global LocalDayClock so
+      // `repo.markComplete`/`repo.bulkMarkComplete` (which stamp
+      // `eventTimestamp` via `DateTimeFactory.nowUtc()`) resolve against
+      // the same frozen `today` the reducer and `StreakStateService` use
+      // below, instead of the real wall clock. Matches the pattern in
+      // `epic_27_integration_lockout_redaction_atomic_test.dart`'s AC1
+      // group.
+      useLocalDayClock(FakeLocalDayClock(today));
+
       db = createTestDatabase();
       await seedProfile(db);
       sync = _MockSyncEngine();
@@ -112,6 +121,7 @@ void main() {
 
     tearDown(() async {
       await db.close();
+      resetLocalDayClock();
     });
 
     test('50 items × 3 stages with awardGamificationPoints=false → '
@@ -164,9 +174,15 @@ void main() {
 
       // AC: derived streak state is zero in both fields.
       //
-      // Pinning the reducer directly against the empty event log
-      // is what NFR13 is really asking: replay over the events
-      // *attributable to the batch* must yield zero. The
+      // Replaying the reducer over `streakRows` — the rows this test
+      // just queried from the DB, not a hardcoded empty literal — is
+      // what NFR13 is really asking: replay over the events
+      // *attributable to the batch* must yield zero. Because this maps
+      // the real query result, a future regression that leaks a
+      // `streak_events` row from `bulkMarkComplete` would flow into the
+      // reduce and fail the assertions below (AUD-t-story-acceptance-32
+      // — a literal `const <StreakLogEvent>[]` here would pass
+      // regardless of what the DB actually holds). The
       // `StreakStateService` path additionally exercises
       // `StreakRestorer`, which is independently the subject of
       // Story 26.27 (and Story 27.6's cloud-restore test) — its
@@ -174,7 +190,14 @@ void main() {
       // not here, to keep this canary focused on the one bug it
       // exists to catch.
       final reducerState = const StreakReducer().reduce(
-        const <StreakLogEvent>[],
+        streakRows.map(
+          (r) => StreakLogEvent(
+            profileId: r.profileId,
+            eventType: r.eventType,
+            eventTimestamp: r.eventTimestamp,
+            clientDeviceId: r.clientDeviceId,
+          ),
+        ),
         today: today,
       );
       expect(reducerState.currentStreak, 0);
@@ -199,14 +222,20 @@ void main() {
         db.streakEvents,
       )..where((t) => t.profileId.equals(profileId))).get();
       expect(streakRows, hasLength(1));
+      // AUD-t-story-acceptance-41 / TQ-6: `repo.markComplete` stamps
+      // `eventTimestamp` via `DateTimeFactory.nowUtc()`, which now
+      // resolves through the `useLocalDayClock` pin installed in `setUp`
+      // — so this equals `today` exactly, deterministically, independent
+      // of wall-clock date.
+      expect(streakRows.single.eventTimestamp.toUtc(), today);
 
       final state = await StreakStateService(
         db: db,
         clock: FakeLocalDayClock(today),
       ).read(profileId: profileId);
-      // The completion landed "today" (DateTimeFactory.nowUtc() at
-      // test execution time) — which is at most a few seconds before
-      // `today`. The reducer counts that UTC day as the current run.
+      // The completion landed exactly at `today` (the pinned clock, not
+      // wall-clock time — see the `eventTimestamp` assertion above), so
+      // the reducer counts that day as the current run.
       expect(state.maxStreak, 1);
     });
   });
