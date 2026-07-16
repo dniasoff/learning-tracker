@@ -208,25 +208,16 @@ void main() {
         },
       );
 
-      test('add_track_flow.dart uses AlignmentDirectional.centerStart', () {
-        // add_track_flow.dart was deleted by DNI-353 (26.10); its content
-        // was migrated to add_track_flow_screen.dart which already uses
-        // AlignmentDirectional. The constraint is satisfied.
-        final exists = libFileExists(
-          'features/tracks/setup/presentation/screens/add_track_flow.dart',
-        );
-        if (!exists) return; // file deleted — constraint satisfied by deletion
-        final src = readFeatureFile(
-          'track_setup/presentation/screens/add_track_flow.dart',
-        );
-        expect(
-          src,
-          contains('AlignmentDirectional.centerStart'),
-          reason:
-              'AC4: Align widgets in add_track_flow.dart must use '
-              'AlignmentDirectional.centerStart instead of Alignment.centerLeft.',
-        );
-      });
+      // add_track_flow.dart (checked by a former AC4 case here) was deleted
+      // by DNI-353 (26.10), along with the old flattened directory it lived
+      // under (removed by commit e365a4c8; the canonical location for this
+      // feature is features/tracks/setup/). That case's own
+      // "add_track_flow_screen.dart already uses AlignmentDirectional"
+      // comment does not hold up: the screen file contains no
+      // Alignment-related code at all today. AC1-AC3's repo-wide regex
+      // sweep above already covers add_track_flow_screen.dart across all of
+      // lib/features/, so no positive guard is needed for it here
+      // (AUD-t-story-acceptance-35).
 
       test(
         'content_item_tile.dart uses TextAlign.start instead of TextAlign.left/right',
