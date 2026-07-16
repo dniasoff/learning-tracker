@@ -7014,13 +7014,13 @@
     {
       "id": "AUD-t-story-acceptance-31",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Deduplicate the 6 copies of _insertTrack() in story_acceptance tests onto the existing shared seedTrack() helper",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (merge-lane w4r1c3, 2026-07-16). review agent lost (quota); fix commit 8884bc32 (fix(tests): AUD-t-story-acceptance-31 - dedupe _insertTrack onto seedTrack()) built on worktree branch worktree-wf_fbd1f0b0-a07-3 was never reviewed/merged before the review agent was lost. Internal process blocker, not an external blocker. Worktree checkout removed; branch retained unmerged (git cherry dev shows +8884bc32, no patch-equivalent commit on dev) pending a future harvest pass."
     },
     {
       "id": "AUD-guardrails-21",
@@ -7419,13 +7419,13 @@
     {
       "id": "AUD-t-story-acceptance-46",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Replace fixed 50ms Future.delayed polling with stream.first awaits in epic_15's curriculum-scope watch-stream test",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (merge-lane w4r1c3, 2026-07-16). review agent lost (quota); fix commit c4f30bbf (fix(tests): AUD-t-story-acceptance-46 - stream.first over fixed-delay polling) built on worktree branch worktree-wf_fbd1f0b0-a07-3 was never reviewed/merged before the review agent was lost. Internal process blocker, not an external blocker. Worktree checkout removed; branch retained unmerged (git cherry dev shows +c4f30bbf, no patch-equivalent commit on dev) pending a future harvest pass."
     },
     {
       "id": "AUD-t-story-acceptance-25",
@@ -9681,13 +9681,13 @@
     {
       "id": "AUD-t-story-acceptance-22",
       "wave": 4,
-      "status": "todo",
+      "status": "skipped-refuted",
       "severity": "P3",
       "title": "Add Linear DNI ids to the two TODO comments in epic_14_settings_test.dart's skipped app-info group",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "skipped-refuted (merge-lane w4r1c3, 2026-07-16). Already fixed pre-wave, independently confirmed: lines 724 and 728 of learning_tracker/test/story_acceptance/epic_14_settings_test.dart already read `// TODO(DNI-393): verify version string display` and `// TODO(DNI-393): verify link navigation` respectively -- real Linear ids, not placeholders. git blame confirms both lines were added by commit ddc2af09, which is an ancestor of this branch's current HEAD; that commit is the fix for AUD-repo-02 (ledger: wave 0, status merged, commits [ddc2af09, 0958f823]) -- \"Add Linear IDs to the 8 untracked TODO/FIXME comments (AG-6)\" -- covering this exact site. This finding is a duplicate of AUD-repo-02, already merged. Independently re-verified against the current tree by running the AG-6 grep gate (Makefile check 10/15) standalone: grep -rnP '^\\s*//\\s*(TODO|FIXME)\\b' lib/ test/ integration_test/ --include=\"*.dart\" | grep -v \"\\.g\\.dart\" | grep -v \"\\.freezed\\.dart\" | grep -v \"DNI-[0-9]\" | grep -v \"^lib/firebase_options.dart:\" returns 0 matches repo-wide (exit 1, no output). AC satisfied; no code change made."
     },
     {
       "id": "AUD-t-story-acceptance-33",

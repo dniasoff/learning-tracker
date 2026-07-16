@@ -422,3 +422,13 @@ The wave-4 closing gate failed on these 3 findings: `AUD-t-profiles-03` and `AUD
 - **Delivery disposition:** `skipped-refuted` (merge-lane `w4r1c9`, 2026-07-16).
 - **Basis — already fixed by sibling commit, independently confirmed:** line 241 of `learning_tracker/test/story_acceptance/epic_27_story_4_widget_golden_test.dart` already reads `// TODO(DNI-393): CompletionButton was removed in the Wave-3/4 refactor.` — a real Linear id, not a placeholder. `git blame` confirms this line was added by commit `ddc2af09`, which is an ancestor of this branch's current `HEAD`; that commit is the fix for `AUD-repo-02` (ledger: wave 0, status `merged`, commits `[ddc2af09, 0958f823]`) — "Add Linear IDs to the 8 untracked TODO/FIXME comments (AG-6)" — covering this exact site. This finding is a duplicate of `AUD-repo-02`, already merged. Independently re-verified against the current tree by running the AG-6 grep gate (Makefile check 10/15) standalone: `grep -rnP '^\s*//\s*(TODO|FIXME)\b' lib/ test/ integration_test/ --include="*.dart" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]" | grep -v "^lib/firebase_options.dart:"` returns 0 matches repo-wide (exit 1, no output). AC satisfied; no code change made.
 - **Logged by:** merge-lane w4r1c9 agent (sonnet), 2026-07-16.
+
+---
+
+## AUD-t-story-acceptance-22 — Add Linear DNI ids to the two TODO comments in epic_14_settings_test.dart's skipped app-info group
+
+- **Wave:** 4
+- **Severity:** P3
+- **Delivery disposition:** `skipped-refuted` (merge-lane `w4r1c3`, 2026-07-16).
+- **Basis — already fixed by sibling commit, independently confirmed:** lines 724 and 728 of `learning_tracker/test/story_acceptance/epic_14_settings_test.dart` already read `// TODO(DNI-393): verify version string display` and `// TODO(DNI-393): verify link navigation` respectively — real Linear ids, not placeholders. `git blame` confirms both lines were added by commit `ddc2af09`, which is an ancestor of this branch's current `HEAD`; that commit is the fix for `AUD-repo-02` (ledger: wave 0, status `merged`, commits `[ddc2af09, 0958f823]`) — "Add Linear IDs to the 8 untracked TODO/FIXME comments (AG-6)" — covering this exact site. This finding is a duplicate of `AUD-repo-02`, already merged. Independently re-verified against the current tree by running the AG-6 grep gate (Makefile check 10/15) standalone: `grep -rnP '^\s*//\s*(TODO|FIXME)\b' lib/ test/ integration_test/ --include="*.dart" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]" | grep -v "^lib/firebase_options.dart:"` returns 0 matches repo-wide (exit 1, no output). AC satisfied; no code change made.
+- **Logged by:** merge-lane w4r1c3 agent (sonnet), 2026-07-16.
