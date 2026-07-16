@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
-import 'package:flutter/foundation.dart' show ByteData, Uint8List;
+import 'package:flutter/foundation.dart' show ByteData, Uint8List, debugPrint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
@@ -11,7 +11,6 @@ import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart'
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
@@ -274,7 +273,13 @@ void main() {
       addTearDown(() async {
         try {
           await tmp.delete(recursive: true);
-        } catch (_) {}
+        } catch (e) {
+          // AUD-t-story-acceptance-40 (EH-3): log instead of silently
+          // swallowing — a held SQLite file handle on the just-closed
+          // read-only DB could make this delete fail, and an empty catch
+          // body would leave no breadcrumb that temp-dir cleanup ever failed.
+          debugPrint('Temp dir cleanup failed for ${tmp.path}: $e');
+        }
       });
 
       final writable = ContentDatabase(NativeDatabase(dbFile));
@@ -324,7 +329,11 @@ void main() {
         addTearDown(() async {
           try {
             await tmp.delete(recursive: true);
-          } catch (_) {}
+          } catch (e) {
+            // AUD-t-story-acceptance-40 (EH-3): log instead of swallowing —
+            // see the matching addTearDown above for rationale.
+            debugPrint('Temp dir cleanup failed for ${tmp.path}: $e');
+          }
         });
 
         // Build a small source seed DB on disk with a known version row —
@@ -600,27 +609,6 @@ void main() {
         );
         expect(entry!.programId, def.id);
       }
-    });
-  });
-
-  // ─── Story 19.5 superseded by Epic 20 v2 unified AuthState ──────
-  group('Story 19.5 — superseded by Epic 20 v2 unified AuthState', () {
-    test('unified AuthState exposes tier + session status', () {
-      const signedOut = AuthState.signedOut();
-      expect(signedOut.isSignedIn, isFalse);
-      expect(signedOut.tier, isNull);
-
-      const signedIn = AuthState.signedIn(
-        user: AuthUser(
-          profileId: 1,
-          email: 'test@example.com',
-          displayName: 'Test',
-        ),
-        tier: Tier.cloudBorn,
-      );
-      expect(signedIn.isSignedIn, isTrue);
-      expect(signedIn.isCloudBorn, isTrue);
-      expect(signedIn.isLocalBorn, isFalse);
     });
   });
 

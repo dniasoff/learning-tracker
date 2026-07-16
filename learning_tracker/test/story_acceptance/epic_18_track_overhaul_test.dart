@@ -22,7 +22,6 @@ import 'package:learning_tracker/features/tracks/domain/services/curriculum_acti
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
 import '../helpers/test_database.dart' show seedProfile;
@@ -43,10 +42,6 @@ Future<int> _insertTrack(UserDatabase db) async {
 }
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(CurriculumId.mishnayos);
-  });
-
   // ── Story 18.1: AddTrackFlow has no rewards step ──────────────────────────
 
   group(
