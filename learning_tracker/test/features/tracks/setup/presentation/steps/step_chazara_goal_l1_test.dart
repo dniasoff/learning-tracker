@@ -773,12 +773,18 @@ void main() {
         expect(emittedGoal, isNotNull);
         final goal = emittedGoal!;
         expect(goal.goalType, equals('pace'));
-        // rawLearningUnit is set to _paceGranularity which is 'perek' for
-        // the coarse key of mishnayos.
+        // rawLearningUnit is set to _paceGranularity, which must equal
+        // 'perek' (mishnayos's coarse storage key) after tapping the
+        // 'Perakim' segment — not merely non-null, since _paceGranularity
+        // already defaults to a non-null value ('mishna', the fine key)
+        // before any tap, so isNotNull alone would pass even if the tap
+        // never changed the granularity.
         expect(
           goal.rawLearningUnit,
-          isNotNull,
-          reason: 'rawLearningUnit must be set after granularity change',
+          equals('perek'),
+          reason:
+              'rawLearningUnit must equal the coarse storage key ("perek") '
+              'after selecting the coarse (Perakim) segment.',
         );
 
         addTearDown(() => _tearDown(tester));

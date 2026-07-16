@@ -786,10 +786,43 @@ void main() {
         );
         await _pump(tester);
 
-        // The remove-rounded icon button is the decrement stepper.
-        // When paceValue == 1, onPressed should be null (disabled).
-        // Just verifying the value "1" is visible (loading completed).
-        expect(find.text('1'), findsWidgets);
+        // The remove_rounded icon sits inside an InkWell (the decrement
+        // stepper is EditTrackScreen's private _StepperButton, which wraps
+        // Material > InkWell rather than IconButton — there is no IconButton
+        // in this widget tree to inspect). At the floor (paceValue == 1) the
+        // stepper's onTap callback must be null (disabled).
+        final decrementInkWell = tester.widget<InkWell>(
+          find.ancestor(
+            of: find.byIcon(Icons.remove_rounded),
+            matching: find.byType(InkWell),
+          ),
+        );
+        expect(
+          decrementInkWell.onTap,
+          isNull,
+          reason:
+              'Decrement stepper must be disabled (onTap == null) when '
+              'paceValue is already at the floor of 1.',
+        );
+
+        // After incrementing past the floor, the decrement stepper must
+        // become enabled.
+        await tester.tap(find.byIcon(Icons.add_rounded));
+        await tester.pump();
+
+        final decrementInkWellAfterIncrement = tester.widget<InkWell>(
+          find.ancestor(
+            of: find.byIcon(Icons.remove_rounded),
+            matching: find.byType(InkWell),
+          ),
+        );
+        expect(
+          decrementInkWellAfterIncrement.onTap,
+          isNotNull,
+          reason:
+              'Decrement stepper must re-enable once paceValue is above the '
+              'floor.',
+        );
 
         await _tearDown(tester);
       },
