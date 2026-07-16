@@ -6867,13 +6867,18 @@
     {
       "id": "AUD-t-story-acceptance-48",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Use DateTimeFactory.nowUtc() instead of raw DateTime.now() for insert timestamps in epic_18/epic_19 story-acceptance tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "b7b395d1f6d6d5ab4401e113fb12b4782484567f"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-48 AC1 OK: grep 'DateTime.now()' on both files returns no match (exit 1); 15 sites replaced with DateTimeFactory.nowUtc() (10 epic_18 + 5 epic_19)",
+        "AUD-t-story-acceptance-48 ratchet OK: both files dropped from _baseline (69->67); reinjecting DateTime.now( makes checker exit 1, reverted clean"
+      ],
+      "notes": "Re-verified all 15 evidence sites still had raw DateTime.now(). Replaced with DateTimeFactory.nowUtc(), matching drift_memory.dart's pattern. Shrank TQ-6 ratchet baseline for the 2 now-clean files. AC grep verified red-before/green-after."
     },
     {
       "id": "AUD-t-story-acceptance-42",
