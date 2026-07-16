@@ -7,8 +7,9 @@
 ///      _HebrewTermsTile, _NikudTile, _TransliterationVariantTile class
 ///      declarations.
 /// AC4: Settings screen uses PreferenceListTile and PreferenceSegmentedTile.
-/// AC5: hebrewTerms defaults to false, useHebrewDate defaults to false
-///      (verified via HebrewTermsPreference / HebrewDatePreference).
+/// AC5: hebrewTerms defaults to true, useHebrewDate defaults to true
+///      (verified via HebrewTermsPreference / HebrewDatePreference; changed
+///      from the original false defaults by fix(issue-7a)).
 /// AC6: Onboarding screen does NOT contain hebrewTerms or hebrewDate toggles
 ///      as steps.
 @Tags(['epic_26'])
