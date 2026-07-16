@@ -28,6 +28,39 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 
+/// Cached result of [_findAppEntrySource] so the disk scan below runs once
+/// per test process and is shared by every group that needs the app-entry
+/// source (AC2/AC3 and AC9) — see AUD-t-story-acceptance-34.
+String? _appEntrySourceCache;
+
+/// Locates the MaterialApp configuration — it may live in
+/// `lib/app/learning_tracker_app.dart` or `lib/main.dart`, and the working
+/// directory when tests run may be the package root or the repo root — and
+/// returns its contents, memoized after the first successful read.
+String _findAppEntrySource() {
+  final cached = _appEntrySourceCache;
+  if (cached != null) return cached;
+
+  final candidates = [
+    File('lib/app/learning_tracker_app.dart'),
+    File('learning_tracker/lib/app/learning_tracker_app.dart'),
+    File('lib/main.dart'),
+    File('learning_tracker/lib/main.dart'),
+  ];
+  for (final f in candidates) {
+    if (f.existsSync()) {
+      final content = f.readAsStringSync();
+      if (content.contains('MaterialApp') ||
+          content.contains('locale: null') ||
+          content.contains('themeMode:')) {
+        _appEntrySourceCache = content;
+        return content;
+      }
+    }
+  }
+  throw StateError('main.dart or learning_tracker_app.dart not found');
+}
+
 void main() {
   // ────────────────────────────────────────────────────────────────────────────
   // AC1 — _selectedLanguage hardcode removed from onboarding_screen.dart
@@ -99,25 +132,7 @@ void main() {
       late String mainSource;
 
       setUpAll(() {
-        // MaterialApp config may live in main.dart or learning_tracker_app.dart.
-        final candidates = [
-          File('lib/app/learning_tracker_app.dart'),
-          File('learning_tracker/lib/app/learning_tracker_app.dart'),
-          File('lib/main.dart'),
-          File('learning_tracker/lib/main.dart'),
-        ];
-        for (final f in candidates) {
-          if (f.existsSync()) {
-            final content = f.readAsStringSync();
-            if (content.contains('MaterialApp') ||
-                content.contains('locale: null') ||
-                content.contains('themeMode:')) {
-              mainSource = content;
-              return;
-            }
-          }
-        }
-        throw StateError('main.dart or learning_tracker_app.dart not found');
+        mainSource = _findAppEntrySource();
       });
 
       test('main.dart sets MaterialApp `locale: null`', () {
@@ -392,23 +407,11 @@ void main() {
     tags: ['story_25_20'],
     () {
       test('main.dart wires `themeMode: ThemeMode.system`', () {
-        final candidates = [
-          File('lib/app/learning_tracker_app.dart'),
-          File('learning_tracker/lib/app/learning_tracker_app.dart'),
-          File('lib/main.dart'),
-          File('learning_tracker/lib/main.dart'),
-        ];
-        String? source;
-        for (final f in candidates) {
-          if (f.existsSync()) {
-            final c = f.readAsStringSync();
-            if (c.contains('themeMode:')) {
-              source = c;
-              break;
-            }
-          }
-        }
-        expect(source, isNotNull);
+        // weaken-ok: the standalone `expect(source, isNotNull)` is gone
+        // because _findAppEntrySource() now throws StateError (an equally
+        // loud, equally test-failing signal) instead of returning null when
+        // no candidate file is found — see AUD-t-story-acceptance-34.
+        final source = _findAppEntrySource();
         expect(
           source,
           contains('themeMode: ThemeMode.system'),
@@ -419,23 +422,10 @@ void main() {
       });
 
       test('main.dart passes `darkTheme: AppTheme.darkTheme()`', () {
-        final candidates = [
-          File('lib/app/learning_tracker_app.dart'),
-          File('learning_tracker/lib/app/learning_tracker_app.dart'),
-          File('lib/main.dart'),
-          File('learning_tracker/lib/main.dart'),
-        ];
-        String? source;
-        for (final f in candidates) {
-          if (f.existsSync()) {
-            final c = f.readAsStringSync();
-            if (c.contains('darkTheme:')) {
-              source = c;
-              break;
-            }
-          }
-        }
-        expect(source, isNotNull);
+        // weaken-ok: same as above — StateError from _findAppEntrySource()
+        // replaces the standalone isNotNull check with an equally-loud
+        // not-found failure (AUD-t-story-acceptance-34).
+        final source = _findAppEntrySource();
         expect(
           source,
           contains('darkTheme: AppTheme.darkTheme()'),
