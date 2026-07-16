@@ -784,7 +784,8 @@ void main() {
     testWidgets(
       'back-dating is allowed (offset -7 is within [today-30, today])',
       (tester) async {
-        final today = DateTime.now();
+        // Fixed reference date (TQ-6: hermetic tests use no wall-clock).
+        final today = DateTime(2026, 6, 1);
         final window = ProgramStartingPosition.allowedWindow(today);
 
         final offset7DaysAgo = today.subtract(const Duration(days: 7));
@@ -808,7 +809,8 @@ void main() {
     testWidgets('ProgramStartingPosition.allowedWindow minDate is today - 30', (
       tester,
     ) async {
-      final today = DateTime.now();
+      // Fixed reference date (TQ-6: hermetic tests use no wall-clock).
+      final today = DateTime(2026, 6, 1);
       final window = ProgramStartingPosition.allowedWindow(today);
 
       final todayMidnight = DateTime(today.year, today.month, today.day);
@@ -831,7 +833,8 @@ void main() {
     testWidgets('start >30 days ago throws StartDateWindowException', (
       tester,
     ) async {
-      final today = DateTime.now();
+      // Fixed reference date (TQ-6: hermetic tests use no wall-clock).
+      final today = DateTime(2026, 6, 1);
       final tooFarBack = today.subtract(const Duration(days: 31));
 
       expect(
@@ -845,7 +848,8 @@ void main() {
     testWidgets('future start date throws StartDateWindowException', (
       tester,
     ) async {
-      final today = DateTime.now();
+      // Fixed reference date (TQ-6: hermetic tests use no wall-clock).
+      final today = DateTime(2026, 6, 1);
       final tomorrow = today.add(const Duration(days: 1));
 
       expect(
@@ -858,7 +862,8 @@ void main() {
     testWidgets('back-date of exactly 30 days is accepted (boundary)', (
       tester,
     ) async {
-      final today = DateTime.now();
+      // Fixed reference date (TQ-6: hermetic tests use no wall-clock).
+      final today = DateTime(2026, 6, 1);
       final todayMidnight = DateTime(today.year, today.month, today.day);
       final exactly30DaysAgo = todayMidnight.subtract(const Duration(days: 30));
 
@@ -877,7 +882,8 @@ void main() {
     testWidgets('offset:-7 encodes correctly via legacy grammar', (
       tester,
     ) async {
-      final today = DateTime.now();
+      // Fixed reference date (TQ-6: hermetic tests use no wall-clock).
+      final today = DateTime(2026, 6, 1);
       final startDate = DateTime(
         today.year,
         today.month,
