@@ -9764,13 +9764,15 @@
     {
       "id": "AUD-t-story-acceptance-38",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Import the shared MockContentRepository fake instead of redeclaring it in epic_24_stop_bleeding_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "9ea0ef6c375ca8757e396892839b4026cf23b317"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Re-verified local MockContentRepository redeclaration still present. Removed it + unused import; added import from mocks/mock_repositories.dart. AC verified via grep. analyze zero issues, targeted test 6/6 pass, make audit 67/67 clean."
     },
     {
       "id": "AUD-t-cross-63",
