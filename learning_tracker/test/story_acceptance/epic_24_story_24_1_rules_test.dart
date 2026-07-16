@@ -45,12 +45,21 @@ void main() {
         });
 
         test('allows create (not wildcard read/write)', () {
-          expect(rules, contains('points >= 0'));
-          expect(rules, contains('points <= 100'));
+          // AUD-t-story-acceptance-20: scoped to the completions block (not
+          // the whole `rules` string) so this fails if the points bound is
+          // removed from completions even when coincidentally-matching text
+          // survives elsewhere in the file -- points_ledger and
+          // streak_events have no such bound today.
+          final block = _extractBlock(rules, 'completions/{completionId}');
+          expect(block, contains('points >= 0'));
+          expect(block, contains('points <= 100'));
         });
 
         test('enforces completed_at <= request.time', () {
-          expect(rules, contains('completed_at <= request.time'));
+          // AUD-t-story-acceptance-20: scoped to the completions block, see
+          // above.
+          final block = _extractBlock(rules, 'completions/{completionId}');
+          expect(block, contains('completed_at <= request.time'));
         });
 
         test('denies update on completions', () {
@@ -165,12 +174,38 @@ void main() {
       group('global default deny rule', () {
         test('has wildcard deny-all rule', () {
           expect(rules, contains('match /{document=**}'));
-          // The deny-all rule must come before any collection-specific rules.
           final denyPos = rules.indexOf('allow read, write: if false');
           expect(
             denyPos,
             greaterThan(-1),
             reason: 'Missing default deny-all rule',
+          );
+
+          // AUD-t-story-acceptance-20: the comment above claimed the
+          // deny-all rule "must come before any collection-specific rules"
+          // but nothing enforced it -- `denyPos > -1` only checks the text
+          // exists somewhere in the file, so moving the deny-all rule after
+          // a collection-specific match block (a real security regression:
+          // any collection not yet reached would no longer inherit the hard
+          // deny) would not have failed this test. Assert the actual
+          // ordering against the first collection-specific match block.
+          final completionsPos = rules.indexOf(
+            'match /completions/{completionId}',
+          );
+          expect(
+            completionsPos,
+            greaterThan(-1),
+            reason: 'completions match block not found',
+          );
+          expect(
+            denyPos,
+            lessThan(completionsPos),
+            reason:
+                'The deny-all rule must precede the completions '
+                'collection-specific match block so any collection not '
+                'explicitly listed inherits a hard deny. Found deny-all at '
+                'offset $denyPos and completions match at offset '
+                '$completionsPos.',
           );
         });
       });
