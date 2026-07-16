@@ -613,6 +613,17 @@ void main() {
     });
   });
 
+  // ─── Story 19.5 removed (AUD-t-story-acceptance-33) ──────────────
+  // The old "superseded by Epic 20 v2 unified AuthState" group here
+  // asserted AuthState.signedOut/signedIn shape, including the
+  // cloudBorn-tier case. That coverage is NOT owned by Story 20.5 in
+  // epic_20_hard_tier_auth_test.dart — that group only exercises the
+  // localBorn variant. The actual current owner of the cloudBorn
+  // AuthState.signedIn contract (isSignedIn/isCloudBorn/isLocalBorn/tier)
+  // is test/features/auth/domain/models/auth_state_test.dart — see
+  // 'isCloudBorn and isLocalBorn reflect tier' and
+  // 'isSignedIn is true only when signedIn' in that file.
+
   // ─── Story 19.8: SyncEngine Conditional ──────────────────────────
   group('Story 19.8 — SyncEngine Conditional Activation', () {
     test('SyncStatus.localOnly represents no-account state', () {
