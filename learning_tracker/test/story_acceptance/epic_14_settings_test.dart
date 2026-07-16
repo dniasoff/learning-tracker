@@ -29,21 +29,6 @@ Future<void> _noOpPush({
   required String displayName,
 }) async {}
 
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
-
 void main() {
   // ── Story 14.1: Settings screen ───────────────────────────────
   //
@@ -57,7 +42,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
     });
 
     tearDown(() async {
@@ -160,7 +145,7 @@ void main() {
       db = createTestDatabase();
       await seedProfile(db);
       await seedProfileZero(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       service = DataExportImportService(
         database: db,
         appVersionFetcher: () async => '1.0.0',

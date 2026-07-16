@@ -32,28 +32,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
-import '../helpers/drift_memory.dart' show seedProfile;
+import '../helpers/drift_memory.dart' show seedProfile, seedTrack;
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
 class _MockCompletionRepository extends Mock implements CompletionRepository {}
 
 class _MockBookmarkRepository extends Mock implements BookmarkRepository {}
-
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
 
 void main() {
   // ── Story 9.1: Welcome flow ───────────────────────────────────
@@ -68,7 +53,7 @@ void main() {
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
       await seedProfile(db);
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
       firestorePushes = [];
     });
 
@@ -187,7 +172,7 @@ void main() {
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
       await seedProfile(db);
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
     });
 
     tearDown(() async {
@@ -293,7 +278,7 @@ void main() {
     setUp(() async {
       db = UserDatabase(NativeDatabase.memory());
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       goalRepo = GoalRepositoryImpl(database: db, profileId: 1);
     });
 

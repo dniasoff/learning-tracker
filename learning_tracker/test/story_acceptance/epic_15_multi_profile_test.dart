@@ -50,21 +50,6 @@ class _InMemoryContentRepo implements SchedulerContentRepository {
 class _MockLearningLedgerRepository extends Mock
     implements LearningLedgerRepository {}
 
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
-
 void main() {
   group(
     'Story 15.1 -- Multi-Profile Data Model & Migration',
@@ -77,7 +62,7 @@ void main() {
       setUp(() async {
         db = createTestDatabase();
         await seedProfile(db);
-        trackId = await _insertTrack(db);
+        trackId = await seedTrack(db, profileId: 1);
         profileRepo = ProfileRepositoryImpl(db);
       });
 
@@ -596,7 +581,7 @@ void main() {
       setUp(() async {
         db = createTestDatabase();
         await seedProfile(db);
-        await _insertTrack(db);
+        await seedTrack(db, profileId: 1);
       });
 
       tearDown(() async {
@@ -780,7 +765,7 @@ void main() {
       setUp(() async {
         db = createTestDatabase();
         await seedProfile(db);
-        await _insertTrack(db);
+        await seedTrack(db, profileId: 1);
       });
 
       tearDown(() async {
@@ -918,7 +903,7 @@ void main() {
       setUp(() async {
         db = createTestDatabase();
         await seedProfile(db);
-        trackId = await _insertTrack(db);
+        trackId = await seedTrack(db, profileId: 1);
         profileRepo = ProfileRepositoryImpl(db);
       });
 
@@ -1105,7 +1090,7 @@ void main() {
       setUp(() async {
         db = createTestDatabase();
         await seedProfile(db);
-        trackId = await _insertTrack(db);
+        trackId = await seedTrack(db, profileId: 1);
         profileRepo = ProfileRepositoryImpl(db);
       });
 
@@ -1564,7 +1549,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
     });
 
     tearDown(() async {
@@ -2041,7 +2026,7 @@ void main() {
       db = createTestDatabase();
       await seedProfile(db);
       await seedProfileZero(db); // profileId:0 used in applyWizardResult calls
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       wizardService = LearningProcessWizardService(
         stageDao: db.stageDao,
         learningProgramRepo: LearningProgramRepository.instance,
@@ -2324,7 +2309,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
     });
 
     tearDown(() async {
@@ -2431,7 +2416,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
       profileRepo = ProfileRepositoryImpl(db);
     });
 
@@ -2609,7 +2594,7 @@ void main() {
       db = createTestDatabase();
       await seedProfile(db);
       await seedProfileZero(db); // profileId:0 used in applyWizardResult calls
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       wizardService = LearningProcessWizardService(
         stageDao: db.stageDao,
         learningProgramRepo: LearningProgramRepository.instance,
@@ -2828,7 +2813,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
     });
 
     tearDown(() async {
@@ -3168,7 +3153,7 @@ void main() {
       await seedProfileZero(
         db,
       ); // creates account 0 + profile 0 for scope tests
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
     });
 
     tearDown(() async {

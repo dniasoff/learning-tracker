@@ -46,21 +46,6 @@ Future<void> _seedStreak(UserDatabase db, int profileId, int count) async {
   }
 }
 
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
-
 void main() {
   setUpAll(() {
     tz.initializeTimeZones();
@@ -174,7 +159,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       mockService = MockNotificationGateway();
       alertService = StreakAlertService(
         db: db,

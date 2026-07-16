@@ -36,21 +36,6 @@ Widget _harness(Widget child) {
   );
 }
 
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
-
 void main() {
   // ── Story 16.1: Pace-Based Goal Mode ────────────────────────────────
   group('Story 16.1 -- Pace-Based Goal Mode', tags: ['story_16_1'], () {
@@ -211,7 +196,7 @@ void main() {
     test('AC-1: StudyDayConfigDao CRUD operations', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
-      final trackId = await _insertTrack(db);
+      final trackId = await seedTrack(db, profileId: 1);
 
       // Seed defaults — all 7 days as study
       await db.studyDayConfigDao.seedDefaults(
@@ -244,7 +229,7 @@ void main() {
     test('AC-2: defaults to study when no config exists', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
 
       // No config seeded — isStudyDay should default to true
       final result = await db.studyDayConfigDao.isStudyDay(
@@ -289,7 +274,7 @@ void main() {
     test('AC-5: upsertDayConfig toggles between study and review', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
-      final trackId = await _insertTrack(db);
+      final trackId = await seedTrack(db, profileId: 1);
 
       await db.studyDayConfigDao.seedDefaults(
         profileId: 1,
@@ -334,7 +319,7 @@ void main() {
     test('AC-8: studyDaysPerWeek correctly counts study days', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
-      final trackId = await _insertTrack(db);
+      final trackId = await seedTrack(db, profileId: 1);
 
       await db.studyDayConfigDao.seedDefaults(
         profileId: 1,
@@ -381,7 +366,7 @@ void main() {
     test('AC-1: configs are scoped to profile', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
-      final trackId = await _insertTrack(db);
+      final trackId = await seedTrack(db, profileId: 1);
 
       await db.studyDayConfigDao.seedDefaults(
         profileId: 1,
@@ -432,7 +417,7 @@ void main() {
     test('deleteConfigsByCurriculumAndProfile removes all configs', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
-      final trackId = await _insertTrack(db);
+      final trackId = await seedTrack(db, profileId: 1);
 
       await db.studyDayConfigDao.seedDefaults(
         profileId: 1,
@@ -758,7 +743,7 @@ void main() {
       final db = createTestDatabase();
       addTearDown(db.close);
       await seedProfile(db);
-      final trackId = await _insertTrack(db);
+      final trackId = await seedTrack(db, profileId: 1);
 
       // Insert stage definitions first
       await db.stageDao.insertStageDefinition(
@@ -818,7 +803,7 @@ void main() {
         final db = createTestDatabase();
         addTearDown(db.close);
         await seedProfile(db);
-        final trackId = await _insertTrack(db);
+        final trackId = await seedTrack(db, profileId: 1);
 
         // Each (profileId, sefariaRef, stageId, trackType) is unique (C1).
         // Use 5 distinct stages to get a count of 5 for 'Berakhot.1.1'.
@@ -868,7 +853,7 @@ void main() {
         final db = createTestDatabase();
         addTearDown(db.close);
         await seedProfile(db);
-        final trackId = await _insertTrack(db);
+        final trackId = await seedTrack(db, profileId: 1);
 
         final now = DateTime.now().toUtc();
         await seedCompletion(
@@ -939,7 +924,7 @@ void main() {
               updatedAt: DateTime.utc(2026, 1, 1),
             ),
           );
-      final trackId = await _insertTrack(db);
+      final trackId = await seedTrack(db, profileId: 1);
 
       final now = DateTime.now().toUtc();
       // Profile 1
@@ -989,7 +974,7 @@ void main() {
       () async {
         final db = createTestDatabase();
         addTearDown(db.close);
-        await _insertTrack(db);
+        await seedTrack(db, profileId: 1);
 
         final counts = await db.completionDao.getReviewCountsByItem(
           'mishnayos',
@@ -1003,7 +988,7 @@ void main() {
     test('AC-1: returns empty map for item with no completions', () async {
       final db = createTestDatabase();
       addTearDown(db.close);
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
 
       final breakdown = await db.completionDao.getStageBreakdownByItem(
         'mishnayos',
@@ -1120,7 +1105,7 @@ void main() {
       test('AC-6: study day config persists via DAO', () async {
         final db = createTestDatabase();
         addTearDown(db.close);
-        final trackId = await _insertTrack(db);
+        final trackId = await seedTrack(db, profileId: 1);
 
         await db.studyDayConfigDao.seedDefaults(
           profileId: 1,
@@ -1159,7 +1144,7 @@ void main() {
       test('AC-8: skip leaves defaults (all days = study)', () async {
         final db = createTestDatabase();
         addTearDown(db.close);
-        await _insertTrack(db);
+        await seedTrack(db, profileId: 1);
 
         // No config saved — isStudyDay defaults to true
         final isStudy = await db.studyDayConfigDao.isStudyDay(

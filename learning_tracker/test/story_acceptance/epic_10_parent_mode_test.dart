@@ -29,21 +29,6 @@ import '../helpers/drift_memory.dart';
 import '../helpers/fake_secure_storage.dart';
 import '../helpers/test_database.dart';
 
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
-
 /// Taller logical surface so scroll-heavy Point Settings fits in tests.
 void _pointConfigLargeSurface(WidgetTester tester) {
   final view = tester.view;
@@ -144,7 +129,7 @@ void main() {
       final db = createTestDatabase();
       await seedProfile(db);
       addTearDown(() => db.close());
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
 
       final learnerProfiles = await db.select(db.learnerProfiles).get();
       expect(learnerProfiles, isNotEmpty);
@@ -157,7 +142,7 @@ void main() {
       final db = createTestDatabase();
       await seedProfile(db);
       addTearDown(() => db.close());
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
 
       // Create an account + child learner profile
       final accountId = await db
@@ -281,7 +266,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
     });
 
     tearDown(() => db.close());
@@ -581,7 +566,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       pointsService = PointsService(db, profileId: testProfileId);
 
       // Activate mishnayos and seed stages + point configs
