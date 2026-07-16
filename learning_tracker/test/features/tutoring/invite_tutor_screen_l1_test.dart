@@ -16,6 +16,8 @@
 @Tags(['tutoring', 'invite_tutor'])
 library;
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -858,15 +860,146 @@ void main() {
 
   group('InviteTutorScreen — no hardcoded user-facing strings', () {
     test('screen source contains no hardcoded English UI strings', () {
-      // Read the source and verify that visible UI text is keyed through l10n.
-      // The check is based on the absence of known hardcoded strings that
-      // previously existed, confirming they live in ARB/l10n instead.
-      final src = Uri.file(
+      // AUD-t-tutoring-05: this used to be `Uri.file(path).toString()` —
+      // which never reads the filesystem and made `expect(src, isNotEmpty)`
+      // true for any non-empty path string, regardless of the screen's
+      // actual contents. This reads the real file and scans for `Text(` /
+      // `TextSpan(text:)` call sites whose argument is a string literal
+      // carrying real (non-interpolation, non-punctuation) Latin text —
+      // the same detection AX-2's Rule-0 checker
+      // (tool/check_hardcoded_presentation_text.dart) uses — so the test can
+      // no longer pass independent of the file it claims to check.
+      final content = File(
         'lib/features/tutoring/presentation/screens/invite_tutor_screen.dart',
-      ).toString();
-      // This test passes trivially — the real audit is captured as a bug note
-      // below. The screen correctly uses l10n for all visible strings.
-      expect(src, isNotEmpty);
+      ).readAsStringSync();
+
+      final violations = _findHardcodedTextLiterals(content);
+
+      expect(
+        violations,
+        isEmpty,
+        reason:
+            'Found hardcoded English literal(s) passed to Text()/TextSpan() '
+            'in invite_tutor_screen.dart — route through AppLocalizations/ARB '
+            '(AX-2):\n${violations.join('\n')}',
+      );
     });
   });
+}
+
+// ── Hardcoded-text detection helpers (AUD-t-tutoring-05) ────────────────────
+//
+// Mirrors the Text()/TextSpan(text:) literal-detection logic in
+// tool/check_hardcoded_presentation_text.dart (the AX-2 Rule-0 checker),
+// scoped here to a single screen file so this test genuinely depends on the
+// screen's source rather than asserting something trivially true.
+
+final _textCall = RegExp(r'\bText\(');
+final _textSpanCall = RegExp(r'\bTextSpan\(');
+final _textParam = RegExp(r'\btext\s*:');
+
+/// Scans [content] for `Text(<literal>` and `TextSpan(..., text: <literal>`
+/// call sites whose literal argument contains hardcoded (non-interpolation,
+/// non-punctuation) text. Returns one `line N: <reason>` string per
+/// violation.
+List<String> _findHardcodedTextLiterals(String content) {
+  final results = <String>[];
+
+  for (final match in _textCall.allMatches(content)) {
+    final openParen = match.end - 1;
+    final closeParen = _findMatchingParen(content, openParen);
+    if (closeParen == -1) continue; // unterminated — leave to the analyzer
+    final args = content.substring(openParen + 1, closeParen);
+    final literal = _leadingStringLiteral(args);
+    if (literal != null && _hasHardcodedText(literal)) {
+      results.add(
+        'line ${_lineOf(content, match.start)}: hardcoded literal passed '
+        "to Text(): '$literal'",
+      );
+    }
+  }
+
+  for (final match in _textSpanCall.allMatches(content)) {
+    final openParen = match.end - 1;
+    final closeParen = _findMatchingParen(content, openParen);
+    if (closeParen == -1) continue;
+    final args = content.substring(openParen + 1, closeParen);
+    final textMatch = _textParam.firstMatch(args);
+    if (textMatch == null) continue;
+    final literal = _leadingStringLiteral(args.substring(textMatch.end));
+    if (literal != null && _hasHardcodedText(literal)) {
+      results.add(
+        'line ${_lineOf(content, match.start)}: hardcoded literal passed '
+        "to TextSpan(text:): '$literal'",
+      );
+    }
+  }
+
+  return results;
+}
+
+int _lineOf(String content, int index) =>
+    '\n'.allMatches(content.substring(0, index)).length + 1;
+
+/// If [s], once leading whitespace is trimmed, begins with a quote
+/// character, returns the literal's raw (still-escaped) contents.
+/// Otherwise null — the argument is an expression/identifier (presumably
+/// l10n- or variable-derived), not a literal.
+String? _leadingStringLiteral(String s) {
+  var i = 0;
+  while (i < s.length && _isWhitespace(s[i])) {
+    i++;
+  }
+  if (i >= s.length) return null;
+  final quote = s[i];
+  if (quote != "'" && quote != '"') return null;
+  final buffer = StringBuffer();
+  i++;
+  while (i < s.length && s[i] != quote) {
+    buffer.write(s[i]);
+    if (s[i] == r'\' && i + 1 < s.length) {
+      i++;
+      buffer.write(s[i]);
+    }
+    i++;
+  }
+  return buffer.toString();
+}
+
+bool _isWhitespace(String c) => c == ' ' || c == '\n' || c == '\t' || c == '\r';
+
+/// True if [literal] contains a Latin letter once `${...}`/`$identifier`
+/// interpolation and `\x` escape sequences are stripped — i.e. it carries
+/// real, untranslated English text rather than pure interpolation or
+/// punctuation.
+bool _hasHardcodedText(String literal) {
+  var stripped = literal.replaceAll(RegExp(r'\\.'), '');
+  stripped = stripped.replaceAll(RegExp(r'\$\{[^}]*\}'), '');
+  stripped = stripped.replaceAll(RegExp(r'\$[A-Za-z_][A-Za-z0-9_]*'), '');
+  return RegExp('[A-Za-z]').hasMatch(stripped);
+}
+
+/// Finds the index of the `)` that matches the `(` at [openParenIndex],
+/// skipping over parens that appear inside string literals.
+int _findMatchingParen(String s, int openParenIndex) {
+  var depth = 0;
+  var i = openParenIndex;
+  while (i < s.length) {
+    final c = s[i];
+    if (c == '(') {
+      depth++;
+    } else if (c == ')') {
+      depth--;
+      if (depth == 0) return i;
+    } else if (c == "'" || c == '"') {
+      final quote = c;
+      i++;
+      while (i < s.length && s[i] != quote) {
+        if (s[i] == r'\') i++;
+        i++;
+      }
+    }
+    i++;
+  }
+  return -1;
 }
