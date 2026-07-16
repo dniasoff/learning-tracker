@@ -447,6 +447,15 @@ void main() {
       verify(() => user.linkWithCredential(any())).called(1);
     });
 
+    test('linkWithGoogleIdToken throws when no user is signed in', () async {
+      when(() => mockFirebaseAuth.currentUser).thenReturn(null);
+
+      expect(
+        () => gateway.linkWithGoogleIdToken(idToken: 'tok'),
+        throwsA(isA<StateError>()),
+      );
+    });
+
     test('reauthenticateWithGoogleIdToken reauths when signed in', () async {
       final user = MockUser();
       when(() => mockFirebaseAuth.currentUser).thenReturn(user);
@@ -459,6 +468,18 @@ void main() {
       verify(() => user.reauthenticateWithCredential(any())).called(1);
     });
 
+    test(
+      'reauthenticateWithGoogleIdToken throws when no user is signed in',
+      () async {
+        when(() => mockFirebaseAuth.currentUser).thenReturn(null);
+
+        expect(
+          () => gateway.reauthenticateWithGoogleIdToken(idToken: 'tok'),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
+
     test('linkWithEmailAndPassword links a new password credential', () async {
       final user = MockUser();
       when(() => mockFirebaseAuth.currentUser).thenReturn(user);
@@ -469,6 +490,15 @@ void main() {
       await gateway.linkWithEmailAndPassword(email: 'a@b.c', password: 'pw');
 
       verify(() => user.linkWithCredential(any())).called(1);
+    });
+
+    test('linkWithEmailAndPassword throws when no user is signed in', () async {
+      when(() => mockFirebaseAuth.currentUser).thenReturn(null);
+
+      expect(
+        () => gateway.linkWithEmailAndPassword(email: 'a@b.c', password: 'pw'),
+        throwsA(isA<StateError>()),
+      );
     });
   });
 
