@@ -95,7 +95,6 @@ const _baseline = <String>{
   'test/features/settings/settings_utils_test.dart',
   'test/features/sync/domain/models/sync_status_test.dart',
   'test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart',
-  'test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart',
   'test/features/tutoring/firestore_tutor_grant_repository_test.dart',
   'test/integration/stage_sync_test.dart',
   'test/scheduler/overdue_projection_test.dart',
