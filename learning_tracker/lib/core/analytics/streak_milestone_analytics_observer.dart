@@ -44,7 +44,7 @@ final streakMilestoneAnalyticsObserverProvider =
 
       final stateProvider = StreakStateService(
         db: db,
-        clock: const SystemLocalDayClock(),
+        clock: ref.watch(localDayClockProvider),
       );
 
       final firedMilestones = <int>{};
