@@ -156,35 +156,6 @@ void main() {
     });
   });
 
-  group('readAppLocale', () {
-    test('returns scoped value when set', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('app_locale_p1', 'he');
-      expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 1), 'he');
-    });
-
-    test('falls back to legacy key for profile 0', () async {
-      SharedPreferences.setMockInitialValues({
-        ProfileScopedPreferenceKeys.legacyAppLocaleKey: 'he',
-      });
-      final prefs = await SharedPreferences.getInstance();
-      expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 0), 'he');
-    });
-
-    test(
-      'returns "en" by default for non-zero profile with no value',
-      () async {
-        final prefs = await SharedPreferences.getInstance();
-        expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 5), 'en');
-      },
-    );
-
-    test('returns "en" for profile 0 when no legacy key present', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(ProfileScopedPreferenceKeys.readAppLocale(prefs, 0), 'en');
-    });
-  });
-
   // =========================================================================
   // readUseHebrewCalendar
   // =========================================================================
@@ -225,36 +196,6 @@ void main() {
     });
   });
 
-  group('readUseHebrewCalendar', () {
-    test('returns scoped value when set', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('use_hebrew_calendar_p2', true);
-      expect(
-        ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, 2),
-        isTrue,
-      );
-    });
-
-    test('falls back to legacy key for profile 0', () async {
-      SharedPreferences.setMockInitialValues({
-        ProfileScopedPreferenceKeys.legacyUseHebrewCalendarKey: true,
-      });
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, 0),
-        isTrue,
-      );
-    });
-
-    test('returns false by default for non-zero profile', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, 3),
-        isFalse,
-      );
-    });
-  });
-
   // =========================================================================
   // readFontSizeIndex
   // =========================================================================
@@ -283,27 +224,6 @@ void main() {
     test('returns default 1 when nothing is set (profileId 0)', () async {
       final prefs = await SharedPreferences.getInstance();
       expect(ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, 0), 1);
-    });
-  });
-
-  group('readFontSizeIndex', () {
-    test('returns scoped value when set', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('text_display_font_size_p1', 2);
-      expect(ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, 1), 2);
-    });
-
-    test('falls back to legacy key for profile 0', () async {
-      SharedPreferences.setMockInitialValues({
-        ProfileScopedPreferenceKeys.legacyFontSizeKey: 2,
-      });
-      final prefs = await SharedPreferences.getInstance();
-      expect(ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, 0), 2);
-    });
-
-    test('returns default 1 for non-zero profile', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(ProfileScopedPreferenceKeys.readFontSizeIndex(prefs, 4), 1);
     });
   });
 
@@ -339,27 +259,6 @@ void main() {
     test('returns default true when nothing is set (profileId 0)', () async {
       final prefs = await SharedPreferences.getInstance();
       expect(ProfileScopedPreferenceKeys.readShowNikud(prefs, 0), isTrue);
-    });
-  });
-
-  group('readShowNikud', () {
-    test('returns scoped value when set', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('text_display_show_nikud_p1', false);
-      expect(ProfileScopedPreferenceKeys.readShowNikud(prefs, 1), isFalse);
-    });
-
-    test('falls back to legacy key for profile 0', () async {
-      SharedPreferences.setMockInitialValues({
-        ProfileScopedPreferenceKeys.legacyShowNikudKey: false,
-      });
-      final prefs = await SharedPreferences.getInstance();
-      expect(ProfileScopedPreferenceKeys.readShowNikud(prefs, 0), isFalse);
-    });
-
-    test('returns true by default for non-zero profile', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(ProfileScopedPreferenceKeys.readShowNikud(prefs, 2), isTrue);
     });
   });
 
@@ -407,36 +306,6 @@ void main() {
     });
   });
 
-  group('readLearningOrderParentControls', () {
-    test('returns scoped value when set', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('learning_order_parent_controls_p3', true);
-      expect(
-        ProfileScopedPreferenceKeys.readLearningOrderParentControls(prefs, 3),
-        isTrue,
-      );
-    });
-
-    test('falls back to legacy key for profile 0', () async {
-      SharedPreferences.setMockInitialValues({
-        ProfileScopedPreferenceKeys.legacyLearningOrderKey: true,
-      });
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readLearningOrderParentControls(prefs, 0),
-        isTrue,
-      );
-    });
-
-    test('returns false by default', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readLearningOrderParentControls(prefs, 5),
-        isFalse,
-      );
-    });
-  });
-
   // =========================================================================
   // readHebrewTermsScript
   // =========================================================================
@@ -478,37 +347,6 @@ void main() {
     });
   });
 
-  group('readHebrewTermsScript', () {
-    test('returns scoped value when set', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('hebrew_terms_script_p1', true);
-      expect(
-        ProfileScopedPreferenceKeys.readHebrewTermsScript(prefs, 1),
-        isTrue,
-      );
-    });
-
-    test('falls back to legacy key for profile 0', () async {
-      SharedPreferences.setMockInitialValues({
-        ProfileScopedPreferenceKeys.legacyHebrewTermsScriptKey: true,
-      });
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readHebrewTermsScript(prefs, 0),
-        isTrue,
-      );
-    });
-
-    // Default is true — Hebrew script is the factory default (§9 / §11.7 fix).
-    test('returns true by default for non-zero profile', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readHebrewTermsScript(prefs, 6),
-        isTrue,
-      );
-    });
-  });
-
   // =========================================================================
   // readTransliterationVariant
   // =========================================================================
@@ -526,25 +364,6 @@ void main() {
     });
 
     test('returns default ashkenazi when not set', () async {
-      final prefs = await SharedPreferences.getInstance();
-      expect(
-        ProfileScopedPreferenceKeys.readTransliterationVariant(prefs, 1),
-        'ashkenazi',
-      );
-    });
-  });
-
-  group('readTransliterationVariant', () {
-    test('returns stored value when set', () async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('transliteration_variant_p1', 'sephardi');
-      expect(
-        ProfileScopedPreferenceKeys.readTransliterationVariant(prefs, 1),
-        'sephardi',
-      );
-    });
-
-    test('returns "ashkenazi" by default', () async {
       final prefs = await SharedPreferences.getInstance();
       expect(
         ProfileScopedPreferenceKeys.readTransliterationVariant(prefs, 1),
