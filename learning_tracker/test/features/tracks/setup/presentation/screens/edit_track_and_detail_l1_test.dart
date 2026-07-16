@@ -786,10 +786,43 @@ void main() {
         );
         await _pump(tester);
 
-        // The remove-rounded icon button is the decrement stepper.
-        // When paceValue == 1, onPressed should be null (disabled).
-        // Just verifying the value "1" is visible (loading completed).
-        expect(find.text('1'), findsWidgets);
+        // The remove_rounded icon sits inside an InkWell (the decrement
+        // stepper is EditTrackScreen's private _StepperButton, which wraps
+        // Material > InkWell rather than IconButton — there is no IconButton
+        // in this widget tree to inspect). At the floor (paceValue == 1) the
+        // stepper's onTap callback must be null (disabled).
+        final decrementInkWell = tester.widget<InkWell>(
+          find.ancestor(
+            of: find.byIcon(Icons.remove_rounded),
+            matching: find.byType(InkWell),
+          ),
+        );
+        expect(
+          decrementInkWell.onTap,
+          isNull,
+          reason:
+              'Decrement stepper must be disabled (onTap == null) when '
+              'paceValue is already at the floor of 1.',
+        );
+
+        // After incrementing past the floor, the decrement stepper must
+        // become enabled.
+        await tester.tap(find.byIcon(Icons.add_rounded));
+        await tester.pump();
+
+        final decrementInkWellAfterIncrement = tester.widget<InkWell>(
+          find.ancestor(
+            of: find.byIcon(Icons.remove_rounded),
+            matching: find.byType(InkWell),
+          ),
+        );
+        expect(
+          decrementInkWellAfterIncrement.onTap,
+          isNotNull,
+          reason:
+              'Decrement stepper must re-enable once paceValue is above the '
+              'floor.',
+        );
 
         await _tearDown(tester);
       },
@@ -1314,31 +1347,12 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('zero-valued metrics render 0% for both labels', (
-      tester,
-    ) async {
-      final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
-
-      final track = _track(id: 1, profileId: 0);
-
-      await tester.pumpWidget(
-        _buildDetailApp(
-          track: track,
-          db: db2,
-          currentCycle: 0.0,
-          lifetime: 0.0,
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      expect(find.text('Track progress: 0%'), findsOneWidget);
-      expect(find.text('Lifetime: 0%'), findsOneWidget);
-
-      await _tearDown(tester);
-    });
+    // The zero-valued dual-progress-labels case ("Track progress: 0%" /
+    // "Lifetime: 0%") is owned exclusively by track_detail_screen_test.dart
+    // ("Track Detail — dual progress labels (Task #16)" >
+    // "zero-valued metrics still render both labels at 0%") — removed here
+    // per AUD-t-tracks-01 to eliminate the line-for-line duplicate assertion
+    // pinned in two files against two different fixture-building helpers.
   });
 
   // ── Chazara header rendering ──────────────────────────────────────────────
@@ -1557,36 +1571,13 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets('bulk-prior tile carries outlined shape and tileColor', (
-      tester,
-    ) async {
-      final db2 = inMemoryDb();
-      await seedProfileZero(db2);
-      addTearDown(() => db2.close());
-
-      final track = _track(id: 1, profileId: 0);
-
-      await tester.pumpWidget(
-        _buildDetailApp(track: track, db: db2, hasProgramEnrollment: false),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      final bulkTileFinder = find.byKey(
-        const ValueKey('trackDetail.bulkPriorTile'),
-      );
-      expect(bulkTileFinder, findsOneWidget);
-      final bulkTile = tester.widget<ListTile>(bulkTileFinder);
-
-      // Secondary visual treatment: outlined shape.
-      expect(bulkTile.shape, isA<RoundedRectangleBorder>());
-      final shape = bulkTile.shape! as RoundedRectangleBorder;
-      expect(shape.side.width, greaterThan(0));
-      // And a tinted background.
-      expect(bulkTile.tileColor, isNotNull);
-
-      await _tearDown(tester);
-    });
+    // The bulk-prior tile's outlined-shape/tileColor styling assertion is
+    // owned exclusively by track_detail_screen_test.dart ("Track Detail —
+    // differentiated bulk-prior tile (Task #16)" > "bulk-prior tile uses
+    // outlined/secondary styling with new 'previously learned' copy", which
+    // also cross-checks against the sibling Edit tile) — removed here per
+    // AUD-t-tracks-01 to eliminate the line-for-line duplicate assertion
+    // pinned in two files against two different fixture-building helpers.
 
     testWidgets('tapping Delete Track opens archive/wipe dialog', (
       tester,
