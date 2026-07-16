@@ -881,7 +881,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	  FAIL=1; \
 	fi; \
 	echo "55/57 — AG-6: no NEW *.skip test file under test/ — dead/uncompiled test code (outside flutter test's glob, zero CI signal — AUD-t-cross-17) is deleted, not parked; RATCHET like AG-5's check_test_mirroring.dart, only a file NOT in the tracked legacy list below fails the gate"; \
-	ALLOWED_SKIP_FILES="test/features/sync/data/sync_engine_test.dart.skip"; \
+	ALLOWED_SKIP_FILES=""; \
 	SKIP_HITS=$$(find test/ -name "*.skip" | sort); \
 	for f in $$SKIP_HITS; do \
 	  case " $$ALLOWED_SKIP_FILES " in \
@@ -991,6 +991,12 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	  echo "  invalidations with completionCommittedProvider; every consumer watches that counter instead:"; \
 	  grep -n "ref\.invalidate(" lib/features/content_browsing/presentation/screens/text_display_screen.dart \
 	    | grep -v ":[[:space:]]*//"; \
+	  FAIL=1; \
+	fi; \
+	echo "68/68 — Rule-0: no test/ file imports a lib path deleted in W2.35 (sync_engine.dart, firestore_data_source.dart, offline_queue.dart) — real coverage lives in outbox_processor_test.dart (AUD-t-sync-01)"; \
+	if grep -rn "package:learning_tracker/.*/\(sync_engine\|firestore_data_source\|offline_queue\)\.dart" test/ | grep -q .; then \
+	  echo "  test/ file imports a lib path deleted in W2.35 — resurrecting dead sync test scaffolding instead of using outbox_processor_test.dart (AUD-t-sync-01):"; \
+	  grep -rn "package:learning_tracker/.*/\(sync_engine\|firestore_data_source\|offline_queue\)\.dart" test/; \
 	  FAIL=1; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
