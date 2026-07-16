@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/controllers/add_track_flow_state.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart';
 
 void main() {
   group('AddTrackResult', () {
@@ -112,78 +114,94 @@ void main() {
   });
 
   group('Smart track name defaults', () {
+    // These exercise the REAL production symbol, smartDefaultTrackName
+    // (lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart),
+    // not a private test-local reimplementation — see AUD-t-track_setup-01.
     test('uses program name when program selected', () {
       const state = AddTrackState(
         curriculumId: CurriculumId.bavli,
         programName: 'דף היומי',
       );
 
-      final defaultName = _getSmartDefault(state);
+      final defaultName = smartDefaultTrackName(state, useHebrewTerms: true);
       expect(defaultName, 'דף היומי');
     });
 
-    test('uses scope value when scope narrowed', () {
-      const state = AddTrackState(
-        curriculumId: CurriculumId.mishnayos,
-        scopeSelections: [ScopeEntry(level: 1, value: 'סדר זרעים')],
-      );
+    test(
+      'uses curriculum label (not the last scope value) when scope narrowed',
+      () {
+        // Regression test for the F-05/F-21/run7 on-device audit fix: the
+        // track-setup wizard's smart default name previously showed the
+        // last-selected scope value (e.g. "סדר זרעים") instead of the
+        // curriculum label, so the post-creation snackbar didn't match the
+        // Track Management hub card title. Before the fix was wired through
+        // this production symbol, asserting this expectation against the
+        // (now-deleted) stale test-local copy failed with:
+        //   Expected: משניות
+        //     Actual: סדר זרעים
+        const state = AddTrackState(
+          curriculumId: CurriculumId.mishnayos,
+          scopeSelections: [ScopeEntry(level: 1, value: 'סדר זרעים')],
+        );
 
-      final defaultName = _getSmartDefault(state);
-      expect(defaultName, 'סדר זרעים');
-    });
+        final defaultName = smartDefaultTrackName(state, useHebrewTerms: true);
+        expect(defaultName, CurriculumId.mishnayos.displayNameHe);
+      },
+    );
 
     test('uses curriculum Hebrew name as fallback', () {
       const state = AddTrackState(curriculumId: CurriculumId.mishnayos);
 
-      final defaultName = _getSmartDefault(state);
+      final defaultName = smartDefaultTrackName(state, useHebrewTerms: true);
       expect(defaultName, CurriculumId.mishnayos.displayNameHe);
     });
   });
 
   group('Program auto-skip logic', () {
+    // These call the real AddTrackFlowStateX.hasProgramsForCurriculum
+    // (lib/features/tracks/setup/presentation/controllers/add_track_flow_state.dart)
+    // directly instead of re-typing the curriculum list — see
+    // AUD-t-track_setup-01.
     test('bavli has programs', () {
-      expect(_hasProgramsForCurriculum(CurriculumId.bavli), true);
+      expect(
+        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.bavli),
+        true,
+      );
     });
 
     test('mishnaBerurah has programs', () {
-      expect(_hasProgramsForCurriculum(CurriculumId.mishnaBerurah), true);
+      expect(
+        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.mishnaBerurah),
+        true,
+      );
     });
 
     test('mishnayos has programs', () {
-      expect(_hasProgramsForCurriculum(CurriculumId.mishnayos), true);
+      expect(
+        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.mishnayos),
+        true,
+      );
     });
 
     test('chumash has no programs', () {
-      expect(_hasProgramsForCurriculum(CurriculumId.chumash), false);
+      expect(
+        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.chumash),
+        false,
+      );
     });
 
     test('mishnehTorah has programs', () {
-      expect(_hasProgramsForCurriculum(CurriculumId.mishnehTorah), true);
+      expect(
+        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.mishnehTorah),
+        true,
+      );
     });
 
     test('tanach has programs', () {
-      expect(_hasProgramsForCurriculum(CurriculumId.tanach), true);
+      expect(
+        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.tanach),
+        true,
+      );
     });
   });
-}
-
-// Extracted logic from AddTrackFlow for unit testing
-String _getSmartDefault(AddTrackState state) {
-  if (state.programName != null) return state.programName!;
-  if (state.scopeSelections != null && state.scopeSelections!.isNotEmpty) {
-    return state.scopeSelections!.last.value;
-  }
-  return state.curriculumId?.displayNameHe ?? '';
-}
-
-/// Curricula that have at least one seeded learning program.
-bool _hasProgramsForCurriculum(CurriculumId curriculum) {
-  return curriculum == CurriculumId.bavli ||
-      curriculum == CurriculumId.mishnaBerurah ||
-      curriculum == CurriculumId.yerushalmi ||
-      curriculum == CurriculumId.mussar ||
-      curriculum == CurriculumId.mishnayos ||
-      curriculum == CurriculumId.nach ||
-      curriculum == CurriculumId.mishnehTorah ||
-      curriculum == CurriculumId.tanach;
 }
