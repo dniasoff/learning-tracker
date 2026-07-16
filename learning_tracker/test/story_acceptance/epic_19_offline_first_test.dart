@@ -11,7 +11,6 @@ import 'package:learning_tracker/core/database/seed/learning_program_seeds.dart'
 import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
@@ -600,27 +599,6 @@ void main() {
         );
         expect(entry!.programId, def.id);
       }
-    });
-  });
-
-  // ─── Story 19.5 superseded by Epic 20 v2 unified AuthState ──────
-  group('Story 19.5 — superseded by Epic 20 v2 unified AuthState', () {
-    test('unified AuthState exposes tier + session status', () {
-      const signedOut = AuthState.signedOut();
-      expect(signedOut.isSignedIn, isFalse);
-      expect(signedOut.tier, isNull);
-
-      const signedIn = AuthState.signedIn(
-        user: AuthUser(
-          profileId: 1,
-          email: 'test@example.com',
-          displayName: 'Test',
-        ),
-        tier: Tier.cloudBorn,
-      );
-      expect(signedIn.isSignedIn, isTrue);
-      expect(signedIn.isCloudBorn, isTrue);
-      expect(signedIn.isLocalBorn, isFalse);
     });
   });
 
