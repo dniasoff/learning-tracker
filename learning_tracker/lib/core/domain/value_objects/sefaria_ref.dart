@@ -126,11 +126,13 @@ class SefariaRef {
   static String _normalise(String raw) =>
       raw.trim().replaceAll('–', '-'); // en-dash → hyphen
 
-  /// Splits [ref] into `(title, address)` by peeling the trailing numeric
-  /// token (optionally followed by a single letter) from the end.
+  /// Splits [ref] into `(title, address)` by peeling the trailing address
+  /// token from the end: a digit run, optionally followed by `:` and another
+  /// digit run (chapter:verse, e.g. `"1:1"`), optionally followed by a
+  /// single letter (amud, e.g. `"2a"`).
   static (String, String)? _splitTail(String ref) {
     final match = RegExp(
-      r'^(.*?)(\d+[a-z]?)$',
+      r'^(.*?)(\d+(?::\d+)?[a-z]?)$',
     ).firstMatch(ref.replaceAll('_', ' ').trim());
     if (match == null) return null;
     return ((match.group(1) ?? '').trim(), (match.group(2) ?? '').trim());
