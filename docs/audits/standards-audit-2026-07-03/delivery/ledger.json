@@ -1915,13 +1915,18 @@
   {
    "id": "AUD-core-domain-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Fix SefariaRef.titlePart/addressPart to match the documented chapter:verse split (or fix the docs)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "dc47ccbe41489611167256d09f8ffc61767e6475"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-domain-02 AC1 OK: docstring:66 promises 'Mishnah Berakhot'; regex fixed to \\d+(?::\\d+)?[a-z]?; titlePart=='Mishnah Berakhot', addressPart=='1:1' (28/28 + trace)",
+    "AUD-core-domain-02 AC2 OK: test:59-65 comment now affirms docstring match; old bug-acknowledging comment removed (git diff)"
+   ],
+   "notes": "Re-verified: regex couldn't cross ':' in chapter:verse; produced 'Mishnah Berakhot 1:'/'1' vs docstring's 'Mishnah Berakhot'/'1:1'; test locked in bug. No other caller (grep). Red-first: asserted contract, captured fail, fixed regex to `\\d+(?::\\d+)?[a-z]?`, reran 28/28 pass. Both ACs satisfied."
   },
   {
    "id": "AUD-core-sync-23",
