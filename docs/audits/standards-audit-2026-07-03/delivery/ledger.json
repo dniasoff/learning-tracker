@@ -4571,13 +4571,18 @@
     {
       "id": "AUD-t-tracks-05",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Make the TS-10 and TS-2 SelfPacedGoalStep regression tests pump the widget instead of only checking constructor storage",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c7, 2026-07-16). review agent lost (quota) mid-review; no independently-verified review completed for this finding. A candidate fix exists as commit 202174e51bd9f1564ea498d97f30146aaca940bd (\"fix(tests): AUD-t-tracks-05 - pump SelfPacedGoalStep TS-10/TS-2 regression tests\") on stray worktree branch worktree-wf_155489ba-7ba-7, touching test/features/tracks/setup/presentation/steps/goal_step_ts10_state_preserve_test.dart and self_paced_goal_step_scope_test.dart, but it was left un-merged pending re-review per this cid's payload (findingsMerged empty). No code change landed on dev. Branch retained (not patch-equivalent to dev) for a future gate-repair pass to re-review and land, per the AUD-t-cross-64/AUD-t-cross-81 precedent."
+      "commits": [
+        "314d02bd91fc60fbb48433361f2967ce52e7839f"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tracks-05 AC1 OK: goal_step_ts10_state_preserve_test.dart pumps the widget with a deadline initialGoal and asserts the deadline card renders active + Continue emits the restored deadline goal",
+        "AUD-t-tracks-05 AC2 OK: self_paced_goal_step_scope_test.dart pumps the widget with scopeSelections + a mixed content fixture and asserts the rendered count is the scoped total (2), not the full content list (5) or DB full-curriculum count (99)"
+      ],
+      "notes": "merged (gate-repair, 2026-07-17). Prior row was blocked citing an interrupted review pass; a complete, correct candidate fix already existed on stray branch worktree-wf_155489ba-7ba-7 (commit 202174e51bd9f1564ea498d97f30146aaca940bd) but was never merged. Re-reviewed and cherry-picked onto dev at 314d02bd91fc60fbb48433361f2967ce52e7839f. goal_step_ts10_state_preserve_test.dart and self_paced_goal_step_scope_test.dart now pump SelfPacedGoalStep and assert observable deadline-mode/scoped-count state instead of only constructor storage. flutter test on both files: 4/4 passed; goal_step_ts5_continue_overlap_test.dart (neighboring TS-5 coverage): 2/2 passed; flutter analyze clean; make audit PASSED."
     },
     {
       "id": "AUD-t-tracks-06",
@@ -9558,13 +9563,17 @@
     {
       "id": "AUD-t-sync-02",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "local_data_upload_service_test.dart's 'existing completion is re-enqueued' test asserts nothing and contradicts its own name",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (wave-4 chunk11 reconciliation, 2026-07-16). Ledger mismatch found on reconciliation: row was left at status=todo (commits: [], reviewRounds: 0) even though the wave4-chunk11 engine outcome classifies this id as blocked. A candidate fix exists as commit 21bad53ceb4ee88787e3304c0f666deb25cf3182 (\"fix(tests/sync): AUD-t-sync-02 - assert idempotent no-reenqueue in local_data_upload_service_test\") on stray worktree branch worktree-wf_155489ba-7ba-20, touching test/features/sync/data/local_data_upload_service_test.dart, but it was never merged into dev (git cherry dev worktree-wf_155489ba-7ba-20 shows it unmerged) and no merge-lane cid/disposition note for this id was found anywhere on disk. No code change landed on dev. Branch retained (not patch-equivalent to dev) for a future gate-repair pass to re-review and land, per the AUD-t-tracks-05/AUD-t-tracks-07 precedent."
+      "commits": [
+        "314d02bd91fc60fbb48433361f2967ce52e7839f"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-sync-02 AC1 OK: no test in the file has an empty assertion set combined with a name asserting the opposite of its own comment - the renamed test now asserts expect(completionRows, isEmpty)"
+      ],
+      "notes": "merged (gate-repair, 2026-07-17). Prior row was blocked citing an interrupted review pass; a complete, correct candidate fix already existed on stray branch worktree-wf_155489ba-7ba-20 (commit 21bad53ceb4ee88787e3304c0f666deb25cf3182) but was never merged. Re-reviewed and cherry-picked onto dev at 314d02bd91fc60fbb48433361f2967ce52e7839f. Renamed local_data_upload_service_test.dart's 'existing completion is re-enqueued via CompletionWriter' test to '... is NOT re-enqueued ... (idempotent)' and added the missing expect(completionRows, isEmpty) assertion so the test's name matches what it verifies. flutter test: 46/46 passed; flutter analyze clean; make audit PASSED."
     },
     {
       "id": "AUD-t-cross-101",
@@ -9683,13 +9692,17 @@
     {
       "id": "AUD-t-tracks-07",
       "wave": 4,
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Delete or fix the redundant weak step-count assertion in add_track_flow_screen_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c17, 2026-07-16). review agent lost (quota) mid-review; no independently-verified review completed for this finding. A candidate fix exists as commit 31b843d9f3b265c09489025c9211a32235a594c7 (\"test(tracks): AUD-t-tracks-07 - delete redundant weak step-count assertion\") on stray worktree branch worktree-wf_155489ba-7ba-27, touching test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart, but it was left un-merged pending re-review per this cid's payload (findingsMerged empty). No code change landed on dev. Branch retained (not patch-equivalent to dev, git cherry dev worktree-wf_155489ba-7ba-27 shows commit 31b843d9 as unmerged) for a future gate-repair pass to re-review and land, per the AUD-t-tracks-05/AUD-t-cross-64/AUD-t-cross-81 precedent."
+      "commits": [
+        "314d02bd91fc60fbb48433361f2967ce52e7839f"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tracks-07 AC1 OK: only the exact-6 assertion remains for the self-paced Chumash step-count scenario; the weak >= 4 duplicate is deleted"
+      ],
+      "notes": "merged (gate-repair, 2026-07-17). Prior row was blocked citing an interrupted review pass; a complete, correct candidate fix already existed on stray branch worktree-wf_155489ba-7ba-27 (commit 31b843d9f3b265c09489025c9211a32235a594c7) but was never merged. Re-reviewed and cherry-picked onto dev at 314d02bd91fc60fbb48433361f2967ce52e7839f. Deleted the redundant weak '>= 4' step-count assertion in add_track_flow_screen_l1_test.dart; the exact-6 assertion immediately below it already covers the same setup with a strictly stronger check, so no coverage is lost (TQ-7 satisfied - deletion strengthens, not weakens, net coverage). flutter test: 40/40 passed; flutter analyze clean; make audit PASSED."
     },
     {
       "id": "AUD-tutoring-17",
