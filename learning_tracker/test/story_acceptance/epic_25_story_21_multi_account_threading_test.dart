@@ -18,7 +18,8 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/account/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
+
+import '../helpers/pump_app.dart';
 
 /// Resolves the repo root from the `learning_tracker/` sub-directory so the
 /// grep test can scan all of `lib/` without depending on the cwd.
@@ -217,17 +218,13 @@ void main() {
 
   group('Story 25.21 — tier-aware offline UX', () {
     Widget wrap({required AuthState authState, required Widget child}) =>
-        ProviderScope(
+        pumpApp(
           overrides: [
             authStateProvider.overrideWith(
               () => _FakeAuthStateNotifier(authState),
             ),
           ],
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: child),
-          ),
+          child: Scaffold(body: child),
         );
 
     testWidgets('OfflineTopBanner renders nothing when visible == false', (

@@ -9,13 +9,15 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../helpers/pump_app.dart';
 
 Widget _wrap(
   Widget child, {
@@ -25,12 +27,10 @@ Widget _wrap(
   SharedPreferences.setMockInitialValues({
     'hebrew_terms_script_p0': hebrewTermsScript,
   });
-  return ProviderScope(
-    child: MaterialApp(
-      home: Directionality(
-        textDirection: ambient,
-        child: Scaffold(body: child),
-      ),
+  return pumpApp(
+    child: Directionality(
+      textDirection: ambient,
+      child: Scaffold(body: child),
     ),
   );
 }
@@ -146,6 +146,33 @@ void main() {
         final t = tester.widget<Text>(find.byType(Text));
         expect(t.data, equals('משניות'));
         expect(t.textDirection, equals(TextDirection.rtl));
+      },
+    );
+  });
+
+  // ── AUD-t-story-acceptance-28 — shared pumpApp wiring ─────────────────
+  //
+  // `_wrap` used to build its own MaterialApp without localization
+  // delegates. It only worked because none of the widgets under test above
+  // call `AppLocalizations.of(context)`. This regression test pumps a
+  // widget that DOES, so any future ad hoc MaterialApp wrapper missing the
+  // delegates fails loudly here instead of silently at the next widget that
+  // reads a translated string.
+  group('AUD-t-story-acceptance-28 — pumpApp l10n wiring', () {
+    testWidgets(
+      'a widget calling AppLocalizations.of(context) resolves without a '
+      'missing-delegate error',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            Builder(
+              builder: (context) =>
+                  Text(AppLocalizations.of(context)!.appTitle),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Torah Learning Tracker'), findsOneWidget);
       },
     );
   });
