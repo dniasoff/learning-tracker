@@ -3678,13 +3678,18 @@
     {
       "id": "AUD-t-tracks-02",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Extract the _HebrewTermsOff/_track/_perTrackOverrides test scaffolding duplicated across 3 track-management test files",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "cb9d2db6d1e79083c60730509a52058e284e762c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tracks-02 AC1 OK: 7 scaffolding symbols defined once in track_hub_test_helpers.dart, imported by all 3 files; grep confirms no local dupes remain",
+        "AUD-t-tracks-02 AC2 OK: test counts preserved 3/20/32, 55/55 pass; chazaraEnabled drift unified default=false, test13 chazara=true still passes"
+      ],
+      "notes": "Extracted HebrewTermsOff/buildTrack()/perTrackOverrides()/MockStackRouter/FakePageRouteInfo/settle()/teardown() into new setup/helpers/track_hub_test_helpers.dart, imported by all 3 files; local dupes removed; drifted chazaraEnabled param unified. 55 tests pass (3+20+32); analyze/audit clean."
     },
     {
       "id": "AUD-t-tutoring-03",
@@ -4577,13 +4582,19 @@
     {
       "id": "AUD-t-tracks-06",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Rewrite TrackLearningOrderScreen 'race-safety' test to actually verify the _sedarimSaveSeq guard",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "cb9d2db6d1e79083c60730509a52058e284e762c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tracks-06 AC1 OK: I removed guard (screen L223) -> test20 red (masechtosReads len 3 vs 2); restored -> green, source diff empty",
+        "AUD-t-tracks-06 AC2 OK: per-call Completers masechtosReads[] distinguish 'Masechtos Fresh' vs 'Masechtos Initial' (L1011-1063), not just counting saves",
+        "AUD-t-tracks-06 AC3 OK: asserts _renderedRefs contains 'Masechtos Fresh' & isNot(contains 'Masechtos Initial') L1062-82, not bare findsAtLeastNWidgets"
+      ],
+      "notes": "Rewrote test 20 with per-call Completers distinguishing fresh vs stale masechtos refetch; asserts exactly 2 reads + fresh content survives. Red-first: removed mySeq guard -> test failed (3 reads); restored guard (source diff empty) -> test passes."
     },
     {
       "id": "AUD-tutoring-10",
