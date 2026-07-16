@@ -224,10 +224,15 @@ void main() {
     test(
       'constructor accepts null functions (uses FirebaseFunctions.instance)',
       () {
-        // This is a compile-time + late-init check; the repository falls back to
-        // FirebaseFunctions.instance when null is passed. We just confirm the
-        // class is constructible without error from the type system perspective.
-        expect(FirestoreTutorGrantRepository.new, isNotNull);
+        // AUD-t-tutoring-10: `expect(FirestoreTutorGrantRepository.new,
+        // isNotNull)` can never fail — a constructor tear-off is a non-null
+        // function value regardless of whether the constructor itself works.
+        // Actually construct the repository with `functions` omitted (null)
+        // and confirm it resolves FirebaseFunctions.instance without
+        // throwing, and that the built instance still satisfies
+        // TutorGrantRepository.
+        final repo = FirestoreTutorGrantRepository();
+        expect(repo, isA<TutorGrantRepository>());
       },
     );
   });
@@ -379,11 +384,20 @@ void main() {
           ]),
         );
 
-        // Should not throw; the malformed entry is silently dropped.
+        // AUD-t-tutoring-10: `lessThanOrEqualTo(2)` never distinguishes
+        // "malformed entry correctly dropped" (1 survivor) from "nothing was
+        // actually filtered" (2 survivors) — both satisfy `<= 2`, so a
+        // regression that silently stopped skipping malformed entries (e.g.
+        // `grant_id` defaulting to '' instead of throwing) would ship
+        // undetected. Assert the real, specific contract instead: exactly
+        // the one well-formed entry survives, and it's the expected one.
         final grants = await repo.listIncomingGrants();
-        // The valid entry may survive; the malformed one is dropped.
-        // Verify no exception is thrown (the list has ≤ 2 elements).
-        expect(grants.length, lessThanOrEqualTo(2));
+        expect(
+          grants,
+          hasLength(1),
+          reason: 'the malformed entry (missing grant_id) must be dropped',
+        );
+        expect(grants.single.grantId, 'valid');
       },
     );
   });

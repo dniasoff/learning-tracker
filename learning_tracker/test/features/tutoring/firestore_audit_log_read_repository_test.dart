@@ -9,6 +9,8 @@
 @Tags(['tutoring', 'audit_log', 'unit'])
 library;
 
+import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/features/tutoring/data/repositories/firestore_audit_log_read_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/audit_log_providers.dart';
 import 'package:test/test.dart';
@@ -17,12 +19,29 @@ void main() {
   // ── Type contract ──────────────────────────────────────────────────────────
 
   group('TutorAuditLogReadRepository — interface contract', () {
-    test('abstract interface is not null (compile-time check)', () {
-      // Verifies that the interface compiles and is accessible. The concrete
-      // FirestoreAuditLogReadRepository class requires Firebase.initializeApp()
-      // and is therefore tested via integration tests with the emulator.
-      expect(TutorAuditLogReadRepository, isNotNull);
-    });
+    test(
+      'FirestoreAuditLogReadRepository satisfies TutorAuditLogReadRepository '
+      '(real assignability check — fails to compile otherwise)',
+      () {
+        // AUD-t-tutoring-10: `expect(TutorAuditLogReadRepository, isNotNull)`
+        // can never fail — a bare Type literal is non-null by construction
+        // regardless of what (if anything) implements it. The concrete
+        // FirestoreAuditLogReadRepository class requires
+        // Firebase.initializeApp() to instantiate, so it is exercised at
+        // runtime via integration tests with the emulator — but assignability
+        // to the interface doesn't need an instance: assigning the concrete
+        // constructor tear-off to an interface-typed function variable only
+        // type-checks if FirestoreAuditLogReadRepository genuinely implements
+        // TutorAuditLogReadRepository with a matching constructor signature.
+        // Removing `implements TutorAuditLogReadRepository` from the class
+        // turns this into a compile error, failing this test file.
+        const TutorAuditLogReadRepository Function({
+          required FirestoreGateway gateway,
+        })
+        ctor = FirestoreAuditLogReadRepository.new;
+        expect(ctor, isNotNull);
+      },
+    );
   });
 
   // ── TutorAuditLogEntry round-trip ─────────────────────────────────────────
