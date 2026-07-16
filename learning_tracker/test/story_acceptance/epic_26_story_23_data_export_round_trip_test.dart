@@ -447,26 +447,7 @@ void main() {
         }
 
         // ── Wipe the DB ───────────────────────────────────────────
-        await db.transaction(() async {
-          await db.delete(db.streakEvents).go();
-          await db.delete(db.streakEvents).go();
-          await db.delete(db.completionEvents).go();
-          await db.delete(db.completionEvents).go();
-          await db.delete(db.learningLedger).go();
-          await db.delete(db.dailyPlans).go();
-          await db.delete(db.trackLearningOrder).go();
-          await db.delete(db.learningOrder).go();
-          await db.delete(db.bookmarks).go();
-          await db.delete(db.goals).go();
-          await db.delete(db.studyDayConfigs).go();
-          await db.delete(db.pointConfigs).go();
-          await db.delete(db.stageDefinitions).go();
-          await db.delete(db.profilePrograms).go();
-          await db.delete(db.curriculumScopes).go();
-          await db.delete(db.curriculumTracks).go();
-          await db.delete(db.learnerProfiles).go();
-          await db.delete(db.accounts).go();
-        });
+        await wipeAllUserTables(db);
 
         // ── Verify DB is empty ────────────────────────────────────
         expect(await db.select(db.accounts).get(), isEmpty);
@@ -687,26 +668,7 @@ void main() {
           reason: 'purgedAt must be serialised into the export',
         );
 
-        await db.transaction(() async {
-          await db.delete(db.completionEvents).go();
-          await db.delete(db.completionEvents).go();
-          await db.delete(db.streakEvents).go();
-          await db.delete(db.streakEvents).go();
-          await db.delete(db.learningLedger).go();
-          await db.delete(db.dailyPlans).go();
-          await db.delete(db.trackLearningOrder).go();
-          await db.delete(db.learningOrder).go();
-          await db.delete(db.bookmarks).go();
-          await db.delete(db.goals).go();
-          await db.delete(db.studyDayConfigs).go();
-          await db.delete(db.pointConfigs).go();
-          await db.delete(db.stageDefinitions).go();
-          await db.delete(db.profilePrograms).go();
-          await db.delete(db.curriculumScopes).go();
-          await db.delete(db.curriculumTracks).go();
-          await db.delete(db.learnerProfiles).go();
-          await db.delete(db.accounts).go();
-        });
+        await wipeAllUserTables(db);
 
         await _service(db).importData(jsonStr);
 
