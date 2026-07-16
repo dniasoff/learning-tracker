@@ -9491,13 +9491,20 @@
     {
       "id": "AUD-t-sync-03",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "profile_scoped_preference_keys_test.dart tests each read* method twice under two differently-named, near-identical groups",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "0d14553042bf0c1177b36a990f9978429ebfcc5e"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-sync-03 AC OK (line count): file dropped 555->374 lines (git show merge-base=555, wc -l HEAD=374), a material 33% reduction",
+        "AUD-t-sync-03 AC OK (one group each): grep shows exactly 7 read* groups, one per method; zero bare-named duplicate groups remain",
+        "AUD-t-sync-03 AC OK (paths kept): each retained group asserts scoped+legacy-p0+default; flutter test PASS 42/42 across all 7 methods",
+        "AUD-t-sync-03 TQ-7 OK: deleted bare groups verified duplicates; every deleted scenario subset of kept group (5/7 add default-p0), no unique coverage lost"
+      ],
+      "notes": "Evidence path stale (AUD-sync-06 moved file to test/core/preferences/) but defect held there: 7 read* methods each had a duplicate group pair. Deleted 7 bare 'readX' duplicates, kept 'ProfileScopedPreferenceKeys.readX' naming. File 555->374 lines. 42/42 tests pass; all paths still covered."
     },
     {
       "id": "AUD-t-sync-02",
