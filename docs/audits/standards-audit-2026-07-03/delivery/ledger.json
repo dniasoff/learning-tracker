@@ -4592,13 +4592,18 @@
     {
       "id": "AUD-t-tutoring-02",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Add TutoredWriteRouter coverage for the 4 always-pass-through methods in s1_tutored_write_router_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "e7b5b4b629c5f55157d8b2508bdb80c34d2ef97a"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-02 AC1 OK: test at s1_...test.dart:1211 calls _tutored router.deleteLearnerProfile(42); asserts count==1 & record.wasCalled isFalse; green (+44)",
+        "AUD-t-tutoring-02 AC2 OK: pushSettings(:1152)/pushLearningOrder(:1168)/pushUiPreferencesSnapshot(:1191) tutored tests assert delegate count==1 & wasCalled isFalse; green"
+      ],
+      "notes": "Confirmed zero calls to the 4 methods pre-fix. Added group covering all 4 in tutored mode (both AC bullets met). Red-first: inverted router pass-through to simulate regression -> 4/4 new tests failed; reverted (diff=0); reran -> 45/45 pass. Merged --no-ff onto dev (w4r1c9, mergeSha e7b5b4b629c5f55157d8b2508bdb80c34d2ef97a). Post-rebase gate: make audit 67/67 clean, flutter analyze clean (touchedStrings=false, no arb-parity needed). gatePolicy=disjoint-skip: rebase vs dev was file-disjoint (dev tip == merge-base of tipSha and dev), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
     },
     {
       "id": "AUD-t-story-acceptance-05",
