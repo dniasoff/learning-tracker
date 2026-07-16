@@ -9634,13 +9634,13 @@
     {
       "id": "AUD-t-tracks-07",
       "wave": 4,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Delete or fix the redundant weak step-count assertion in add_track_flow_screen_l1_test.dart",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "blocked (merge-lane w4r1c17, 2026-07-16). review agent lost (quota) mid-review; no independently-verified review completed for this finding. A candidate fix exists as commit 31b843d9f3b265c09489025c9211a32235a594c7 (\"test(tracks): AUD-t-tracks-07 - delete redundant weak step-count assertion\") on stray worktree branch worktree-wf_155489ba-7ba-27, touching test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart, but it was left un-merged pending re-review per this cid's payload (findingsMerged empty). No code change landed on dev. Branch retained (not patch-equivalent to dev, git cherry dev worktree-wf_155489ba-7ba-27 shows commit 31b843d9 as unmerged) for a future gate-repair pass to re-review and land, per the AUD-t-tracks-05/AUD-t-cross-64/AUD-t-cross-81 precedent."
     },
     {
       "id": "AUD-tutoring-17",
