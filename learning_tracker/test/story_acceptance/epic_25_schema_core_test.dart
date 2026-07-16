@@ -607,9 +607,24 @@ void main() {
       test(
         'AuthRepository interface declares currentUser, onAuthStateChanged, signIn, signInWithGoogle, signOut',
         () {
-          // Verify the abstract class has the expected members by constructing
-          // a mock and calling them. This is a compile-time check — if the
-          // interface is missing a member, the mock class cannot compile.
+          // Compile-time shape check only (AUD-t-story-acceptance-47): the
+          // `when(...)` stubs below reference each interface member with its
+          // real signature, so this test fails to COMPILE if AuthRepository
+          // drops or reshapes a member `_MockAuthRepository` implements.
+          // There are deliberately no expect() calls here — this test used
+          // to stub the mock and then assert the mock echoed back exactly
+          // what it was just told to return, which can never fail
+          // regardless of what AuthRepositoryImpl actually does. Real
+          // behavioural coverage for AuthRepositoryImpl lives in
+          // test/features/auth/data/repositories/auth_repository_impl_test.dart.
+          // weaken-ok: AUD-t-story-acceptance-47 — the 5 expect() calls
+          // removed below only echoed values just stubbed on this same mock
+          // (e.g. `when(() => repo.currentUser).thenReturn(null)` then
+          // `expect(repo.currentUser, isNull)`); they could never fail
+          // regardless of AuthRepositoryImpl's real behaviour, so they
+          // carried no verification value. No net coverage is lost — real
+          // behavioural coverage for AuthRepositoryImpl already lives in
+          // auth_repository_impl_test.dart (see path above).
           final repo = _MockAuthRepository();
 
           when(() => repo.currentUser).thenReturn(null);
@@ -621,17 +636,6 @@ void main() {
           ).thenAnswer((_) async {});
           when(() => repo.signInWithGoogle()).thenAnswer((_) async {});
           when(() => repo.signOut()).thenAnswer((_) async {});
-
-          expect(repo.currentUser, isNull);
-          expect(repo.onAuthStateChanged(), isA<Stream<AppUser?>>());
-
-          // Verify the calls complete without error.
-          expect(
-            () async => repo.signInWithEmail('a@b.com', 'pw'),
-            returnsNormally,
-          );
-          expect(() async => repo.signInWithGoogle(), returnsNormally);
-          expect(() async => repo.signOut(), returnsNormally);
         },
       );
 
@@ -1137,13 +1141,30 @@ void main() {
       test('SystemLocalDayClock.today returns a y/m/d local DateTime', () {
         const clock = SystemLocalDayClock();
 
+        // Bracket the call under test between two wall-clock reads instead
+        // of comparing to a single independent DateTime.now() (AUD-t-story-
+        // acceptance-37): with two unrelated reads, a local-midnight
+        // rollover between them makes the comparison intermittently
+        // disagree. Bracketing means `today` is guaranteed to fall on
+        // either `before`'s or `after`'s calendar day, so the assertion is
+        // race-free even if midnight ticks over mid-test.
+        final before = DateTime.now();
         final today = clock.today();
-        final sysNow = DateTime.now();
+        final after = DateTime.now();
+
+        final beforeDay = DateTime(before.year, before.month, before.day);
+        final afterDay = DateTime(after.year, after.month, after.day);
+        final todayDay = DateTime(today.year, today.month, today.day);
 
         expect(today.isUtc, isFalse);
-        expect(today.year, equals(sysNow.year));
-        expect(today.month, equals(sysNow.month));
-        expect(today.day, equals(sysNow.day));
+        expect(
+          todayDay == beforeDay || todayDay == afterDay,
+          isTrue,
+          reason:
+              'expected today() ($todayDay) to equal the calendar day of '
+              'either the before ($beforeDay) or after ($afterDay) '
+              'DateTime.now() bracket',
+        );
         expect(today.hour, equals(0));
         expect(today.minute, equals(0));
         expect(today.second, equals(0));
