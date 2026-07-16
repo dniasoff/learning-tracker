@@ -3727,24 +3727,28 @@
     {
       "id": "AUD-t-story-acceptance-20",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Scope firestore.rules text-matching assertions to their collection block and check deny-all ordering in epic_24_stop_the_bleeding_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "24ab310cbe3d1ce96a01aa5a5985c568ef7e4c94"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "File renamed (AUD-14) but finding valid. Scoped assertions to _extractBlock(completions); added denyPos<completionsPos check. Red-first: mutated real firestore.rules, both tests failed, reverted (diff clean), reran -> 17/17 pass. Commit 3e8078db."
     },
     {
       "id": "AUD-t-story-acceptance-21",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Test FirebaseCrashlyticsService.setUserIdentifier directly instead of a hand-duplicated fake in epic_24_stop_the_bleeding_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "d81eb3f38d34827f4bff5fee7b41b040c84fcc66"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "File renamed (AUD-14) but finding valid. Added MockFirebaseCrashlytics + real service for AC3/AC4. Red-first: mutated real ternary, 3 tests failed, reverted (diff clean), reran -> 8/8 pass. 3rd duplicate elsewhere left untouched. Commit 12e4cc0b."
     },
     {
       "id": "AUD-t-story-acceptance-12",
