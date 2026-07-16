@@ -1141,13 +1141,30 @@ void main() {
       test('SystemLocalDayClock.today returns a y/m/d local DateTime', () {
         const clock = SystemLocalDayClock();
 
+        // Bracket the call under test between two wall-clock reads instead
+        // of comparing to a single independent DateTime.now() (AUD-t-story-
+        // acceptance-37): with two unrelated reads, a local-midnight
+        // rollover between them makes the comparison intermittently
+        // disagree. Bracketing means `today` is guaranteed to fall on
+        // either `before`'s or `after`'s calendar day, so the assertion is
+        // race-free even if midnight ticks over mid-test.
+        final before = DateTime.now();
         final today = clock.today();
-        final sysNow = DateTime.now();
+        final after = DateTime.now();
+
+        final beforeDay = DateTime(before.year, before.month, before.day);
+        final afterDay = DateTime(after.year, after.month, after.day);
+        final todayDay = DateTime(today.year, today.month, today.day);
 
         expect(today.isUtc, isFalse);
-        expect(today.year, equals(sysNow.year));
-        expect(today.month, equals(sysNow.month));
-        expect(today.day, equals(sysNow.day));
+        expect(
+          todayDay == beforeDay || todayDay == afterDay,
+          isTrue,
+          reason:
+              'expected today() ($todayDay) to equal the calendar day of '
+              'either the before ($beforeDay) or after ($afterDay) '
+              'DateTime.now() bracket',
+        );
         expect(today.hour, equals(0));
         expect(today.minute, equals(0));
         expect(today.second, equals(0));
