@@ -607,9 +607,24 @@ void main() {
       test(
         'AuthRepository interface declares currentUser, onAuthStateChanged, signIn, signInWithGoogle, signOut',
         () {
-          // Verify the abstract class has the expected members by constructing
-          // a mock and calling them. This is a compile-time check — if the
-          // interface is missing a member, the mock class cannot compile.
+          // Compile-time shape check only (AUD-t-story-acceptance-47): the
+          // `when(...)` stubs below reference each interface member with its
+          // real signature, so this test fails to COMPILE if AuthRepository
+          // drops or reshapes a member `_MockAuthRepository` implements.
+          // There are deliberately no expect() calls here — this test used
+          // to stub the mock and then assert the mock echoed back exactly
+          // what it was just told to return, which can never fail
+          // regardless of what AuthRepositoryImpl actually does. Real
+          // behavioural coverage for AuthRepositoryImpl lives in
+          // test/features/auth/data/repositories/auth_repository_impl_test.dart.
+          // weaken-ok: AUD-t-story-acceptance-47 — the 5 expect() calls
+          // removed below only echoed values just stubbed on this same mock
+          // (e.g. `when(() => repo.currentUser).thenReturn(null)` then
+          // `expect(repo.currentUser, isNull)`); they could never fail
+          // regardless of AuthRepositoryImpl's real behaviour, so they
+          // carried no verification value. No net coverage is lost — real
+          // behavioural coverage for AuthRepositoryImpl already lives in
+          // auth_repository_impl_test.dart (see path above).
           final repo = _MockAuthRepository();
 
           when(() => repo.currentUser).thenReturn(null);
@@ -621,17 +636,6 @@ void main() {
           ).thenAnswer((_) async {});
           when(() => repo.signInWithGoogle()).thenAnswer((_) async {});
           when(() => repo.signOut()).thenAnswer((_) async {});
-
-          expect(repo.currentUser, isNull);
-          expect(repo.onAuthStateChanged(), isA<Stream<AppUser?>>());
-
-          // Verify the calls complete without error.
-          expect(
-            () async => repo.signInWithEmail('a@b.com', 'pw'),
-            returnsNormally,
-          );
-          expect(() async => repo.signInWithGoogle(), returnsNormally);
-          expect(() async => repo.signOut(), returnsNormally);
         },
       );
 
