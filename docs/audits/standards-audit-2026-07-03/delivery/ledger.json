@@ -9695,13 +9695,17 @@
     {
       "id": "AUD-t-tutoring-12",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Verify the W7.11 tutor_live_mark_blocked analytics event fires in mark_live_completion_invariant_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "76b66b710eec79d8219c6f4763afc053276111e1"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-12 AC1 OK: test L80-96 injects real FakeAnalyticsService, asserts countOf(tutorLiveMarkBlocked)==1 on tutor path (==LogEvents.tutor.liveMarkBlocked)"
+      ],
+      "notes": "Grep confirmed zero coverage before fix. Evidence quote stale (renamed post-freeze by 1d131567) but finding substance held. Added 3 FakeAnalyticsService cases: tutor fires once, owner/child-self never. Red-first: broke prod code, fires-once case failed 1 vs 0, reverted, reran green 7/7."
     },
     {
       "id": "AUD-t-tutoring-09",
