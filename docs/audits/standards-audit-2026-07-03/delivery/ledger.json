@@ -9703,13 +9703,18 @@
     {
       "id": "AUD-t-story-acceptance-43",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Remove the self-comparison schemaVersion assertion and fix the stale '13' docstring in epic_27_test_infrastructure_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "6a1272ba9602b6f5d17ab81414b998746aea56bf"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-43 AC1a OK: python backreference scan (comments stripped) finds NO expect(x,x); removed line survives only inside weaken-ok comment L154",
+        "AUD-t-story-acceptance-43 AC1b OK: stale docstring '=13' removed, now points to UserDatabase.schemaVersion (valid; user_database.dart:209 =>36). Satisfies 'or is removed'"
+      ],
+      "notes": "Re-verified tautology + stale '=13' docstring (actual 36) still present, no drift since 4018a91c. Deleted self-comparison (kept greaterThanOrEqualTo(1)), added weaken-ok comment per TQ-7, replaced docstring number with pointer to UserDatabase.schemaVersion. Both AC satisfied."
     },
     {
       "id": "AUD-t-story-acceptance-22",
