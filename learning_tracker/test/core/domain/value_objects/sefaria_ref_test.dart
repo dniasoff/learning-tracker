@@ -58,13 +58,10 @@ void main() {
     group('titlePart', () {
       test('extracts title from chapter:verse ref', () {
         final ref = SefariaRef.parse('Mishnah Berakhot 1:1');
-        // The trailing "1:1" ends with digit 1 so tail captures "1" and title is
-        // "Mishnah Berakhot 1:".  However the regex captures the last numeric
-        // group so title = "Mishnah Berakhot 1:" — let's assert what we actually
-        // produce (the regex captures trailing token only).
-        // Expected: 'Mishnah Berakhot 1:' is the title, '1' is the address.
-        // The SefariaRef titlePart splits on the LAST pure-numeric token.
-        expect(ref.titlePart, 'Mishnah Berakhot 1:');
+        // Matches the class docstring's worked example: the whole "1:1"
+        // chapter:verse address is one trailing token, so the title stops
+        // before it.
+        expect(ref.titlePart, 'Mishnah Berakhot');
       });
 
       test('extracts title from amud ref', () {
@@ -79,6 +76,13 @@ void main() {
     });
 
     group('addressPart', () {
+      test('extracts chapter:verse address', () {
+        final ref = SefariaRef.parse('Mishnah Berakhot 1:1');
+        // Matches the class docstring's worked example: addressPart is the
+        // whole "1:1" token, not just the trailing "1".
+        expect(ref.addressPart, '1:1');
+      });
+
       test('extracts amud address', () {
         final ref = SefariaRef.parse('Shabbat 2a');
         expect(ref.addressPart, '2a');
