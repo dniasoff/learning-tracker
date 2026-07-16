@@ -445,20 +445,19 @@ void main() {
 
   // ── 12. crash_reported ────────────────────────────────────────────────────
   group('27.14 — crash_reported', () {
-    test(
-      'NullCrashlyticsService.recordError does NOT fire crash_reported',
-      () async {
-        // NullCrashlyticsService is a no-op — it never calls analytics.
-        // Verify that the AnalyticsService contract is still intact.
-        final analytics = FakeAnalyticsService();
-        await analytics.logCrashReported(fatal: true);
-        expect(analytics.countOf(AnalyticsEvent.crashReported), 1);
-        expect(
-          analytics.lastParamsOf(AnalyticsEvent.crashReported),
-          containsPair('fatal', true),
-        );
-      },
-    );
+    test('logCrashReported fatal=true fires with correct param', () async {
+      // Verifies the AnalyticsService.logCrashReported contract directly.
+      // NullCrashlyticsService's own no-op behaviour (it never calls
+      // analytics.logCrashReported) is covered separately in
+      // test/core/logging/crashlytics_service_test.dart.
+      final analytics = FakeAnalyticsService();
+      await analytics.logCrashReported(fatal: true);
+      expect(analytics.countOf(AnalyticsEvent.crashReported), 1);
+      expect(
+        analytics.lastParamsOf(AnalyticsEvent.crashReported),
+        containsPair('fatal', true),
+      );
+    });
 
     test('logCrashReported fatal=false fires with correct param', () async {
       final analytics = FakeAnalyticsService();
