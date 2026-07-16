@@ -23,6 +23,7 @@ import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
@@ -202,63 +203,67 @@ void main() {
 
     // ── N5 — restoreOrCreate resets activatedAt to mark a new session ────────
 
-    group('N5: restoreOrCreate resets activatedAt for a new learning session', () {
-      test(
-        'restored track gets activatedAt = now so the current cycle starts fresh',
-        () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
+    group(
+      'N5: restoreOrCreate resets activatedAt for a new learning session',
+      () {
+        test(
+          'restored track gets activatedAt = now so the current cycle starts fresh',
+          () async {
+            final db = inMemoryDb();
+            addTearDown(db.close);
 
-          final originalActivatedAt = DateTimeFactory.nowUtc().subtract(
-            const Duration(days: 5),
-          );
+            // AUD-t-story-acceptance-39: inject a fixed clock instead of
+            // comparing activatedAt to a real DateTime.now()/nowUtc() read at
+            // assertion time — a stall between the write and the assertion
+            // (e.g. a cold Drift/sqlite3 open on a contended CI runner) would
+            // otherwise flake this test for a reason unrelated to the code
+            // under test.
+            final fixedNow = DateTime.utc(2026, 6, 1, 12);
+            useLocalDayClock(FakeLocalDayClock(fixedNow));
+            addTearDown(resetLocalDayClock);
 
-          // Insert a track with an activatedAt 5 days in the past.
-          final trackId = await db
-              .into(db.curriculumTracks)
-              .insert(
-                CurriculumTracksCompanion.insert(
-                  profileId: 1,
-                  curriculumId: CurriculumId.mishnayos.storageKey,
-                  stateChangedAt: originalActivatedAt,
-                  activatedAt: originalActivatedAt,
-                ),
-              );
+            final originalActivatedAt = fixedNow.subtract(
+              const Duration(days: 5),
+            );
 
-          // Soft-delete the track.
-          await db.trackDao.deleteTrackAndData(trackId);
+            // Insert a track with an activatedAt 5 days in the past.
+            final trackId = await db
+                .into(db.curriculumTracks)
+                .insert(
+                  CurriculumTracksCompanion.insert(
+                    profileId: 1,
+                    curriculumId: CurriculumId.mishnayos.storageKey,
+                    stateChangedAt: originalActivatedAt,
+                    activatedAt: originalActivatedAt,
+                  ),
+                );
 
-          final beforeRestore = DateTimeFactory.nowUtc();
+            // Soft-delete the track.
+            await db.trackDao.deleteTrackAndData(trackId);
 
-          // Re-add via restoreOrCreate.
-          await db.trackDao.restoreOrCreate(
-            profileId: 1,
-            curriculumId: CurriculumId.mishnayos,
-          );
+            // Re-add via restoreOrCreate.
+            await db.trackDao.restoreOrCreate(
+              profileId: 1,
+              curriculumId: CurriculumId.mishnayos,
+            );
 
-          final restored = await db.trackDao.getTrackById(trackId);
+            final restored = await db.trackDao.getTrackById(trackId);
 
-          // activatedAt must be reset to now (new session), not the old value.
-          expect(
-            restored!.activatedAt.isAfter(
-              DateTimeFactory.nowUtc().subtract(const Duration(days: 4)),
-            ),
-            isTrue,
-            reason:
-                'N5: restoreOrCreate must reset activatedAt to now so that '
-                'the current learning session starts fresh; old completions '
-                'predating activatedAt are excluded from current-cycle progress',
-          );
-          expect(
-            restored.activatedAt.isAfter(
-              beforeRestore.subtract(const Duration(seconds: 5)),
-            ),
-            isTrue,
-            reason: 'N5: new activatedAt must be approximately now',
-          );
-        },
-      );
-    });
+            // activatedAt must be reset to the fake clock's fixed instant (new
+            // session), not the old value.
+            expect(
+              restored!.activatedAt.isAtSameMomentAs(fixedNow),
+              isTrue,
+              reason:
+                  'N5: restoreOrCreate must reset activatedAt to the current '
+                  'clock instant so that the current learning session starts '
+                  'fresh; old completions predating activatedAt are excluded '
+                  'from current-cycle progress',
+            );
+          },
+        );
+      },
+    );
 
     // ── N6 — completion count and progress % share one "done" definition ────
 
