@@ -117,7 +117,17 @@ class CurriculumLabel extends ConsumerWidget {
        _itemMode = null,
        _sefariaRef = null;
 
-  /// Renders a label from an already-loaded [ContentItem]. Sync.
+  /// Renders a label from an already-loaded [ContentItem].
+  ///
+  /// [CurriculumLabelMode.leaf] is synchronous — it only needs the item's
+  /// own `displayNameHe`/`displayNameEn`. [CurriculumLabelMode.breadcrumb]
+  /// and [CurriculumLabelMode.parent] need every NAMED ancestor segment's
+  /// Hebrew name (e.g. the Seder/Masechta above a Mishna), which isn't
+  /// carried on the leaf item itself — those modes resolve it via
+  /// `item.sefariaRef` through the same async provider path as
+  /// [CurriculumLabel.breadcrumb]/[CurriculumLabel.parent]
+  /// (`renderedDisplayForRefProvider`/`renderedParentForRefProvider`), so
+  /// they render a zero-width-space placeholder for one frame while loading.
   const CurriculumLabel.item(
     ContentItem item, {
     CurriculumLabelMode mode = CurriculumLabelMode.leaf,
@@ -278,7 +288,59 @@ class CurriculumLabel extends ConsumerWidget {
       case _Kind.item:
         final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
         final variant = ref.watch(currentTransliterationVariantProvider);
-        return _text(_renderItem(useHebrew, variant), useHebrew: useHebrew);
+        final item = _item!;
+        switch (_itemMode!) {
+          case CurriculumLabelMode.leaf:
+            // Only the leaf's own displayNameHe/displayNameEn is needed —
+            // no ancestor lookup required, so this stays synchronous.
+            return _text(
+              CurriculumLabelRenderer.renderForItem(
+                item,
+                useHebrew: useHebrew,
+                transliterationVariant: variant,
+              ),
+              useHebrew: useHebrew,
+            );
+          case CurriculumLabelMode.breadcrumb:
+            // AUD-core-labels-01: route through the same ref-based async
+            // provider as CurriculumLabel.breadcrumb so every named
+            // ancestor segment (not just the leaf) resolves its Hebrew
+            // name via curriculumContentProvider instead of falling back
+            // to the raw storage-key value.
+            return ref
+                .watch(renderedDisplayForRefProvider(item.sefariaRef))
+                .when(
+                  data: (s) => _text(s, useHebrew: useHebrew),
+                  loading: () => _text('​', useHebrew: useHebrew),
+                  error: (_, __) => _text(
+                    CurriculumLabelRenderer.renderForItem(
+                      item,
+                      useHebrew: useHebrew,
+                      fullPath: true,
+                      transliterationVariant: variant,
+                    ),
+                    useHebrew: useHebrew,
+                  ),
+                );
+          case CurriculumLabelMode.parent:
+            // AUD-core-labels-01: same fix as breadcrumb above, via
+            // renderedParentForRefProvider.
+            return ref
+                .watch(renderedParentForRefProvider(item.sefariaRef))
+                .when(
+                  data: (s) => _text(s ?? '', useHebrew: useHebrew),
+                  loading: () => _text('​', useHebrew: useHebrew),
+                  error: (_, __) => _text(
+                    CurriculumLabelRenderer.renderParentForItem(
+                          item,
+                          useHebrew: useHebrew,
+                          transliterationVariant: variant,
+                        ) ??
+                        '',
+                    useHebrew: useHebrew,
+                  ),
+                );
+        }
       case _Kind.breadcrumb:
         final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
         final r = _sefariaRef!;
@@ -311,31 +373,6 @@ class CurriculumLabel extends ConsumerWidget {
               loading: () => _text('​', useHebrew: useHebrew),
               error: (_, __) => _text('', useHebrew: useHebrew),
             );
-    }
-  }
-
-  String _renderItem(bool useHebrew, TransliterationVariant variant) {
-    switch (_itemMode!) {
-      case CurriculumLabelMode.leaf:
-        return CurriculumLabelRenderer.renderForItem(
-          _item!,
-          useHebrew: useHebrew,
-          transliterationVariant: variant,
-        );
-      case CurriculumLabelMode.breadcrumb:
-        return CurriculumLabelRenderer.renderForItem(
-          _item!,
-          useHebrew: useHebrew,
-          fullPath: true,
-          transliterationVariant: variant,
-        );
-      case CurriculumLabelMode.parent:
-        return CurriculumLabelRenderer.renderParentForItem(
-              _item!,
-              useHebrew: useHebrew,
-              transliterationVariant: variant,
-            ) ??
-            '';
     }
   }
 
