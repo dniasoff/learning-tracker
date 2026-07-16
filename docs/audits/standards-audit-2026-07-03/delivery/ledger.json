@@ -8080,13 +8080,19 @@
     {
       "id": "AUD-t-sync-01",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Three test files exercise or scaffold a fully-deleted sync subsystem (OfflineQueue, SyncEngine, FirestoreDataSource) instead of being deleted",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "82be0ca78b2d26fd3c94fa797784163235ea1997"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-sync-01 AC1 OK: 3 lib paths absent from lib/ (find empty); post-fix AC grep exits 1; pre-fix RED = 3 import lines in sync_engine_test.dart.skip",
+        "AUD-t-sync-01 checker OK: make audit 68/68 exists and FIRES \u2014 probe importing sync_engine.dart made audit FAIL exit 2; removed probe -> exit 0 again",
+        "AUD-t-sync-01 AG-6 OK: .skip removed from allow-list; zero .skip files remain, empty ALLOWED_SKIP_FILES keeps check 55/57 clean"
+      ],
+      "notes": "Re-verified all 3 files existed as evidenced; deleted lib paths confirmed absent. Deleted all 3 dead files. RED: pre-fix AC grep matched 3 lines. GREEN: post-fix grep exits 1. Shipped grep as permanent make audit check 68/68; cleaned stale .skip entry from AG-6 allow-list."
     },
     {
       "id": "AUD-sync-05",
