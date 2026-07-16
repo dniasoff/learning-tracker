@@ -114,6 +114,32 @@ void main() {
           final after = await db.completionDao.getCompletionsByTrack(trackId);
           expect(after, isEmpty);
 
+          // AUD-t-story-acceptance-26: the assertion above only proves the
+          // *view* is empty — completionsView filters `purgedAt IS NULL`,
+          // so a regression that hard-deletes the row instead of tombstoning
+          // it would produce this exact same empty result. Go around the
+          // view with a raw select on completion_events directly to prove
+          // the row count is unchanged (append-only, C3/N8) and purgedAt is
+          // actually set on every row for this track.
+          final rawAfter = await (db.select(
+            db.completionEvents,
+          )..where((t) => t.trackId.equals(trackId))).get();
+          expect(
+            rawAfter,
+            hasLength(before.length),
+            reason:
+                'completion_events row count must be unchanged by '
+                'purgeHistory — rows are tombstoned, never deleted '
+                '(C3/N8 append-only invariant)',
+          );
+          expect(
+            rawAfter.every((c) => c.purgedAt != null),
+            isTrue,
+            reason:
+                'every completion_events row for the purged track must '
+                'carry a non-null purgedAt',
+          );
+
           // Track row is physically deleted — no tombstone left behind.
           final trackRow = await db.trackDao.getTrackById(trackId);
           expect(trackRow, isNull);
