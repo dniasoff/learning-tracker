@@ -104,30 +104,27 @@ void main() {
       );
     });
 
-    test(
-      'completions block denies update from non-owners and denies delete',
-      () {
-        final block = _extractRuleBlock(rules, 'completions/{completionId}');
-        // Update must be gated by isOwner(uid) — either as a combined
-        // "create, update" or a separate rule (including the SR-1
-        // idempotent-replay guard — AUD-docs-01 — which is owner-only PLUS
-        // value-unchanged, strictly stronger than plain owner-only). A tutor
-        // (uid ≠ profileId owner) always fails isOwner(uid), so no tutor can
-        // update a completion.
-        expect(
-          block,
-          anyOf(
-            contains('allow update: if false'),
-            contains('allow create, update: if isOwner'),
-            contains(
-              'allow update: if isOwner(uid) && request.resource.data == resource.data',
-            ),
+    test('completions block denies update from non-owners and denies delete', () {
+      final block = _extractRuleBlock(rules, 'completions/{completionId}');
+      // Update must be gated by isOwner(uid) — either as a combined
+      // "create, update" or a separate rule (including the SR-1
+      // idempotent-replay guard — AUD-docs-01 — which is owner-only PLUS
+      // value-unchanged, strictly stronger than plain owner-only). A tutor
+      // (uid ≠ profileId owner) always fails isOwner(uid), so no tutor can
+      // update a completion.
+      expect(
+        block,
+        anyOf(
+          contains('allow update: if false'),
+          contains('allow create, update: if isOwner'),
+          contains(
+            'allow update: if isOwner(uid) && request.resource.data == resource.data',
           ),
-          reason: 'completions update MUST be owner-only or explicitly denied.',
-        );
-        expect(block, contains('allow delete: if false'));
-      },
-    );
+        ),
+        reason: 'completions update MUST be owner-only or explicitly denied.',
+      );
+      expect(block, contains('allow delete: if false'));
+    });
   });
 
   // ── 2. Owner positive path (regression guard) ───────────────────────────
@@ -331,22 +328,6 @@ void main() {
         reason:
             'Tutors MUST be able to read settings per FR-3 '
             '(tutors can configure curricula and stages).',
-      );
-    });
-
-    test('completions write is still owner-only despite tutor read access', () {
-      final block = _extractRuleBlock(rules, 'completions/{completionId}');
-      expect(
-        block,
-        isNot(contains('hasActiveTutorAccess(uid, profileId)')),
-        reason:
-            'hasActiveTutorAccess MUST NOT appear in the completions WRITE '
-            'block. Tutors cannot write completions from the client.',
-        // This test checks the write portion doesn't use the tutor helper.
-        // The allow read line will have it, but allow create must not.
-        skip:
-            'Structural check superseded by allow create: if isOwner(uid) '
-            'guard — the whole create rule is owner-only regardless.',
       );
     });
 
