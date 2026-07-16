@@ -48,6 +48,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/drift_memory.dart';
+import '../../helpers/pump_app.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -750,7 +751,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      ProviderScope(
+      pumpApp(
         retry: (_, __) => null,
         overrides: [
           incomingTutorGrantsProvider.overrideWith(
@@ -763,17 +764,7 @@ void main() {
           ),
           userDatabaseProvider.overrideWithValue(db),
         ],
-        child: const MaterialApp(
-          locale: Locale('en'),
-          localizationsDelegates: [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: ManageGrantsScreen(),
-        ),
+        child: const ManageGrantsScreen(),
       ),
     );
     await tester.pump();
@@ -871,20 +862,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(
-            locale: Locale('en'),
-            localizationsDelegates: [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: ManageGrantsScreen(),
-          ),
-        ),
+        pumpApp(container: container, child: const ManageGrantsScreen()),
       );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));

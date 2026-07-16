@@ -51,6 +51,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/drift_memory.dart';
+import '../../helpers/pump_app.dart';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -796,7 +797,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        ProviderScope(
+        pumpApp(
           overrides: [
             profileListProvider.overrideWith((ref) => Future.value([child])),
             outgoingTutorGrantsProvider(
@@ -808,20 +809,10 @@ void main() {
             tutorNotificationGatewayProvider.overrideWithValue(notifGw),
             userDatabaseProvider.overrideWithValue(db),
           ],
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: StackRouterScope(
-              controller: router,
-              stateHash: 0,
-              child: const Scaffold(body: ManageTutorsScreen()),
-            ),
+          child: StackRouterScope(
+            controller: router,
+            stateHash: 0,
+            child: const Scaffold(body: ManageTutorsScreen()),
           ),
         ),
       );
@@ -935,22 +926,12 @@ void main() {
       );
 
       await tester.pumpWidget(
-        UncontrolledProviderScope(
+        pumpApp(
           container: container,
-          child: MaterialApp(
-            locale: const Locale('en'),
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: StackRouterScope(
-              controller: router,
-              stateHash: 0,
-              child: const Scaffold(body: ManageTutorsScreen()),
-            ),
+          child: StackRouterScope(
+            controller: router,
+            stateHash: 0,
+            child: const Scaffold(body: ManageTutorsScreen()),
           ),
         ),
       );
