@@ -252,6 +252,14 @@ Future<void> _teardown(WidgetTester tester) async {
   await tester.pump(Duration.zero);
 }
 
+/// The sefariaRefs of every currently-rendered [DraggableOrderItem], read
+/// directly off the widget (not via rendered text, since [DraggableOrderItem]
+/// resolves its label asynchronously through `CurriculumLabel.local`).
+List<String> _renderedRefs(WidgetTester tester) => tester
+    .widgetList<DraggableOrderItem>(find.byType(DraggableOrderItem))
+    .map((w) => w.item.sefariaRef)
+    .toList();
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1032,52 +1040,106 @@ void main() {
 
   group('TrackLearningOrderScreen — race-safety (_sedarimSaveSeq)', () {
     testWidgets(
-      '20. rapid successive reorders only persist the final order (seq guard)',
+      '20. a stale slow save resolving after a newer reorder must not '
+      'clobber the fresher masechtos state (seq guard)',
       (tester) async {
-        // Both reorders must complete before the slow first save resolves.
         final items = [
           _orderItem('Seder Zeraim', 0),
           _orderItem('Seder Moed', 1),
         ];
 
-        // First save is deliberately slow; second resolves immediately.
-        var saveCount = 0;
+        // Each saveSedarimOrder call gets its own Completer so the test
+        // — not a fixed delay racing a fixed pump duration — controls
+        // exactly which save "wins" and when.
+        final saveCompleters = <Completer<void>>[];
         when(
           () =>
               repo.saveSedarimOrder(any<int>(), any<List<LearningOrderItem>>()),
-        ).thenAnswer((_) async {
-          saveCount++;
-          if (saveCount == 1) {
-            // Slow first save — yields so the test can trigger a second reorder.
-            await Future<void>.delayed(const Duration(milliseconds: 200));
-          }
+        ).thenAnswer((_) {
+          final completer = Completer<void>();
+          saveCompleters.add(completer);
+          return completer.future;
         });
 
+        // Each masechtos read (the initial load, plus any post-save
+        // invalidate/refetch triggered from _persistSedarim) also gets its
+        // own Completer, so the test can tell a "fresh" refetch (triggered
+        // by the second, winning reorder) apart from a "stale" one
+        // (triggered by the first, slow reorder resolving late) — and prove
+        // the stale one never happens once the seq guard is in place.
+        final masechtosReads = <Completer<List<LearningOrderItem>>>[];
+        Future<List<LearningOrderItem>> masechtosFactory() {
+          final completer = Completer<List<LearningOrderItem>>();
+          masechtosReads.add(completer);
+          return completer.future;
+        }
+
         await tester.pumpWidget(
-          _buildOrderApp(repo: repo, sedarimFactory: () => Future.value(items)),
+          _buildOrderApp(
+            repo: repo,
+            sedarimFactory: () => Future.value(items),
+            masechtosFactory: masechtosFactory,
+          ),
         );
         await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+
+        // Resolve the initial masechtos load (the body stays behind the
+        // loading spinner — gated on BOTH sedarim and masechtos — until it
+        // does).
+        expect(masechtosReads, hasLength(1));
+        masechtosReads[0].complete([_orderItem('Masechtos Initial', 0)]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
 
         final listFinder = find.byType(ReorderableListView).first;
         final listWidget = tester.widget<ReorderableListView>(listFinder);
 
-        // First reorder (starts slow async save).
+        // First reorder — its save is left pending ("slow").
         listWidget.onReorderItem?.call(0, 1);
-        await tester.pump(const Duration(milliseconds: 10));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+        expect(saveCompleters, hasLength(1));
 
-        // Second reorder while first save is still in-flight.
+        // Second reorder fired while the first save is still in flight —
+        // its save is also left pending for now.
         listWidget.onReorderItem?.call(0, 1);
-        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+        expect(saveCompleters, hasLength(2));
 
-        // Both save calls are dispatched.
-        verify(
-          () =>
-              repo.saveSedarimOrder(_kTrackId, any<List<LearningOrderItem>>()),
-        ).called(2);
+        // The SECOND (fresher) save resolves first.
+        saveCompleters[1].complete();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
 
-        // The screen must still be mounted and showing the list without crash.
-        expect(find.byType(DraggableOrderItem), findsAtLeastNWidgets(1));
+        // Its post-save continuation invalidates + refetches masechtos —
+        // resolve that fresh read.
+        expect(masechtosReads, hasLength(2));
+        masechtosReads[1].complete([_orderItem('Masechtos Fresh', 0)]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(_renderedRefs(tester), contains('Masechtos Fresh'));
+        expect(_renderedRefs(tester), isNot(contains('Masechtos Initial')));
+
+        // Now the FIRST (stale) save finally resolves, late.
+        saveCompleters[0].complete();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // The seq guard must suppress the stale continuation entirely: no
+        // extra masechtos invalidate/refetch fires, and the rendered order
+        // still reflects only the second (fresher) reorder's masechtos
+        // fetch — not a stale one clobbering it.
+        expect(
+          masechtosReads,
+          hasLength(2),
+          reason:
+              'a late-resolving stale save must not trigger another '
+              'masechtos invalidate/refetch once a newer reorder has '
+              'already landed — if it does, the seq guard has regressed',
+        );
+        expect(_renderedRefs(tester), contains('Masechtos Fresh'));
 
         await _teardown(tester);
       },
