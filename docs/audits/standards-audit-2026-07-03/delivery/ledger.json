@@ -9644,13 +9644,17 @@
     {
       "id": "AUD-t-story-acceptance-41",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Pin the LocalDayClock in epic_27_story_05_bulk_mark_prior_test.dart's second test instead of relying on real wall time",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "9cb1d31864abd299a4f3e9700f1c9e5067b1c1e4"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-41 AC OK: useLocalDayClock setUp L59 + resetLocalDayClock tearDown L124; eventTimestamp==today(2026-05-13) passes => wall-clock independent"
+      ],
+      "notes": "No useLocalDayClock pin existed; markComplete used real wall clock vs frozen FakeLocalDayClock. Red-first (scratch, reverted): tolerance assertion failed, ~1545h actual gap. Fixed via useLocalDayClock/resetLocalDayClock pin (AC1-group pattern); corrected stale comment. Commit a26285c1."
     },
     {
       "id": "AUD-t-story-acceptance-45",
@@ -10607,13 +10611,17 @@
     {
       "id": "AUD-t-story-acceptance-32",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Delete or fix the tautological empty-list StreakReducer assertion in epic_27_story_05_bulk_mark_prior_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "babad29df79631cb5f26dbda30bd7215aefe861f"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-32 AC OK: reduce() now consumes streakRows.map (L176-185); scratch leaked-row injection -> currentStreak=1 fails assertion, non-tautological"
+      ],
+      "notes": "Confirmed tautology: reducer fed hardcoded const <StreakLogEvent>[] instead of queried streakRows. Red-first (scratch, reverted): injected leaked streak_events row - old code still passed; fixed code (map streakRows->reduce) failed as expected (0 vs actual 1). Applied permanent fix. Commit 0299fc48."
     },
     {
       "id": "AUD-t-cross-77",
