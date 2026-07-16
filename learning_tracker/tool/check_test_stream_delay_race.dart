@@ -67,7 +67,6 @@ const _baseline = <String>{
   'test/core/analytics/streak_milestone_analytics_observer_test.dart',
   'test/core/streak/streak_state_service_test.dart',
   'test/features/dashboard/presentation/providers/dashboard_providers_test.dart',
-  'test/story_acceptance/epic_15_multi_profile_test.dart',
 };
 
 final _testBodyOpener = RegExp(r'^\s*test(?:Widgets)?\(');

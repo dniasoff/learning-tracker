@@ -3538,17 +3538,22 @@ void main() {
       test(
         'scope watch stream emits on every change for provider reactivity',
         () async {
-          final emissions = <List<CurriculumScope>>[];
-          final sub = db.curriculumScopeDao
-              .watchScopes(1, CurriculumId.mishnayos)
-              .listen(emissions.add);
+          // Deterministic stream reads instead of a fixed-delay sleep after
+          // each write (AUD-t-story-acceptance-46) — matches the
+          // `await stream.first` pattern already used above in 'watchScopes
+          // emits updates when scopes change'. Each write is awaited before
+          // the next is issued, so every `stream.first` corresponds to
+          // exactly the emission caused by the write immediately before it.
+          final stream = db.curriculumScopeDao.watchScopes(
+            1,
+            CurriculumId.mishnayos,
+          );
 
-          // Wait for initial emission
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-          expect(emissions, isNotEmpty);
-          expect(emissions.last, isEmpty);
+          // Transition 1: initial emission is empty
+          final initial = await stream.first;
+          expect(initial, isEmpty);
 
-          // Set scopes
+          // Transition 2: set scopes
           await db.curriculumScopeDao.setScopes(
             1,
             CurriculumId.mishnayos,
@@ -3556,10 +3561,10 @@ void main() {
             1,
             ['Seder Zeraim'],
           );
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-          expect(emissions.last, hasLength(1));
+          final afterSet = await stream.first;
+          expect(afterSet, hasLength(1));
 
-          // Change scopes
+          // Transition 3: change scopes
           await db.curriculumScopeDao.setScopes(
             1,
             CurriculumId.mishnayos,
@@ -3567,18 +3572,14 @@ void main() {
             1,
             ['Seder Moed'],
           );
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-          expect(emissions.last, hasLength(1));
-          expect(emissions.last.first.scopeValue, 'Seder Moed');
+          final afterChange = await stream.first;
+          expect(afterChange, hasLength(1));
+          expect(afterChange.first.scopeValue, 'Seder Moed');
 
-          // Clear scopes
+          // Transition 4: clear scopes
           await db.curriculumScopeDao.clearScopes(1, CurriculumId.mishnayos);
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-          expect(emissions.last, isEmpty);
-
-          await sub.cancel();
-          // At least 4 emissions: initial, set, change, clear
-          expect(emissions.length, greaterThanOrEqualTo(4));
+          final afterClear = await stream.first;
+          expect(afterClear, isEmpty);
         },
       );
     });
