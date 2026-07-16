@@ -3,11 +3,13 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
@@ -61,6 +63,47 @@ int computeWizardStepTotal({
     return fullStepCount - 1;
   }
   return fullStepCount;
+}
+
+/// Pure, ref-free implementation of the Add-Track wizard's smart default
+/// track name. Extracted from [_AddTrackFlowState._getSmartDefault] (which
+/// wraps this with the `ref.watch`ed Hebrew-terms/transliteration state) so
+/// it can be unit-tested directly against [AddTrackState] without a
+/// `WidgetRef`/`ProviderScope` — see add_track_result_test.dart.
+///
+/// AUD-t-track_setup-01 / F-05/F-21/run7: always uses the curriculum label
+/// for the track's default name (not the last-selected seder, e.g. "Seder
+/// Taharos") so the post-creation snackbar matches the Track Management hub
+/// card title, which shows the curriculum — whether the user picked the
+/// whole curriculum or just a section.
+String smartDefaultTrackName(
+  AddTrackState state, {
+  required bool useHebrewTerms,
+  TransliterationVariant variant = TransliterationVariant.ashkenazi,
+}) {
+  if (state.programName != null) return state.programName!;
+  if (state.scopeSelections != null && state.scopeSelections!.isNotEmpty) {
+    // F-05/F-21/run7: always use the curriculum label for the track's default
+    // name (not the last-selected seder, e.g. "Seder Taharos") so the
+    // post-creation snackbar matches the Track Management hub card title,
+    // which shows the curriculum — whether the user picked the whole
+    // curriculum or just a section.
+    final c = state.curriculumId;
+    if (c != null) {
+      return curriculumLabelFor(
+        c,
+        useHebrewTerms: useHebrewTerms,
+        variant: variant,
+      );
+    }
+  }
+  final c = state.curriculumId;
+  if (c == null) return '';
+  return curriculumLabelFor(
+    c,
+    useHebrewTerms: useHebrewTerms,
+    variant: variant,
+  );
 }
 
 const _kAddTrackStep = 'add_track_step';
@@ -667,21 +710,11 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     );
   }
 
-  String _getSmartDefault() {
-    if (_state.programName != null) return _state.programName!;
-    if (_state.scopeSelections != null && _state.scopeSelections!.isNotEmpty) {
-      // F-05/F-21/run7: always use the curriculum label for the track's default
-      // name (not the last-selected seder, e.g. "Seder Taharos") so the
-      // post-creation snackbar matches the Track Management hub card title,
-      // which shows the curriculum — whether the user picked the whole
-      // curriculum or just a section.
-      final c = _state.curriculumId;
-      if (c != null) return curriculumLabelText(ref, curriculum: c);
-    }
-    final c = _state.curriculumId;
-    if (c == null) return '';
-    return curriculumLabelText(ref, curriculum: c);
-  }
+  String _getSmartDefault() => smartDefaultTrackName(
+    _state,
+    useHebrewTerms: ref.watch(effectiveUseHebrewTermsProvider),
+    variant: ref.watch(currentTransliterationVariantProvider),
+  );
 
   // ── Build ──────────────────────────────────────────────────────────────────
 
