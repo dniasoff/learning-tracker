@@ -16,6 +16,8 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
+import '../../helpers/dart_method_body.dart';
+
 void main() {
   group(
     'WS3.3e — Dual-role fix: _isTutorSession keyed to active selection (DEC-21)',
@@ -40,17 +42,18 @@ void main() {
         // activeTutoredProfileSelectionProvider instead. Since the file may
         // still import or mention incomingTutorGrantsProvider in comments for
         // history, we check the actual _isTutorSession implementation.
-        final methodStart = textDisplaySrc.indexOf('bool _isTutorSession(');
         expect(
-          methodStart,
-          isNot(-1),
+          textDisplaySrc.contains('bool _isTutorSession('),
+          isTrue,
           reason: '_isTutorSession method must exist',
         );
 
-        // Grab the method body (up to closing brace — heuristic: next `}`).
-        final methodBody = textDisplaySrc.substring(
-          methodStart,
-          textDisplaySrc.indexOf('\n  }', methodStart) + 4,
+        // Grab the method body via brace-depth-matched extraction (not a
+        // naive "next `}`" search — see AUD-t-tutoring-11 and
+        // test/helpers/dart_method_body.dart's doc comment).
+        final methodBody = extractMethodBody(
+          textDisplaySrc,
+          'bool _isTutorSession(',
         );
 
         // The method body must NOT call incomingTutorGrantsProvider.
@@ -68,10 +71,9 @@ void main() {
 
       test('AC2: _isTutorSession reads activeTutoredProfileSelectionProvider '
           '(correct scope gate)', () {
-        final methodStart = textDisplaySrc.indexOf('bool _isTutorSession(');
-        final methodBody = textDisplaySrc.substring(
-          methodStart,
-          textDisplaySrc.indexOf('\n  }', methodStart) + 4,
+        final methodBody = extractMethodBody(
+          textDisplaySrc,
+          'bool _isTutorSession(',
         );
 
         expect(
@@ -109,6 +111,48 @@ void main() {
               'DEC-21 dual-role fix so future readers understand why '
               'activeTutoredProfileSelectionProvider is used instead of '
               'incomingTutorGrantsProvider',
+        );
+      });
+
+      // ── Regression: extraction must not truncate on a naive brace search ──────
+      // AUD-t-tutoring-11: AC1/AC2 above used to grab the method body via
+      // `textDisplaySrc.indexOf('\n  }', methodStart) + 4` — a naive search
+      // for the *first* two-space-indented `}` after the method start,
+      // rather than counting brace depth. That heuristic only worked because
+      // `_isTutorSession` happens to be a one-line method today. This test
+      // proves `extractMethodBody` (test/helpers/dart_method_body.dart),
+      // which AC1/AC2 now use, does NOT get fooled the way the old naive
+      // search would: a nested block whose closing brace lands at the same
+      // indent as the method's own closing brace must not truncate the
+      // extracted body early. (Ran red against the old inline naive search
+      // before this file was fixed — see the AUD-t-tutoring-11 commit.)
+      test('REGRESSION: method-body extraction survives a nested block whose '
+          r"closing brace sits at the method's own indent (naive '\n  }' "
+          'search would truncate here and miss the rest of the body)', () {
+        const fixture = '''
+class _Fixture {
+  bool _isTutorSession(BuildContext context) {
+    if (checkSomething()) {
+  }
+    return ref.watch(incomingTutorGrantsProvider) != null;
+  }
+}
+''';
+
+        final body = extractMethodBody(fixture, 'bool _isTutorSession(');
+
+        // A naive `indexOf('\n  }', methodStart) + 4` search would stop
+        // at the nested `if` block's closing brace above (also 2-space
+        // indented) and never reach this marker — silently truncating
+        // the body and letting an `isNot(contains(...))` assertion pass
+        // regardless of what the unseen remainder actually does.
+        expect(
+          body,
+          contains('incomingTutorGrantsProvider'),
+          reason:
+              'depth-matched extraction must return the full method body '
+              "even when a nested block's closing brace lands at the "
+              "same indent as the method's own closing brace",
         );
       });
     },
