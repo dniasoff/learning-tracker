@@ -42,6 +42,7 @@ import 'package:learning_tracker/features/scheduler/presentation/providers/sched
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_edit_service.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_edit_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit_track_screen.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/steps/chazara_widgets.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_chazara.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -1004,16 +1005,22 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
+      // Precondition: all 5 rounds actually rendered (otherwise the absence
+      // check below would be vacuous — it could pass because setup failed,
+      // not because the max-5 guard fired).
+      expect(find.byType(CustomDayEditorChip), findsNWidgets(5));
+
       // With 5 rounds in custom mode, the add-round chip must be hidden.
-      // Find the custom-mode card by its title and verify absence of add icon
-      // inside it. We verify by finding the "Custom Cycle" card and checking
-      // the add chip count: the custom section only shows AddRoundChip when
-      // _customDelays.length < 5.
-      //
       // Implementation check: the source code uses:
       //   if (_customDelays.length < 5) AddRoundChip(...)
       // With 5 rounds the chip is not in the widget tree at all.
-      expect(find.byIcon(Icons.add_circle_outline_rounded), findsNothing);
+      //
+      // Find the AddRoundChip widget itself rather than its internal
+      // Icons.add — that icon is ambiguous with the per-round "+1 day"
+      // TinyCircleButton inside every CustomDayEditorChip (also Icons.add),
+      // so an icon-only finder would always find something regardless of
+      // whether the add-round chip is present.
+      expect(find.byType(AddRoundChip), findsNothing);
 
       await _tearDown(tester);
     });
@@ -1026,8 +1033,7 @@ void main() {
       await tester.pumpWidget(
         _buildChazaraApp(
           curriculumId: CurriculumId.mishnayos,
-          initialDelays: [1], // 1 custom round (doesn't match preset [1])
-          // Note: [1] matches the "1 day" preset so we use [3] to force custom.
+          initialDelays: [3], // not a preset → forces custom mode, 1 round
           onComplete: (r) {
             capturedRoundCount = r?.wizardResult.customRounds?.length;
           },
@@ -1036,22 +1042,37 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      // Tap the add-round chip — finds the add_rounded icon in AddRoundChip.
-      final addIcons = find.byIcon(Icons.add_rounded);
-      if (addIcons.evaluate().isNotEmpty) {
-        await tester.tap(addIcons.first);
-        await tester.pump();
-      }
+      // Precondition: exactly 1 custom round rendered before the tap.
+      expect(find.byType(CustomDayEditorChip), findsNWidgets(1));
+
+      // Tap the add-round chip. Find the AddRoundChip widget itself rather
+      // than its internal Icons.add — that icon is ambiguous with the
+      // per-round "+1 day" TinyCircleButton (also Icons.add), so an
+      // icon-only finder would tap the wrong control if AddRoundChip
+      // happened not to be present.
+      final addChip = find.byType(AddRoundChip);
+      expect(
+        addChip,
+        findsOneWidget,
+        reason: 'Custom mode with 1 round must show the add-round chip',
+      );
+      await tester.tap(addChip);
+      await tester.pump();
+
+      // Round count must have gone from 1 to 2 in the widget tree.
+      expect(find.byType(CustomDayEditorChip), findsNWidgets(2));
 
       // Confirm and capture.
       await tester.tap(find.byType(FilledButton));
       await tester.pump();
 
-      // At least 1 round after add.
+      // Real assertion: adding one round to a single-round custom cycle
+      // must produce exactly 2 custom rounds (not merely "at least 1",
+      // which would pass even if the add chip did nothing).
       expect(
         capturedRoundCount,
-        greaterThanOrEqualTo(1),
-        reason: 'Adding a round must produce at least 1 custom round',
+        2,
+        reason: 'Adding a round from 1 must produce exactly 2 custom rounds',
       );
 
       await _tearDown(tester);
@@ -1071,30 +1092,20 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      // With only 1 custom round, the remove button (onRemove: null when
-      // _customDelays.length <= 1) must be disabled (rendered as null callback).
-      // The implementation sets onRemove: _customDelays.length > 1 ? () => ... : null
-      // so the remove icon button is present but the callback is null.
-      //
-      // We assert that you cannot delete below 1 by verifying the "Close"
-      // icon button is either absent or has a null callback.
-      //
-      // Find all IconButtons whose icon is close/cancel.
-      final closeButtons = find.byWidgetPredicate(
-        (widget) =>
-            widget is IconButton &&
-            widget.onPressed == null &&
-            (widget.icon is Icon) &&
-            ((widget.icon as Icon).icon == Icons.close ||
-                (widget.icon as Icon).icon == Icons.cancel),
-      );
-      // Either there are no delete buttons, or they all have null callbacks.
-      // Either outcome confirms min-1 is enforced.
-      // This is a soft assertion: we simply confirm round count does not reach 0.
+      // Precondition: exactly 1 custom round rendered.
+      expect(find.byType(CustomDayEditorChip), findsNWidgets(1));
+
+      // The implementation sets:
+      //   onRemove: _customDelays.length > 1 ? () => ... : null
+      // and CustomDayEditorChip only builds the "Remove" control at all when
+      // onRemove is non-null (`if (onRemove != null) [...TextButton...]`) —
+      // it renders as a TextButton (labelled via l10n.actionRemove), not an
+      // IconButton with a close/cancel icon. With exactly 1 round, onRemove
+      // is null, so the TextButton must be entirely absent from the tree.
       expect(
-        closeButtons.evaluate().length,
-        greaterThanOrEqualTo(0),
-        reason: 'min-1 enforcement: no enabled delete buttons when rounds == 1',
+        find.byType(TextButton),
+        findsNothing,
+        reason: 'min-1 enforcement: no remove control when rounds == 1',
       );
 
       await _tearDown(tester);
