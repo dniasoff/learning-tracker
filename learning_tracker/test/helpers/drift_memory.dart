@@ -97,6 +97,33 @@ Future<int> seedTrack(
       );
 }
 
+/// Deletes every row from every user-scoped table in [db], in one
+/// transaction, with exactly one delete call per table.
+///
+/// Intended for round-trip tests that need to prove import restores state
+/// from a clean slate (e.g. export → wipe → import → compare). Centralising
+/// the wipe sequence here means a newly added table only needs updating in
+/// one place, instead of drifting across independently copy-pasted blocks
+/// (AUD-t-story-acceptance-29).
+Future<void> wipeAllUserTables(UserDatabase db) => db.transaction(() async {
+  await db.delete(db.streakEvents).go();
+  await db.delete(db.completionEvents).go();
+  await db.delete(db.learningLedger).go();
+  await db.delete(db.dailyPlans).go();
+  await db.delete(db.trackLearningOrder).go();
+  await db.delete(db.learningOrder).go();
+  await db.delete(db.bookmarks).go();
+  await db.delete(db.goals).go();
+  await db.delete(db.studyDayConfigs).go();
+  await db.delete(db.pointConfigs).go();
+  await db.delete(db.stageDefinitions).go();
+  await db.delete(db.profilePrograms).go();
+  await db.delete(db.curriculumScopes).go();
+  await db.delete(db.curriculumTracks).go();
+  await db.delete(db.learnerProfiles).go();
+  await db.delete(db.accounts).go();
+});
+
 /// Seeds a learner profile with id = 0 into [db].
 ///
 /// Required by code that hardcodes profileId = 0 (e.g.
