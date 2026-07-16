@@ -6685,13 +6685,19 @@
     {
       "id": "AUD-t-story-acceptance-29",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Dedupe the copy-pasted DB-wipe block in epic_26_story_23 — duplicate per-table delete calls in both tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "5a5dbe0f1089abe81093ac182f770e0c6484ab2b"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-29 AC1 OK: both inline blocks now call wipeAllUserTables(db) at test lines 450 & 671; grep 'await db.delete(db.' = 0 matches",
+        "AUD-t-story-acceptance-29 AC1 OK: helper at drift_memory.dart:108 has 16 deletes, all distinct tables, no dups (grep -c=16); imported at test line 16",
+        "AUD-t-story-acceptance-29 AC1 OK: helper table set = union of both originals; test 8/8 PASS; post-wipe isEmpty assertions intact (no TQ-7)"
+      ],
+      "notes": "Confirmed both wipe blocks (lines 450-469, 690-708 pre-fix) duplicated streakEvents/completionEvents deletes. Extracted wipeAllUserTables(db) into test/helpers/drift_memory.dart; both sites now call it. grep confirms zero remaining per-table delete calls in the test file."
     },
     {
       "id": "AUD-t-story-acceptance-39",
