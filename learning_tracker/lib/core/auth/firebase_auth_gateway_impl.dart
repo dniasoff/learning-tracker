@@ -214,16 +214,24 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
 
   @override
   Future<void> linkWithGoogleIdToken({required String? idToken}) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated user found');
+    }
     final credential = GoogleAuthProvider.credential(idToken: idToken);
-    await _firebaseAuth.currentUser?.linkWithCredential(credential);
+    await user.linkWithCredential(credential);
   }
 
   @override
   Future<void> reauthenticateWithGoogleIdToken({
     required String? idToken,
   }) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated user found');
+    }
     final credential = GoogleAuthProvider.credential(idToken: idToken);
-    await _firebaseAuth.currentUser?.reauthenticateWithCredential(credential);
+    await user.reauthenticateWithCredential(credential);
   }
 
   @override
@@ -231,11 +239,15 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
     required String email,
     required String password,
   }) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw StateError('No authenticated user found');
+    }
     final credential = EmailAuthProvider.credential(
       email: email,
       password: password,
     );
-    await _firebaseAuth.currentUser?.linkWithCredential(credential);
+    await user.linkWithCredential(credential);
   }
 
   @override
