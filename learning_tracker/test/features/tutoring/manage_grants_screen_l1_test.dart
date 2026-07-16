@@ -154,6 +154,10 @@ void main() {
   Widget buildSubject(
     Future<List<TutorGrant>> Function() grantsFactory, {
     ResignTutorGrantUseCase? resignUseCase,
+    // AUD-t-tutoring-07: parameterized so RTL (Hebrew) coverage can reuse
+    // the exact same harness instead of hardcoding Locale('en') with no way
+    // to exercise a directional-layout regression.
+    Locale locale = const Locale('en'),
   }) {
     final db = inMemoryDb();
     return ProviderScope(
@@ -171,16 +175,16 @@ void main() {
         ),
         userDatabaseProvider.overrideWithValue(db),
       ],
-      child: const MaterialApp(
-        locale: Locale('en'),
-        localizationsDelegates: [
+      child: MaterialApp(
+        locale: locale,
+        localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: ManageGrantsScreen(),
+        home: const ManageGrantsScreen(),
       ),
     );
   }
@@ -901,6 +905,57 @@ void main() {
 
       await tearDownWidget(tester);
       await db.close();
+    },
+  );
+
+  // ── 17. AUD-t-tutoring-07: RTL (Hebrew locale) ───────────────────────────────
+  //
+  // Sibling l1 tests in this batch (manage_tutors_screen_l1_test.dart,
+  // tutor_audit_log_screen_l1_test.dart) each carry a Locale('he') case —
+  // the audit-log one exists specifically because an earlier RTL clipping
+  // bug was found there. buildSubject hardcoded Locale('en') with no way to
+  // parameterize it, so a directional-layout regression on the active/
+  // pending grant rows would ship with green tests.
+
+  testWidgets(
+    'he locale: active and pending grant rows render without RenderFlex '
+    'overflow',
+    (tester) async {
+      final active = _activeGrant(grantId: 'grant-a1');
+      final pending = _pendingGrant(grantId: 'grant-p1');
+      await tester.pumpWidget(
+        buildSubject(
+          () => Future.value([active, pending]),
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Key affordances must still be present and unclipped under RTL.
+      // Section headers/action label are l10n-driven, so assert on the
+      // Hebrew (app_he.arb) strings, not the English ones; the grant
+      // display names are data, not copy, so they render verbatim in
+      // either locale.
+      expect(find.text('פעילות (1)'), findsOneWidget); // "Active (1)"
+      expect(
+        find.text('הזמנות ממתינות (1)'),
+        findsOneWidget,
+      ); // "Pending invites (1)"
+      expect(find.text('Yossi Levi'), findsOneWidget);
+      expect(find.text('Moshe Cohen'), findsOneWidget);
+      expect(find.text('התפטרות'), findsOneWidget); // "Resign"
+
+      // No RenderFlex overflow (or any other) exception was reported.
+      expect(
+        tester.takeException(),
+        isNull,
+        reason:
+            'ManageGrantsScreen must render the active/pending grant rows '
+            'without a RenderFlex overflow under Locale(he) (RTL)',
+      );
+
+      await tearDownWidget(tester);
     },
   );
 }

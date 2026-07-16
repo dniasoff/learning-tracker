@@ -75,6 +75,10 @@ Widget _buildApp({
   required InviteTutorUseCase useCase,
   List<ProfileModel>? profiles,
   String childProfileId = _childProfileId,
+  // AUD-t-tutoring-07: parameterized so RTL (Hebrew) coverage can reuse the
+  // exact same harness instead of hardcoding Locale('en') with no way to
+  // exercise a directional-layout regression.
+  Locale locale = const Locale('en'),
 }) {
   final profileList =
       profiles ??
@@ -99,7 +103,7 @@ Widget _buildApp({
       ).overrideWith((ref) => Future.value([])),
     ],
     child: MaterialApp(
-      locale: const Locale('en'),
+      locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -122,12 +126,14 @@ Future<void> _pumpScreen(
   required InviteTutorUseCase useCase,
   List<ProfileModel>? profiles,
   String childProfileId = _childProfileId,
+  Locale locale = const Locale('en'),
 }) async {
   await tester.pumpWidget(
     _buildApp(
       useCase: useCase,
       profiles: profiles,
       childProfileId: childProfileId,
+      locale: locale,
     ),
   );
   // First pump triggers the build; second settles the Future.value micro-task.
@@ -884,6 +890,44 @@ void main() {
             '(AX-2):\n${violations.join('\n')}',
       );
     });
+  });
+
+  // ── RTL (Hebrew locale) ──────────────────────────────────────────────────────
+  //
+  // AUD-t-tutoring-07: sibling l1 tests in this batch
+  // (manage_tutors_screen_l1_test.dart, tutor_audit_log_screen_l1_test.dart)
+  // each carry a Locale('he') case — the audit-log one exists specifically
+  // because an earlier RTL clipping bug was found there. This screen
+  // hardcoded Locale('en') with no way to parameterize it, so a
+  // directional-layout regression here would ship with green tests.
+
+  group('InviteTutorScreen — RTL (Hebrew locale)', () {
+    testWidgets(
+      'he locale: form and Send button render without RenderFlex overflow',
+      (tester) async {
+        await _pumpScreen(
+          tester,
+          useCase: mockUseCase,
+          locale: const Locale('he'),
+        );
+
+        // Key affordances must still be present and unclipped under RTL.
+        expect(find.byType(TextFormField), findsOneWidget);
+        expect(find.byType(FilledButton), findsOneWidget);
+        expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+
+        // No RenderFlex overflow (or any other) exception was reported.
+        expect(
+          tester.takeException(),
+          isNull,
+          reason:
+              'InviteTutorScreen must render the email form and Send button '
+              'without a RenderFlex overflow under Locale(he) (RTL)',
+        );
+
+        await _tearDown(tester);
+      },
+    );
   });
 }
 
