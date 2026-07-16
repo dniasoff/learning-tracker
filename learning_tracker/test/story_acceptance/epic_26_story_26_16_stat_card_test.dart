@@ -18,14 +18,29 @@ import 'package:test/test.dart';
 
 import '../helpers/golden_runner.dart';
 import '../helpers/lib_source.dart';
+import '../helpers/pump_app.dart';
 
 // ─── Harness ─────────────────────────────────────────────────────────────────
 
+/// AUD-t-story-acceptance-23: a hand-rolled `MaterialApp(locale: locale)`
+/// with no `localizationsDelegates`/`supportedLocales` never actually
+/// resolves `Locale('he')` — `MaterialApp` falls back to its default
+/// `supportedLocales` (`[Locale('en', 'US')]`) whenever the requested
+/// locale isn't in that list, so `Locale('he')` silently rendered as
+/// en_US/LTR, identical to `Locale('en')`, and the "he" testWidgets
+/// variants below gave zero RTL coverage.
+///
+/// Delegating to the shared [pumpApp] helper (TQ-3,
+/// docs/coding-standards.md) fixes this correctly instead of hand-rolling
+/// another local delegate list: `pumpApp` already wires the real
+/// `GlobalMaterialLocalizations` delegate trio plus
+/// `AppLocalizations.supportedLocales` (which includes `he`), so the
+/// requested locale now actually resolves and `Directionality` flips to
+/// RTL for `Locale('he')`.
 Widget _harness({required Widget child, required Locale locale}) {
-  return MaterialApp(
-    debugShowCheckedModeBanner: false,
+  return pumpApp(
     locale: locale,
-    home: Scaffold(
+    child: Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
       body: SafeArea(child: child),
     ),
@@ -183,6 +198,56 @@ void main() {
           // Tap should not throw even with no onTap.
           await tester.tap(find.byType(StatCard), warnIfMissed: false);
           await tester.pumpAndSettle();
+        });
+
+        // Regression coverage for AUD-t-story-acceptance-23: the previous
+        // fix parameterized these tests over Locale('en') + Locale('he')
+        // but _harness only forwarded `locale:` to MaterialApp without
+        // GlobalMaterialLocalizations delegates or a matching
+        // supportedLocales list. MaterialApp's locale resolution falls back
+        // to its default supportedLocales ([Locale('en', 'US')]) whenever
+        // the requested locale isn't in that list, so Locale('he') silently
+        // resolved to en_US/LTR — identical to the 'en' run — and the "he"
+        // testWidgets above never actually exercised RTL directionality or
+        // hit-testing. This test asserts the ambient Directionality the
+        // widget tree actually resolves to, which fails under the broken
+        // harness (both locales resolve 'ltr') and only passes once 'he'
+        // truly flips to 'rtl'.
+        testWidgets('harness resolves real Directionality for this locale', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            _harness(
+              locale: locale,
+              child: const SizedBox(
+                width: 160,
+                height: 120,
+                child: StatCard(
+                  icon: Icons.verified_outlined,
+                  iconColor: Color(0xFFF8C146),
+                  value: '42',
+                  label: 'Completions',
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final resolved = Directionality.of(
+            tester.element(find.byType(StatCard)),
+          );
+          final expected = locale.languageCode == 'he'
+              ? TextDirection.rtl
+              : TextDirection.ltr;
+          expect(
+            resolved,
+            expected,
+            reason:
+                "_harness must actually resolve Locale('${locale.languageCode}') "
+                'to $expected — without GlobalMaterialLocalizations + a '
+                "supportedLocales list including 'he', MaterialApp falls "
+                'back to en_US/LTR for every locale and RTL tap/layout '
+                'regressions go undetected (AUD-t-story-acceptance-23).',
+          );
         });
       },
     );
