@@ -10,6 +10,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -70,6 +71,66 @@ void main() {
       expect(await useCase.call(() async => 'ok'), 'ok');
       expect(session.isTutorSession, isFalse);
     });
+
+    // AUD-t-tutoring-12: the forbidden-write branch fires
+    // AnalyticsEvent.tutorLiveMarkBlocked (W7.11) so tutor-boundary
+    // violations are visible in dashboards. Without injecting an
+    // AnalyticsService, `_analytics?.logEvent(...)` is a silent no-op and a
+    // regression that drops the call is invisible to the suite.
+    test(
+      'tutor session fires AnalyticsEvent.tutorLiveMarkBlocked exactly once',
+      () async {
+        final analytics = FakeAnalyticsService();
+        final useCase = MarkLiveCompletionUseCase<void>(
+          session: _tutorSession(),
+          analytics: analytics,
+        );
+
+        await expectLater(
+          () => useCase.call(() async {}),
+          throwsA(isA<TutorWriteForbiddenException>()),
+        );
+
+        expect(analytics.countOf(AnalyticsEvent.tutorLiveMarkBlocked), 1);
+      },
+    );
+
+    test(
+      'owner session never fires AnalyticsEvent.tutorLiveMarkBlocked',
+      () async {
+        final analytics = FakeAnalyticsService();
+        final useCase = MarkLiveCompletionUseCase<int>(
+          session: _ownerSession(),
+          analytics: analytics,
+        );
+
+        await useCase.call(() async => 42);
+
+        expect(analytics.countOf(AnalyticsEvent.tutorLiveMarkBlocked), 0);
+      },
+    );
+
+    test(
+      'child-self session never fires AnalyticsEvent.tutorLiveMarkBlocked',
+      () async {
+        final analytics = FakeAnalyticsService();
+        final session = ResolvedSession.forOwner(
+          selection: const OwnProfileSelection(
+            profileId: '1',
+            ownerUid: 'self-1',
+          ),
+          isChildMode: true,
+        );
+        final useCase = MarkLiveCompletionUseCase<String>(
+          session: session,
+          analytics: analytics,
+        );
+
+        await useCase.call(() async => 'ok');
+
+        expect(analytics.countOf(AnalyticsEvent.tutorLiveMarkBlocked), 0);
+      },
+    );
 
     test(
       'VO invariant: canMarkLiveCompletion is always false, never constructible '
