@@ -135,14 +135,37 @@ class ContentTree {
       for (final item in entry.value) {
         if (parentByRef.containsKey(item.sefariaRef)) continue;
 
-        final levels = item.isLeaf ? _ancestorLevels(item) : _levelsOf(item);
-        if (levels.isEmpty) continue;
+        // For a leaf, _ancestorLevels(item) already returns the immediate
+        // parent container's own key (see pass 1's leaf branch above, which
+        // uses it directly). For a container, _levelsOf(item) returns the
+        // item's own key, so it still needs one "walk up" truncation to
+        // reach its parent's key. Applying that truncation to both
+        // uniformly (as this used to do) walked leaves past their true
+        // parent to the grandparent whenever the leaf preceded its own
+        // container in source order (AUD-core-content-02).
+        var candidateLevels = <String>[];
+        if (item.isLeaf) {
+          candidateLevels = _ancestorLevels(item);
+        } else {
+          final ownLevels = _levelsOf(item);
+          candidateLevels = ownLevels.sublist(0, ownLevels.length - 1);
+        }
 
-        // Walk up one level to find the parent container.
-        final parentLevels = levels.sublist(0, levels.length - 1);
-        if (parentLevels.isEmpty) continue;
-
-        final parentItem = containerByKey[_containerKey(currKey, parentLevels)];
+        // Source data doesn't always materialise a ContentItem for every
+        // intermediate level (e.g. a 4-level leaf whose Perek grouping has
+        // no explicit container row) — containerByKey then has no entry at
+        // the immediate ancestor key. In that case keep walking up until an
+        // actually-registered container is found, matching [children]'s
+        // existing tolerance for "virtual" ungrouped levels.
+        ContentItem? parentItem;
+        while (candidateLevels.isNotEmpty) {
+          parentItem = containerByKey[_containerKey(currKey, candidateLevels)];
+          if (parentItem != null) break;
+          candidateLevels = candidateLevels.sublist(
+            0,
+            candidateLevels.length - 1,
+          );
+        }
         if (parentItem != null) {
           parentByRef[item.sefariaRef] = parentItem;
         }
