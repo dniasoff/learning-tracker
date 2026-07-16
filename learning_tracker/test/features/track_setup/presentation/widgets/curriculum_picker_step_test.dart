@@ -1,27 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/curriculum_picker_step.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../../helpers/pump_app.dart';
 
 void main() {
   group('CurriculumPickerStep', () {
-    Widget wrapWithL10n(Widget child) {
+    // [TQ-3] pumps through the shared `pumpApp` helper (AUD-t-track_setup-02)
+    // instead of hand-rolling the ProviderScope + MaterialApp(delegates, ...)
+    // block — see test/helpers/pump_app.dart.
+    Widget wrapWithL10n(Widget child, {Locale locale = const Locale('en')}) {
       SharedPreferences.setMockInitialValues({'hebrew_terms_script_p0': true});
-      return ProviderScope(
-        child: MaterialApp(
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(body: child),
-        ),
+      return pumpApp(
+        locale: locale,
+        child: Scaffold(body: child),
       );
     }
 
@@ -91,6 +85,24 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.textContaining('already have a track'), findsWidgets);
+    });
+
+    // [AUD-t-track_setup-02] RTL smoke — this app is Hebrew-primary and this
+    // step renders on a first-run, high-visibility flow, but was previously
+    // only ever pumped under the implicit default (English/LTR) locale.
+    testWidgets('renders under Locale(he) without overflow or errors', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapWithL10n(
+          CurriculumPickerStep(onSelected: (_) {}),
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(CurriculumPickerStep), findsOneWidget);
     });
   });
 }
