@@ -279,30 +279,38 @@ void main() {
       },
     );
 
+    // AUD-core-domain-01: WeeklySchedule/RollingSchedule used to enforce
+    // these invariants with `assert()`, which is stripped from
+    // release/profile builds — the AssertionError these tests originally
+    // expected would silently vanish exactly where users run the app, even
+    // though both factory docstrings promise `Throws [ArgumentError]`. Both
+    // constructors now throw ArgumentError explicitly (build-mode
+    // independent), so these tests are updated to assert the documented,
+    // always-enforced contract.
     test(
-      'WeeklySchedule() with empty daysOfWeek throws AssertionError',
+      'WeeklySchedule() with empty daysOfWeek throws ArgumentError',
       () async {
         // Validation now happens at ScheduleSpec construction time
-        expect(() => WeeklySchedule([]), throwsA(isA<AssertionError>()));
+        expect(() => WeeklySchedule([]), throwsArgumentError);
 
         verifyNever(() => mockStageDao.insertStageDefinition(any()));
       },
     );
 
     test(
-      'WeeklySchedule() with out-of-range day throws AssertionError',
+      'WeeklySchedule() with out-of-range day throws ArgumentError',
       () async {
         expect(
           () => WeeklySchedule([0, 3, 5]), // 0 is invalid (Mon=1..Sun=7)
-          throwsA(isA<AssertionError>()),
+          throwsArgumentError,
         );
 
         verifyNever(() => mockStageDao.insertStageDefinition(any()));
       },
     );
 
-    test('RollingSchedule() with windowSize=0 throws AssertionError', () async {
-      expect(() => RollingSchedule(0), throwsA(isA<AssertionError>()));
+    test('RollingSchedule() with windowSize=0 throws ArgumentError', () async {
+      expect(() => RollingSchedule(0), throwsArgumentError);
 
       verifyNever(() => mockStageDao.insertStageDefinition(any()));
     });
