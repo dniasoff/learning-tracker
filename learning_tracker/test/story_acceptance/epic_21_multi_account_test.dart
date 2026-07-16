@@ -472,7 +472,8 @@ void main() {
 
     // ─── Story 21.10: Sign-Out Routing ──────────────────────────
     group('Story 21.10 — Sign-Out Routing', tags: ['story_21_10'], () {
-      test('registry count determines post-signout destination', () async {
+      test('registry count is non-empty/empty in exactly the shape the '
+          'post-signout router switch reads', () async {
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
         addTearDown(registry.close);
 
@@ -499,13 +500,20 @@ void main() {
           ),
         );
 
+        // This domain-layer test verifies the registry-count predicate
+        // itself. The actual routing decision --
+        // `accounts.isNotEmpty ? AccountPickerRoute() : SignInRoute()`
+        // (the "welcome" screen) -- lives in
+        // account_actions.dart:showSignOutConfirmation and is not
+        // exercised here; that switch is covered by code review / manual
+        // verification of showSignOutConfirmation, not by this test.
         var accounts = await registry.getAllAccounts();
-        expect(accounts.isNotEmpty, isTrue); // → picker
+        expect(accounts.isNotEmpty, isTrue); // → AccountPickerRoute
 
         await registry.removeAccount('acc-1');
         await registry.removeAccount('acc-2');
         accounts = await registry.getAllAccounts();
-        expect(accounts.isEmpty, isTrue); // → welcome
+        expect(accounts.isEmpty, isTrue); // → SignInRoute ("welcome")
       });
     });
 
@@ -578,7 +586,8 @@ void main() {
         expect(updated.firebaseUid, 'new-fb-uid');
       });
 
-      test('AC3: cloud-born account does not show upgrade option', () {
+      test('AC3: cloud-born account has isLocalBorn == false, the flag '
+          'the upgrade button is gated on', () {
         const cloudState = AuthState.signedIn(
           user: AuthUser(
             profileId: 1,
@@ -588,6 +597,12 @@ void main() {
           ),
           tier: Tier.cloudBorn,
         );
+        // This domain-layer test verifies the flag itself. The upgrade
+        // button is only rendered `if (isLocalAuth)` in
+        // BackupSyncSection._buildLocalOnlyCard, where `isLocalAuth:
+        // authState.isLocalBorn` -- see backup_sync_section.dart. That
+        // conditional render is covered by code review of
+        // BackupSyncSection, not by this test.
         expect(cloudState.isLocalBorn, isFalse);
       });
     });
