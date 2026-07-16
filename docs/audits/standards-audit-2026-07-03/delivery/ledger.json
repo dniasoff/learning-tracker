@@ -1452,13 +1452,19 @@
   {
    "id": "AUD-core-auth-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Guard FirebaseAuthGatewayImpl link/reauth methods against silent no-op on null currentUser",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "6c0945033e891a319d094aa5ee6cad74b133cfbb"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-auth-02 AC1 OK: impl L216-251 all 3 methods add `if(user==null) throw StateError` then call user.method() not silent currentUser?. ; matches sibling guards",
+    "AUD-core-auth-02 AC2 OK: 3 new null-user throws tests L450/471/495 pass in 37/37; red-first genuine (pre-fix ?. no-op cannot throw), commit captures red output",
+    "AUD-core-auth-02 AC3 OK: existing 'links/reauths when signed in' tests L438/459/483 stay green in 37/37 run"
+   ],
+   "notes": "Re-verified: lines 218/226/238 still no-op'd on null currentUser. Added 'if (user==null) throw StateError' guard, matching sibling methods. Kept StateError; typed exception is separate AUD-core-auth-03, out of scope. Red-first: 3 tests written, shown failing, then fixed green. ACs met. gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart + its test vs ledger.json/sefaria_ref.dart on dev side), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate. Post-rebase gate: make audit 67/67 clean, flutter analyze clean (no issues)."
   },
   {
    "id": "AUD-core-database-08",
