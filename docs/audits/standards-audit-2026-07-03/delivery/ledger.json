@@ -4526,13 +4526,19 @@
     {
       "id": "AUD-t-tracks-03",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Fix the vacuous ChazaraInlineSetup custom-round tests in edit_track_screen_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "29f3a0bc20f93b3a5062c9028dfc77aea4f9e77e"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tracks-03 AC1 OK: injecting `<5 || true` at step_chazara.dart:305 made 'hidden at 5' test FAIL at test line 1023 (AddRoundChip findsNothing); reverted clean",
+        "AUD-t-tracks-03 AC2 OK: injecting `onRemove length>=0` at step_chazara.dart:298 made 'remove absent at 1' test FAIL at line 1105 (TextButton findsNothing)",
+        "AUD-t-tracks-03 de-vacuous OK: vacuous icon/length>=0 asserts replaced with real byType finders+exact counts; confirmed src Icons.add ambiguity + conditional TextButton"
+      ],
+      "notes": "Confirmed AddRoundChip renders Icons.add (not add_circle_outline_rounded/add_rounded); remove is a conditional TextButton not IconButton. Fixed 3 vacuous assertions to use widget-type finders + real before/after counts. AC1/AC2 mutation-verified: each mutation failed the test, then reverted cleanly."
     },
     {
       "id": "AUD-t-tracks-05",
