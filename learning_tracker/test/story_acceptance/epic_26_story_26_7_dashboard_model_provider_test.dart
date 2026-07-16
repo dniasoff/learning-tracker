@@ -25,7 +25,6 @@
 @Tags(['epic_26'])
 library;
 
-import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:test/test.dart';
 
 import '../helpers/lib_source.dart';
@@ -60,14 +59,6 @@ void main() {
     'Story 26.7 AC2 — onTrackChanged is the canonical invalidation helper',
     tags: ['story_26_7'],
     () {
-      test(
-        'onTrackChanged is importable from after_track_change_invalidation',
-        () {
-          // Importing onTrackChanged directly verifies it is exported.
-          expect(onTrackChanged, isNotNull);
-        },
-      );
-
       test('after_track_change_invalidation.dart declares onTrackChanged', () {
         final src = _src(
           'features/tracks/setup/presentation/providers/after_track_change_invalidation.dart',

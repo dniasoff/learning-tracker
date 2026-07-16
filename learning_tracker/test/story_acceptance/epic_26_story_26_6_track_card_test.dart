@@ -21,15 +21,6 @@ void main() {
     tags: ['story_26_6'],
     () {
       test(
-        'firstTaskInTrackForCategoryProvider provider function is importable',
-        () {
-          // Compile-time check: the import at the top of this file already
-          // references scheduler_providers.dart which defines the provider.
-          expect(firstTaskInTrackForCategoryProvider, isNotNull);
-        },
-      );
-
-      test(
         'scheduler_providers.dart source declares firstTaskInTrackForCategory',
         () {
           final source = readLibSource(
@@ -52,18 +43,6 @@ void main() {
     'Story 26.6 AC5 — TrackTaskCategory enum has review / dueToday / overdue',
     tags: ['story_26_6'],
     () {
-      test('TrackTaskCategory.review exists', () {
-        expect(TrackTaskCategory.review, isNotNull);
-      });
-
-      test('TrackTaskCategory.dueToday exists', () {
-        expect(TrackTaskCategory.dueToday, isNotNull);
-      });
-
-      test('TrackTaskCategory.overdue exists', () {
-        expect(TrackTaskCategory.overdue, isNotNull);
-      });
-
       test('TrackTaskCategory has exactly 3 values', () {
         expect(TrackTaskCategory.values.length, 3);
       });

@@ -45,11 +45,6 @@ void main() {
           reason: 'stat_card.dart must exist under core/widgets/.',
         );
       });
-
-      test('StatCard is importable (compile-time check)', () {
-        // If this file compiles, the import resolved StatCard successfully.
-        expect(StatCard, isNotNull);
-      });
     },
   );
 

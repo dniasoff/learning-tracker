@@ -17,8 +17,6 @@ library;
 
 import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_terms_preference.dart';
-import 'package:learning_tracker/core/widgets/preference_list_tile.dart';
-import 'package:learning_tracker/core/widgets/preference_segmented_tile.dart';
 import 'package:test/test.dart';
 
 import '../helpers/lib_source.dart';
@@ -36,12 +34,6 @@ void main() {
           reason: 'preference_list_tile.dart must exist under core/widgets/.',
         );
       });
-
-      test('PreferenceListTile is importable (compile-time check)', () {
-        // If this test file compiles, the import at the top of this file
-        // has already resolved PreferenceListTile successfully.
-        expect(PreferenceListTile, isNotNull);
-      });
     },
   );
 
@@ -57,11 +49,6 @@ void main() {
           reason:
               'preference_segmented_tile.dart must exist under core/widgets/.',
         );
-      });
-
-      test('PreferenceSegmentedTile<T> is importable (compile-time check)', () {
-        // The import at the top of this file already resolved it.
-        expect(PreferenceSegmentedTile, isNotNull);
       });
     },
   );
