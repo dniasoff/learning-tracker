@@ -3683,13 +3683,18 @@
     {
       "id": "AUD-t-tutoring-03",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Add a shared pumpApp test helper instead of hand-rolled MaterialApp boilerplate in tutoring widget tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "7ce022026b767e5013d7f53707901f97f23b5c24"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-03 AC1 OK: pump_app.dart:90-102 one MaterialApp + 4 delegates; new builder/debugShowCheckedModeBanner optional passthroughs, defaults match MaterialApp",
+        "AUD-t-tutoring-03 AC2 OK: 4 files use pumpApp(), 0 residual MaterialApp/delegate blocks; 7 sites migrated, baseline 203->196, grep==196"
+      ],
+      "notes": "Re-verified: 4 named files still hand-rolled MaterialApp+delegates 7x at HEAD; pump_app.dart existed but files weren't migrated. Migrated all 7 sites onto pumpApp(); added optional builder/debugShowCheckedModeBanner params for 2 overflow TextScaler sites. Baseline 203->196. AC1/AC2 verified."
     },
     {
       "id": "AUD-t-story-acceptance-19",
