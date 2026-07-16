@@ -5629,13 +5629,19 @@
     {
       "id": "AUD-t-tutoring-01",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Add Locale('he') RTL variant to tutor_pin_reset_screen_l1_test.dart and tutor_pin_setup_screen_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "751b8286cd6f6fe4c44782a95ab57316276c8afd"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-01 AC1 OK (reset): new testWidgets pumps Locale('he'), asserts takeException null+Scaffold+_kEmail+lock_reset_rounded (icon@reset_screen.dart:168)",
+        "AUD-t-tutoring-01 AC1 OK (setup): new testWidgets pumps Locale('he'), asserts takeException null+Scaffold+lock_person_rounded (icon@setup_screen.dart:212)",
+        "AUD-t-tutoring-01 AC1 OK: both he tests pass 34/34 exit0; assertions hit real screen widgets not mock; mirrors sibling entry_gate test"
+      ],
+      "notes": "Re-verified: both files hardcoded Locale('en') with no Hebrew pump. Added `locale` param (default en) + Hebrew(RTL) testWidgets group to each, mirroring tutor_pin_entry_gate_l1_test.dart. Suite 32->34 tests, no regressions."
     },
     {
       "id": "AUD-docs-04",
