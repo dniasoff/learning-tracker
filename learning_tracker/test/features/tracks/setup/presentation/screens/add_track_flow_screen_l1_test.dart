@@ -357,29 +357,6 @@ void main() {
       addTearDown(() => _tearDown(tester));
     });
 
-    testWidgets(
-      'self-paced Chumash step count is >= 5 (includes all self-paced steps)',
-      (tester) async {
-        final svc = MockTrackCreationService();
-        await tester.pumpWidget(
-          _buildApp(overrides: _baseOverrides(creationService: svc)),
-        );
-        await _settle(tester);
-
-        final rawText = tester
-            .widgetList<Text>(find.textContaining('STEP'))
-            .where((t) => t.data?.contains(' OF ') ?? false)
-            .first
-            .data!;
-        final total = int.parse(rawText.split(' OF ').last);
-
-        // curriculum + scope + studyDays + chazara + goal + bulkMark = 6 steps
-        // for a self-paced non-program curriculum.
-        expect(total, greaterThanOrEqualTo(4));
-        addTearDown(() => _tearDown(tester));
-      },
-    );
-
     testWidgets('self-paced Chumash shows exactly 6 total steps', (
       tester,
     ) async {

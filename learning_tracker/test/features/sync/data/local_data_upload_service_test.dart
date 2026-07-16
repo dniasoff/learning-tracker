@@ -275,7 +275,8 @@ void main() {
   // ── 2. Completions ─────────────────────────────────────────────────────────
 
   group('completions', () {
-    test('existing completion is re-enqueued via CompletionWriter', () async {
+    test('existing completion is NOT re-enqueued via CompletionWriter '
+        '(idempotent)', () async {
       // Seed one completion event directly.
       await db
           .into(db.completionEvents)
@@ -296,10 +297,11 @@ void main() {
       final (:service, facade: _) = _buildService(db);
       await service.pushAllLocalData();
 
-      // CompletionWriter.commitBatch will see the existing event and return
-      // isNew=false — no new outbox row. That is correct idempotent behaviour.
-      // The important assertion is that pushAllLocalData doesn't throw.
-      // (The service only enqueues NEW completions.)
+      // CompletionWriter.commitBatch will see the existing event and
+      // return isNew=false — no new outbox row. That is correct
+      // idempotent behaviour: the service only enqueues NEW completions.
+      final completionRows = await _rowsOf(db, OutboxEntityKind.completion);
+      expect(completionRows, isEmpty);
     });
 
     test(
