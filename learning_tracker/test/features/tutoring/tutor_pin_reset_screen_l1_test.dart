@@ -60,7 +60,11 @@ void main() {
     resetCompleteCalled = false;
   });
 
-  Widget buildSubject({AppUser? user, VoidCallback? onResetComplete}) {
+  Widget buildSubject({
+    AppUser? user,
+    VoidCallback? onResetComplete,
+    Locale locale = const Locale('en'),
+  }) {
     // Default: signed-in user with email.
     when(() => mockAuthRepo.currentUser).thenReturn(user ?? _fakeUser());
 
@@ -70,7 +74,7 @@ void main() {
         tutorPinServiceProvider.overrideWithValue(mockPinService),
       ],
       child: MaterialApp(
-        locale: const Locale('en'),
+        locale: locale,
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
@@ -450,5 +454,29 @@ void main() {
     expect(find.byIcon(Icons.lock_reset_rounded), findsOneWidget);
 
     await tearDownWidget(tester);
+  });
+
+  // ── AUD-t-tutoring-01 — Hebrew (RTL) variant ─────────────────────────────
+  //
+  // Mirrors tutor_pin_entry_gate_l1_test.dart's Hebrew group (TQ-3): key
+  // screens in the tutor-PIN flow must carry a Locale('he') smoke test so
+  // RTL/overflow regressions are not invisible to an LTR-only suite.
+  group('AUD-t-tutoring-01 — Hebrew (RTL) variant', () {
+    testWidgets('he locale: renders confirm step without overflow or crash', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildSubject(locale: const Locale('he')));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // No RenderFlex overflow exceptions — just assert key structural
+      // widgets and that the send button/email are still findable.
+      expect(tester.takeException(), isNull);
+      expect(find.byType(Scaffold), findsAtLeastNWidgets(1));
+      expect(find.text(_kEmail), findsOneWidget);
+      expect(find.byIcon(Icons.lock_reset_rounded), findsOneWidget);
+
+      await tearDownWidget(tester);
+    });
   });
 }

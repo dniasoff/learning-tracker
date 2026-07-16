@@ -71,15 +71,18 @@ class _StubTutorPinService implements TutorPinService {
 /// always returns [TutorPinSuccess].
 ///
 /// [onPinSet], [onSkip] — callbacks forwarded to the screen.
+///
+/// [locale] — defaults to English; pass `const Locale('he')` for RTL.
 Widget _buildHarness({
   required TutorPinService stubService,
   required VoidCallback onPinSet,
   VoidCallback? onSkip,
+  Locale locale = const Locale('en'),
 }) {
   return ProviderScope(
     overrides: [tutorPinServiceProvider.overrideWithValue(stubService)],
     child: MaterialApp(
-      locale: const Locale('en'),
+      locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -738,6 +741,40 @@ void main() {
       await tester.pump();
 
       expect(skipCalled, isTrue, reason: 'onSkip must be called on tap');
+      await _teardown(tester);
+    });
+  });
+
+  // ── AUD-t-tutoring-01 — Hebrew (RTL) variant ─────────────────────────────
+  //
+  // Mirrors tutor_pin_entry_gate_l1_test.dart's Hebrew group (TQ-3): key
+  // screens in the tutor-PIN flow must carry a Locale('he') smoke test so
+  // RTL/overflow regressions are not invisible to an LTR-only suite.
+  group('TutorPinSetupScreen — AUD-t-tutoring-01: Hebrew (RTL) variant', () {
+    testWidgets('he locale: renders enterPin step without overflow or crash', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // No RenderFlex overflow exceptions — assert key structural widgets.
+      expect(tester.takeException(), isNull);
+      expect(find.byType(Scaffold), findsAtLeastNWidgets(1));
+      expect(find.byIcon(Icons.lock_person_rounded), findsOneWidget);
+
       await _teardown(tester);
     });
   });
