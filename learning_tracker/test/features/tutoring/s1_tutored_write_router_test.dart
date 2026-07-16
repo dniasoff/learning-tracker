@@ -52,6 +52,10 @@ class _FakeDelegate implements SyncWriteFacade {
   int pushProfileProgramCount = 0;
   int pushLearnerProfileCount = 0;
   int deleteCompletionCount = 0;
+  int pushUiPreferencesSnapshotCount = 0;
+  int pushSettingsCount = 0;
+  int pushLearningOrderCount = 0;
+  int deleteLearnerProfileCount = 0;
 
   // Aggregate for "outbox depth"
   int get totalEnqueueCount =>
@@ -94,7 +98,8 @@ class _FakeDelegate implements SyncWriteFacade {
       pushGamificationCount++;
 
   @override
-  Future<void> pushUiPreferencesSnapshot() async {}
+  Future<void> pushUiPreferencesSnapshot() async =>
+      pushUiPreferencesSnapshotCount++;
 
   @override
   Future<void> pushBookmark(Map<String, dynamic> bookmark) async =>
@@ -105,7 +110,8 @@ class _FakeDelegate implements SyncWriteFacade {
       pushProfileProgramCount++;
 
   @override
-  Future<void> pushSettings(Map<String, dynamic> settings) async {}
+  Future<void> pushSettings(Map<String, dynamic> settings) async =>
+      pushSettingsCount++;
 
   @override
   Future<void> pushLearningOrder({
@@ -113,14 +119,15 @@ class _FakeDelegate implements SyncWriteFacade {
     required String curriculumId,
     required List<Map<String, dynamic>> items,
     required DateTime updatedAt,
-  }) async {}
+  }) async => pushLearningOrderCount++;
 
   @override
   Future<void> pushLearnerProfile(Map<String, dynamic> profile) async =>
       pushLearnerProfileCount++;
 
   @override
-  Future<void> deleteLearnerProfile(int profileId) async {}
+  Future<void> deleteLearnerProfile(int profileId) async =>
+      deleteLearnerProfileCount++;
 
   @override
   Future<void> deleteCompletion(String completionId) async =>
@@ -1133,4 +1140,77 @@ void main() {
       },
     );
   });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // AUD-t-tutoring-02: pushSettings / pushLearningOrder /
+  // pushUiPreferencesSnapshot / deleteLearnerProfile are the 4 documented
+  // "always pass-through" methods (see tutored_write_router.dart header —
+  // deleteLearnerProfile is explicitly excluded because talmid profile
+  // deletion is not a tutor right). Even in tutored mode they must always
+  // reach the delegate outbox and never invoke the CF invoker.
+  // ────────────────────────────────────────────────────────────────────────────
+
+  group(
+    'AUD-t-tutoring-02 — always-pass-through methods never invoke the CF',
+    () {
+      test(
+        'tutored: pushSettings always reaches delegate, CF never invoked',
+        () async {
+          final record = _FakeInvokerRecord();
+          final delegate = _FakeDelegate();
+          final router = _tutored(record, delegate);
+
+          await router.pushSettings({'locale': 'he'});
+
+          expect(delegate.pushSettingsCount, 1);
+          expect(record.wasCalled, isFalse);
+        },
+      );
+
+      test(
+        'tutored: pushLearningOrder always reaches delegate, CF never invoked',
+        () async {
+          final record = _FakeInvokerRecord();
+          final delegate = _FakeDelegate();
+          final router = _tutored(record, delegate);
+
+          await router.pushLearningOrder(
+            profileId: 42,
+            curriculumId: 'daf_yomi',
+            items: [
+              {'content_item_id': 'Berakhot.2a'},
+            ],
+            updatedAt: DateTime.utc(2026, 1, 1),
+          );
+
+          expect(delegate.pushLearningOrderCount, 1);
+          expect(record.wasCalled, isFalse);
+        },
+      );
+
+      test('tutored: pushUiPreferencesSnapshot always reaches delegate, CF '
+          'never invoked', () async {
+        final record = _FakeInvokerRecord();
+        final delegate = _FakeDelegate();
+        final router = _tutored(record, delegate);
+
+        await router.pushUiPreferencesSnapshot();
+
+        expect(delegate.pushUiPreferencesSnapshotCount, 1);
+        expect(record.wasCalled, isFalse);
+      });
+
+      test('tutored: deleteLearnerProfile always reaches delegate, CF never '
+          'invoked (talmid profile deletion is not a tutor right)', () async {
+        final record = _FakeInvokerRecord();
+        final delegate = _FakeDelegate();
+        final router = _tutored(record, delegate);
+
+        await router.deleteLearnerProfile(42);
+
+        expect(delegate.deleteLearnerProfileCount, 1);
+        expect(record.wasCalled, isFalse);
+      });
+    },
+  );
 }
