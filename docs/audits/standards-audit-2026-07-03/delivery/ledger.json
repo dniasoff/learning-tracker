@@ -10536,13 +10536,17 @@
     {
       "id": "AUD-t-story-acceptance-24",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Add missing tags: ['story_5_2'] to the Story 5.2 group in epic_05_stages_order_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "684208dd6ae9c962d31b3bceaf724f4a19fcdc2e"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-story-acceptance-24 AC1 OK: line 152 group carries tags:['story_5_2']; `--tags story_5_2` now selects exactly 6 Story 5.2 tests, all pass (was 0)."
+      ],
+      "notes": "Confirmed: line 152 group was the only story group missing tags vs. sibling groups (e.g. Story 5.1 has tags:['story_5_1']). Added tags:['story_5_2']. Verified: `flutter test --tags story_5_2` now selects exactly Story 5.2's 6 tests (would have matched 0 before)."
     },
     {
       "id": "AUD-repo-03",
