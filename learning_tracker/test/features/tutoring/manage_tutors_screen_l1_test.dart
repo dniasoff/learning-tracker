@@ -38,17 +38,20 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_notification_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/manage_tutors_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/drift_memory.dart';
+import '../../helpers/pump_app.dart';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
@@ -731,6 +734,230 @@ void main() {
     },
   );
 
+  // ── AUD-t-tutoring-06: mirror wipe on successful Revoke ─────────────────────
+  //
+  // R4-M3 fires an unawaited buildTutoredMirrorWipeServiceFromWidget(...)
+  // .wipeMirrorForGrant(grantId) after a successful revoke. No test asserted
+  // the Drift tutored-mirror row was actually deleted — a regression that
+  // silently dropped the unawaited(...) call, or broke the onWipe wiring,
+  // would ship undetected (the same stale-local-data bug class as
+  // DG-TUT-STALE-01 / iter10_outgoing_grants_stale_cache_test.dart).
+
+  testWidgets(
+    'AUD-t-tutoring-06: confirming Revoke deletes the Drift tutored-mirror '
+    'row for the revoked grant',
+    (tester) async {
+      final child = _childProfile(id: 1, displayName: 'MirrorWipeChild');
+      final grant = _activeGrant(tutorEmail: 'tutor@mirrorwipe.com');
+      final mockRevoke = _MockRevoke();
+      when(
+        () => mockRevoke.call(grant: any(named: 'grant')),
+      ).thenAnswer((_) async => const TutorGrantSuccess());
+
+      final notifGw = _MockNotificationGateway();
+      when(
+        () => notifGw.notifyTutorOfRevocation(
+          tutorEmail: any(named: 'tutorEmail'),
+          parentName: any(named: 'parentName'),
+          childName: any(named: 'childName'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final auth = _MockAuthRepository();
+      when(() => auth.currentUser).thenReturn(null);
+
+      final db = inMemoryDb();
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'parent@example.com',
+              tier: 'localBorn',
+              displayName: 'Test Parent',
+              createdAt: DateTime.utc(2026, 1, 1),
+              updatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
+      // Seed a tutored-mirror row keyed to this grantId — this is the row
+      // wipeMirrorForGrant must delete on a successful revocation.
+      await db.profileDao.upsertTutoredProfile(
+        accountId: accountId,
+        parentUid: grant.parentUid,
+        remoteChildProfileId: grant.childProfileId,
+        grantId: grant.grantId,
+        displayName: 'Mirrored Child',
+        mode: 'child',
+        now: DateTime.utc(2026, 1, 1),
+      );
+      final before = await db.profileDao.getTutoredMirrorsForAccount(accountId);
+      expect(
+        before,
+        hasLength(1),
+        reason: 'precondition: mirror row exists before revocation',
+      );
+
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: [
+            profileListProvider.overrideWith((ref) => Future.value([child])),
+            outgoingTutorGrantsProvider(
+              '1',
+            ).overrideWith((ref) => Future.value([grant])),
+            authRepositoryProvider.overrideWithValue(auth),
+            revokeTutorGrantUseCaseProvider.overrideWithValue(mockRevoke),
+            rescindTutorInviteUseCaseProvider.overrideWithValue(_MockRescind()),
+            tutorNotificationGatewayProvider.overrideWithValue(notifGw),
+            userDatabaseProvider.overrideWithValue(db),
+          ],
+          child: StackRouterScope(
+            controller: router,
+            stateHash: 0,
+            child: const Scaffold(body: ManageTutorsScreen()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(find.text('Revoke'));
+      await tester.pump();
+      await tester.tap(find.text('Revoke').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final after = await db.profileDao.getTutoredMirrorsForAccount(accountId);
+      expect(
+        after,
+        isEmpty,
+        reason:
+            'wipeMirrorForGrant must delete the tutored-mirror row for the '
+            'revoked grant',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+      await db.close();
+    },
+  );
+
+  // ── AUD-t-tutoring-06: active tutored session exits on Revoke ───────────────
+  //
+  // When the revoked grant IS the current account's active tutored session
+  // (activeTutoredProfileSelectionProvider), the R4-M3 onWipe callback must
+  // call ActiveTutoredProfileSelection.exit() so the session clears
+  // immediately instead of leaving a stale "inside a talmid view" state
+  // whose backing grant no longer exists.
+
+  testWidgets(
+    'AUD-t-tutoring-06: confirming Revoke for the active tutored session '
+    'clears activeTutoredProfileSelectionProvider',
+    (tester) async {
+      final child = _childProfile(id: 1, displayName: 'ActiveSessionChild');
+      final grant = _activeGrant(tutorEmail: 'tutor@activesession.com');
+      final mockRevoke = _MockRevoke();
+      when(
+        () => mockRevoke.call(grant: any(named: 'grant')),
+      ).thenAnswer((_) async => const TutorGrantSuccess());
+
+      final notifGw = _MockNotificationGateway();
+      when(
+        () => notifGw.notifyTutorOfRevocation(
+          tutorEmail: any(named: 'tutorEmail'),
+          parentName: any(named: 'parentName'),
+          childName: any(named: 'childName'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final auth = _MockAuthRepository();
+      when(() => auth.currentUser).thenReturn(null);
+
+      final db = inMemoryDb();
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'parent@example.com',
+              tier: 'localBorn',
+              displayName: 'Test Parent',
+              createdAt: DateTime.utc(2026, 1, 1),
+              updatedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
+      await db.profileDao.upsertTutoredProfile(
+        accountId: accountId,
+        parentUid: grant.parentUid,
+        remoteChildProfileId: grant.childProfileId,
+        grantId: grant.grantId,
+        displayName: 'Mirrored Child',
+        mode: 'child',
+        now: DateTime.utc(2026, 1, 1),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          profileListProvider.overrideWith((ref) => Future.value([child])),
+          outgoingTutorGrantsProvider(
+            '1',
+          ).overrideWith((ref) => Future.value([grant])),
+          authRepositoryProvider.overrideWithValue(auth),
+          revokeTutorGrantUseCaseProvider.overrideWithValue(mockRevoke),
+          rescindTutorInviteUseCaseProvider.overrideWithValue(_MockRescind()),
+          tutorNotificationGatewayProvider.overrideWithValue(notifGw),
+          userDatabaseProvider.overrideWithValue(db),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Enter the revoked grant as the active tutored session.
+      container
+          .read(activeTutoredProfileSelectionProvider.notifier)
+          .enter(
+            TutoredProfileSelection(
+              profileId: grant.childProfileId,
+              ownerUid: grant.parentUid,
+              grantId: grant.grantId,
+              permissions: TutorPermissions.defaults(),
+            ),
+          );
+      expect(
+        container.read(activeTutoredProfileSelectionProvider),
+        isNotNull,
+        reason: 'precondition: tutored session must be active',
+      );
+
+      await tester.pumpWidget(
+        pumpApp(
+          container: container,
+          child: StackRouterScope(
+            controller: router,
+            stateHash: 0,
+            child: const Scaffold(body: ManageTutorsScreen()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(find.text('Revoke'));
+      await tester.pump();
+      await tester.tap(find.text('Revoke').last);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        container.read(activeTutoredProfileSelectionProvider),
+        isNull,
+        reason:
+            'revoking the active tutored session must call exit(), '
+            'clearing activeTutoredProfileSelectionProvider',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+      await db.close();
+    },
+  );
+
   // ── Pending grants ──────────────────────────────────────────────────────────
 
   testWidgets('renders pending tutor email and "Pending" status label', (
@@ -960,7 +1187,7 @@ void main() {
   );
 
   testWidgets(
-    'shows "PENDING (1)" section header when there is one pending grant',
+    'shows "Pending (1)" section header when there is one pending grant',
     (tester) async {
       final child = _childProfile(id: 1, displayName: 'Aba');
       final grant = _pendingGrant();
@@ -977,7 +1204,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // l10n: manageTutorsPendingSection(1) → "PENDING (1)"
+      // l10n: manageTutorsPendingSection(1) → "Pending (1)"
       expect(find.text('Pending (1)'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());

@@ -11,20 +11,32 @@
 @Tags(['tutoring', 'v2_r3_c3', 'unit'])
 library;
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/domain/repositories/tutor_grant_repository.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('FirestoreTutorGrantRepository — structural', () {
-    test('is a TutorGrantRepository subtype (compile-time check)', () {
-      // Verifies at compile time that FirestoreTutorGrantRepository satisfies
-      // the TutorGrantRepository interface. Actual instantiation requires
-      // Firebase.initializeApp() — covered by integration tests.
-      // This test passes if the above imports compile without error.
-      expect(FirestoreTutorGrantRepository, isNotNull);
+    test('FirestoreTutorGrantRepository satisfies TutorGrantRepository '
+        '(real assignability check — fails to compile otherwise)', () {
+      // AUD-t-tutoring-10: `expect(FirestoreTutorGrantRepository,
+      // isNotNull)` can never fail — a bare Type literal is non-null by
+      // construction regardless of what (if anything) implements it.
+      // Actual instantiation requires Firebase.initializeApp() — covered
+      // by integration tests — but assignability to the interface doesn't
+      // need an instance: assigning the concrete constructor tear-off to
+      // an interface-typed function variable only type-checks if
+      // FirestoreTutorGrantRepository genuinely implements
+      // TutorGrantRepository with a matching constructor signature.
+      // Removing `implements TutorGrantRepository` from the class turns
+      // this into a compile error, failing this test file.
+      const TutorGrantRepository Function({FirebaseFunctions? functions}) ctor =
+          FirestoreTutorGrantRepository.new;
+      expect(ctor, isNotNull);
     });
   });
 
