@@ -22,6 +22,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz_lib;
 
+import '../helpers/drift_memory.dart' show seedTrack;
 import '../helpers/test_database.dart';
 
 // ---------------------------------------------------------------------------
@@ -88,21 +89,6 @@ Future<int> _insertProfile(UserDatabase db) async {
   return profile.id;
 }
 
-Future<int> _insertTrack(UserDatabase db, int profileId) async {
-  final now = DateTime.utc(2026, 5, 13);
-  final track = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: 'mishnayos',
-          stateChangedAt: now,
-          activatedAt: now,
-        ),
-      );
-  return track.id;
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -133,7 +119,11 @@ void main() {
       db = createTestDatabase();
       await seedProfile(db);
       profileId = await _insertProfile(db);
-      trackId = await _insertTrack(db, profileId);
+      trackId = await seedTrack(
+        db,
+        profileId: profileId,
+        activatedAt: DateTime.utc(2026, 5, 13),
+      );
     });
 
     tearDown(() async => db.close());

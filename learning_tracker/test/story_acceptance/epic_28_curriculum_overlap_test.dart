@@ -28,7 +28,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
-import '../helpers/drift_memory.dart' show seedCompletion;
+import '../helpers/drift_memory.dart' show seedCompletion, seedTrack;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -63,26 +63,6 @@ Future<int> _insertProfile(UserDatabase db) async {
         ),
       );
   return p.id;
-}
-
-/// Insert a minimal curriculum track and return its id.
-Future<int> _insertTrack(
-  UserDatabase db,
-  int profileId,
-  String curriculumId,
-) async {
-  final now = DateTime.utc(2026, 1, 1);
-  final t = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          stateChangedAt: now,
-          activatedAt: now,
-        ),
-      );
-  return t.id;
 }
 
 /// Insert a single completion row.
@@ -260,7 +240,12 @@ void main() {
     setUp(() async {
       db = _openDb();
       profileId = await _insertProfile(db);
-      chumashTrackId = await _insertTrack(db, profileId, 'chumash');
+      chumashTrackId = await seedTrack(
+        db,
+        profileId: profileId,
+        curriculumId: 'chumash',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
     });
 
     tearDown(() async => db.close());
@@ -329,7 +314,12 @@ void main() {
     setUp(() async {
       db = _openDb();
       profileId = await _insertProfile(db);
-      nachTrackId = await _insertTrack(db, profileId, 'nach');
+      nachTrackId = await seedTrack(
+        db,
+        profileId: profileId,
+        curriculumId: 'nach',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
     });
 
     tearDown(() async => db.close());
@@ -373,8 +363,18 @@ void main() {
     setUp(() async {
       db = _openDb();
       profileId = await _insertProfile(db);
-      chumashTrackId = await _insertTrack(db, profileId, 'chumash');
-      tanachTrackId = await _insertTrack(db, profileId, 'tanach');
+      chumashTrackId = await seedTrack(
+        db,
+        profileId: profileId,
+        curriculumId: 'chumash',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
+      tanachTrackId = await seedTrack(
+        db,
+        profileId: profileId,
+        curriculumId: 'tanach',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
     });
 
     tearDown(() async => db.close());
@@ -475,7 +475,12 @@ void main() {
     });
 
     test('Mishnayos completion does not pollute Tanach refs', () async {
-      final trackId = await _insertTrack(db, profileId, 'mishnayos');
+      final trackId = await seedTrack(
+        db,
+        profileId: profileId,
+        curriculumId: 'mishnayos',
+        activatedAt: DateTime.utc(2026, 1, 1),
+      );
       await _insertCompletion(
         db,
         profileId: profileId,
@@ -496,7 +501,12 @@ void main() {
     test(
       'Chumash completion is visible in Chumash refs (subset does not lose its own refs)',
       () async {
-        final trackId = await _insertTrack(db, profileId, 'chumash');
+        final trackId = await seedTrack(
+          db,
+          profileId: profileId,
+          curriculumId: 'chumash',
+          activatedAt: DateTime.utc(2026, 1, 1),
+        );
         await _insertCompletion(
           db,
           profileId: profileId,

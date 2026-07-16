@@ -35,21 +35,6 @@ import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 import '../mocks/mock_repositories.dart';
 
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
-
 void main() {
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
@@ -352,7 +337,7 @@ void main() {
       // seedProfileZero needed: CurriculumActivationService defaults to
       // profileId=0; StudyDayConfigDao.seedDefaults inserts with profile_id=0.
       await seedProfileZero(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       addTearDown(() => db.close());
 
       service = CurriculumActivationService(
@@ -897,7 +882,7 @@ void main() {
       final db = createTestDatabase();
       await seedProfile(db);
       addTearDown(() => db.close());
-      final trackId = await _insertTrack(db);
+      final trackId = await seedTrack(db, profileId: 1);
 
       await seedCompletion(
         db,
@@ -925,7 +910,7 @@ void main() {
       final db = createTestDatabase();
       await seedProfile(db);
       addTearDown(() => db.close());
-      final bTrackId = await _insertTrack(db);
+      final bTrackId = await seedTrack(db, profileId: 1);
       await db.bookmarkDao.insertBookmark(
         BookmarksCompanion.insert(
           profileId: 1,

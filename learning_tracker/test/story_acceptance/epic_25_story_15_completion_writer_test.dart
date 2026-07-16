@@ -22,24 +22,6 @@ import '../helpers/drift_memory.dart';
 
 UserDatabase _createDb() => UserDatabase(NativeDatabase.memory());
 
-/// Insert a curriculum track row and return its id, so completion FKs resolve.
-Future<int> _insertTrack(
-  UserDatabase db, {
-  int profileId = 1,
-  String curriculumId = 'mishnah_yomit',
-}) async {
-  return db
-      .into(db.curriculumTracks)
-      .insert(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: curriculumId,
-          stateChangedAt: DateTime.utc(2026, 5, 1),
-          activatedAt: DateTime.utc(2026, 5, 1),
-        ),
-      );
-}
-
 CompletionCommand _cmd({
   required int trackId,
   int profileId = 1,
@@ -75,7 +57,12 @@ void main() {
         db = _createDb();
         await seedProfile(db);
         writer = CompletionWriter(db);
-        trackId = await _insertTrack(db);
+        trackId = await seedTrack(
+          db,
+          profileId: 1,
+          curriculumId: 'mishnah_yomit',
+          activatedAt: DateTime.utc(2026, 5, 1),
+        );
       });
       tearDown(() => db.close());
 
