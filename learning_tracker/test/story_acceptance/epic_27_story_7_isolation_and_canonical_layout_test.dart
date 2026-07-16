@@ -28,21 +28,6 @@ const _refForA = 'Mishnah_Berakhot.1.1';
 const _stageId = 1;
 const _trackType = 'personal';
 
-/// Inserts a [CurriculumTracks] row for [profileId] and returns its id.
-Future<int> _insertTrackFor(UserDatabase db, int profileId) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: profileId,
-          curriculumId: _curriculumId,
-          stateChangedAt: DateTime.utc(2026, 5, 13, 10),
-          activatedAt: DateTime.utc(2026, 5, 13, 10),
-        ),
-      );
-  return row.id;
-}
-
 void main() {
   // ── Story 27.7.1 ─ multi-profile isolation ─────────────────────────────
 
@@ -78,7 +63,12 @@ void main() {
         );
 
         // A completion lives under profileA only.
-        trackIdA = await _insertTrackFor(db, profileA.id);
+        trackIdA = await seedTrack(
+          db,
+          profileId: profileA.id,
+          curriculumId: _curriculumId,
+          activatedAt: DateTime.utc(2026, 5, 13, 10),
+        );
         completionIdA = await seedCompletion(
           db,
           CompletionEventsCompanion.insert(

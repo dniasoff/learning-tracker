@@ -25,22 +25,8 @@ import 'package:learning_tracker/features/tracks/setup/domain/services/track_cre
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
+import '../helpers/drift_memory.dart' show seedTrack;
 import '../helpers/test_database.dart' show seedProfile;
-
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTimeFactory.nowUtc(),
-          activatedAt: DateTimeFactory.nowUtc(),
-        ),
-      );
-  return row.id;
-}
 
 void main() {
   // ── Story 18.1: AddTrackFlow has no rewards step ──────────────────────────
@@ -145,7 +131,7 @@ void main() {
                   updatedAt: DateTimeFactory.nowUtc(),
                 ),
               );
-          await _insertTrack(db);
+          await seedTrack(db, profileId: 1);
 
           final activationService = CurriculumActivationService(
             database: db,
@@ -366,7 +352,7 @@ void main() {
             final db = UserDatabase(NativeDatabase.memory());
             addTearDown(db.close);
             await seedProfile(db);
-            final trackId = await _insertTrack(db);
+            final trackId = await seedTrack(db, profileId: 1);
 
             final repo = StageDefinitionRepositoryImpl(
               stageDao: db.stageDao,
@@ -549,7 +535,7 @@ void main() {
           final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
           await seedProfile(db);
-          final trackId = await _insertTrack(db);
+          final trackId = await seedTrack(db, profileId: 1);
 
           // Insert English defaults
           await db.stageDao.insertStageDefinition(
@@ -593,7 +579,7 @@ void main() {
           final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
           await seedProfile(db);
-          final trackId = await _insertTrack(db);
+          final trackId = await seedTrack(db, profileId: 1);
 
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(
@@ -623,7 +609,7 @@ void main() {
           final db = UserDatabase(NativeDatabase.memory());
           addTearDown(db.close);
           await seedProfile(db);
-          final trackId = await _insertTrack(db);
+          final trackId = await seedTrack(db, profileId: 1);
 
           await db.stageDao.insertStageDefinition(
             StageDefinitionsCompanion.insert(

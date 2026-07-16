@@ -30,21 +30,6 @@ class _InMemoryContentRepo implements SchedulerContentRepository {
       items;
 }
 
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
-
 void main() {
   // ── Story 6.1: Parametric Scheduler Engine ─────────────────────────
 
@@ -66,7 +51,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
 
       // Set up 3 stages
       await db.stageDao.insertStageDefinition(
@@ -204,7 +189,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
 
       await db.stageDao.insertStageDefinition(
         StageDefinitionsCompanion.insert(
@@ -469,7 +454,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       goalRepo = GoalRepositoryImpl(database: db, profileId: 1);
     });
 
@@ -779,7 +764,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
 
       // Set up stage definitions for mishnayos
       await db.stageDao.insertStageDefinition(
@@ -898,7 +883,7 @@ void main() {
       setUp(() async {
         db = createTestDatabase();
         await seedProfile(db);
-        trackId = await _insertTrack(db);
+        trackId = await seedTrack(db, profileId: 1);
 
         // Single "Learn only" stage — no chazara stages.
         await db.stageDao.insertStageDefinition(

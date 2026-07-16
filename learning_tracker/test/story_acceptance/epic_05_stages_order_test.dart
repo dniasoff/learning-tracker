@@ -15,7 +15,8 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/m
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
-import '../helpers/drift_memory.dart' show seedProfile, seedProfileZero;
+import '../helpers/drift_memory.dart'
+    show seedProfile, seedProfileZero, seedTrack;
 
 class _MockContentRepository extends Mock implements ContentRepository {}
 
@@ -30,21 +31,6 @@ ContentItem _makeItem(String ref, {int sortOrder = 0}) {
     sortOrder: sortOrder,
     isLeaf: false,
   );
-}
-
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
 }
 
 void main() {
@@ -63,7 +49,7 @@ void main() {
     setUp(() async {
       database = UserDatabase(NativeDatabase.memory());
       await seedProfile(database);
-      trackId = await _insertTrack(database);
+      trackId = await seedTrack(database, profileId: 1);
       repository = StageDefinitionRepositoryImpl(
         stageDao: database.stageDao,
         completionDao: database.completionDao,
@@ -158,7 +144,7 @@ void main() {
       database = UserDatabase(NativeDatabase.memory());
       await seedProfile(database);
       await seedProfileZero(database);
-      await _insertTrack(database);
+      await seedTrack(database, profileId: 1);
       mockContent = _MockContentRepository();
       repo = LearningOrderRepositoryImpl(
         database: database,

@@ -17,21 +17,6 @@ import 'package:test/test.dart';
 import '../helpers/drift_memory.dart';
 import '../helpers/test_database.dart';
 
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 0,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
-
 void main() {
   // ── Story 8.1: Points system ──────────────────────────────────
 
@@ -43,7 +28,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 0);
       final now = DateTime.now();
       await db
           .into(db.goals)
@@ -170,7 +155,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 0);
       streakService = StreakService(db, profileId: 1);
       log = StreakEventLog(db);
     });

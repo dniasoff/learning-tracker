@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/progress/data/repositories/progress_re
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
+import '../helpers/drift_memory.dart' show seedTrack;
 import '../helpers/test_database.dart';
 
 class _MockSyncEngine extends Mock implements SyncWriteFacade {}
@@ -50,21 +51,6 @@ List<ContentItem> _fiveItems() => List.generate(
   ),
 );
 
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
-
 void main() {
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
@@ -82,7 +68,7 @@ void main() {
       db = _db();
       await seedProfile(db);
       await seedProfileZero(db);
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);
@@ -250,7 +236,7 @@ void main() {
     setUp(() async {
       db = _db();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);
@@ -370,7 +356,7 @@ void main() {
     setUp(() async {
       db = _db();
       await seedProfile(db);
-      await _insertTrack(db);
+      await seedTrack(db, profileId: 1);
       syncEngine = _MockSyncEngine();
       contentRepo = _MockContentRepository();
       repo = _repo(db, syncEngine, contentRepo);

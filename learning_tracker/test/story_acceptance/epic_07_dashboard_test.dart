@@ -50,21 +50,6 @@ ContentItem _leaf({
   );
 }
 
-/// Creates a default curriculum track and returns its ID.
-Future<int> _insertTrack(UserDatabase db) async {
-  final row = await db
-      .into(db.curriculumTracks)
-      .insertReturning(
-        CurriculumTracksCompanion.insert(
-          profileId: 1,
-          curriculumId: 'mishnayos',
-          stateChangedAt: DateTime.now(),
-          activatedAt: DateTime.now(),
-        ),
-      );
-  return row.id;
-}
-
 void main() {
   // ── Story 7.1: Dashboard screen ───────────────────────────────
 
@@ -82,7 +67,7 @@ void main() {
       });
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       aggregator = CrossCurriculumAggregator();
     });
 
@@ -546,7 +531,7 @@ void main() {
     setUp(() async {
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
     });
 
     tearDown(() async {
@@ -894,7 +879,7 @@ void main() {
       refCounter = 0;
       db = createTestDatabase();
       await seedProfile(db);
-      trackId = await _insertTrack(db);
+      trackId = await seedTrack(db, profileId: 1);
       chartService = ChartDataService(db, profileId: 1);
     });
 
