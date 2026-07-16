@@ -1,16 +1,17 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'content_index.g.dart';
+part 'content_index.freezed.dart';
 
 /// Adjacent siblings of a [ContentItem] within its curriculum's leaf order.
-class AdjacentItems {
-  const AdjacentItems({this.prev, this.next});
-
-  final ContentItem? prev;
-  final ContentItem? next;
+@freezed
+abstract class AdjacentItems with _$AdjacentItems {
+  const factory AdjacentItems({ContentItem? prev, ContentItem? next}) =
+      _AdjacentItems;
 }
 
 /// O(1) ref → item index across all 9 curricula.
