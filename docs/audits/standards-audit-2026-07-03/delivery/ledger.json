@@ -6118,13 +6118,16 @@
     {
       "id": "AUD-t-story-acceptance-23",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Add a Locale('he') behavioral variant to StatCard's interactive widget tests (epic_26_story_26_16)",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "30348dfbd0839fb8b5dec5445d21511eccc7e423",
+        "c944dcdc5d444efd0ed6da02f97e03a1481360d8"
+      ],
+      "reviewRounds": 2,
       "acVerified": [],
-      "notes": ""
+      "notes": "Confirmed: 5 testWidgets in stat_card_test.dart's AC2+AC3 group hardcoded Locale('en') (line #s drifted, content unchanged). Parameterized the group over en+he. 10 tests now run (was 5), all pass, incl. tap-behavior under RTL."
     },
     {
       "id": "AUD-core-database-16",
@@ -6844,13 +6847,15 @@
     {
       "id": "AUD-t-story-acceptance-42",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Remove 14 tautological expect(<Symbol>, isNotNull) compile-time-check tests across 4 epic-26 story files",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "d96334f2734c8ba407d02ccb8a4628f7349b6971"
+      ],
+      "reviewRounds": 2,
       "acVerified": [],
-      "notes": ""
+      "notes": "Confirmed: 8 of 14 sites remained (6 already deleted by unrelated commit 3322a173 AUD-dashboard-05). Deleted the 8 tautological isNotNull tests, each with a surviving sibling structural check; removed 3 now-unused imports. grep confirms pattern gone from epic_26 files."
     },
     {
       "id": "AUD-t-cross-88",
@@ -9659,13 +9664,15 @@
     {
       "id": "AUD-t-story-acceptance-36",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Fix stale AC5 doc comment in epic_26_story_26_20 — still claims hebrewTerms/hebrewDate default to false",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "abf5d72c6711ee16dc8ac54b95575150abe3e8ce"
+      ],
+      "reviewRounds": 2,
       "acVerified": [],
-      "notes": ""
+      "notes": "Confirmed: file header said hebrewTerms/useHebrewDate default to false, contradicting the AC5 group title and live defaultValue getters (both true). Updated header text. Doc-only; all 14 tests still pass."
     },
     {
       "id": "AUD-t-story-acceptance-41",
