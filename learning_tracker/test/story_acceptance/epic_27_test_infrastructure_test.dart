@@ -10,8 +10,9 @@
 ///         build)` that automatically produces both English and Hebrew
 ///         golden variants (NFR13).
 ///   AC3 — `test/helpers/drift_memory.dart` provides `inMemoryDb()`
-///         returning a fresh schema-v1 (current schemaVersion = 13)
-///         `UserDatabase` instance backed by `NativeDatabase.memory()`.
+///         returning a fresh schema-v1 (current schemaVersion — see
+///         `UserDatabase.schemaVersion`) `UserDatabase` instance backed
+///         by `NativeDatabase.memory()`.
 ///   AC4 — At least one consumer of each helper exists. The consumers in
 ///         this file double as living documentation: the integration tests
 ///         in DNI-27.5–27.9 will follow these patterns.
@@ -149,7 +150,11 @@ void main() {
           // Schema version reflects the project's current Drift
           // schema. W3.19 reset this to 1; the helper must not
           // pin a stale number.
-          expect(db.schemaVersion, db.schemaVersion);
+          // weaken-ok: AUD-t-story-acceptance-43 — removed
+          // `expect(db.schemaVersion, db.schemaVersion)`, a
+          // self-comparison that always passes and verified nothing.
+          // The `greaterThanOrEqualTo(1)` check below is the real
+          // (minimal) sanity check on the value.
           expect(db.schemaVersion, greaterThanOrEqualTo(1));
         } finally {
           await db.close();
