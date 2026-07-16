@@ -1206,7 +1206,7 @@ void main() {
   );
 
   testWidgets(
-    'shows "PENDING (1)" section header when there is one pending grant',
+    'shows "Pending (1)" section header when there is one pending grant',
     (tester) async {
       final child = _childProfile(id: 1, displayName: 'Aba');
       final grant = _pendingGrant();
@@ -1223,7 +1223,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // l10n: manageTutorsPendingSection(1) → "PENDING (1)"
+      // l10n: manageTutorsPendingSection(1) → "Pending (1)"
       expect(find.text('Pending (1)'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
