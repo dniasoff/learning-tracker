@@ -149,7 +149,7 @@ void main() {
 
   // ── Story 5.2: Custom learning order ──────────────────────────
 
-  group('Story 5.2 -- Custom learning order', () {
+  group('Story 5.2 -- Custom learning order', tags: ['story_5_2'], () {
     late UserDatabase database;
     late _MockContentRepository mockContent;
     late LearningOrderRepositoryImpl repo;
