@@ -29,6 +29,8 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart'
+    show FakeLocalDayClock, localDayClockProvider;
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
@@ -92,6 +94,14 @@ List<Override> _overridesFor({
 }) {
   return [
     userDatabaseProvider.overrideWith((ref) => db),
+    // Pin the wall clock so TrackInfoCard's pace-derived text (via
+    // _trackPaceCalcProvider, which reads localDayClockProvider) is
+    // deterministic instead of depending on the live system clock — matches
+    // the fixed-date pattern used by every sibling file that mounts this
+    // screen (edit_track_and_detail_l1_test.dart, track_detail_goal_stale_test.dart).
+    localDayClockProvider.overrideWithValue(
+      FakeLocalDayClock(DateTime.utc(2026, 5, 30)),
+    ),
     // Goal writes go through goalRepositoryProvider, which watches
     // syncWriteFacadeProvider → authStateProvider → Firebase. Stub the sync
     // facade to null (the local-born no-op path) so the repo persists to the
