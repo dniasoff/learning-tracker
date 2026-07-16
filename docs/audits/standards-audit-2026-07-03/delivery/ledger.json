@@ -2039,13 +2039,20 @@
     {
       "id": "AUD-t-tutoring-06",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Verify TutoredMirrorWipeService fires on tutor resign/revoke in manage_grants_screen_l1_test.dart and manage_tutors_screen_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "60f62e2cd05bb60b248dc9fb69ce45a2ab234a86",
+        "03ad03888268687beaaed56636334feb9f53ed81"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-06 AC1 OK: manage_grants test seeds mirror, resigns, asserts getTutoredMirrorsForAccount isEmpty (diff L454-528)",
+        "AUD-t-tutoring-06 AC2 OK: manage_tutors test seeds mirror, revokes, asserts isEmpty (diff L716-811)",
+        "AUD-t-tutoring-06 AC3 OK: both active-session tests assert provider isNull post-resign/revoke; _clearTutoredSelection only on pop, red-first confirms coupling"
+      ],
+      "notes": "Added 4 tests asserting Drift mirror-row deletion + activeTutoredProfileSelectionProvider clears on resign/revoke. Red-first: disabled R4-M3 wipe call -> 4 tests failed; reverted -> green. Commit dded8750 (pre-rebase) / 60f62e2c (merged) + follow-up ecb4d3e0 (pre-rebase) / 03ad0388 (merged) (TQ-3 pumpApp ratchet compliance)."
     },
     {
       "id": "AUD-t-story-acceptance-04",
@@ -6052,13 +6059,18 @@
     {
       "id": "AUD-t-tutoring-05",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P2",
       "title": "Remove or implement the dead 'hardcoded string audit' test in invite_tutor_screen_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "c4de51bce5e92456e263cb0606f227c7debeae69"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-05 AC1 OK: test now File().readAsStringSync()+_findHardcodedTextLiterals scan (diff L207-225); red-first fired on Text('Invite a Tutor')",
+        "AUD-t-tutoring-05 AC2 OK: reads real screen file; bad path throws->fail, cannot pass independent of file contents"
+      ],
+      "notes": "Replaced tautological Uri.file().toString()+isNotEmpty check with real File().readAsStringSync() scan for hardcoded Text()/TextSpan() literals. Red-first: hardcoded a Text('Invite a Tutor') -> test failed; reverted -> green. Commit 57638bf1 (pre-rebase) / c4de51bc (merged)."
     },
     {
       "id": "AUD-t-story-acceptance-09",
@@ -8153,24 +8165,34 @@
     {
       "id": "AUD-t-tutoring-10",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace tautological isNotNull(Type)/constructor-tearoff compile-checks with real interface/constructor assertions",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "92efa920c0c4d0ce559b2911a1194d9adc0cea7c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-10 AC1 OK: 2 files typed ctor-tearoff assign; data/repo file constructs+isA<TutorGrantRepository>; malformed->hasLength(1)+grantId=='valid'",
+        "AUD-t-tutoring-10 AC2 OK: both concrete classes carry `implements`; ctor sigs match tearoffs so removal->compile error / isA runtime fail"
+      ],
+      "notes": "Replaced 4 tautological isNotNull/tearoff/weak-bound checks with real tearoff assignability checks, isA<Interface>() instantiation, hasLength(1)+identity assertion. Red-first: removing implements caused compile errors; unfiltered malformed entries broke the new assertion. Commit fc1b6560 (pre-rebase) / 92efa920 (merged)."
     },
     {
       "id": "AUD-t-tutoring-07",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Add a Hebrew/RTL locale variant to invite_tutor_screen_l1_test.dart and manage_grants_screen_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "7b96b3ca3285515e810737dae34b2d63ac06ad90"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-07 AC1 OK: invite_tutor Locale('he') test asserts field/button present + takeException isNull (diff L237-264)",
+        "AUD-t-tutoring-07 AC2 OK: manage_grants Locale('he') test asserts he-ARB headers + takeException isNull (diff L636-676)"
+      ],
+      "notes": "Parameterized locale in both screens' harnesses, added Locale('he') tests asserting no RenderFlex overflow via tester.takeException(). Red-first: injected oversized Row -> both tests failed; reverted -> green. Commit 31671981 (pre-rebase) / 7b96b3ca (merged)."
     },
     {
       "id": "AUD-repo-04",
@@ -9710,13 +9732,17 @@
     {
       "id": "AUD-t-tutoring-09",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Fix stale 'PENDING (1)' test description in manage_tutors_screen_l1_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "d5df2048e77a904ef97c28f8f90fcfcb6343d5c5"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-tutoring-09 AC1 OK: test name + inline comment now read 'Pending (1)' matching find.text('Pending (1)') (diff L937-949)"
+      ],
+      "notes": "Fixed stale 'PENDING (1)' test name/comment to 'Pending (1)' matching the actual assertion. Hygiene-only, no behavior change. Commit e00dac6d (pre-rebase) / d5df2048 (merged)."
     },
     {
       "id": "AUD-t-story-acceptance-37",
