@@ -4,6 +4,8 @@
 /// host StreamProvider or crashing the app-shell build.
 library;
 
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +14,7 @@ import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
 import '../../helpers/drift_memory.dart';
@@ -117,21 +120,24 @@ void main() {
 
     // ── 3. happy-path milestones still fire ───────────────────────────────────
 
-    test('happy path: milestone fires when streak reaches threshold', () async {
-      final analytics = FakeAnalyticsService();
+    test('happy path: milestone fires when streak reaches threshold '
+        '(AUD-core-analytics-02)', () async {
+      final analytics = _MilestoneAwaitingAnalyticsService();
       final db = inMemoryDb();
       await seedProfile(db);
 
-      // Seed 7 consecutive streak events ENDING TODAY so currentStreak == 7.
-      // Anchored relative to "now" — a hardcoded past date silently breaks the
-      // moment the calendar advances past it (the days stop being a *current*
-      // streak), which is exactly what made this test flaky across a midnight.
-      final todayUtc = DateTime.now().toUtc();
-      final base = DateTime.utc(
-        todayUtc.year,
-        todayUtc.month,
-        todayUtc.day,
-      ).subtract(const Duration(days: 6));
+      // Fixed clock instead of DateTime.now() — the observer now watches
+      // localDayClockProvider (mirrors outbox_providers.dart's
+      // localDayClockProvider seam) instead of hardcoding
+      // `const SystemLocalDayClock()`, so "today" is deterministic and the
+      // seeded data no longer needs to be anchored to the real wall clock.
+      // Noon UTC keeps the local-day conversion inside the same calendar
+      // date across any host machine timezone (max UTC offset is ±14h).
+      final clock = FakeLocalDayClock(DateTime.utc(2026, 5, 31, 12));
+
+      // Seed 7 consecutive streak events ENDING on the fixed "today" so
+      // currentStreak == 7.
+      final base = DateTime.utc(2026, 5, 25);
       for (var i = 0; i < 7; i++) {
         final day = base.add(Duration(days: i));
         await db.streakEventDao.appendEvent(
@@ -150,6 +156,7 @@ void main() {
           userDatabaseProvider.overrideWithValue(db),
           activeProfileIdProvider.overrideWithValue(1),
           analyticsServiceProvider.overrideWithValue(analytics),
+          localDayClockProvider.overrideWithValue(clock),
         ],
       );
       addTearDown(container.dispose);
@@ -161,14 +168,18 @@ void main() {
       );
       addTearDown(sub.close);
 
-      // Poll until the milestone event fires. The streak-state stream restores
-      // + emits asynchronously; a fixed 50ms delay is order/timing-flaky (it
-      // happened to pass when warmer tests ran first, failed in isolation).
-      final deadline = DateTime.now().add(const Duration(seconds: 5));
-      while (DateTime.now().isBefore(deadline) &&
-          analytics.countOf(AnalyticsEvent.streakMilestoneReached) < 1) {
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-      }
+      // Event-driven wait instead of a wall-clock polling loop: the fake
+      // analytics service completes a Completer the instant
+      // logStreakMilestoneReached fires, so this resolves as soon as the
+      // streak-state stream's first emission lands (near-instant), with a
+      // bounded timeout only as a safety net against a genuine hang.
+      await analytics.milestoneFired.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => fail(
+          'milestone=7 did not fire within 5s of a deterministic '
+          'fixed-clock seed',
+        ),
+      );
 
       expect(
         analytics.countOf(AnalyticsEvent.streakMilestoneReached),
@@ -193,5 +204,30 @@ class _ThrowingAnalyticsService extends AnalyticsService {
   @override
   Future<void> logEvent(String name, {Map<String, Object?>? parameters}) {
     throw Exception('analytics unavailable (test double)');
+  }
+}
+
+/// A [FakeAnalyticsService] that additionally exposes [milestoneFired] — a
+/// future that completes the instant `AnalyticsEvent.streakMilestoneReached`
+/// is logged. Lets the happy-path test await the exact event instead of
+/// polling `DateTime.now()` on a fixed interval.
+class _MilestoneAwaitingAnalyticsService extends AnalyticsService {
+  final FakeAnalyticsService _delegate = FakeAnalyticsService();
+  final Completer<void> _milestoneFired = Completer<void>();
+
+  Future<void> get milestoneFired => _milestoneFired.future;
+
+  int countOf(String name) => _delegate.countOf(name);
+
+  Map<String, Object?>? lastParamsOf(String name) =>
+      _delegate.lastParamsOf(name);
+
+  @override
+  Future<void> logEvent(String name, {Map<String, Object?>? parameters}) async {
+    await _delegate.logEvent(name, parameters: parameters);
+    if (name == AnalyticsEvent.streakMilestoneReached &&
+        !_milestoneFired.isCompleted) {
+      _milestoneFired.complete();
+    }
   }
 }
