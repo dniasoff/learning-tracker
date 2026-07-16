@@ -9607,13 +9607,18 @@
     {
       "id": "AUD-t-track_setup-02",
       "wave": 4,
-      "status": "todo",
+      "status": "merged",
       "severity": "P3",
       "title": "Add a Locale('he') RTL variant and a shared pump helper for curriculum_picker_step_test.dart and track_label_step_test.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": ""
+      "commits": [
+        "cf7e6d92c268a3a64412becd4d5c067e31844065"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-t-track_setup-02 AC1 OK curriculum_picker: testWidgets Locale('he') asserts takeException() isNull; runs+passes +5",
+        "AUD-t-track_setup-02 AC1 OK track_label: testWidgets Locale('he') asserts takeException() isNull; runs+passes +10"
+      ],
+      "notes": "Re-verified: both files hand-rolled delegate blocks, zero Locale('he') coverage. Migrated onto shared pumpApp() (TQ-3); added Locale('he') testWidgets to each asserting takeException() null. Updated tq3_pump_app_delegate_baseline.txt 204->203 per ratchet's own instructions."
     },
     {
       "id": "AUD-tracks-24",
