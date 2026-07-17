@@ -26,13 +26,14 @@ enum CurriculumId {
 
   const CurriculumId(this.storageKey);
 
-  /// Canonical string key used in database and content_items table.
+  /// Canonical string key used in the database and in `ContentItem.curriculumId`
+  /// (loaded from the bundled JSON hierarchy assets — there is no
+  /// `content_items` database table).
   final String storageKey;
 
   /// Resolve a [CurriculumId] from its [storageKey] string — the raw
-  /// value read from the database / `content_items` table or a
-  /// `ContentItem.curriculumId`. Returns null when [key] does not match
-  /// any known curriculum.
+  /// value read from the database or a `ContentItem.curriculumId`. Returns
+  /// null when [key] does not match any known curriculum.
   ///
   /// This is the single canonical storageKey→enum lookup; call sites
   /// must not re-implement the linear scan themselves.

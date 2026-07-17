@@ -11,13 +11,14 @@ class ParentControlException extends PermissionException {
 
 /// Repository for managing custom learning order per curriculum.
 ///
-/// Implements D7: learning_order table is the override; content_items.sort_order
-/// is the fallback when no custom order exists.
+/// Implements D7: learning_order table is the override; `ContentItem.sortOrder`
+/// (from the bundled JSON hierarchy assets — there is no `content_items`
+/// database table) is the fallback when no custom order exists.
 abstract class LearningOrderRepository {
   /// Get the ordered list of drag-level items for a curriculum.
   ///
   /// Returns custom order if rows exist in learning_order table;
-  /// otherwise falls back to content_items.sort_order (natural Sefaria order).
+  /// otherwise falls back to `ContentItem.sortOrder` (natural Sefaria order).
   Future<List<LearningOrderItem>> getOrder(CurriculumId curriculumId);
 
   /// Save a new custom order for a curriculum.

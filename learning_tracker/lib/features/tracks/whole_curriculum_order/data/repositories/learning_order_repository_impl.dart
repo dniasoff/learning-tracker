@@ -90,7 +90,7 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
       }).toList();
     }
 
-    // No custom order — fall back to content_items.sort_order at drag level
+    // No custom order — fall back to ContentItem.sortOrder at drag level
     final sorted = index.entries.toList()
       ..sort((a, b) => a.value.sortOrder.compareTo(b.value.sortOrder));
 

@@ -14,7 +14,7 @@ abstract class LearningOrderItem with _$LearningOrderItem {
     required String displayNameEn,
     required int userSortOrder,
 
-    /// False if this item is using fallback sort from content_items.sort_order.
+    /// False if this item is using fallback sort from `ContentItem.sortOrder`.
     @Default(false) bool isCustomOrdered,
   }) = _LearningOrderItem;
 }
