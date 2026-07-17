@@ -7438,13 +7438,21 @@
     {
       "id": "AUD-profiles-16",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Log swallowed exceptions in profiles' log-less catch blocks instead of silently discarding them",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "aea3c2cb5f217528bb42fc0dab6a93adfcbdd254"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-16 AC1 OK: sites 1-3 (profile_repository_impl create/update/self-heal) now catch(e,st)+_log.warning before offline-first fallthrough; diff+checker green",
+        "AUD-profiles-16 AC1 OK: site 5 (add_profile_dialog:51) catch(e,st)+AppLogger.instance.warning before set(err=null); AppLogger imported line 3",
+        "AUD-profiles-16 AC1 OK: site 4 (profile_picker_screen:291) gone - file has 0 catch blocks; ancestor commit 648e815f gutted screen pre-dispatch; not a deferral",
+        "AUD-profiles-16 AC2 OK: checker check_eh3_profiles_log_less_catch.dart fires red (exit1/4viol) on pre-fix, green (exit0) on fixed, wired into make audit 76/76",
+        "AUD-profiles-16 AC2 scope OK: 3-file scope mirrors real precedent check_eh3_log_less_catch.dart; lib/-wide custom_lint no_log_less_catch exists (AUD-onboarding-11)"
+      ],
+      "notes": "4/5 sites fixed (3 in profile_repository_impl.dart, 1 in add_profile_dialog.dart) now log via AppLogger, non-fatal behavior unchanged. 5th site (profile_picker_screen.dart:291) already deleted by unrelated commit 648e815f before dispatch; kept in checker scope as guard. AC1+AC2 satisfied."
     },
     {
       "id": "AUD-t-settings-08",
