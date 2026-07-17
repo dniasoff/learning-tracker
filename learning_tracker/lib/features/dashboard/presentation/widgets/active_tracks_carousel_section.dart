@@ -3,7 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/active_track_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/arrow_button.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class ActiveTracksCarouselSection extends StatefulWidget {

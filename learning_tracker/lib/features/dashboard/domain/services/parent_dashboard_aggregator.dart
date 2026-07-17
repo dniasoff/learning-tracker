@@ -6,8 +6,7 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/dashboard/domain/use_cases/compute_pace_status_use_case.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';

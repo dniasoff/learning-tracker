@@ -1,5 +1,5 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 
 /// Progress data for an entire curriculum, broken down by hierarchy level.
 class CurriculumProgressData {

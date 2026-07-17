@@ -1,8 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 
 part 'add_track_result.freezed.dart';
 

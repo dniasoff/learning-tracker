@@ -3,9 +3,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/domain/models/calendar_position.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
-import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 

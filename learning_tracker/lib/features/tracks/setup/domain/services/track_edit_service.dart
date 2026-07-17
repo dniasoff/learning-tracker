@@ -2,8 +2,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
-import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 
 /// Applies in-place edits to an existing track.
 ///

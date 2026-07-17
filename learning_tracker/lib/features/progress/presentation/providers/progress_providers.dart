@@ -12,7 +12,7 @@ import 'package:learning_tracker/features/progress/domain/models/curriculum_prog
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
-import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';

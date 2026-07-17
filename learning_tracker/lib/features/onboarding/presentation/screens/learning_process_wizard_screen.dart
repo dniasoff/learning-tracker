@@ -8,7 +8,7 @@ import 'package:learning_tracker/features/onboarding/domain/models/wizard_result
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_controller.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_step.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/wizard_steps.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 
 // Re-export from domain layer for backward compatibility.
 export 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart'

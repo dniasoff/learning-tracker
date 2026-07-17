@@ -1,8 +1,6 @@
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/pace_derivation.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 
 /// Input bundle for [ComputePaceStatusUseCase].
 ///

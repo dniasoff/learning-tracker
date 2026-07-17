@@ -32,8 +32,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 // `lib/features/progress/presentation/widgets/...` would violate the
 // layering rule.
 import 'package:learning_tracker/features/progress/progress.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
-import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 

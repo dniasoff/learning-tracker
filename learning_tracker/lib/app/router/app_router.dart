@@ -38,8 +38,7 @@ import 'package:learning_tracker/features/progress/presentation/screens/progress
 import 'package:learning_tracker/features/progress/presentation/screens/recent_activity_screen.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/siyumim_milestones_screen.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/screens/city_picker_screen.dart';
-import 'package:learning_tracker/features/scheduler/presentation/screens/scheduler_screen.dart';
-import 'package:learning_tracker/features/scheduler/presentation/screens/study_day_config_screen.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';

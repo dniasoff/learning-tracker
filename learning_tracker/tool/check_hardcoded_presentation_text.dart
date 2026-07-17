@@ -75,7 +75,11 @@ const _baseline = <String>{
   // this file so _getSmartDefault can delegate to a ref-free pure function)
   // pushed this SAME pre-existing, still-unaddressed AX-2 hit down by 43
   // lines. No content at this site changed.
-  'lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart:556',
+  // AUD-scheduler-14: re-pinned from :556 — collapsing two deep
+  // features/scheduler/ imports into one features/scheduler/scheduler.dart
+  // barrel import moved this SAME pre-existing, still-unaddressed AX-2 hit
+  // up by 1 line. No content at this site changed.
+  'lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart:555',
   'lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart:119',
   'lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart:425',
 };

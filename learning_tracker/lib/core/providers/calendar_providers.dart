@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
+import 'package:learning_tracker/features/scheduler/scheduler.dart';
 
 /// Provider for the offline-first [LocalCalendarEngine].
 ///
