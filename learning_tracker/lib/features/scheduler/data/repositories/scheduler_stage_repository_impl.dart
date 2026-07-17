@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_stage_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 
@@ -29,7 +30,21 @@ class SchedulerStageRepositoryImpl implements SchedulerStageRepository {
     Map<String, dynamic> sched;
     try {
       sched = jsonDecode(r.schedule) as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e) {
+      // AUD-scheduler-11 (EH-3): this used to swallow the jsonDecode/cast
+      // failure and silently substitute a hardcoded delay(0) default,
+      // changing the stage's chazara/review timing with no diagnostic
+      // trail to explain a future "my review schedule looks wrong" report.
+      // Log the row id and raw malformed value before falling back.
+      AppLogger.instance.warning(
+        event: 'scheduler_stage_malformed_schedule',
+        fields: {
+          'stage_id': r.id,
+          'curriculum_id': r.curriculumId,
+          'raw_schedule': r.schedule,
+          'error': e.toString(),
+        },
+      );
       sched = {'type': 'delay', 'delay_days': 0};
     }
 
