@@ -217,7 +217,6 @@ void main() {
                 curriculumId: CurriculumId.mishnayos,
                 level: 1,
                 levelName: 'Seder Zeraim',
-                levelLabel: 'seder',
                 totalItems: 74,
                 completedItems: 18,
                 stageBreakdown: [

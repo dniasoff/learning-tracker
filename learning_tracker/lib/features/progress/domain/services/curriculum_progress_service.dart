@@ -136,9 +136,6 @@ class CurriculumProgressService {
       }
     }
 
-    final level1Label = levelLabels.isNotEmpty ? levelLabels[0] : 'Level 1';
-    final level2Label = levelLabels.length > 1 ? levelLabels[1] : 'Level 2';
-
     // Maintain order by first occurrence
     final orderedKeys = <String>[];
     for (final item in leafItems) {
@@ -159,7 +156,6 @@ class CurriculumProgressService {
           leafItems: items,
           completions: levelCompletions,
           stageDefinitions: stageDefinitions,
-          levelLabel: level2Label,
         );
       }
 
@@ -167,7 +163,6 @@ class CurriculumProgressService {
         curriculumEnum: curriculumEnum,
         level: 1,
         levelName: level1Name,
-        levelLabel: level1Label,
         leafItems: items,
         completions: levelCompletions,
         stageDefinitions: stageDefinitions,
@@ -181,7 +176,6 @@ class CurriculumProgressService {
     required List<ContentItem> leafItems,
     required List<Completion> completions,
     required List<domain_stage.StageDefinition> stageDefinitions,
-    required String levelLabel,
   }) {
     final grouped = <String, List<ContentItem>>{};
     for (final item in leafItems) {
@@ -217,7 +211,6 @@ class CurriculumProgressService {
         curriculumEnum: curriculumEnum,
         level: 2,
         levelName: level2Name,
-        levelLabel: levelLabel,
         leafItems: items,
         completions: levelCompletions,
         stageDefinitions: stageDefinitions,
@@ -229,7 +222,6 @@ class CurriculumProgressService {
     required CurriculumId curriculumEnum,
     required int level,
     required String levelName,
-    required String levelLabel,
     required List<ContentItem> leafItems,
     required List<Completion> completions,
     required List<domain_stage.StageDefinition> stageDefinitions,
@@ -268,7 +260,6 @@ class CurriculumProgressService {
       curriculumId: curriculumEnum,
       level: level,
       levelName: levelName,
-      levelLabel: levelLabel,
       totalItems: leafItems.length,
       completedItems: completedCount,
       stageBreakdown: stageBreakdown,

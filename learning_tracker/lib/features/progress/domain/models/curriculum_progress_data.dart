@@ -22,7 +22,6 @@ class HierarchyLevelProgress {
     required this.curriculumId,
     required this.level,
     required this.levelName,
-    required this.levelLabel,
     required this.totalItems,
     required this.completedItems,
     required this.stageBreakdown,
@@ -42,7 +41,6 @@ class HierarchyLevelProgress {
   /// Raw content storage key for this level (e.g. "Seder Zeraim"). NOT a
   /// display string — render it through the curriculum label layer.
   final String levelName;
-  final String levelLabel;
   final int totalItems;
   final int completedItems;
   final List<StageBreakdownEntry> stageBreakdown;
