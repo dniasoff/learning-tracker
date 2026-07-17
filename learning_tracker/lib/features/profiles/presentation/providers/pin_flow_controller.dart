@@ -139,6 +139,7 @@ const _sentinel = Object();
 /// keepAlive: true — the screen mounts a persistent subscription for the
 /// duration of the PIN flow. Auto-dispose would tear down state mid-flow when
 /// there is a momentary gap between widget rebuilds.
+// keepAlive: must survive momentary widget-tree gaps mid-flow, see the doc comment above.
 @Riverpod(keepAlive: true)
 class PinFlowController extends _$PinFlowController {
   @override

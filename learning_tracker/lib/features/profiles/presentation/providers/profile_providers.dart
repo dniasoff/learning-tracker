@@ -18,6 +18,7 @@ part 'profile_providers.g.dart';
 /// brief signed-out window (e.g. between sign-up and the
 /// `setLocalBornSession` call that lands onboarding) so DAO calls that
 /// happen before auth-state settles keep their previous behavior.
+// keepAlive: read from DAO call sites throughout the account's session, must survive unrelated rebuilds.
 @Riverpod(keepAlive: true)
 int currentAccountId(Ref ref) {
   final authState = ref.watch(authStateProvider);
@@ -25,6 +26,7 @@ int currentAccountId(Ref ref) {
 }
 
 /// Provider for the ProfileRepository implementation.
+// keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
 @Riverpod(keepAlive: true)
 ProfileRepository profileRepository(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
@@ -33,6 +35,7 @@ ProfileRepository profileRepository(Ref ref) {
 }
 
 /// The currently selected profile ID. Null means no profile selected yet.
+// keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
 @Riverpod(keepAlive: true)
 class SelectedProfileId extends _$SelectedProfileId {
   @override
@@ -74,6 +77,7 @@ class SelectedProfileId extends _$SelectedProfileId {
 ///
 /// Watched by the app shell so it runs on every auth-valid mount. Returns the
 /// id that was selected (existing or newly healed), or null when signed-out.
+// keepAlive: the app shell watches this once per auth transition, must survive unrelated rebuilds.
 @Riverpod(keepAlive: true)
 Future<int?> autoSelectedProfileId(Ref ref) async {
   final authState = ref.watch(authStateProvider);
@@ -158,6 +162,7 @@ Future<ProfileModel?> selectedProfile(Ref ref) async {
 /// talk about "a session" rather than a nullable integer. This is the
 /// canonical read path for profile-selection state; write path stays on
 /// `selectedProfileIdProvider.notifier` (select / clear).
+// keepAlive: wraps selectedProfileIdProvider, which is itself keepAlive — must not defeat that.
 @Riverpod(keepAlive: true)
 ProfileSession profileSession(Ref ref) {
   final id = ref.watch(selectedProfileIdProvider);

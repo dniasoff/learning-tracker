@@ -1065,7 +1065,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    | grep -vE '^\s*//' | grep -nE "\.toString\(\)|\.message"; \
 	  FAIL=1; \
 	fi; \
-	echo "76/77 — SM-6: every @Riverpod(keepAlive: true) in lib/core/preferences/preference_providers.dart carries an inline // keepAlive: justification comment within 2 lines above (diff-scoped to this file per AUD-core-preferences-05)"; \
+	echo "76/78 — SM-6: every @Riverpod(keepAlive: true) in lib/core/preferences/preference_providers.dart carries an inline // keepAlive: justification comment within 2 lines above (diff-scoped to this file per AUD-core-preferences-05)"; \
 	if awk '/@Riverpod\(keepAlive: true\)/ && prev1 !~ /\/\/[ \t]*keepAlive:/ && prev2 !~ /\/\/[ \t]*keepAlive:/ { print NR": "$$0 } { prev2 = prev1; prev1 = $$0 }' \
 	    lib/core/preferences/preference_providers.dart | grep -q .; then \
 	  echo "  @Riverpod(keepAlive: true) missing an inline // keepAlive: <reason> justification comment"; \
@@ -1074,7 +1074,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    lib/core/preferences/preference_providers.dart; \
 	  FAIL=1; \
 	fi; \
-	echo "77/77 — SM-6: every @Riverpod(keepAlive: true) under lib/features/content_browsing/presentation/providers/ carries an inline // keepAlive: justification comment within 2 lines above (AUD-content_browsing-07; cloud_content_providers.dart is out of scope — deleted as dead code by AUD-content_browsing-06)"; \
+	echo "77/78 — SM-6: every @Riverpod(keepAlive: true) under lib/features/content_browsing/presentation/providers/ carries an inline // keepAlive: justification comment within 2 lines above (AUD-content_browsing-07; cloud_content_providers.dart is out of scope — deleted as dead code by AUD-content_browsing-06)"; \
 	for f in lib/features/content_browsing/presentation/providers/content_providers.dart \
 	         lib/features/content_browsing/presentation/providers/text_display_providers.dart; do \
 	  if awk '/@Riverpod\(keepAlive: true\)/ { if (prev1 !~ /\/\/[ \t]*keepAlive:/ && prev2 !~ /\/\/[ \t]*keepAlive:/) print FILENAME":"NR": "$$0 } { prev2 = prev1; prev1 = $$0 }' "$$f" | grep -q .; then \
@@ -1084,6 +1084,21 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    FAIL=1; \
 	  fi; \
 	done; \
+	echo "78/78 — SM-6: every @Riverpod(keepAlive: true) in lib/features/profiles/presentation/providers/{active_profile_provider,parent_pin_session_provider,profile_providers,pin_flow_controller}.dart carries an inline // keepAlive: justification comment on the line immediately above (diff-scoped to this batch per AUD-profiles-22; other repo-wide keepAlive sites remain tracked separately, not yet in this gate)"; \
+	if awk 'FNR==1 { prev = "" } /@Riverpod\(keepAlive: true\)/ && prev !~ /\/\/[ \t]*keepAlive:/ { print FILENAME":"FNR": "$$0 } { prev = $$0 }' \
+	    lib/features/profiles/presentation/providers/active_profile_provider.dart \
+	    lib/features/profiles/presentation/providers/parent_pin_session_provider.dart \
+	    lib/features/profiles/presentation/providers/profile_providers.dart \
+	    lib/features/profiles/presentation/providers/pin_flow_controller.dart | grep -q .; then \
+	  echo "  @Riverpod(keepAlive: true) missing an inline // keepAlive: <reason> justification comment"; \
+	  echo "  on the preceding line (SM-6, docs/coding-standards.md:167, AUD-profiles-22):"; \
+	  awk 'FNR==1 { prev = "" } /@Riverpod\(keepAlive: true\)/ && prev !~ /\/\/[ \t]*keepAlive:/ { print FILENAME":"FNR": "$$0 } { prev = $$0 }' \
+	    lib/features/profiles/presentation/providers/active_profile_provider.dart \
+	    lib/features/profiles/presentation/providers/parent_pin_session_provider.dart \
+	    lib/features/profiles/presentation/providers/profile_providers.dart \
+	    lib/features/profiles/presentation/providers/pin_flow_controller.dart; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \

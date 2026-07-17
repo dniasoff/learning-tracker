@@ -14,6 +14,7 @@ part 'active_profile_provider.g.dart';
 ///
 /// `keepAlive` ensures the state survives route changes.
 /// Default value 0 represents the legacy/default profile.
+// keepAlive: read from many screens across navigation, must survive route/widget-tree changes.
 @Riverpod(keepAlive: true)
 class ActiveProfileId extends _$ActiveProfileId {
   @override
