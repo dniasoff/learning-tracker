@@ -2689,13 +2689,19 @@
   {
    "id": "AUD-core-navigation-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Finish the W1.2 router migration — delete lib/core/navigation/{app_router,app_shell,router_provider,guards/auth_guard}.dart re-export shims and repoint every importer",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "df7f247d574a736ba8c3a98c06e54167ad1e2293"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-navigation-02 AC1 OK: 4 shims show D in name-status; grep of lib+test finds zero shim imports (2 stale comments only)",
+    "AUD-core-navigation-02 AC2 OK: app_shell_test + auth_guard_test are R099 renames into test/app/router/, import-only delta, pass 63 tests exit 0",
+    "AUD-core-navigation-02 AC3 OK: check 69/69 fires exit 2 on injected core->app import, clean on real tree; whitelist=3 pre-existing guard sites"
+   ],
+   "notes": "Re-verified shims existed (no drift). Deleted 4 W1.2 shims, repointed 68 importers to lib/app/router/**, fixed import order, moved 2 test files to test/app/router/**, added audit check 69/69 (ratchet, whitelists 3 pre-existing out-of-scope sites). Fires on injected violation, clean on real tree."
   },
   {
    "id": "AUD-core-domain-04",
