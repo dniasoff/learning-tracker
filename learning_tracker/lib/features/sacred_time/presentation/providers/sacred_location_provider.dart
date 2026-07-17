@@ -51,6 +51,10 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
           prefs,
           result.location.countryCode == 'IL',
         );
+        // After the awaits above the provider may have been
+        // invalidated/disposed (e.g. an account switch mid-GPS-fetch).
+        // Never write state on a disposed notifier.
+        if (!ref.mounted) return result;
         state = result.location;
         ref.invalidate(inIsraelProvider);
         await _pushSnapshot();
@@ -89,6 +93,10 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
     final prefs = await SharedPreferences.getInstance();
     await SacredTimePreferences.writeLocation(prefs, loc);
     await SacredTimePreferences.writeInIsrael(prefs, countryCode == 'IL');
+    // After the awaits above the provider may have been
+    // invalidated/disposed (e.g. an account switch). Never write state on a
+    // disposed notifier.
+    if (!ref.mounted) return;
     state = loc;
     ref.invalidate(inIsraelProvider);
     await _pushSnapshot();
@@ -109,10 +117,15 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
     state = loc;
     final prefs = await SharedPreferences.getInstance();
     await SacredTimePreferences.writeLocation(prefs, loc);
+    // After the await above the provider may have been
+    // invalidated/disposed (e.g. an account switch). Never touch ref on a
+    // disposed notifier.
+    if (!ref.mounted) return;
     await _pushSnapshot();
   }
 
   Future<void> _pushSnapshot() async {
+    if (!ref.mounted) return;
     await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();
   }
 }
@@ -150,6 +163,10 @@ class InIsraelNotifier extends _$InIsraelNotifier {
     state = value;
     final prefs = await SharedPreferences.getInstance();
     await SacredTimePreferences.writeInIsrael(prefs, value);
+    // After the await above the provider may have been
+    // invalidated/disposed (e.g. an account switch). Never touch ref on a
+    // disposed notifier.
+    if (!ref.mounted) return;
     await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();
   }
 }

@@ -28,6 +28,7 @@
 @Tags(['sacred_time', 'location', 'cities'])
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -362,6 +363,19 @@ class _FakeLocationService extends LocationService {
 
   @override
   Future<LocationFetchResult> detectCurrent() async => _result;
+}
+
+/// AUD-sacred_time-01 (SM-4): a [LocationService] whose `detectCurrent()`
+/// suspends on a caller-controlled [Completer] instead of resolving
+/// immediately — lets a test hold `detect()` mid-`await`, exactly like a
+/// real in-flight 15s GPS fix, so it can simulate an account
+/// switch/container disposal landing in that window.
+class _CompleterLocationService extends LocationService {
+  final Completer<LocationFetchResult> completer;
+  _CompleterLocationService(this.completer);
+
+  @override
+  Future<LocationFetchResult> detectCurrent() => completer.future;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1240,5 +1254,122 @@ void main() {
         expect(container.read(inIsraelProvider), isTrue);
       },
     );
+  });
+
+  // ── SM-4 ref.mounted guards (AUD-sacred_time-01) ────────────────────────────
+  //
+  // detect(), setManualCity(), setManualCoords() and InIsraelNotifier.
+  // setInIsrael() all touch `ref`/`state` after an `await` with no
+  // `ref.mounted` guard — unlike `_load()` in this same file, which already
+  // guards (see its "Never write state on a disposed notifier" comment).
+  // Riverpod 3 throws UnmountedRefException when a disposed Ref is touched;
+  // an account switch/sign-out mid-GPS-fetch (or mid any of these methods'
+  // awaits) is the obvious real-world trigger. These tests reproduce that
+  // race directly and assert the exception never reaches the caller.
+  group('SM-4 ref.mounted guards (AUD-sacred_time-01)', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    tearDown(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('detect() torn down mid-GPS-fetch (account switch during a slow GPS '
+        'fix): no UnmountedRefException propagates', () async {
+      final fetchCompleter = Completer<LocationFetchResult>();
+      final fakeService = _CompleterLocationService(fetchCompleter);
+      final container = _makeContainer(locationService: fakeService);
+
+      // Build the notifier first so disposal below tears down a fully
+      // initialised instance, matching the real app (the provider is
+      // already alive before the user taps "detect").
+      container.read(sacredLocationProvider);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      // Start detect() — it suspends on the completer's future, exactly
+      // like a real in-flight GPS fix (up to 15s in the real service).
+      final resultFuture = container
+          .read(sacredLocationProvider.notifier)
+          .detect();
+
+      // Simulate an account switch tearing the provider tree down WHILE
+      // the GPS fetch is still in flight.
+      container.dispose();
+
+      // Let the in-flight GPS fetch resolve now that the notifier is
+      // disposed.
+      final detectedLoc = SacredLocation(
+        latitude: 31.7683,
+        longitude: 35.2137,
+        source: SacredLocationSource.detected,
+        fixedAt: DateTime.utc(2026, 5, 1),
+        countryCode: 'IL',
+      );
+      fetchCompleter.complete(LocationFetchSuccess(detectedLoc));
+
+      // Core assertion: no UnmountedRefException (or any exception)
+      // reaches the caller — detect() still resolves with the fetch
+      // result even though it could not write state.
+      await expectLater(resultFuture, completes);
+      final result = await resultFuture;
+      expect(result, isA<LocationFetchSuccess>());
+    });
+
+    test(
+      'setManualCity() torn down mid-await (account switch during the '
+      'SharedPreferences round trip): no UnmountedRefException propagates',
+      () async {
+        final container = _makeContainer();
+
+        // Start setManualCity() — its first suspension point is
+        // `await SharedPreferences.getInstance()`. Disposing synchronously
+        // right after kicking it off, with no `await` in between, is
+        // guaranteed to land inside that suspension: the mock channel call
+        // needs at least one microtask turn to resolve.
+        final resultFuture = container
+            .read(sacredLocationProvider.notifier)
+            .setManualCity(
+              latitude: 31.7683,
+              longitude: 35.2137,
+              cityLabel: 'Jerusalem',
+              countryCode: 'IL',
+            );
+
+        container.dispose();
+
+        await expectLater(resultFuture, completes);
+      },
+    );
+
+    test(
+      'setManualCoords() torn down mid-await (account switch during the '
+      'SharedPreferences round trip): no UnmountedRefException propagates',
+      () async {
+        final container = _makeContainer();
+
+        final resultFuture = container
+            .read(sacredLocationProvider.notifier)
+            .setManualCoords(latitude: 48.8566, longitude: 2.3522);
+
+        container.dispose();
+
+        await expectLater(resultFuture, completes);
+      },
+    );
+
+    test('InIsraelNotifier.setInIsrael() torn down mid-await (account switch '
+        'during the SharedPreferences round trip): no UnmountedRefException '
+        'propagates', () async {
+      final container = _makeContainer();
+
+      final resultFuture = container
+          .read(inIsraelProvider.notifier)
+          .setInIsrael(true);
+
+      container.dispose();
+
+      await expectLater(resultFuture, completes);
+    });
   });
 }
