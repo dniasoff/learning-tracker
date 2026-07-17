@@ -6424,13 +6424,18 @@
     {
       "id": "AUD-core-utils-02",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Remove dead isShabbos/isYomTov/formatHebrewDate from HebrewCalendarUtils (superseded by zmanim_window_service)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "72fe990183c23c338655cb4d02e52846a88e55b4"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-utils-02 AC1 OK: 3 methods removed entirely from HebrewCalendarUtils; remaining lib/ grep hits are false positives; zero real callers",
+        "AUD-core-utils-02 AC2 OK: Shabbos+Yom Tov Detection groups removed whole; 2 formatHebrewDate tests removed, live gregorianToHebrew test kept"
+      ],
+      "notes": "Verified evidence matched; grep confirmed zero prod callers outside definition file. Deleted isShabbos/isYomTov/formatHebrewDate + doc comments. Removed dedicated test groups + 1 story-acceptance test. AC1 satisfied via 'or removed entirely'; AC2 satisfied: test groups removed alongside source."
     },
     {
       "id": "AUD-t-gamification-06",
