@@ -13,17 +13,11 @@ class HebrewDatePreference extends ProfileScopedPreference<bool> {
 
   @override
   bool readFromPrefs(SharedPreferences prefs, int profileId) {
-    final scoped = prefs.getBool(
-      ProfileScopedPreferenceKeys.useHebrewCalendar(profileId),
-    );
-    if (scoped != null) return scoped;
-    if (profileId == 0) {
-      return prefs.getBool(
-            ProfileScopedPreferenceKeys.legacyUseHebrewCalendarKey,
-          ) ??
-          defaultValue;
-    }
-    return defaultValue;
+    // Delegates to the single source of truth for the scoped/legacy-key
+    // read+default logic (matches TextDisplayPreference's pattern) so this
+    // default can never drift from ProfileScopedPreferenceKeys' own default
+    // again — see AUD-core-preferences-02.
+    return ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, profileId);
   }
 
   @override

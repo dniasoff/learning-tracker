@@ -48,9 +48,12 @@ class ProfileScopedPreferenceKeys {
     final scoped = prefs.getBool(useHebrewCalendar(profileId));
     if (scoped != null) return scoped;
     if (profileId == 0) {
-      return prefs.getBool(legacyUseHebrewCalendarKey) ?? false;
+      // Legacy key defaults to true — Hebrew calendar is the factory
+      // default (matches HebrewDatePreference.defaultValue). The old
+      // `?? false` was stale (AUD-core-preferences-02).
+      return prefs.getBool(legacyUseHebrewCalendarKey) ?? true;
     }
-    return false;
+    return true;
   }
 
   static int readFontSizeIndex(SharedPreferences prefs, int profileId) {

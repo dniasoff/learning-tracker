@@ -179,21 +179,37 @@ void main() {
       );
     });
 
-    test('returns false when nothing is set (non-zero profileId)', () async {
+    // Default is true — Hebrew calendar is the factory default, matching
+    // HebrewDatePreference.defaultValue (AUD-core-preferences-02: the old
+    // `?? false` / `return false` fallback was stale).
+    test('returns true when nothing is set (non-zero profileId)', () async {
       final prefs = await SharedPreferences.getInstance();
       expect(
         ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, 3),
-        isFalse,
+        isTrue,
       );
     });
 
-    test('returns false when nothing is set (profileId 0)', () async {
+    test('returns true when nothing is set (profileId 0)', () async {
       final prefs = await SharedPreferences.getInstance();
       expect(
         ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, 0),
-        isFalse,
+        isTrue,
       );
     });
+
+    test(
+      'falls back to legacy key explicit false for profileId 0 '
+      '(explicit false is honoured, not overridden by the default)',
+      () async {
+        SharedPreferences.setMockInitialValues({'use_hebrew_calendar': false});
+        final prefs = await SharedPreferences.getInstance();
+        expect(
+          ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, 0),
+          isFalse,
+        );
+      },
+    );
   });
 
   // =========================================================================
