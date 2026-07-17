@@ -12,6 +12,7 @@ part 'content_providers.g.dart';
 /// keepAlive: true ensures the in-memory content cache persists for the
 /// lifetime of the app — rebuilding this provider would discard cached data.
 /// Loads hierarchy content from bundled assets.
+// keepAlive: singleton in-memory content cache must survive rebuilds for the app's lifetime.
 @Riverpod(keepAlive: true)
 ContentRepository contentRepository(Ref ref) {
   return ContentRepositoryImpl();
@@ -32,6 +33,7 @@ Future<List<ContentItem>> curriculumContent(
 /// Lets widgets that have a Sefaria ref (daily-task cards, completion
 /// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
 /// without having to plumb the Hebrew name through the model layer.
+// keepAlive: built from a full-curriculum scan; must survive last-listener-disappear so repeat lookups stay cheap.
 @Riverpod(keepAlive: true)
 Future<Map<String, String>> curriculumHeNames(
   Ref ref,

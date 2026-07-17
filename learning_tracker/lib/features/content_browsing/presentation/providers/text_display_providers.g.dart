@@ -12,6 +12,7 @@ part of 'text_display_providers.dart';
 ///
 /// Awaits [contentDatabaseProvider] so the repository is only created once
 /// the content DB is ready (extraction completes on first launch).
+// keepAlive: singleton repository wrapping the content-DB DAOs must survive rebuilds for the app's lifetime.
 
 @ProviderFor(textCacheRepository)
 final textCacheRepositoryProvider = TextCacheRepositoryProvider._();
@@ -20,6 +21,7 @@ final textCacheRepositoryProvider = TextCacheRepositoryProvider._();
 ///
 /// Awaits [contentDatabaseProvider] so the repository is only created once
 /// the content DB is ready (extraction completes on first launch).
+// keepAlive: singleton repository wrapping the content-DB DAOs must survive rebuilds for the app's lifetime.
 
 final class TextCacheRepositoryProvider
     extends
@@ -35,6 +37,7 @@ final class TextCacheRepositoryProvider
   ///
   /// Awaits [contentDatabaseProvider] so the repository is only created once
   /// the content DB is ready (extraction completes on first launch).
+  // keepAlive: singleton repository wrapping the content-DB DAOs must survive rebuilds for the app's lifetime.
   TextCacheRepositoryProvider._()
     : super(
         from: null,
@@ -151,6 +154,7 @@ final class TextContentFamily extends $Family
 /// Facade over [currentFontSizeProvider] kept under the existing
 /// `fontSizeProvider` name to avoid churning the text-display call sites.
 /// The single source of truth lives in `core/preferences/`.
+// keepAlive: font-size toggle must survive navigating away from the reader and back.
 
 @ProviderFor(FontSizeNotifier)
 final fontSizeProvider = FontSizeNotifierProvider._();
@@ -158,11 +162,13 @@ final fontSizeProvider = FontSizeNotifierProvider._();
 /// Facade over [currentFontSizeProvider] kept under the existing
 /// `fontSizeProvider` name to avoid churning the text-display call sites.
 /// The single source of truth lives in `core/preferences/`.
+// keepAlive: font-size toggle must survive navigating away from the reader and back.
 final class FontSizeNotifierProvider
     extends $NotifierProvider<FontSizeNotifier, FontSize> {
   /// Facade over [currentFontSizeProvider] kept under the existing
   /// `fontSizeProvider` name to avoid churning the text-display call sites.
   /// The single source of truth lives in `core/preferences/`.
+  // keepAlive: font-size toggle must survive navigating away from the reader and back.
   FontSizeNotifierProvider._()
     : super(
         from: null,
@@ -195,6 +201,7 @@ String _$fontSizeNotifierHash() => r'64cc147b8512d7c80dd0dbc989f10bce81efaabf';
 /// Facade over [currentFontSizeProvider] kept under the existing
 /// `fontSizeProvider` name to avoid churning the text-display call sites.
 /// The single source of truth lives in `core/preferences/`.
+// keepAlive: font-size toggle must survive navigating away from the reader and back.
 
 abstract class _$FontSizeNotifier extends $Notifier<FontSize> {
   FontSize build();
@@ -216,15 +223,18 @@ abstract class _$FontSizeNotifier extends $Notifier<FontSize> {
 
 /// Facade over [showNikudPrefProvider] kept under the existing
 /// `showNikudProvider` name to avoid churning consumers.
+// keepAlive: nikud-visibility toggle must survive navigating away from the reader and back.
 
 @ProviderFor(ShowNikud)
 final showNikudProvider = ShowNikudProvider._();
 
 /// Facade over [showNikudPrefProvider] kept under the existing
 /// `showNikudProvider` name to avoid churning consumers.
+// keepAlive: nikud-visibility toggle must survive navigating away from the reader and back.
 final class ShowNikudProvider extends $NotifierProvider<ShowNikud, bool> {
   /// Facade over [showNikudPrefProvider] kept under the existing
   /// `showNikudProvider` name to avoid churning consumers.
+  // keepAlive: nikud-visibility toggle must survive navigating away from the reader and back.
   ShowNikudProvider._()
     : super(
         from: null,
@@ -256,6 +266,7 @@ String _$showNikudHash() => r'ce289c2aa555eb79f9c4d3d96ca3b72c7363a19e';
 
 /// Facade over [showNikudPrefProvider] kept under the existing
 /// `showNikudProvider` name to avoid churning consumers.
+// keepAlive: nikud-visibility toggle must survive navigating away from the reader and back.
 
 abstract class _$ShowNikud extends $Notifier<bool> {
   bool build();

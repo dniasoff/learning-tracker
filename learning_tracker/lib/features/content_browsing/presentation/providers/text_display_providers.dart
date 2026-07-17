@@ -10,6 +10,7 @@ part 'text_display_providers.g.dart';
 ///
 /// Awaits [contentDatabaseProvider] so the repository is only created once
 /// the content DB is ready (extraction completes on first launch).
+// keepAlive: singleton repository wrapping the content-DB DAOs must survive rebuilds for the app's lifetime.
 @Riverpod(keepAlive: true)
 Future<TextCacheRepository> textCacheRepository(Ref ref) async {
   final database = await ref.watch(contentDatabaseProvider.future);
@@ -30,6 +31,7 @@ Future<TextContent?> textContent(Ref ref, String sefariaRef) async {
 /// Facade over [currentFontSizeProvider] kept under the existing
 /// `fontSizeProvider` name to avoid churning the text-display call sites.
 /// The single source of truth lives in `core/preferences/`.
+// keepAlive: font-size toggle must survive navigating away from the reader and back.
 @Riverpod(keepAlive: true)
 class FontSizeNotifier extends _$FontSizeNotifier {
   @override
@@ -41,6 +43,7 @@ class FontSizeNotifier extends _$FontSizeNotifier {
 
 /// Facade over [showNikudPrefProvider] kept under the existing
 /// `showNikudProvider` name to avoid churning consumers.
+// keepAlive: nikud-visibility toggle must survive navigating away from the reader and back.
 @Riverpod(keepAlive: true)
 class ShowNikud extends _$ShowNikud {
   @override
