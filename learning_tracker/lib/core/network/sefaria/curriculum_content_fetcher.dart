@@ -1,16 +1,24 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 
+part 'curriculum_content_fetcher.freezed.dart';
+
 /// Result of fetching all content for a curriculum.
-class FetchResult {
-  const FetchResult({required this.items, required this.hierarchyConfig});
+///
+/// `@freezed` generates field-wise `==`/`hashCode`/`copyWith`/`toString`
+/// (previously this class had no `==` at all and fell back to identity —
+/// AUD-core-network-01).
+@freezed
+abstract class FetchResult with _$FetchResult {
+  const factory FetchResult({
+    /// All content items in the curriculum hierarchy.
+    required List<ContentItem> items,
 
-  /// All content items in the curriculum hierarchy.
-  final List<ContentItem> items;
-
-  /// Configuration describing the hierarchy structure.
-  final CurriculumHierarchyConfig hierarchyConfig;
+    /// Configuration describing the hierarchy structure.
+    required CurriculumHierarchyConfig hierarchyConfig,
+  }) = _FetchResult;
 }
 
 /// Abstract interface for curriculum-specific Sefaria API adapters.
