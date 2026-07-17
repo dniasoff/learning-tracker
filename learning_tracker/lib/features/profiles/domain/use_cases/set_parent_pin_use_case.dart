@@ -6,7 +6,13 @@
 // The use case enforces the invariant that a PIN must be exactly 4 numeric
 // digits before dispatching to the service.  It does NOT own bcrypt or storage
 // — those belong to [PinService].
+//
+// AUD-core-domain-05: validation defers to [Pin] (the domain value object
+// that already implements the 4-digit-numeric invariant) instead of
+// hand-rolling a duplicate format regex — a single source of truth for the
+// PIN format.
 
+import 'package:learning_tracker/core/domain/value_objects/pin.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 
 /// Result of a set-parent-pin operation.
@@ -43,7 +49,7 @@ class SetParentPinUseCase {
     required int profileId,
     required String pin,
   }) async {
-    if (pin.length != 4 || !_isNumeric(pin)) {
+    if (Pin.tryParse(pin) == null) {
       return const SetPinValidationFailure(
         message: 'PIN must be exactly 4 numeric digits.',
       );
@@ -51,6 +57,4 @@ class SetParentPinUseCase {
     await _pinService.setProfilePin(profileId, pin);
     return const SetPinSuccess();
   }
-
-  bool _isNumeric(String s) => RegExp(r'^\d{4}$').hasMatch(s);
 }

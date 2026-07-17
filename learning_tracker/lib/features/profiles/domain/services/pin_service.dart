@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/domain/value_objects/pin.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -15,6 +16,10 @@ part 'pin_service.g.dart';
 ///
 /// PINs are device-local only and never synced to Firestore.
 /// All PINs are hashed with bcrypt before storage - plaintext is never persisted.
+///
+/// AUD-core-domain-05: the 4-digit-PIN format invariant is validated via
+/// [Pin.tryParse] — the single source of truth for that rule — rather than a
+/// private hand-rolled regex.
 class PinService {
   PinService(
     this._secureStorage, {
@@ -61,7 +66,7 @@ class PinService {
   /// The plaintext PIN is never stored.
   /// Resets any existing lockout state when a new PIN is set.
   Future<void> setParentPin(String pin) async {
-    if (pin.length != 4 || !_isNumeric(pin)) {
+    if (Pin.tryParse(pin) == null) {
       throw const InvalidPinFormatException();
     }
 
@@ -131,7 +136,7 @@ class PinService {
   /// each child profile can have its own PIN. Resets any existing lockout
   /// state for the profile. Plaintext is never persisted.
   Future<void> setProfilePin(int profileId, String pin) async {
-    if (pin.length != 4 || !_isNumeric(pin)) {
+    if (Pin.tryParse(pin) == null) {
       throw const InvalidPinFormatException();
     }
     final hash = BCrypt.hashpw(pin, BCrypt.gensalt());
@@ -195,7 +200,7 @@ class PinService {
   /// Stored under an independent namespace from the parent PIN so granting
   /// parent access does not grant tutor access (and vice versa).
   Future<void> setTutorPin(int profileId, String pin) async {
-    if (pin.length != 4 || !_isNumeric(pin)) {
+    if (Pin.tryParse(pin) == null) {
       throw const InvalidPinFormatException();
     }
     final hash = BCrypt.hashpw(pin, BCrypt.gensalt());
@@ -257,10 +262,6 @@ class PinService {
   }
 
   // Private helper methods
-
-  bool _isNumeric(String str) {
-    return RegExp(r'^\d+$').hasMatch(str);
-  }
 
   Future<void> _incrementFailedAttempts(
     String countKey,
