@@ -9753,13 +9753,18 @@
   {
    "id": "AUD-profiles-21",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Stop autoSelectedProfileId's build() from writing to the DB and mutating sibling providers",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "61958a0616f9486f2d6a5102dbcb628d69daedae"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-profiles-21 AC1a OK: build() = pure ref.watch(selectedProfileIdProvider); purity test asserts ensureCalls==0 + selectedProfileId==null after awaiting .future",
+    "AUD-profiles-21 AC1b OK: BUG D1 self-heal tests 6/6 PASS (zero-profile self-heal + stale-id FK), adapted to ensureSelected() with assertions preserved"
+   ],
+   "notes": "Re-verified live (red test failed pre-fix, confirming impurity). Converted to class-based AsyncNotifier: build() now pure; self-heal moved to ensureSelected(), triggered from app_shell via addPostFrameCallback (one-shot flag). 5 tests adapted + 1 new purity test. No lint checker named by AC. Merged --no-ff onto dev (mergeSha 61958a0616f9486f2d6a5102dbcb628d69daedae). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (No issues found!). gatePolicy=disjoint-skip: rebase vs dev was file-disjoint (no overlapping paths since merge-base d43ecdd10f758b5b7847989669a4b9e49f9b5792 -- branch touched app_shell.dart/profile_providers.dart(+.g.dart)/auto_selected_profile_id_test.dart, dev touched recent_activity_providers.dart(+.freezed.dart)/recent_activity_window_equality_test.dart/ledger.json), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate. touchedStrings=false, arb-parity not run."
   },
   {
    "id": "AUD-profiles-14",
