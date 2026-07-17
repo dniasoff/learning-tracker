@@ -1304,13 +1304,18 @@
   {
    "id": "AUD-content_browsing-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P1",
    "title": "Make hierarchy_selection_panel.dart's breadcrumb separator direction-aware",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "8d1830c1289409ff004e3adcade134a8537586f7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-content_browsing-02 AC1 OK: RTL/Locale('he') test asserts chevron_left findsOneWidget + chevron_right findsNothing (test:150-164); 4/4 pass, red-first confirmed",
+    "AUD-content_browsing-02 AC2 OK: grep chevron_right in hierarchy_selection_panel.dart = 0 hits; both sites use breadcrumbSeparatorIcon helper (lines 197,239)"
+   ],
+   "notes": "Re-verified line 228-232 still hardcoded chevron_right (not already fixed). Also found identical pattern in same file's tile drill-in indicator, covered by AC-2's grep. Fixed both via breadcrumbSeparatorIcon helper. Red-first test failed RTL before fix, all 4 pass after. AC-1/AC-2 satisfied."
   },
   {
    "id": "AUD-dashboard-01",
