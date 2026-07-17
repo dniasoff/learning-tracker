@@ -12,6 +12,7 @@ import '../../../../helpers/test_database.dart';
 /// All other methods are no-ops — only the goal push path is under test.
 class _RecordingGoalSyncFacade implements SyncWriteFacade {
   final List<Map<String, dynamic>> goalPayloads = [];
+  final List<Map<String, dynamic>> deletePayloads = [];
 
   @override
   Future<void> pushGoal(Map<String, dynamic> goal) async {
@@ -19,7 +20,10 @@ class _RecordingGoalSyncFacade implements SyncWriteFacade {
   }
 
   @override
-  Future<void> deleteGoal(Map<String, dynamic> payload) async {}
+  Future<void> deleteGoal(Map<String, dynamic> payload) async {
+    deletePayloads.add(Map<String, dynamic>.from(payload));
+  }
+
   @override
   Future<void> pushGamificationSettingsSnapshot() async {}
   @override
@@ -157,6 +161,25 @@ void main() {
 
       expect(updated.targetPercent, 75.0);
       expect(updated.description, 'Updated goal');
+    });
+
+    // AUD-scheduler-04 — updateGoal must throw a typed ArgumentError (not
+    // silently no-op, and not a raw DB/null-check crash) when the goalId
+    // doesn't exist — e.g. the goal was already deleted by a sync merge
+    // from another device before this device's in-flight edit lands.
+    test('updateGoal throws ArgumentError for a nonexistent goalId', () async {
+      const missingGoalId = 999999;
+
+      expect(
+        () => repo.updateGoal(goalId: missingGoalId, targetPercent: 50.0),
+        throwsA(
+          isA<ArgumentError>().having(
+            (e) => e.message,
+            'message',
+            contains('Goal not found: $missingGoalId'),
+          ),
+        ),
+      );
     });
 
     test('deleteGoal removes the goal', () async {
@@ -375,6 +398,39 @@ void main() {
           reason: 'profile_id must be present on update pushes too',
         );
         expect(payload['id'], isNotNull);
+      });
+
+      // AUD-scheduler-04 — mirrors the create/update payload-completeness
+      // tests above but for _syncDeleteGoal, which had zero coverage: a key
+      // rename or dropped field in its {firestore_id, curriculum_id} payload
+      // would previously have shipped silently.
+      test('deleteGoal pushes firestore_id and curriculum_id in the outbox '
+          'payload', () async {
+        final goal = await repoWithSync.createGoal(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackId: trackId,
+          targetPercent: 100.0,
+        );
+        syncFacade.goalPayloads.clear();
+
+        await repoWithSync.deleteGoal(goal.id!);
+
+        expect(syncFacade.deletePayloads, hasLength(1));
+        final payload = syncFacade.deletePayloads.first;
+        expect(
+          payload['firestore_id'],
+          equals(goal.firestoreId),
+          reason: 'firestore_id must identify the deterministic doc to delete',
+        );
+        expect(
+          payload['curriculum_id'],
+          equals('mishnayos'),
+          reason:
+              'curriculum_id must be present for the delete queue '
+              'entry',
+        );
+        expect(payload.keys, containsAll(['firestore_id', 'curriculum_id']));
       });
     });
   });
