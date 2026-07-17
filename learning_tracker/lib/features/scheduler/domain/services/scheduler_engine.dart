@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart'
+    as completion_constants;
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
@@ -40,14 +42,21 @@ class SchedulerEngine {
   /// `==` because Drift may return a local-timezone [DateTime] when the
   /// underlying column stores an integer epoch, causing UTC-vs-local
   /// inequality even for the same instant.
-  static final int kBulkPriorSentinelMs = DateTime.utc(
-    2000,
-    1,
-    1,
-  ).millisecondsSinceEpoch;
+  ///
+  /// Re-exported from `core/learning/completion_constants.dart`, the single
+  /// source of truth for this sentinel (features/ → core/ is a legal import
+  /// direction; see docs/coding-standards.md Rule 1/Rule 2) — kept as a
+  /// static member here so existing `SchedulerEngine.kBulkPriorSentinelMs`
+  /// call sites are unaffected.
+  static const int kBulkPriorSentinelMs =
+      completion_constants.kBulkPriorSentinelMs;
 
   /// Sentinel [DateTime] instance for callers that need it (e.g. tests).
-  static final DateTime kBulkPriorSentinel = DateTime.utc(2000, 1, 1);
+  ///
+  /// Re-exported from `core/learning/completion_constants.dart` — see
+  /// [kBulkPriorSentinelMs].
+  static final DateTime kBulkPriorSentinel =
+      completion_constants.kBulkPriorSentinelDate;
 
   const SchedulerEngine({
     required SchedulerContentRepository contentRepository,

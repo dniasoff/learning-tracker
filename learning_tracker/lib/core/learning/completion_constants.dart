@@ -17,3 +17,14 @@ library;
 /// such as daily-completion bar charts and streak calculations.
 const int kBulkPriorSentinelMs =
     946684800000; // DateTime.utc(2000, 1, 1).millisecondsSinceEpoch
+
+/// [DateTime] representation of [kBulkPriorSentinelMs].
+///
+/// Prefer comparing via [kBulkPriorSentinelMs]/`millisecondsSinceEpoch`
+/// where possible — a sentinel [DateTime] that has round-tripped through
+/// Firestore or Drift can carry a different `isUtc` flag than this
+/// instance, which breaks a plain `==`/object comparison. This value is
+/// provided for call sites that need the [DateTime] itself, e.g. to stamp
+/// `completedAt` when writing a bulk-prior completion, or via
+/// `toUtc().isAtSameMomentAs(...)` for flag-independent comparisons.
+final DateTime kBulkPriorSentinelDate = DateTime.utc(2000, 1, 1);
