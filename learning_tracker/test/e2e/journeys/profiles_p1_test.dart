@@ -56,7 +56,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
     show activeProfileIdProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart'
+import 'package:learning_tracker/features/profiles/presentation/providers/switcher_sheet_pin_guard_provider.dart'
     show switcherSheetPinGuardRequiredProvider;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
