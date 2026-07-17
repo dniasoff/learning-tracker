@@ -5577,13 +5577,19 @@
     {
       "id": "AUD-profiles-08",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Populate features/profiles/profiles.dart barrel exports so Rule 2 is satisfiable for the whole feature",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "34606753ce01ca334a2408edf1db977d5b051ab9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-08 AC1 OK: 6 files deep-imported by 2+ external features (active_profile=12,providers=10,pin=5,model=4,keypad=3,session=3); all 6 in barrel exports",
+        "AUD-profiles-08 AC2 OK: check 15/15 exists (Makefile:420), self-cmp bug fixed; profiles deep-imports 143->135 under lib/features (delta 8=8 migrations); audit exit 0",
+        "AUD-profiles-08 AC3 OK: all 9 migrated sites (app_shell+8) deep=0/barrel=1, import only profiles.dart, no residual deep paths"
+      ],
+      "notes": "profiles.dart (was 1 scoped export) now exports 8 files covering every symbol deep-imported by 2+ features (AC1). Migrated 9 sites onto barrel (app_shell.dart 5->1 import + 8 single-file sites). check-15/15 profiles/ WARN count dropped 78->70 (AC2). AC3 shown by barrel-only imports passing tests."
     },
     {
       "id": "AUD-t-progress-04",
