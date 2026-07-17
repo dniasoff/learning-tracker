@@ -8393,13 +8393,17 @@
   {
    "id": "AUD-progress-10",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete or wire up the dead MonthlyActivitySliverCalendar spike widget",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "1bc4c1e6bdc20a2bacb9d697235f12ef4782fb10"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-progress-10 AC1 OK: delete branch; grep MonthlyActivitySliverCalendar whole repo = 0 hits; widget+2 tests show D in diff. Delete is an allowed AC branch."
+   ],
+   "notes": "Re-verified: grep found 15 hits, all in the widget's own file/l10n, zero screen callers. Took delete branch (wiring in needs bg job+migration, beyond P3/S). Deleted widget + 2 spike tests (re-run green 8/8 first) + 3 orphaned ARB keys. Final grep -> 0 hits."
   },
   {
    "id": "AUD-progress-11",
