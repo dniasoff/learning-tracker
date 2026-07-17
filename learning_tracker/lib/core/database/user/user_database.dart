@@ -704,10 +704,7 @@ class UserDatabase extends _$UserDatabase {
             "WHERE type = 'table' AND name = 'completion_events'",
           ).get();
           if (hasCompletionEvents.isNotEmpty) {
-            await m.addColumn(
-              completionEvents,
-              completionEvents.stageIdFormat,
-            );
+            await m.addColumn(completionEvents, completionEvents.stageIdFormat);
 
             final hasStageDefinitions = await customSelect(
               'SELECT 1 FROM sqlite_master '
