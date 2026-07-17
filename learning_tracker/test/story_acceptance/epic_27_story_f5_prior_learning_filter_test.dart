@@ -41,7 +41,7 @@ bool _isTaskCompletedBuggy(DailyTask task, List<Completion> completions) {
 // Sentinel completions (completedAt = 2000-01-01) are skipped.
 // ---------------------------------------------------------------------------
 bool _isTaskCompletedFixed(DailyTask task, List<Completion> completions) {
-  final sentinelMs = SchedulerEngine.kBulkPriorSentinelMs;
+  const sentinelMs = SchedulerEngine.kBulkPriorSentinelMs;
   return completions.any((c) {
     if (c.sefariaRef != task.contentItemSefariaRef) return false;
     if (task.trackId != 0 && c.trackId != task.trackId) return false;

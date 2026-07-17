@@ -31,9 +31,6 @@ export 'package:learning_tracker/core/content/hierarchy_selection.dart';
 /// [BulkPriorCompletionService.expungePriorCompletions].
 const kBulkPriorSentinel = Duration(milliseconds: kBulkPriorSentinelMs);
 
-/// [DateTime] representation of the bulk-prior sentinel (UTC 2000-01-01).
-final kBulkPriorSentinelDate = DateTime.utc(2000, 1, 1);
-
 /// True when [completedAt] is the bulk-prior sentinel.
 ///
 /// Compares the moment (not the object) because a sentinel completion that
