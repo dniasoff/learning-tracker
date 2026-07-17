@@ -9,6 +9,17 @@
 /// `lifetime_knowledge_screen_test.dart`'s F13 assertion for the sibling
 /// `lifetimeDataProvider` fix — same technique, extended to the per-track
 /// dual-progress loop that F13 left un-batched.
+///
+/// AUD-progress-03 bounce (w4r1c20): the original version of this file
+/// asserted only build COUNTS (exactly once, not once-per-track), never
+/// post-commit FRESHNESS — so it stayed green even while the batched
+/// providers cached a stale `.future` forever after their first build (see
+/// `track_dual_progress_reactivity_test.dart`'s new `lifetimePercentage`
+/// case for the direct staleness regression test). The second test below
+/// closes that gap: it asserts the batched providers rebuild exactly once
+/// MORE (still shared across tracks, not once-per-track) after a
+/// `completionCommittedProvider` tick, and that the resulting
+/// `lifetimePercentage` actually advances.
 library;
 
 import 'package:drift/drift.dart' show Value;
@@ -22,6 +33,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart'
@@ -164,6 +176,26 @@ Future<int> _seedTrackWithStage(
   return trackId;
 }
 
+Future<void> _seedLiveCompletion(
+  UserDatabase db, {
+  required String curriculumId,
+  required int trackId,
+  required String ref,
+  required DateTime at,
+}) async {
+  await db.completionEventDao.appendEvent(
+    CompletionEventsCompanion.insert(
+      profileId: _profileId,
+      curriculumId: curriculumId,
+      sefariaRef: ref,
+      stageId: 1,
+      trackType: 'personal',
+      trackId: Value(trackId),
+      eventTimestamp: at,
+    ),
+  );
+}
+
 ProviderContainer _makeContainer(UserDatabase db, ProviderObserver observer) =>
     ProviderContainer(
       observers: [observer],
@@ -228,6 +260,91 @@ void main() {
             '${_trackCurricula.length} per-track computations — '
             'AUD-progress-03 N+1 fix',
       );
+    });
+
+    test('after a completionCommittedProvider tick, the 3 batched providers '
+        'rebuild EXACTLY ONCE MORE (still shared, not once per track) and '
+        'lifetimePercentage reflects the new completion — AUD-progress-03 '
+        'bounce regression (w4r1c20)', () async {
+      final db = inMemoryDb();
+      addTearDown(db.close);
+      await seedProfile(db);
+
+      final trackIds = <String, int>{};
+      for (final curriculumId in _trackCurricula) {
+        trackIds[curriculumId] = await _seedTrackWithStage(
+          db,
+          curriculumId: curriculumId,
+        );
+      }
+
+      final observer = _CountingObserver();
+      final container = _makeContainer(db, observer);
+      addTearDown(container.dispose);
+
+      // Keep the autoDispose family alive across both reads.
+      final sub = container.listen(
+        trackDualProgressMetricsProvider(_profileId),
+        (_, __) {},
+      );
+      addTearDown(sub.close);
+
+      final first = await container.read(
+        trackDualProgressMetricsProvider(_profileId).future,
+      );
+      expect(first, hasLength(_trackCurricula.length));
+      final firstMishnayos = first.firstWhere(
+        (m) => m.curriculumId.storageKey == 'mishnayos',
+      );
+      expect(
+        firstMishnayos.lifetimePercentage,
+        0.0,
+        reason: 'no completions seeded yet',
+      );
+      expect(observer.completionsBuilds, 1);
+      expect(observer.ledgerBuilds, 1);
+      expect(observer.programsBuilds, 1);
+
+      // Seed a live completion directly in the DB — mirrors what the real
+      // write path persists before it also ticks completionCommittedProvider.
+      await _seedLiveCompletion(
+        db,
+        curriculumId: 'mishnayos',
+        trackId: trackIds['mishnayos']!,
+        ref: 'mishnayos_ref_0',
+        at: DateTime.utc(2026, 6, 1),
+      );
+
+      // Signal reactive update — the provider must rebuild automatically.
+      container.read(completionCommittedProvider.notifier).increment();
+      await Future<void>.microtask(() {});
+
+      final second = await container.read(
+        trackDualProgressMetricsProvider(_profileId).future,
+      );
+      final secondMishnayos = second.firstWhere(
+        (m) => m.curriculumId.storageKey == 'mishnayos',
+      );
+
+      expect(
+        secondMishnayos.lifetimePercentage,
+        greaterThan(firstMishnayos.lifetimePercentage),
+        reason:
+            'trackCompletionsByProfileProvider / '
+            'trackLedgerEntriesByProfileProvider must re-fetch when '
+            'completionCommittedProvider ticks — otherwise the parent '
+            'rebuilds (per its own completionCommittedProvider watch) but '
+            'reads stale cached children and lifetimePercentage never '
+            'advances (AUD-progress-03 bounce)',
+      );
+      expect(secondMishnayos.lifetimePercentage, closeTo(1 / 5, 1e-9));
+
+      // The other 2 tracks are untouched — sharing the batched providers
+      // must not cross-contaminate one track's fresh data into another's.
+      final secondChumash = second.firstWhere(
+        (m) => m.curriculumId.storageKey == 'chumash',
+      );
+      expect(secondChumash.lifetimePercentage, 0.0);
     });
   });
 }

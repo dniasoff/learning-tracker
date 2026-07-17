@@ -330,18 +330,27 @@ final globalLifetimeCurriculaProvider = lifetimeSummariesProvider;
 /// AUD-progress-03 — N+1 fix (sibling of the F13 fix above, extended to the
 /// per-track dual-progress loop F13 left un-batched).
 final trackCompletionsByProfileProvider = FutureProvider.autoDispose
-    .family<Map<int, List<Completion>>, int>(
-      name: 'trackCompletionsByProfileProvider',
-      (ref, profileId) async {
-        final db = ref.watch(userDatabaseProvider);
-        final all = await db.completionDao.getCompletionsByProfile(profileId);
-        final out = <int, List<Completion>>{};
-        for (final c in all) {
-          (out[c.trackId] ??= <Completion>[]).add(c);
-        }
-        return out;
-      },
-    );
+    .family<
+      Map<int, List<Completion>>,
+      int
+    >(name: 'trackCompletionsByProfileProvider', (ref, profileId) async {
+      // AUD-progress-03 bounce (w4r1c20): recompute on every completion
+      // commit, mirroring the watch its F13 siblings
+      // (priorImportsByProfileProvider / completionsByProfileForLifetimeProvider,
+      // above) carry. Without this, trackDualProgressMetricsProvider's own
+      // watch of completionCommittedProvider (below) rebuilds the PARENT
+      // but this un-invalidated autoDispose child keeps returning its
+      // stale cached .future, so lifetimePercentage never advances after a
+      // live mark.
+      ref.watch<int>(completionCommittedProvider);
+      final db = ref.watch(userDatabaseProvider);
+      final all = await db.completionDao.getCompletionsByProfile(profileId);
+      final out = <int, List<Completion>>{};
+      for (final c in all) {
+        (out[c.trackId] ??= <Completion>[]).add(c);
+      }
+      return out;
+    });
 
 /// Profile-wide learning-ledger load for [trackDualProgressMetricsProvider],
 /// partitioned by trackId.
@@ -356,6 +365,10 @@ final trackLedgerEntriesByProfileProvider = FutureProvider.autoDispose
     .family<Map<int, List<LearningLedgerData>>, int>(
       name: 'trackLedgerEntriesByProfileProvider',
       (ref, profileId) async {
+        // AUD-progress-03 bounce (w4r1c20): see the identical comment on
+        // trackCompletionsByProfileProvider above — same staleness bug,
+        // same fix.
+        ref.watch<int>(completionCommittedProvider);
         final db = ref.watch(userDatabaseProvider);
         final all = await db.learningLedgerDao.getEntriesByProfile(profileId);
         final out = <int, List<LearningLedgerData>>{};
@@ -380,6 +393,14 @@ final profileProgramsByProfileProvider = FutureProvider.autoDispose
     .family<Map<String, ProfileProgram>, int>(
       name: 'profileProgramsByProfileProvider',
       (ref, profileId) async {
+        // AUD-progress-03 bounce (w4r1c20): see the identical comment on
+        // trackCompletionsByProfileProvider above. Program enrollment itself
+        // doesn't change on a completion commit, but this provider is
+        // watched from the same parent alongside the two providers above —
+        // keeping all three on the same invalidation signal avoids a
+        // three-way split where two children refresh and one silently keeps
+        // stale `todayDueCount`/`overdueCount` derivations across a commit.
+        ref.watch<int>(completionCommittedProvider);
         final db = ref.watch(userDatabaseProvider);
         final rows = await db.profileProgramDao.getProgramsForProfile(
           profileId,
