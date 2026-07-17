@@ -576,6 +576,192 @@ void main() {
     });
   });
 
+  // ── SM-4: ref.mounted guard after await (AUD-profiles-05 regression) ──────
+  //
+  // Every await in _handleSetup/_handleChange/_handleVerify must be followed
+  // by a `ref.mounted` check before `state` is touched. If the
+  // ProviderContainer is disposed while a PinService call is in flight (app
+  // teardown, container disposal in tests), resuming without the guard
+  // throws UnmountedRefException from the `state = ...` setter. These tests
+  // dispose the container mid-await and assert nothing escapes as an
+  // uncaught zone error.
+  group('PinFlowController — ref.mounted guard after await (SM-4 regression)', () {
+    /// Runs [body] inside a guarded zone and returns whatever error escaped
+    /// it uncaught (e.g. an UnmountedRefException thrown by a `state = ...`
+    /// touch after the container was disposed mid-await), or null if none did.
+    Future<Object?> uncaughtErrorFrom(Future<void> Function() body) async {
+      Object? escaped;
+      await runZonedGuarded(body, (error, stack) {
+        escaped = error;
+      });
+      return escaped;
+    }
+
+    test(
+      'verify mode: container disposed mid-verifyProfilePin await',
+      () async {
+        final ps = _MockPinService();
+        final completer = Completer<bool>();
+        when(
+          () => ps.verifyProfilePin(1, '1234'),
+        ).thenAnswer((_) => completer.future);
+
+        final container = _makeContainer(pinService: ps);
+        container
+            .read(pinFlowControllerProvider.notifier)
+            .reset(PinFlowMode.verify);
+
+        final escaped = await uncaughtErrorFrom(() async {
+          _enterDigits(
+            container.read(pinFlowControllerProvider.notifier),
+            '1234',
+          );
+          // Let _handleVerify start and reach the await.
+          await Future<void>.delayed(Duration.zero);
+
+          // Dispose mid-await, mirroring app teardown while the bcrypt/
+          // secure-storage call is in flight.
+          container.dispose();
+
+          // Resolve the pending call after disposal.
+          completer.complete(true);
+
+          // Pump so the post-await continuation runs.
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        });
+
+        expect(
+          escaped,
+          isNull,
+          reason:
+              'an unguarded `state = ...` after the await throws '
+              'UnmountedRefException once the container is disposed mid-await',
+        );
+      },
+    );
+
+    test(
+      'setup mode confirm step: container disposed mid-setProfilePin await',
+      () async {
+        final ps = _MockPinService();
+        final completer = Completer<void>();
+        when(
+          () => ps.setProfilePin(1, '1234'),
+        ).thenAnswer((_) => completer.future);
+
+        final container = _makeContainer(pinService: ps);
+        final ctrl = container.read(pinFlowControllerProvider.notifier);
+        ctrl.reset(PinFlowMode.setup);
+        // enterNew step is synchronous.
+        _enterDigits(ctrl, '1234');
+        await Future<void>.delayed(Duration.zero);
+        expect(
+          container.read(pinFlowControllerProvider).step,
+          PinFlowStep.confirm,
+        );
+
+        final escaped = await uncaughtErrorFrom(() async {
+          // confirm step triggers the awaited setProfilePin call.
+          _enterDigits(ctrl, '1234');
+          await Future<void>.delayed(Duration.zero);
+
+          container.dispose();
+          completer.complete();
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        });
+
+        expect(
+          escaped,
+          isNull,
+          reason:
+              'an unguarded `state = ...` after the await throws '
+              'UnmountedRefException once the container is disposed mid-await',
+        );
+      },
+    );
+
+    test(
+      'change mode verifyCurrent step: container disposed mid-verifyProfilePin '
+      'await',
+      () async {
+        final ps = _MockPinService();
+        final completer = Completer<bool>();
+        when(
+          () => ps.verifyProfilePin(1, '0000'),
+        ).thenAnswer((_) => completer.future);
+
+        final container = _makeContainer(pinService: ps);
+        final ctrl = container.read(pinFlowControllerProvider.notifier);
+        ctrl.reset(PinFlowMode.change);
+
+        final escaped = await uncaughtErrorFrom(() async {
+          _enterDigits(ctrl, '0000');
+          await Future<void>.delayed(Duration.zero);
+
+          container.dispose();
+          completer.complete(true);
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        });
+
+        expect(
+          escaped,
+          isNull,
+          reason:
+              'an unguarded `state = ...` after the await throws '
+              'UnmountedRefException once the container is disposed mid-await',
+        );
+      },
+    );
+
+    test('change mode confirm step: container disposed mid-setProfilePin await '
+        '(no try/catch prior to the fix)', () async {
+      final ps = _MockPinService();
+      when(() => ps.verifyProfilePin(1, '0000')).thenAnswer((_) async => true);
+      final completer = Completer<void>();
+      when(
+        () => ps.setProfilePin(1, '5678'),
+      ).thenAnswer((_) => completer.future);
+
+      final container = _makeContainer(pinService: ps);
+      final ctrl = container.read(pinFlowControllerProvider.notifier);
+      ctrl.reset(PinFlowMode.change);
+
+      // verifyCurrent
+      _enterDigits(ctrl, '0000');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(
+        container.read(pinFlowControllerProvider).step,
+        PinFlowStep.enterNew,
+      );
+      // enterNew
+      _enterDigits(ctrl, '5678');
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        container.read(pinFlowControllerProvider).step,
+        PinFlowStep.confirm,
+      );
+
+      final escaped = await uncaughtErrorFrom(() async {
+        // confirm step triggers the awaited setProfilePin call.
+        _enterDigits(ctrl, '5678');
+        await Future<void>.delayed(Duration.zero);
+
+        container.dispose();
+        completer.complete();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+
+      expect(
+        escaped,
+        isNull,
+        reason:
+            'an unguarded `state = ...` after the await throws '
+            'UnmountedRefException once the container is disposed mid-await '
+            '(this confirm step previously had no try/catch at all)',
+      );
+    });
+  });
+
   group('PinFlowController — setup mode step transitions (sync)', () {
     test('4 digits in enterNew → transitions to confirm step', () async {
       final ps = _MockPinService();
