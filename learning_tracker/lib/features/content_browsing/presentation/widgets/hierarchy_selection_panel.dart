@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -189,7 +190,12 @@ class HierarchySelectionPanelState
                 fontWeight: FontWeight.w700,
               ),
             ),
-            trailing: onDrill != null ? const Icon(Icons.chevron_right) : null,
+            // AUD-content_browsing-02: this drill-in disclosure chevron must
+            // also point the reading-forward direction, so reuse the shared
+            // direction-aware helper instead of a bare hardcoded chevron.
+            trailing: onDrill != null
+                ? Icon(breadcrumbSeparatorIcon(Directionality.of(context)))
+                : null,
             onTap: onDrill ?? () => _toggleItem(item, currentPath.length),
           );
           // In Hebrew mode the labels are RTL; wrap the tile so that
@@ -225,8 +231,12 @@ class HierarchySelectionPanelState
                       child: CurriculumLabel.curriculum(widget.curriculumId),
                     ),
                     for (var i = 0; i < _navigationStack.length; i++) ...[
-                      const Icon(
-                        Icons.chevron_right,
+                      // AUD-content_browsing-02: use the shared
+                      // direction-aware separator so this inline breadcrumb
+                      // agrees with BreadcrumbNavigation's chevron in RTL
+                      // (Hebrew terms mode) instead of always pointing right.
+                      Icon(
+                        breadcrumbSeparatorIcon(Directionality.of(context)),
                         size: 16,
                         color: Colors.grey,
                       ),
