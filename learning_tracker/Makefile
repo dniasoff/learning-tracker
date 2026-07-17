@@ -1027,6 +1027,15 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    | grep -v "static final RegExp" | grep -v "static const RegExp"; \
 	  FAIL=1; \
 	fi; \
+	echo "72/72 — SM-6: every @Riverpod(keepAlive: true) in lib/core/auth/auth_providers.dart carries an inline // keepAlive: justification comment on the line immediately above (diff-scoped to this file per AUD-core-auth-04; other repo-wide keepAlive sites — e.g. content_index.dart, registry_provider.dart, preference_providers.dart — are tracked separately, not yet in this gate)"; \
+	if awk '/@Riverpod\(keepAlive: true\)/ && prev !~ /\/\/[ \t]*keepAlive:/ { print NR": "$$0 } { prev = $$0 }' \
+	    lib/core/auth/auth_providers.dart | grep -q .; then \
+	  echo "  @Riverpod(keepAlive: true) missing an inline // keepAlive: <reason> justification comment"; \
+	  echo "  on the preceding line (SM-6, docs/coding-standards.md:167, AUD-core-auth-04):"; \
+	  awk '/@Riverpod\(keepAlive: true\)/ && prev !~ /\/\/[ \t]*keepAlive:/ { print NR": "$$0 } { prev = $$0 }' \
+	    lib/core/auth/auth_providers.dart; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \

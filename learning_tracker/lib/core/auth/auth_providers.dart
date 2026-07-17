@@ -10,6 +10,7 @@ part 'auth_providers.g.dart';
 ///
 /// Tests override this with a fake gateway via
 /// `ProviderScope(overrides: [firebaseAuthGatewayProvider.overrideWithValue(fake)])`.
+// keepAlive: stateless singleton facade, cheap to keep for app lifetime.
 @Riverpod(keepAlive: true)
 FirebaseAuthGateway firebaseAuthGateway(Ref ref) {
   return FirebaseAuthGatewayImpl();
@@ -19,6 +20,7 @@ FirebaseAuthGateway firebaseAuthGateway(Ref ref) {
 ///
 /// Tests override this with a fake gateway via
 /// `ProviderScope(overrides: [googleSignInGatewayProvider.overrideWithValue(fake)])`.
+// keepAlive: stateless singleton facade, cheap to keep for app lifetime.
 @Riverpod(keepAlive: true)
 GoogleSignInGateway googleSignInGateway(Ref ref) {
   return GoogleSignInGatewayImpl();
