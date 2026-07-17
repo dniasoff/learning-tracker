@@ -5631,13 +5631,20 @@
     {
       "id": "AUD-progress-03",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Batch trackDualProgressMetricsProvider's per-track sequential DB reads (N+1 left un-fixed by sibling F13)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "20046580cfd62a73d1e858fdd26c313209ac238d"
+      ],
+      "reviewRounds": 2,
+      "acVerified": [
+        "AUD-progress-03 AC1 OK: 3 per-track DAO calls replaced by profile-wide batched providers building once each; rest parallelized via Future.wait (providers.dart:325-503)",
+        "AUD-progress-03 AC1 OK: DAO equivalence verified - batched getByProfile partitions == old per-track queries; metric order preserved by Future.wait",
+        "AUD-progress-03 AC2 OK: batch_test ProviderObserver (_CountingObserver, mirrors F13) asserts each batched provider builds ==1 across 3 tracks; passes",
+        "AUD-progress-03 reactivity OK: children watch completionCommittedProvider (345/371/403); regression tests assert lifetimePercentage 0->1/5 after commit"
+      ],
+      "notes": "Re-verified: no drift since 4018a91c. Confirmed N+1 in per-track loop. Fixed via 3 profile-wide batched providers (mirroring sibling F13 pattern) + Future.wait parallelization of remaining work. AC1/AC2 both satisfied and self-checked."
     },
     {
       "id": "AUD-sacred_time-05",
