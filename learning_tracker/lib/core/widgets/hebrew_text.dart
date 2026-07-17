@@ -31,11 +31,23 @@ class HebrewText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // AUD-core-theme-01: the fallback branch used to overwrite fontFamily
+    // outright, discarding the ambient theme's real typography (Plus Jakarta
+    // Sans) in favour of the Hebrew font. Instead, keep the themed family as
+    // primary and add the Hebrew font as a fallback purely for glyph
+    // coverage — Plus Jakarta Sans has no Hebrew glyphs, so Flutter's text
+    // layout falls through to "Noto Sans Hebrew" per-glyph automatically,
+    // and non-Hebrew characters (verse numerals, punctuation) keep
+    // rendering in the app's real font instead of always switching to the
+    // Hebrew face.
     final effectiveStyle =
         style ??
-        DefaultTextStyle.of(
-          context,
-        ).style.copyWith(fontFamily: AppTextStyles.hebrewFontFamily);
+        DefaultTextStyle.of(context).style.copyWith(
+          fontFamilyFallback: [
+            AppTextStyles.hebrewFontFamily,
+            ...?DefaultTextStyle.of(context).style.fontFamilyFallback,
+          ],
+        );
 
     return Directionality(
       textDirection: TextDirection.rtl,

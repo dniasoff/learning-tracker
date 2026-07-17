@@ -62,6 +62,14 @@ String _findAppEntrySource() {
 }
 
 void main() {
+  // AUD-core-theme-01: AppTextStyles' English getters (AC5 below) now build
+  // on GoogleFonts.plusJakartaSans, which checks the asset bundle via
+  // ServicesBinding.instance as a side effect — needs a binding even for the
+  // plain (non-widget-pumping) `test()` cases in this file, and CI runs
+  // tests in randomized order (TQ-6) so this can't rely on a testWidgets()
+  // call elsewhere in the file running first.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   // ────────────────────────────────────────────────────────────────────────────
   // AC1 — _selectedLanguage hardcode removed from onboarding_screen.dart
   // ────────────────────────────────────────────────────────────────────────────
@@ -226,18 +234,13 @@ void main() {
         );
       });
 
-      test('getTextDirection returns RTL for Hebrew script', () {
-        expect(AppTextStyles.getTextDirection('שלום'), TextDirection.rtl);
-        expect(AppTextStyles.getTextDirection('Hello'), TextDirection.ltr);
-      });
-
-      test('getStyleForContent applies Hebrew family for RTL content', () {
-        final style = AppTextStyles.getStyleForContent(
-          'משנה ברכות',
-          AppTextStyles.bodyMedium,
-        );
-        expect(style.fontFamily, 'Noto Sans Hebrew');
-      });
+      // AUD-core-theme-01 AC2: getTextDirection/getStyleForContent were
+      // dead code (zero callers anywhere outside test files) and have been
+      // removed from AppTextStyles; their coverage here (previously
+      // asserting RTL detection / Hebrew-family style selection through
+      // those two helpers) is removed with them. AC5's actual claim —
+      // AppTextStyles' Hebrew getters use Noto Sans Hebrew — remains
+      // covered by the two tests above.
     },
   );
 
