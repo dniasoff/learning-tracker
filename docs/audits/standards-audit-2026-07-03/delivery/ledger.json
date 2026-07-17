@@ -1302,13 +1302,13 @@
   {
    "id": "AUD-scheduler-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P1",
    "title": "Lazy-load GroupedDailyView's per-curriculum task list instead of List.generate-ing every DailyTaskCard",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c3, 2026-07-17). review agent lost (quota); fix commit 66faae63aed06f84ddea51bd0fe12acf4bf940f6 exists on worktree branch worktree-wf_24065ac5-4c4-3 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
   },
   {
    "id": "AUD-core-sync-11",
