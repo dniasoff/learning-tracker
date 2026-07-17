@@ -59,10 +59,48 @@ Future<void> withResolvedStudyDayTrackId(
 /// resolved — the historical bug called the scheduler invalidation
 /// synchronously, outside the write's `.then()` closure, so the scheduler
 /// rebuilt from stale study-day data.
+///
+/// A failing [write] propagates raw (EH-2: this domain-layer helper throws;
+/// [invalidate] is correctly skipped). [writeThenInvalidateGuarded] is the
+/// presentation-facing wrapper that converts that raw exception into a
+/// logged, non-crashing outcome (EH-3).
 Future<void> writeThenInvalidate({
   required Future<void> Function() write,
   required void Function() invalidate,
 }) async {
   await write();
   invalidate();
+}
+
+/// Presentation-layer wrapper around [writeThenInvalidate] (AUD-scheduler-17).
+///
+/// Runs [write], then — only on success, and only when [isMounted] still
+/// returns `true` — invokes [invalidate]. On failure, routes the error to
+/// [onError] (never lets it propagate as an unhandled Future error) and
+/// returns `false` so the caller can skip any follow-up that depends on the
+/// write having actually persisted (e.g. `_toggleDay` skips the sync push
+/// when the local write failed). Returns `true` when [write] succeeded.
+///
+/// This is the exact function `study_day_config_screen.dart:_toggleDay`
+/// calls — matching the AUD-t-scheduler-02 testability pattern used by
+/// [writeThenInvalidate] itself: tests drive this function directly instead
+/// of re-deriving the guard/error-handling logic inline.
+Future<bool> writeThenInvalidateGuarded({
+  required Future<void> Function() write,
+  required void Function() invalidate,
+  required bool Function() isMounted,
+  required void Function(Object error, StackTrace stackTrace) onError,
+}) async {
+  try {
+    await writeThenInvalidate(
+      write: write,
+      invalidate: () {
+        if (isMounted()) invalidate();
+      },
+    );
+    return true;
+  } catch (e, st) {
+    onError(e, st);
+    return false;
+  }
 }

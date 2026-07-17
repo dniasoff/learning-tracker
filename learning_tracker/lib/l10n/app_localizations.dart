@@ -8946,6 +8946,12 @@ abstract class AppLocalizations {
   /// **'No study days selected — every day is review only and no new learning will be scheduled.'**
   String get schedulerStudyDaysZeroWarning;
 
+  /// Snackbar shown on the Study Days screen when toggling a day's study/review type fails to save locally (AUD-scheduler-17).
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save this change. Please try again.'**
+  String get schedulerStudyDayToggleSaveError;
+
   /// Short weekday label for Sunday on the Study Days screen.
   ///
   /// In en, this message translates to:

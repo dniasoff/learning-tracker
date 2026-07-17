@@ -5363,6 +5363,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'No study days selected — every day is review only and no new learning will be scheduled.';
 
   @override
+  String get schedulerStudyDayToggleSaveError =>
+      'Could not save this change. Please try again.';
+
+  @override
   String get schedulerDayAbbrevSun => 'Sun';
 
   @override

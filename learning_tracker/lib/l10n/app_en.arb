@@ -3185,6 +3185,10 @@
   "@schedulerStudyDaysZeroWarning": {
     "description": "Inline warning shown on the Study Days screen when zero study days are selected for the week."
   },
+  "schedulerStudyDayToggleSaveError": "Could not save this change. Please try again.",
+  "@schedulerStudyDayToggleSaveError": {
+    "description": "Snackbar shown on the Study Days screen when toggling a day's study/review type fails to save locally (AUD-scheduler-17)."
+  },
   "schedulerDayAbbrevSun": "Sun",
   "@schedulerDayAbbrevSun": {
     "description": "Short weekday label for Sunday on the Study Days screen."
