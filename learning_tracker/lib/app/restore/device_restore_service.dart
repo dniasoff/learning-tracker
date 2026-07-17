@@ -45,12 +45,20 @@ class DeviceRestoreService {
     required CurriculumImportService curriculumImportService,
     required AppLogger logger,
     AnalyticsService? analytics,
+    // AUD-core-navigation-04 (SM-7): optional so tests can substitute a fake
+    // [ParentAnalyticsRepository] without also faking the whole Drift
+    // database it reads, mirroring the `local_data_upload_service.dart`
+    // seam (AUD-sync-05). Production callers (restore_providers.dart) omit
+    // this and get the real DB-backed implementation.
+    ParentAnalyticsRepository? analyticsRepository,
   }) : _database = database,
        _syncOrchestrator = syncOrchestrator,
        _isAuthenticated = isAuthenticated,
        _curriculumImportService = curriculumImportService,
        _logger = logger,
-       _analytics = analytics ?? const NullAnalyticsService();
+       _analytics = analytics ?? const NullAnalyticsService(),
+       _analyticsRepository =
+           analyticsRepository ?? ParentAnalyticsRepositoryImpl(database);
 
   final UserDatabase _database;
   final SyncOrchestrator _syncOrchestrator;
@@ -58,6 +66,7 @@ class DeviceRestoreService {
   final CurriculumImportService _curriculumImportService;
   final AppLogger _logger;
   final AnalyticsService _analytics;
+  final ParentAnalyticsRepository _analyticsRepository;
 
   /// SharedPreferences key tracking restore lifecycle. Values: 'in_progress'
   /// while a restore is running and 'complete' on success. Absent when the
@@ -98,8 +107,7 @@ class DeviceRestoreService {
     // install. This catches the reinstall case even if stale profile
     // rows exist locally (otherwise the empty-completions check would
     // be hidden by leftover SQLite state).
-    final analytics = ParentAnalyticsRepositoryImpl(_database);
-    final completions = await analytics.getAllCompletions(
+    final completions = await _analyticsRepository.getAllCompletions(
       scope: CrossProfileScope.syncRestore,
     );
     if (completions.isEmpty) return true;
