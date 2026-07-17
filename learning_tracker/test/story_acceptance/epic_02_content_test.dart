@@ -697,6 +697,35 @@ void main() {
       );
     });
 
+    // ── AC: seed_content.dart reuses the tested Sefaria Dio client
+    // (AUD-core-network-02: it must not hand-roll its own untested,
+    // retry-less, logger-less Dio() -- that bypasses createSefariaClient's
+    // retry interceptor and redacted logging, both fully covered by
+    // test/core/network/dio_client_test.dart).
+
+    test(
+      'seed_content.dart wires the tested createSefariaClient() Dio client',
+      () {
+        final source = File('tool/seed_content.dart').readAsStringSync();
+        expect(
+          source,
+          contains('createSefariaClient('),
+          reason:
+              'tool/seed_content.dart must call createSefariaClient() from '
+              'tool/lib/dio_client.dart instead of constructing its own Dio '
+              'inline (AUD-core-network-02)',
+        );
+        expect(
+          RegExp(r'Dio\(\s*BaseOptions\(').hasMatch(source),
+          isFalse,
+          reason:
+              'tool/seed_content.dart must not hand-roll Dio(BaseOptions(...)) '
+              '-- reuse createSefariaClient() so the retry interceptor and '
+              'redacted logging actually apply (AUD-core-network-02)',
+        );
+      },
+    );
+
     // ── AC: ContentRepositoryImpl class implements ContentRepository
 
     test('ContentRepositoryImpl implements ContentRepository', () {

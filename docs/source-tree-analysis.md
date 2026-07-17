@@ -77,9 +77,12 @@ learning_tracker/
 │   ├── fonts/                    # Noto Sans Hebrew (5 weights)
 │   └── images/                   # Image assets
 ├── tool/                         # Dev scripts and utilities (13 files)
-│   ├── seed_content.dart         # Content seeding
+│   ├── seed_content.dart         # AUD-core-network-02: manual fallback, hits
+│   │                             # the live public Sefaria API; NOT part of
+│   │                             # `make seed` (see docs/seed-build.md)
 │   ├── upload_to_firebase.*      # Firebase upload scripts
-│   └── lib/sefaria/              # Per-curriculum Sefaria API fetchers
+│   └── lib/sefaria/              # Per-curriculum Sefaria API fetchers used
+│                                 # only by the seed_content.dart fallback above
 ├── integration_test/             # E2E tests on device/emulator
 ├── android/                      # Android platform code
 ├── pubspec.yaml                  # Dependencies

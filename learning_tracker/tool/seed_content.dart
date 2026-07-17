@@ -4,8 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:dio/dio.dart';
-
+import 'lib/dio_client.dart';
 import 'lib/sefaria/bavli_fetcher.dart';
 import 'lib/sefaria/chumash_fetcher.dart';
 import 'lib/sefaria/mishna_berurah_fetcher.dart';
@@ -16,20 +15,21 @@ import 'lib/sefaria/yerushalmi_fetcher.dart';
 
 /// CLI script to fetch content from Sefaria API and generate bundled JSON files.
 ///
+/// This is a manual fallback path that hits the live public Sefaria REST API
+/// directly, per curriculum. It is NOT part of the canonical `make seed`
+/// build (which resolves everything from a local Sefaria Mongo dump -- see
+/// docs/seed-build.md); it exists for one-off/manual content refreshes.
+///
 /// Usage: dart run tool/seed_content.dart
 ///
 /// Generates JSON files in build/seeded_content/ for each curriculum.
 Future<void> main() async {
   print('🌱 Seeding content from Sefaria API...\n');
 
-  // Configure Dio for Sefaria API
-  final dio = Dio(
-    BaseOptions(
-      baseUrl: 'https://www.sefaria.org',
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-    ),
-  );
+  // Reuse the tested Sefaria Dio client (retry interceptor + redacted
+  // logging) instead of hand-rolling an untested Dio() here
+  // (AUD-core-network-02).
+  final dio = createSefariaClient();
 
   // Create output directory
   final outputDir = Directory('build/seeded_content');
