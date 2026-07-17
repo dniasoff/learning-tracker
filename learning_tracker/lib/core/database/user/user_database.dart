@@ -692,36 +692,47 @@ class UserDatabase extends _$UserDatabase {
           // cannot) resolve it, but it also does not regress it. No NEW
           // ambiguous row can ever be created again: CompletionWriter now
           // stamps every insert with an explicit tag.
-          await m.addColumn(completionEvents, completionEvents.stageIdFormat);
-
-          final hasStageDefinitions = await customSelect(
-            'SELECT 1 FROM sqlite_master '
-            "WHERE type = 'table' AND name = 'stage_definitions'",
-          ).get();
+          //
+          // Guard: partial-schema migration paths (e.g. older upgrade tests
+          // that model only their own migration's tables) may not have
+          // created completion_events yet — same pattern as the
+          // hasTrackLearningOrder guard above (v36) and the
+          // hasLedger/hasGoals/hasPointsLedger guards elsewhere in this
+          // method.
           final hasCompletionEvents = await customSelect(
             'SELECT 1 FROM sqlite_master '
             "WHERE type = 'table' AND name = 'completion_events'",
           ).get();
-          if (hasStageDefinitions.isNotEmpty &&
-              hasCompletionEvents.isNotEmpty) {
-            await customStatement(
-              "UPDATE completion_events SET stage_id_format = 'stageOrder' "
-              'WHERE stage_id_format IS NULL AND EXISTS ('
-              '  SELECT 1 FROM stage_definitions sd '
-              '  WHERE sd.profile_id = completion_events.profile_id '
-              '    AND sd.curriculum_id = completion_events.curriculum_id '
-              '    AND sd.stage_order = completion_events.stage_id'
-              ')',
+          if (hasCompletionEvents.isNotEmpty) {
+            await m.addColumn(
+              completionEvents,
+              completionEvents.stageIdFormat,
             );
-            await customStatement(
-              "UPDATE completion_events SET stage_id_format = 'legacyId' "
-              'WHERE stage_id_format IS NULL AND EXISTS ('
-              '  SELECT 1 FROM stage_definitions sd '
-              '  WHERE sd.profile_id = completion_events.profile_id '
-              '    AND sd.curriculum_id = completion_events.curriculum_id '
-              '    AND sd.id = completion_events.stage_id'
-              ')',
-            );
+
+            final hasStageDefinitions = await customSelect(
+              'SELECT 1 FROM sqlite_master '
+              "WHERE type = 'table' AND name = 'stage_definitions'",
+            ).get();
+            if (hasStageDefinitions.isNotEmpty) {
+              await customStatement(
+                "UPDATE completion_events SET stage_id_format = 'stageOrder' "
+                'WHERE stage_id_format IS NULL AND EXISTS ('
+                '  SELECT 1 FROM stage_definitions sd '
+                '  WHERE sd.profile_id = completion_events.profile_id '
+                '    AND sd.curriculum_id = completion_events.curriculum_id '
+                '    AND sd.stage_order = completion_events.stage_id'
+                ')',
+              );
+              await customStatement(
+                "UPDATE completion_events SET stage_id_format = 'legacyId' "
+                'WHERE stage_id_format IS NULL AND EXISTS ('
+                '  SELECT 1 FROM stage_definitions sd '
+                '  WHERE sd.profile_id = completion_events.profile_id '
+                '    AND sd.curriculum_id = completion_events.curriculum_id '
+                '    AND sd.id = completion_events.stage_id'
+                ')',
+              );
+            }
           }
         }
       },

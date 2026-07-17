@@ -131,8 +131,11 @@ void main() {
       // this allow-list by DNI-362: UnitCompletion no longer carries
       // displayNameHe/displayNameEn; label resolution is deferred to
       // CurriculumLabel.level at render time.
-      // Constructs CalendarProgramEntry instances directly.
-      'lib/features/scheduler/presentation/providers/scheduler_providers.dart',
+      // Constructs CalendarProgramEntry instances directly. Moved here from
+      // scheduler_providers.dart (presentation) by AUD-scheduler-12's
+      // extraction of the projection/plan business logic to the domain
+      // layer — scheduler_providers.dart no longer reads displayNameEn/He.
+      'lib/features/scheduler/domain/services/daily_task_projection_service.dart',
       // SefariaRefMatcher domain service — constructs sentinel ContentItem
       // instances (required constructor fields, not UI label reads). C5 extraction.
       'lib/features/scheduler/domain/services/sefaria_ref_matcher.dart',
