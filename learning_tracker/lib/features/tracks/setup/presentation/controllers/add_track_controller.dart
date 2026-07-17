@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
@@ -100,37 +101,57 @@ class AddTrackController extends _$AddTrackController {
     state = _navStateFromIndex(clamped, formData);
   }
 
+  /// Persists the wizard's current step + form data so it can be restored.
+  ///
+  /// AUD-core-preferences-04 (EH-2): callers ([_advance], [goBack],
+  /// [onConfirmationComplete]) fire this fire-and-forget (no `await`, no
+  /// `unawaited()`) so navigation is never blocked on disk I/O — which means
+  /// an exception here would previously become an unobserved Future
+  /// rejection. The whole body is wrapped so this method's Future NEVER
+  /// rejects: a write failure is caught and logged instead. The wizard's
+  /// in-memory `state` (the actual navigation source of truth) is
+  /// unaffected either way — only the save-for-later-restore snapshot is
+  /// lost, and now that loss is at least diagnosable from Send Diagnostic
+  /// Logs instead of silently vanishing.
   Future<void> _persist() async {
-    final form = state.formData;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_kStep, _navIndex(state));
-    if (form.curriculumId != null) {
-      await prefs.setString(_kCurriculum, form.curriculumId!.storageKey);
-    }
-    if (form.scopeSelections != null) {
-      await prefs.setString(
-        _kScope,
-        jsonEncode(
-          form.scopeSelections!
-              .map((s) => {'level': s.level, 'value': s.value})
-              .toList(),
-        ),
+    try {
+      final form = state.formData;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_kStep, _navIndex(state));
+      if (form.curriculumId != null) {
+        await prefs.setString(_kCurriculum, form.curriculumId!.storageKey);
+      }
+      if (form.scopeSelections != null) {
+        await prefs.setString(
+          _kScope,
+          jsonEncode(
+            form.scopeSelections!
+                .map((s) => {'level': s.level, 'value': s.value})
+                .toList(),
+          ),
+        );
+      }
+      if (form.programId != null) {
+        await prefs.setInt(_kProgram, form.programId!);
+      }
+      if (form.programName != null) {
+        await prefs.setString(_kProgramName, form.programName!);
+      }
+      if (form.studyDays != null) {
+        await prefs.setString(
+          _kStudyDays,
+          jsonEncode(form.studyDays!.map((k, v) => MapEntry(k.toString(), v))),
+        );
+      }
+      if (form.trackLabel != null) {
+        await prefs.setString(_kLabel, form.trackLabel!);
+      }
+    } catch (e, st) {
+      AppLogger.instance.error(
+        event: 'add_track_wizard_persist_failed',
+        exception: e,
+        stackTrace: st,
       );
-    }
-    if (form.programId != null) {
-      await prefs.setInt(_kProgram, form.programId!);
-    }
-    if (form.programName != null) {
-      await prefs.setString(_kProgramName, form.programName!);
-    }
-    if (form.studyDays != null) {
-      await prefs.setString(
-        _kStudyDays,
-        jsonEncode(form.studyDays!.map((k, v) => MapEntry(k.toString(), v))),
-      );
-    }
-    if (form.trackLabel != null) {
-      await prefs.setString(_kLabel, form.trackLabel!);
     }
   }
 

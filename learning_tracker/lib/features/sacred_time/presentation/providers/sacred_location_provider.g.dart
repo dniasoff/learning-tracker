@@ -91,7 +91,7 @@ final class SacredLocationNotifierProvider
 }
 
 String _$sacredLocationNotifierHash() =>
-    r'4afc3fc51546607323da3bf65f43375a7bb78a00';
+    r'15590961a9ae228932d09a21a2cefb15f46c295d';
 
 /// Cached device location used for Sacred Time window calculation.
 /// Survives app restarts via SharedPreferences. App-global (not per-profile).
@@ -156,7 +156,7 @@ final class InIsraelNotifierProvider
   }
 }
 
-String _$inIsraelNotifierHash() => r'42ffc207b60d62ea25c838f0788ab02897d65101';
+String _$inIsraelNotifierHash() => r'd374aad6c4a6c2fa62d8a8b267e0872b07bbd37f';
 
 /// User-toggleable in-Israel flag. Auto-set by [SacredLocationNotifier.detect]
 /// and [setManualCity] from the country code, but the user can flip freely

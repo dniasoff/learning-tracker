@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart
 import 'package:learning_tracker/core/preferences/text_display_preference.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/preferences/transliteration_variant_preference.dart';
+import 'package:learning_tracker/core/utils/guarded_persist.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart'
     show syncWriteFacadeProvider;
@@ -165,8 +166,17 @@ class UseHebrewTerms extends _$UseHebrewTerms
   Future<void> set(bool value) async {
     final profileId = ref.read(activeProfileIdProvider);
     final pref = ref.read(hebrewTermsPreferenceProvider);
+    final previous = state;
     state = value;
-    await _writeAndPushSnapshot(ref, pref, profileId, value);
+    // AUD-core-preferences-04 (EH-2): a plain-value Notifier has no error
+    // channel, so a failed write must be caught explicitly — otherwise the
+    // optimistic `state = value` above silently diverges from what actually
+    // persisted, with zero explanation to the user.
+    await guardedPersist(
+      event: 'use_hebrew_terms_persist_failed',
+      write: () => _writeAndPushSnapshot(ref, pref, profileId, value),
+      onFailure: () => state = previous,
+    );
   }
 }
 
@@ -190,8 +200,16 @@ class UseHebrewDate extends _$UseHebrewDate
   Future<void> set(bool value) async {
     final profileId = ref.read(activeProfileIdProvider);
     final pref = ref.read(hebrewDatePreferenceProvider);
+    final previous = state;
     state = value;
-    await _writeAndPushSnapshot(ref, pref, profileId, value);
+    // AUD-core-preferences-04 (EH-2): see UseHebrewTerms.set — guard the
+    // persistence write so a failure logs + rolls back instead of leaving
+    // state silently diverged from the persisted value.
+    await guardedPersist(
+      event: 'use_hebrew_date_persist_failed',
+      write: () => _writeAndPushSnapshot(ref, pref, profileId, value),
+      onFailure: () => state = previous,
+    );
   }
 }
 
@@ -218,8 +236,14 @@ class ShowNikudPref extends _$ShowNikudPref
     if (value == state) return;
     final profileId = ref.read(activeProfileIdProvider);
     final pref = ref.read(nikudPreferenceProvider);
+    final previous = state;
     state = value;
-    await _writeAndPushSnapshot(ref, pref, profileId, value);
+    // AUD-core-preferences-04 (EH-2): see UseHebrewTerms.set.
+    await guardedPersist(
+      event: 'show_nikud_persist_failed',
+      write: () => _writeAndPushSnapshot(ref, pref, profileId, value),
+      onFailure: () => state = previous,
+    );
   }
 }
 
@@ -286,9 +310,15 @@ class CurrentTransliterationVariant extends _$CurrentTransliterationVariant
   Future<void> set(TransliterationVariant variant) async {
     final profileId = ref.read(activeProfileIdProvider);
     final pref = ref.read(transliterationVariantPreferenceProvider);
+    final previous = state;
     state = variant;
     // Transliteration variant is local-only — no Firestore push.
-    await pref.write(profileId, variant);
+    // AUD-core-preferences-04 (EH-2): see UseHebrewTerms.set.
+    await guardedPersist(
+      event: 'transliteration_variant_persist_failed',
+      write: () => pref.write(profileId, variant),
+      onFailure: () => state = previous,
+    );
   }
 }
 
@@ -312,7 +342,13 @@ class CurrentFontSize extends _$CurrentFontSize
   Future<void> set(FontSize size) async {
     final profileId = ref.read(activeProfileIdProvider);
     final pref = ref.read(textDisplayPreferenceProvider);
+    final previous = state;
     state = size;
-    await _writeAndPushSnapshot(ref, pref, profileId, size);
+    // AUD-core-preferences-04 (EH-2): see UseHebrewTerms.set.
+    await guardedPersist(
+      event: 'current_font_size_persist_failed',
+      write: () => _writeAndPushSnapshot(ref, pref, profileId, size),
+      onFailure: () => state = previous,
+    );
   }
 }
