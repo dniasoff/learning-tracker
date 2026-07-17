@@ -5,8 +5,11 @@ part 'content_item.freezed.dart';
 /// A single item in a curriculum's content hierarchy.
 ///
 /// Represents both container nodes (seder, masechta, perek) and leaf nodes
-/// (individual mishna, daf, pasuk, etc.). Maps directly to the
-/// `content_items` table schema.
+/// (individual mishna, daf, pasuk, etc.). Loaded from the bundled JSON
+/// hierarchy assets (`assets/content/hierarchy/{curriculum_id}.json`) by
+/// `ContentRepositoryImpl` — there is no `content_items` database table;
+/// that name only survives as a historical FK reference in a few database
+/// doc comments.
 ///
 /// `@freezed` generates field-wise `==`/`hashCode`/`copyWith`/`toString` so
 /// two items are only equal when every field matches — a hand-rolled
