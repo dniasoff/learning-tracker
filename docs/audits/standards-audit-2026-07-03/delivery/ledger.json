@@ -7170,13 +7170,19 @@
   {
    "id": "AUD-profiles-17",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Migrate switcherSheetPinGuardRequiredProvider to @riverpod codegen and move it to presentation/providers/",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "ffe830270563ee4c06ecdd218c2fdc52a2182e0d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-profiles-17 AC1 OK: @riverpod at provider .dart:21 on Future<bool> switcherSheetPinGuardRequired (l.22); file in presentation/providers/",
+    "AUD-profiles-17 AC2 OK: an2 test diff = 1 added import; overrides (l.76,325) unchanged; passes in 29-pass run",
+    "AUD-profiles-17 AC3 OK: grep for hand-declared top-level Provider under presentation/widgets/ = NONE; old FutureProvider removed from switcher sheet"
+   ],
+   "notes": "Re-verified at HEAD, still present. Migrated provider to @riverpod codegen in new presentation/providers/ file (SM-1+placement). Same name preserved so an2 test overrides pass unmodified (import repointed only). All 3 ACs verified. Now isAutoDispose:true, fixing lifecycle defect."
   },
   {
    "id": "AUD-profiles-15",
