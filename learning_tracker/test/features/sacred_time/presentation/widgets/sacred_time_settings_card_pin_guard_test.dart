@@ -23,7 +23,7 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
