@@ -26,7 +26,14 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// was removed when this shim was introduced — see F4 in the W7-D
 /// adversarial review fix wave).
 class ProgramLabelResolver {
-  const ProgramLabelResolver._(this._labels);
+  /// Builds a resolver directly from a resolved [DomainTermLabels] value —
+  /// no [WidgetRef]/[Ref] required. This is the label-selection logic's
+  /// real entry point: the methods below only branch on
+  /// [DomainTermLabels.isHebrew], so a plain `test()` can construct
+  /// `ProgramLabelResolver(const DomainTermLabels(true))` directly instead
+  /// of pumping a widget tree. [of] and [fromRef] are thin Riverpod wiring
+  /// built on top of this constructor.
+  const ProgramLabelResolver(this._labels);
 
   final DomainTermLabels _labels;
 
@@ -35,11 +42,11 @@ class ProgramLabelResolver {
   /// Cheap to construct on every rebuild — [DomainTermLabels] itself just
   /// captures the toggle boolean.
   factory ProgramLabelResolver.of(WidgetRef ref) =>
-      ProgramLabelResolver._(domainTermLabels(ref));
+      ProgramLabelResolver(domainTermLabels(ref));
 
   /// Provider-side variant of [ProgramLabelResolver.of].
   factory ProgramLabelResolver.fromRef(Ref ref) =>
-      ProgramLabelResolver._(domainTermLabelsFromRef(ref));
+      ProgramLabelResolver(domainTermLabelsFromRef(ref));
 
   /// Returns the display name for a [LearningProgramData] respecting the
   /// Hebrew Terms toggle.
