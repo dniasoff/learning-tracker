@@ -7430,13 +7430,18 @@
   {
    "id": "AUD-core-exceptions-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove dead DuplicateCompletionException / InvalidTrackOperationException or wire them up — neither is thrown in production",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "09ae5692e265b082ea50c5f9e4cf5816118a4bd2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-exceptions-01 AC1 OK: grep -rn both class names in lib/ => zero results; classes deleted. test/ hits are comments only.",
+    "AUD-core-exceptions-01 AC2 OK: duplicate_completion_exception_test.dart deleted + InvalidTrackOperationException toString group removed; find => no orphan test files."
+   ],
+   "notes": "Re-verified zero live throws in lib/. Deleted both exception classes, orphaned test file, dead re-export in track_repository.dart, and toString-only test group. AC1 (grep zero) and AC2 (no orphaned test) confirmed post-fix."
   },
   {
    "id": "AUD-core-sync-31",
