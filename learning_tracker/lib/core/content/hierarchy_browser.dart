@@ -96,12 +96,6 @@ class HierarchyBrowserState extends ConsumerState<HierarchyBrowser> {
 
   // ── Public API for external callers ──────────────────────────────────────
 
-  /// Raw values of the current navigation stack (one entry per level drilled).
-  List<String> get currentPath => List.unmodifiable(_path);
-
-  /// True when the browser is not at the top level.
-  bool get canGoBack => _path.isNotEmpty;
-
   /// Navigate up one level. Call from an AppBar back button using a GlobalKey.
   void navigateBack() {
     if (_path.isEmpty) return;
