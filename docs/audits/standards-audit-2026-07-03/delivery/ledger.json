@@ -6478,13 +6478,18 @@
   {
    "id": "AUD-core-auth-05",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Extract the duplicated provider-ID mapping in FirebaseAuthGatewayImpl into one helper",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "83617c4d707fda778aaafe7e681ee4af17b08291"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-auth-05 AC1 OK: helper _providerIds added at impl.dart:31, called from _toAppUser (L27) and getLinkedProviders (L263); diff --stat = 1 file only",
+    "AUD-core-auth-05 AC2 OK: 37/37 green incl 'propagates linked-provider IDs' (L76) and getLinkedProviders 'returns provider IDs from the current user' (+36)"
+   ],
+   "notes": "Re-verified: duplication still present at lines 27/255-257 (tree not drifted). Extracted `_providerIds(Iterable<UserInfo>)` helper, used by both _toAppUser and getLinkedProviders. Both AC-named tests confirmed green before and after (37/37 in suite)."
   },
   {
    "id": "AUD-t-cross-93",
