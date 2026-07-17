@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/learning/completion_constants.dart'
     as completion_constants;
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/scheduler_completion_repository.dart';
@@ -374,8 +375,23 @@ class SchedulerEngine {
     final currentCompletedAt = itemCompletions[stage.stageOrder];
 
     if (previousCompletedAt != null && currentCompletedAt == null) {
-      final dueDate = previousCompletedAt.add(Duration(days: stage.delayDays));
-      final daysUntilDue = dueDate.difference(config.currentDate).inDays;
+      // AUD-scheduler-13: previousCompletedAt and config.currentDate both
+      // carry a real time-of-day (completion timestamps are never
+      // normalized; config.currentDate flows straight from the clock
+      // provider). Duration.inDays truncates toward zero, so computing the
+      // due-date gap from raw timestamps under-reports overdue-ness by up
+      // to a day whenever the previous completion's time-of-day is later
+      // than "now"'s time-of-day. Normalize both to calendar-date-only
+      // first, matching the pattern already used in
+      // _buildProjectionTasks (scheduler_providers.dart).
+      final previousCompletedDate = LocalDayUtils.extractLocalDate(
+        previousCompletedAt,
+      );
+      final currentDate = LocalDayUtils.extractLocalDate(config.currentDate);
+      final dueDate = previousCompletedDate.add(
+        Duration(days: stage.delayDays),
+      );
+      final daysUntilDue = dueDate.difference(currentDate).inDays;
 
       if (daysUntilDue < 0) {
         overdueTasks.add(
