@@ -8964,13 +8964,18 @@
     {
       "id": "AUD-core-time-01",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "core/time/local_day_clock.dart's currentLocalDayClock global has no compiler-enforced set/reset pairing for tests",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "0b4ae8b2550521ecb40407e02a68278f9647abf3"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-time-01 AC1 OK: fake_clock.dart:38 installFakeClock pairs useLocalDayClock+addTearDown(reset); fake_clock_test.dart proves auto-reset fires (LIFO red-first)",
+        "AUD-core-time-01 AC2 OK: outbox_processor_test 7 setUp+1 inline migrated; grep shows only remaining useLocalDayClock( is in the helper; all 15 files done"
+      ],
+      "notes": "Verified vs tree at cc2feb7e, still holds. Added installFakeClock(seed): installs FakeLocalDayClock + addTearDown(resetLocalDayClock) atomically (AC1). Migrated all 15 files with real useLocalDayClock() calls (finding undercounted at 2) onto helper (AC2). Red-first test proves auto-reset fires. gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base cc2feb7e), so payload.testsToRun was not re-run here; make audit (all 67 greps) and flutter analyze (no issues) both clean post-rebase; touchedStrings=false so arb-parity not run; the wave-closing full make ci is the integration gate. Merged --no-ff onto dev (w4r1c25, mergeSha 0b4ae8b2550521ecb40407e02a68278f9647abf3)."
     },
     {
       "id": "AUD-core-sync-35",
