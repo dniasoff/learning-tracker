@@ -166,7 +166,10 @@ lib/core/database/
 learning_tracker/tool/                  # The build pipeline
 ├── prepare_asset.dart                  # .xz → .gz at build time
 ├── seed_content_db.dart                # Build the seed
-├── seed_content.dart                   # Fetch per-curriculum content
+├── seed_content.dart                   # AUD-core-network-02: manual fallback --
+│                                        # hits the live public Sefaria API directly
+│                                        # per curriculum; NOT part of `make seed`
+│                                        # (see docs/seed-build.md)
 ├── seed_text_content.dart              # Fetch bilingual text from Sefaria
 ├── validate_seed_coverage.dart         # CI gate: every (program, date) resolves
 └── verify_seed_calendar.dart           # Cross-check calendar against live Sefaria

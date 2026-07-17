@@ -8,6 +8,18 @@ Docker. There are **no public Sefaria API calls** in the build path.
 
 > TL;DR: `cd learning_tracker && make seed`
 
+## `make seed` is the only canonical content-build path
+
+`make seed` (this doc) is the sole path referenced by CI/docs for producing
+`content.db.xz`. `learning_tracker/tool/seed_content.dart` is a separate,
+**manual fallback** script (not invoked by `make seed`, `make ci`, or any
+other `make` target): it fetches per-curriculum hierarchy JSON directly from
+the *live public Sefaria REST API* (via `tool/lib/dio_client.dart`'s
+`createSefariaClient()` — retry + redacted logging) into
+`build/seeded_content/`, for one-off manual content refreshes outside the
+Mongo-dump pipeline. It is not part of the from-zero build described below
+(AUD-core-network-02).
+
 ## What's in the DB
 
 | Table | Rows (current) | Source |
