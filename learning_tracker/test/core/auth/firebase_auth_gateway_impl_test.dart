@@ -129,6 +129,39 @@ void main() {
     });
   });
 
+  group('getIdToken (AUD-core-auth-01 / AU-5)', () {
+    test('returns null when no current user is signed in', () async {
+      when(() => mockFirebaseAuth.currentUser).thenReturn(null);
+
+      expect(await gateway.getIdToken(), isNull);
+      expect(await gateway.getIdToken(forceRefresh: true), isNull);
+    });
+
+    test('defaults forceRefresh to false and returns the token', () async {
+      final user = MockUser();
+      when(() => mockFirebaseAuth.currentUser).thenReturn(user);
+      when(() => user.getIdToken(false)).thenAnswer((_) async => 'cached-jwt');
+
+      final token = await gateway.getIdToken();
+
+      expect(token, 'cached-jwt');
+      verify(() => user.getIdToken(false)).called(1);
+    });
+
+    test('passes forceRefresh: true through to User.getIdToken — the AU-5 '
+        'primitive a permission-denied/unauthenticated retry needs to bypass '
+        'the SDK local token cache', () async {
+      final user = MockUser();
+      when(() => mockFirebaseAuth.currentUser).thenReturn(user);
+      when(() => user.getIdToken(true)).thenAnswer((_) async => 'fresh-jwt');
+
+      final token = await gateway.getIdToken(forceRefresh: true);
+
+      expect(token, 'fresh-jwt');
+      verify(() => user.getIdToken(true)).called(1);
+    });
+  });
+
   group('signInWithEmailAndPassword', () {
     test('passes email and password through to FirebaseAuth', () async {
       when(

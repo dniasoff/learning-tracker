@@ -36,6 +36,10 @@ class _ThrowingAuthRepository implements AuthRepository {
   int sendCount = 0;
 
   @override
+  Future<String?> getIdToken({bool forceRefresh = false}) =>
+      throw UnimplementedError();
+
+  @override
   Future<void> sendEmailVerification() async {
     sendCount++;
     throw Exception('simulated send-verification failure');

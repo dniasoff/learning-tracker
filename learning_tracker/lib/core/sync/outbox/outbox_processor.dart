@@ -98,6 +98,17 @@ class OutboxProcessor {
     // drain triggers (orchestrator + write-tee facade kicks) by injecting it
     // at the single processor construction site.
     bool Function()? isIdentityMismatched,
+    // AUD-core-auth-01 (AU-5): optional callback that force-refreshes the
+    // cached Firebase ID token. Wired to `AuthRepository.getIdToken` in
+    // production. A push that fails with the gateway's typed
+    // [FirestorePermissionDeniedException] is often recovering from a STALE
+    // cached token (e.g. a custom-claims change since the token was minted)
+    // rather than a genuine authorization failure. When wired, this callback
+    // is invoked exactly once with `forceRefresh: true` and the push is
+    // retried exactly once before falling through to the existing
+    // exponential backoff. Defaults to null (no refresh — immediate
+    // fall-through), so every pre-existing caller/test is unaffected.
+    Future<String?> Function({required bool forceRefresh})? refreshIdToken,
   }) : _dao = outboxDao,
        _pipeline = pipeline,
        _clock = clock,
@@ -105,7 +116,8 @@ class OutboxProcessor {
        _pushTimeout = pushTimeout,
        _drainStaleAfter = drainStaleAfter,
        _isTutoredProfile = isTutoredProfile,
-       _isIdentityMismatched = isIdentityMismatched;
+       _isIdentityMismatched = isIdentityMismatched,
+       _refreshIdToken = refreshIdToken;
 
   final OutboxDao _dao;
   final PushPipeline _pipeline;
@@ -117,6 +129,9 @@ class OutboxProcessor {
 
   // Identity guard injected at construction time — see constructor doc.
   final bool Function()? _isIdentityMismatched;
+
+  // AUD-core-auth-01 (AU-5) — force-refresh callback, see constructor doc.
+  final Future<String?> Function({required bool forceRefresh})? _refreshIdToken;
 
   /// Maximum number of push attempts before a row is dead-lettered.
   static const int _maxAttempts = 10;
@@ -357,9 +372,11 @@ class OutboxProcessor {
       List<String> committed;
       Object? failedError;
       try {
-        committed = await _pipeline
-            .pushCompletionsBatch(profileId: profileId, entries: entries)
-            .timeout(_pushTimeout);
+        committed = await _withTokenRefreshRetry(
+          () => _pipeline
+              .pushCompletionsBatch(profileId: profileId, entries: entries)
+              .timeout(_pushTimeout),
+        );
       } on BatchPushException catch (e) {
         // Partial failure: the chunks listed in `e.committed` are durable —
         // delete exactly those rows; the remaining rows are marked attempted
@@ -453,12 +470,14 @@ class OutboxProcessor {
           // attempted, siblings and other kinds keep draining) instead of
           // throwing out of the whole kind loop.
           final payload = _decodePayload(row.payload);
-          await _dispatch(
-            kind: kind,
-            profileId: profileId,
-            entityKey: row.entityKey,
-            payload: payload,
-          ).timeout(_pushTimeout);
+          await _withTokenRefreshRetry(
+            () => _dispatch(
+              kind: kind,
+              profileId: profileId,
+              entityKey: row.entityKey,
+              payload: payload,
+            ).timeout(_pushTimeout),
+          );
           await _dao.deleteRow(row.id);
           successCount++;
         } catch (e) {
@@ -486,6 +505,32 @@ class OutboxProcessor {
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────
+
+  /// Runs [op] once. If it throws [FirestorePermissionDeniedException] and a
+  /// force-refresh callback is wired (AUD-core-auth-01 / AU-5), force-
+  /// refreshes the cached Firebase ID token exactly once and retries [op]
+  /// exactly once more.
+  ///
+  /// Any error from the retry — permission-denied or otherwise — propagates
+  /// unchanged to the caller, which applies its normal error handling
+  /// (backoff, dead-letter, permission-denied analytics). This keeps the
+  /// retry fully transparent to every existing failure path: the attempt
+  /// counter increments by exactly 1 per [drain] pass through a row,
+  /// whether or not a refresh+retry happened internally.
+  ///
+  /// A no-op passthrough (immediate rethrow, no retry) when
+  /// [_refreshIdToken] is null — the pre-AUD-core-auth-01 behavior every
+  /// existing caller/test relies on.
+  Future<T> _withTokenRefreshRetry<T>(Future<T> Function() op) async {
+    try {
+      return await op();
+    } on FirestorePermissionDeniedException {
+      final refresh = _refreshIdToken;
+      if (refresh == null) rethrow;
+      await refresh(forceRefresh: true);
+      return await op();
+    }
+  }
 
   /// Fires the same `permission_denied` analytics event
   /// `sync_orchestrator.dart`'s `pullOnLaunch` error handler fires, but from

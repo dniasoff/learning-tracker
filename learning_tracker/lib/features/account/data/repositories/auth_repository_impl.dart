@@ -159,6 +159,10 @@ class AuthRepositoryImpl implements AuthRepository {
     return _toAppUserOrNull(refreshed);
   }
 
+  @override
+  Future<String?> getIdToken({bool forceRefresh = false}) =>
+      _auth.getIdToken(forceRefresh: forceRefresh);
+
   // ── Action-code operations ─────────────────────────────────────────────────
 
   @override
