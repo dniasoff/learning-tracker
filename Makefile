@@ -177,12 +177,9 @@ audit:
 	echo "$$HITS"; \
 	\
 	echo ""; \
-	echo "[10/12] EdgeInsets.only(left:|right:) — RTL violation (NFR16/UX-DR5)"; \
-	HITS=$$(grep -rn 'EdgeInsets\.only([^)]*\(left\|right\):' "$$LIB/" \
-	  --include='*.dart' \
-	  | grep -v '\.g\.dart' \
-	  | grep -v '\.freezed\.dart' || true); \
-	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
+	echo "[10/12] EdgeInsets.only(left:|right:) — RTL violation (NFR16/UX-DR5/AX-1, AUD-profiles-18)"; \
+	HITS=$$(dart run tool/check_edgeinsets_rtl.dart 2>&1) || FAIL=1; \
+	echo "$$HITS"; \
 	\
 	echo ""; \
 	echo "[11/12] import package:cloud_firestore / firebase_storage outside core/sync + core/auth (NFR3)"; \
