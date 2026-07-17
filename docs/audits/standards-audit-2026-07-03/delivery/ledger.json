@@ -2174,7 +2174,7 @@
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c8, 2026-07-17). review agent lost (quota); no review completed for this item in this run, no code change produced, no mergeable diff. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+   "notes": "blocked (merge-lane w4r1c8, 2026-07-17). review agent lost (quota); fix commit 0e33570005597a14704337eeb9fa88114400951e exists on worktree branch worktree-wf_24065ac5-4c4-8 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
   },
   {
    "id": "AUD-account-12",
