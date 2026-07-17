@@ -58,7 +58,6 @@
 ///   ContentSearchScreen       — requires bundled asset ContentRepository
 ///   TextDisplayScreen         — requires bundled asset ContentRepository + route arg
 ///   LifetimeCurriculumMarkingRoute — requires bundled content DB
-///   PinFlowChangeRoute        — verifyProfilePin bcrypt against FlutterSecureStorage
 ///   AppShellRoute             — container, not a standalone pumped surface
 ///   PersistentSwitcherScaffold — lives in LearningTrackerApp builder slot
 ///
@@ -69,7 +68,6 @@
 ///   34 AcceptInviteScreen
 ///   35 DeclineInviteScreen
 ///   36 PinFlowSetupRoute
-///   37 PinFlowVerifyRoute
 ///   38 ParentSettingsScreen
 ///   39 PointConfigScreen
 ///   40 RewardConfigurationScreen
@@ -78,6 +76,13 @@
 ///   43 CurriculumSettingsScreen
 ///   44 LearningOrderScreen
 ///   45 ParentTrackManagementScreen
+///
+/// REMOVED (AUD-profiles-06): PinFlowVerifyRoute (was #37) and
+/// PinFlowChangeRoute were registered routes nothing in `lib/` ever pushed —
+/// the real verify/change PIN UX is the modal dialogs in
+/// parent_pin_keypad_dialog.dart, not a routed screen. Both routes and their
+/// PinFlowScreen wrappers were deleted; only PinFlowSetupRoute (#36) remains
+/// a real navigation target.
 ///
 /// Catalog: docs/planning/e2e-test-suite-plan.md §2 / §7 (E2E-1512)
 @Tags(['e2e', 'overflow'])
@@ -297,7 +302,6 @@ void main() {
       '  ContentSearchScreen        — bundled asset ContentRepository required\n'
       '  TextDisplayScreen          — bundled asset + sefariaRef route arg\n'
       '  LifetimeCurriculumMarkingRoute — bundled content DB required\n'
-      '  PinFlowChangeRoute         — bcrypt PIN verify against FlutterSecureStorage\n'
       '  AppShellRoute              — container, not a standalone screen\n'
       '  PersistentSwitcherScaffold — lives in LearningTrackerApp builder slot',
       name: 'overflow_sweep',
@@ -1188,29 +1192,7 @@ void main() {
     },
   );
 
-  // ── 37: PinFlowVerifyRoute ─────────────────────────────────────────────────
-
-  testWidgets(
-    '37 PinFlowVerifyRoute — no overflow',
-    skip:
-        true, // device/harness: guarded router.push hangs headless; untested — DNI-404 tracks the on-device overflow sweep
-    (tester) async {
-      await _sweepPath(
-        tester,
-        label: 'PinFlowVerifyRoute',
-        path: '/parent-mode/pin-entry',
-        identityFactory: () => E2EIdentity.localBorn(
-          displayName: 'PinVerify',
-          profileMode: 'child',
-        ),
-        extraOverrides: [
-          dashboardStreakProvider.overrideWith(
-            (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-          ),
-        ],
-      );
-    },
-  );
+  // ── 37: (removed — AUD-profiles-06 deleted PinFlowVerifyRoute; see header) ─
 
   // ── 38: ParentSettingsScreen ───────────────────────────────────────────────
   //
@@ -1566,13 +1548,6 @@ void main() {
   testWidgets(
     'SKIP LifetimeCurriculumMarkingRoute — requires bundled content DB to '
     'render curriculum item list; in-memory DB is empty',
-    skip: true,
-    (tester) async {},
-  );
-
-  testWidgets(
-    'SKIP PinFlowChangeRoute — verifyProfilePin bcrypt round-trip against '
-    'FlutterSecureStorage; _NullPinService.verifyProfilePin unimplemented',
     skip: true,
     (tester) async {},
   );

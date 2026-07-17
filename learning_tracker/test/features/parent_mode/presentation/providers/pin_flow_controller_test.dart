@@ -814,4 +814,65 @@ void main() {
       expect(s.step, PinFlowStep.enterNew);
     });
   });
+
+  // ── AUD-profiles-06: PP-1 busy-lock generalised to change mode ────────────
+  //
+  // PP-1 (see pp1_pin_setup_dialog_busy_guard_test.dart) fixed a rapid-tap
+  // digit leak in the SETUP dialog's enterNew -> confirm transition, but only
+  // there: PinFlowController's OWN setup transition, and every mode's
+  // enterNew -> confirm transition in the OTHER three hand-rolled copies
+  // (verify has none; change had the identical shape), never got the fix —
+  // exactly the "no guarantee of applying to the others" duplication this
+  // finding calls out. Consolidating onto one PinEntryMachine (used by this
+  // controller AND every dialog) means the busy-lock now protects the SAME
+  // transition wherever it occurs, including change mode's enterNew ->
+  // confirm step, which is exercised here directly against the controller.
+  group('PinFlowController — change mode enterNew -> confirm busy guard '
+      '(AUD-profiles-06: PP-1 generalised)', () {
+    test('a rapid extra tap immediately after the 4th enterNew digit is '
+        'swallowed, not appended as digit 1 of the confirm buffer', () async {
+      final ps = _MockPinService();
+      when(() => ps.verifyProfilePin(7, '0000')).thenAnswer((_) async => true);
+
+      final container = _makeContainer(pinService: ps, profileId: 7);
+      addTearDown(container.dispose);
+      final ctrl = container.read(pinFlowControllerProvider.notifier);
+      ctrl.reset(PinFlowMode.change);
+
+      // Step 1: verifyCurrent (async — already correctly busy-locked).
+      _enterDigits(ctrl, '0000');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(
+        container.read(pinFlowControllerProvider).step,
+        PinFlowStep.enterNew,
+      );
+
+      // Step 2: enterNew. Enter all 4 digits AND an immediate extra tap
+      // in the same synchronous burst — no `await` in between — so the
+      // extra tap is queued exactly like a rapid double-tap racing the
+      // synchronous digit-buffer reset.
+      for (final d in '1234'.split('')) {
+        ctrl.appendDigit(d);
+      }
+      ctrl.appendDigit('9'); // rapid extra tap
+
+      // Let the busy-lock's one-microtask settle window drain.
+      await Future<void>.delayed(Duration.zero);
+
+      final s = container.read(pinFlowControllerProvider);
+      expect(
+        s.step,
+        PinFlowStep.confirm,
+        reason: 'the 4 enterNew digits must still advance to confirm',
+      );
+      expect(
+        s.digits,
+        isEmpty,
+        reason:
+            'the rapid extra tap must be swallowed by the busy guard, '
+            'not accepted as digit 1 of the confirm buffer (the PP-1 bug, '
+            'previously only fixed for the setup dialog)',
+      );
+    });
+  });
 }

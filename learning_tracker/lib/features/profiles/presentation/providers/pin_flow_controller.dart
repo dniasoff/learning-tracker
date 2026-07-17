@@ -1,140 +1,40 @@
-import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/features/profiles/domain/services/pin_flow_machine.dart'
-    show PinFlowMode, PinFlowStep;
+import 'package:learning_tracker/features/profiles/domain/services/pin_entry_machine.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 // Re-export so existing importers of this file keep seeing PinFlowMode /
-// PinFlowStep without an extra import (AG-4 dedup — these enums have exactly
-// one definition now: pin_flow_machine.dart's pure domain layer).
-export 'package:learning_tracker/features/profiles/domain/services/pin_flow_machine.dart'
-    show PinFlowMode, PinFlowStep;
+// PinFlowStep / PinFlowState / PinFlowError without an extra import (AG-4
+// dedup — these types have exactly one definition now: pin_entry_machine.dart's
+// pure domain layer, AUD-profiles-06).
+export 'package:learning_tracker/features/profiles/domain/services/pin_entry_machine.dart'
+    show PinFlowError, PinFlowMode, PinFlowState, PinFlowStep;
 
 part 'pin_flow_controller.g.dart';
-
-// ---------------------------------------------------------------------------
-// PinFlowError
-// ---------------------------------------------------------------------------
-
-/// Closed set of user-facing error conditions the PIN flow can surface.
-///
-/// AUD-profiles-09 (EH-5/AX-2): replaces the previous free-text
-/// `errorMessage: String?` field on [PinFlowState]. The old field carried raw
-/// English sentinels (e.g. `'Incorrect PIN'`) that [PinFlowScreen] mapped back
-/// to ARB strings via exact string matching with a silent fallback arm — a
-/// coupling that had already drifted undetected once (a case matched a string
-/// this controller never actually produced). Every value here MUST be
-/// resolved to localized text via an EXHAUSTIVE switch in the presentation
-/// layer (compiler-enforced, no default/fallback arm) so a new value here is
-/// a compile error everywhere it isn't handled, not a silent raw-text leak.
-enum PinFlowError {
-  /// The entered PIN did not match the stored hash.
-  incorrectPin,
-
-  /// The confirm-step PIN did not match the first entry.
-  pinsDoNotMatch,
-
-  /// No profile was selected/active when the flow needed one.
-  noActiveProfile,
-
-  /// [PinService] rejected the PIN as not exactly 4 numeric digits
-  /// ([InvalidPinFormatException]). Not reachable via the keypad today (which
-  /// only ever emits 4 numeric digits) but mapped explicitly rather than
-  /// falling through, per the exhaustive-switch contract above.
-  invalidPinFormat,
-
-  /// Any other exception surfaced while saving/verifying a PIN — e.g. a stray
-  /// [ArgumentError] (AUD-profiles-20's defensive catch). Kept distinct from
-  /// [invalidPinFormat] because it is not an expected/typed PinService
-  /// failure, just a "something unexpected happened, don't crash" fallback.
-  unexpected,
-}
-
-// ---------------------------------------------------------------------------
-// PinFlowState
-// ---------------------------------------------------------------------------
-
-/// Immutable snapshot of [PinFlowController] state.
-class PinFlowState {
-  const PinFlowState({
-    required this.mode,
-    required this.step,
-    this.digits = '',
-    this.firstPin,
-    this.error,
-    this.busy = false,
-    this.lockedOut = false,
-    this.lockoutMinutes = 0,
-    this.completed = false,
-  });
-
-  final PinFlowMode mode;
-  final PinFlowStep step;
-
-  /// Digits accumulated so far for the current step (max 4).
-  final String digits;
-
-  /// The PIN entered in the first step of setup/change (held for confirm).
-  final String? firstPin;
-
-  /// Non-null when the last action produced an error. A closed enum
-  /// (AUD-profiles-09) — presentation resolves it to text via
-  /// `AppLocalizations` through an exhaustive switch; never free text.
-  final PinFlowError? error;
-
-  /// True while an async operation (bcrypt verify/hash) is in flight.
-  final bool busy;
-
-  /// True when the lockout threshold has been exceeded.
-  final bool lockedOut;
-
-  /// Remaining minutes of the active lockout (0 when not locked out).
-  final int lockoutMinutes;
-
-  /// True once the flow has successfully completed.
-  final bool completed;
-
-  PinFlowState copyWith({
-    PinFlowMode? mode,
-    PinFlowStep? step,
-    String? digits,
-    Object? firstPin = _sentinel,
-    Object? error = _sentinel,
-    bool? busy,
-    bool? lockedOut,
-    int? lockoutMinutes,
-    bool? completed,
-  }) {
-    return PinFlowState(
-      mode: mode ?? this.mode,
-      step: step ?? this.step,
-      digits: digits ?? this.digits,
-      firstPin: firstPin == _sentinel ? this.firstPin : firstPin as String?,
-      error: error == _sentinel ? this.error : error as PinFlowError?,
-      busy: busy ?? this.busy,
-      lockedOut: lockedOut ?? this.lockedOut,
-      lockoutMinutes: lockoutMinutes ?? this.lockoutMinutes,
-      completed: completed ?? this.completed,
-    );
-  }
-}
-
-const _sentinel = Object();
 
 // ---------------------------------------------------------------------------
 // PinFlowController
 // ---------------------------------------------------------------------------
 
-/// Riverpod notifier that owns state transitions for the unified PIN flow.
+/// Riverpod adapter around [PinEntryMachine] — owns state transitions for the
+/// unified PIN flow.
+///
+/// AUD-profiles-06: this controller no longer implements the digit-buffer/
+/// busy/lockout transitions itself. [PinEntryMachine] is the single shared
+/// implementation; every setup/verify/change PIN-entry UI (this controller
+/// behind the routed PinFlowScreen, and the three modal dialogs in
+/// `presentation/widgets/`) constructs its own instance and forwards keypad
+/// gestures into it, so a transition fix lands once and protects every
+/// surface.
 ///
 /// A single instance is shared across the lifetime of [PinFlowScreen]. Call
 /// [reset] whenever the screen mounts so that the correct initial [PinFlowStep]
 /// is set for the active [PinFlowMode].
 ///
-/// Lockout state is read directly from [PinService] (E25/DNI-339); the
-/// controller surfaces `lockedOut` / `lockoutMinutes` into its own state so
-/// that the UI can render the lockout panel without touching the service again.
+/// Lockout state is read directly from [PinService] (E25/DNI-339) via the
+/// machine; the controller surfaces `lockedOut` / `lockoutMinutes` into its
+/// own state so that the UI can render the lockout panel without touching the
+/// service again.
 ///
 /// keepAlive: true — the screen mounts a persistent subscription for the
 /// duration of the PIN flow. Auto-dispose would tear down state mid-flow when
@@ -142,13 +42,19 @@ const _sentinel = Object();
 // keepAlive: must survive momentary widget-tree gaps mid-flow, see the doc comment above.
 @Riverpod(keepAlive: true)
 class PinFlowController extends _$PinFlowController {
+  late final PinEntryMachine _machine = PinEntryMachine(
+    pinService: () => ref.read(pinServiceProvider),
+    profileId: () => ref.read(selectedProfileIdProvider),
+    onStateChanged: (s) => state = s,
+    isActive: () => ref.mounted,
+  );
+
   @override
   PinFlowState build() {
     // Default to verify mode; callers must call reset() on mount.
-    return const PinFlowState(
-      mode: PinFlowMode.verify,
-      step: PinFlowStep.verifyCurrent,
-    );
+    // Reading _machine here (rather than lazily on first use) pins its
+    // construction to this build() call, matching the state below.
+    return _machine.state;
   }
 
   // ------------------------------------------------------------------
@@ -167,7 +73,7 @@ class PinFlowController extends _$PinFlowController {
   /// that does not participate in the mount-token protocol.
   void reset(PinFlowMode mode) {
     _mountToken = null;
-    state = PinFlowState(mode: mode, step: _initialStep(mode));
+    _machine.reset(mode);
   }
 
   /// Claim the controller for a screen mount identified by [mountToken],
@@ -191,323 +97,12 @@ class PinFlowController extends _$PinFlowController {
   void initializeForMount(Object mountToken, PinFlowMode mode) {
     if (identical(_mountToken, mountToken)) return;
     _mountToken = mountToken;
-    state = PinFlowState(mode: mode, step: _initialStep(mode));
+    _machine.reset(mode);
   }
 
   /// Append a single digit. Submits automatically when 4 digits are entered.
-  void appendDigit(String d) {
-    if (state.busy || state.lockedOut) return;
-    if (state.digits.length >= 4) return;
-    state = state.copyWith(digits: state.digits + d, error: null);
-    if (state.digits.length == 4) {
-      _onFourDigits();
-    }
-  }
+  void appendDigit(String d) => _machine.appendDigit(d);
 
   /// Remove the last digit.
-  void backspace() {
-    if (state.busy || state.lockedOut) return;
-    if (state.digits.isEmpty) return;
-    state = state.copyWith(
-      digits: state.digits.substring(0, state.digits.length - 1),
-      error: null,
-    );
-  }
-
-  // ------------------------------------------------------------------
-  // Internal
-  // ------------------------------------------------------------------
-
-  static PinFlowStep _initialStep(PinFlowMode mode) {
-    switch (mode) {
-      case PinFlowMode.setup:
-        return PinFlowStep.enterNew;
-      case PinFlowMode.change:
-        return PinFlowStep.verifyCurrent;
-      case PinFlowMode.verify:
-        return PinFlowStep.verifyCurrent;
-    }
-  }
-
-  Future<void> _onFourDigits() async {
-    final pin = state.digits;
-    final pinService = ref.read(pinServiceProvider);
-    final profileId = ref.read(selectedProfileIdProvider);
-
-    switch (state.mode) {
-      case PinFlowMode.setup:
-        await _handleSetup(pin, profileId, pinService);
-      case PinFlowMode.change:
-        await _handleChange(pin, profileId, pinService);
-      case PinFlowMode.verify:
-        await _handleVerify(pin, profileId, pinService);
-    }
-  }
-
-  // --- Setup (enter → confirm → save) ---
-
-  Future<void> _handleSetup(
-    String pin,
-    int? profileId,
-    PinService pinService,
-  ) async {
-    if (state.step == PinFlowStep.enterNew) {
-      // First entry: store and ask to confirm.
-      state = state.copyWith(
-        firstPin: pin,
-        step: PinFlowStep.confirm,
-        digits: '',
-      );
-      return;
-    }
-
-    // Confirm step: validate match then persist.
-    if (pin != state.firstPin) {
-      state = state.copyWith(
-        error: _pinsDoNotMatch(),
-        step: PinFlowStep.enterNew,
-        firstPin: null,
-        digits: '',
-      );
-      return;
-    }
-
-    if (profileId == null) {
-      state = state.copyWith(
-        error: _noActiveProfile(),
-        step: PinFlowStep.enterNew,
-        firstPin: null,
-        digits: '',
-      );
-      return;
-    }
-
-    state = state.copyWith(busy: true, error: null);
-    try {
-      await pinService.setProfilePin(profileId, pin);
-      // SM-4: the container can be disposed while the bcrypt/secure-storage
-      // write above is in flight (e.g. app teardown); resuming and touching
-      // `state` on a disposed ref throws UnmountedRefException.
-      if (!ref.mounted) return;
-      // Clear digits immediately so the completion frame shows an empty
-      // keypad instead of 4 filled dots while maybePop() is in-flight.
-      state = state.copyWith(
-        busy: false,
-        completed: true,
-        step: PinFlowStep.done,
-        digits: '',
-      );
-    } on InvalidPinFormatException {
-      // AUD-profiles-09: PinService's typed validation failure (see
-      // AUD-onboarding-16) maps to a closed PinFlowError; the screen resolves
-      // the user-facing text via AppLocalizations through an exhaustive
-      // switch — the exception's dev-facing .message is never surfaced.
-      // SM-4: the await above may have raced a container disposal.
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        busy: false,
-        error: PinFlowError.invalidPinFormat,
-        step: PinFlowStep.enterNew,
-        firstPin: null,
-        digits: '',
-      );
-    } on ArgumentError catch (e, st) {
-      // AUD-profiles-20: ArgumentError.message is typed Object? (dynamic),
-      // not String — reading it with an unchecked `as String?` cast (the
-      // previous code here) would throw a TypeError the moment any caller
-      // constructed one with a non-String message (e.g.
-      // ArgumentError.value(42, 'pin', 99)). Read it null-safely via
-      // `?.toString()` purely for diagnostics; the user-facing state is the
-      // typed, generic PinFlowError.unexpected — never the raw message.
-      AppLogger.instance.warning(
-        event: 'pin_flow_setup_unexpected_argument_error',
-        fields: {'detail': e.message?.toString() ?? 'no message'},
-        exception: e,
-        stackTrace: st,
-      );
-      // SM-4: the await above may have raced a container disposal.
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        busy: false,
-        error: PinFlowError.unexpected,
-        step: PinFlowStep.enterNew,
-        firstPin: null,
-        digits: '',
-      );
-    }
-  }
-
-  // --- Change (verifyCurrent → enterNew → confirm → save) ---
-
-  Future<void> _handleChange(
-    String pin,
-    int? profileId,
-    PinService pinService,
-  ) async {
-    if (profileId == null) {
-      state = state.copyWith(error: _noActiveProfile(), digits: '');
-      return;
-    }
-
-    switch (state.step) {
-      case PinFlowStep.verifyCurrent:
-        state = state.copyWith(busy: true, error: null);
-        try {
-          final ok = await pinService.verifyProfilePin(profileId, pin);
-          // SM-4: the container can be disposed while the verify call above
-          // is in flight; resuming and touching `state` on a disposed ref
-          // throws UnmountedRefException.
-          if (!ref.mounted) return;
-          if (ok) {
-            state = state.copyWith(
-              busy: false,
-              step: PinFlowStep.enterNew,
-              digits: '',
-            );
-          } else {
-            state = state.copyWith(
-              busy: false,
-              error: _incorrectPin(),
-              digits: '',
-            );
-          }
-        } on PinLockoutException catch (e) {
-          // SM-4: the await above may have raced a container disposal.
-          if (!ref.mounted) return;
-          state = state.copyWith(
-            busy: false,
-            lockedOut: true,
-            lockoutMinutes: e.remainingMinutes,
-            digits: '',
-          );
-        }
-
-      case PinFlowStep.enterNew:
-        state = state.copyWith(
-          firstPin: pin,
-          step: PinFlowStep.confirm,
-          digits: '',
-        );
-
-      case PinFlowStep.confirm:
-        if (pin != state.firstPin) {
-          state = state.copyWith(
-            error: _pinsDoNotMatch(),
-            step: PinFlowStep.enterNew,
-            firstPin: null,
-            digits: '',
-          );
-          return;
-        }
-        state = state.copyWith(busy: true, error: null);
-        // AUD-profiles-05: same try/catch pattern as _handleSetup's confirm
-        // step — this step previously had no try/catch at all, so a typed
-        // PinService failure here (or an UnmountedRefException from a
-        // container disposed mid-await) went unguarded/unconverted.
-        try {
-          await pinService.setProfilePin(profileId, pin);
-          // SM-4: the container can be disposed while the write above is in
-          // flight (e.g. app teardown).
-          if (!ref.mounted) return;
-          // Clear digits so the completion frame shows an empty keypad while
-          // maybePop() is in-flight (same fix as _handleSetup).
-          state = state.copyWith(
-            busy: false,
-            completed: true,
-            step: PinFlowStep.done,
-            digits: '',
-          );
-        } on InvalidPinFormatException {
-          // AUD-profiles-09: see the matching catch in _handleSetup — the
-          // typed PinService failure maps to a closed PinFlowError, resolved
-          // to text by the screen via an exhaustive switch.
-          if (!ref.mounted) return;
-          state = state.copyWith(
-            busy: false,
-            error: PinFlowError.invalidPinFormat,
-            step: PinFlowStep.enterNew,
-            firstPin: null,
-            digits: '',
-          );
-        } on ArgumentError catch (e, st) {
-          // AUD-profiles-20: see the matching catch in _handleSetup — read
-          // ArgumentError.message null-safely via `?.toString()` purely for
-          // diagnostics; the user-facing state stays the typed, generic
-          // PinFlowError.unexpected.
-          AppLogger.instance.warning(
-            event: 'pin_flow_change_unexpected_argument_error',
-            fields: {'detail': e.message?.toString() ?? 'no message'},
-            exception: e,
-            stackTrace: st,
-          );
-          if (!ref.mounted) return;
-          state = state.copyWith(
-            busy: false,
-            error: PinFlowError.unexpected,
-            step: PinFlowStep.enterNew,
-            firstPin: null,
-            digits: '',
-          );
-        }
-
-      case PinFlowStep.done:
-        break;
-    }
-  }
-
-  // --- Verify (single verify → done) ---
-
-  Future<void> _handleVerify(
-    String pin,
-    int? profileId,
-    PinService pinService,
-  ) async {
-    if (profileId == null) {
-      state = state.copyWith(error: _noActiveProfile(), digits: '');
-      return;
-    }
-
-    state = state.copyWith(busy: true, error: null);
-    try {
-      final ok = await pinService.verifyProfilePin(profileId, pin);
-      // SM-4: the container can be disposed while the verify call above is
-      // in flight; resuming and touching `state` on a disposed ref throws
-      // UnmountedRefException.
-      if (!ref.mounted) return;
-      if (ok) {
-        // Clear digits so the completion frame shows an empty keypad while
-        // maybePop() is in-flight.
-        state = state.copyWith(
-          busy: false,
-          completed: true,
-          step: PinFlowStep.done,
-          digits: '',
-        );
-      } else {
-        state = state.copyWith(busy: false, error: _incorrectPin(), digits: '');
-      }
-    } on PinLockoutException catch (e) {
-      // SM-4: the await above may have raced a container disposal.
-      if (!ref.mounted) return;
-      state = state.copyWith(
-        busy: false,
-        lockedOut: true,
-        lockoutMinutes: e.remainingMinutes,
-        digits: '',
-      );
-    }
-  }
-
-  // ------------------------------------------------------------------
-  // Error-code selectors (AUD-profiles-09).
-  //
-  // The controller has no BuildContext, so it can only select a typed
-  // PinFlowError — never localized text. PinFlowScreen (which has
-  // AppLocalizations) resolves each code to text via an exhaustive switch.
-  // Tests can assert on these codes directly without needing a widget tree.
-  // ------------------------------------------------------------------
-
-  PinFlowError _incorrectPin() => PinFlowError.incorrectPin;
-  PinFlowError _pinsDoNotMatch() => PinFlowError.pinsDoNotMatch;
-  PinFlowError _noActiveProfile() => PinFlowError.noActiveProfile;
+  void backspace() => _machine.backspace();
 }

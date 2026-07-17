@@ -8,34 +8,11 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/pin_flow_controller.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/pin_flow_error_text.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 export 'package:learning_tracker/features/profiles/presentation/providers/pin_flow_controller.dart'
     show PinFlowMode;
-
-// ---------------------------------------------------------------------------
-// Error-code resolution (AUD-profiles-09)
-// ---------------------------------------------------------------------------
-
-/// Localizes a [PinFlowError] code into its ARB string.
-///
-/// The PIN flow's controller has no `BuildContext`, so [PinFlowState.error]
-/// is a closed enum ([PinFlowError]), never free text (AUD-profiles-09,
-/// EH-5/AX-2). This switch is EXHAUSTIVE — deliberately no default/fallback
-/// arm — so adding a new [PinFlowError] value without adding a case here is a
-/// compile error, not a silent raw-English leak to Hebrew-locale users. Both
-/// [_PinFlowScreenState] (change/verify modes) and [_SetupScaffold] (setup
-/// mode) resolve through this single function so the two surfaces cannot
-/// drift apart the way `_resolveError`'s old string-matching once did.
-String? _resolvePinFlowError(PinFlowError? error, AppLocalizations l10n) =>
-    switch (error) {
-      null => null,
-      PinFlowError.incorrectPin => l10n.incorrectPin,
-      PinFlowError.pinsDoNotMatch => l10n.pinsDoNotMatch,
-      PinFlowError.noActiveProfile => l10n.pinNoActiveProfile,
-      PinFlowError.invalidPinFormat => l10n.pinInvalidFormat,
-      PinFlowError.unexpected => l10n.pinFailedToSave,
-    };
 
 // ---------------------------------------------------------------------------
 // Route
@@ -185,7 +162,7 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
               title: _resolveTitle(state, l10n),
               subtitle: _resolveSubtitle(state, l10n),
               digits: state.digits,
-              errorMessage: _resolvePinFlowError(state.error, l10n),
+              errorMessage: resolvePinFlowErrorText(state.error, l10n),
               lockedOut: state.lockedOut,
               lockoutMinutes: state.lockoutMinutes,
               busy: state.busy,
@@ -351,7 +328,7 @@ class _SetupScaffold extends StatelessWidget {
                     // the first time saw raw English error text. Resolve it
                     // through the same exhaustive switch as the
                     // change/verify surface.
-                    errorMessage: _resolvePinFlowError(state.error, l10n),
+                    errorMessage: resolvePinFlowErrorText(state.error, l10n),
                     lockedOut: false,
                     lockoutMinutes: 0,
                     busy: state.busy,
@@ -373,11 +350,21 @@ class _SetupScaffold extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Route wrappers — three named routes that resolve to PinFlowScreen.
+// Route wrapper — the one named route that resolves to PinFlowScreen.
 //
-// AutoRoute requires a separate @RoutePage class per route name. These thin
-// wrappers pass the correct [PinFlowMode] down so that the same UI drives
-// setup, change, and verify flows.
+// AUD-profiles-06: this used to be three route wrappers (setup/verify/
+// change), but grepping every `.push(`/`.pushRoute(` call site in `lib/`
+// showed PinFlowVerifyRoute and PinFlowChangeRoute were registered and never
+// pushed anywhere — the app's real verify/change UX goes through the
+// dialog-based `showParentPinVerificationDialog` / `showParentPinChangeDialog`
+// (parent_pin_keypad_dialog.dart) via router_provider.dart's `promptForPin`
+// and settings_screen.dart. Only the setup route is a real navigation target
+// (PinGuard.pinSetupRoute, and settings_screen.dart's "Set Parent PIN" tile
+// when no PIN exists yet), so it is the only wrapper kept. PinFlowScreen
+// itself still supports [PinFlowMode.change]/[PinFlowMode.verify] — that
+// logic is exercised directly by the modal dialogs' shared [PinEntryMachine]
+// and by this screen's own widget tests, just no longer behind a second
+// unreachable navigation path.
 // ---------------------------------------------------------------------------
 
 /// Route for setting up a parent PIN for the first time (or after a wipe).
@@ -389,26 +376,4 @@ class PinFlowSetupScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       const PinFlowScreen(mode: PinFlowMode.setup);
-}
-
-/// Route for verifying the parent PIN to unlock a guarded route.
-/// Path: /parent-mode/pin-entry
-@RoutePage(name: 'PinFlowVerifyRoute')
-class PinFlowVerifyScreen extends StatelessWidget {
-  const PinFlowVerifyScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) =>
-      const PinFlowScreen(mode: PinFlowMode.verify);
-}
-
-/// Route for changing an existing parent PIN.
-/// Path: /parent-mode/pin-change
-@RoutePage(name: 'PinFlowChangeRoute')
-class PinFlowChangeScreen extends StatelessWidget {
-  const PinFlowChangeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) =>
-      const PinFlowScreen(mode: PinFlowMode.change);
 }

@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_entry_machine.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_mode_dialog_frame.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/pin_flow_error_text.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Shows the redesigned parent PIN keypad, verifies against [profileId],
@@ -66,8 +68,6 @@ const Color _pinDotInner = Color(0xFFC9D0DA);
 
 // --- Verification -----------------------------------------------------------
 
-enum _ChangeStep { verifyCurrent, enterNew, confirmNew }
-
 class _ParentPinVerificationDialog extends StatefulWidget {
   const _ParentPinVerificationDialog({
     required this.profileId,
@@ -89,85 +89,43 @@ class _ParentPinVerificationDialog extends StatefulWidget {
 
 class _ParentPinVerificationDialogState
     extends State<_ParentPinVerificationDialog> {
-  String _digits = '';
-  String? _errorMessage;
-  bool _busy = false;
-  bool _lockedOut = false;
-  int _lockoutMinutes = 0;
+  // AUD-profiles-06: digit-buffer/busy/lockout transitions now live in one
+  // shared implementation (PinEntryMachine) instead of being hand-rolled
+  // again in this dialog.
+  late final PinEntryMachine _machine = PinEntryMachine(
+    pinService: () => widget.pinService,
+    profileId: () => widget.profileId,
+    onStateChanged: _onMachineStateChanged,
+    isActive: () => mounted,
+    initialMode: PinFlowMode.verify,
+  );
 
-  Future<void> _submitIfComplete() async {
-    if (_digits.length != 4 || _busy || _lockedOut) return;
-    setState(() {
-      _busy = true;
-      _errorMessage = null;
-    });
-    final l10n = AppLocalizations.of(context)!;
-    try {
-      final ok = await widget.pinService.verifyProfilePin(
-        widget.profileId,
-        _digits,
-      );
-      if (!mounted) return;
-      if (ok) {
-        Navigator.of(context).pop(true);
-      } else {
-        setState(() {
-          _digits = '';
-          _errorMessage = l10n.incorrectPin;
-          _busy = false;
-        });
-      }
-    } on PinLockoutException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _lockedOut = true;
-        _lockoutMinutes = e.remainingMinutes;
-        _digits = '';
-        _busy = false;
-        _errorMessage = null;
-      });
+  void _onMachineStateChanged(PinFlowState state) {
+    if (!mounted) return;
+    if (state.completed) {
+      Navigator.of(context).pop(true);
+      return;
     }
+    setState(() {});
   }
 
-  void _appendDigit(String d) {
-    if (_busy || _lockedOut) return;
-    if (_digits.length >= 4) return;
-    setState(() {
-      _digits += d;
-      _errorMessage = null;
-    });
-    if (_digits.length == 4) {
-      _submitIfComplete();
-    }
-  }
-
-  void _backspace() {
-    if (_busy || _lockedOut) return;
-    if (_digits.isEmpty) return;
-    setState(() {
-      _digits = _digits.substring(0, _digits.length - 1);
-      _errorMessage = null;
-    });
-  }
-
-  void _cancel() {
-    Navigator.of(context).pop(false);
-  }
+  void _cancel() => Navigator.of(context).pop(false);
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final state = _machine.state;
     return PinKeypadDialogFrame(
       title: l10n.enterParentPin,
       subtitle: widget.subtitle ?? l10n.enterParentPinSubtitle,
-      digits: _digits,
-      errorMessage: _errorMessage,
-      lockedOut: _lockedOut,
-      lockoutMinutes: _lockoutMinutes,
-      busy: _busy,
+      digits: state.digits,
+      errorMessage: resolvePinFlowErrorText(state.error, l10n),
+      lockedOut: state.lockedOut,
+      lockoutMinutes: state.lockoutMinutes,
+      busy: state.busy,
       onClose: _cancel,
-      onDigit: _appendDigit,
-      onBackspace: _backspace,
+      onDigit: _machine.appendDigit,
+      onBackspace: _machine.backspace,
       onCancel: _cancel,
     );
   }
@@ -189,147 +147,64 @@ class _ParentPinChangeDialog extends StatefulWidget {
 }
 
 class _ParentPinChangeDialogState extends State<_ParentPinChangeDialog> {
-  _ChangeStep _step = _ChangeStep.verifyCurrent;
-  String? _newPin;
-  String _digits = '';
-  String? _errorMessage;
-  bool _busy = false;
-  bool _lockedOut = false;
-  int _lockoutMinutes = 0;
+  // AUD-profiles-06: same shared PinEntryMachine as verification/setup —
+  // this dialog's confirm-step save previously had NO try/catch at all
+  // around setProfilePin (an uncaught InvalidPinFormatException/ArgumentError
+  // would have escaped as an unhandled Future error); it now gets the same
+  // guarded save as every other mode for free.
+  late final PinEntryMachine _machine = PinEntryMachine(
+    pinService: () => widget.pinService,
+    profileId: () => widget.profileId,
+    onStateChanged: _onMachineStateChanged,
+    isActive: () => mounted,
+    initialMode: PinFlowMode.change,
+  );
 
-  String _title(AppLocalizations l10n) {
-    switch (_step) {
-      case _ChangeStep.verifyCurrent:
-        return l10n.enterCurrentPin;
-      case _ChangeStep.enterNew:
-        return l10n.enterNewPin;
-      case _ChangeStep.confirmNew:
-        return l10n.confirmNewPin;
+  void _onMachineStateChanged(PinFlowState state) {
+    if (!mounted) return;
+    if (state.completed) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.pinChangedSuccessfully)));
+      Navigator.of(context).pop(true);
+      return;
     }
+    setState(() {});
   }
 
-  String _subtitle(AppLocalizations l10n) {
-    switch (_step) {
-      case _ChangeStep.verifyCurrent:
-        // PP-12 fix: use change-flow subtitle, not the verify-gate subtitle.
-        return l10n.enterCurrentPinSubtitle;
-      case _ChangeStep.enterNew:
-        return l10n.enterNewPinSubtitle;
-      case _ChangeStep.confirmNew:
-        return l10n.confirmNewPinSubtitle;
-    }
-  }
+  String _title(PinFlowStep step, AppLocalizations l10n) => switch (step) {
+    PinFlowStep.verifyCurrent => l10n.enterCurrentPin,
+    PinFlowStep.enterNew => l10n.enterNewPin,
+    PinFlowStep.confirm => l10n.confirmNewPin,
+    PinFlowStep.done => l10n.changeParentPin,
+  };
 
-  Future<void> _onFourDigits() async {
-    if (_digits.length != 4 || _busy || _lockedOut) return;
-    setState(() {
-      _busy = true;
-      _errorMessage = null;
-    });
-    final pin = _digits;
-    final l10n = AppLocalizations.of(context)!;
+  String _subtitle(PinFlowStep step, AppLocalizations l10n) => switch (step) {
+    // PP-12 fix: use change-flow subtitle, not the verify-gate subtitle.
+    PinFlowStep.verifyCurrent => l10n.enterCurrentPinSubtitle,
+    PinFlowStep.enterNew => l10n.enterNewPinSubtitle,
+    PinFlowStep.confirm => l10n.confirmNewPinSubtitle,
+    PinFlowStep.done => '',
+  };
 
-    switch (_step) {
-      case _ChangeStep.verifyCurrent:
-        try {
-          final ok = await widget.pinService.verifyProfilePin(
-            widget.profileId,
-            pin,
-          );
-          if (!mounted) return;
-          if (ok) {
-            setState(() {
-              _step = _ChangeStep.enterNew;
-              _digits = '';
-              _busy = false;
-            });
-          } else {
-            setState(() {
-              _digits = '';
-              _errorMessage = l10n.incorrectPin;
-              _busy = false;
-            });
-          }
-        } on PinLockoutException catch (e) {
-          if (!mounted) return;
-          setState(() {
-            _lockedOut = true;
-            _lockoutMinutes = e.remainingMinutes;
-            _digits = '';
-            _busy = false;
-          });
-        }
-        return;
-
-      case _ChangeStep.enterNew:
-        setState(() {
-          _newPin = pin;
-          _step = _ChangeStep.confirmNew;
-          _digits = '';
-          _busy = false;
-        });
-        return;
-
-      case _ChangeStep.confirmNew:
-        if (pin != _newPin) {
-          if (!mounted) return;
-          setState(() {
-            _errorMessage = l10n.pinsDoNotMatch;
-            _step = _ChangeStep.enterNew;
-            _newPin = null;
-            _digits = '';
-            _busy = false;
-          });
-          return;
-        }
-        await widget.pinService.setProfilePin(widget.profileId, pin);
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.pinChangedSuccessfully)));
-        Navigator.of(context).pop(true);
-    }
-  }
-
-  void _appendDigit(String d) {
-    if (_busy || _lockedOut) return;
-    if (_digits.length >= 4) return;
-    setState(() {
-      _digits += d;
-      _errorMessage = null;
-    });
-    if (_digits.length == 4) {
-      _onFourDigits();
-    }
-  }
-
-  void _backspace() {
-    if (_busy || _lockedOut) return;
-    if (_digits.isEmpty) return;
-    setState(() {
-      _digits = _digits.substring(0, _digits.length - 1);
-      _errorMessage = null;
-    });
-  }
-
-  void _cancel() {
-    Navigator.of(context).pop(false);
-  }
+  void _cancel() => Navigator.of(context).pop(false);
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final state = _machine.state;
     return PinKeypadDialogFrame(
-      title: _title(l10n),
-      subtitle: _subtitle(l10n),
-      digits: _digits,
-      errorMessage: _errorMessage,
-      lockedOut: _lockedOut,
-      lockoutMinutes: _lockoutMinutes,
-      busy: _busy,
+      title: _title(state.step, l10n),
+      subtitle: _subtitle(state.step, l10n),
+      digits: state.digits,
+      errorMessage: resolvePinFlowErrorText(state.error, l10n),
+      lockedOut: state.lockedOut,
+      lockoutMinutes: state.lockoutMinutes,
+      busy: state.busy,
       onClose: _cancel,
-      onDigit: _appendDigit,
-      onBackspace: _backspace,
+      onDigit: _machine.appendDigit,
+      onBackspace: _machine.backspace,
       onCancel: _cancel,
     );
   }
