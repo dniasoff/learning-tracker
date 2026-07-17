@@ -2716,13 +2716,20 @@
   {
    "id": "AUD-core-ids-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Adopt or delete 6 of 7 unused NaturalKey.forX factories — mergers duplicate the exact key-format logic inline",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "d421b991655de2f13231932b96c59b865dc1647d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-ids-01 AC1 OK: doc comment natural_key.dart:9-20 corrected - old 'scattered across merger layer' claim replaced with explicit 'Adoption is not repo-wide'",
+    "AUD-core-ids-01 AC1 OK: 6 mergers routed - bookmark:46, learning_order:48, settings:45, stage_definition:59, track_config:48 forX + profile_program:75 fromSingle",
+    "AUD-core-ids-01 AC2 OK: natural_key_test.dart pins forStageDefinition->'bavli|7|0' & forLearningOrder->'bavli|Berakhot', genuine exact-string, 79/79 pass",
+    "AUD-core-ids-01 behavior OK: factory outputs byte-identical to pre-fix inline; merger round-trip 'key written matches read back' tests pass unchanged"
+   ],
+   "notes": "6/7 forX factories were unused; mergers hand-built identical strings. Routed 5 mergers through their dedicated factory, profile_program via fromSingle. Format preserved exactly, doc comment corrected, AC-required regression test added pinning exact strings."
   },
   {
    "id": "AUD-settings-09",
