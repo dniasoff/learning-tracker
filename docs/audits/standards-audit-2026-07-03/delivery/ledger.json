@@ -3248,13 +3248,19 @@
     {
       "id": "AUD-profiles-06",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Consolidate the PIN entry/verify/change/setup state machine duplicated across 3 live implementations in features/profiles",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "84910d8947bc203e9a89334d8ca0885826454257"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-06 AC1 OK: PinEntryMachine is sole transition impl; controller+all 3 dialogs delegate; grep shows no hand-rolled transitions left in presentation files",
+        "AUD-profiles-06 AC2 OK: Verify/ChangeRoute+wrappers deleted (grep: comments only); change/verify logic now single shared machine, live via dialogs",
+        "AUD-profiles-06 AC3 OK: pin_flow_controller_test.dart + parent_pin_keypad_dialog_test.dart both green in the 115-test targeted run (exit 0)"
+      ],
+      "notes": "PinEntryMachine is now the single shared transition impl; all 3 dialogs + controller delegate to it. Dead routes deleted; controller's change/verify modes kept (now live, shared). Red-first test verified against pre-fix code. All 3 ACs green."
     },
     {
       "id": "AUD-t-profiles-03",
