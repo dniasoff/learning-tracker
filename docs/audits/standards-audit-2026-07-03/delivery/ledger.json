@@ -2848,13 +2848,27 @@
   {
    "id": "AUD-core-preferences-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Wrap the unguarded SharedPreferences/service writes in 9 plain-value Notifier mutation methods across 6 files",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "0f1208f4386b36edf845548f75072204e3a00416"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-preferences-04 AC1 OK: 16 live sites guarded (prefs 5x guardedPersist, sacred_location 4x, scheduler 2x, notifications 5x AsyncValue.guard via _guardedPersist)",
+    "AUD-core-preferences-04 AC1 OK: grep 'await prefs.set' in 6 files -> all hits inside guard closures; L431/437/805 are top-level helpers, not named Notifier methods",
+    "AUD-core-preferences-04 AC1 OK: add_track _persist() whole body try/catch+AppLogger; onboarding advance() save guarded + init/advance/jumpTo load via _guardedLoad",
+    "AUD-core-preferences-04 AC1 OK: rollback wired at every site (onFailure: () => state = previous), so state cannot diverge from persisted truth without an AppLogger.error",
+    "AUD-core-preferences-04 AC2 OK: 6/6 named sites have throwing-fake tests (ShowNikud.set, toggle, setManualCity, skip, goBack->_persist, advance); 19 pass my run",
+    "AUD-core-preferences-04 AC2 OK: tests use runZonedGuarded to assert no unobserved rejection + assert state rollback/AsyncError - real behavior, not mock assertions",
+    "AUD-core-preferences-04 AC2 OK: every regression test carries a success control case ('guard must not mask a genuine successful persist') - guards against inverted fix",
+    "AUD-core-preferences-04 AC2 OK: fixture throwing_shared_preferences_store.dart overrides real setValue/remove to throw; reads still succeed so build() unaffected",
+    "AUD-core-preferences-04 AC3 OK: tool/check_guarded_persist.dart exists + wired into make audit as check 80/80 (Makefile diff); make audit PASSED in my run",
+    "AUD-core-preferences-04 AC3 OK: reverted prefs+scheduler to pre-fix -> checker exit 1, named set()/skip()/undoSkip(). Fires on REAL violations, not just fixtures",
+    "AUD-core-preferences-04 AC3 OK: self-test proves red fixture -> exit 1 with method name, delete -> exit 0, plus try/catch and guardedPersist negative cases"
+   ],
+   "notes": "Verified 21 sites unguarded. Added guardedPersist helper (6 files, rollback+log); notifications use SM-5 AsyncValue.guard. add_track _persist try/catch; onboarding advance/init/jumpTo guarded. Rule-0 checker added to make audit (80/80), self-tested. clearSaved() out-of-scope, baselined not fixed."
   },
   {
    "id": "AUD-l10n-01",
