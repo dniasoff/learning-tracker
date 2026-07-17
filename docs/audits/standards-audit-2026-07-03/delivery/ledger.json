@@ -8755,13 +8755,18 @@
   {
    "id": "AUD-core-ids-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix or delete NaturalKey.forLearnerProfile's fragile non-null-Object emptiness check — fallbackProfileId branch is effectively unreachable and untested",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "d240b6ece2023c8093fd9d888c374803c2293b05"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-ids-02 AC1 (if kept) OK: test:15-22 forLearnerProfile(profileIdOrRow:null,fallback:42) asserts value=='42'; sig now Object?+`==null` at natural_key.dart:92,95",
+    "AUD-core-ids-02 AC2 (deleted) N/A: builder took 'if kept' path (companion -01 out of scope); grep shows zero non-test callers, no new dead code"
+   ],
+   "notes": "Re-verified: still non-nullable Object + .toString().isNotEmpty, zero callers. Companion AUD-core-ids-01 left it unused, so 'if kept' path: Object? + == null. Red-first: test w/ profileIdOrRow:null failed to COMPILE on old sig, then fix applied, 3/3 green."
   },
   {
    "id": "AUD-core-time-01",
