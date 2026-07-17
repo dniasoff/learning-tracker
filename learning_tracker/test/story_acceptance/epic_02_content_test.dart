@@ -14,8 +14,11 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/content_repository_impl.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/data/services/text_download_service.dart';
@@ -311,16 +314,35 @@ void main() {
       expect(FontSize.small.multiplier, lessThan(FontSize.medium.multiplier));
       expect(FontSize.medium.multiplier, lessThan(FontSize.large.multiplier));
 
-      // Preferences can be changed
+      // AUD-core-preferences-03: preferences can be changed -- drive the
+      // REAL provider the text-display screen reads (currentFontSizeProvider,
+      // backed by TextDisplayPreference), not the dead TextDisplayPreferences
+      // singleton (deleted; it read/wrote unscoped legacy keys and nothing in
+      // lib/ consumed it). Asserting through `textDisplayPreferenceProvider`'s
+      // own `.read()` after the write proves a real SharedPreferences
+      // round-trip -- this fails if TextDisplayPreference.writeToPrefs (or
+      // its key derivation) stops persisting.
       SharedPreferences.setMockInitialValues({});
-      final prefs = TextDisplayPreferences.instance;
-      prefs.reset();
-      expect(prefs.fontSize, FontSize.medium); // default
+      final container = ProviderContainer.test(
+        overrides: [
+          authStateProvider.overrideWithValue(const AuthState.signedOut()),
+        ],
+      );
 
-      await prefs.setFontSize(FontSize.large);
-      expect(prefs.fontSize, FontSize.large);
+      expect(
+        container.read(currentFontSizeProvider),
+        FontSize.medium,
+      ); // default
 
-      prefs.reset();
+      await container
+          .read(currentFontSizeProvider.notifier)
+          .set(FontSize.large);
+      expect(container.read(currentFontSizeProvider), FontSize.large);
+
+      final persisted = await container
+          .read(textDisplayPreferenceProvider)
+          .read(0);
+      expect(persisted, FontSize.large);
     });
   });
 
@@ -1031,24 +1053,32 @@ void main() {
       expect(HebrewUtils.hasNikud('\u05DE\u05D0'), isFalse);
     });
 
-    test(
-      'TextDisplayPreferences.showNikud defaults to true and persists',
-      () async {
-        SharedPreferences.setMockInitialValues({});
-        final prefs = TextDisplayPreferences.instance;
-        prefs.reset();
+    test('showNikudPrefProvider defaults to true and persists', () async {
+      // AUD-core-preferences-03: drive the REAL provider the text-display
+      // screen reads (showNikudPrefProvider, backed by NikudPreference), not
+      // the dead TextDisplayPreferences singleton (deleted; it read/wrote
+      // unscoped legacy keys and nothing in lib/ consumed it). Asserting
+      // through `nikudPreferenceProvider`'s own `.read()` after each write
+      // proves a real SharedPreferences round-trip -- this fails if
+      // NikudPreference.writeToPrefs (or its key derivation) stops
+      // persisting.
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer.test(
+        overrides: [
+          authStateProvider.overrideWithValue(const AuthState.signedOut()),
+        ],
+      );
 
-        expect(prefs.showNikud, isTrue);
+      expect(container.read(showNikudPrefProvider), isTrue); // default
 
-        await prefs.setShowNikud(false);
-        expect(prefs.showNikud, isFalse);
+      await container.read(showNikudPrefProvider.notifier).set(false);
+      expect(container.read(showNikudPrefProvider), isFalse);
+      expect(await container.read(nikudPreferenceProvider).read(0), isFalse);
 
-        await prefs.setShowNikud(true);
-        expect(prefs.showNikud, isTrue);
-
-        prefs.reset();
-      },
-    );
+      await container.read(showNikudPrefProvider.notifier).set(true);
+      expect(container.read(showNikudPrefProvider), isTrue);
+      expect(await container.read(nikudPreferenceProvider).read(0), isTrue);
+    });
 
     test(
       'TextDownloadService reports not-downloaded for a fresh profile',
