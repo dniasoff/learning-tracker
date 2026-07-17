@@ -3344,13 +3344,20 @@
   {
    "id": "AUD-core-auth-03",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace hardcoded English StateError messages in FirebaseAuthGatewayImpl with typed error codes",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "5c47175345103338961c9b9d5279f02acf447d8a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-auth-03 AC1 OK: 0 'throw StateError(' in gateway impl (only docstring L21); all 8 guards throw typed NotAuthenticatedException",
+    "AUD-core-auth-03 AC2 OK: 8 'no user signed in' gateway tests updated isA<StateError>->isA<NotAuthenticatedException>(), all pass",
+    "AUD-core-auth-03 AC3 OK: overlay raw e.toString() removed (bool _hasError+AppLogger); 3 other callers render l10n; red-first widget test added",
+    "AUD-core-auth-03 AC3 grep OK: Makefile greps 72/73+73/73 present, clean, and confirmed to FIRE on injected violations, pass clean"
+   ],
+   "notes": "4 sites had grown to 8 (AUD-core-auth-02 deferred this); defect still live. Added NotAuthenticatedException(InternalException), replaced 8 StateError throws, updated 8 tests. AC3: found+fixed a real raw e.toString() render in delete overlay (red-first). Added 2 audit greps, fire-verified."
   },
   {
    "id": "AUD-core-network-01",
