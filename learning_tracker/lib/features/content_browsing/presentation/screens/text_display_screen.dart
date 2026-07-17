@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -667,8 +668,13 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       // application layer — not just by the UI button being disabled.
       // This ensures any future call site (keyboard shortcut, notification action,
       // etc.) that bypasses the UI still hits the domain boundary.
+      // AUD-content_browsing-03: inject analytics so tutor_live_mark_blocked
+      // (W7.11) actually fires when the domain guard rejects a tutor
+      // session — without this, `_analytics` stays null inside the use
+      // case and the dashboard-visibility event silently never fires.
       final markLiveUseCase = MarkLiveCompletionUseCase<MarkCompletionResult>(
         session: session,
+        analytics: ref.read(analyticsServiceProvider),
       );
       final completionUseCase = ref.read(markCompletionUseCaseProvider);
 
