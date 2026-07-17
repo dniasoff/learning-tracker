@@ -10467,13 +10467,18 @@
   {
    "id": "AUD-core-auth-06",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Guard the force-unwrapped credential.user in FirebaseAuthGatewayImpl.createUserWithEmailAndPassword",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "5bcf991dae5e83bce281e106448d07faf17cf0c7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-auth-06 AC1 OK: grep '.user!' in impl file returns nothing (exit 1); lines 86-90 null-check credential.user + throw StateError",
+    "AUD-core-auth-06 AC2 OK: new test stubs credential.user=null, drives real gateway, asserts StateError; red-first proven (pre-fix fails _TypeError@86), 38/38 post-fix"
+   ],
+   "notes": "Line 86 confirmed still had credential.user!.uid. Red-first test caught raw _TypeError before fix; fixed via null-check + throw StateError, matching file's existing pattern (EH-5 typed exc. is separate finding AUD-core-auth-03, not yet done). ACs verified: no bare ! remains; new test passes."
   },
   {
    "id": "AUD-t-cross-80",
