@@ -5701,13 +5701,22 @@
   {
    "id": "AUD-sacred_time-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Fix ZmanimWindowService polar-fallback candle-lighting/tzais to use the target location's time, not the device's",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "4b8567a8cf18226c0182c255cc6d1e6002625cb8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-sacred_time-04 AC1 OK: svc.dart:209-223 _polarFallbackUtc = DateTime.utc minus longitude/15 offset; both sites :167 (17h), :191 (21h) route via it",
+    "AUD-sacred_time-04 AC1 OK: old DateTime(...).toUtc() local ctor gone; same UTC instant across 7 TZs (UTC-11..+14, incl +5:45 Kathmandu)",
+    "AUD-sacred_time-04 AC2 OK: test :130 extreme-lat Svalbard 78.2232/15.6267, 2026-07-03/04 midnight sun -> getCandleLighting()/getTzais() null",
+    "AUD-sacred_time-04 AC2 OK: null branch proven live - pre-fix result shifts w/ TZ (17:00Z UTC, 15:00Z Berlin, 21:00Z NY), only reachable via fallback",
+    "AUD-sacred_time-04 AC2 OK: asserts absolute UTC vs longitude expectation; PASS under UTC/Berlin/NY/Kiritimati/Midway/Kathmandu/Sydney",
+    "AUD-sacred_time-04 AC2 OK: 2-min bound discriminates - nearest real offset UTC+1 lands 2.5min out, still red. Not vacuous."
+   ],
+   "notes": "Evidence verified, no drift. Red-first test failed pre-fix: actual=15:00:00Z (device CEST+2) vs expected ~15:57:00Z (target longitude offset), 57min gap. Fix: DateTime.utc minus longitude-derived solar offset replaces device-local DateTime(...).toUtc(). Both ACs satisfied."
   },
   {
    "id": "AUD-scheduler-15",
