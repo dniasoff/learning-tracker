@@ -1175,13 +1175,22 @@
   {
    "id": "AUD-sacred_time-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P1",
    "title": "Guard ref.mounted after await in SacredLocationNotifier/InIsraelNotifier mutator methods",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "dcbcc77eecc64471dc7b45590afaeb90cbe04e76"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-sacred_time-01 AC1 OK: detect guards L57 before state L58 + ref.invalidate L59; setManualCity L99 before state L100 + invalidate L101",
+    "AUD-sacred_time-01 AC1 OK: setManualCoords guards L123 before _pushSnapshot L124; _pushSnapshot self-guards L128 before ref.read L129",
+    "AUD-sacred_time-01 AC1 OK: InIsraelNotifier._load guards L156; setInIsrael guards L169 before ref.read L170. No unguarded async method left.",
+    "AUD-sacred_time-01 AC1 OK: ref.read at L41 runs before the await suspends, so needs no guard; first post-await touch L58 guarded at L57.",
+    "AUD-sacred_time-01 AC2 OK: _CompleterLocationService (test L368-380) holds detect() mid-await; 4 tests assert expectLater(future, completes) on dispose race.",
+    "AUD-sacred_time-01 AC2 OK: red-first reproduced by me - reversed patch gives 4/4 real disposed-Ref failures; restored tree 53/53 pass."
+   ],
+   "notes": "Re-verified: commit 952252d9 only guarded _load(). Defect confirmed live in 4 named methods. Added ref.mounted guards to all 4 + _pushSnapshot. Red-first: 4 tests failed pre-fix at exact evidence lines, pass post-fix. No new lint rule needed."
   },
   {
    "id": "AUD-settings-03",
