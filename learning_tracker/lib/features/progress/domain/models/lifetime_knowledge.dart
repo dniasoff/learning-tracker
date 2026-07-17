@@ -101,7 +101,7 @@ class LifetimeTreeNode {
   /// Hierarchy level (1..4) — Seder / Masechta / Perek / Mishna for Mishnayos.
   final int level;
 
-  /// Raw value from `content_items.levelN` (e.g. "Chullin", "1" for Perek 1).
+  /// Raw value from `ContentItem.levelN` (e.g. "Chullin", "1" for Perek 1).
   /// Sortable; usable as a node key.
   final String rawValue;
 
