@@ -322,6 +322,72 @@ final lifetimeSummariesProvider = FutureProvider.autoDispose
 @Deprecated('Use lifetimeSummariesProvider or lifetimeDataProvider instead')
 final globalLifetimeCurriculaProvider = lifetimeSummariesProvider;
 
+/// Profile-wide completions load for [trackDualProgressMetricsProvider],
+/// partitioned by trackId.
+///
+/// One query per profile replaces the [CompletionDao.getCompletionsByTrackAndProfile]
+/// read that previously ran once PER TRACK inside the per-track loop below.
+/// AUD-progress-03 — N+1 fix (sibling of the F13 fix above, extended to the
+/// per-track dual-progress loop F13 left un-batched).
+final trackCompletionsByProfileProvider = FutureProvider.autoDispose
+    .family<Map<int, List<Completion>>, int>(
+      name: 'trackCompletionsByProfileProvider',
+      (ref, profileId) async {
+        final db = ref.watch(userDatabaseProvider);
+        final all = await db.completionDao.getCompletionsByProfile(profileId);
+        final out = <int, List<Completion>>{};
+        for (final c in all) {
+          (out[c.trackId] ??= <Completion>[]).add(c);
+        }
+        return out;
+      },
+    );
+
+/// Profile-wide learning-ledger load for [trackDualProgressMetricsProvider],
+/// partitioned by trackId.
+///
+/// One query per profile replaces the [LearningLedgerDao.getEntriesByTrack]
+/// read that previously ran once PER TRACK inside the per-track loop below.
+/// Ledger rows with a `null` trackId (survive track deletion via
+/// `ON DELETE SET NULL`) are omitted — they can never match a live track's
+/// `track.id` lookup, mirroring [LearningLedgerDao.getEntriesByTrack]'s
+/// non-null equality filter. AUD-progress-03 — N+1 fix.
+final trackLedgerEntriesByProfileProvider = FutureProvider.autoDispose
+    .family<Map<int, List<LearningLedgerData>>, int>(
+      name: 'trackLedgerEntriesByProfileProvider',
+      (ref, profileId) async {
+        final db = ref.watch(userDatabaseProvider);
+        final all = await db.learningLedgerDao.getEntriesByProfile(profileId);
+        final out = <int, List<LearningLedgerData>>{};
+        for (final e in all) {
+          final trackId = e.trackId;
+          if (trackId == null) continue;
+          (out[trackId] ??= <LearningLedgerData>[]).add(e);
+        }
+        return out;
+      },
+    );
+
+/// Profile-wide program-enrollment load for [trackDualProgressMetricsProvider],
+/// partitioned by curriculumType.
+///
+/// One query per profile replaces the
+/// [ProfileProgramDao.getProgramForProfileAndCurriculum] read that previously
+/// ran once PER TRACK inside the per-track loop below. `(profileId,
+/// curriculumType)` is a DB-enforced unique key, so at most one row exists
+/// per curriculum. AUD-progress-03 — N+1 fix.
+final profileProgramsByProfileProvider = FutureProvider.autoDispose
+    .family<Map<String, ProfileProgram>, int>(
+      name: 'profileProgramsByProfileProvider',
+      (ref, profileId) async {
+        final db = ref.watch(userDatabaseProvider);
+        final rows = await db.profileProgramDao.getProgramsForProfile(
+          profileId,
+        );
+        return {for (final p in rows) p.curriculumType: p};
+      },
+    );
+
 /// Per-track dual-progress metrics for the active-track dashboard card.
 ///
 /// Returns a list of [TrackDualProgressMetric], one per active track, each
@@ -364,102 +430,152 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
       // dispose", failing the whole metric list.
       final progressSvc = ref.read(trackProgressServiceProvider);
       final useHebrewTerms = domainTermLabelsFromRef(ref).isHebrew;
+      // AUD-progress-03 — N+1 fix. `ref.watch(...future)` kicks off each
+      // batched provider's build exactly ONCE here (still synchronous — it
+      // only returns a Future, it doesn't await one), and the resulting
+      // Future is handed to every per-track computation below, so N tracks
+      // share one profile-wide query per DAO instead of issuing one query
+      // per track (mirrors the F13 fix above for lifetimeDataProvider).
+      // Watched here, before the first await, for the same reason as
+      // `progressSvc`/`useHebrewTerms` above.
+      final completionsByTrackFuture = ref.watch(
+        trackCompletionsByProfileProvider(profileId).future,
+      );
+      final ledgerEntriesByTrackFuture = ref.watch(
+        trackLedgerEntriesByProfileProvider(profileId).future,
+      );
+      final programsByCurriculumFuture = ref.watch(
+        profileProgramsByProfileProvider(profileId).future,
+      );
       final tracks = await db.trackDao.getAllForProfile(profileId);
 
-      final metrics = <TrackDualProgressMetric>[];
-      for (final track in tracks) {
-        final curriculum = CurriculumId.values
-            .where((c) => c.storageKey == track.curriculumId)
-            .firstOrNull;
-        if (curriculum == null) {
-          AppLogger.instance.warning(
-            event:
-                'trackDualProgressMetrics: unknown curriculumId key: '
-                '"${track.curriculumId}" — skipping',
-          );
-          continue;
-        }
-        final leaves = await _safeLoadLeavesForTrack(
-          repo,
-          db,
-          profileId,
-          curriculum,
-          track.id,
-        );
-        if (leaves == null) continue;
-        final denominator = leaves.length;
-        if (denominator == 0) continue;
-
-        // Layer 3 migration: use TrackProgressService with trackAchievement tier.
-        // since: track.activatedAt preserves the time-gated "this cycle" semantics.
-        // requireAllStages: false matches the old distinct-refs-only count.
-        // trackAchievement excludes lifetimeOnly rows (correct per B1 policy).
-        final currentCyclePct = await progressSvc.completionPercent(
-          trackId: track.id,
-          profileId: profileId,
-          tier: CompletionTierFilter.trackAchievement,
-          totalItems: denominator,
-          requireAllStages: false,
-          since: track.activatedAt,
-        );
-
-        final allTrackCompletions = await db.completionDao
-            .getCompletionsByTrackAndProfile(track.id, profileId);
-        final trackLedger = await db.learningLedgerDao.getEntriesByTrack(
-          track.id,
-          profileId,
-        );
-
-        const builder = LifetimeTreeBuilder();
-        final lifetimeRefs = builder.computeLearnedLeafRefs(
-          leaves: leaves,
-          completedRefs: allTrackCompletions.map((c) => c.sefariaRef).toSet(),
-          ledgerEntries: trackLedger,
-        );
-        final lifetimePct = lifetimeRefs.length / denominator;
-
-        final enrollment = await db.profileProgramDao
-            .getProgramForProfileAndCurriculum(
-              profileId,
-              curriculum.storageKey,
-            );
-        int? todayDueCount;
-        int? overdueCount;
-        if (enrollment != null) {
-          try {
-            final calendarPos = await ref.read(
-              programCalendarPositionProvider(track.id).future,
-            );
-            final delta = calendarPos.delta;
-            overdueCount = delta < 0 ? (-delta - 1).clamp(0, 9999) : 0;
-            todayDueCount = delta > 0 ? 0 : 1;
-          } catch (_) {
-            overdueCount = 0;
-            todayDueCount = 0;
-          }
-        }
-
-        final localizedCurriculum = curriculumLabelFor(
-          curriculum,
-          useHebrewTerms: useHebrewTerms,
-        );
-        metrics.add(
-          TrackDualProgressMetric(
-            trackId: track.id,
-            // W3.22: trackType dropped — label is just the curriculum name.
-            trackLabel: localizedCurriculum,
-            curriculumId: curriculum,
-            currentCyclePercentage: currentCyclePct.clamp(0.0, 1.0),
-            lifetimePercentage: lifetimePct.clamp(0.0, 1.0),
-            isProgramTrack: enrollment != null,
-            todayDueCount: todayDueCount,
-            overdueCount: overdueCount,
+      // The remaining per-track work (leaf loading, completion-percent,
+      // calendar position) is independent across tracks — run it
+      // concurrently instead of one sequential await chain per track, so a
+      // profile with N active tracks no longer pays N × latency to render.
+      final results = await Future.wait(
+        tracks.map(
+          (track) => _computeTrackDualProgressMetric(
+            ref: ref,
+            db: db,
+            repo: repo,
+            progressSvc: progressSvc,
+            useHebrewTerms: useHebrewTerms,
+            profileId: profileId,
+            track: track,
+            completionsByTrackFuture: completionsByTrackFuture,
+            ledgerEntriesByTrackFuture: ledgerEntriesByTrackFuture,
+            programsByCurriculumFuture: programsByCurriculumFuture,
           ),
-        );
-      }
+        ),
+      );
 
-      return metrics;
+      return results.whereType<TrackDualProgressMetric>().toList();
     });
+
+/// Computes a single track's [TrackDualProgressMetric], reading the
+/// profile-wide batched completions/ledger/program-enrollment maps rather
+/// than issuing its own per-track DAO queries. Returns `null` when the track
+/// should be skipped (unknown curriculum key, missing content asset, or a
+/// zero-item scope) — extracted from [trackDualProgressMetricsProvider] so
+/// it can run concurrently across tracks via `Future.wait`.
+Future<TrackDualProgressMetric?> _computeTrackDualProgressMetric({
+  required Ref ref,
+  required UserDatabase db,
+  required ContentRepository repo,
+  required TrackProgressService progressSvc,
+  required bool useHebrewTerms,
+  required int profileId,
+  required CurriculumTrack track,
+  required Future<Map<int, List<Completion>>> completionsByTrackFuture,
+  required Future<Map<int, List<LearningLedgerData>>>
+  ledgerEntriesByTrackFuture,
+  required Future<Map<String, ProfileProgram>> programsByCurriculumFuture,
+}) async {
+  final curriculum = CurriculumId.values
+      .where((c) => c.storageKey == track.curriculumId)
+      .firstOrNull;
+  if (curriculum == null) {
+    AppLogger.instance.warning(
+      event:
+          'trackDualProgressMetrics: unknown curriculumId key: '
+          '"${track.curriculumId}" — skipping',
+    );
+    return null;
+  }
+  final leaves = await _safeLoadLeavesForTrack(
+    repo,
+    db,
+    profileId,
+    curriculum,
+    track.id,
+  );
+  if (leaves == null) return null;
+  final denominator = leaves.length;
+  if (denominator == 0) return null;
+
+  // Layer 3 migration: use TrackProgressService with trackAchievement tier.
+  // since: track.activatedAt preserves the time-gated "this cycle" semantics.
+  // requireAllStages: false matches the old distinct-refs-only count.
+  // trackAchievement excludes lifetimeOnly rows (correct per B1 policy).
+  final currentCyclePct = await progressSvc.completionPercent(
+    trackId: track.id,
+    profileId: profileId,
+    tier: CompletionTierFilter.trackAchievement,
+    totalItems: denominator,
+    requireAllStages: false,
+    since: track.activatedAt,
+  );
+
+  final completionsByTrack = await completionsByTrackFuture;
+  final allTrackCompletions =
+      completionsByTrack[track.id] ?? const <Completion>[];
+  final ledgerEntriesByTrack = await ledgerEntriesByTrackFuture;
+  final trackLedger =
+      ledgerEntriesByTrack[track.id] ?? const <LearningLedgerData>[];
+
+  const builder = LifetimeTreeBuilder();
+  final lifetimeRefs = builder.computeLearnedLeafRefs(
+    leaves: leaves,
+    completedRefs: allTrackCompletions.map((c) => c.sefariaRef).toSet(),
+    ledgerEntries: trackLedger,
+  );
+  final lifetimePct = lifetimeRefs.length / denominator;
+
+  final programsByCurriculum = await programsByCurriculumFuture;
+  final enrollment = programsByCurriculum[curriculum.storageKey];
+  int? todayDueCount;
+  int? overdueCount;
+  if (enrollment != null) {
+    try {
+      final calendarPos = await ref.read(
+        programCalendarPositionProvider(track.id).future,
+      );
+      final delta = calendarPos.delta;
+      overdueCount = delta < 0 ? (-delta - 1).clamp(0, 9999) : 0;
+      todayDueCount = delta > 0 ? 0 : 1;
+    } catch (_) {
+      overdueCount = 0;
+      todayDueCount = 0;
+    }
+  }
+
+  final localizedCurriculum = curriculumLabelFor(
+    curriculum,
+    useHebrewTerms: useHebrewTerms,
+  );
+  return TrackDualProgressMetric(
+    trackId: track.id,
+    // W3.22: trackType dropped — label is just the curriculum name.
+    trackLabel: localizedCurriculum,
+    curriculumId: curriculum,
+    currentCyclePercentage: currentCyclePct.clamp(0.0, 1.0),
+    lifetimePercentage: lifetimePct.clamp(0.0, 1.0),
+    isProgramTrack: enrollment != null,
+    todayDueCount: todayDueCount,
+    overdueCount: overdueCount,
+  );
+}
 
 final lifetimeTotalsAcrossAllCurriculaProvider = FutureProvider.autoDispose
     .family<LifetimeTotals, int>((ref, profileId) async {
