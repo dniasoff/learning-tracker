@@ -11002,13 +11002,18 @@
     {
       "id": "AUD-profiles-18",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace EdgeInsets.only(left:/right:) with EdgeInsetsDirectional in ParentTrackManagementScreen",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "9f212c9a8c9d56fa789a21b66468ddc16c784e60"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-18 AC1 OK: parent_track_management_screen.dart:120 = const EdgeInsetsDirectional.only(start:16,end:16,top:8,bottom:96); analyze clean",
+        "AUD-profiles-18 AC2 OK: tool/check_edgeinsets_rtl.dart scans lib/ recursively, red-first proven (revert->exit1 :120, restore->exit0), wired into root make audit [10/12]"
+      ],
+      "notes": "Confirmed live. AC1: EdgeInsets.only(left/right)->EdgeInsetsDirectional.only(start/end) line 120. AC2: old grep was single-line-blind to this multi-line site; replaced check[10/12] with paren-balanced tool/check_edgeinsets_rtl.dart. Red(exit1)->green(exit0) shown. Baselined 2 out-of-scope sites."
     },
     {
       "id": "AUD-progress-09",
