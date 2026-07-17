@@ -728,7 +728,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           level: 1,
           levelName: 'Tahorot',
-          levelLabel: 'Seder',
           totalItems: 4,
           completedItems: 2,
           stageBreakdown: [StageBreakdownEntry(stageName: 'Learn', count: 2)],

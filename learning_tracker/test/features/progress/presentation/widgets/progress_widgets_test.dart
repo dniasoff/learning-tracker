@@ -243,7 +243,6 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         level: 1,
         levelName: 'Seder Zeraim',
-        levelLabel: 'Seder',
         totalItems: 10,
         completedItems: 5,
         stageBreakdown: [StageBreakdownEntry(stageName: 'Learned', count: 5)],
@@ -272,7 +271,6 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         level: 1,
         levelName: 'Seder Zeraim',
-        levelLabel: 'Seder',
         totalItems: 10,
         completedItems: 5,
         stageBreakdown: [
@@ -302,7 +300,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           level: 1,
           levelName: 'Seder Zeraim',
-          levelLabel: 'Seder',
           totalItems: 10,
           completedItems: 5,
           stageBreakdown: [
@@ -347,7 +344,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           level: 1,
           levelName: 'Seder Zeraim',
-          levelLabel: 'Seder',
           totalItems: 10,
           completedItems: 5,
           stageBreakdown: [
@@ -390,7 +386,6 @@ void main() {
         curriculumId: CurriculumId.mishnayos,
         level: 1,
         levelName: 'Seder Zeraim',
-        levelLabel: 'Seder',
         totalItems: 4,
         completedItems: 2,
         stageBreakdown: [StageBreakdownEntry(stageName: 'Learned', count: 2)],
@@ -400,7 +395,6 @@ void main() {
             curriculumId: CurriculumId.mishnayos,
             level: 2,
             levelName: 'Berachos',
-            levelLabel: 'Masechta',
             totalItems: 2,
             completedItems: 2,
             stageBreakdown: [
@@ -412,7 +406,6 @@ void main() {
             curriculumId: CurriculumId.mishnayos,
             level: 2,
             levelName: 'Peah',
-            levelLabel: 'Masechta',
             totalItems: 2,
             completedItems: 0,
             stageBreakdown: [
@@ -504,7 +497,6 @@ void main() {
           curriculumId: CurriculumId.mishnayos,
           level: 1,
           levelName: rawLevelName,
-          levelLabel: 'Seder',
           totalItems: 10,
           completedItems: 5,
           stageBreakdown: const [
