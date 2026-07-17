@@ -408,11 +408,9 @@
   "learner": "Learner",
   "learningTracker": "Learning Tracker",
   "searchContent": "Search content",
-  "errorWithMessage": "Error: {error}",
+  "errorWithMessage": "Something went wrong. Please try again.",
   "@errorWithMessage": {
-    "placeholders": {
-      "error": {"type": "String"}
-    }
+    "description": "AUD-progress-08: generic failure message for an AsyncValue error branch — never interpolate the raw exception (EH-5)."
   },
   "errorLoadingTasks": "Error loading tasks: {error}",
   "@errorLoadingTasks": {
@@ -1032,11 +1030,9 @@
     }
   },
   "loadingYourJourney": "Loading your journey...",
-  "failedToLoadJourney": "Failed to load journey: {error}",
+  "failedToLoadJourney": "Failed to load journey. Please try again.",
   "@failedToLoadJourney": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "AUD-progress-08: generic failure message — never interpolate the raw exception (EH-5)."
   },
   "journeyEmptyTitle": "No siyumim yet",
   "journeyEmptyBody": "When you complete a masechta or sefer, it will be recorded here as a permanent milestone.",
@@ -2293,12 +2289,9 @@
   "@curriculumProgressLoading": {
     "description": "Loading placeholder shown in CurriculumProgressScreen while progress data is being fetched."
   },
-  "curriculumProgressLoadFailed": "Failed to load progress: {error}",
+  "curriculumProgressLoadFailed": "Failed to load progress. Please try again.",
   "@curriculumProgressLoadFailed": {
-    "description": "Error message shown in CurriculumProgressScreen when progress data fails to load.",
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "AUD-progress-08: generic failure message shown in CurriculumProgressScreen when progress data fails to load — never interpolate the raw exception (EH-5)."
   },
   "curriculumProgressSettingsTooltip": "Curriculum settings",
   "@curriculumProgressSettingsTooltip": {
@@ -2613,19 +2606,13 @@
   "@lifetimeKnowledgeLoading": {
     "description": "Loading indicator message on the Lifetime Knowledge screen body."
   },
-  "lifetimeKnowledgeLoadError": "Failed to load: {error}",
+  "lifetimeKnowledgeLoadError": "Failed to load. Please try again.",
   "@lifetimeKnowledgeLoadError": {
-    "description": "Body error message when the Lifetime Knowledge per-curriculum tree fails to load.",
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "AUD-progress-08: generic body error message when the Lifetime Knowledge per-curriculum tree fails to load — never interpolate the raw exception (EH-5)."
   },
-  "lifetimeKnowledgeCounterError": "Failed to load counters: {error}",
+  "lifetimeKnowledgeCounterError": "Failed to load counters. Please try again.",
   "@lifetimeKnowledgeCounterError": {
-    "description": "Header error message when the Lifetime Knowledge header counters fail to load.",
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "AUD-progress-08: generic header error message when the Lifetime Knowledge header counters fail to load — never interpolate the raw exception (EH-5)."
   },
   "lifetimeKnowledgeRetry": "Retry",
   "@lifetimeKnowledgeRetry": {

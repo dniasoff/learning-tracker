@@ -692,9 +692,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchContent => 'Search content';
 
   @override
-  String errorWithMessage(String error) {
-    return 'Error: $error';
-  }
+  String get errorWithMessage => 'Something went wrong. Please try again.';
 
   @override
   String errorLoadingTasks(String error) {
@@ -1894,9 +1892,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loadingYourJourney => 'Loading your journey...';
 
   @override
-  String failedToLoadJourney(String error) {
-    return 'Failed to load journey: $error';
-  }
+  String get failedToLoadJourney => 'Failed to load journey. Please try again.';
 
   @override
   String get journeyEmptyTitle => 'No siyumim yet';
@@ -4131,9 +4127,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get curriculumProgressLoading => 'Loading progress...';
 
   @override
-  String curriculumProgressLoadFailed(String error) {
-    return 'Failed to load progress: $error';
-  }
+  String get curriculumProgressLoadFailed =>
+      'Failed to load progress. Please try again.';
 
   @override
   String get curriculumProgressSettingsTooltip => 'Curriculum settings';
@@ -4439,14 +4434,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lifetimeKnowledgeLoading => 'Loading lifetime knowledge…';
 
   @override
-  String lifetimeKnowledgeLoadError(String error) {
-    return 'Failed to load: $error';
-  }
+  String get lifetimeKnowledgeLoadError => 'Failed to load. Please try again.';
 
   @override
-  String lifetimeKnowledgeCounterError(String error) {
-    return 'Failed to load counters: $error';
-  }
+  String get lifetimeKnowledgeCounterError =>
+      'Failed to load counters. Please try again.';
 
   @override
   String get lifetimeKnowledgeRetry => 'Retry';

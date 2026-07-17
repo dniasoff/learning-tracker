@@ -135,7 +135,7 @@ class _LifetimeKnowledgeScreenState
                 error: (error, _) => Padding(
                   padding: const EdgeInsets.all(24),
                   child: ErrorDisplay(
-                    message: l10n.lifetimeKnowledgeLoadError(error.toString()),
+                    message: l10n.lifetimeKnowledgeLoadError,
                     onRetry: () {
                       if (_filter == _LifetimeSourceFilter.allSources) {
                         ref.invalidate(
@@ -240,7 +240,7 @@ class _LifetimeHeaderCard extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  l10n.lifetimeKnowledgeCounterError(error.toString()),
+                  l10n.lifetimeKnowledgeCounterError,
                   style: theme.textTheme.bodySmall,
                 ),
               ),
