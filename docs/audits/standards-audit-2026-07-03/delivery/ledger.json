@@ -8870,13 +8870,18 @@
     {
       "id": "AUD-core-preferences-06",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Guard _bindObserver's post-await 'state =' write with ref.mounted in preference_providers.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "590e822887e4054bc970e32b5f39f59b31972072"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-preferences-06 AC1 OK: preference_providers.dart:66-73 guardedOnValue no-ops on !ref.mounted, applied to .listen() and read().then()",
+        "AUD-core-preferences-06 AC2 OK: sm4_test disposes container mid read() on UseHebrewDate keepAlive notifier; GREEN post-fix, RED pre-fix (UnmountedRefException)"
+      ],
+      "notes": "Re-verified real. RED test reproduced UnmountedRefException on unfixed code (container disposed while pref.read() pending). Fix: _bindObserver wraps onValue in guardedOnValue no-op'ing when !ref.mounted, applied to stream listener + read().then(). Both ACs satisfied; test green post-fix."
     },
     {
       "id": "AUD-t-cross-90",
