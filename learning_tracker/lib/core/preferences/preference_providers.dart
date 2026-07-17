@@ -18,6 +18,7 @@ part 'preference_providers.g.dart';
 
 /// Long-lived singleton holding the [HebrewTermsPreference] object. Riverpod
 /// keeps it alive so the underlying broadcast stream survives route changes.
+// keepAlive: profile-scoped store; lives for the app session.
 @Riverpod(keepAlive: true)
 HebrewTermsPreference hebrewTermsPreference(Ref ref) {
   final pref = HebrewTermsPreference();
@@ -25,6 +26,7 @@ HebrewTermsPreference hebrewTermsPreference(Ref ref) {
   return pref;
 }
 
+// keepAlive: profile-scoped store; lives for the app session.
 @Riverpod(keepAlive: true)
 HebrewDatePreference hebrewDatePreference(Ref ref) {
   final pref = HebrewDatePreference();
@@ -32,6 +34,7 @@ HebrewDatePreference hebrewDatePreference(Ref ref) {
   return pref;
 }
 
+// keepAlive: profile-scoped store; lives for the app session.
 @Riverpod(keepAlive: true)
 NikudPreference nikudPreference(Ref ref) {
   final pref = NikudPreference();
@@ -39,6 +42,7 @@ NikudPreference nikudPreference(Ref ref) {
   return pref;
 }
 
+// keepAlive: profile-scoped store; lives for the app session.
 @Riverpod(keepAlive: true)
 TransliterationVariantPreference transliterationVariantPreference(Ref ref) {
   final pref = TransliterationVariantPreference();
@@ -46,6 +50,7 @@ TransliterationVariantPreference transliterationVariantPreference(Ref ref) {
   return pref;
 }
 
+// keepAlive: profile-scoped store; lives for the app session.
 @Riverpod(keepAlive: true)
 TextDisplayPreference textDisplayPreference(Ref ref) {
   final pref = TextDisplayPreference();
@@ -130,6 +135,7 @@ Future<void> _writeAndPushSnapshot<T>(
 /// Whether to render Jewish learning terms in Hebrew script for the active
 /// profile. This is the **only** `core/` entry point for the toggle —
 /// `core/labels/` reads here, never via `features/settings/`.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
 @Riverpod(keepAlive: true)
 class UseHebrewTerms extends _$UseHebrewTerms
     with _SentinelGuardedPreference<bool> {
@@ -155,6 +161,7 @@ class UseHebrewTerms extends _$UseHebrewTerms
   }
 }
 
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
 @Riverpod(keepAlive: true)
 class UseHebrewDate extends _$UseHebrewDate
     with _SentinelGuardedPreference<bool> {
@@ -179,6 +186,7 @@ class UseHebrewDate extends _$UseHebrewDate
   }
 }
 
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
 @Riverpod(keepAlive: true)
 class ShowNikudPref extends _$ShowNikudPref
     with _SentinelGuardedPreference<bool> {
@@ -229,6 +237,7 @@ Locale resolveDeviceUiLocale(List<Locale> deviceLocales) {
 /// providers to localize background text where no BuildContext is available;
 /// invalidated on a runtime device-locale change by
 /// `LearningTrackerApp.didChangeLocales`.
+// keepAlive: read by background notification code with no widget listener.
 @Riverpod(keepAlive: true)
 Locale currentAppLocale(Ref ref) =>
     resolveDeviceUiLocale(PlatformDispatcher.instance.locales);
@@ -248,6 +257,7 @@ bool effectiveUseHebrewTerms(Ref ref) =>
     ref.watch(currentAppLocaleProvider).languageCode == 'he' ||
     ref.watch(useHebrewTermsProvider);
 
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
 @Riverpod(keepAlive: true)
 class CurrentTransliterationVariant extends _$CurrentTransliterationVariant
     with _SentinelGuardedPreference<TransliterationVariant> {
@@ -273,6 +283,7 @@ class CurrentTransliterationVariant extends _$CurrentTransliterationVariant
   }
 }
 
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
 @Riverpod(keepAlive: true)
 class CurrentFontSize extends _$CurrentFontSize
     with _SentinelGuardedPreference<FontSize> {
