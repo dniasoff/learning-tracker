@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
@@ -215,4 +216,77 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
   });
+
+  // AUD-profiles-16 (EH-3 log-less catch): the live duplicate-name check's
+  // `catch (_) { set(() => err = null); }` previously discarded a DB failure
+  // with zero AppLogger call. This closes the db *before* pumping so
+  // `profileDao.profileExistsByName(...)` throws deterministically when the
+  // name field's onChanged handler runs the check — simulating any DB-layer
+  // failure during that best-effort live validation.
+  testWidgets(
+    'AUD-profiles-16: duplicate-name check failure logs via AppLogger '
+    'instead of silently discarding the exception',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final db = createTestDatabase();
+      await seedProfileWithIds(db, profileId: 1, accountId: 1);
+      // Close the DB before pumping so the duplicate-name check's DAO call
+      // throws deterministically once the user types a name.
+      await db.close();
+
+      final repo = _MockProfileRepository();
+
+      await tester.pumpWidget(
+        pumpApp(
+          overrides: [
+            userDatabaseProvider.overrideWithValue(db),
+            currentAccountIdProvider.overrideWithValue(1),
+            profileRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: Consumer(
+            builder: (ctx, ref, _) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const Key('open'),
+                  onPressed: () => showAddProfileDialog(ctx, ref),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('open')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Name non-empty → triggers the duplicate-name check against the
+      // (closed) db, which must throw.
+      await tester.enterText(find.byType(TextField).first, 'TestKid');
+      await tester.pump(const Duration(milliseconds: 400)); // debounced check
+
+      final history = AppLogger.instance.talker.history
+          .map((e) => e.generateTextMessage())
+          .toList();
+      expect(
+        history.any(
+          (m) => m.contains('add_profile_dialog_duplicate_check_failed'),
+        ),
+        isTrue,
+        reason:
+            'A duplicate-name-check DB failure must be logged via AppLogger '
+            'instead of being silently swallowed (EH-3, AUD-profiles-16). '
+            'Talker history: $history',
+      );
+
+      // Close the dialog and flush the delayed controller-dispose timer.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump(Duration.zero);
+    },
+  );
 }

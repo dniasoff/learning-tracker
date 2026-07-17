@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/learner_profile_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -69,6 +70,56 @@ class _TutorRoutedFailingFacade implements SyncWriteFacade {
       'permission denied',
       code: 'permission-denied',
     );
+  }
+
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushGamificationSettingsSnapshot() async {}
+  @override
+  Future<void> pushUiPreferencesSnapshot() async {}
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {}
+  @override
+  Future<void> pushSettings(Map<String, dynamic> settings) async {}
+  @override
+  Future<void> pushGoal(Map<String, dynamic> goal) async {}
+  @override
+  Future<void> deleteGoal(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {}
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> items,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStageDefinitions({
+    required int trackId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> stages,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStudyDayConfig(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
+}
+
+/// [SyncWriteFacade] whose [pushLearnerProfile] always fails with a plain
+/// (non-tutor-routed) exception — used by the AUD-profiles-16 regression
+/// group below to exercise the generic offline-first "swallow but log"
+/// catch branch (as opposed to [_TutorRoutedFailingFacade]'s
+/// `TutorWriteException`, which takes the separate rethrow branch). All
+/// other operations are no-ops; the test only exercises the profile push.
+class _GenericFailingFacade implements SyncWriteFacade {
+  @override
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {
+    throw Exception('simulated cloud push failure');
   }
 
   @override
@@ -760,4 +811,128 @@ void main() {
       );
     },
   );
+
+  // ── AUD-profiles-16 (EH-3): non-fatal cloud-push catch blocks must log ────
+  //
+  // createProfile/updateProfile/ensureDefaultProfile all swallow a generic
+  // (non-tutor-routed) pushLearnerProfile failure as part of the
+  // offline-first design — the local write must stand regardless. Previously
+  // that `catch (_) { ... }` carried only a code comment and made zero
+  // AppLogger call, so a real production failure pattern (e.g. outbox writes
+  // silently failing on a subset of devices) left no telemetry trail. These
+  // three tests assert the offline-first behaviour is preserved (the
+  // operation still succeeds) AND that the failure is now logged.
+
+  group('AUD-profiles-16 — log-less catch: cloud push failures now log', () {
+    late UserDatabase db;
+    late _GenericFailingFacade facade;
+    late ProfileRepositoryImpl repoWithFailingPush;
+
+    setUp(() async {
+      db = createTestDatabase();
+      facade = _GenericFailingFacade();
+      repoWithFailingPush = ProfileRepositoryImpl(db, syncEngine: facade);
+      await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'push-fail@test.com',
+              tier: 'cloudBorn',
+              displayName: 'Push-Fail Account',
+              createdAt: DateTimeFactory.nowUtc(),
+              updatedAt: DateTimeFactory.nowUtc(),
+            ),
+          );
+      // Deliberately NOT calling AppLogger.init() here: ProfileRepositoryImpl
+      // caches `final _log = AppLogger.instance;` as a top-level field, bound
+      // once on the file's first access within this test process — an
+      // AppLogger.init() call afterwards (as stage_definition_codec_test.dart
+      // does, since its call site reads `AppLogger.instance` fresh on every
+      // invocation instead of caching it) would swap in a new Talker that
+      // `_log` never picks up, and history assertions below would silently
+      // read the wrong (empty) Talker. Instead, each assertion below matches
+      // on a marker string unique to this finding, so accumulated history
+      // from earlier tests in this file is harmless.
+    });
+
+    tearDown(() => db.close());
+
+    test('createProfile still succeeds offline-first AND logs the cloud push '
+        'failure via AppLogger', () async {
+      final created = await repoWithFailingPush.createProfile(
+        accountId: 1,
+        displayName: 'Offline Kid',
+        mode: 'child',
+      );
+
+      expect(created.displayName, 'Offline Kid');
+
+      final history = AppLogger.instance.talker.history
+          .map((e) => e.generateTextMessage())
+          .toList();
+      expect(
+        history.any((m) => m.contains('profile_repo_create_cloud_push_failed')),
+        isTrue,
+        reason:
+            'A non-fatal cloud push failure must still be logged via '
+            'AppLogger so it leaves a diagnostic trail (EH-3, '
+            'AUD-profiles-16). Talker history: $history',
+      );
+    });
+
+    test('updateProfile still succeeds offline-first AND logs the cloud push '
+        'failure via AppLogger', () async {
+      final now = DateTimeFactory.nowUtc();
+      final id = await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: 1,
+              displayName: 'Original',
+              mode: 'adult',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+
+      final updated = await repoWithFailingPush.updateProfile(
+        id: id,
+        displayName: 'Renamed',
+      );
+      expect(updated.displayName, 'Renamed');
+
+      final history = AppLogger.instance.talker.history
+          .map((e) => e.generateTextMessage())
+          .toList();
+      expect(
+        history.any((m) => m.contains('profile_repo_update_cloud_push_failed')),
+        isTrue,
+        reason:
+            'A non-fatal cloud push failure must still be logged via '
+            'AppLogger so it leaves a diagnostic trail (EH-3, '
+            'AUD-profiles-16). Talker history: $history',
+      );
+    });
+
+    test('ensureDefaultProfile still succeeds offline-first AND logs the cloud '
+        'push failure via AppLogger', () async {
+      final healedId = await repoWithFailingPush.ensureDefaultProfile(
+        accountId: 1,
+        defaultDisplayName: 'Healed',
+      );
+      expect(healedId, isPositive);
+
+      final history = AppLogger.instance.talker.history
+          .map((e) => e.generateTextMessage())
+          .toList();
+      expect(
+        history.any((m) => m.contains('profile_self_heal_cloud_push_failed')),
+        isTrue,
+        reason:
+            'A non-fatal cloud push failure must still be logged via '
+            'AppLogger so it leaves a diagnostic trail (EH-3, '
+            'AUD-profiles-16). Talker history: $history',
+      );
+    });
+  });
 }
