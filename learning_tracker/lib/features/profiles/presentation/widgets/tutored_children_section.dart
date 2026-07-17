@@ -153,9 +153,14 @@ class _ViewInvitationsRow extends ConsumerWidget {
                   size: 24,
                 ),
               ),
-              Positioned(
+              // AX-1/AUD-profiles-23: PositionedDirectional so the
+              // pending-invite count badge sits on the TRAILING corner of
+              // the mail icon in both LTR and RTL. A plain Positioned(right:)
+              // pinned it to the physical right, which is the LEADING edge
+              // in Hebrew RTL.
+              PositionedDirectional(
                 top: 6,
-                right: 6,
+                end: 6,
                 child: Container(
                   width: 14,
                   height: 14,
