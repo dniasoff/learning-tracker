@@ -11129,13 +11129,17 @@
   {
    "id": "AUD-progress-09",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Add a semantic label to the icon-only drill-in IconButton in LifetimeMarkingScopeRow",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "6e16e22d32069ad11142df2b7fa3d08cfb6fad74"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-progress-09 AC1 OK: test asserts real Semantics label (getSemantics().label + bySemanticsLabel); reverting lib fix -> red (Actual ''), green with fix"
+   ],
+   "notes": "Re-verified: drill-in IconButton lacked a11y label. Red-first test failed (label ''). Fixed via tooltip: + Icon(semanticLabel:) (tooltip: alone only sets .tooltip not .label on Flutter 3.44.6). Reused existing scopeShowContentsTooltip ARB key. 83/83 green."
   },
   {
    "id": "AUD-progress-15",
