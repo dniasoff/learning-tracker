@@ -2700,13 +2700,18 @@
   {
    "id": "AUD-core-domain-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace hardcoded 'cloudBorn' literal and profile_model.dart's reimplemented switch with AccountTier/ProfileMode's own storageKey/fromStorageKey",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "f35cefa005157ebe6a025ec6131827910d27525e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-domain-04 AC1 OK: 4 sites now AccountTier.cloud.storageKey; only typed UserTier.*.dbValue + doc prose remain; source-scan test green",
+    "AUD-core-domain-04 AC2 OK: getter delegates to ProfileMode.tryFromStorageKey; documented EH-4 divergence (standards.md:189) satisfies AC clause"
+   ],
+   "notes": "Confirmed 4 raw 'cloudBorn' literals + hand-rolled switch. Fixed both ACs via AccountTier.cloud.storageKey and new ProfileMode.tryFromStorageKey delegation. Red-first: 3 new/extended test groups failed pre-fix, pass post-fix. All gates green."
   },
   {
    "id": "AUD-core-ids-01",
