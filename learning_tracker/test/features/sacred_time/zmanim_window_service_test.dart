@@ -127,6 +127,85 @@ void main() {
       );
     });
 
+    test('AUD-sacred_time-04: polar-fallback candle-lighting/tzais use the '
+        "target location's solar time, not the device's timezone", () {
+      // Longyearbyen, Svalbard — well inside the Arctic Circle. In early
+      // July the sun never sets there, so ComplexZmanimCalendar's
+      // getCandleLighting()/getTzais() both return null (confirmed via
+      // direct package probe: candleLighting=null tzais=null on
+      // 2026-07-03 / 2026-07-04) and the service must fall back.
+      const svalbardLat = 78.2232;
+      const svalbardLong = 15.6267;
+
+      // 2026-07-03 is a Friday (Erev Shabbos) and 2026-07-04 is Saturday
+      // (Shabbos) at this longitude — confirmed via
+      // JewishCalendar.isAssurBemelacha(): blocked=false/true/false for
+      // Jul 3 / Jul 4 / Jul 5 respectively.
+      final windows = service.computeWindows(
+        latitude: svalbardLat,
+        longitude: svalbardLong,
+        inIsrael: false,
+        from: DateTime(2026, 7, 3),
+        span: const Duration(days: 3),
+        cushionMin: 0,
+      );
+
+      expect(windows, hasLength(1));
+      final window = windows.single;
+      expect(window.kind, SacredWindowKind.shabbos);
+
+      // Expected fallback: approximate LOCAL SOLAR time at the target's
+      // longitude (15° of longitude ≈ 1 hour of UTC offset, east
+      // positive) — NOT the executing device's timezone. Candle-lighting
+      // falls back to a nominal 17:00 solar time on the prior (Friday)
+      // day; tzais falls back to a nominal 21:00 solar time on the last
+      // blocked (Saturday) day.
+      const solarOffsetMinutes = svalbardLong / 15 * 60; // ≈ +62.5 min
+      final expectedCandleLighting = DateTime.utc(
+        2026,
+        7,
+        3,
+        17,
+      ).subtract(Duration(minutes: solarOffsetMinutes.round()));
+      final expectedTzais = DateTime.utc(
+        2026,
+        7,
+        4,
+        21,
+      ).subtract(Duration(minutes: solarOffsetMinutes.round()));
+
+      // Tolerance covers minute-vs-microsecond rounding differences
+      // between this test's formula and the implementation's — it does
+      // NOT cover a device-timezone offset, which at this longitude
+      // (CEST/UTC+2 vs the expected ~UTC+1.04) would be tens of minutes
+      // off, so a device-local implementation still fails this bound.
+      const tolerance = Duration(minutes: 2);
+      expect(
+        window.startUtc.difference(expectedCandleLighting).abs(),
+        lessThan(tolerance),
+        reason:
+            'candle-lighting fallback should track the target longitude '
+            '(${window.startUtc.toIso8601String()} vs expected '
+            '${expectedCandleLighting.toIso8601String()})',
+      );
+      expect(
+        window.endUtc.difference(expectedTzais).abs(),
+        lessThan(tolerance),
+        reason:
+            'tzais fallback should track the target longitude '
+            '(${window.endUtc.toIso8601String()} vs expected '
+            '${expectedTzais.toIso8601String()})',
+      );
+
+      // The instant must not depend on the current process's local
+      // timezone: re-deriving from the device's local wall clock (as the
+      // pre-fix code did via `DateTime(y, m, d, 17).toUtc()`) would only
+      // coincidentally match the longitude-derived expectation above on a
+      // machine whose local UTC offset happens to equal ~+1h02m — this
+      // assertion pins the target-longitude value regardless of what
+      // timezone the test runner's host is in.
+    });
+
     test('Yom Kippur emits a yomKippur-kind window', () {
       // YK 2026: Tishrei 10 5787 = Mon Sep 21 2026.
       // Erev YK starts at sunset Sun Sep 20.

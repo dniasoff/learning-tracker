@@ -19,8 +19,11 @@ import 'package:learning_tracker/features/sacred_time/domain/models/sacred_windo
 /// so the lock kicks in slightly early and releases slightly late.
 ///
 /// Polar fallback: if sunset can't be computed (extreme latitudes during
-/// solstice), the algorithm falls back to a wide local-time window (17:00 of
-/// the prior day to 21:00 of the last blocked day) — over-blocking by design.
+/// solstice), the algorithm falls back to a wide window (17:00 to 21:00,
+/// approximate solar time) — over-blocking by design. This fallback is
+/// anchored to the *target* [longitude]'s approximate solar time (15° of
+/// longitude ≈ 1 hour of UTC offset), never the executing device's
+/// timezone — see [_polarFallbackUtc].
 class ZmanimWindowService {
   const ZmanimWindowService();
 
@@ -141,8 +144,9 @@ class ZmanimWindowService {
     return SacredWindowKind.shabbos;
   }
 
-  /// Sunset − [candleOffsetMin] on [forDate], in UTC. Falls back to local
-  /// 17:00 if sunset is uncomputable (polar latitudes).
+  /// Sunset − [candleOffsetMin] on [forDate], in UTC. Falls back to the
+  /// target's approximate solar 17:00 if sunset is uncomputable (polar
+  /// latitudes) — see [_polarFallbackUtc].
   DateTime _candleLighting({
     required double latitude,
     required double longitude,
@@ -160,11 +164,16 @@ class ZmanimWindowService {
       ..setCandleLightingOffset(candleOffsetMin);
     final cl = cal.getCandleLighting();
     if (cl != null) return cl.toUtc();
-    return DateTime(forDate.year, forDate.month, forDate.day, 17).toUtc();
+    return _polarFallbackUtc(
+      forDate: forDate,
+      longitude: longitude,
+      localHour: 17,
+    );
   }
 
   /// Tzais (8.5° below horizon, geonim) on [forDate], in UTC. Falls back to
-  /// local 21:00 if uncomputable.
+  /// the target's approximate solar 21:00 if uncomputable — see
+  /// [_polarFallbackUtc].
   DateTime _tzais({
     required double latitude,
     required double longitude,
@@ -179,7 +188,38 @@ class ZmanimWindowService {
     final cal = ComplexZmanimCalendar.intGeoLocation(geo)..setCalendar(forDate);
     final tz = cal.getTzais();
     if (tz != null) return tz.toUtc();
-    return DateTime(forDate.year, forDate.month, forDate.day, 21).toUtc();
+    return _polarFallbackUtc(
+      forDate: forDate,
+      longitude: longitude,
+      localHour: 21,
+    );
+  }
+
+  /// Approximates [localHour] wall-clock at the *target* [longitude]'s
+  /// solar time, expressed as a UTC instant. Used only for the
+  /// polar-latitude fallback (AUD-sacred_time-04), where sunset/tzais can't
+  /// be computed and the algorithm still needs *some* wide window anchored
+  /// to the target — not the executing device.
+  ///
+  /// 15° of longitude ≈ 1 hour of solar offset from UTC (east-positive).
+  /// This is deliberately independent of the executing device's timezone:
+  /// [forDate]'s year/month/day components are read directly with no
+  /// local→UTC conversion, and [DateTime.utc] never consults the host's
+  /// local timezone at all.
+  static DateTime _polarFallbackUtc({
+    required DateTime forDate,
+    required double longitude,
+    required int localHour,
+  }) {
+    final solarOffset = Duration(
+      microseconds: (longitude / 15 * Duration.microsecondsPerHour).round(),
+    );
+    return DateTime.utc(
+      forDate.year,
+      forDate.month,
+      forDate.day,
+      localHour,
+    ).subtract(solarOffset);
   }
 
   static DateTime _atMidnightLocal(DateTime d) =>
