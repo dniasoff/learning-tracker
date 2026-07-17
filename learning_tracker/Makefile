@@ -733,20 +733,25 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/db3_batch_check.$$$$.log; \
 	fi; \
-	echo "37/40 — SM-7: no ad-hoc ParentAnalyticsRepositoryImpl/RewardMilestoneService construction inside the AUD-sync-05 fix sites (local_data_upload_service.dart, outbox_sync_write_facade.dart, reward_settings_merge_delegate.dart) plus the AUD-core-navigation-04 fix site (restore_guard.dart)"; \
-	if grep -nE "final +[A-Za-z_][A-Za-z0-9_]* += +(ParentAnalyticsRepositoryImpl|RewardMilestoneService)\(" \
+	echo "37/40 — SM-7: no ad-hoc RewardMilestoneService construction inside the AUD-sync-05 fix sites (local_data_upload_service.dart, outbox_sync_write_facade.dart, reward_settings_merge_delegate.dart), and no ad-hoc ParentAnalyticsRepositoryImpl construction ANYWHERE in lib/ outside core/analytics/ (AUD-core-navigation-04 gate-repair: structural, not a 4-file allowlist)"; \
+	if grep -nE "final +[A-Za-z_][A-Za-z0-9_]* += +RewardMilestoneService\(" \
 	    lib/features/sync/data/local_data_upload_service.dart \
 	    lib/features/sync/data/outbox_sync_write_facade.dart \
 	    lib/features/sync/data/reward_settings_merge_delegate.dart \
-	    lib/core/navigation/guards/restore_guard.dart \
 	    | grep -q .; then \
-	  echo "  Ad-hoc mid-method Repository/Service construction reintroduced — inject via a constructor/factory parameter instead (AUD-sync-05/AUD-core-navigation-04, SM-7):"; \
-	  grep -nE "final +[A-Za-z_][A-Za-z0-9_]* += +(ParentAnalyticsRepositoryImpl|RewardMilestoneService)\(" \
+	  echo "  Ad-hoc mid-method RewardMilestoneService construction reintroduced — inject via a constructor/factory parameter instead (AUD-sync-05, SM-7):"; \
+	  grep -nE "final +[A-Za-z_][A-Za-z0-9_]* += +RewardMilestoneService\(" \
 	    lib/features/sync/data/local_data_upload_service.dart \
 	    lib/features/sync/data/outbox_sync_write_facade.dart \
-	    lib/features/sync/data/reward_settings_merge_delegate.dart \
-	    lib/core/navigation/guards/restore_guard.dart; \
+	    lib/features/sync/data/reward_settings_merge_delegate.dart; \
 	  FAIL=1; \
+	fi; \
+	if ! dart run tool/check_sm7_analytics_repository_construction.dart > /tmp/sm7_analytics_repo_check.$$$$.log 2>&1; then \
+	  cat /tmp/sm7_analytics_repo_check.$$$$.log; \
+	  rm -f /tmp/sm7_analytics_repo_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/sm7_analytics_repo_check.$$$$.log; \
 	fi; \
 	echo "38/40 — DB-2/DB-3: TrackLearningOrderDao.upsertOrder never regresses to an awaited per-row into( loop (AUD-core-database-05)"; \
 	if ! dart run tool/check_db_dao_loop_writes.dart > /tmp/db_dao_loop_writes_check.$$$$.log 2>&1; then \
