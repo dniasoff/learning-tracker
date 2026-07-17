@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/sync/codec/learning_ledger_codec.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart'
     show OutboxEntityKind;
@@ -128,7 +129,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     // sentinel date so a siyum ledger row produced by a bulk-in-track mark is
     // not dated today (which would inflate streak / recent-activity reads).
     // Mirrors recordCompletionsBatch.
-    final completedAt = source.creditsEngagement ? now : _kSentinelDate;
+    final completedAt = source.creditsEngagement ? now : kBulkPriorSentinelDate;
 
     // AUD-learning-03 (DB-2): the ledger insert and its outbox row commit or
     // roll back together — a crash between the two would otherwise strand a
@@ -173,11 +174,6 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     return entry;
   }
 
-  /// Sentinel date written for non-live batch marks so that streak,
-  /// points-per-day, and recent-activity reads are not inflated by
-  /// historical or bulk imports.
-  static final DateTime _kSentinelDate = DateTime.utc(2000, 1, 1);
-
   @override
   Future<List<LearningLedgerData>> recordCompletionsBatch(
     List<LedgerManualBatchItem> items, {
@@ -198,7 +194,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     // engagement reads (streak, points-per-day) are never credited for them.
     final completedAt = source.creditsEngagement
         ? DateTimeFactory.nowUtc()
-        : _kSentinelDate;
+        : kBulkPriorSentinelDate;
 
     // AUD-learning-03 (DB-2): every ledger row AND its outbox row commit or
     // roll back together as one unit. Previously the outbox enqueue ran in a

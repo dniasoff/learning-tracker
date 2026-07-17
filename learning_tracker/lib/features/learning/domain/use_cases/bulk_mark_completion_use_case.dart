@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
@@ -82,7 +83,7 @@ class BulkMarkCompletionUseCase {
 
     final effectiveCompletedAt = source.creditsEngagement
         ? request.completedAt
-        : DateTime.utc(2000, 1, 1);
+        : kBulkPriorSentinelDate;
 
     final gatedRequest = BulkCompletionRequest(
       curriculumId: request.curriculumId,
