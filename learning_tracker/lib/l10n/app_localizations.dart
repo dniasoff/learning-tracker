@@ -2463,6 +2463,12 @@ abstract class AppLocalizations {
   /// **'Could not load talmid data. Please try again.'**
   String get tutoredEntryError;
 
+  /// No description provided for @tutoredEntryAborted.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the talmid profile on this account. Please try again.'**
+  String get tutoredEntryAborted;
+
   /// No description provided for @viewingChildBanner.
   ///
   /// In en, this message translates to:

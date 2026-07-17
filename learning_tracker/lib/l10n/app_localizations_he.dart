@@ -1371,6 +1371,10 @@ class AppLocalizationsHe extends AppLocalizations {
       'לא ניתן לטעון את נתוני התלמיד. אנא נסה שנית.';
 
   @override
+  String get tutoredEntryAborted =>
+      'לא ניתן לפתוח את פרופיל התלמיד בחשבון זה. אנא נסה שנית.';
+
+  @override
   String viewingChildBanner(String name) {
     return 'מצב הורה — צופה ב-$name';
   }

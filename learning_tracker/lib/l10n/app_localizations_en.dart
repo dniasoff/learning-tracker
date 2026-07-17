@@ -1379,6 +1379,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not load talmid data. Please try again.';
 
   @override
+  String get tutoredEntryAborted =>
+      'Could not open the talmid profile on this account. Please try again.';
+
+  @override
   String viewingChildBanner(String name) {
     return 'Parent mode — viewing $name';
   }

@@ -663,6 +663,17 @@ class _TutoredChildRow extends ConsumerWidget {
       );
       ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
       dismissLoading();
+      // AUD-profiles-10 (EH-2/UX completeness): give feedback consistent with
+      // the permissionDenied/error branches above — without this the user
+      // taps the row, watches the spinner, and it disappears with zero
+      // explanation, indistinguishable from a silent hang.
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.tutoredEntryAborted),
+          ),
+        );
+      }
     }
   }
 }
