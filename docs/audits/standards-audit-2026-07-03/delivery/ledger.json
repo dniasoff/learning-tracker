@@ -8499,13 +8499,17 @@
   {
    "id": "AUD-core-analytics-03",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix misleading 'Keeps alive' doc comment on streakMilestoneAnalyticsObserverProvider — it is declared autoDispose",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "48612ba38305aa32994849ade4b95d22ac007bde"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-analytics-03 AC1 OK: comment reworded to 'Stays active while watched...' at observer.dart:20; grep '///.*keeps alive' lib/ = 0 matches"
+   ],
+   "notes": "No drift since 4018a91c. Confirmed line 20 'Keeps alive...' above autoDispose provider (line 39), colliding with SM-6. Reworded to 'Stays active while watched...'. Added Rule-0 audit check (69/69) failing lib/ doc comments claiming 'Keeps alive' without keepAlive:true."
   },
   {
    "id": "AUD-core-auth-04",
