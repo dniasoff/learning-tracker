@@ -7787,13 +7787,20 @@
   {
    "id": "AUD-core-content-06",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Correct or remove program_ref_resolver.dart's false production-integration doc claims",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "98e65ddd9dd272ceed3925c5e6ce597e077809dd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-content-06 AC1 OK: resolver.dart:7-11,21-37 now states not-wired, flags DNI-330=Story25.9 core/labels (epics.md:782), cites DNI-329=25.8 build (epics.md:781)",
+    "AUD-core-content-06 AC1 OK: 4 status bullets true - 0 prod ProgramRefSource impls; sefaria_ref_matcher.dart:16; dashboard :185 + reader :162 still bare lookup",
+    "AUD-core-content-06 AC2 OK: scheduler_providers.dart:112 collapseDafTasks (cited line 108) now uses lookupWithVariants; FR16 MUST req epics-greenfield:50",
+    "AUD-core-content-06 red-first OK: test:116-128 double-space ref -> old lookup len 2 vs expected 1; commit shows red (+4 -1) then green 5/5"
+   ],
+   "notes": "Re-verified: DNI-330 wrong, zero prod call sites. AC1: fixed doc comments, cited DNI-329. AC2: FR16 still intended; added static lookupWithVariants, routed scheduler_providers.dart:108 through it (additive-only). Left sefaria_ref_matcher.dart alone, out of scope."
   },
   {
    "id": "AUD-t-cross-85",
