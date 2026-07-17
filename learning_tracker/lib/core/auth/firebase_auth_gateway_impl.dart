@@ -24,11 +24,19 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
     email: user.email,
     displayName: user.displayName,
     emailVerified: user.emailVerified,
-    providers: user.providerData.map((i) => i.providerId).toList(),
+    providers: _providerIds(user.providerData),
   );
 
   AuthGatewayUser? _toAppUserOrNull(User? user) =>
       user == null ? null : _toAppUser(user);
+
+  /// Projects Firebase [UserInfo] entries to their `providerId` strings.
+  ///
+  /// The single source of truth for "what does 'linked providers' mean for
+  /// this user" — shared by [_toAppUser] and [getLinkedProviders] so the two
+  /// can never independently drift on the projection.
+  List<String> _providerIds(Iterable<UserInfo> data) =>
+      data.map((info) => info.providerId).toList();
 
   // ── Read-only accessors ──────────────────────────────────────────────────
 
@@ -252,9 +260,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
 
   @override
   List<String> getLinkedProviders() {
-    return _firebaseAuth.currentUser?.providerData
-            .map((info) => info.providerId)
-            .toList() ??
-        const <String>[];
+    final providerData = _firebaseAuth.currentUser?.providerData;
+    return providerData == null ? const <String>[] : _providerIds(providerData);
   }
 }
