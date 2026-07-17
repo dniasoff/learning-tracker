@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 
 /// A reusable list-tile for preference/settings screens.
@@ -76,7 +77,7 @@ class PreferenceListTile extends StatelessWidget {
           : Text(
               subtitle!,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: const Color(0xFF929BAA),
+                color: AppColors.preferenceSubtitleGrey,
                 fontSize: 15,
               ),
             ),
