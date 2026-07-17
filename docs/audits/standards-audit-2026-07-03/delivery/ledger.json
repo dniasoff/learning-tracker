@@ -5856,13 +5856,14 @@
       "severity": "P2",
       "title": "Resolve the ambiguous stageId/stageOrder dual-interpretation in SchedulerCompletionRepositoryImpl.resolveStageOrder",
       "commits": [
-        "8bf8602b6675de1a00591ca3a6866049d23c371c"
+        "8bf8602b6675de1a00591ca3a6866049d23c371c",
+        "eca5b445a3f75e61b69d515891c57575156d3fe0"
       ],
       "reviewRounds": 1,
       "acVerified": [
         "AUD-scheduler-15 AC OK: SchedulerCompletionRepositoryImpl.resolveStageOrder's ambiguous stageId/stageOrder dual-interpretation resolved via a new stage_id_format column (drift schema v37) + backfill migration, preserving stage_id and leaving genuine collisions unresolved rather than guessing worse"
       ],
-      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit 5f20fe2a existed on stray worktree branch worktree-wf_24065ac5-4c4-42, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean cherry-pick, no conflicts). flutter test on scheduler_completion_repository_impl_test.dart + v36_to_v37_test.dart -> all passed. Merged as 8bf8602b. Stray worktree + branch deleted post-harvest."
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit 5f20fe2a existed on stray worktree branch worktree-wf_24065ac5-4c4-42, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean cherry-pick, no conflicts). flutter test on scheduler_completion_repository_impl_test.dart + v36_to_v37_test.dart -> all passed. Merged as 8bf8602b. Stray worktree + branch deleted post-harvest. Follow-up (full-suite verification, same pass): the v37 onUpgrade block's m.addColumn(completionEvents, ...) ran unconditionally, unlike the v36 block's documented table-existence guard for the same partial-schema-fixture scenario - crashed 5 unrelated narrow-fixture migration gate tests (v27_to_v29, v31_to_v32, v33_to_v34, v34_to_v35, v35_to_v36) once schemaVersion moved past 36. Fixed in eca5b445 (added the same sqlite_master existence guard); flutter test test/migration/ -> 28/28 passed post-fix."
     },
     {
       "id": "AUD-scheduler-14",
@@ -5901,13 +5902,14 @@
       "severity": "P2",
       "title": "Move scheduler_providers.dart's projection/plan-building business logic into the domain layer",
       "commits": [
-        "1cf86d6bc6c31b41bd0fc7917eac31ddb8a035a3"
+        "1cf86d6bc6c31b41bd0fc7917eac31ddb8a035a3",
+        "eca5b445a3f75e61b69d515891c57575156d3fe0"
       ],
       "reviewRounds": 1,
       "acVerified": [
         "AUD-scheduler-12 AC OK: buildProjectionTasks/buildFreshPlan extracted to domain/services/daily_task_projection_service.dart, taking no Ref (track label injected as a plain callback matching getScopedContent/programRepository); daily_task_projection_service.dart exists and is directly unit-testable without a ProviderContainer"
       ],
-      "notes": "Wave-4 gate-repair harvest (2026-07-17), parked-r01 defect re-verified STILL LIVE before this pass (no daily_task_projection_service.dart existed; scheduler_providers.dart still carried the projection/plan logic inline). Two unreviewed duplicate/retry fix commits existed (92c5b0f0 on worktree-wf_24065ac5-4c4-94, f0e234a4 on worktree-wf_24065ac5-4c4-39) - byte-identical diffs; used 92c5b0f0 (rebased against a more recent dev base, fewer expected conflicts). Cherry-pick conflicted in scheduler_providers.dart (dev had independently gained AUD-scheduler-09's amnesty-cutoff seam extraction and AUD-scheduler-10's SkippedTasks guard in the same region, both ALSO harvested in this pass) - reconciled by taking the extraction wholesale and additionally folding AUD-scheduler-09's amnesty_cutoff.dart seam into the new daily_task_projection_service.dart (replacing its private _amnestyDayCutoffUtc duplicate with calls to the shared amnestyDayCutoffUtc/clampAmnestyCutoffToAnchor functions), so neither finding's fix regresses the other. flutter test (94 tests across daily_task_projection_service_test.dart, amnesty_cutoff_test.dart, reorder_amnesty_test.dart, overdue_projection_test.dart, scheduler_providers_test.dart, scheduler_all_daily_tasks_test.dart, clear_overdue_button_test.dart) -> all passed; flutter analyze -> No issues found. Merged as 1cf86d6b. Both stray worktrees + branches deleted post-harvest. Codegen gate (build_runner + git diff --exit-code) then caught scheduler_providers.g.dart drift from the combined AUD-scheduler-09/10/12 stack and it was resynced separately (chore commit e5291f30)."
+      "notes": "Wave-4 gate-repair harvest (2026-07-17), parked-r01 defect re-verified STILL LIVE before this pass (no daily_task_projection_service.dart existed; scheduler_providers.dart still carried the projection/plan logic inline). Two unreviewed duplicate/retry fix commits existed (92c5b0f0 on worktree-wf_24065ac5-4c4-94, f0e234a4 on worktree-wf_24065ac5-4c4-39) - byte-identical diffs; used 92c5b0f0 (rebased against a more recent dev base, fewer expected conflicts). Cherry-pick conflicted in scheduler_providers.dart (dev had independently gained AUD-scheduler-09's amnesty-cutoff seam extraction and AUD-scheduler-10's SkippedTasks guard in the same region, both ALSO harvested in this pass) - reconciled by taking the extraction wholesale and additionally folding AUD-scheduler-09's amnesty_cutoff.dart seam into the new daily_task_projection_service.dart (replacing its private _amnestyDayCutoffUtc duplicate with calls to the shared amnestyDayCutoffUtc/clampAmnestyCutoffToAnchor functions), so neither finding's fix regresses the other. flutter test (94 tests across daily_task_projection_service_test.dart, amnesty_cutoff_test.dart, reorder_amnesty_test.dart, overdue_projection_test.dart, scheduler_providers_test.dart, scheduler_all_daily_tasks_test.dart, clear_overdue_button_test.dart) -> all passed; flutter analyze -> No issues found. Merged as 1cf86d6b. Both stray worktrees + branches deleted post-harvest. Codegen gate (build_runner + git diff --exit-code) then caught scheduler_providers.g.dart drift from the combined AUD-scheduler-09/10/12 stack and it was resynced separately (chore commit e5291f30). Follow-up (full-suite verification, same pass): the relocated daily_task_projection_service.dart reads displayNameEn/displayNameHe while building a fallback CalendarProgramEntry - moved verbatim from scheduler_providers.dart, which was already allow-listed in epic_25_story_25_9_lints_test.dart's Rule-5 check; the allow-list entry needed to move with the code. Fixed in eca5b445; flutter test test/story_acceptance/epic_25_story_25_9_lints_test.dart -> 3/3 passed post-fix."
     },
     {
       "id": "AUD-scheduler-10",
