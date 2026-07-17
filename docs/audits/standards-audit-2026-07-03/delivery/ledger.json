@@ -5782,13 +5782,13 @@
   {
    "id": "AUD-scheduler-14",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P2",
    "title": "Populate the scheduler feature barrel (scheduler.dart) with real exports",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c25, 2026-07-17). review agent lost (quota); fix commit 64c2f3b27a8c7b9397721e8e94eb5eb05c434cc1 exists on worktree branch worktree-wf_24065ac5-4c4-41 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
   },
   {
    "id": "AUD-scheduler-13",
