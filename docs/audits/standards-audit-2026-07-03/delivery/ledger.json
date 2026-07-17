@@ -6368,13 +6368,18 @@
   {
    "id": "AUD-core-domain-06",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Give StartDateWindowException a stable error code instead of a raw pre-formatted English message (EH-5)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "cd366214d4d06b0fe95ac9d33edc40226f51ea51"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-domain-06 AC1 OK: StartDateWindowException extends ValidationException, inherits validationCode=invalidInput (app_exception.dart:72-81); 2 unit tests pass",
+    "AUD-core-domain-06 AC2 OK: AppErrorView switches on validationCode->ARB body, never message (app_error_view.dart:161-177); EN+HE widget tests on real exception pass"
+   ],
+   "notes": "Already fixed by sibling commit be269d3c (post-register): validationCode (AC1) + AppErrorView ARB resolution (AC2) cover this via inheritance. Gap: AC2 EN+HE widget test naming this exception was missing. Added 2 unit + 2 widget tests on the real exception; all pass, zero prod-code change needed."
   },
   {
    "id": "AUD-t-cross-79",
