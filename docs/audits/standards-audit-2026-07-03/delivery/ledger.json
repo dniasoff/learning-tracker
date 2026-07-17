@@ -9645,13 +9645,19 @@
     {
       "id": "AUD-profiles-14",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Guard ref.read calls after the cached-profile await in TutoredChildrenSection._fireEntryPullAndNavigate",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "b97cbc06a7d402263e5748a9ea0be8e0d815091c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-14 AC1 OK: sm4_test dismisses sheet at :246 while getTutoredProfile pending, completes :254, asserts takeException null :257; passes",
+        "AUD-profiles-14 AC1 red-first OK: revert prod to HEAD^ + same test = StateError ref-unmounted at section.dart:516 (behavioral)",
+        "AUD-profiles-14 AC2 OK: 2 awaits (503,586); each post-await ref (523,532,607,620,644,660,679) behind mounted guard (518,603,678)"
+      ],
+      "notes": "Confirmed real: row's ref.read after cached-mirror await crashes if dismissible switcher sheet closes mid-await. Red-first test reproduced exact StateError at line 516. Fix: context.mounted guard after both awaits and in StateError catch clause; test now green."
     },
     {
       "id": "AUD-t-profiles-07",
