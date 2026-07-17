@@ -75,58 +75,84 @@ class SelectedProfileId extends _$SelectedProfileId {
 /// rows, e.g. a pre-existing track) and select it. After this an authenticated
 /// account always has ≥1 profile selected.
 ///
-/// Watched by the app shell so it runs on every auth-valid mount. Returns the
-/// id that was selected (existing or newly healed), or null when signed-out.
-// keepAlive: the app shell watches this once per auth transition, must survive unrelated rebuilds.
+/// AUD-profiles-21 (SM-2 — provider `build` must be pure): all of the above
+/// self-heal logic used to run directly inside `build()`, so merely
+/// watching/reading this provider silently wrote to
+/// `selectedProfileIdProvider` (a sibling provider) and to the database
+/// (`ensureDefaultProfile`). `build()` now only mirrors the current
+/// selection; the effect lives in [ensureSelected], an explicit method
+/// invoked by the app shell's post-frame auth-valid effect (see
+/// `app_shell.dart`) — never from `build()`.
+// keepAlive: the app shell triggers ensureSelected() once per auth transition, must survive unrelated rebuilds.
 @Riverpod(keepAlive: true)
-Future<int?> autoSelectedProfileId(Ref ref) async {
-  final authState = ref.watch(authStateProvider);
-  if (!authState.isSignedIn) return null;
+class AutoSelectedProfileId extends _$AutoSelectedProfileId {
+  @override
+  Future<int?> build() async => ref.watch(selectedProfileIdProvider);
 
-  final repo = ref.read(profileRepositoryProvider);
-  final accountId = ref.read(currentAccountIdProvider);
-
-  // FK-CONSTRAINT-ONBOARDING-01: if a profileId is already selected (e.g.
-  // by the sign-in flow or the picker), verify it still exists in the
-  // CURRENT account's DB before early-returning. On an account switch the
-  // stale id from the previous account can survive in memory even after
-  // clear() is called (race or missed call path). Returning a stale id that
-  // has no row in this account's learner_profiles table causes
-  // SqliteException(787): FOREIGN KEY constraint failed on any
-  // profile_id-scoped INSERT (e.g. track creation → stage_definitions).
-  final current = ref.read(selectedProfileIdProvider);
-  if (current != null) {
-    final existingProfile = await repo.getProfileById(current);
-    if (existingProfile != null) return current;
-    // Stale id — clear it and fall through to the auto-select/self-heal path.
-    ref.read(selectedProfileIdProvider.notifier).clear();
-  }
-  final profiles = await repo.getProfilesByAccount(accountId);
-
-  final int id;
-  if (profiles.isNotEmpty) {
-    id = profiles.first.id;
-  } else {
-    // Self-heal: an authenticated account with no local profile. Create a
-    // default adult profile (named from the account) and adopt any orphaned
-    // profile_id=0 rows so existing tracks survive.
-    final fallbackName = authState.currentUser?.displayName.trim() ?? '';
-    id = await repo.ensureDefaultProfile(
-      accountId: accountId,
-      defaultDisplayName: fallbackName.isNotEmpty ? fallbackName : 'Me',
-    );
-    // The freshly created profile changed the account's profile set; refresh
-    // any list/stream consumers so the new profile is visible immediately.
-    ref.invalidate(profileListProvider);
+  /// Runs the BUG D1 self-heal / auto-select effect and returns the id that
+  /// ends up selected (existing, healed, or null when signed-out).
+  ///
+  /// MUST be invoked explicitly by a caller reacting to an auth transition
+  /// (see `app_shell.dart`) — never from [build] (AUD-profiles-21 / SM-2).
+  Future<int?> ensureSelected() async {
+    state = const AsyncLoading();
+    final guarded = await AsyncValue.guard(_resolveSelection);
+    // SM-4: this notifier is keepAlive so disposal mid-await is not expected
+    // in practice, but guard against touching `state` after one anyway.
+    if (!ref.mounted) return guarded.value;
+    state = guarded;
+    return guarded.value;
   }
 
-  // Re-check after the await: the picker / sign-in flow may have selected
-  // a profile while we were fetching. Don't clobber an explicit choice.
-  if (ref.read(selectedProfileIdProvider) == null) {
-    ref.read(selectedProfileIdProvider.notifier).select(id);
-    return id;
+  Future<int?> _resolveSelection() async {
+    final authState = ref.read(authStateProvider);
+    if (!authState.isSignedIn) return null;
+
+    final repo = ref.read(profileRepositoryProvider);
+    final accountId = ref.read(currentAccountIdProvider);
+
+    // FK-CONSTRAINT-ONBOARDING-01: if a profileId is already selected (e.g.
+    // by the sign-in flow or the picker), verify it still exists in the
+    // CURRENT account's DB before early-returning. On an account switch the
+    // stale id from the previous account can survive in memory even after
+    // clear() is called (race or missed call path). Returning a stale id that
+    // has no row in this account's learner_profiles table causes
+    // SqliteException(787): FOREIGN KEY constraint failed on any
+    // profile_id-scoped INSERT (e.g. track creation → stage_definitions).
+    final current = ref.read(selectedProfileIdProvider);
+    if (current != null) {
+      final existingProfile = await repo.getProfileById(current);
+      if (existingProfile != null) return current;
+      // Stale id — clear it and fall through to the auto-select/self-heal path.
+      ref.read(selectedProfileIdProvider.notifier).clear();
+    }
+    final profiles = await repo.getProfilesByAccount(accountId);
+
+    final int id;
+    if (profiles.isNotEmpty) {
+      id = profiles.first.id;
+    } else {
+      // Self-heal: an authenticated account with no local profile. Create a
+      // default adult profile (named from the account) and adopt any orphaned
+      // profile_id=0 rows so existing tracks survive.
+      final fallbackName = authState.currentUser?.displayName.trim() ?? '';
+      id = await repo.ensureDefaultProfile(
+        accountId: accountId,
+        defaultDisplayName: fallbackName.isNotEmpty ? fallbackName : 'Me',
+      );
+      // The freshly created profile changed the account's profile set; refresh
+      // any list/stream consumers so the new profile is visible immediately.
+      ref.invalidate(profileListProvider);
+    }
+
+    // Re-check after the await: the picker / sign-in flow may have selected
+    // a profile while we were fetching. Don't clobber an explicit choice.
+    if (ref.read(selectedProfileIdProvider) == null) {
+      ref.read(selectedProfileIdProvider.notifier).select(id);
+      return id;
+    }
+    return ref.read(selectedProfileIdProvider);
   }
-  return ref.read(selectedProfileIdProvider);
 }
 
 /// Profiles for the current account.

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,6 +64,12 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
   // online. Routes into the existing Upgrade-to-Cloud flow.
   bool _upgradePromptShown = false;
 
+  // AUD-profiles-21: guards the BUG D1 auto-select/self-heal effect
+  // (`autoSelectedProfileIdProvider.ensureSelected()`) so it fires once per
+  // signed-in session rather than on every rebuild. Reset on sign-out so a
+  // later sign-in re-triggers it — mirrors `_didJumpToSettings` below.
+  bool _autoSelectRan = false;
+
   @override
   Widget build(BuildContext context) {
     // When the Firebase uid changes (account switch or sign-out), clear any
@@ -101,11 +109,33 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     // interactive sign-in flow (the only caller of selectedProfileId.select)
     // is skipped, leaving the in-memory selection null → activeProfileId 0 →
     // FK failures on profile_id-scoped writes (track creation's
-    // stage_definitions insert). Watching this effect provider re-selects the
-    // account's first profile on every auth-valid mount when nothing is
-    // selected yet. The value itself is unused; the subscription is what runs
-    // the selection side-effect.
-    ref.watch(autoSelectedProfileIdProvider);
+    // stage_definitions insert). Scheduling this effect re-selects the
+    // account's first profile (self-healing a zero-profile account if
+    // needed) whenever auth becomes signed-in, including at initial mount if
+    // it is already signed-in.
+    //
+    // AUD-profiles-21 (SM-2 — provider `build` must be pure):
+    // `autoSelectedProfileId`'s `build()` is now a pure read; the self-heal
+    // side effect lives in its explicit `ensureSelected()` method, which
+    // mutates `selectedProfileIdProvider` — a provider write Riverpod
+    // forbids while any widget is mid-build. So, like `_didJumpToSettings`
+    // and `_upgradePromptShown` below, it is scheduled via
+    // `addPostFrameCallback` rather than called synchronously from here or
+    // from `initState` (SM-2 also rules out kicking a provider off from
+    // `initState`). `_autoSelectRan` makes this a once-per-signed-in-session
+    // effect; it resets on sign-out so a later sign-in re-triggers it.
+    final isSignedIn = ref.watch(authStateProvider.select((s) => s.isSignedIn));
+    if (isSignedIn && !_autoSelectRan) {
+      _autoSelectRan = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(
+          ref.read(autoSelectedProfileIdProvider.notifier).ensureSelected(),
+        );
+      });
+    } else if (!isSignedIn) {
+      _autoSelectRan = false;
+    }
 
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
