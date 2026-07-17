@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+
+import '../../helpers/fake_clock.dart';
 
 void main() {
   group('DateTimeFactory', () {
@@ -9,8 +10,7 @@ void main() {
       // reading the real wall clock, so the test is hermetic (TQ-6) and
       // cannot flake under CI scheduling jitter/GC pauses.
       final fixedInstant = DateTime.utc(2026, 2, 9, 12, 30, 45);
-      useLocalDayClock(FakeLocalDayClock(fixedInstant));
-      addTearDown(resetLocalDayClock);
+      installFakeClock(fixedInstant);
 
       final now = DateTimeFactory.nowUtc();
       expect(now.isUtc, isTrue);

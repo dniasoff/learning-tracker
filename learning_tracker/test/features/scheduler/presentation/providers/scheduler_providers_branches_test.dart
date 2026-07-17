@@ -37,7 +37,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
@@ -50,6 +49,7 @@ import 'package:learning_tracker/features/tracks/stages/presentation/providers/s
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/drift_memory.dart';
+import '../../../../helpers/fake_clock.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fake no-op calendar engine (calendar tests are not in scope here).
@@ -565,8 +565,7 @@ void main() {
       // Install a fake wall clock decades away from both the real date and
       // `today` above. A correct implementation never consults this — it is
       // wired only through the overridden clockProvider (below).
-      useLocalDayClock(FakeLocalDayClock(DateTime.utc(2099, 1, 1)));
-      addTearDown(resetLocalDayClock);
+      installFakeClock(DateTime.utc(2099, 1, 1));
 
       final c = _container(db, clock: today, contentCount: 30);
       addTearDown(c.dispose);

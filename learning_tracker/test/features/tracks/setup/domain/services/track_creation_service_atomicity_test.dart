@@ -5,7 +5,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
@@ -16,6 +15,7 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../../helpers/drift_memory.dart';
+import '../../../../../helpers/fake_clock.dart';
 
 class _MockActivation extends Mock implements CurriculumActivationService {}
 
@@ -138,8 +138,7 @@ void main() {
     // reproduced deterministically with a >1s artificial delay between the
     // reads before this fix.
     final fixedNow = DateTime.utc(2026, 6, 15, 12);
-    useLocalDayClock(FakeLocalDayClock(fixedNow));
-    addTearDown(resetLocalDayClock);
+    installFakeClock(fixedNow);
 
     final before = DateTimeFactory.nowUtc();
     const result = AddTrackResult(
@@ -214,8 +213,7 @@ void main() {
     // why the clock must be frozen (both B3 tests are "sites" of the same
     // finding).
     final fixedNow = DateTime.utc(2026, 6, 15, 12);
-    useLocalDayClock(FakeLocalDayClock(fixedNow));
-    addTearDown(resetLocalDayClock);
+    installFakeClock(fixedNow);
 
     final before = DateTimeFactory.nowUtc();
     const result = AddTrackResult(

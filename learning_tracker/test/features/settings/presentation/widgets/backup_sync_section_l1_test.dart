@@ -39,7 +39,6 @@ import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
@@ -47,6 +46,8 @@ import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dar
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../../../../helpers/fake_clock.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -164,8 +165,7 @@ void main() {
     testWidgets('shows "Backup & Sync" heading and last-synced subtitle', (
       tester,
     ) async {
-      useLocalDayClock(FakeLocalDayClock(_kFixedNow));
-      addTearDown(resetLocalDayClock);
+      installFakeClock(_kFixedNow);
       final lastSynced = _kFixedNow.subtract(const Duration(minutes: 5));
       await _pump(
         tester,
@@ -189,8 +189,7 @@ void main() {
     testWidgets('shows "just now" when sync was under 1 minute ago', (
       tester,
     ) async {
-      useLocalDayClock(FakeLocalDayClock(_kFixedNow));
-      addTearDown(resetLocalDayClock);
+      installFakeClock(_kFixedNow);
       final lastSynced = _kFixedNow.subtract(const Duration(seconds: 30));
       await _pump(
         tester,
@@ -212,8 +211,7 @@ void main() {
     testWidgets(
       'he locale: minutes-ago relative time is localized (no English)',
       (tester) async {
-        useLocalDayClock(FakeLocalDayClock(_kFixedNow));
-        addTearDown(resetLocalDayClock);
+        installFakeClock(_kFixedNow);
         final lastSynced = _kFixedNow.subtract(const Duration(minutes: 5));
         await _pump(
           tester,
@@ -240,8 +238,7 @@ void main() {
     testWidgets('he locale: "just now" is localized (no English literal)', (
       tester,
     ) async {
-      useLocalDayClock(FakeLocalDayClock(_kFixedNow));
-      addTearDown(resetLocalDayClock);
+      installFakeClock(_kFixedNow);
       final lastSynced = _kFixedNow.subtract(const Duration(seconds: 30));
       await _pump(
         tester,

@@ -32,10 +32,11 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_error_code.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../helpers/fake_clock.dart';
 
 // ── Fake FirestoreGateway ─────────────────────────────────────────────────────
 
@@ -635,10 +636,8 @@ void main() {
     final fixedNow = DateTime.utc(2026, 3, 15, 9, 30);
 
     setUp(() {
-      useLocalDayClock(FakeLocalDayClock(fixedNow));
+      installFakeClock(fixedNow);
     });
-
-    tearDown(resetLocalDayClock);
 
     test('skips pull when last sync was within 5 minutes', () async {
       // Seed SharedPreferences with a last-sync timestamp just 30 seconds

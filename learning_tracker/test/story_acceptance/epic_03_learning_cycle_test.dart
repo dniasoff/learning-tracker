@@ -8,7 +8,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
@@ -17,6 +16,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart' show seedTrack;
+import '../helpers/fake_clock.dart';
 import '../helpers/test_database.dart';
 
 class _MockSyncEngine extends Mock implements SyncWriteFacade {}
@@ -92,8 +92,7 @@ void main() {
         // Drift/sqlite3 open on a contended CI runner) would otherwise flake
         // this test for a reason unrelated to the code under test.
         final fixedNow = DateTime.utc(2026, 6, 1, 12);
-        useLocalDayClock(FakeLocalDayClock(fixedNow));
-        addTearDown(resetLocalDayClock);
+        installFakeClock(fixedNow);
 
         const sefariaRef = 'Mishnah Berachot 1:1';
         final completion = (await repo.markComplete(

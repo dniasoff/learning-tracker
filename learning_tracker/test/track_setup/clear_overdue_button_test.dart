@@ -27,7 +27,6 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
@@ -42,6 +41,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../helpers/drift_memory.dart';
+import '../helpers/fake_clock.dart';
 
 // ---------------------------------------------------------------------------
 // Mocks / fakes for driving the real EditTrackScreen widget (Test E)
@@ -448,8 +448,7 @@ void main() {
   testWidgets('E: tapping Clear Overdue on the real EditTrackScreen calls '
       'SyncWriteFacade.pushProfileProgram(Map) with the full production '
       'payload, not FirestoreGateway (F-C1 / AUD-t-cross-24)', (tester) async {
-    useLocalDayClock(FakeLocalDayClock(today));
-    addTearDown(resetLocalDayClock);
+    installFakeClock(today);
 
     final db = inMemoryDb();
     await seedProfile(db);

@@ -18,7 +18,8 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/listener_supervisor.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
+
+import '../helpers/fake_clock.dart';
 
 /// A listener source whose channels are backed by user-driven controllers.
 class _ControllerSource implements ListenerSource {
@@ -98,9 +99,7 @@ void main() {
       // AUD-t-cross-101: drive the throttle boundary through the
       // injectable LocalDayClock seam instead of real elapsed time, so
       // both sides of the 60 s window are provable by construction.
-      final clock = FakeLocalDayClock(DateTime.utc(2026, 1, 1));
-      useLocalDayClock(clock);
-      addTearDown(resetLocalDayClock);
+      final clock = installFakeClock(DateTime.utc(2026, 1, 1));
 
       final source = _ControllerSource(['completions']);
       var pullCount = 0;
