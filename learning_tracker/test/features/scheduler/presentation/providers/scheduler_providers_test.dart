@@ -14,10 +14,13 @@
 ///   • previouslySkippedRefsProvider  — prefs round-trip
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
@@ -54,6 +57,31 @@ class _SlowSharedPreferencesStore extends InMemorySharedPreferencesStore {
     // awaiting the real load future, the assertion below would observe the
     // stale initial `{}` state.
     await Future<void>.delayed(const Duration(milliseconds: 400));
+    return super.getAll();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// AUD-scheduler-10 (SM-4): a SharedPreferencesStorePlatform whose getAll()
+// suspends on an externally-held Completer until the test opens the gate.
+// Lets the test dispose the ProviderContainer while _loadFromPrefs's
+// `await SharedPreferences.getInstance()` is still in flight — deterministic
+// (no timing race), mirroring the established pattern in
+// skipped_onboarding_cta_banner_dismiss_mounted_test.dart (AUD-dashboard-02).
+// ---------------------------------------------------------------------------
+
+class _GatedSkippedTasksStore extends InMemorySharedPreferencesStore {
+  _GatedSkippedTasksStore(super.data) : super.withData();
+
+  final Completer<void> _gate = Completer<void>();
+
+  void openGate() {
+    if (!_gate.isCompleted) _gate.complete();
+  }
+
+  @override
+  Future<Map<String, Object>> getAll() async {
+    await _gate.future;
     return super.getAll();
   }
 }
@@ -452,6 +480,53 @@ void main() {
         );
       },
     );
+
+    test('container disposed mid-_loadFromPrefs await does not log an '
+        'AppLogger error (AUD-scheduler-10, SM-4 regression)', () async {
+      // Reset the SharedPreferences singleton/completer before installing
+      // the gated store below (same rationale as the debugReadyForTest
+      // slow-store test above).
+      SharedPreferences.setMockInitialValues({});
+      final store = _GatedSkippedTasksStore({
+        'flutter.skipped_tasks_date': '2026-05-29',
+        'flutter.skipped_tasks_refs': ['ref_X'],
+      });
+      SharedPreferencesStorePlatform.instance = store;
+      addTearDown(() => SharedPreferences.setMockInitialValues({}));
+
+      final c = _withClock(DateTime.utc(2026, 5, 29));
+
+      // Kick off build() -> _loadFromPrefs(), which suspends on the gated
+      // getAll() call inside `await SharedPreferences.getInstance()`.
+      c.listen<Set<String>>(skippedTasksProvider, (_, _) {});
+
+      final historyBefore = AppLogger.instance.talker.history.length;
+
+      // Dispose the container while the prefs load is still in flight —
+      // the exact SM-4 race this finding guards against.
+      c.dispose();
+
+      // Resolve the gated getAll() now that the container is gone.
+      store.openGate();
+
+      // Let the resumed continuation run to completion.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final newEntries = AppLogger.instance.talker.history
+          .skip(historyBefore)
+          .map((e) => e.generateTextMessage())
+          .toList();
+
+      expect(
+        newEntries.any((m) => m.contains('Failed to load skipped tasks')),
+        isFalse,
+        reason:
+            'a disposed-mid-load ref must return early via the '
+            'ref.mounted guard, not fall through to the catch block and '
+            'misreport a routine dispose race as "Failed to load skipped '
+            'tasks". New log entries: $newEntries',
+      );
+    });
   });
 
   // ── previouslySkippedRefsProvider ─────────────────────────────────────────

@@ -213,6 +213,11 @@ class SkippedTasks extends _$SkippedTasks {
   Future<void> _loadFromPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      // SM-4: the provider may have been disposed (e.g. the user navigated
+      // off the Scheduler screen) while the await above was in flight —
+      // return early instead of touching `ref`/`state` on an unmounted Ref
+      // (AUD-scheduler-10).
+      if (!ref.mounted) return;
       final today = ref.read(clockProvider);
       final todayStr =
           '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
@@ -227,6 +232,9 @@ class SkippedTasks extends _$SkippedTasks {
         await prefs.setStringList(_previouslySkippedRefsKey, yesterdayRefs);
         await prefs.setString(_skippedDateKey, todayStr);
         await prefs.setStringList(_skippedRefsKey, []);
+        // SM-4: three more awaits happened since the guard above — re-check
+        // before this second `state = ...` touch.
+        if (!ref.mounted) return;
         state = {};
       }
     } catch (e, st) {
