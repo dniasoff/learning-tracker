@@ -26,6 +26,8 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart'
+    show DeviceRestoreRoute;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -91,6 +93,7 @@ void main() {
         // BEFORE FIX this test would FAIL: the guard would return resolver.next()
         // (short-circuit on _isNewDevice == false) instead of redirecting.
         final guard = RestoreGuard(
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
           getDatabase: () => db, // empty — simulates a brand-new account DB
           hasCloudAccount: () => true,
         );
@@ -141,6 +144,7 @@ void main() {
         await _seedProfile(db);
 
         final guard = RestoreGuard(
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
           getDatabase: () => db,
           hasCloudAccount: () => true,
         );
@@ -186,6 +190,7 @@ void main() {
   group('R3 — reset on a fresh (never-run) guard is a no-op', () {
     test('empty DB + cloud account redirects regardless of reset', () async {
       final guard = RestoreGuard(
+        deviceRestoreRoute: () => const DeviceRestoreRoute(),
         getDatabase: () => db,
         hasCloudAccount: () => true,
       );
@@ -217,6 +222,7 @@ void main() {
       'reset then markRestoreComplete: subsequent nav passes through',
       () async {
         final guard = RestoreGuard(
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
           getDatabase: () => db,
           hasCloudAccount: () => true,
         );

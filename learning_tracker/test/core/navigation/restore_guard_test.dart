@@ -14,6 +14,8 @@ library;
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/app/router/app_router.dart'
+    show DeviceRestoreRoute;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -100,6 +102,7 @@ void main() {
     test('calls resolver.next() without touching DB or router', () async {
       var dbCalls = 0;
       final guard = RestoreGuard(
+        deviceRestoreRoute: () => const DeviceRestoreRoute(),
         getDatabase: () {
           dbCalls++;
           return db;
@@ -125,7 +128,11 @@ void main() {
     late RestoreGuard guard;
 
     setUp(() {
-      guard = RestoreGuard(getDatabase: () => db, hasCloudAccount: () => false);
+      guard = RestoreGuard(
+        deviceRestoreRoute: () => const DeviceRestoreRoute(),
+        getDatabase: () => db,
+        hasCloudAccount: () => false,
+      );
     });
 
     test('calls resolver.next() and does not redirect', () async {
@@ -152,6 +159,7 @@ void main() {
     test('replaces with DeviceRestoreRoute and calls next(false)', () async {
       // DB is completely empty — no completions, no profiles.
       final guard = RestoreGuard(
+        deviceRestoreRoute: () => const DeviceRestoreRoute(),
         getDatabase: () => db,
         hasCloudAccount: () => true,
       );
@@ -177,6 +185,7 @@ void main() {
       'no-dead-end: next(false) is always called alongside replace()',
       () async {
         final guard = RestoreGuard(
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
           getDatabase: () => db,
           hasCloudAccount: () => true,
         );
@@ -187,6 +196,37 @@ void main() {
         verify(() => resolver.next(false)).called(1);
       },
     );
+
+    test('AUD-core-navigation-01: replaces with exactly the route returned by '
+        'the injected deviceRestoreRoute builder, not a route the guard '
+        'builds itself', () async {
+      // Regression for the app→core→app import cycle: RestoreGuard used
+      // to hardcode `const DeviceRestoreRoute()` internally (importing the
+      // app-layer route class directly). Prove the redirect route is now
+      // fully caller-controlled by injecting a distinctive marker route
+      // that the guard could not possibly have constructed on its own.
+      final guard = RestoreGuard(
+        deviceRestoreRoute: () =>
+            const PageRouteInfo('AUD_CORE_NAV_01_MARKER_ROUTE'),
+        getDatabase: () => db,
+        hasCloudAccount: () => true,
+      );
+
+      await guard.onNavigation(resolver, router);
+
+      verify(
+        () => router.replace(
+          any<PageRouteInfo>(
+            that: isA<PageRouteInfo>().having(
+              (r) => r.routeName,
+              'routeName',
+              'AUD_CORE_NAV_01_MARKER_ROUTE',
+            ),
+          ),
+        ),
+      ).called(1);
+      verify(() => resolver.next(false)).called(1);
+    });
   });
 
   // ── Branch 4a: cloud account + non-empty via profiles ─────────────────────
@@ -195,6 +235,7 @@ void main() {
     test('resolver.next() — no redirect', () async {
       await _insertProfile(db);
       final guard = RestoreGuard(
+        deviceRestoreRoute: () => const DeviceRestoreRoute(),
         getDatabase: () => db,
         hasCloudAccount: () => true,
       );
@@ -211,6 +252,7 @@ void main() {
       () async {
         await _insertProfile(db);
         final guard = RestoreGuard(
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
           getDatabase: () => db,
           hasCloudAccount: () => true,
         );
@@ -250,6 +292,7 @@ void main() {
       await _insertCompletionEvent(db, profileId: profileId, trackId: trackId);
 
       final guard = RestoreGuard(
+        deviceRestoreRoute: () => const DeviceRestoreRoute(),
         getDatabase: () => db,
         hasCloudAccount: () => true,
       );
@@ -270,6 +313,7 @@ void main() {
       () async {
         // Guard starts with empty DB + cloud account → would redirect.
         final guard = RestoreGuard(
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
           getDatabase: () => db,
           hasCloudAccount: () => true,
         );
@@ -301,6 +345,7 @@ void main() {
       'markRestoreComplete on fresh guard (never ran) → next() on first nav',
       () async {
         final guard = RestoreGuard(
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
           getDatabase: () => db,
           hasCloudAccount: () => true,
         );
@@ -325,6 +370,7 @@ void main() {
       () async {
         var hasCloud = false;
         final guard = RestoreGuard(
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
           getDatabase: () => db,
           hasCloudAccount: () => hasCloud,
         );
@@ -363,6 +409,7 @@ void main() {
       () async {
         when(() => resolver.isResolved).thenReturn(false);
         final guard = RestoreGuard(
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
           getDatabase: () => throw StateError('provider disposed mid-flight'),
           hasCloudAccount: () => true,
         );

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 
@@ -18,17 +17,28 @@ class ProfileGuard extends AutoRouteGuard {
     required void Function(int) setSelectedProfileId,
     required int Function() getAccountId,
     required bool Function() isTutoredSession,
+    required PageRouteInfo Function() profilePickerRoute,
   }) : _getDatabase = getDatabase,
        _getSelectedProfileId = getSelectedProfileId,
        _setSelectedProfileId = setSelectedProfileId,
        _getAccountId = getAccountId,
-       _isTutoredSession = isTutoredSession;
+       _isTutoredSession = isTutoredSession,
+       _profilePickerRoute = profilePickerRoute;
 
   final UserDatabase Function() _getDatabase;
   final int? Function() _getSelectedProfileId;
   final void Function(int) _setSelectedProfileId;
   final int Function() _getAccountId;
   final bool Function() _isTutoredSession;
+
+  /// Builds the [PageRouteInfo] to redirect to when 2+ profiles exist and
+  /// none is selected. Injected by the caller (the app-layer router wiring)
+  /// rather than imported here — `core/navigation/` must not depend on
+  /// `app/router/` (AUD-core-navigation-01: this guard used to import
+  /// `core/navigation/app_router.dart`, a re-export shim for
+  /// `app/router/app_router.dart`, which itself imports this file — a real
+  /// app→core→app import cycle).
+  final PageRouteInfo Function() _profilePickerRoute;
 
   @override
   Future<void> onNavigation(
@@ -132,7 +142,7 @@ class ProfileGuard extends AutoRouteGuard {
       event: 'profile_guard_multiple_profiles_redirecting',
       fields: {'profileCount': profiles.length},
     );
-    unawaited(router.replace(const ProfilePickerRoute()));
+    unawaited(router.replace(_profilePickerRoute()));
     resolver.next(false);
   }
 }

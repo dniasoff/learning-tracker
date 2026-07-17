@@ -86,6 +86,7 @@ void main() {
       'AC2: blocks navigation when no scope (no active profile) is resolved',
       () async {
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async => true,
           getScope: () => null,
@@ -103,6 +104,7 @@ void main() {
         when(() => pinSvc.hasProfilePin(42)).thenAnswer((_) async => false);
 
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async => false,
           getScope: () => const PinScope.parent(42),
@@ -121,6 +123,7 @@ void main() {
         when(() => pinSvc.hasProfilePin(42)).thenAnswer((_) async => true);
 
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async => true,
           getScope: () => const PinScope.parent(42),
@@ -136,6 +139,7 @@ void main() {
       when(() => pinSvc.hasProfilePin(42)).thenAnswer((_) async => true);
 
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinSvc,
         promptForPin: () async => false,
         getScope: () => const PinScope.parent(42),
@@ -153,6 +157,7 @@ void main() {
 
         var prompts = 0;
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async {
             prompts++;
@@ -176,6 +181,7 @@ void main() {
 
         var prompts = 0;
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async {
             prompts++;
@@ -199,6 +205,7 @@ void main() {
 
         var prompts = 0;
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async {
             prompts++;
@@ -234,6 +241,7 @@ void main() {
         when(() => pinSvc.hasTutorPin(7)).thenAnswer((_) async => true);
 
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async => true,
           getScope: () => const PinScope.tutor(7),
@@ -254,6 +262,7 @@ void main() {
         when(() => pinSvc.hasTutorPin(7)).thenAnswer((_) async => false);
 
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinSvc,
           promptForPin: () async => false,
           getScope: () => const PinScope.tutor(7),
@@ -274,6 +283,7 @@ void main() {
       // ignore: omit_local_variable_types
       PinScope currentScope = const PinScope.parent(7);
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinSvc,
         promptForPin: () async {
           if (currentScope is PinScopeTutor) tutorPrompts++;
@@ -305,7 +315,7 @@ void main() {
       throw StateError('Could not locate repo root');
     }
 
-    test('AC4: exactly five distinct guard files exist under '
+    test('AC4: exactly four distinct guard files exist under '
         'lib/core/navigation/guards/', () {
       final root = repoRoot();
       final dir = Directory(
@@ -321,7 +331,6 @@ void main() {
       expect(
         guards,
         equals({
-          'auth_guard.dart',
           'restore_guard.dart',
           'profile_guard.dart',
           'child_mode_guard.dart',
@@ -329,7 +338,11 @@ void main() {
         }),
         reason:
             'After DNI-339, parent_pin_guard.dart is folded into '
-            'pin_guard.dart parameterized by PinScope.',
+            'pin_guard.dart parameterized by PinScope. After '
+            'AUD-core-navigation-01, this directory\'s own auth_guard.dart '
+            '(a dead re-export shim) is deleted; the real AuthGuard has '
+            'lived under lib/app/router/guards/ since the W1.2 refactor, '
+            'and is intentionally NOT a core/navigation-owned guard.',
       );
     });
 

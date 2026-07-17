@@ -82,6 +82,7 @@ void main() {
   group('B1 — getScope returns null', () {
     test('calls next(false) and does not touch router', () async {
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => true, // should never be reached
         getScope: () => null,
@@ -102,6 +103,7 @@ void main() {
     test('parent scope: next(true) without calling promptForPin', () async {
       var promptCalls = 0;
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async {
           promptCalls++;
@@ -127,6 +129,7 @@ void main() {
     test('tutor scope: next(true) without calling promptForPin', () async {
       var promptCalls = 0;
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async {
           promptCalls++;
@@ -154,6 +157,7 @@ void main() {
 
       final authenticated = <PinScope>[];
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => false, // should not be reached
         getScope: () => _parentScope,
@@ -167,6 +171,42 @@ void main() {
       verifyNever(() => resolver.next(false));
       expect(authenticated, [_parentScope]);
     });
+
+    test(
+      'AUD-core-navigation-01: pushes exactly the route returned by the '
+      'injected pinSetupRoute builder, not a route the guard builds itself',
+      () async {
+        // Regression for the app→core→app import cycle: PinGuard used to
+        // hardcode `const PinFlowSetupRoute()` internally (importing the
+        // app-layer route class directly). Prove the push route is now
+        // fully caller-controlled by injecting a distinctive marker route
+        // that the guard could not possibly have constructed on its own.
+        when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => false);
+        _stubRouterPush(router, true);
+
+        final guard = PinGuard(
+          pinSetupRoute: () =>
+              const PageRouteInfo('AUD_CORE_NAV_01_MARKER_ROUTE'),
+          pinService: pinService,
+          promptForPin: () async => false,
+          getScope: () => _parentScope,
+        );
+
+        await guard.onNavigation(resolver, router);
+
+        verify(
+          () => router.push<bool>(
+            any<PageRouteInfo>(
+              that: isA<PageRouteInfo>().having(
+                (r) => r.routeName,
+                'routeName',
+                'AUD_CORE_NAV_01_MARKER_ROUTE',
+              ),
+            ),
+          ),
+        ).called(1);
+      },
+    );
   });
 
   // ── B4: no PIN set, setup flow returns false ──────────────────────────────────
@@ -180,6 +220,7 @@ void main() {
 
         final authenticated = <PinScope>[];
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinService,
           promptForPin: () async => false,
           getScope: () => _parentScope,
@@ -205,6 +246,7 @@ void main() {
 
       final authenticated = <PinScope>[];
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => false,
         getScope: () => _parentScope,
@@ -228,6 +270,7 @@ void main() {
 
       final authenticated = <PinScope>[];
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => true,
         getScope: () => _parentScope,
@@ -247,6 +290,7 @@ void main() {
 
       final authenticated = <PinScope>[];
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => true,
         getScope: () => _tutorScope,
@@ -265,6 +309,7 @@ void main() {
 
       var promptCalls = 0;
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async {
           promptCalls++;
@@ -294,6 +339,7 @@ void main() {
 
       final authenticated = <PinScope>[];
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => false,
         getScope: () => _parentScope,
@@ -313,6 +359,7 @@ void main() {
 
       final authenticated = <PinScope>[];
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => false,
         getScope: () => _tutorScope,
@@ -335,6 +382,7 @@ void main() {
 
       var promptCalls = 0;
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async {
           promptCalls++;
@@ -360,6 +408,7 @@ void main() {
     test('fires onSessionLocked callback', () async {
       var lockCalls = 0;
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => true,
         getScope: () => _parentScope,
@@ -375,6 +424,7 @@ void main() {
       'does not throw when no onSessionLocked callback is registered',
       () async {
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinService,
           promptForPin: () async => true,
           getScope: () => _parentScope,
@@ -391,6 +441,7 @@ void main() {
     test('sets parent scope so next navigation skips prompt', () async {
       var promptCalls = 0;
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async {
           promptCalls++;
@@ -410,6 +461,7 @@ void main() {
     test('fires onSessionAuthenticated with parent scope', () async {
       final authenticated = <PinScope>[];
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => true,
         getScope: () => _parentScope,
@@ -428,6 +480,7 @@ void main() {
     test('sets tutor scope so next navigation skips prompt', () async {
       var promptCalls = 0;
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async {
           promptCalls++;
@@ -447,6 +500,7 @@ void main() {
     test('fires onSessionAuthenticated with the given scope', () async {
       final authenticated = <PinScope>[];
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => true,
         getScope: () => _tutorScope,
@@ -466,6 +520,7 @@ void main() {
       when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => true);
 
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => false,
         getScope: () => _parentScope,
@@ -483,6 +538,7 @@ void main() {
       when(() => pinService.hasTutorPin(1)).thenAnswer((_) async => true);
 
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => false,
         getScope: () => _tutorScope,
@@ -505,6 +561,7 @@ void main() {
 
         var promptCalls = 0;
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinService,
           promptForPin: () async {
             promptCalls++;
@@ -535,6 +592,7 @@ void main() {
 
         var promptCalls = 0;
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinService,
           promptForPin: () async {
             promptCalls++;
@@ -575,6 +633,7 @@ void main() {
         var promptCalls = 0;
         var currentProfileId = 1;
         final guard = PinGuard(
+          pinSetupRoute: () => _FakePageRouteInfo(),
           pinService: pinService,
           promptForPin: () async {
             promptCalls++;
@@ -615,6 +674,7 @@ void main() {
       when(() => resolver.isResolved).thenReturn(false);
       when(() => pinService.hasProfilePin(1)).thenAnswer((_) async => true);
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => throw Exception('PIN verify boom'),
         getScope: () => _parentScope,
@@ -632,6 +692,7 @@ void main() {
         () => pinService.hasProfilePin(1),
       ).thenThrow(Exception('secure storage boom'));
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: pinService,
         promptForPin: () async => true,
         getScope: () => _parentScope,

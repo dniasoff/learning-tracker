@@ -65,6 +65,7 @@ void main() {
 
   group('tutored session active', () {
     ProfileGuard makeGuard({required int? selectedId}) => ProfileGuard(
+      profilePickerRoute: () => _FakePageRouteInfo(),
       getDatabase: () => db,
       getSelectedProfileId: () => selectedId,
       setSelectedProfileId: (_) {},
@@ -102,6 +103,7 @@ void main() {
 
   group('zero own profiles, not tutored', () {
     ProfileGuard makeGuard() => ProfileGuard(
+      profilePickerRoute: () => _FakePageRouteInfo(),
       getDatabase: () => db,
       getSelectedProfileId: () => null,
       setSelectedProfileId: (_) {},
@@ -151,6 +153,7 @@ void main() {
 
       final selected = <int>[];
       final guard = ProfileGuard(
+        profilePickerRoute: () => _FakePageRouteInfo(),
         getDatabase: () => db,
         getSelectedProfileId: () => null,
         setSelectedProfileId: (id) => selected.add(id),
@@ -167,6 +170,49 @@ void main() {
     });
   });
 
+  // ── 2+ profiles, none selected → redirect to picker ───────────────────────
+
+  group('2+ own profiles, none selected', () {
+    test('AUD-core-navigation-01: replaces with exactly the route returned by '
+        'the injected profilePickerRoute builder, not a route the guard '
+        'builds itself', () async {
+      // Regression for the app→core→app import cycle: ProfileGuard used
+      // to hardcode `const ProfilePickerRoute()` internally (importing the
+      // app-layer route class directly). Prove the redirect route is now
+      // fully caller-controlled by injecting a distinctive marker route
+      // that the guard could not possibly have constructed on its own.
+      final accountId = await seedAccount(db);
+      await _insertOwnProfile(db, accountId: accountId);
+      await _insertOwnProfile(db, accountId: accountId);
+
+      final guard = ProfileGuard(
+        profilePickerRoute: () =>
+            const PageRouteInfo('AUD_CORE_NAV_01_MARKER_ROUTE'),
+        getDatabase: () => db,
+        getSelectedProfileId: () => null,
+        setSelectedProfileId: (_) {},
+        getAccountId: () => accountId,
+        isTutoredSession: () => false,
+      );
+
+      await guard.onNavigation(resolver, router);
+
+      verify(
+        () => router.replace(
+          any<PageRouteInfo>(
+            that: isA<PageRouteInfo>().having(
+              (r) => r.routeName,
+              'routeName',
+              'AUD_CORE_NAV_01_MARKER_ROUTE',
+            ),
+          ),
+        ),
+      ).called(1);
+      verify(() => resolver.next(false)).called(1);
+      verifyNever(() => resolver.next());
+    });
+  });
+
   // ── Branch 4: already-selected valid profile ─────────────────────────────────
 
   group('valid profile already selected', () {
@@ -175,6 +221,7 @@ void main() {
       final profileId = await _insertOwnProfile(db, accountId: accountId);
 
       final guard = ProfileGuard(
+        profilePickerRoute: () => _FakePageRouteInfo(),
         getDatabase: () => db,
         getSelectedProfileId: () => profileId,
         setSelectedProfileId: (_) {},
@@ -202,6 +249,7 @@ void main() {
       () async {
         when(() => resolver.isResolved).thenReturn(false);
         final guard = ProfileGuard(
+          profilePickerRoute: () => _FakePageRouteInfo(),
           getDatabase: () => throw StateError('provider disposed mid-flight'),
           getSelectedProfileId: () => null,
           setSelectedProfileId: (_) {},

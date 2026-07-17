@@ -90,6 +90,7 @@ Future<AppRouter> _createAuthenticatedRouter({
   // a profile whose id matches getSelectedProfileId() → 1.
   await seedProfileWithIds(testDb, profileId: 1, accountId: 1);
   final restoreGuard = RestoreGuard(
+    deviceRestoreRoute: () => const DeviceRestoreRoute(),
     getDatabase: () => testDb,
     hasCloudAccount: () => false,
   );
@@ -104,6 +105,7 @@ Future<AppRouter> _createAuthenticatedRouter({
     authGuard: AuthGuard(),
     restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
+      profilePickerRoute: () => const ProfilePickerRoute(),
       getDatabase: () => testDb,
       getSelectedProfileId: () => 1,
       setSelectedProfileId: (_) {},
@@ -115,6 +117,7 @@ Future<AppRouter> _createAuthenticatedRouter({
       getSelectedProfileId: () => 1,
     ),
     pinGuard: PinGuard(
+      pinSetupRoute: () => const PinFlowSetupRoute(),
       pinService: mockPinService,
       promptForPin: () async => false,
       getScope: () => const PinScope.parent(1),
@@ -128,6 +131,7 @@ Future<AppRouter> _createUnauthenticatedRouter() async {
 
   final testDb = createTestDatabase();
   final restoreGuard = RestoreGuard(
+    deviceRestoreRoute: () => const DeviceRestoreRoute(),
     getDatabase: () => testDb,
     hasCloudAccount: () => false,
   );
@@ -137,6 +141,7 @@ Future<AppRouter> _createUnauthenticatedRouter() async {
     authGuard: AuthGuard(),
     restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
+      profilePickerRoute: () => const ProfilePickerRoute(),
       getDatabase: () => testDb,
       getSelectedProfileId: () => 1,
       setSelectedProfileId: (_) {},
@@ -148,6 +153,7 @@ Future<AppRouter> _createUnauthenticatedRouter() async {
       getSelectedProfileId: () => 1,
     ),
     pinGuard: PinGuard(
+      pinSetupRoute: () => const PinFlowSetupRoute(),
       pinService: mockPinService,
       promptForPin: () async => false,
       getScope: () => const PinScope.parent(1),

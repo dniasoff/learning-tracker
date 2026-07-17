@@ -1007,22 +1007,16 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    FAIL=1; \
 	  fi; \
 	done; \
-	echo "70/70 — Rule 1 dependency-direction: no NEW lib/core/ file imports lib/app/ (W1.2 shim removal — AUD-core-navigation-02) — RATCHET, only a site outside the tracked pre-existing list below fails the gate"; \
-	echo "  (deleting the app_router/app_shell/router_provider/guards/auth_guard re-export shims unmasked 3 pre-existing"; \
-	echo "  lib/core/navigation/guards/{pin,profile,restore}_guard.dart -> app_router.dart sites, whitelisted below as"; \
-	echo "  out-of-scope follow-up debt; any OTHER lib/core/ -> lib/app/ site fails this gate)"; \
-	ALLOWED_CORE_APP_IMPORTS="lib/core/navigation/guards/pin_guard.dart:package:learning_tracker/app/router/app_router.dart lib/core/navigation/guards/profile_guard.dart:package:learning_tracker/app/router/app_router.dart lib/core/navigation/guards/restore_guard.dart:package:learning_tracker/app/router/app_router.dart"; \
-	CORE_APP_HITS=$$(grep -rn "package:learning_tracker/app/" lib/core/ --include="*.dart" \
-	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" || true); \
-	for hit in $$(echo "$$CORE_APP_HITS" | grep -oE "^[^:]+:[0-9]+:.*package:learning_tracker/app/[^']+\.dart" | sed -E 's/^([^:]+):[0-9]+:.*(package:learning_tracker\/app\/[^'"'"']+\.dart)$$/\1:\2/' | sort -u); do \
-	  case " $$ALLOWED_CORE_APP_IMPORTS " in \
-	    *" $$hit "*) ;; \
-	    *) \
-	      echo "  $$hit — new lib/core/ -> lib/app/ import; the dependency direction is app -> features -> core."; \
-	      echo "    Inject the data a core module needs from app/ via constructor parameter or Riverpod provider instead."; \
-	      FAIL=1 ;; \
-	  esac; \
-	done; \
+	echo "70/70 — Rule 1a dependency-direction: no lib/core/ file imports lib/app/ (W1.2 shim removal — AUD-core-navigation-02; cycle broken via guard DI — AUD-core-navigation-01) — hard gate, zero legacy debt"; \
+	echo "  (deleting the app_router/app_shell/router_provider/guards/auth_guard re-export shims originally unmasked 3 pre-existing"; \
+	echo "  lib/core/navigation/guards/{pin,profile,restore}_guard.dart -> app_router.dart sites; those guards now take"; \
+	echo "  PageRouteInfo Function() constructor params supplied by app-layer router wiring instead of importing app/router/"; \
+	echo "  directly, so the whitelist is gone — ANY lib/core/ -> lib/app/ site fails this gate)"; \
+	if grep -rn "import 'package:learning_tracker/app/" lib/core/ --include="*.dart" | grep -q .; then \
+	  echo "  lib/core/ file imports from lib/app/ — core/ must not depend on app/ (dependency direction is strictly app -> features -> core, coding-standards.md Layering Rules):"; \
+	  grep -rn "import 'package:learning_tracker/app/" lib/core/ --include="*.dart"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
