@@ -1,4 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+
+part 'lifetime_knowledge.freezed.dart';
 
 /// Completion state of a node in the lifetime knowledge tree.
 enum LifetimeNodeState {
@@ -43,35 +46,29 @@ enum LifetimeLeafSource {
 /// Only meaningful on terminal nodes (`children.isEmpty`). Higher-level nodes
 /// expose `null` because they aggregate over multiple leaves with potentially
 /// mixed provenance.
-class LifetimeLeafProvenance {
-  const LifetimeLeafProvenance({
-    required this.source,
-    required this.chazarosCount,
-  });
+///
+/// `==`/`hashCode` are freezed-generated from [source] and [chazarosCount];
+/// `toString` is hand-written to keep the compact `chazaros:` debug label
+/// used by existing call sites.
+@freezed
+abstract class LifetimeLeafProvenance with _$LifetimeLeafProvenance {
+  const LifetimeLeafProvenance._();
 
-  /// Where the leaf's lifetime credit comes from.
-  final LifetimeLeafSource source;
+  const factory LifetimeLeafProvenance({
+    /// Where the leaf's lifetime credit comes from.
+    required LifetimeLeafSource source,
 
-  /// Number of completion events recorded for this leaf — `limudim + chazaros`,
-  /// i.e. every distinct stage event ever logged.
-  ///
-  /// For [LifetimeLeafSource.lifetimeImported] entries that originated from
-  /// the ledger rather than the completion_events table this is `0` (no event
-  /// rows exist for ledger-only marks). For [LifetimeLeafSource.bulkMarked]
-  /// it counts the bulk-import event rows (typically 1). For
-  /// [LifetimeLeafSource.live] it counts all completion events including the
-  /// upgrades from prior bulk imports.
-  final int chazarosCount;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is LifetimeLeafProvenance &&
-          other.source == source &&
-          other.chazarosCount == chazarosCount);
-
-  @override
-  int get hashCode => Object.hash(source, chazarosCount);
+    /// Number of completion events recorded for this leaf — `limudim +
+    /// chazaros`, i.e. every distinct stage event ever logged.
+    ///
+    /// For [LifetimeLeafSource.lifetimeImported] entries that originated from
+    /// the ledger rather than the completion_events table this is `0` (no
+    /// event rows exist for ledger-only marks). For
+    /// [LifetimeLeafSource.bulkMarked] it counts the bulk-import event rows
+    /// (typically 1). For [LifetimeLeafSource.live] it counts all completion
+    /// events including the upgrades from prior bulk imports.
+    required int chazarosCount,
+  }) = _LifetimeLeafProvenance;
 
   @override
   String toString() =>

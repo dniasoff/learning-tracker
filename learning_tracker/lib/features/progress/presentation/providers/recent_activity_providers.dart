@@ -37,7 +37,13 @@ part 'recent_activity_providers.freezed.dart';
 /// a fresh fetch. Generated equality also means a field added to this type
 /// later is automatically included in `==`/`hashCode` — a hand-written
 /// override could silently forget it and under-compare, causing stale
-/// `FutureProvider.family` cache hits (AUD-progress-15).
+/// `FutureProvider.family` cache hits (AUD-progress-15). `@freezed` (not a
+/// record) because this type crosses a public API boundary — constructed in
+/// `recent_activity_screen.dart` and referenced from test code outside this
+/// file — and docs/coding-standards.md reserves bare records for small
+/// private multi-value returns only (AUD-progress-14 considered a record
+/// typedef here too; AUD-progress-15's `@freezed` landed first and is the
+/// standards-conformant choice for this particular type).
 @freezed
 abstract class RecentActivityWindow with _$RecentActivityWindow {
   const factory RecentActivityWindow({

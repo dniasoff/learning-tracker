@@ -1,3 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'pace_calculator.freezed.dart';
+
 /// Grace window in calendar days from track start during which pace status is
 /// always [ProgressPaceStatus.graceWindow] regardless of actual progress.
 ///
@@ -41,82 +45,80 @@ enum ProgressPaceStatus { graceWindow, onTrack, ahead, behind }
 /// - `today == trackStartDate` (day 0) → [actualVelocity] = 0 and status is
 ///   always [ProgressPaceStatus.graceWindow].
 ///
-/// Use [ProgressPaceCalculator.compute] to create an instance.
-class ProgressPaceCalculator {
-  // ---------------------------------------------------------------------------
-  // Inputs
-  // ---------------------------------------------------------------------------
-
-  /// Total number of items in the track (e.g. total mishnayos).
-  final int totalItems;
-
-  /// Items completed before [trackStartDate] via bulk-mark (sentinel date).
-  final int bulkBaseline;
-
-  /// Items completed on or after [trackStartDate] (live progress).
-  final int liveProgress;
-
-  /// The date the track was created/configured by the user (local-day midnight).
-  final DateTime trackStartDate;
-
-  /// The user-set finish date (local-day midnight).
-  final DateTime targetDate;
-
-  /// Today's date (local-day midnight).
-  final DateTime today;
+/// ## Construction
+/// The only production constructor is the computing factory
+/// [ProgressPaceCalculator.compute] — [ProgressPaceCalculator._raw] is
+/// library-private, so an instance with inconsistent derived fields can
+/// never be constructed from outside this file. `==`/`hashCode` are
+/// freezed-generated from all fields (inputs + derived); `toString` is
+/// hand-written for a compact debug representation.
+@Freezed(map: FreezedMapOptions.none, when: FreezedWhenOptions.none)
+abstract class ProgressPaceCalculator with _$ProgressPaceCalculator {
+  const ProgressPaceCalculator._();
 
   // ---------------------------------------------------------------------------
-  // Derived fields — computed once in the factory
+  // Private constructor — all fields pre-computed. Reached only via
+  // [ProgressPaceCalculator.compute].
   // ---------------------------------------------------------------------------
 
-  /// Items to complete per calendar day to finish on [targetDate].
-  ///
-  /// 0.0 when [targetDate] == [trackStartDate] (degenerate range).
-  final double requiredVelocity;
+  const factory ProgressPaceCalculator._raw({
+    // -------------------------------------------------------------------------
+    // Inputs
+    // -------------------------------------------------------------------------
 
-  /// Items completed per calendar day since [trackStartDate].
-  ///
-  /// 0.0 when [today] == [trackStartDate] (day 0 — no elapsed time).
-  final double actualVelocity;
+    /// Total number of items in the track (e.g. total mishnayos).
+    required int totalItems,
 
-  /// How many items should have been done by today at the required velocity.
-  final double expectedProgressToday;
+    /// Items completed before [trackStartDate] via bulk-mark (sentinel date).
+    required int bulkBaseline,
 
-  /// Signed difference between live progress and expected progress.
-  ///
-  /// Positive = ahead of schedule. Negative = behind schedule.
-  final double paceVariance;
+    /// Items completed on or after [trackStartDate] (live progress).
+    required int liveProgress,
 
-  /// [paceVariance] expressed in calendar days.
-  ///
-  /// Positive = ahead, negative = behind. 0.0 when [requiredVelocity] is 0.
-  final double paceVarianceInDays;
+    /// The date the track was created/configured by the user (local-day
+    /// midnight).
+    required DateTime trackStartDate,
 
-  /// True when the track is within the [kPaceGraceWindowDays] window.
-  final bool isInGraceWindow;
+    /// The user-set finish date (local-day midnight).
+    required DateTime targetDate,
 
-  /// The overall pace status derived from the inputs and computed fields.
-  final ProgressPaceStatus paceStatus;
+    /// Today's date (local-day midnight).
+    required DateTime today,
 
-  // ---------------------------------------------------------------------------
-  // Private constructor — all fields pre-computed
-  // ---------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // Derived fields — computed once in [ProgressPaceCalculator.compute]
+    // -------------------------------------------------------------------------
 
-  const ProgressPaceCalculator._({
-    required this.totalItems,
-    required this.bulkBaseline,
-    required this.liveProgress,
-    required this.trackStartDate,
-    required this.targetDate,
-    required this.today,
-    required this.requiredVelocity,
-    required this.actualVelocity,
-    required this.expectedProgressToday,
-    required this.paceVariance,
-    required this.paceVarianceInDays,
-    required this.isInGraceWindow,
-    required this.paceStatus,
-  });
+    /// Items to complete per calendar day to finish on [targetDate].
+    ///
+    /// 0.0 when [targetDate] == [trackStartDate] (degenerate range).
+    required double requiredVelocity,
+
+    /// Items completed per calendar day since [trackStartDate].
+    ///
+    /// 0.0 when [today] == [trackStartDate] (day 0 — no elapsed time).
+    required double actualVelocity,
+
+    /// How many items should have been done by today at the required
+    /// velocity.
+    required double expectedProgressToday,
+
+    /// Signed difference between live progress and expected progress.
+    ///
+    /// Positive = ahead of schedule. Negative = behind schedule.
+    required double paceVariance,
+
+    /// [paceVariance] expressed in calendar days.
+    ///
+    /// Positive = ahead, negative = behind. 0.0 when [requiredVelocity] is 0.
+    required double paceVarianceInDays,
+
+    /// True when the track is within the [kPaceGraceWindowDays] window.
+    required bool isInGraceWindow,
+
+    /// The overall pace status derived from the inputs and computed fields.
+    required ProgressPaceStatus paceStatus,
+  }) = _ProgressPaceCalculator;
 
   // ---------------------------------------------------------------------------
   // Factory constructor — performs all computation
@@ -184,7 +186,7 @@ class ProgressPaceCalculator {
       paceStatus = ProgressPaceStatus.onTrack;
     }
 
-    return ProgressPaceCalculator._(
+    return ProgressPaceCalculator._raw(
       totalItems: totalItems,
       bulkBaseline: bulkBaseline,
       liveProgress: liveProgress,
@@ -202,29 +204,10 @@ class ProgressPaceCalculator {
   }
 
   // ---------------------------------------------------------------------------
-  // Equality + hash
+  // toString — freezed generates == and hashCode from all fields above;
+  // this custom override is kept for a compact, fixed-precision debug
+  // representation.
   // ---------------------------------------------------------------------------
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is ProgressPaceCalculator &&
-          other.totalItems == totalItems &&
-          other.bulkBaseline == bulkBaseline &&
-          other.liveProgress == liveProgress &&
-          other.trackStartDate == trackStartDate &&
-          other.targetDate == targetDate &&
-          other.today == today;
-
-  @override
-  int get hashCode => Object.hash(
-    totalItems,
-    bulkBaseline,
-    liveProgress,
-    trackStartDate,
-    targetDate,
-    today,
-  );
 
   @override
   String toString() =>
