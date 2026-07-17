@@ -417,7 +417,7 @@ final class SkippedTasksProvider
   }
 }
 
-String _$skippedTasksHash() => r'6cffc858abc461285abb06713d2e3958ecba7750';
+String _$skippedTasksHash() => r'79a75ca4bf7ab95b70c65d312d15ff305fb05f59';
 
 /// Holds the set of sefaria refs skipped (dismissed) today.
 ///

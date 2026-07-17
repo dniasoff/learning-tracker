@@ -3,7 +3,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/content_browsing/content_browsing.dart';
 
 /// Resolve a curriculum hierarchy level's raw storage key (a seder/sefer at
 /// level 1, a masechta/siman/hilchos at level 2, …) to its variant-aware
