@@ -8106,13 +8106,21 @@
     {
       "id": "AUD-content_browsing-07",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Add keepAlive justification comments to live content_browsing providers",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "266d8bbcd4af40005aa0e16d3b2eaf9a87fe67e2"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-content_browsing-07 AC1 OK: checker exists \u2014 Makefile check 76/76 (awk SM-6 grep on the 3 provider files) wired into make audit FAIL->exit1",
+        "AUD-content_browsing-07 AC1 OK: checker fires \u2014 scratchpad fixture stripping FontSizeNotifier comment -> awk flagged line 36; clean on real tree",
+        "AUD-content_browsing-07 AC1 OK: all 8 keepAlive:true sites in feature (only in presentation/providers) have inline // keepAlive: directly above annotation",
+        "AUD-content_browsing-07 AC1 OK: 3 evidenced sites covered \u2014 curriculumHeNames, FontSizeNotifier, ShowNikud each carry justification",
+        "AUD-content_browsing-07 AC1 OK: make audit exit 0, check 76/76 printed with no violation lines, 'audit PASSED'"
+      ],
+      "notes": "Re-verified: 3 evidenced sites still lacked comments - confirmed. AC scope = named dir (per AUD-onboarding-13 precedent), so fixed all 8 keepAlive sites in the 3 files. Shipped grep as audit check 76/76. Red (8 flagged) -> fix -> green (0); checker re-verified via fixture."
     },
     {
       "id": "AUD-content_browsing-08",
