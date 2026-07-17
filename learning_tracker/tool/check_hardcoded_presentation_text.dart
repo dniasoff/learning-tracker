@@ -60,7 +60,9 @@ const _baseline = <String>{
   'lib/features/gamification/presentation/widgets/points_display_widget.dart:98',
   'lib/features/onboarding/presentation/screens/bulk_mark_screen.dart:776',
   'lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:66',
-  'lib/features/scheduler/presentation/widgets/pace_indicator.dart:82',
+  // AUD-scheduler-08: pace_indicator.dart (the hardcoded-English site this
+  // entry baselined) deleted as dead code — zero production consumers, see
+  // that finding's fix commit. Entry removed rather than left dangling.
   // AUD-sacred_time-08: re-pinned from :302 — the SacredTimeSettingsCard
   // Parent-PIN-gate wiring (sacredTimeLocationPinGuardRequiredProvider watch
   // + pinGuardRequired/activeProfileId passed to the card) added near the
