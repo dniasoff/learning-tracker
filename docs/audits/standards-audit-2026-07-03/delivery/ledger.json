@@ -6227,13 +6227,17 @@
     {
       "id": "AUD-progress-02",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Add a semantic label to the custom back IconButton in recent_activity_screen.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "38a77ff48e889919d4cc2f2257f3b4c172b315ce"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-progress-02 AC1 OK: a11y test asserts real semantics (EN label=='Back', HE bySemanticsLabel found); green 2/2, red +0/-2 pre-fix; fix adds Icon semanticLabel (AX-3)"
+      ],
+      "notes": "Re-verified evidence still present. Red-first test failed pre-fix (EN label empty, HE bySemanticsLabel found 0). Fixed via tooltip+Icon(semanticLabel:), mirroring AUD-gamification-04's pattern. Test now green 2/2. AC satisfied."
     },
     {
       "id": "AUD-sync-03",
