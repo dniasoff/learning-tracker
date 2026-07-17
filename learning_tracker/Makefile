@@ -1027,7 +1027,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    | grep -v "static final RegExp" | grep -v "static const RegExp"; \
 	  FAIL=1; \
 	fi; \
-	echo "72/72 — SM-6: every @Riverpod(keepAlive: true) in lib/core/auth/auth_providers.dart carries an inline // keepAlive: justification comment on the line immediately above (diff-scoped to this file per AUD-core-auth-04; other repo-wide keepAlive sites — e.g. content_index.dart, registry_provider.dart, preference_providers.dart — are tracked separately, not yet in this gate)"; \
+	echo "72/75 — SM-6: every @Riverpod(keepAlive: true) in lib/core/auth/auth_providers.dart carries an inline // keepAlive: justification comment on the line immediately above (diff-scoped to this file per AUD-core-auth-04; other repo-wide keepAlive sites — e.g. content_index.dart, registry_provider.dart, preference_providers.dart — are tracked separately, not yet in this gate)"; \
 	if awk '/@Riverpod\(keepAlive: true\)/ && prev !~ /\/\/[ \t]*keepAlive:/ { print NR": "$$0 } { prev = $$0 }' \
 	    lib/core/auth/auth_providers.dart | grep -q .; then \
 	  echo "  @Riverpod(keepAlive: true) missing an inline // keepAlive: <reason> justification comment"; \
@@ -1036,13 +1036,32 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    lib/core/auth/auth_providers.dart; \
 	  FAIL=1; \
 	fi; \
-	echo "73/73 — Rule-0 (ratchet): no NEW stray .gitkeep in a non-empty lib/ directory (AUD-core-constants-02)"; \
+	echo "73/75 — Rule-0 (ratchet): no NEW stray .gitkeep in a non-empty lib/ directory (AUD-core-constants-02)"; \
 	if ! dart run tool/check_gitkeep_stray.dart > /tmp/gitkeep_stray_check.$$$$.log 2>&1; then \
 	  cat /tmp/gitkeep_stray_check.$$$$.log; \
 	  rm -f /tmp/gitkeep_stray_check.$$$$.log; \
 	  FAIL=1; \
 	else \
 	  rm -f /tmp/gitkeep_stray_check.$$$$.log; \
+	fi; \
+	echo "74/75 — EH-5: firebase_auth_gateway_impl.dart never regresses to a raw StateError precondition guard — throw NotAuthenticatedException instead (AUD-core-auth-03)"; \
+	if grep -n "throw StateError(" lib/core/auth/firebase_auth_gateway_impl.dart | grep -q .; then \
+	  echo "  lib/core/auth/firebase_auth_gateway_impl.dart: raw StateError(...) precondition guard reintroduced —"; \
+	  echo "  a domain/data error must carry a stable type/code, never a pre-formatted human sentence (EH-5)."; \
+	  echo "  Throw NotAuthenticatedException (defined in this file) instead:"; \
+	  grep -n "throw StateError(" lib/core/auth/firebase_auth_gateway_impl.dart; \
+	  FAIL=1; \
+	fi; \
+	echo "75/75 — EH-5: _DeletingAccountOverlayState (account_actions.dart) never renders a caught exception's raw message/toString() in the UI (AUD-core-auth-03)"; \
+	if awk '/^class _DeletingAccountOverlayState/,/^}/' lib/features/settings/presentation/utils/account_actions.dart \
+	    | grep -vE '^\s*//' | grep -qE "\.toString\(\)|\.message"; then \
+	  echo "  lib/features/settings/presentation/utils/account_actions.dart: _DeletingAccountOverlayState renders a"; \
+	  echo "  caught exception's raw .toString()/.message — an untranslated, developer-facing string reaching the UI"; \
+	  echo "  (EH-5). Resolve display text via AppLocalizations only (l10n.deletingAccountError); log the raw error"; \
+	  echo "  via AppLogger for diagnostics instead:"; \
+	  awk '/^class _DeletingAccountOverlayState/,/^}/' lib/features/settings/presentation/utils/account_actions.dart \
+	    | grep -vE '^\s*//' | grep -nE "\.toString\(\)|\.message"; \
+	  FAIL=1; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \

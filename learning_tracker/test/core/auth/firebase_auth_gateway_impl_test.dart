@@ -241,24 +241,27 @@ void main() {
       expect(uid, 'fresh-uid');
     });
 
-    test('throws a StateError when the credential has no user', () async {
-      final credential = MockUserCredential();
-      when(() => credential.user).thenReturn(null);
-      when(
-        () => mockFirebaseAuth.createUserWithEmailAndPassword(
-          email: 'new@example.com',
-          password: 'pass123',
-        ),
-      ).thenAnswer((_) async => credential);
+    test(
+      'throws NotAuthenticatedException when the credential has no user',
+      () async {
+        final credential = MockUserCredential();
+        when(() => credential.user).thenReturn(null);
+        when(
+          () => mockFirebaseAuth.createUserWithEmailAndPassword(
+            email: 'new@example.com',
+            password: 'pass123',
+          ),
+        ).thenAnswer((_) async => credential);
 
-      expect(
-        () => gateway.createUserWithEmailAndPassword(
-          email: 'new@example.com',
-          password: 'pass123',
-        ),
-        throwsA(isA<StateError>()),
-      );
-    });
+        expect(
+          () => gateway.createUserWithEmailAndPassword(
+            email: 'new@example.com',
+            password: 'pass123',
+          ),
+          throwsA(isA<NotAuthenticatedException>()),
+        );
+      },
+    );
   });
 
   group('updateDisplayName', () {
@@ -290,7 +293,7 @@ void main() {
           continueUrl: 'https://example.com/verify',
           androidPackageName: 'com.example.app',
         ),
-        throwsA(isA<StateError>()),
+        throwsA(isA<NotAuthenticatedException>()),
       );
     });
 
@@ -418,7 +421,10 @@ void main() {
     test('throws when no user is signed in', () async {
       when(() => mockFirebaseAuth.currentUser).thenReturn(null);
 
-      expect(gateway.deleteCurrentUser(), throwsA(isA<StateError>()));
+      expect(
+        gateway.deleteCurrentUser(),
+        throwsA(isA<NotAuthenticatedException>()),
+      );
     });
 
     test('calls user.delete() when signed in', () async {
@@ -436,7 +442,10 @@ void main() {
     test('throws when no user is signed in', () async {
       when(() => mockFirebaseAuth.currentUser).thenReturn(null);
 
-      expect(gateway.updatePassword('pw'), throwsA(isA<StateError>()));
+      expect(
+        gateway.updatePassword('pw'),
+        throwsA(isA<NotAuthenticatedException>()),
+      );
     });
 
     test('forwards to user.updatePassword when signed in', () async {
@@ -456,7 +465,7 @@ void main() {
 
       expect(
         () => gateway.reauthenticateWithEmail(email: 'a@b.c', password: 'pw'),
-        throwsA(isA<StateError>()),
+        throwsA(isA<NotAuthenticatedException>()),
       );
     });
 
@@ -504,7 +513,7 @@ void main() {
 
       expect(
         () => gateway.linkWithGoogleIdToken(idToken: 'tok'),
-        throwsA(isA<StateError>()),
+        throwsA(isA<NotAuthenticatedException>()),
       );
     });
 
@@ -527,7 +536,7 @@ void main() {
 
         expect(
           () => gateway.reauthenticateWithGoogleIdToken(idToken: 'tok'),
-          throwsA(isA<StateError>()),
+          throwsA(isA<NotAuthenticatedException>()),
         );
       },
     );
@@ -549,7 +558,7 @@ void main() {
 
       expect(
         () => gateway.linkWithEmailAndPassword(email: 'a@b.c', password: 'pw'),
-        throwsA(isA<StateError>()),
+        throwsA(isA<NotAuthenticatedException>()),
       );
     });
   });

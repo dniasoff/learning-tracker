@@ -1,6 +1,30 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:learning_tracker/core/auth/auth_gateway_user.dart';
 import 'package:learning_tracker/core/auth/firebase_auth_gateway.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
+
+/// Thrown by [FirebaseAuthGatewayImpl] when an operation requires a
+/// signed-in user but `FirebaseAuth.currentUser` is null.
+///
+/// Every call site is a precondition guard: the UI only exposes these
+/// operations from screens already gated behind an active session, so a real
+/// occurrence is a race (expired/revoked session, e.g. between navigation and
+/// the async call landing) rather than a normal user-facing outcome. That is
+/// why this extends [InternalException] — "unexpected internal state,
+/// should never be shown in the UI" — rather than [PermissionException]:
+/// per EH-5, presentation must resolve a stable code/category through
+/// `AppLocalizations`/`AppErrorView` rather than render [message]
+/// (developer-facing, English-only, for logs/Crashlytics only). A single
+/// category is sufficient signal here — there is exactly one failure mode,
+/// so a leaf-specific enum (like `ValidationErrorCode`) isn't warranted.
+///
+/// Replaces the untyped `StateError('No authenticated user found')`
+/// previously thrown from every precondition guard in this file
+/// (AUD-core-auth-03).
+class NotAuthenticatedException extends InternalException {
+  const NotAuthenticatedException()
+    : super('No authenticated user found: FirebaseAuth.currentUser is null');
+}
 
 /// Concrete [FirebaseAuthGateway].
 ///
@@ -100,7 +124,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
     );
     final user = credential.user;
     if (user == null) {
-      throw StateError('No authenticated user found');
+      throw const NotAuthenticatedException();
     }
     return user.uid;
   }
@@ -119,7 +143,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   }) async {
     final user = _firebaseAuth.currentUser;
     if (user == null) {
-      throw StateError('No authenticated user found');
+      throw const NotAuthenticatedException();
     }
     await user.sendEmailVerification(
       ActionCodeSettings(
@@ -191,7 +215,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   Future<void> deleteCurrentUser() async {
     final user = _firebaseAuth.currentUser;
     if (user == null) {
-      throw StateError('No authenticated user found');
+      throw const NotAuthenticatedException();
     }
     await user.delete();
   }
@@ -200,7 +224,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   Future<void> updatePassword(String newPassword) async {
     final user = _firebaseAuth.currentUser;
     if (user == null) {
-      throw StateError('No authenticated user found');
+      throw const NotAuthenticatedException();
     }
     await user.updatePassword(newPassword);
   }
@@ -214,7 +238,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   }) async {
     final user = _firebaseAuth.currentUser;
     if (user == null) {
-      throw StateError('No authenticated user found');
+      throw const NotAuthenticatedException();
     }
     final credential = EmailAuthProvider.credential(
       email: email,
@@ -235,7 +259,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   Future<void> linkWithGoogleIdToken({required String? idToken}) async {
     final user = _firebaseAuth.currentUser;
     if (user == null) {
-      throw StateError('No authenticated user found');
+      throw const NotAuthenticatedException();
     }
     final credential = GoogleAuthProvider.credential(idToken: idToken);
     await user.linkWithCredential(credential);
@@ -247,7 +271,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   }) async {
     final user = _firebaseAuth.currentUser;
     if (user == null) {
-      throw StateError('No authenticated user found');
+      throw const NotAuthenticatedException();
     }
     final credential = GoogleAuthProvider.credential(idToken: idToken);
     await user.reauthenticateWithCredential(credential);
@@ -260,7 +284,7 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
   }) async {
     final user = _firebaseAuth.currentUser;
     if (user == null) {
-      throw StateError('No authenticated user found');
+      throw const NotAuthenticatedException();
     }
     final credential = EmailAuthProvider.credential(
       email: email,

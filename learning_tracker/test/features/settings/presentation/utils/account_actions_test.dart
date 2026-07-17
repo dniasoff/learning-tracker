@@ -49,6 +49,8 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
+import 'package:learning_tracker/core/auth/firebase_auth_gateway_impl.dart'
+    show NotAuthenticatedException;
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
@@ -962,6 +964,73 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
+
+      // Resolve second call for clean teardown
+      await tester.tap(find.text('Retry'));
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets(
+    'DeletingAccountOverlay error: never renders the raw exception message/toString() '
+    '(EH-5, AUD-core-auth-03) — only the localized deletingAccountError copy shows',
+    (tester) async {
+      final user = _cloudUser(providers: const []);
+      var callCount = 0;
+      // The raw message deliberately contains a distinctive, developer-facing
+      // (untranslated) fragment that must never reach the widget tree — this
+      // covers BOTH a plain Exception.toString() and this finding's own
+      // NotAuthenticatedException.message, since the delete flow can surface
+      // either depending on where the failure originates.
+      when(() => service.deleteAccount(any<String>())).thenAnswer((_) async {
+        callCount++;
+        if (callCount == 1) {
+          throw const NotAuthenticatedException();
+        }
+      });
+
+      await tester.pumpWidget(
+        _buildApp(
+          child: _DeleteHost(user: user),
+          router: router,
+          authRepo: authRepo,
+          service: service,
+          connectivity: connectivity,
+          registry: registry,
+          userDb: userDb,
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('trigger'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.enterText(find.byType(TextField), 'DELETE');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(TextButton, 'Delete Account'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Error state is showing...
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      // ...via the fixed, localized copy...
+      expect(
+        find.text('Deletion encountered an issue. You have been signed out.'),
+        findsOneWidget,
+      );
+      // ...and NEVER the raw, untranslated exception detail.
+      expect(
+        find.textContaining('NotAuthenticatedException'),
+        findsNothing,
+        reason:
+            'EH-5 (AUD-core-auth-03): the caught exception\'s raw message/'
+            'toString() must never be rendered in the UI — presentation must '
+            'resolve display text via AppLocalizations only.',
+      );
+      expect(find.textContaining('FirebaseAuth.currentUser'), findsNothing);
 
       // Resolve second call for clean teardown
       await tester.tap(find.text('Retry'));

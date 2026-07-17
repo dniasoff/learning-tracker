@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart'
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
@@ -349,7 +350,13 @@ class _DeletingAccountOverlay extends ConsumerStatefulWidget {
 
 class _DeletingAccountOverlayState
     extends ConsumerState<_DeletingAccountOverlay> {
-  String? _error;
+  // EH-5 (AUD-core-auth-03): deliberately a bool, not the caught exception's
+  // message/toString(). `deleteAccount()` can fail with anything from a
+  // FirebaseAuthException (English SDK message) to this file's own
+  // NotAuthenticatedException — none of that is safe to render untranslated.
+  // `l10n.deletingAccountError` (in [_buildError]) is the only user-facing
+  // copy; the raw error is logged via [AppLogger] for diagnostics instead.
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -396,9 +403,17 @@ class _DeletingAccountOverlayState
       // with full interactivity until the async replace lands.
       await ref.read(routerProvider).replaceAll([const SignInRoute()]);
       if (mounted) Navigator.of(context).pop(); // close overlay
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (mounted) {
-        setState(() => _error = e.toString());
+        // EH-5 (AUD-core-auth-03): log the raw error for diagnostics — never
+        // surface e.toString()/e.message in the UI (see [_hasError] doc).
+        AppLogger.instance.error(
+          event: 'delete_account_failed',
+          fields: {'accountId': widget.accountId},
+          exception: e,
+          stackTrace: stackTrace,
+        );
+        setState(() => _hasError = true);
         // Still clear auth even on failure — account may be partially deleted.
         ref.read(authStateProvider.notifier).signOut();
         ref.invalidate(authStateProvider);
@@ -417,7 +432,7 @@ class _DeletingAccountOverlayState
           child: Center(
             child: Padding(
               padding: const EdgeInsets.all(32),
-              child: _error != null
+              child: _hasError
                   ? _buildError(context, l10n)
                   : _buildProgress(l10n),
             ),
@@ -463,16 +478,10 @@ class _DeletingAccountOverlayState
           style: const TextStyle(color: Colors.white, fontSize: 16),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 8),
-        Text(
-          _error!,
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
-          textAlign: TextAlign.center,
-        ),
         const SizedBox(height: 24),
         FilledButton(
           onPressed: () {
-            setState(() => _error = null);
+            setState(() => _hasError = false);
             unawaited(_runDeletion());
           },
           child: Text(l10n.actionRetry),
