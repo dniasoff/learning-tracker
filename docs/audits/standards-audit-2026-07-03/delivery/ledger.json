@@ -2262,13 +2262,18 @@
     {
       "id": "AUD-profiles-10",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Show user-facing error feedback on the StateError path in TutoredChildrenSection._fireEntryPullAndNavigate",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "29fa95ceb3f64df0b2b58dbb5598fea9476576f1"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-10 AC1 OK: new test hits real StateError path (log confirms), asserts SnackBar+tutoredEntryAborted; red-first reproduced (fails L217 w/o fix)",
+        "AUD-profiles-10 AC2 OK: widget.dart:670-676 mounted-guarded SnackBar matches permissionDenied (634-642) and error (650-656) branches"
+      ],
+      "notes": "Verified: StateError catch block only logged+dismissed, no snackbar, unlike sibling branches. Confirmed red-first via test driving real tap->PIN->pull flow with authRepositoryProvider.currentUser=null (documented trigger). Fix adds matching snackbar with new tutoredEntryAborted l10n key. gatePolicy=disjoint-skip: rebase onto dev was file-disjoint (tip touched tutored_children_section.dart + l10n files + new test; no overlap with dev's changed-file set) so per policy the merge-lane test run was skipped; make audit + flutter analyze + make arb-parity all clean post-rebase."
     },
     {
       "id": "AUD-t-progress-06",
