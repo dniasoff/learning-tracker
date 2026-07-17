@@ -5,15 +5,22 @@ import 'package:analyzer/error/error.dart' hide LintCode;
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-/// AUD-tutoring-08 (PF-2) Rule-0 checker.
+/// AUD-tutoring-08 / AUD-scheduler-01 (PF-2) Rule-0 checker.
 ///
 /// Flags an eagerly-expanded widget list — `for (final x in y) Widget(...)`,
-/// or `…iterable.map((x) => Widget(...))` / `.map(...).toList()` — fed
-/// directly into the `children:` of a NON-lazy scroll container:
+/// `…iterable.map((x) => Widget(...))` / `.map(...).toList()`, or
+/// `List.generate(count, (i) => Widget(...))` — fed directly into the
+/// `children:` of a NON-lazy container:
 ///   - `ListView(children: […])` — the plain/default constructor, NOT
-///     `.builder`/`.separated`/`.custom`, which are already lazy; or
+///     `.builder`/`.separated`/`.custom`, which are already lazy;
 ///   - a `Column(children: […])` that is itself wrapped in a
-///     `SingleChildScrollView` (making the whole column scroll).
+///     `SingleChildScrollView` (making the whole column scroll); or
+///   - an `ExpansionTile(children: […])` — `ExpansionTile`'s own children
+///     list has NO virtualization: the moment the tile itself is built
+///     (e.g. `initiallyExpanded: true`, or the user expands it), every one
+///     of its children is built up front regardless of viewport, even when
+///     the tile is one lazily-mounted item inside an outer
+///     `ListView.builder`.
 ///
 /// A lazy `ListView.builder` (flattening multiple sections into one
 /// item-model list, if needed) should be used instead whenever the expanded
@@ -23,16 +30,29 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 /// a fixed enum's `.values`, an explicitly `.take(n)`-capped preview) — this
 /// rule does NOT flag:
 ///   - `SomeEnum.values` (a compile-time-bounded enumeration);
-///   - any iterable explicitly capped via `.take(n)`; or
-///   - a list/set literal.
+///   - any iterable explicitly capped via `.take(n)`;
+///   - a list/set literal; or
+///   - a `List.generate(n, ...)` whose count is a literal int or a
+///     `.length` read off one of the above bounded sources (e.g.
+///     `List.generate(CurriculumId.values.length, ...)`).
 ///
-/// This is exactly the pattern AUD-tutoring-08 found duplicated across
-/// `ManageGrantsScreen` (a `for` loop feeding a plain `ListView(children:)`)
-/// and Settings' embedded `_PendingInvitesSection` (a `for` loop feeding a
-/// `Column` inside the section) — both driven by `incomingTutorGrantsProvider`
-/// / `pendingTutorInvitesProvider`, an unbounded roster with no archiving
-/// path. See `docs/audits/standards-audit-2026-07-03/delivery/findings/
-/// AUD-tutoring-08.json` (acceptance_criteria[0], "Rule-0: PF-2 checker").
+/// This rule was written for two duplicated real-world shapes:
+///   - AUD-tutoring-08: `ManageGrantsScreen` (a `for` loop feeding a plain
+///     `ListView(children:)`) and Settings' embedded
+///     `_PendingInvitesSection` (a `for` loop feeding a `Column` inside the
+///     section) — both driven by `incomingTutorGrantsProvider` /
+///     `pendingTutorInvitesProvider`, an unbounded roster with no archiving
+///     path. See `docs/audits/standards-audit-2026-07-03/delivery/findings/
+///     AUD-tutoring-08.json` (acceptance_criteria[0], "Rule-0: PF-2
+///     checker").
+///   - AUD-scheduler-01: `GroupedDailyView` called
+///     `List.generate(tasks.length, (i) => DailyTaskCard(...))` inside an
+///     always-expanded `ExpansionTile`, itself inside a plain
+///     `ListView(children: curricula.map(...).toList())` — an unbounded,
+///     provider-derived overdue-task backlog. See
+///     `docs/audits/standards-audit-2026-07-03/delivery/findings/
+///     AUD-scheduler-01.json` (acceptance_criteria[0], "Rule-0: PF-2
+///     checker").
 ///
 /// See `packages/custom_lints/README.md` for rule rationale and remediation.
 class NoEagerListInNonLazyScrollContainer extends DartLintRule {
@@ -41,11 +61,12 @@ class NoEagerListInNonLazyScrollContainer extends DartLintRule {
   static const _code = LintCode(
     name: 'no_eager_list_in_non_lazy_scroll_container',
     problemMessage:
-        'PF-2: this for-loop/.map() expansion eagerly builds every row up '
-        'front inside a non-lazy ListView/Column instead of a lazy '
-        'ListView.builder. Unbounded (provider-driven) collections must be '
-        'built lazily so off-screen rows are never realized — see '
-        'AUD-tutoring-08.',
+        'PF-2: this for-loop/.map()/List.generate() expansion eagerly '
+        'builds every row up front inside a non-lazy ListView/Column/'
+        'ExpansionTile instead of a lazy ListView.builder or a windowed '
+        'SliverList(delegate: SliverChildBuilderDelegate(...)). Unbounded '
+        '(provider-driven) collections must be built lazily so off-screen '
+        'rows are never realized — see AUD-tutoring-08 / AUD-scheduler-01.',
     errorSeverity: DiagnosticSeverity.WARNING,
   );
 
@@ -75,6 +96,16 @@ class NoEagerListInNonLazyScrollContainer extends DartLintRule {
       if (typeName == 'Column') {
         if (!_isWrappedInSingleChildScrollView(node)) return;
         _checkChildrenArgument(node, reporter);
+        return;
+      }
+
+      if (typeName == 'ExpansionTile') {
+        // Unlike Column, ExpansionTile.children needs no "is this wrapped
+        // in a scroll container" gate: ExpansionTile itself is never lazy
+        // — the tile's own children are built up front the moment the
+        // tile is built, whether or not it sits inside an outer lazy
+        // ListView.builder (AUD-scheduler-01).
+        _checkChildrenArgument(node, reporter);
       }
     });
   }
@@ -92,8 +123,9 @@ class NoEagerListInNonLazyScrollContainer extends DartLintRule {
     }
     if (childrenValue == null) return;
 
-    // Shape 1: `children: [ …, for (final x in y) Widget(x), … ]` or
-    // `children: [ …, ...xs.map((x) => Widget(x)), … ]`.
+    // Shape 1: `children: [ …, for (final x in y) Widget(x), … ]`,
+    // `children: [ …, ...xs.map((x) => Widget(x)), … ]`, or
+    // `children: [ …, ...List.generate(n, (i) => Widget(i)), … ]`.
     if (childrenValue is ListLiteral) {
       for (final element in childrenValue.elements) {
         if (element is ForElement && !_isBoundedForLoop(element)) {
@@ -101,16 +133,21 @@ class NoEagerListInNonLazyScrollContainer extends DartLintRule {
           continue;
         }
         if (element is SpreadElement &&
-            _isEagerMapExpansion(element.expression)) {
+            (_isEagerMapExpansion(element.expression) ||
+                _isEagerListGenerate(element.expression))) {
           reporter.atNode(element, _code);
         }
       }
       return;
     }
 
-    // Shape 2: `children: xs.map((x) => Widget(x)).toList()` — the entire
-    // children value IS the eager expansion, with no list literal wrapper.
-    if (_isEagerMapExpansion(childrenValue)) {
+    // Shape 2: `children: xs.map((x) => Widget(x)).toList()` or
+    // `children: List.generate(n, (i) => Widget(i))` — the entire children
+    // value IS the eager expansion, with no list literal wrapper. This is
+    // exactly the AUD-scheduler-01 `ExpansionTile(children: List.generate(
+    // tasks.length, ...))` shape.
+    if (_isEagerMapExpansion(childrenValue) ||
+        _isEagerListGenerate(childrenValue)) {
       reporter.atNode(childrenValue, _code);
     }
   }
@@ -139,10 +176,23 @@ class NoEagerListInNonLazyScrollContainer extends DartLintRule {
     if (condition is! BinaryExpression) return false;
     final operator = condition.operator.type;
     if (operator != TokenType.LT && operator != TokenType.LT_EQ) return false;
+    return _isBoundedLengthExpression(condition.rightOperand);
+  }
 
-    final right = condition.rightOperand;
-    if (right is PropertyAccess && right.propertyName.name == 'length') {
-      return _isBoundedSource(right.target ?? right);
+  /// True for a literal int, or an `EXPR.length` read where `EXPR` is a
+  /// provably-bounded source (see [_isBoundedSource]). Covers both a
+  /// compound target — `SomeEnum.values.length`, parsed as `PropertyAccess`
+  /// — and a bare single-identifier target — `someList.length`, parsed as
+  /// `PrefixedIdentifier` — since the analyzer disambiguates
+  /// `identifier.identifier` chains differently depending on whether the
+  /// left side is itself a simple identifier or a compound expression.
+  bool _isBoundedLengthExpression(Expression expr) {
+    if (expr is IntegerLiteral) return true;
+    if (expr is PropertyAccess && expr.propertyName.name == 'length') {
+      return _isBoundedSource(expr.target ?? expr);
+    }
+    if (expr is PrefixedIdentifier && expr.identifier.name == 'length') {
+      return _isBoundedSource(expr.prefix);
     }
     return false;
   }
@@ -167,6 +217,19 @@ class NoEagerListInNonLazyScrollContainer extends DartLintRule {
     final receiver = mapCall.target;
     if (receiver == null) return false;
     return !_isBoundedSource(receiver);
+  }
+
+  /// True for `List.generate(count, generator)` whose `count` is NOT a
+  /// provably-bounded length expression (see [_isBoundedLengthExpression]) —
+  /// the AUD-scheduler-01 `List.generate(tasks.length, (i) => ...)` shape.
+  bool _isEagerListGenerate(Expression expr) {
+    if (expr is! InstanceCreationExpression) return false;
+    if (expr.constructorName.type.name.lexeme != 'List') return false;
+    if (expr.constructorName.name?.name != 'generate') return false;
+
+    final args = expr.argumentList.arguments;
+    if (args.isEmpty) return false;
+    return !_isBoundedLengthExpression(args.first);
   }
 
   /// `SomeEnum.values`, an explicitly `.take(n)`-capped iterable, or a
@@ -201,8 +264,7 @@ class NoEagerListInNonLazyScrollContainer extends DartLintRule {
         return false;
       }
       if (current is InstanceCreationExpression &&
-          current.constructorName.type.name.lexeme ==
-              'SingleChildScrollView') {
+          current.constructorName.type.name.lexeme == 'SingleChildScrollView') {
         return true;
       }
       current = current.parent;

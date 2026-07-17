@@ -54,6 +54,10 @@ class Column extends Widget {
 class SingleChildScrollView extends Widget {
   SingleChildScrollView({Widget? child});
 }
+
+class ExpansionTile extends Widget {
+  ExpansionTile({List<Widget>? children});
+}
 ''';
 
 void main() {
@@ -201,6 +205,94 @@ Widget build(List<String> programs) {
       );
     });
 
+    group(
+        'violations — AUD-scheduler-01: List.generate(...) feeding '
+        'ExpansionTile(children:) / ListView(children:)', () {
+      test(
+        'flags List.generate(tasks.length, ...) feeding '
+        'ExpansionTile(children:) — the GroupedDailyView pre-fix '
+        'AUD-scheduler-01 shape',
+        () async {
+          final file = _tmpFileAt(
+            '''
+$_prelude
+Widget build(List<String> tasks) {
+  return ExpansionTile(
+    children: List.generate(tasks.length, (i) {
+      return Text(tasks[i]);
+    }),
+  );
+}
+''',
+            'lib/features/scheduler/presentation/widgets',
+          );
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isNotEmpty,
+            reason: 'A List.generate(...) expansion over an unbounded, '
+                'provider-derived collection feeding a non-lazy '
+                'ExpansionTile(children:) must be flagged — ExpansionTile '
+                'has no virtualization of its own, so every card is built '
+                'the moment the tile is built',
+          );
+        },
+      );
+
+      test(
+        'flags List.generate(n, ...) feeding a plain ListView(children:) '
+        'with no ExpansionTile wrapper',
+        () async {
+          final file = _tmpFileAt(
+            '''
+$_prelude
+Widget build(List<String> grants) {
+  return ListView(
+    children: List.generate(grants.length, (i) => Text(grants[i])),
+  );
+}
+''',
+            'lib/features/tutoring/presentation/screens',
+          );
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isNotEmpty,
+            reason: 'children: bound directly to a List.generate(...) call '
+                'over an unbounded collection must be flagged',
+          );
+        },
+      );
+
+      test(
+        'flags a `...List.generate(...)` spread element feeding '
+        'ListView(children:)',
+        () async {
+          final file = _tmpFileAt(
+            '''
+$_prelude
+Widget build(List<String> grants) {
+  return ListView(
+    children: [
+      Text('Header'),
+      ...List.generate(grants.length, (i) => Text(grants[i])),
+    ],
+  );
+}
+''',
+            'lib/features/tutoring/presentation/screens',
+          );
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isNotEmpty,
+            reason: 'A List.generate(...) spread element over an unbounded '
+                'collection must be flagged',
+          );
+        },
+      );
+    });
+
     group('allowed — already-lazy ListView.builder', () {
       test('does not flag ListView.builder', () async {
         final file = _tmpFileAt(
@@ -278,7 +370,8 @@ Widget build() {
         },
       );
 
-      test('does not flag a `.map()` chain over an explicitly `.take(n)`-'
+      test(
+          'does not flag a `.map()` chain over an explicitly `.take(n)`-'
           'capped iterable', () async {
         final file = _tmpFileAt(
           '''
@@ -299,6 +392,60 @@ Widget build(List<String> grants) {
               'flagged',
         );
       });
+
+      test(
+        'does not flag List.generate(CurriculumId.values.length, ...) '
+        'feeding ExpansionTile(children:) — a compile-time-bounded enum '
+        'count',
+        () async {
+          final file = _tmpFileAt(
+            '''
+$_prelude
+enum CurriculumId { chumash, mishnayos, bavli }
+Widget build() {
+  return ExpansionTile(
+    children: List.generate(
+      CurriculumId.values.length,
+      (i) => Text(CurriculumId.values[i].toString()),
+    ),
+  );
+}
+''',
+            'lib/features/scheduler/presentation/widgets',
+          );
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isEmpty,
+            reason: 'List.generate(...) bounded by a compile-time-bounded '
+                'enum\'s `.values.length` must not be flagged',
+          );
+        },
+      );
+
+      test(
+        'does not flag List.generate(3, ...) with a literal int count',
+        () async {
+          final file = _tmpFileAt(
+            '''
+$_prelude
+Widget build() {
+  return ListView(
+    children: List.generate(3, (i) => Text(i.toString())),
+  );
+}
+''',
+            'lib/features/tutoring/presentation/screens',
+          );
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isEmpty,
+            reason: 'A literal int count is provably bounded and must not '
+                'be flagged',
+          );
+        },
+      );
     });
 
     group('allowed — a non-scrolling Column is not the flagged shape', () {

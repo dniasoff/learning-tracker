@@ -28,6 +28,8 @@
 ///  12.  Skip (swipe-dismiss) shows snackbar with Undo action.
 ///  13.  No track-type labels ("Personal"/"Standard"/"Custom"/"אישי") shown.
 ///  14.  Hebrew (RTL) smoke — screen pumps without error under `he` locale.
+///  15.  AUD-scheduler-01 (PF-2): grouped view lazily windows a large
+///       (~200-task) backlog instead of realizing every DailyTaskCard.
 @Tags(['scheduler', 'l1'])
 library;
 
@@ -703,6 +705,101 @@ void main() {
 
       expect(find.byType(Scaffold), findsOneWidget);
       expect(find.byType(ErrorWidget), findsNothing);
+
+      await _tearDown(tester);
+    });
+  });
+
+  // ── 15. AUD-scheduler-01: lazy-build the grouped view (PF-2) ───────────────
+  //
+  // GroupedDailyView previously built every DailyTaskCard up front via
+  // `List.generate(tasks.length, ...)` fed into a non-lazy `ExpansionTile`
+  // inside a plain `ListView(children: ...)`. A lapsed user (the app's own
+  // core scenario) can accumulate a large, unbounded overdue backlog across
+  // curricula — this regression guards that only the on-screen cards are
+  // realized, matching the already-lazy flat (_TaskList / ListView.builder)
+  // path, never every card up front.
+
+  group('SchedulerScreen — AUD-scheduler-01: grouped view windowing', () {
+    testWidgets('grouped view realizes only the initial viewport worth of '
+        'DailyTaskCards for a ~205-task backlog across 3 curricula, matching '
+        'the already-lazy flat list path — never all ~205', (tester) async {
+      final tasks = [
+        for (var i = 0; i < 70; i++)
+          _task(
+            curriculum: CurriculumId.mishnayos,
+            ref: 'Mishnah_Berakhot_$i',
+            isOverdue: true,
+            priority: DailyTaskPriority.overdueProgram,
+          ),
+        for (var i = 0; i < 70; i++)
+          _task(
+            curriculum: CurriculumId.bavli,
+            ref: 'Bavli_Berakhot_$i',
+            isOverdue: true,
+            priority: DailyTaskPriority.overdueProgram,
+          ),
+        for (var i = 0; i < 65; i++)
+          _task(
+            curriculum: CurriculumId.chumash,
+            ref: 'Chumash_Bereshit_$i',
+            isOverdue: true,
+            priority: DailyTaskPriority.overdueProgram,
+          ),
+      ];
+      expect(tasks.length, 205);
+
+      // Baseline: the already-compliant flat (_TaskList / ListView.builder)
+      // path never realizes all ~205 cards for the same backlog/viewport.
+      await tester.pumpWidget(_buildScreen(tasks: tasks));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final flatRealized = tester.widgetList(find.byType(DailyTaskCard)).length;
+      expect(
+        flatRealized,
+        lessThan(tasks.length),
+        reason:
+            'sanity check: the compliant flat _TaskList path must not '
+            'realize every card either — if this fails the fixture/'
+            'harness itself is wrong, not GroupedDailyView',
+      );
+
+      // Switch to grouped view — the view under test.
+      await tester.tap(find.byIcon(Icons.grid_view_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(GroupedDailyView), findsOneWidget);
+
+      final groupedRealized = tester
+          .widgetList(find.byType(DailyTaskCard))
+          .length;
+
+      // The whole point of AUD-scheduler-01: grouped view must not
+      // realize every DailyTaskCard up front for an unbounded backlog.
+      expect(
+        groupedRealized,
+        lessThan(tasks.length),
+        reason:
+            'GroupedDailyView must lazily build only the on-screen '
+            'DailyTaskCards for an unbounded (~205-task) backlog spread '
+            'across curricula, not all of them up front (PF-2 / '
+            'AUD-scheduler-01)',
+      );
+      // Windowed to roughly the same viewport as the flat list — not just
+      // "less than 205" (a very loose bound would tolerate a partial fix
+      // that still over-realizes, e.g. capping to 100 instead of a real
+      // viewport window).
+      expect(
+        groupedRealized,
+        lessThanOrEqualTo(flatRealized + 10),
+        reason:
+            'grouped view should realize a comparable number of cards to '
+            'the already-lazy flat list for the same viewport — a much '
+            'larger count would indicate it is still over-building '
+            '(e.g. one full curriculum section eagerly expanded)',
+      );
 
       await _tearDown(tester);
     });
