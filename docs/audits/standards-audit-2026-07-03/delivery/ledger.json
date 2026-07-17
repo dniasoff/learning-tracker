@@ -5047,13 +5047,18 @@
   {
    "id": "AUD-core-content-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Convert HierarchySelection and AdjacentItems to @freezed instead of hand-rolled/missing equality",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "67be5ef976fe75ae6b7c7d69efe4a20666c65c42"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-content-01 AC1 OK: both now @freezed; hierarchy_selection_test 7 equality tests + epic_25 93/93 pass unchanged; no existing test modified",
+    "AUD-core-content-01 AC2 OK: analyze clean + 13 Set<HierarchySelection> tests (bulk_mark, il7_il9 breadcrumb, r2 panel) pass, exit 0"
+   ],
+   "notes": "Confirmed hand-rolled ==/hashCode (HierarchySelection) and no equality (AdjacentItems). Converted both to @freezed. Red test caught AdjacentItems identity-equality failure pre-fix, passes post-fix. Existing ==/hashCode tests unchanged (AC1). Set<HierarchySelection> sites unaffected (AC2)."
   },
   {
    "id": "AUD-core-content-03",
