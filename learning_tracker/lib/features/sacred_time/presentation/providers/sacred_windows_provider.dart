@@ -10,6 +10,7 @@ part 'sacred_windows_provider.g.dart';
 
 /// 6-month rolling list of pre-computed Sacred Time block windows. Recomputed
 /// whenever the user's location or in-Israel flag changes.
+// keepAlive: read by both the lock overlay and CurrentSacredWindow's per-30s timer; dropping it on last-listener-loss would force a recompute on every screen navigation.
 @Riverpod(keepAlive: true)
 List<SacredWindow> sacredWindows(Ref ref) {
   final location = ref.watch(sacredLocationProvider);
@@ -30,6 +31,7 @@ List<SacredWindow> sacredWindows(Ref ref) {
 ///
 /// Recomputed every minute via an internal timer so the lock screen drops
 /// without manual invalidation when tzais passes.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock screen drops the instant tzais passes, not just on the next rebuild.
 @Riverpod(keepAlive: true)
 class CurrentSacredWindow extends _$CurrentSacredWindow {
   Timer? _timer;

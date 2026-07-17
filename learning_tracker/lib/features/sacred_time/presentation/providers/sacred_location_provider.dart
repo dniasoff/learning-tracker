@@ -10,11 +10,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'sacred_location_provider.g.dart';
 
+// keepAlive: stateless facade wrapping platform geolocation calls; cheap to keep for the app's lifetime, avoids rebuild churn for its dependents.
 @Riverpod(keepAlive: true)
 LocationService locationService(Ref ref) => const LocationService();
 
 /// Cached device location used for Sacred Time window calculation.
 /// Survives app restarts via SharedPreferences. App-global (not per-profile).
+// keepAlive: mirrors a persisted preference read on cold start; must survive widget unmounts so it isn't reloaded on every rebuild.
 @Riverpod(keepAlive: true)
 class SacredLocationNotifier extends _$SacredLocationNotifier {
   @override
@@ -177,6 +179,7 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
 /// User-toggleable in-Israel flag. Auto-set by [SacredLocationNotifier.detect]
 /// and [setManualCity] from the country code, but the user can flip freely
 /// afterwards (e.g. visitors who keep two-day chag while in Israel).
+// keepAlive: the notifier's own _explicitlySet guard must survive widget unmounts, or a rebuild would drop it and let a stale async _load() clobber an explicit user choice.
 @Riverpod(keepAlive: true)
 class InIsraelNotifier extends _$InIsraelNotifier {
   /// True once an explicit [setInIsrael] has run for this notifier instance.
