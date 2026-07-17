@@ -91,13 +91,19 @@ extension type NaturalKey(String value) implements String {
   // ── Learner profile ─────────────────────────────────────────────────────────
 
   /// Natural key for a learner profile: the profile id as a string.
+  ///
+  /// [profileIdOrRow] is nullable — pass `null` to use [fallbackProfileId]
+  /// (e.g. when no row/id is available yet). AUD-core-ids-02: previously
+  /// typed as non-nullable `Object` and gated on
+  /// `profileIdOrRow.toString().isNotEmpty`, which made the fallback
+  /// unreachable for every realistic value.
   factory NaturalKey.forLearnerProfile({
-    required Object profileIdOrRow,
+    required Object? profileIdOrRow,
     required int fallbackProfileId,
   }) => NaturalKey(
-    profileIdOrRow.toString().isNotEmpty
-        ? profileIdOrRow.toString()
-        : fallbackProfileId.toString(),
+    profileIdOrRow == null
+        ? fallbackProfileId.toString()
+        : profileIdOrRow.toString(),
   );
 
   // ── Learning order ──────────────────────────────────────────────────────────
