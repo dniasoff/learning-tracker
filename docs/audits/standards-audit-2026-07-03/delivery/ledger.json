@@ -3672,13 +3672,13 @@
   {
    "id": "AUD-progress-05",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P2",
    "title": "Collapse chart_data_service.dart's *Live methods — byte-identical duplicates of their non-Live counterparts",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c9, 2026-07-17). review agent lost (quota); fix commit b9c011d7451e97a0561f81a60c2224abe2e3b360 exists on worktree branch worktree-wf_24065ac5-4c4-9 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
   },
   {
    "id": "AUD-t-progress-03",
