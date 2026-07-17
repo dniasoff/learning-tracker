@@ -1362,13 +1362,28 @@
   {
    "id": "AUD-sacred_time-03",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P1",
    "title": "Stop surfacing raw exception .toString() text to Sacred Time users",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "e2617cd2e7a80d142ec67bdc01319366de302d51"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-sacred_time-03 AC1 OK: location_service.dart:29-38 LocationFetchError(this.code,{debugDetail}) w/ final LocationErrorCode code; String message field gone",
+    "AUD-sacred_time-03 AC1 OK: location_service.dart:88-94 switch{TimeoutException()=>timeout,_=>unknown}; e.toString() only into debugDetail (logs)",
+    "AUD-sacred_time-03 AC1 OK: new location_error_code.dart enum + AG-5 mirror test; sacred_location_provider.dart:66-73 logs code.name+debugDetail via AppLogger",
+    "AUD-sacred_time-03 AC1 OK: settings_card.dart:240-259 exhaustive switch code->ARB; grep: no LocationFetchError.message caller remains",
+    "AUD-sacred_time-03 AC2 OK: cities_repository.dart:97-110 _guarded() wraps both queries, converts on Exception -> CitySearchException(database)",
+    "AUD-sacred_time-03 AC2 OK: _guarded catches Exception only (not Error), preserving EH-4 crash-loud; programmingError test still green",
+    "AUD-sacred_time-03 AC2 OK: MUTATION - _guarded reduced to passthrough failed both new repo tests (-2); conversion is load-bearing",
+    "AUD-sacred_time-03 AC2 OK: city_picker_screen.dart:112-130 switches on CitySearchException.code, unknown->generic ARB, never error.toString()",
+    "AUD-sacred_time-03 AC3 OK: city_picker_l1_test he-locale asserts findsNothing for 'Exception:'/'TimeoutException'/'Time limit reached'",
+    "AUD-sacred_time-03 AC3 OK: MUTATION - restoring e.toString() failed exactly the 2 AC tests incl he-locale; red-first confirmed by me",
+    "AUD-sacred_time-03 AC3 OK: settings_card_l10n_test he-locale SnackBar asserts no raw text; Hebrew string renders (suite 120 green)",
+    "AUD-sacred_time-03 AC3 OK: grep of lib/features/sacred_time: only surviving .toString() feeds debugDetail; zero rendered raw paths"
+   ],
+   "notes": "Evidence re-verified pre-fix. LocationFetchError now carries LocationErrorCode+debugDetail; CitiesRepository wraps queries to convert raw exceptions into typed CitySearchException. All 3 ACs met; verified red (reverted fix, new tests failed showing raw text) then green after restoring."
   },
   {
    "id": "AUD-account-03",
