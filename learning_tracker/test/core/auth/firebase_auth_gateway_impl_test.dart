@@ -207,6 +207,25 @@ void main() {
 
       expect(uid, 'fresh-uid');
     });
+
+    test('throws a StateError when the credential has no user', () async {
+      final credential = MockUserCredential();
+      when(() => credential.user).thenReturn(null);
+      when(
+        () => mockFirebaseAuth.createUserWithEmailAndPassword(
+          email: 'new@example.com',
+          password: 'pass123',
+        ),
+      ).thenAnswer((_) async => credential);
+
+      expect(
+        () => gateway.createUserWithEmailAndPassword(
+          email: 'new@example.com',
+          password: 'pass123',
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
   });
 
   group('updateDisplayName', () {

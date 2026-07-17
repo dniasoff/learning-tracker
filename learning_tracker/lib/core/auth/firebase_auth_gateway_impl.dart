@@ -91,7 +91,11 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
       email: email,
       password: password,
     );
-    return credential.user!.uid;
+    final user = credential.user;
+    if (user == null) {
+      throw StateError('No authenticated user found');
+    }
+    return user.uid;
   }
 
   @override
