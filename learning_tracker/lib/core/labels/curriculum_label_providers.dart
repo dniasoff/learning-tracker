@@ -3,7 +3,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+import 'package:learning_tracker/features/content_browsing/content_browsing.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'curriculum_label_providers.g.dart';
