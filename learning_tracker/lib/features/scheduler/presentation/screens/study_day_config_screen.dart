@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -272,7 +273,14 @@ class StudyDayConfigScreen extends ConsumerWidget {
         // scheduler invalidation runs strictly AFTER the DB write completes,
         // so allDailyTasksProvider re-reads the updated study-day config
         // instead of rebuilding from stale data.
-        await writeThenInvalidate(
+        //
+        // AUD-scheduler-17 (EH-2/EH-3): writeThenInvalidateGuarded catches a
+        // thrown upsertDayConfig (constraint violation, disk error) instead
+        // of letting it propagate as an unhandled Future error, logs it via
+        // AppLogger, and only invokes ref.invalidate when the widget is
+        // still mounted — matching the context.mounted guard the SnackBar
+        // below already uses.
+        final wrote = await writeThenInvalidateGuarded(
           write: () => db.studyDayConfigDao.upsertDayConfig(
             profileId: profileId,
             curriculumId: curriculumId.storageKey,
@@ -281,7 +289,29 @@ class StudyDayConfigScreen extends ConsumerWidget {
             dayType: newType.storageKey,
           ),
           invalidate: () => ref.invalidate(allDailyTasksProvider),
+          isMounted: () => context.mounted,
+          onError: (e, st) {
+            AppLogger.instance.error(
+              event: 'study_day_toggle_write_failed',
+              exception: e,
+              stackTrace: st,
+            );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.schedulerStudyDayToggleSaveError,
+                  ),
+                ),
+              );
+            }
+          },
         );
+        // The local write failed and was already logged/surfaced above —
+        // don't push sync data for a config that never persisted locally.
+        if (!wrote) return;
         try {
           await syncFacade?.pushStudyDayConfig({
             'profile_id': profileId,

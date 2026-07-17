@@ -2787,6 +2787,7 @@
   "schedulerStudyDaysAllStudyDays": "כל הימים הם ימי לימוד במסלול זה.",
   "schedulerStudyDaysPerWeek": "{count, plural, =1{יום לימוד אחד בשבוע} other{{count} ימי לימוד בשבוע}}",
   "schedulerStudyDaysZeroWarning": "לא נבחרו ימי לימוד — כל הימים הם לחזרה בלבד ולא יתוזמן לימוד חדש.",
+  "schedulerStudyDayToggleSaveError": "לא ניתן היה לשמור את השינוי. נסו שוב.",
   "schedulerDayAbbrevSun": "א׳",
   "schedulerDayAbbrevMon": "ב׳",
   "schedulerDayAbbrevTue": "ג׳",

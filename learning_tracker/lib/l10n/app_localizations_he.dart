@@ -5313,6 +5313,10 @@ class AppLocalizationsHe extends AppLocalizations {
       'לא נבחרו ימי לימוד — כל הימים הם לחזרה בלבד ולא יתוזמן לימוד חדש.';
 
   @override
+  String get schedulerStudyDayToggleSaveError =>
+      'לא ניתן היה לשמור את השינוי. נסו שוב.';
+
+  @override
   String get schedulerDayAbbrevSun => 'א׳';
 
   @override
