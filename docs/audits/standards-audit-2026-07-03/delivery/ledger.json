@@ -9908,13 +9908,15 @@
   {
    "id": "AUD-sacred_time-09",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Route Sacred Time's hardcoded Color() literals through core/theme tokens",
-   "commits": [],
-   "reviewRounds": 0,
+   "commits": [
+    "034789958f3b5e2ebf37e4c08ac3231c48d70aed"
+   ],
+   "reviewRounds": 1,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "Re-verified: 6 raw Color(0xFF...) literals present pre-fix; extracted to new AppColors tokens (reusing accentPurpleDeep/notifCardShadow where identical). Colors.white (7 sites) untouched - excluded by rule's tested whitelist. AC2 checker verified red->green, wired into make audit."
   },
   {
    "id": "AUD-scheduler-21",
