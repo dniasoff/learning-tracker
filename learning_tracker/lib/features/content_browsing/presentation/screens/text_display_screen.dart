@@ -561,7 +561,11 @@ class _ReaderSectionCard extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Colors.white,
+                // AUD-content_browsing-08: theme's onPrimary token instead
+                // of a raw Colors.white literal (see FilledButton fix below
+                // in this file / error_display.dart / app_error_view.dart
+                // for the same pattern).
+                color: Theme.of(context).colorScheme.onPrimary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -936,7 +940,14 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                             : isDone
                             ? AppTheme.brandGoldDeep
                             : AppTheme.brandBlue,
-                        foregroundColor: Colors.white,
+                        // AUD-content_browsing-08: theme's onPrimary token
+                        // (matches error_display.dart / app_error_view.dart)
+                        // instead of a raw Colors.white literal — onPrimary
+                        // is white in both the light and dark theme today,
+                        // but repaints if that ever changes.
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(999),
