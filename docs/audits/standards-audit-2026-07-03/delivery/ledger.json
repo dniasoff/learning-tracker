@@ -9714,13 +9714,18 @@
     {
       "id": "AUD-profiles-23",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Use PositionedDirectional in TutoredChildrenSection's pending-invite count badge instead of physical right:",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "cebdc8d0a63c8ab44e82d3fb5f407147701fbdbd"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-23 AC1 OK: line161 now PositionedDirectional(top:6,end:6); no live Positioned(right:) (only comment text); checker passes on file",
+        "AUD-profiles-23 AC2 OK: Makefile [10b/12] runs checker via ||FAIL=1->L209 audit FAILED; red-first: exit1 flags line161, exit0 fixed"
+      ],
+      "notes": "Confirmed Positioned(right:6) still live at line 156 (drifted from 145). Replaced with PositionedDirectional(end:6). Added tool/check_positioned_rtl.dart, wired as root Makefile [10b/12]. Red-first: failed on this site pre-fix; clean post-fix. Both ACs met."
     },
     {
       "id": "AUD-t-profiles-06",
