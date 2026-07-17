@@ -1,18 +1,17 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
-/// Scheduler-local completion record representation.
-class SchedulerCompletion {
-  const SchedulerCompletion({
-    required this.sefariaRef,
-    required this.stageOrder,
-    required this.trackType,
-    required this.completedAt,
-  });
+part 'scheduler_completion_repository.freezed.dart';
 
-  final String sefariaRef;
-  final int stageOrder;
-  final String trackType;
-  final DateTime completedAt;
+/// Scheduler-local completion record representation.
+@freezed
+abstract class SchedulerCompletion with _$SchedulerCompletion {
+  const factory SchedulerCompletion({
+    required String sefariaRef,
+    required int stageOrder,
+    required String trackType,
+    required DateTime completedAt,
+  }) = _SchedulerCompletion;
 }
 
 /// Abstract repository for completions consumed by the scheduler.
