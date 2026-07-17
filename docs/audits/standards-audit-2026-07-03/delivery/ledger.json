@@ -2806,13 +2806,19 @@
   {
    "id": "AUD-core-navigation-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete dead core/navigation re-export shims and break the app_router↔guards import cycle",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "40908cecc2f70d270255bcc7d02aef8470e25694"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-navigation-01 AC1 OK: grep import app/ in lib/core/ = no matches; 3 guards dropped core/navigation/app_router.dart import",
+    "AUD-core-navigation-01 AC2 OK: app_shell.dart + guards/auth_guard.dart deleted; no refs in lib+test+integration_test; test importers repointed",
+    "AUD-core-navigation-01 AC3 OK: Makefile check 69 hard gate + Rule 1a added, mirrors check 14/15; fires exit 2 on deliberate lib/core->app fixture"
+   ],
+   "notes": "Re-verified: real app->core->app cycle present (guards imported shim app_router.dart; it imports same guards). Fixed via DI: guards take PageRouteInfo Function() params. Deleted app_shell.dart + guards/auth_guard.dart, repointed 4 test importers. Added hard-gate audit 69/69. All 3 ACs pass. Merged --no-ff onto dev (cid w4r1c19, mergeSha 40908cecc2f70d270255bcc7d02aef8470e25694). Post-rebase gate: make audit 70/70 clean (incl. new hard-gate check 69), flutter analyze clean (no issues). gatePolicy=disjoint-skip: dev tip equalled the tipSha/dev merge-base (dev had not advanced), so the file-set intersection was empty; payload.testsToRun was not re-run here — the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-core-network-02",
