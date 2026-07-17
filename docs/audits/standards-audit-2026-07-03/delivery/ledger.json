@@ -663,13 +663,18 @@
   {
    "id": "AUD-core-preferences-03",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P1",
    "title": "Delete the dead TextDisplayPreferences singleton; repoint the tests that exercise it onto CurrentFontSize/ShowNikudPref",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "a9c3f30c3db55e5c1d4161af60b98a4501dda5e5"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-preferences-03 AC1 OK: grep -rn TextDisplayPreferences lib/ returns nothing (exit 1); class deleted, FontSize enum kept; no code refs repo-wide",
+    "AUD-core-preferences-03 AC2 OK: epic_02 test drives currentFontSizeProvider + reads textDisplayPreferenceProvider.read(0); my no-op writeToPrefs mutation went RED"
+   ],
+   "notes": "Confirmed dead singleton (zero lib/ refs). Deleted class, kept FontSize enum. Repointed both epic_02_content_test.dart tests onto currentFontSizeProvider/showNikudPrefProvider. Mutation-test proved red-first (no-op'd writeToPrefs, both tests failed red, reverted to green - AC2). AC1 grep clean."
   },
   {
    "id": "AUD-core-sync-10",
