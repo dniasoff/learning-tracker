@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'cities_provider.g.dart';
 
+// keepAlive: holds an open sqlite3 Database handle; disposing on last-listener-loss would force a re-open/re-extraction of the cities asset.
 @Riverpod(keepAlive: true)
 CitiesRepository citiesRepository(Ref ref) {
   final repo = CitiesRepository();

@@ -10,12 +10,14 @@ part of 'sacred_windows_provider.dart';
 // ignore_for_file: type=lint, type=warning
 /// 6-month rolling list of pre-computed Sacred Time block windows. Recomputed
 /// whenever the user's location or in-Israel flag changes.
+// keepAlive: read by both the lock overlay and CurrentSacredWindow's per-30s timer; dropping it on last-listener-loss would force a recompute on every screen navigation.
 
 @ProviderFor(sacredWindows)
 final sacredWindowsProvider = SacredWindowsProvider._();
 
 /// 6-month rolling list of pre-computed Sacred Time block windows. Recomputed
 /// whenever the user's location or in-Israel flag changes.
+// keepAlive: read by both the lock overlay and CurrentSacredWindow's per-30s timer; dropping it on last-listener-loss would force a recompute on every screen navigation.
 
 final class SacredWindowsProvider
     extends
@@ -27,6 +29,7 @@ final class SacredWindowsProvider
     with $Provider<List<SacredWindow>> {
   /// 6-month rolling list of pre-computed Sacred Time block windows. Recomputed
   /// whenever the user's location or in-Israel flag changes.
+  // keepAlive: read by both the lock overlay and CurrentSacredWindow's per-30s timer; dropping it on last-listener-loss would force a recompute on every screen navigation.
   SacredWindowsProvider._()
     : super(
         from: null,
@@ -68,6 +71,7 @@ String _$sacredWindowsHash() => r'c20beb5cbb41b482ca0f1447057b1dcf0cebae0d';
 ///
 /// Recomputed every minute via an internal timer so the lock screen drops
 /// without manual invalidation when tzais passes.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock screen drops the instant tzais passes, not just on the next rebuild.
 
 @ProviderFor(CurrentSacredWindow)
 final currentSacredWindowProvider = CurrentSacredWindowProvider._();
@@ -77,6 +81,7 @@ final currentSacredWindowProvider = CurrentSacredWindowProvider._();
 ///
 /// Recomputed every minute via an internal timer so the lock screen drops
 /// without manual invalidation when tzais passes.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock screen drops the instant tzais passes, not just on the next rebuild.
 final class CurrentSacredWindowProvider
     extends $NotifierProvider<CurrentSacredWindow, SacredWindow?> {
   /// Currently-active window (the one whose [start, end] contains "now"), or
@@ -84,6 +89,7 @@ final class CurrentSacredWindowProvider
   ///
   /// Recomputed every minute via an internal timer so the lock screen drops
   /// without manual invalidation when tzais passes.
+  // keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock screen drops the instant tzais passes, not just on the next rebuild.
   CurrentSacredWindowProvider._()
     : super(
         from: null,
@@ -119,6 +125,7 @@ String _$currentSacredWindowHash() =>
 ///
 /// Recomputed every minute via an internal timer so the lock screen drops
 /// without manual invalidation when tzais passes.
+// keepAlive: owns a running Timer that must keep firing even while no widget is watching, so the lock screen drops the instant tzais passes, not just on the next rebuild.
 
 abstract class _$CurrentSacredWindow extends $Notifier<SacredWindow?> {
   SacredWindow? build();

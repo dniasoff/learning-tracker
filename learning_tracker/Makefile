@@ -1104,7 +1104,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    lib/features/profiles/presentation/providers/pin_flow_controller.dart; \
 	  FAIL=1; \
 	fi; \
-	echo "79/79 — EH-3: no log-less catch in the profiles create/update/self-heal cloud-push paths or the add-profile-dialog duplicate-name check (AUD-profiles-16)"; \
+	echo "79/81 — EH-3: no log-less catch in the profiles create/update/self-heal cloud-push paths or the add-profile-dialog duplicate-name check (AUD-profiles-16)"; \
 	if ! dart run tool/check_eh3_profiles_log_less_catch.dart > /tmp/eh3_profiles_log_less_catch_check.$$$$.log 2>&1; then \
 	  cat /tmp/eh3_profiles_log_less_catch_check.$$$$.log; \
 	  rm -f /tmp/eh3_profiles_log_less_catch_check.$$$$.log; \
@@ -1112,13 +1112,26 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/eh3_profiles_log_less_catch_check.$$$$.log; \
 	fi; \
-	echo "80/80 — EH-2/SM-5 Rule-0: no unguarded await <prefs-or-dao-call> in a Future<void> Notifier method across the AUD-core-preferences-04 scope (core/preferences, notifications, sacred_time, scheduler, tracks/setup, onboarding providers)"; \
+	echo "80/81 — EH-2/SM-5 Rule-0: no unguarded await <prefs-or-dao-call> in a Future<void> Notifier method across the AUD-core-preferences-04 scope (core/preferences, notifications, sacred_time, scheduler, tracks/setup, onboarding providers)"; \
 	if ! dart run tool/check_guarded_persist.dart > /tmp/check_guarded_persist.$$$$.log 2>&1; then \
 	  cat /tmp/check_guarded_persist.$$$$.log; \
 	  rm -f /tmp/check_guarded_persist.$$$$.log; \
 	  FAIL=1; \
 	else \
 	  rm -f /tmp/check_guarded_persist.$$$$.log; \
+	fi; \
+	echo "81/81 — SM-6: every @Riverpod(keepAlive: true) in lib/features/sacred_time/presentation/providers/{cities_provider,sacred_location_provider,sacred_windows_provider}.dart carries an inline // keepAlive: justification comment on the line immediately above (diff-scoped to this batch per AUD-sacred_time-07; other repo-wide keepAlive sites remain tracked separately, not yet in this gate)"; \
+	if awk 'FNR==1 { prev = "" } /@Riverpod\(keepAlive: true\)/ && prev !~ /\/\/[ \t]*keepAlive:/ { print FILENAME":"FNR": "$$0 } { prev = $$0 }' \
+	    lib/features/sacred_time/presentation/providers/cities_provider.dart \
+	    lib/features/sacred_time/presentation/providers/sacred_location_provider.dart \
+	    lib/features/sacred_time/presentation/providers/sacred_windows_provider.dart | grep -q .; then \
+	  echo "  @Riverpod(keepAlive: true) missing an inline // keepAlive: <reason> justification comment"; \
+	  echo "  on the preceding line (SM-6, docs/coding-standards.md:167, AUD-sacred_time-07):"; \
+	  awk 'FNR==1 { prev = "" } /@Riverpod\(keepAlive: true\)/ && prev !~ /\/\/[ \t]*keepAlive:/ { print FILENAME":"FNR": "$$0 } { prev = $$0 }' \
+	    lib/features/sacred_time/presentation/providers/cities_provider.dart \
+	    lib/features/sacred_time/presentation/providers/sacred_location_provider.dart \
+	    lib/features/sacred_time/presentation/providers/sacred_windows_provider.dart; \
+	  FAIL=1; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \

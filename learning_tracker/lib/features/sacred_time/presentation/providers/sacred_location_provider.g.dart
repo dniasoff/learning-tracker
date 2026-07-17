@@ -53,16 +53,19 @@ String _$locationServiceHash() => r'781de39d66b80cd814e0941c88d5ae9dd3af48cd';
 
 /// Cached device location used for Sacred Time window calculation.
 /// Survives app restarts via SharedPreferences. App-global (not per-profile).
+// keepAlive: mirrors a persisted preference read on cold start; must survive widget unmounts so it isn't reloaded on every rebuild.
 
 @ProviderFor(SacredLocationNotifier)
 final sacredLocationProvider = SacredLocationNotifierProvider._();
 
 /// Cached device location used for Sacred Time window calculation.
 /// Survives app restarts via SharedPreferences. App-global (not per-profile).
+// keepAlive: mirrors a persisted preference read on cold start; must survive widget unmounts so it isn't reloaded on every rebuild.
 final class SacredLocationNotifierProvider
     extends $NotifierProvider<SacredLocationNotifier, SacredLocation?> {
   /// Cached device location used for Sacred Time window calculation.
   /// Survives app restarts via SharedPreferences. App-global (not per-profile).
+  // keepAlive: mirrors a persisted preference read on cold start; must survive widget unmounts so it isn't reloaded on every rebuild.
   SacredLocationNotifierProvider._()
     : super(
         from: null,
@@ -91,10 +94,11 @@ final class SacredLocationNotifierProvider
 }
 
 String _$sacredLocationNotifierHash() =>
-    r'15590961a9ae228932d09a21a2cefb15f46c295d';
+    r'a1fb5c7dc05d5e80fe3c1b50137cf944ea39de43';
 
 /// Cached device location used for Sacred Time window calculation.
 /// Survives app restarts via SharedPreferences. App-global (not per-profile).
+// keepAlive: mirrors a persisted preference read on cold start; must survive widget unmounts so it isn't reloaded on every rebuild.
 
 abstract class _$SacredLocationNotifier extends $Notifier<SacredLocation?> {
   SacredLocation? build();
@@ -117,6 +121,7 @@ abstract class _$SacredLocationNotifier extends $Notifier<SacredLocation?> {
 /// User-toggleable in-Israel flag. Auto-set by [SacredLocationNotifier.detect]
 /// and [setManualCity] from the country code, but the user can flip freely
 /// afterwards (e.g. visitors who keep two-day chag while in Israel).
+// keepAlive: the notifier's own _explicitlySet guard must survive widget unmounts, or a rebuild would drop it and let a stale async _load() clobber an explicit user choice.
 
 @ProviderFor(InIsraelNotifier)
 final inIsraelProvider = InIsraelNotifierProvider._();
@@ -124,11 +129,13 @@ final inIsraelProvider = InIsraelNotifierProvider._();
 /// User-toggleable in-Israel flag. Auto-set by [SacredLocationNotifier.detect]
 /// and [setManualCity] from the country code, but the user can flip freely
 /// afterwards (e.g. visitors who keep two-day chag while in Israel).
+// keepAlive: the notifier's own _explicitlySet guard must survive widget unmounts, or a rebuild would drop it and let a stale async _load() clobber an explicit user choice.
 final class InIsraelNotifierProvider
     extends $NotifierProvider<InIsraelNotifier, bool> {
   /// User-toggleable in-Israel flag. Auto-set by [SacredLocationNotifier.detect]
   /// and [setManualCity] from the country code, but the user can flip freely
   /// afterwards (e.g. visitors who keep two-day chag while in Israel).
+  // keepAlive: the notifier's own _explicitlySet guard must survive widget unmounts, or a rebuild would drop it and let a stale async _load() clobber an explicit user choice.
   InIsraelNotifierProvider._()
     : super(
         from: null,
@@ -161,6 +168,7 @@ String _$inIsraelNotifierHash() => r'd374aad6c4a6c2fa62d8a8b267e0872b07bbd37f';
 /// User-toggleable in-Israel flag. Auto-set by [SacredLocationNotifier.detect]
 /// and [setManualCity] from the country code, but the user can flip freely
 /// afterwards (e.g. visitors who keep two-day chag while in Israel).
+// keepAlive: the notifier's own _explicitlySet guard must survive widget unmounts, or a rebuild would drop it and let a stale async _load() clobber an explicit user choice.
 
 abstract class _$InIsraelNotifier extends $Notifier<bool> {
   bool build();
