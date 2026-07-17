@@ -52,10 +52,13 @@ class CumulativeLineChart extends StatelessWidget {
         ),
         belowBarData: BarAreaData(
           show: true,
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0x33123DAE), Color(0x00123DAE)],
+            colors: [
+              AppColors.blueMid.withValues(alpha: 0.2),
+              AppColors.blueMid.withValues(alpha: 0),
+            ],
           ),
         ),
       ),

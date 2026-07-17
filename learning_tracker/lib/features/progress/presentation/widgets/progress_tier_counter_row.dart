@@ -101,7 +101,7 @@ class ProgressTierCounterRow extends ConsumerWidget {
         value: streakValue,
         label: l10n.tierTileLabelStreak,
         semanticLabel: l10n.tierCounterStreakDays(currentStreak),
-        accent: const Color(0xFFFF6F77),
+        accent: AppColors.progressTierStreakAccent,
       ),
       _Counter(
         emoji: '🏆',
@@ -126,7 +126,7 @@ class ProgressTierCounterRow extends ConsumerWidget {
           value: pointsValue,
           label: l10n.tierTileLabelPoints,
           semanticLabel: l10n.tierCounterPoints(points),
-          accent: const Color(0xFFE4A100),
+          accent: AppColors.progressTierPointsAccent,
         ),
     ];
 

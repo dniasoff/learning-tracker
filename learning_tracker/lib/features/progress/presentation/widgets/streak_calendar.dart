@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kosher_dart/kosher_dart.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 
@@ -216,7 +217,7 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const activeColor = Color(0xFF103BAC);
+    const activeColor = AppColors.progressStreakActiveDay;
     final label = formatStreakDayLabel(date, useHebrewDate: useHebrewDate);
 
     return DecoratedBox(
@@ -225,7 +226,9 @@ class _DayCell extends StatelessWidget {
         shape: BoxShape.circle,
         border: isToday
             ? Border.all(
-                color: isActive ? Colors.white : const Color(0xFF9FA8BD),
+                color: isActive
+                    ? Colors.white
+                    : AppColors.progressStreakTodayRing,
                 width: 1.4,
               )
             : null,

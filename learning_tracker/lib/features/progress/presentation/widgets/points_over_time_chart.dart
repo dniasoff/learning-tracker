@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -44,7 +45,7 @@ class PointsOverTimeChart extends StatelessWidget {
                 barRods: [
                   BarChartRodData(
                     toY: data[i].points.toDouble(),
-                    color: const Color(0xFFF2D9B3),
+                    color: AppColors.progressPointsBarFill,
                     width: data.length <= 7 ? 20 : 10,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(8),
