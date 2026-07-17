@@ -3795,13 +3795,19 @@
   {
    "id": "AUD-scheduler-06",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete dead StudyDayConfigRepositoryImpl/toggleStudyDay — live _toggleDay write path bypasses the repository layer (DB-1)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "b250d54550b2020eba406add25c40cf0c88b6623"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-scheduler-06 AC1 OK: grep -rn 'StudyDayConfigRepositoryImpl(' lib/ = zero (exit1); impl+interface deleted, no dangling refs in lib/+test/",
+    "AUD-scheduler-06 AC2 OK: grep -rn 'toggleStudyDay' lib/ = zero (exit1); build_runner regen of .g.dart matches committed, provider absent",
+    "AUD-scheduler-06 AC3 OK: l1_test.dart not in commit (unchanged) and passes 21/21; asserts DB state not call path"
+   ],
+   "notes": "Evidence verified. Deleted StudyDayConfigRepositoryImpl, orphaned interface (zero other refs), dead toggleStudyDay provider + unused import. Regenerated .g.dart, diff scoped, unrelated drift reverted. AC1/AC2 greps zero; AC3 test unchanged, 21/21 pass."
   },
   {
    "id": "AUD-t-cross-09",
