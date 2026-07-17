@@ -7,7 +7,9 @@
 //     citySearchProvider is in AsyncLoading.
 //   • Data state: matching cities render as ListTile rows (name + subtitle).
 //   • Empty state: "No matches for …" shown when result list is empty.
-//   • Error state: "Search failed: …" shown when citySearchProvider errors.
+//   • Error state: generic "Search failed…" shown when citySearchProvider
+//     errors; the raw exception text never renders, in EN or he locale
+//     (AUD-sacred_time-03, EH-5).
 //   • Selecting a city calls sacredLocationProvider.notifier.setManualCity()
 //     with the correct lat/lng/cityLabel/countryCode.
 //   • Selecting a city triggers router.pop with the chosen City.
@@ -438,13 +440,23 @@ void main() {
       expect(
         find.textContaining('Search failed'),
         findsOneWidget,
-        reason: 'errorSearchFailed l10n string must be shown on error',
+        reason:
+            'cityPickerSearchErrorGeneric l10n string must be shown on '
+            'error',
       );
 
       await _teardown(tester);
     });
 
-    testWidgets('error message includes exception text', (tester) async {
+    // AUD-sacred_time-03 (EH-5) — red-first regression: before the fix, this
+    // asserted the OPPOSITE (that the raw exception text DID leak through —
+    // the exact bug the finding reports). CitiesRepository now converts raw
+    // I/O exceptions into a typed CitySearchException before they reach
+    // citySearchProvider, and the screen resolves that typed code through
+    // AppLocalizations, so the raw exception text must never render.
+    testWidgets('error message never includes the raw exception text', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildApp(
           router: _defaultRouter(),
@@ -459,9 +471,43 @@ void main() {
 
       expect(
         find.textContaining('specific db error'),
-        findsOneWidget,
-        reason: 'The exception message should appear in the error widget',
+        findsNothing,
+        reason: 'The raw exception message must never reach the UI (EH-5)',
       );
+      expect(find.textContaining('Search failed'), findsOneWidget);
+
+      await _teardown(tester);
+    });
+
+    // AUD-sacred_time-03 (EH-5) acceptance criterion: a widget test under
+    // Locale('he') asserting no raw exception text (e.g. 'Exception:',
+    // 'TimeoutException') ever renders.
+    testWidgets('he locale: error message never includes raw exception text '
+        '(no "Exception:", no "TimeoutException")', (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          router: _defaultRouter(),
+          locationNotifier: _FakeSacredLocationNotifier(),
+          citySearchOverrides: {
+            'Er': (_) async => throw TimeoutException(
+              'Time limit reached while waiting for position update.',
+            ),
+          },
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.enterText(find.byType(TextField), 'Er');
+      await _pump(tester);
+
+      expect(find.textContaining('Exception:'), findsNothing);
+      expect(find.textContaining('TimeoutException'), findsNothing);
+      expect(
+        find.textContaining('Time limit reached'),
+        findsNothing,
+        reason: 'The raw exception message must never reach the UI (EH-5)',
+      );
+      // The Hebrew generic error string renders instead.
+      expect(find.textContaining('החיפוש נכשל'), findsOneWidget);
 
       await _teardown(tester);
     });

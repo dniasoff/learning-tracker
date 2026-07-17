@@ -17,6 +17,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
@@ -32,6 +34,21 @@ class _FakeSacredLocationNotifier extends SacredLocationNotifier {
 
   @override
   SacredLocation? build() => _initial; // skip SharedPreferences I/O
+}
+
+/// Fake notifier whose [detect] returns a canned [LocationFetchResult] —
+/// used to drive the SnackBar rendered by `_LocationActions._showOutcome`
+/// without touching real GPS/SharedPreferences.
+class _FakeDetectingLocationNotifier extends SacredLocationNotifier {
+  _FakeDetectingLocationNotifier(this._result);
+
+  final LocationFetchResult _result;
+
+  @override
+  SacredLocation? build() => null; // skip SharedPreferences I/O
+
+  @override
+  Future<LocationFetchResult> detect() async => _result;
 }
 
 class _FakeInIsraelNotifier extends InIsraelNotifier {
@@ -50,8 +67,10 @@ Widget _buildCard({
   Locale locale = const Locale('he'),
   bool? useHebrewTerms,
   TransliterationVariant? variant,
+  SacredLocationNotifier? locationNotifierOverride,
 }) {
-  final locationNotifier = _FakeSacredLocationNotifier(location);
+  final locationNotifier =
+      locationNotifierOverride ?? _FakeSacredLocationNotifier(location);
   final inIsraelNotifier = _FakeInIsraelNotifier(inIsrael);
 
   return ProviderScope(
@@ -273,4 +292,51 @@ void main() {
       expect(find.text('SHABBOS MODE'), findsNothing);
     });
   });
+
+  // ── 7. Detect-location error SnackBar — no raw exception text ────────────
+  //
+  // AUD-sacred_time-03 (EH-5): LocationFetchError now carries a stable
+  // LocationErrorCode, never a pre-formatted message. _showOutcome resolves
+  // the code through AppLocalizations, so the SnackBar must never contain
+  // the underlying exception's raw text — even under the Hebrew locale.
+  group(
+    'SacredTimeSettingsCard — detect-location error (no raw exception text)',
+    () {
+      testWidgets(
+        'he locale: timeout error SnackBar shows the Hebrew generic string, '
+        'never raw exception text',
+        (tester) async {
+          final locationNotifier = _FakeDetectingLocationNotifier(
+            const LocationFetchError(
+              LocationErrorCode.timeout,
+              debugDetail: 'TimeoutException after 15s GPS timeLimit',
+            ),
+          );
+
+          await tester.pumpWidget(
+            _buildCard(locationNotifierOverride: locationNotifier),
+          );
+          await tester.pump();
+
+          await tester.tap(find.text('זיהוי אוטומטי'));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(find.textContaining('Exception'), findsNothing);
+          expect(
+            find.textContaining('TimeoutException'),
+            findsNothing,
+            reason: 'The raw exception text must never reach the UI (EH-5)',
+          );
+          expect(
+            find.textContaining('לא ניתן לזהות מיקום'),
+            findsOneWidget,
+            reason:
+                'sacredTimeLocationDetectErrorTimeout must render in '
+                'Hebrew',
+          );
+        },
+      );
+    },
+  );
 }

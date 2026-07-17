@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/city_search_exception.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/cities_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -66,7 +67,7 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(
                 child: Text(
-                  AppLocalizations.of(context)!.errorSearchFailed(e.toString()),
+                  _searchErrorMessage(e, AppLocalizations.of(context)!),
                 ),
               ),
               data: (cities) {
@@ -109,6 +110,26 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
     if (!mounted) return;
     context.router.pop(city);
   }
+}
+
+/// Resolves a `citySearchProvider` [AsyncValue.error] to a localized,
+/// user-facing string.
+///
+/// AUD-sacred_time-03 (EH-5): [CitiesRepository] converts its raw SQLite/I-O
+/// exceptions into a typed [CitySearchException] before they reach this
+/// provider, so the common case switches on [CitySearchException.code] and
+/// never touches [CitySearchException.debugDetail] (logs only). Any other
+/// error shape — defence in depth against a future call site that throws
+/// something else into this provider — still falls back to the generic
+/// string rather than ever rendering `error.toString()`.
+String _searchErrorMessage(Object error, AppLocalizations l10n) {
+  final code = error is CitySearchException
+      ? error.code
+      : CitySearchErrorCode.unknown;
+  return switch (code) {
+    CitySearchErrorCode.database => l10n.cityPickerSearchErrorDatabase,
+    CitySearchErrorCode.unknown => l10n.cityPickerSearchErrorGeneric,
+  };
 }
 
 class _IdleHint extends StatelessWidget {

@@ -5,6 +5,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -236,11 +237,23 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
             ? l10n.sacredTimeLocationPermissionPermanentlyDenied
             : l10n.sacredTimeLocationPermissionDenied,
       LocationFetchServiceDisabled() => l10n.sacredTimeLocationServicesOff,
-      LocationFetchError(:final message) => l10n.sacredTimeLocationDetectError(
-        message,
-      ),
+      LocationFetchError(:final code) => _errorMessage(code, l10n),
     };
     messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Resolves a [LocationErrorCode] to a localized, user-facing string.
+  ///
+  /// AUD-sacred_time-03 (EH-5): [LocationFetchError] carries a stable code,
+  /// never a pre-formatted message — this exhaustive switch is the single
+  /// place that maps each code to user-facing text. The exception's raw
+  /// text (exposed only via [LocationFetchError.debugDetail] for logs) must
+  /// never reach this switch or be rendered.
+  String _errorMessage(LocationErrorCode code, AppLocalizations l10n) {
+    return switch (code) {
+      LocationErrorCode.timeout => l10n.sacredTimeLocationDetectErrorTimeout,
+      LocationErrorCode.unknown => l10n.sacredTimeLocationDetectErrorGeneric,
+    };
   }
 }
 

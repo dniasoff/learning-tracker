@@ -1110,12 +1110,8 @@
   },
   "errorLoadingPoints": "שגיאה בטעינת נקודות",
   "errorSaveFailed": "השמירה נכשלה. נסו שוב.",
-  "errorSearchFailed": "החיפוש נכשל: {error}",
-  "@errorSearchFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
-  },
+  "cityPickerSearchErrorDatabase": "לא הצלחנו לטעון את רשימת הערים. נסו להתקין מחדש את האפליקציה.",
+  "cityPickerSearchErrorGeneric": "החיפוש נכשל. נסו שוב.",
   "errorSearchError": "שגיאת חיפוש: {error}",
   "@errorSearchError": {
     "placeholders": {
@@ -1284,12 +1280,8 @@
   "sacredTimeLocationPermissionPermanentlyDenied": "הרשאת המיקום נדחתה לצמיתות. פתחו את הגדרות המערכת כדי לאפשר.",
   "sacredTimeLocationPermissionDenied": "הרשאת המיקום נדחתה.",
   "sacredTimeLocationServicesOff": "שירותי המיקום כבויים במכשיר זה.",
-  "sacredTimeLocationDetectError": "לא ניתן לזהות מיקום: {message}",
-  "@sacredTimeLocationDetectError": {
-    "placeholders": {
-      "message": { "type": "String" }
-    }
-  },
+  "sacredTimeLocationDetectErrorTimeout": "לא ניתן לזהות מיקום: הבקשה נמשכה זמן רב מדי. נסו שוב בשטח פתוח, או בחרו עיר במקום.",
+  "sacredTimeLocationDetectErrorGeneric": "לא ניתן לזהות מיקום. נסו שוב, או בחרו עיר במקום.",
   "newPasswordLabel": "סיסמה חדשה",
   "confirmNewPasswordLabel": "אישור סיסמה חדשה",
   "passwordMinLengthError": "הסיסמה חייבת להכיל לפחות 6 תווים",

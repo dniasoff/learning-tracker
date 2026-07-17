@@ -2490,9 +2490,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorSaveFailed => 'Failed to save. Please try again.';
 
   @override
-  String errorSearchFailed(String error) {
-    return 'Search failed: $error';
-  }
+  String get cityPickerSearchErrorDatabase =>
+      'We couldn\'t load the city list. Try reinstalling the app.';
+
+  @override
+  String get cityPickerSearchErrorGeneric => 'Search failed. Please try again.';
 
   @override
   String errorSearchError(String error) {
@@ -2797,9 +2799,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Location services are turned off on this device.';
 
   @override
-  String sacredTimeLocationDetectError(String message) {
-    return 'Could not detect location: $message';
-  }
+  String get sacredTimeLocationDetectErrorTimeout =>
+      'Could not detect location: the request timed out. Try again outdoors, or choose a city instead.';
+
+  @override
+  String get sacredTimeLocationDetectErrorGeneric =>
+      'Could not detect location. Try again, or choose a city instead.';
 
   @override
   String get newPasswordLabel => 'New Password';
