@@ -9712,13 +9712,18 @@
   {
    "id": "AUD-profiles-12",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Convert ProfileSession to @freezed instead of hand-written ==/hashCode",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "904116b2c228eed28d1b39c9b2fcb5bb09e04099"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-profiles-12 AC1 OK: @freezed ProfileSession; build_runner emits profile_session.freezed.dart with ==/hashCode/toString, zero drift vs committed",
+    "AUD-profiles-12 AC2 OK: analyze clean; call site keeps (profileId:)/.none()/.isActive; only `const` dropped from .none(), still compiles"
+   ],
+   "notes": "ProfileSession -> single-ctor @freezed, matches ProfileModel. .none() is a non-const body factory (2nd const ctor makes freezed a union, dropping shared profileId getter, breaking isActive). Dropped const at the 1 internal .none() call site; syntax else unchanged. Red-first: red pre-fix, green post. Merged --no-ff onto dev (w4r1c29, mergeSha 648c9aaff7568af2eb3809d18df31d2390bde466). Post-rebase gate: make audit clean (all 80 greps), flutter analyze clean (0 issues), make arb-parity clean (touchedStrings, 1539 keys). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-profiles-13",
