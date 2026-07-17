@@ -7964,13 +7964,19 @@
     {
       "id": "AUD-core-network-04",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Fix ContentItem's doc comment claiming it maps to a content_items DB table that no longer exists",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "312138d5e4c471b20bbae20482fcf1559aedd3d9"
+      ],
+      "reviewRounds": 2,
+      "acVerified": [
+        "AUD-core-network-04 AC(a) OK: content_item.dart:8 now 'Loaded from bundled JSON assets by ContentRepositoryImpl'; matches impl doc :18, rootBundle load :91, pubspec :227",
+        "AUD-core-network-04 AC(b) OK: 5 content_items refs in lib/: 2 past-tense historical FK (allowed), 3 'there is no content_items DB table' negations; 0 present-tense claims",
+        "AUD-core-network-04 sweep OK: renamed ContentItem.curriculumId/levelN/sortOrder all map to real freezed fields (curriculumId, level1..4, sortOrder)"
+      ],
+      "notes": "Re-verified: no content_items table under lib/core/database/tables/. Doc comment falsely claimed present-tense mapping. Rewrote to describe real asset-backed load path via ContentRepositoryImpl, states no such DB table exists. Docs-only fix; AC did not require a checker."
     },
     {
       "id": "AUD-core-constants-01",
