@@ -11154,13 +11154,18 @@
   {
    "id": "AUD-progress-15",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace hand-rolled ==/hashCode on RecentActivityWindow with @freezed or a record",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "9995562884195c4dafc0ab74eb6112f7968a8805"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-progress-15 AC1 OK: class now @freezed (src:41), zero operator==/hashCode in source; merge-base had 2 hits so grep test red pre-fix, green post-fix",
+    "AUD-progress-15 AC2 OK: freezed == (freezed:28) + hashCode (freezed:33) cover all 3 ctor fields; behavior tests prove per-field inequality"
+   ],
+   "notes": "Hand-written ==/hashCode confirmed at line 46-53. Converted to @freezed (not a record: crosses public API). AC1 verified via grep test, red pre-fix/green post-fix. AC2 verified: freezed derives == from all ctor fields; proven via per-field (in)equality tests."
   },
   {
    "id": "AUD-t-progress-08",
