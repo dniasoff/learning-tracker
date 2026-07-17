@@ -417,7 +417,7 @@ final class SkippedTasksProvider
   }
 }
 
-String _$skippedTasksHash() => r'79a75ca4bf7ab95b70c65d312d15ff305fb05f59';
+String _$skippedTasksHash() => r'0360d01b5a098bf96baea418d37fa06896b6a006';
 
 /// Holds the set of sefaria refs skipped (dismissed) today.
 ///
@@ -781,7 +781,7 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'e7133a8e94ae2dc033648a79bccadafe38035339';
+String _$allDailyTasksHash() => r'd7f1047fa6a75af759fa2a8db67e1110180dd21b';
 
 /// Overdue task count for a single curriculum.
 ///
