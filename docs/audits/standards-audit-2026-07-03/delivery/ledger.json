@@ -423,13 +423,18 @@
   {
    "id": "AUD-core-labels-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P1",
    "title": "Fix CurriculumLabel.item breadcrumb/parent modes to resolve ancestor Hebrew names, not just the leaf's",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "7766b9105df990a3be5c5c4c358951276df19a75"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-labels-01 AC1 OK: new breadcrumb testWidget, Mishnayos 2 named ancestors, Hebrew ON, asserts pure-Hebrew crumb + no Latin ancestors; passed in my 122/122",
+    "AUD-core-labels-01 AC2 OK: red-first proven, reverted lib to parent both tests failed +0 -2, restored=pass; parent-mode case added"
+   ],
+   "notes": "Confirmed: breadcrumb/parent modes never passed hebrewNamesPerSegment; named ancestors fell back to raw English in Hebrew mode. Fixed via item.sefariaRef through existing renderedDisplayForRef/renderedParentForRef providers. leaf mode untouched. Red-first: new tests failed pre-fix, pass post-fix."
   },
   {
    "id": "AUD-core-preferences-01",
