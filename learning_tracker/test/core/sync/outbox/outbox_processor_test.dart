@@ -34,6 +34,20 @@ class _FakeAnalyticsService extends AnalyticsService {
   }
 }
 
+// ── Fake ID-token refresher (AUD-core-auth-01) ──────────────────────────────
+
+/// Records every `getIdToken(forceRefresh: ...)` call OutboxProcessor makes
+/// via its `refreshIdToken` callback, standing in for
+/// `AuthRepository.getIdToken` in production.
+class _FakeTokenRefresher {
+  final List<bool> forceRefreshCalls = [];
+
+  Future<String?> call({required bool forceRefresh}) async {
+    forceRefreshCalls.add(forceRefresh);
+    return 'refreshed-token';
+  }
+}
+
 // ── Fake PushPipeline ────────────────────────────────────────────────────────
 
 class _FakePipeline extends Fake implements PushPipeline {
@@ -50,6 +64,13 @@ class _FakePipeline extends Fake implements PushPipeline {
   /// empty `committed` list (a TOTAL failure — the first chunk threw).
   /// One-shot — cleared after it fires.
   bool failTotalNextBatch = false;
+
+  /// When set, [pushCompletionsBatch] throws this raw (not wrapped in a
+  /// [BatchPushException]) — models the real gateway's behavior of
+  /// rethrowing [FirestorePermissionDeniedException] unwrapped from
+  /// `batch.commit()` (see `firestore_gateway_impl.dart`'s
+  /// `pushCompletionsBatch`). One-shot — cleared after it fires.
+  Exception? throwOnNextBatch;
 
   /// Records every batch of entityKeys passed to [pushCompletionsBatch].
   final List<List<String>> batchCalls = [];
@@ -72,6 +93,11 @@ class _FakePipeline extends Fake implements PushPipeline {
     if (failNextPush) {
       failNextPush = false;
       throw Exception('network error');
+    }
+    final toThrow = throwOnNextBatch;
+    if (toThrow != null) {
+      throwOnNextBatch = null;
+      throw toThrow;
     }
     if (failTotalNextBatch) {
       failTotalNextBatch = false;
@@ -108,6 +134,12 @@ class _FakePipeline extends Fake implements PushPipeline {
   /// (AUD-core-sync-20) distinctly from [failNextPush]'s generic Exception.
   Exception? throwOnNextStreak;
 
+  /// When set, [pushStreak] throws this on EVERY call (not one-shot) —
+  /// models a permission-denied failure that persists even after a token
+  /// refresh + retry (AUD-core-auth-01: the cached token was not the actual
+  /// cause, so the retry fails too).
+  Exception? alwaysThrowStreak;
+
   @override
   Future<void> pushStreak({
     required int profileId,
@@ -116,6 +148,10 @@ class _FakePipeline extends Fake implements PushPipeline {
   }) async {
     if (hangStreak) {
       await Completer<void>().future; // never completes
+    }
+    final always = alwaysThrowStreak;
+    if (always != null) {
+      throw always;
     }
     final toThrow = throwOnNextStreak;
     if (toThrow != null) {
@@ -1045,6 +1081,194 @@ void main() {
       );
     },
   );
+
+  // ── AUD-core-auth-01 (AU-5): force-refresh + single retry on
+  // permission-denied ─────────────────────────────────────────────────────
+  //
+  // "On permission-denied/unauthenticated from a synced write, force-refresh
+  // once with getIdToken(true) before the single retry." A stale cached ID
+  // token (e.g. after a custom-claims change) previously had no dedicated
+  // recovery path — a failing push could only retry against the SAME stale
+  // token via the outbox's generic exponential backoff until it dead-lettered.
+  group('OutboxProcessor.drain — force-refresh + retry on permission-denied '
+      '(AUD-core-auth-01)', () {
+    late FakeLocalDayClock clock;
+    late _FakeTokenRefresher refresher;
+
+    setUp(() {
+      clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
+      useLocalDayClock(clock);
+      refresher = _FakeTokenRefresher();
+      processor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: clock,
+        refreshIdToken: refresher.call,
+      );
+    });
+
+    tearDown(resetLocalDayClock);
+
+    test(
+      'non-completion push: permission-denied then success — exactly one '
+      'getIdToken(true) call, retry succeeds, row is deleted (not backed off)',
+      () async {
+        await db.outboxDao.insertOutboxRow(
+          OutboxCompanion.insert(
+            profileId: profileId,
+            entityKind: OutboxEntityKind.streak,
+            entityKey: 'sk-refresh',
+            payload: jsonEncode({'count': 1}),
+            createdAt: clock.nowUtc(),
+          ),
+        );
+        // One-shot: fails once, succeeds on the retry.
+        pipeline.throwOnNextStreak = const FirestorePermissionDeniedException(
+          'simulated PERMISSION_DENIED — stale token',
+          collection: 'streak_events',
+          operation: 'write',
+        );
+
+        final pushed = await processor.drain(profileId);
+
+        expect(
+          refresher.forceRefreshCalls,
+          [true],
+          reason: 'exactly one getIdToken(forceRefresh: true) call',
+        );
+        expect(pipeline.calls, [
+          ('streak', 'sk-refresh'),
+        ], reason: 'the retry actually reached the push pipeline');
+        expect(pushed, 1, reason: 'the retried push counts as a success');
+
+        final remaining = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.streak,
+          profileId,
+        );
+        expect(
+          remaining,
+          isEmpty,
+          reason:
+              'a successful retry deletes the row — it must NOT fall '
+              'through to the normal backoff path',
+        );
+      },
+    );
+
+    test('non-completion push: permission-denied persists through the retry — '
+        'still exactly one getIdToken(true) call, then falls back to the '
+        'normal backoff (row kept pending, attempts incremented)', () async {
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'sk-nohelp',
+          payload: jsonEncode({'count': 1}),
+          createdAt: clock.nowUtc(),
+        ),
+      );
+      // Always throws — the refresh does not fix a genuine authz failure.
+      pipeline.alwaysThrowStreak = const FirestorePermissionDeniedException(
+        'simulated PERMISSION_DENIED — genuinely forbidden',
+        collection: 'streak_events',
+        operation: 'write',
+      );
+
+      final pushed = await processor.drain(profileId);
+
+      expect(
+        refresher.forceRefreshCalls,
+        [true],
+        reason:
+            'the refresh is attempted exactly once per push, even though '
+            'both the original attempt and the retry failed',
+      );
+      expect(pushed, 0);
+
+      final remaining = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.streak,
+        profileId,
+      );
+      expect(remaining, hasLength(1));
+      expect(
+        remaining.single.attempts,
+        1,
+        reason:
+            'the internal retry is transparent to the attempt counter — '
+            'it increments by exactly 1, the same as any other failure, '
+            'so the row now falls under the existing exponential backoff',
+      );
+    });
+
+    test('completions batch: permission-denied then success — exactly one '
+        'getIdToken(true) call, retry succeeds', () async {
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'c-refresh',
+          payload: jsonEncode({'ref': 'Berakhot.2a'}),
+          createdAt: clock.nowUtc(),
+        ),
+      );
+      pipeline.throwOnNextBatch = const FirestorePermissionDeniedException(
+        'simulated PERMISSION_DENIED — stale token',
+        collection: 'completions',
+        operation: 'write',
+      );
+
+      final pushed = await processor.drain(profileId);
+
+      expect(refresher.forceRefreshCalls, [true]);
+      expect(pushed, 1);
+      expect(
+        pipeline.batchCalls,
+        hasLength(2),
+        reason: 'first attempt + retry',
+      );
+
+      final remaining = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.completion,
+        profileId,
+      );
+      expect(remaining, isEmpty);
+    });
+
+    test('no refreshIdToken wired: permission-denied falls straight through to '
+        'the existing backoff path with no retry attempt (pre-AUD-core-auth-01 '
+        'behavior is unchanged when the callback is absent)', () async {
+      final noRefreshProcessor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: clock,
+        // refreshIdToken intentionally omitted (defaults to null).
+      );
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'sk-norefresh',
+          payload: jsonEncode({'count': 1}),
+          createdAt: clock.nowUtc(),
+        ),
+      );
+      pipeline.throwOnNextStreak = const FirestorePermissionDeniedException(
+        'simulated PERMISSION_DENIED',
+        collection: 'streak_events',
+        operation: 'write',
+      );
+
+      final pushed = await noRefreshProcessor.drain(profileId);
+
+      expect(pushed, 0);
+      final remaining = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.streak,
+        profileId,
+      );
+      expect(remaining, hasLength(1));
+      expect(remaining.single.attempts, 1);
+    });
+  });
 
   // ── T1.isolation — tutored-profile guard ──────────────────────────────────
   group('OutboxProcessor.drain — isTutoredProfile guard (T1.isolation)', () {

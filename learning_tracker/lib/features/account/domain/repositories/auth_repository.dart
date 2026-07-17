@@ -86,6 +86,15 @@ abstract class AuthRepository {
   /// user, or `null` if nobody is signed in.
   Future<AppUser?> reloadCurrentUser();
 
+  /// Return the current user's Firebase ID token, or `null` if nobody is
+  /// signed in.
+  ///
+  /// AU-5: pass `forceRefresh: true` to bypass the SDK's local token cache
+  /// and fetch a fresh JWT — the recovery primitive for a synced write that
+  /// fails with `permission-denied`/`unauthenticated` against a stale
+  /// cached token. See [FirebaseAuthGateway.getIdToken].
+  Future<String?> getIdToken({bool forceRefresh = false});
+
   // ── Action-code operations (email verification) ─────────────────────────
 
   /// Checks the given [oobCode] action code. Throws on invalid/expired code.

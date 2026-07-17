@@ -109,5 +109,13 @@ final outboxProcessorProvider = Provider<OutboxProcessor?>((ref) {
     // permanently wedging sync. Read (not watched) so each drain re-evaluates
     // against the current session.
     isIdentityMismatched: () => ref.read(syncIdentityStatusProvider).isMismatch,
+    // AUD-core-auth-01 (AU-5): on a permission-denied push failure, force-
+    // refresh the cached Firebase ID token once and retry once before
+    // falling through to the normal backoff — recovers from a stale token
+    // (e.g. after a custom-claims change) without waiting for a full
+    // sign-out/sign-in. Read (not watched): a refresh call must never
+    // trigger a provider rebuild.
+    refreshIdToken: ({required bool forceRefresh}) =>
+        ref.read(authRepositoryProvider).getIdToken(forceRefresh: forceRefresh),
   );
 });

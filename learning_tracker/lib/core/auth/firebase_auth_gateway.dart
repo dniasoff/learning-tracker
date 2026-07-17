@@ -26,6 +26,19 @@ abstract class FirebaseAuthGateway {
   /// snapshot, or `null` if nobody is signed in.
   Future<AuthGatewayUser?> reloadCurrentUser();
 
+  /// Return the current user's Firebase ID token, or `null` if nobody is
+  /// signed in.
+  ///
+  /// AU-5: pass `forceRefresh: true` to bypass the SDK's local token cache
+  /// and fetch a fresh JWT from the Firebase Auth backend — the primitive a
+  /// synced write needs after a `permission-denied`/`unauthenticated`
+  /// failure, since a cached token can be stale (e.g. after a custom-claims
+  /// change) without the app ever having been signed out. Unlike
+  /// [reloadCurrentUser] — which only refreshes profile fields such as
+  /// `displayName`/`emailVerified` and never touches the cached JWT/claims —
+  /// this is the only way to force a claims-bearing token refresh.
+  Future<String?> getIdToken({bool forceRefresh = false});
+
   // ── Email / password ─────────────────────────────────────────────────────
 
   /// Sign in with an existing email/password pair.

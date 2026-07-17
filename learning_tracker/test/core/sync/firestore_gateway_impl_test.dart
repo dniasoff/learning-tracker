@@ -50,6 +50,9 @@ class _StubAuth implements AuthRepository {
   Stream<AppUser?> onAuthStateChanged() => Stream.value(currentUser);
 
   @override
+  Future<String?> getIdToken({bool forceRefresh = false}) =>
+      throw UnimplementedError();
+  @override
   Future<void> signInWithEmail(String e, String p) =>
       throw UnimplementedError();
   @override

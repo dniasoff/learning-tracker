@@ -511,6 +511,45 @@ void main() {
     });
   });
 
+  group('getIdToken (AUD-core-auth-01 / AU-5)', () {
+    test(
+      'delegates to the gateway with forceRefresh defaulting to false',
+      () async {
+        when(
+          () => mockAuth.getIdToken(forceRefresh: false),
+        ).thenAnswer((_) async => 'cached-jwt');
+
+        final token = await repository.getIdToken();
+
+        expect(token, 'cached-jwt');
+        verify(() => mockAuth.getIdToken(forceRefresh: false)).called(1);
+      },
+    );
+
+    test(
+      'passes forceRefresh: true through to the gateway — the AU-5 recovery '
+      'primitive for a permission-denied/unauthenticated synced write',
+      () async {
+        when(
+          () => mockAuth.getIdToken(forceRefresh: true),
+        ).thenAnswer((_) async => 'fresh-jwt');
+
+        final token = await repository.getIdToken(forceRefresh: true);
+
+        expect(token, 'fresh-jwt');
+        verify(() => mockAuth.getIdToken(forceRefresh: true)).called(1);
+      },
+    );
+
+    test('returns null when the gateway reports no signed-in user', () async {
+      when(
+        () => mockAuth.getIdToken(forceRefresh: any(named: 'forceRefresh')),
+      ).thenAnswer((_) async => null);
+
+      expect(await repository.getIdToken(), isNull);
+    });
+  });
+
   group('action codes', () {
     test('checkActionCode delegates to the gateway', () async {
       when(() => mockAuth.checkActionCode('oob')).thenAnswer((_) async {});

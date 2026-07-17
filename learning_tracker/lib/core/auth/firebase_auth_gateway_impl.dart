@@ -57,6 +57,13 @@ class FirebaseAuthGatewayImpl implements FirebaseAuthGateway {
     return _toAppUserOrNull(_firebaseAuth.currentUser);
   }
 
+  @override
+  Future<String?> getIdToken({bool forceRefresh = false}) {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) return Future.value(null);
+    return user.getIdToken(forceRefresh);
+  }
+
   // ── Email / password ─────────────────────────────────────────────────────
 
   @override
