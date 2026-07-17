@@ -369,7 +369,7 @@ void main() {
       });
 
       test('app_router.dart no longer imports curriculum_learning_screen', () {
-        final file = File('lib/core/navigation/app_router.dart');
+        final file = File('lib/app/router/app_router.dart');
         final source = file.readAsStringSync();
         expect(
           source,

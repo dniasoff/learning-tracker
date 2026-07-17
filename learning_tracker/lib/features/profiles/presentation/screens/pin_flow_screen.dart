@@ -3,7 +3,7 @@ import 'dart:async' show unawaited;
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/navigation/router_provider.dart';
+import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/pin_flow_controller.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
