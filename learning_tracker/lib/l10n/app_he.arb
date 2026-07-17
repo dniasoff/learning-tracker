@@ -2435,26 +2435,6 @@
   "@recentActivityEmptyState": {
     "description": "Empty-state message shown in the Recent Activity charts when the selected filter yields no live completions."
   },
-  "monthlyActivityCalendarNoData": "אין נתוני פעילות",
-  "@monthlyActivityCalendarNoData": {
-    "description": "AUD-progress-11: empty-state fallback shown by MonthlyActivitySliverCalendar when it is given no rollup rows."
-  },
-  "monthlyActivityCalendarMonthHeader": "{month}  —  {activeDays, plural, one{יום פעיל אחד} two{יומיים פעילים} other{{activeDays} ימים פעילים}}",
-  "@monthlyActivityCalendarMonthHeader": {
-    "description": "AUD-progress-11: sticky month header in MonthlyActivitySliverCalendar. {month} is the already-localized month/year label; ICU plural on {activeDays}.",
-    "placeholders": {
-      "month": { "type": "String" },
-      "activeDays": { "type": "int" }
-    }
-  },
-  "monthlyActivityCalendarCompletionsCount": "{count, plural, one{השלמה אחת} two{שתי השלמות} other{{count} השלמות}}",
-  "@monthlyActivityCalendarCompletionsCount": {
-    "description": "AUD-progress-11: completions-count phrase on the compact summary card in MonthlyActivitySliverCalendar.",
-    "placeholders": {
-      "count": { "type": "int" }
-    }
-  },
-
   "redeemScreenTitle": "מימוש פרסים",
   "redeemScreenBalance": "היתרה שלך",
   "redeemScreenNoRewards": "עדיין לא הוגדרו פרסים.\nבקש מהורה להגדיר!",
