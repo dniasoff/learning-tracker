@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/core/utils/guarded_persist.dart';
 import 'package:learning_tracker/core/utils/pace_derivation.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
@@ -238,15 +239,33 @@ class SkippedTasks extends _$SkippedTasks {
   }
 
   Future<void> skip(String sefariaRef) async {
+    final previous = state;
     state = {...state, sefariaRef};
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_skippedRefsKey, state.toList());
+    // AUD-core-preferences-04 (EH-2): guard the write so a failure logs +
+    // rolls back state instead of leaving the skip silently unpersisted
+    // (the dismissed task would reappear next launch with no explanation).
+    await guardedPersist(
+      event: 'skipped_tasks_skip_persist_failed',
+      write: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList(_skippedRefsKey, state.toList());
+      },
+      onFailure: () => state = previous,
+    );
   }
 
   Future<void> undoSkip(String sefariaRef) async {
+    final previous = state;
     state = {...state}..remove(sefariaRef);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_skippedRefsKey, state.toList());
+    // AUD-core-preferences-04 (EH-2): see [skip].
+    await guardedPersist(
+      event: 'skipped_tasks_undo_skip_persist_failed',
+      write: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList(_skippedRefsKey, state.toList());
+      },
+      onFailure: () => state = previous,
+    );
   }
 }
 

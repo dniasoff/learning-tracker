@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/core/utils/guarded_persist.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/sacred_time_preferences.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
@@ -45,19 +46,39 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
           event: 'sacred_location_detect_success',
           fields: {'country': result.location.countryCode ?? 'unknown'},
         );
-        final prefs = await SharedPreferences.getInstance();
-        await SacredTimePreferences.writeLocation(prefs, result.location);
-        await SacredTimePreferences.writeInIsrael(
-          prefs,
-          result.location.countryCode == 'IL',
-        );
-        // After the awaits above the provider may have been
-        // invalidated/disposed (e.g. an account switch mid-GPS-fetch).
-        // Never write state on a disposed notifier.
+        // AUD-sacred_time-01 (SM-4): after the detectCurrent() await above
+        // the provider may have been invalidated/disposed (e.g. an account
+        // switch mid-GPS-fetch). Never touch ref/state on a disposed
+        // notifier.
         if (!ref.mounted) return result;
+        final previous = state;
         state = result.location;
-        ref.invalidate(inIsraelProvider);
-        await _pushSnapshot();
+        // AUD-core-preferences-04 (EH-2): guard the persistence chain so a
+        // write failure logs + rolls back state instead of leaving the
+        // detected location (and the in-Israel flag derived from it)
+        // silently unpersisted while the UI already shows it as set.
+        await guardedPersist(
+          event: 'sacred_location_detect_persist_failed',
+          write: () async {
+            final prefs = await SharedPreferences.getInstance();
+            await SacredTimePreferences.writeLocation(prefs, result.location);
+            await SacredTimePreferences.writeInIsrael(
+              prefs,
+              result.location.countryCode == 'IL',
+            );
+            // AUD-sacred_time-01 (SM-4): after the awaits above the provider
+            // may have been invalidated/disposed (e.g. an account switch
+            // mid-GPS-fetch). Never touch ref on a disposed notifier.
+            if (!ref.mounted) return;
+            ref.invalidate(inIsraelProvider);
+            await _pushSnapshot();
+          },
+          onFailure: () {
+            // AUD-sacred_time-01 (SM-4): never write state on a disposed
+            // notifier.
+            if (ref.mounted) state = previous;
+          },
+        );
       case LocationFetchServiceDisabled():
         AppLogger.instance.warning(
           event: 'sacred_location_detect_service_disabled',
@@ -93,16 +114,26 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
       countryCode: countryCode,
       cityLabel: cityLabel,
     );
-    final prefs = await SharedPreferences.getInstance();
-    await SacredTimePreferences.writeLocation(prefs, loc);
-    await SacredTimePreferences.writeInIsrael(prefs, countryCode == 'IL');
-    // After the awaits above the provider may have been
-    // invalidated/disposed (e.g. an account switch). Never write state on a
-    // disposed notifier.
-    if (!ref.mounted) return;
+    final previous = state;
     state = loc;
-    ref.invalidate(inIsraelProvider);
-    await _pushSnapshot();
+    // AUD-core-preferences-04 (EH-2): see [detect]'s success branch.
+    await guardedPersist(
+      event: 'sacred_location_set_manual_city_persist_failed',
+      write: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await SacredTimePreferences.writeLocation(prefs, loc);
+        await SacredTimePreferences.writeInIsrael(prefs, countryCode == 'IL');
+        // AUD-sacred_time-01 (SM-4): after the awaits above the provider
+        // may have been invalidated/disposed (e.g. an account switch).
+        // Never touch ref on a disposed notifier.
+        if (!ref.mounted) return;
+        ref.invalidate(inIsraelProvider);
+        await _pushSnapshot();
+      },
+      onFailure: () {
+        if (ref.mounted) state = previous;
+      },
+    );
   }
 
   Future<void> setManualCoords({
@@ -117,14 +148,24 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
       source: SacredLocationSource.manualCoords,
       fixedAt: DateTimeFactory.nowUtc(),
     );
+    final previous = state;
     state = loc;
-    final prefs = await SharedPreferences.getInstance();
-    await SacredTimePreferences.writeLocation(prefs, loc);
-    // After the await above the provider may have been
-    // invalidated/disposed (e.g. an account switch). Never touch ref on a
-    // disposed notifier.
-    if (!ref.mounted) return;
-    await _pushSnapshot();
+    // AUD-core-preferences-04 (EH-2): see [detect]'s success branch.
+    await guardedPersist(
+      event: 'sacred_location_set_manual_coords_persist_failed',
+      write: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await SacredTimePreferences.writeLocation(prefs, loc);
+        // AUD-sacred_time-01 (SM-4): after the await above the provider
+        // may have been invalidated/disposed (e.g. an account switch).
+        // Never touch ref on a disposed notifier.
+        if (!ref.mounted) return;
+        await _pushSnapshot();
+      },
+      onFailure: () {
+        if (ref.mounted) state = previous;
+      },
+    );
   }
 
   Future<void> _pushSnapshot() async {
@@ -163,13 +204,24 @@ class InIsraelNotifier extends _$InIsraelNotifier {
 
   Future<void> setInIsrael(bool value) async {
     _explicitlySet = true;
+    final previous = state;
     state = value;
-    final prefs = await SharedPreferences.getInstance();
-    await SacredTimePreferences.writeInIsrael(prefs, value);
-    // After the await above the provider may have been
-    // invalidated/disposed (e.g. an account switch). Never touch ref on a
-    // disposed notifier.
-    if (!ref.mounted) return;
-    await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();
+    // AUD-core-preferences-04 (EH-2): see SacredLocationNotifier.detect's
+    // success branch.
+    await guardedPersist(
+      event: 'in_israel_set_persist_failed',
+      write: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await SacredTimePreferences.writeInIsrael(prefs, value);
+        // AUD-sacred_time-01 (SM-4): after the await above the provider
+        // may have been invalidated/disposed (e.g. an account switch).
+        // Never touch ref on a disposed notifier.
+        if (!ref.mounted) return;
+        await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();
+      },
+      onFailure: () {
+        if (ref.mounted) state = previous;
+      },
+    );
   }
 }

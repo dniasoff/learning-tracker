@@ -1112,6 +1112,14 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/eh3_profiles_log_less_catch_check.$$$$.log; \
 	fi; \
+	echo "80/80 — EH-2/SM-5 Rule-0: no unguarded await <prefs-or-dao-call> in a Future<void> Notifier method across the AUD-core-preferences-04 scope (core/preferences, notifications, sacred_time, scheduler, tracks/setup, onboarding providers)"; \
+	if ! dart run tool/check_guarded_persist.dart > /tmp/check_guarded_persist.$$$$.log 2>&1; then \
+	  cat /tmp/check_guarded_persist.$$$$.log; \
+	  rm -f /tmp/check_guarded_persist.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/check_guarded_persist.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \

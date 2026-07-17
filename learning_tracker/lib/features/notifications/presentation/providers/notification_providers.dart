@@ -27,6 +27,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'notification_providers.g.dart';
 
+/// AUD-core-preferences-04 (SM-5): wraps [body] the way `AsyncValue.guard`
+/// does — but also logs the failure via [AppLogger] under [event] before it
+/// becomes the notifier's terminal `AsyncError` state. Plain `AsyncValue.guard`
+/// alone drops the failure on the floor with no diagnostic trail, which is
+/// exactly the gap this finding closes for [ReminderEnabled], [ReminderTime],
+/// [StreakAlertEnabled], [StreakAlertTime], and [RewardNotificationEnabled]'s
+/// mutation methods: previously each set `state = AsyncData(next)`
+/// optimistically and then awaited the SharedPreferences write with no
+/// try/catch anywhere in the chain, so a write failure was an unobserved
+/// Future rejection and the toggle silently reverted on next launch.
+Future<AsyncValue<T>> _guardedPersist<T>(
+  String event,
+  Future<T> Function() body,
+) {
+  return AsyncValue.guard(() async {
+    try {
+      return await body();
+    } catch (e, st) {
+      AppLogger.instance.error(event: event, exception: e, stackTrace: st);
+      rethrow;
+    }
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Defaults — re-exported from [ReminderPreferences] for backward compat.
 // ---------------------------------------------------------------------------
@@ -79,12 +103,21 @@ class ReminderEnabled extends _$ReminderEnabled {
 
   Future<void> toggle() async {
     final next = !(state.value ?? true);
-    state = AsyncData(next);
     final profileId = ref.read(activeProfileIdProvider);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(
-      NotificationPreferencesRepository.reminderEnabledKey(profileId),
-      next,
+    // AUD-core-preferences-04 (SM-5): derive the terminal state from a single
+    // guarded call instead of optimistically assigning `state = AsyncData(next)`
+    // and then awaiting an unguarded SharedPreferences write — see
+    // [_guardedPersist]'s doc comment.
+    state = await _guardedPersist(
+      'reminder_enabled_toggle_persist_failed',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(
+          NotificationPreferencesRepository.reminderEnabledKey(profileId),
+          next,
+        );
+        return next;
+      },
     );
   }
 }
@@ -123,17 +156,20 @@ class ReminderTime extends _$ReminderTime {
   }
 
   Future<void> setTime(TimeOfDay time) async {
-    state = AsyncData(time);
     final profileId = ref.read(activeProfileIdProvider);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(
-      NotificationPreferencesRepository.reminderHourKey(profileId),
-      time.hour,
-    );
-    await prefs.setInt(
-      NotificationPreferencesRepository.reminderMinuteKey(profileId),
-      time.minute,
-    );
+    // AUD-core-preferences-04 (SM-5): see [ReminderEnabled.toggle].
+    state = await _guardedPersist('reminder_time_set_persist_failed', () async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(
+        NotificationPreferencesRepository.reminderHourKey(profileId),
+        time.hour,
+      );
+      await prefs.setInt(
+        NotificationPreferencesRepository.reminderMinuteKey(profileId),
+        time.minute,
+      );
+      return time;
+    });
   }
 }
 
@@ -160,12 +196,18 @@ class StreakAlertEnabled extends _$StreakAlertEnabled {
 
   Future<void> toggle() async {
     final next = !(state.value ?? true);
-    state = AsyncData(next);
     final profileId = ref.read(activeProfileIdProvider);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(
-      NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
-      next,
+    // AUD-core-preferences-04 (SM-5): see [ReminderEnabled.toggle].
+    state = await _guardedPersist(
+      'streak_alert_enabled_toggle_persist_failed',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(
+          NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
+          next,
+        );
+        return next;
+      },
     );
   }
 }
@@ -204,16 +246,22 @@ class StreakAlertTime extends _$StreakAlertTime {
   }
 
   Future<void> setTime(TimeOfDay time) async {
-    state = AsyncData(time);
     final profileId = ref.read(activeProfileIdProvider);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(
-      NotificationPreferencesRepository.streakAlertHourKey(profileId),
-      time.hour,
-    );
-    await prefs.setInt(
-      NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
-      time.minute,
+    // AUD-core-preferences-04 (SM-5): see [ReminderEnabled.toggle].
+    state = await _guardedPersist(
+      'streak_alert_time_set_persist_failed',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(
+          NotificationPreferencesRepository.streakAlertHourKey(profileId),
+          time.hour,
+        );
+        await prefs.setInt(
+          NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
+          time.minute,
+        );
+        return time;
+      },
     );
   }
 }
@@ -243,12 +291,20 @@ class RewardNotificationEnabled extends _$RewardNotificationEnabled {
 
   Future<void> toggle() async {
     final next = !(state.value ?? true);
-    state = AsyncData(next);
     final profileId = ref.read(activeProfileIdProvider);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(
-      NotificationPreferencesRepository.rewardNotificationEnabledKey(profileId),
-      next,
+    // AUD-core-preferences-04 (SM-5): see [ReminderEnabled.toggle].
+    state = await _guardedPersist(
+      'reward_notification_enabled_toggle_persist_failed',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(
+          NotificationPreferencesRepository.rewardNotificationEnabledKey(
+            profileId,
+          ),
+          next,
+        );
+        return next;
+      },
     );
   }
 }
