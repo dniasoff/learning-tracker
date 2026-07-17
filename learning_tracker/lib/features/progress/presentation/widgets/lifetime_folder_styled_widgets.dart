@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Gradients for Learning lifetime on Progress (blue) and Settings (warm, no blue).
 class LifetimeFolderGradients {
@@ -647,8 +648,24 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
                 icon: Icon(
                   Icons.navigate_next_rounded,
                   color: color.withValues(alpha: 0.9),
+                  // AUD-progress-09 (AX-3): icon-only drill-in button needs a
+                  // non-empty accessible label. `IconButton(tooltip:)` alone
+                  // only populates `SemanticsData.tooltip`, not `.label`, on
+                  // the current Flutter SDK (3.44.6) — see the identical fix
+                  // shape in recent_activity_screen_a11y_test.dart
+                  // (AUD-progress-02) / reward_config_header_a11y_test.dart
+                  // (AUD-gamification-04). `semanticLabel` here maps to
+                  // `Semantics(label:)`, the mechanism AX-3 names.
+                  semanticLabel: AppLocalizations.of(
+                    context,
+                  )!.scopeShowContentsTooltip,
                 ),
                 onPressed: onDrill,
+                // Visual tooltip on long-press/hover. Reuses the same string
+                // already used for the equivalent drill-in chevron in
+                // HierarchyTile (scope_tiles.dart) rather than minting a
+                // near-duplicate ARB key for the same affordance.
+                tooltip: AppLocalizations.of(context)!.scopeShowContentsTooltip,
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),

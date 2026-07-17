@@ -917,6 +917,50 @@ void main() {
       await _tearDown(tester);
     });
 
+    // [AUD-progress-09] The drill-in IconButton is icon-only; a screen-reader
+    // user needs a non-empty accessible label announcing what it does. Assert
+    // directly on the Semantics tree (not just the presence of a `tooltip`
+    // string field) so this fails if the label is ever wired up as decorative
+    // only or left empty.
+    testWidgets(
+      'drill button exposes a non-empty accessible label (Semantics)',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+
+        await _pump(
+          tester,
+          _wrap(
+            LifetimeMarkingScopeRow(
+              primary: 'Drillable',
+              hasDrill: true,
+              onToggle: () {},
+              onDrill: () {},
+            ),
+          ),
+        );
+
+        final drillButton = find.widgetWithIcon(
+          IconButton,
+          Icons.navigate_next_rounded,
+        );
+        expect(drillButton, findsOneWidget);
+
+        final semantics = tester.getSemantics(drillButton);
+        expect(
+          semantics.label,
+          isNotEmpty,
+          reason:
+              'Icon-only drill-in button must carry a non-empty accessible '
+              'label (AX-3) so screen readers announce its purpose.',
+        );
+        expect(semantics.label, 'Show contents');
+        expect(find.bySemanticsLabel('Show contents'), findsOneWidget);
+
+        handle.dispose();
+        await _tearDown(tester);
+      },
+    );
+
     testWidgets('drill button absent when onDrill is null', (tester) async {
       await _pump(
         tester,
