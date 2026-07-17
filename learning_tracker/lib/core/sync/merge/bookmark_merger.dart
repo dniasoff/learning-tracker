@@ -9,6 +9,7 @@
 /// arbitrate symmetrically (local edits between pulls are no longer lost).
 library;
 
+import 'package:learning_tracker/core/ids/natural_key.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -40,7 +41,11 @@ class BookmarkMerger implements EntityMerger {
         final decoded = _codec.decode(row);
         if (decoded == null) continue; // Malformed row — skip.
 
-        final naturalKey = decoded.curriculumId;
+        // AUD-core-ids-01: route through NaturalKey.forBookmark instead of
+        // using the raw curriculumId.
+        final naturalKey = NaturalKey.forBookmark(
+          curriculumId: decoded.curriculumId,
+        ).value;
         final localUpdatedAt = await _store.currentUpdatedAt(
           kind: kind,
           profileId: profileId,

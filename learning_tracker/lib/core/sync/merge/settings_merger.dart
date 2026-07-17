@@ -8,6 +8,7 @@
 /// `updated_at` via [MergeStore.persistUpdatedAt].
 library;
 
+import 'package:learning_tracker/core/ids/natural_key.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/settings_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -39,7 +40,11 @@ class SettingsMerger implements EntityMerger {
         final remoteUpdatedAt = decoded.updatedAt;
         if (remoteUpdatedAt == null) continue;
 
-        final naturalKey = decoded.curriculumId;
+        // AUD-core-ids-01: route through NaturalKey.forSettings instead of
+        // using the raw curriculumId.
+        final naturalKey = NaturalKey.forSettings(
+          curriculumId: decoded.curriculumId,
+        ).value;
         final localUpdatedAt = await _store.currentUpdatedAt(
           kind: kind,
           profileId: profileId,

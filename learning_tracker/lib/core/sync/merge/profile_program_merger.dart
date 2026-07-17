@@ -12,6 +12,7 @@ library;
 import 'dart:async';
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/ids/natural_key.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -68,7 +69,10 @@ class ProfileProgramMerger implements EntityMerger {
         // pattern used by TrackConfigMerger and every other LWW merger.
         // The previous '${decoded.profileId}|${decoded.curriculumId}' caused
         // double-scoping: stored key became '$profileId|$profileId|$curriculumId'.
-        final naturalKey = decoded.curriculumId;
+        // AUD-core-ids-01: route through NaturalKey.fromSingle instead of
+        // using the raw curriculumId — this entity has no dedicated forX
+        // shape, so it uses the generic single-column factory.
+        final naturalKey = NaturalKey.fromSingle(decoded.curriculumId).value;
         final localUpdatedAt = await _store.currentUpdatedAt(
           kind: kind,
           profileId: profileId,

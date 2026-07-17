@@ -12,6 +12,7 @@
 /// `state_changed_at` via [MergeStore.persistUpdatedAt].
 library;
 
+import 'package:learning_tracker/core/ids/natural_key.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/track_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -42,7 +43,11 @@ class TrackConfigMerger implements EntityMerger {
         if (decoded == null) continue; // Missing required fields — skip.
 
         // W3.22: natural key is just curriculumId (one track per curriculum).
-        final naturalKey = decoded.curriculumId;
+        // AUD-core-ids-01: route through NaturalKey.forTrackConfig instead
+        // of using the raw curriculumId.
+        final naturalKey = NaturalKey.forTrackConfig(
+          curriculumId: decoded.curriculumId,
+        ).value;
         final localUpdatedAt = await _store.currentUpdatedAt(
           kind: kind,
           profileId: profileId,

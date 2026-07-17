@@ -6,9 +6,18 @@
 /// runtime cost but prevents accidental mixing of raw strings with merger
 /// identifiers.
 ///
-/// Factory constructors encode the per-entity key shape consistently,
-/// replacing ad-hoc `'$a|$b'` string concatenations that were scattered
-/// across the merger layer.
+/// Factory constructors encode the per-entity key shape consistently.
+///
+/// AUD-core-ids-01: the mergers whose natural key has a dedicated shape
+/// below (stage definitions, settings, bookmarks, track config, learning
+/// order) and the single-column profile-program association construct
+/// their key via these factories rather than hand-rolling `'$a|$b'`
+/// concatenation, so the shape is owned in one place. Adoption is not
+/// repo-wide: some mergers still build their key inline (a plain scalar
+/// such as a bare profile id or remote track id, or — pre-existing,
+/// outside this pass — a `|`-composite of their own) — see the merger's
+/// own doc comment for its actual key construction before assuming it
+/// routes through here.
 ///
 /// [DriftMergeStore] splits on `|` to decode composite keys, so the
 /// separator character must remain `|` throughout.
