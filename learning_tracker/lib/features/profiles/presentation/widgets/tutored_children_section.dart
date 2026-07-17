@@ -520,6 +520,14 @@ class _TutoredChildRow extends ConsumerWidget {
           grantId: selection.grantId,
         );
 
+    // SM-4: the profile-switcher sheet hosting this row is swipe/backdrop-
+    // dismissible for this entire await (showProfileSwitcherSheet overrides
+    // neither `isDismissible` nor `enableDrag`), so the row can unmount while
+    // the read above is in flight. Bail out before touching `ref` again if
+    // that happened — same liveness discipline as the `router` capture above,
+    // just via `context.mounted` since WidgetRef has no `.mounted` of its own.
+    if (!context.mounted) return;
+
     if (cachedProfile != null) {
       // Mirror from a previous session — enter immediately with local data.
       // Delta listeners will stream any changes once connectivity is restored.
@@ -601,6 +609,10 @@ class _TutoredChildRow extends ConsumerWidget {
                 (localProfileId: 0, result: TutoredPullResult.error),
           );
 
+      // SM-4: same liveness guard as above — the pull can take up to 15 s,
+      // plenty of time for the sheet to be dismissed mid-flight.
+      if (!context.mounted) return;
+
       switch (result.result) {
         case TutoredPullResult.success:
           ref
@@ -672,6 +684,9 @@ class _TutoredChildRow extends ConsumerWidget {
         event: 'tutored_pull_aborted',
         fields: {'error': e.toString()},
       );
+      // SM-4: this catch clause's scope spans the second await too, so guard
+      // here as well before touching `ref`.
+      if (!context.mounted) return;
       ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
       dismissLoading();
       // AUD-profiles-10 (EH-2/UX completeness): give feedback consistent with
