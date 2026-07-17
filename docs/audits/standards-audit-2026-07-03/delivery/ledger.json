@@ -1302,13 +1302,18 @@
     {
       "id": "AUD-scheduler-01",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P1",
       "title": "Lazy-load GroupedDailyView's per-curriculum task list instead of List.generate-ing every DailyTaskCard",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c3, 2026-07-17). review agent lost (quota); fix commit 66faae63aed06f84ddea51bd0fe12acf4bf940f6 exists on worktree branch worktree-wf_24065ac5-4c4-3 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "025e05531b2809df6d8f45e961426a60f6e92120"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-01 AC OK: GroupedDailyView rebuilt on CustomScrollView (SliverList/SliverChildBuilderDelegate); only on-screen DailyTaskCards realized regardless of backlog size",
+        "AUD-scheduler-01 AC OK: PF-2 Rule-0 checker (no_eager_list_in_non_lazy_scroll_container) extended for List.generate(...) into ExpansionTile(children:)/ListView(children:); 16/16 rule tests pass"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit 66faae63 existed on stray worktree branch worktree-wf_24065ac5-4c4-3, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean cherry-pick, no conflicts) and re-tested: flutter test test/features/scheduler/presentation/ -> 160/160 passed; dart test packages/custom_lints -> 16/16 passed for the extended rule; flutter analyze -> No issues found; make audit -> PASSED. Merged as 025e0553. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-core-sync-11",
@@ -1718,13 +1723,18 @@
     {
       "id": "AUD-content_browsing-04",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Move TextContent/TextSegment out of text_cache_repository.dart (data layer) into domain/entities/ so presentation and its tests stop importing the data layer",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r2c1, 2026-07-17). Confirmed: TextContent/TextSegment lived in text_cache_repository.dart (data). Moved to domain/entities/text_content.dart w/ back-compat export; screen.dart+2 tests now import domain, AC2 verified (64/64 pass). AC1 grep: 2 unrelated pre-existing DI-wiring hits remain, see notes. Fix commit 30a93e82cc3745b64bec1e288c9ee6d84f5522c1 exists on worktree branch worktree-wf_24065ac5-4c4-119 (worktree removed, branch retained pending re-review — commit not yet on dev). Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "2b4938cfaf20cb669416a5708e4ad36f276329a3"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-content_browsing-04 AC1 OK: TextContent/TextSegment moved from data/repositories/text_cache_repository.dart to domain/entities/text_content.dart",
+        "AUD-content_browsing-04 AC2 OK: text_display_screen.dart + 2 tests now import the domain entity; AC2 verified 64/64 pass"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit 30a93e82 existed on stray worktree branch worktree-wf_24065ac5-4c4-119, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean cherry-pick, no conflicts). Re-verified AC1 grep: 2 unrelated pre-existing DI-wiring hits remain (out of this finding's scope, documented in the fix commit). flutter analyze -> No issues found. Merged as 2b4938cf. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-profiles-07",
@@ -1956,13 +1966,18 @@
     {
       "id": "AUD-scheduler-09",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Extract scheduler_providers.dart's private _amnestyDayCutoffUtc/anchor-clamp so reorder_amnesty_test.dart calls it instead of hand-copying it",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c20, 2026-07-17). review agent lost (quota); fix commit 1e42dc66c0c8fa40b4e63eb5b6e22fd4753f63cf exists on worktree branch worktree-wf_24065ac5-4c4-32 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "a4bfa65b595bc3c176a1405a6a1bcc83e520a08a"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-09 AC OK: _amnestyDayCutoffUtc + anchor-clamp extracted to domain/projection/amnesty_cutoff.dart (amnestyDayCutoffUtc/clampAmnestyCutoffToAnchor), exported via projection.dart; both production call sites and reorder_amnesty_test.dart now call the real seam instead of hand-retyping it",
+        "AUD-scheduler-09 AC OK: mutation-kill re-test (isAfter->isBefore in anchor clamp) confirmed caught post-fix (4 failures) vs undetected pre-fix (11/11 passed against the hand-copied duplicate)"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit 1e42dc66 existed on stray worktree branch worktree-wf_24065ac5-4c4-32, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean cherry-pick, no conflicts) and re-tested: flutter test on amnesty_cutoff_test.dart + reorder_amnesty_test.dart + overdue_projection_test.dart -> all passed. Merged as a4bfa65b. AUD-scheduler-12's later extraction of _buildProjectionTasks into daily_task_projection_service.dart was reconciled to keep calling the shared amnestyDayCutoffUtc/clampAmnestyCutoffToAnchor functions rather than reverting to a private duplicate (see AUD-scheduler-12's note). Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-core-sync-24",
@@ -2198,13 +2213,19 @@
     {
       "id": "AUD-profiles-11",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Widen PinFlowController's catch scopes and add a finally so busy never sticks true on an untyped PinService exception",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c8, 2026-07-17). review agent lost (quota); fix commit 0e33570005597a14704337eeb9fa88114400951e exists on worktree branch worktree-wf_24065ac5-4c4-8 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "38b399674c2bccb8ae42e5738aefaab6776d76be"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-11 AC1 OK: every code path through PinEntryMachine's _advanceToConfirm/_handleVerifyCurrentForChange/_handleConfirmAndSave/_handleVerify guarantees busy is false after return, on both success and any exception type (catch-all + finally backstop)",
+        "AUD-profiles-11 AC2 OK: 4 regression tests added (a generic StateError, not PinLockoutException/InvalidPinFormatException/ArgumentError, thrown from verifyProfilePin/setProfilePin at each of the 4 sites); all 4 red pre-fix, green post-fix; appendDigit confirmed to still accept input afterward",
+        "AUD-profiles-11 AC3 OK: tool/check_sm5_busy_stuck.dart (Rule-0 checker) ported and widened to also scan PinEntryMachine (not just @riverpod Notifiers); wired into make audit as 83/83"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): original fix commit 0e335700 (worktree-wf_24065ac5-4c4-8) targeted PinFlowController directly and could not cherry-pick cleanly — AUD-profiles-06 (landed independently, e5aea6ce) consolidated PinFlowController's hand-rolled transitions into a shared PinEntryMachine used by the controller AND 3 modal PIN dialogs, so the busy-stuck defect (still live, re-verified via grep + a red-first regression test) and its fix now belong in the domain layer. Rewrote the fix against PinEntryMachine rather than reusing the stale patch: same catch-widening/finally-backstop design, now protecting every PIN-entry surface (setup/change/verify), not just the routed screen. flutter test -> 44/44 passed; flutter analyze -> No issues found; make audit -> PASSED (83/83). Merged as 38b39967. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-account-12",
@@ -2493,13 +2514,17 @@
     {
       "id": "AUD-scheduler-11",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Log SchedulerStageRepositoryImpl's schedule-JSON decode failure instead of silently swallowing it",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c22, 2026-07-17). review agent lost (quota); fix commit 193fe2cd5eec2dc7d707982cf37fe2e18c9de8ac exists on worktree branch worktree-wf_24065ac5-4c4-35 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "b7a18b09405554d884e07ea06002ef8282485bcd"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-11 AC OK: SchedulerStageRepositoryImpl's schedule-JSON decode failure now logged via AppLogger instead of silently swallowed; regression test forces a malformed JSON payload and asserts the log call"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit 193fe2cd existed on stray worktree branch worktree-wf_24065ac5-4c4-35, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean cherry-pick, no conflicts). Merged as b7a18b09. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-t-cross-37",
@@ -2980,13 +3005,17 @@
     {
       "id": "AUD-scheduler-16",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Stop keying GoalEntity.firestoreId on mutable targetPercent — every goal-percent edit orphans a Firestore document instead of updating it",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c27, 2026-07-17). review agent lost (quota); fix commit 7cb5cd931b28379ab2a0a76df2610a768b0e3ad1 exists on worktree branch worktree-wf_24065ac5-4c4-46 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "1927e89fdcb6add61e8b8030fc065461ed22f995"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-16 AC OK: GoalEntity.firestoreId no longer keys off mutable targetPercent; updateGoal changing only targetPercent now pushes the SAME firestoreId as the create call (regression test added, verified against repoWithSync outbox payloads)"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit 7cb5cd93 existed on stray worktree branch worktree-wf_24065ac5-4c4-46, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip; cherry-pick conflicted in goal_repository_impl_test.dart (dev had independently gained AUD-scheduler-03/04 test coverage in the same region) - reconciled by keeping both test additions, placing the new AUD-scheduler-16 test inside the existing 'sync payload completeness' group. flutter test on goal_repository_impl_test.dart + goal_entity_extended_test.dart -> 50/50 passed. Merged as 1927e89f. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-t-cross-19",
@@ -3304,13 +3333,17 @@
     {
       "id": "AUD-scheduler-05",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Decouple ProgramLabelResolver from Flutter/Riverpod so its label logic can be unit-tested without pumpWidget",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (parked-r01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. One unreviewed fix commit exists, not merged to dev: cfd33e5660c8032ea897c6780674816a3f3107e4 on worktree-wf_24065ac5-4c4-26 (fix(scheduler): decouple ProgramLabelResolver from WidgetRef/Ref (AUD-scheduler-05)) - no code landed this pass. Independently re-verified against the current tree: lib/features/scheduler/domain/labels/program_label_resolver.dart still imports package:flutter/widgets.dart and package:flutter_riverpod/flutter_riverpod.dart, with WidgetRef/Ref-typed factory constructors intact. Worktree and branch left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
+      "commits": [
+        "896f28c93007b307c46ff5177cbf608c33f2a52c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-05 AC OK: ProgramLabelResolver decoupled from WidgetRef/Ref; label logic now unit-testable without pumpWidget"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17), parked-r01 defect re-verified STILL LIVE before this pass (program_label_resolver.dart still imported package:flutter/widgets.dart and package:flutter_riverpod/flutter_riverpod.dart with WidgetRef/Ref-typed factory constructors). Fix commit cfd33e56 existed on stray worktree branch worktree-wf_24065ac5-4c4-26, unreviewed and unmerged. Content re-verified against current dev tip (clean cherry-pick, no conflicts). Post-merge grep confirms zero flutter/riverpod imports remain in program_label_resolver.dart. Merged as 896f28c9. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-t-cross-20",
@@ -3758,13 +3791,17 @@
     {
       "id": "AUD-progress-05",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Collapse chart_data_service.dart's *Live methods — byte-identical duplicates of their non-Live counterparts",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c9, 2026-07-17). review agent lost (quota); fix commit b9c011d7451e97a0561f81a60c2224abe2e3b360 exists on worktree branch worktree-wf_24065ac5-4c4-9 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "76e0825ff15de650e1c1ac641e21ddd1b8290f8d"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-progress-05 AC OK: chart_data_service.dart's *Live methods collapsed to one-line delegations to their non-Live counterparts; getCumulativeProgressLive/getDailyCompletionsLive carry no independent query/bucketing logic"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit b9c011d7 existed on stray worktree branch worktree-wf_24065ac5-4c4-9, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean cherry-pick, no conflicts). Merged as 76e0825f. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-t-progress-03",
@@ -3802,13 +3839,17 @@
     {
       "id": "AUD-scheduler-08",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Delete unused features/scheduler/presentation/widgets/pace_indicator.dart — dead code, duplicate class name, hardcoded English",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c19, 2026-07-17). review agent lost (quota); fix commit e346490ac4c1aa351aa7762fa061a11f4c5a224c exists on worktree branch worktree-wf_24065ac5-4c4-29 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "81d4d12a5c2b04c5cda61d9f914deeb060a9e86e"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-08 AC OK: dead pace_indicator.dart + its test deleted (zero production consumers, confirmed via grep, distinct from the live ProgressPaceIndicator widget)"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit e346490a existed on stray worktree branch worktree-wf_24065ac5-4c4-29, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip; cherry-pick conflicted in tool/check_hardcoded_presentation_text.dart's baseline set (dev had independently re-pinned an unrelated line number) - reconciled by dropping the now-deleted pace_indicator.dart baseline entry and keeping the current settings_screen.dart:318 pin. dart run tool/check_hardcoded_presentation_text.dart -> OK. Merged as 81d4d12a. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-scheduler-06",
@@ -5724,13 +5765,18 @@
     {
       "id": "AUD-progress-07",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Remove or wire up the dead MonthlyActivitySliverCalendar spike before its placeholder class collides with the real Drift companion",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c11, 2026-07-17). review agent lost (quota); no review completed for this item in this run, no code change produced, no mergeable diff. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "0df4c4f539b81b0045fc3553f17e280535aa4d4d"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-progress-07 AC1 OK: MonthlyActivitySliverCalendar (already deleted by the independent AUD-progress-10 finding) plus its now-fully-orphaned MonthlyActivityRollups table (never wired into UserDatabase) are both gone",
+        "AUD-progress-07 AC2 OK: grep -rn MonthlyActivityRollup across learning_tracker/ (excl. .dart_tool/build) -> 0 hits; no hand-written class reuses the table's reserved @DataClassName name"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): no fix commit had ever been produced for this finding. Re-verified against current dev tip: a separate, independently-landed finding (AUD-progress-10, 745b6ecb, already on dev) had deleted the dead MonthlyActivitySliverCalendar widget + its 2 spike tests for an unrelated reason (zero live callers), incidentally also removing the hand-rolled MonthlyActivityRollup placeholder class and closing AC2. AUD-progress-10 explicitly left the orphaned monthly_activity_rollups.dart table file in place. Wrote a fresh, mechanical fix: deleted the now-fully-orphaned table (never referenced by UserDatabase's @DriftDatabase tables list or anything else in lib/test/). flutter test test/features/progress/ -> 437/437 passed; flutter analyze -> No issues found; make audit -> PASSED. Merged as 0df4c4f5."
     },
     {
       "id": "AUD-progress-03",
@@ -5806,57 +5852,77 @@
     {
       "id": "AUD-scheduler-15",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Resolve the ambiguous stageId/stageOrder dual-interpretation in SchedulerCompletionRepositoryImpl.resolveStageOrder",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c26, 2026-07-17). review agent lost (quota); fix commit 5f20fe2a5d6ea90427a9083fb8250c7f56ae4390 exists on worktree branch worktree-wf_24065ac5-4c4-42 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "8bf8602b6675de1a00591ca3a6866049d23c371c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-15 AC OK: SchedulerCompletionRepositoryImpl.resolveStageOrder's ambiguous stageId/stageOrder dual-interpretation resolved via a new stage_id_format column (drift schema v37) + backfill migration, preserving stage_id and leaving genuine collisions unresolved rather than guessing worse"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit 5f20fe2a existed on stray worktree branch worktree-wf_24065ac5-4c4-42, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean cherry-pick, no conflicts). flutter test on scheduler_completion_repository_impl_test.dart + v36_to_v37_test.dart -> all passed. Merged as 8bf8602b. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-scheduler-14",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Populate the scheduler feature barrel (scheduler.dart) with real exports",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c25, 2026-07-17). review agent lost (quota); fix commit 64c2f3b27a8c7b9397721e8e94eb5eb05c434cc1 exists on worktree branch worktree-wf_24065ac5-4c4-41 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "2a808da8ca96201abbc934d43b7e1068f5e95103"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-14 AC OK: features/scheduler/scheduler.dart barrel populated with real exports; deep cross-feature imports across ~20 consuming files migrated onto the barrel"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit 64c2f3b2 existed on stray worktree branch worktree-wf_24065ac5-4c4-41, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean auto-merge across 43 files, including an accurate re-pin of tool/check_hardcoded_presentation_text.dart's baseline line number). flutter analyze (full project) -> No issues found. Merged as 2a808da8. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-scheduler-13",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Normalize config.currentDate before delay-stage due-date arithmetic in SchedulerEngine",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c24, 2026-07-17). review agent lost (quota); fix commit d026d81cf0eccceeab26e7ffcf3eb14fb152c70d exists on worktree branch worktree-wf_24065ac5-4c4-40 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "149460696e2b41fb1251e0159fe60a6dd27e07be"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-13 AC OK: SchedulerEngine's delay-stage due-date arithmetic normalized to calendar-day (config.currentDate); a delay-stage item with a true 1-calendar-day gap but a later-in-the-day previous completion now correctly lands in overdueTasks"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit d026d81c existed on stray worktree branch worktree-wf_24065ac5-4c4-40, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean cherry-pick, no conflicts). Merged as 14946069. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-scheduler-12",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Move scheduler_providers.dart's projection/plan-building business logic into the domain layer",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (parked-r01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. Two unreviewed fix commits exist, neither merged to dev: 92c5b0f09f12b4099f2c9eb2dd2bbcb58f380f50 on worktree-wf_24065ac5-4c4-94 and f0e234a43612c71d1641ea608f6f6baeafa7ea19 on worktree-wf_24065ac5-4c4-39 (both refactor(scheduler): extract projection/plan business logic to domain layer (AUD-scheduler-12), duplicate/retry attempts, matching file stats) - no code landed this pass. Independently re-verified against the current tree: no daily_task_projection_service.dart exists anywhere under learning_tracker/, and scheduler_providers.dart still carries the projection/plan business logic inline. Worktrees and branches left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
+      "commits": [
+        "1cf86d6bc6c31b41bd0fc7917eac31ddb8a035a3"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-12 AC OK: buildProjectionTasks/buildFreshPlan extracted to domain/services/daily_task_projection_service.dart, taking no Ref (track label injected as a plain callback matching getScopedContent/programRepository); daily_task_projection_service.dart exists and is directly unit-testable without a ProviderContainer"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17), parked-r01 defect re-verified STILL LIVE before this pass (no daily_task_projection_service.dart existed; scheduler_providers.dart still carried the projection/plan logic inline). Two unreviewed duplicate/retry fix commits existed (92c5b0f0 on worktree-wf_24065ac5-4c4-94, f0e234a4 on worktree-wf_24065ac5-4c4-39) - byte-identical diffs; used 92c5b0f0 (rebased against a more recent dev base, fewer expected conflicts). Cherry-pick conflicted in scheduler_providers.dart (dev had independently gained AUD-scheduler-09's amnesty-cutoff seam extraction and AUD-scheduler-10's SkippedTasks guard in the same region, both ALSO harvested in this pass) - reconciled by taking the extraction wholesale and additionally folding AUD-scheduler-09's amnesty_cutoff.dart seam into the new daily_task_projection_service.dart (replacing its private _amnestyDayCutoffUtc duplicate with calls to the shared amnestyDayCutoffUtc/clampAmnestyCutoffToAnchor functions), so neither finding's fix regresses the other. flutter test (94 tests across daily_task_projection_service_test.dart, amnesty_cutoff_test.dart, reorder_amnesty_test.dart, overdue_projection_test.dart, scheduler_providers_test.dart, scheduler_all_daily_tasks_test.dart, clear_overdue_button_test.dart) -> all passed; flutter analyze -> No issues found. Merged as 1cf86d6b. Both stray worktrees + branches deleted post-harvest. Codegen gate (build_runner + git diff --exit-code) then caught scheduler_providers.g.dart drift from the combined AUD-scheduler-09/10/12 stack and it was resynced separately (chore commit e5291f30)."
     },
     {
       "id": "AUD-scheduler-10",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P2",
       "title": "Guard SkippedTasks.build()'s fire-and-forget prefs load with ref.mounted",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r1c21, 2026-07-17). review agent lost (quota); fix commit 01c1f139dc4191ff304ab429ce13eaabcb70cc93 exists on worktree branch worktree-wf_24065ac5-4c4-34 (worktree removed, branch retained pending re-review — commit not yet on dev) but was never reviewed or merged. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
+      "commits": [
+        "01c15bce732a65511861973fc254d795244ae866"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-scheduler-10 AC OK: SkippedTasks.build()'s fire-and-forget prefs load now guarded with ref.mounted before touching state"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17): fix commit 01c1f139 existed on stray worktree branch worktree-wf_24065ac5-4c4-34, unreviewed and unmerged after the review pass that would have landed it did not complete. Content re-verified against current dev tip (clean cherry-pick, no conflicts). Merged as 01c15bce. Stray worktree + branch deleted post-harvest."
     },
     {
       "id": "AUD-account-13",
@@ -8428,13 +8494,17 @@
     {
       "id": "AUD-progress-14",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace hand-rolled ==/hashCode on PaceCalculator, LifetimeLeafProvenance and RecentActivityWindow with @freezed or a record",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (parked-r01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. Two unreviewed fix commits exist, neither merged to dev: 2341462a34bd0b8e332d4ef78559cb00924b98b8 on worktree-wf_24065ac5-4c4-111 and 87e534c1aae9fe03a73d40b24c00aab550731ee1 on worktree-wf_24065ac5-4c4-67 (both fix(progress): AUD-progress-14 - replace hand-rolled == on 3 progress domain models with @freezed/record, overlapping but not byte-identical retry attempts) - no code landed this pass. Independently re-verified against the current tree: pace_calculator.dart:209 and lifetime_knowledge.dart:67 still carry hand-rolled operator== overrides; no *.freezed.dart companion exists for either model. Worktrees and branches left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
+      "commits": [
+        "32d74bbf99880da46fc10e69757ff076a9a39f0c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-progress-14 AC OK: ProgressPaceCalculator and LifetimeLeafProvenance converted to @freezed (all 13 fields on ProgressPaceCalculator, previously only 6 compared by hand-rolled ==); grep -rn 'bool operator ==' lib/features/progress/ (excl. generated) -> 0 hits post-fix, was 2 pre-fix (pace_calculator.dart:209, lifetime_knowledge.dart:67)"
+      ],
+      "notes": "Wave-4 gate-repair harvest (2026-07-17), parked-r01 defect re-verified STILL LIVE before this pass (pace_calculator.dart:209 + lifetime_knowledge.dart:67 still hand-rolled ==). Two unreviewed duplicate/retry fix commits existed (2341462a on worktree-wf_24065ac5-4c4-111, 87e534c1 on worktree-wf_24065ac5-4c4-67); used 2341462a because it was rebased AFTER AUD-progress-15 (73ebbc10, already on dev) independently converted RecentActivityWindow to @freezed, so it only touches the 2 fields this finding's re-verification found still hand-rolled, whereas 87e534c1 predates AUD-progress-15 and would have reverted/conflicted with it. flutter test on pace_calculator_test.dart + siyumim_timeline_and_lifetime_providers_test.dart + recent_activity_* + progress_widgets_test.dart -> 87/87 passed; full test/features/progress/ -> 434/434 passed; flutter analyze -> No issues found. Merged as 32d74bbf. Both stray worktrees + branches deleted post-harvest."
     },
     {
       "id": "AUD-progress-10",
