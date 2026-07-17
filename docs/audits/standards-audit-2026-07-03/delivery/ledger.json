@@ -445,13 +445,19 @@
   {
    "id": "AUD-core-preferences-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P1",
    "title": "Add the IL-1 sentinel-0 guard to UseHebrewDate/ShowNikudPref/CurrentTransliterationVariant/CurrentFontSize in preference_providers.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "48f691f25874c267c25df1b5fad1e9b5849b8907"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-preferences-01 AC1 OK: 4 notifiers now use `with _SentinelGuardedPreference` + guard call (prefs.dart:160,183,252,277); mixin l.109 identical to old guard",
+    "AUD-core-preferences-01 AC1 OK behavioral: red-first pre-fix swap failed exactly those 4 (medium vs large, ashkenazi vs sephardi); post-fix all preserve state",
+    "AUD-core-preferences-01 AC2 OK: 5 ProviderContainer tests, one per notifier, drive realId(42)->0->42 via override; all green (flutter test +5)"
+   ],
+   "notes": "Verified real: UseHebrewTerms had IL-1 guard; other 4 notifiers did not. Red-first ProviderContainer test failed 4/5 pre-fix. Extracted shared _SentinelGuardedPreference<T> mixin, applied to all 5 (incl. migrating UseHebrewTerms). All 5 GREEN post-fix. Both ACs met. Merged --no-ff onto dev (w4r1c1, mergeSha 5e64c31a6b208124de1281c37142b128d42afcb6). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (no issues found), make arb-parity clean (touchedStrings, 1536 keys). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base 8744d9b1a32c65ae4e8e1fa51ac849d4b4cd93ae), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-core-sync-06",
