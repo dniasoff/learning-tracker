@@ -44,7 +44,18 @@ class TutoredChildrenSection extends ConsumerWidget {
       // Don't block the render on the grants load — the own-children grid
       // is already visible. Show nothing while grants are loading.
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (error, stackTrace) {
+        // AUD-profiles-15: hiding the section on a load failure is a
+        // defensible UX call, but the failure must still leave a trace so a
+        // persistently failing grants query (e.g. a Firestore rule
+        // regression on the tutoring collection) can be diagnosed.
+        AppLogger.instance.warning(
+          event: 'tutored_children_grants_load_error',
+          exception: error,
+          stackTrace: stackTrace,
+        );
+        return const SizedBox.shrink();
+      },
       data: (grants) {
         // DEC-8: section visible iff ≥1 active talmid OR ≥1 pending invitation.
         final activeGrants = grants
