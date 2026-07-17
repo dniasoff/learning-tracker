@@ -64,6 +64,59 @@ void _bindObserver<T>(
   pref.read(profileId).then(onValue);
 }
 
+/// Shared IL-1 sentinel guard for keepAlive preference notifiers whose
+/// `build()` follows the `ref.watch(activeProfileIdProvider)` +
+/// `_bindObserver(...)` shape.
+///
+/// `activeProfileIdProvider` transiently emits the sentinel value 0 whenever
+/// `userDatabaseProvider` is invalidated (e.g. during the offline-signup DB
+/// switch), before settling back to the real profile id moments later.
+/// Without this guard, `build()` re-fires with id==0, `_bindObserver` reads
+/// no stored pref for the sentinel, falls back to `pref.defaultValue`, and
+/// overwrites the user's explicit choice — visibly flipping the setting and
+/// silently misfiling any toggle tapped inside that window under profile
+/// 0's SharedPreferences key.
+///
+/// Mix this in and call [sentinelBlocksRebind] as the first statement of
+/// `build()`:
+///
+/// ```dart
+/// @override
+/// bool build() {
+///   final profileId = ref.watch(activeProfileIdProvider);
+///   if (sentinelBlocksRebind(profileId)) return state;
+///   final pref = ref.watch(hebrewDatePreferenceProvider);
+///   _bindObserver(ref, pref, profileId, (value) {
+///     if (value != state) state = value;
+///   });
+///   return pref.defaultValue;
+/// }
+/// ```
+///
+/// On cold-start the profileId may be 0 from the beginning (before any
+/// profile is loaded); [sentinelBlocksRebind] returns false in that case so
+/// callers bind normally and let the profile-0 pref (or default) drive the
+/// initial state. The guard ONLY activates when transitioning FROM a
+/// non-zero id back to 0.
+mixin _SentinelGuardedPreference<T> {
+  /// Tracks whether we have bound a non-sentinel (>0) profile's observer at
+  /// least once.
+  bool _hasBindingForRealProfile = false;
+
+  /// Returns true when [profileId] is the transient sentinel and `build()`
+  /// should bail out early, preserving the notifier's current state instead
+  /// of re-binding the observer.
+  bool sentinelBlocksRebind(int profileId) {
+    if (profileId == 0 && _hasBindingForRealProfile) {
+      return true;
+    }
+    if (profileId != 0) {
+      _hasBindingForRealProfile = true;
+    }
+    return false;
+  }
+}
+
 Future<void> _writeAndPushSnapshot<T>(
   Ref ref,
   ProfileScopedPreference<T> pref,
@@ -78,36 +131,16 @@ Future<void> _writeAndPushSnapshot<T>(
 /// profile. This is the **only** `core/` entry point for the toggle —
 /// `core/labels/` reads here, never via `features/settings/`.
 @Riverpod(keepAlive: true)
-class UseHebrewTerms extends _$UseHebrewTerms {
-  /// Tracks whether we have bound a non-sentinel (>0) profile's observer at
-  /// least once.  Used by the IL-1 sentinel guard.
-  bool _hasBindingForRealProfile = false;
-
+class UseHebrewTerms extends _$UseHebrewTerms
+    with _SentinelGuardedPreference<bool> {
   @override
   bool build() {
     final profileId = ref.watch(activeProfileIdProvider);
-    final pref = ref.watch(hebrewTermsPreferenceProvider);
     // IL-1 fix: do NOT re-bind the SharedPreferences observer when profileId
-    // TRANSITIONS BACK to the sentinel value 0 after we have already seen a
-    // real (>0) profile id.  The sentinel is emitted transiently whenever
-    // userDatabaseProvider is invalidated (e.g. during the offline-signup DB
-    // switch) and then the real profile id is restored moments later.
-    // Without this guard, build() re-fires with id==0, _bindObserver reads
-    // no stored pref for the sentinel, falls back to pref.defaultValue (Hebrew
-    // ON), and overwrites the user's explicit English choice.
-    //
-    // On cold-start the profileId may be 0 from the beginning (before any
-    // profile is loaded); in that case _hasBindingForRealProfile is false so
-    // we bind normally and let the profile-0 pref (or default) drive the
-    // initial state.  The guard ONLY activates when transitioning FROM a
-    // non-zero id back to 0.
-    if (profileId == 0 && _hasBindingForRealProfile) {
-      // Transient sentinel — keep the last valid state.
-      return state;
-    }
-    if (profileId != 0) {
-      _hasBindingForRealProfile = true;
-    }
+    // transiently reverts to the sentinel 0 after a real (>0) profile id has
+    // already been observed. See _SentinelGuardedPreference for details.
+    if (sentinelBlocksRebind(profileId)) return state;
+    final pref = ref.watch(hebrewTermsPreferenceProvider);
     _bindObserver(ref, pref, profileId, (value) {
       if (value != state) state = value;
     });
@@ -123,10 +156,14 @@ class UseHebrewTerms extends _$UseHebrewTerms {
 }
 
 @Riverpod(keepAlive: true)
-class UseHebrewDate extends _$UseHebrewDate {
+class UseHebrewDate extends _$UseHebrewDate
+    with _SentinelGuardedPreference<bool> {
   @override
   bool build() {
     final profileId = ref.watch(activeProfileIdProvider);
+    // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
+    // profileId transiently reverts to the sentinel 0.
+    if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(hebrewDatePreferenceProvider);
     _bindObserver(ref, pref, profileId, (value) {
       if (value != state) state = value;
@@ -143,10 +180,14 @@ class UseHebrewDate extends _$UseHebrewDate {
 }
 
 @Riverpod(keepAlive: true)
-class ShowNikudPref extends _$ShowNikudPref {
+class ShowNikudPref extends _$ShowNikudPref
+    with _SentinelGuardedPreference<bool> {
   @override
   bool build() {
     final profileId = ref.watch(activeProfileIdProvider);
+    // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
+    // profileId transiently reverts to the sentinel 0.
+    if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(nikudPreferenceProvider);
     _bindObserver(ref, pref, profileId, (value) {
       if (value != state) state = value;
@@ -208,10 +249,14 @@ bool effectiveUseHebrewTerms(Ref ref) =>
     ref.watch(useHebrewTermsProvider);
 
 @Riverpod(keepAlive: true)
-class CurrentTransliterationVariant extends _$CurrentTransliterationVariant {
+class CurrentTransliterationVariant extends _$CurrentTransliterationVariant
+    with _SentinelGuardedPreference<TransliterationVariant> {
   @override
   TransliterationVariant build() {
     final profileId = ref.watch(activeProfileIdProvider);
+    // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
+    // profileId transiently reverts to the sentinel 0.
+    if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(transliterationVariantPreferenceProvider);
     _bindObserver(ref, pref, profileId, (value) {
       if (value != state) state = value;
@@ -229,10 +274,14 @@ class CurrentTransliterationVariant extends _$CurrentTransliterationVariant {
 }
 
 @Riverpod(keepAlive: true)
-class CurrentFontSize extends _$CurrentFontSize {
+class CurrentFontSize extends _$CurrentFontSize
+    with _SentinelGuardedPreference<FontSize> {
   @override
   FontSize build() {
     final profileId = ref.watch(activeProfileIdProvider);
+    // IL-1 fix: see _SentinelGuardedPreference — do NOT re-bind when
+    // profileId transiently reverts to the sentinel 0.
+    if (sentinelBlocksRebind(profileId)) return state;
     final pref = ref.watch(textDisplayPreferenceProvider);
     _bindObserver(ref, pref, profileId, (value) {
       if (value != state) state = value;
