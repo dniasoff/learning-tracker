@@ -117,8 +117,18 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
     } on TutorWriteException {
       rethrow;
-    } catch (_) {
-      // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)
+    } catch (e, st) {
+      // Non-fatal: cloud push failure is non-fatal; local write already
+      // succeeded (offline-first). AUD-profiles-16 (EH-3): still log it —
+      // silently discarding it left no telemetry trail to diagnose a real
+      // failure pattern (e.g. outbox writes silently failing on a subset of
+      // devices).
+      _log.warning(
+        event: 'profile_repo_create_cloud_push_failed',
+        fields: {'profileId': model.id},
+        exception: e,
+        stackTrace: st,
+      );
     }
     return model;
   }
@@ -175,8 +185,18 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
     } on TutorWriteException {
       rethrow;
-    } catch (_) {
-      // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)
+    } catch (e, st) {
+      // Non-fatal: cloud push failure is non-fatal; local write already
+      // succeeded (offline-first). AUD-profiles-16 (EH-3): still log it —
+      // silently discarding it left no telemetry trail to diagnose a real
+      // failure pattern (e.g. outbox writes silently failing on a subset of
+      // devices).
+      _log.warning(
+        event: 'profile_repo_update_cloud_push_failed',
+        fields: {'profileId': model.id},
+        exception: e,
+        stackTrace: st,
+      );
     }
     return model;
   }
@@ -355,8 +375,18 @@ class ProfileRepositoryImpl implements ProfileRepository {
       );
     } on TutorWriteException {
       rethrow;
-    } catch (_) {
-      // no-op: cloud push failure is non-fatal; local write already succeeded.
+    } catch (e, st) {
+      // Non-fatal: cloud push failure is non-fatal; local write already
+      // succeeded. AUD-profiles-16 (EH-3): still log it — silently
+      // discarding it left no telemetry trail to diagnose a real failure
+      // pattern (e.g. outbox writes silently failing on a subset of
+      // devices).
+      _log.warning(
+        event: 'profile_self_heal_cloud_push_failed',
+        fields: {'accountId': accountId, 'profileId': newProfileId},
+        exception: e,
+        stackTrace: st,
+      );
     }
 
     return newProfileId;

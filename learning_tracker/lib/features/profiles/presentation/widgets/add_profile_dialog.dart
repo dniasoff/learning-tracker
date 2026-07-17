@@ -48,7 +48,18 @@ Future<ProfileModel?> showAddProfileDialog(
               n,
             );
             set(() => err = exists ? l10n.profileNameAlreadyExists : null);
-          } catch (_) {
+          } catch (e, st) {
+            // AUD-profiles-16 (EH-3): the live duplicate-name check is
+            // best-effort — a DB failure here must not block typing, so we
+            // still clear the error and let the user proceed (the real
+            // duplicate-name guard runs again, non-silently, inside
+            // repo.createProfile below). But it must be logged: previously
+            // this was a bare `catch (_)` with zero telemetry trail.
+            AppLogger.instance.warning(
+              event: 'add_profile_dialog_duplicate_check_failed',
+              exception: e,
+              stackTrace: st,
+            );
             set(() => err = null);
           }
         }
