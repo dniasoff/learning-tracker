@@ -6643,13 +6643,18 @@
   {
    "id": "AUD-sacred_time-07",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Add the required `// keepAlive:` justification comment to Sacred Time's 6 keepAlive providers",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "b2ef278354dda3454dce3c1acdf965f2015602b5"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-sacred_time-07 AC1 OK: all 6 keepAlive sites carry // keepAlive: on the line above - cities:8, sacred_location:13/19/142, sacred_windows:14/35 (verified via sed)",
+    "AUD-sacred_time-07 AC2 OK: audit check 80/80 awk=0 now, fires on comment-removed copy, wired FAIL=1; feature grep shows only these 6 sites so no gaps"
+   ],
+   "notes": "Re-verified all 6 sites, upheld, no drift. Added // keepAlive: tag above each of the 6 @Riverpod(keepAlive: true) annotations (new rationale for the 2 with none). Shipped AC2's Rule-0 checker as Makefile check 80/80. Red-first: awk flagged all 6 before fix (matches evidence), 0 after."
   },
   {
    "id": "AUD-t-cross-96",
