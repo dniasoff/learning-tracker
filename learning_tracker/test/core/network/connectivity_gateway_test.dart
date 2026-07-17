@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -48,5 +49,39 @@ void main() {
         expect(await gateway.isOnline, isFalse);
       },
     );
+
+    test('isOnline resolves false on timeout without waiting for a lookup '
+        'that never completes (AUD-core-network-03: the abandoned lookup '
+        'Future is left running in the background — see the accepted-'
+        'tradeoff comment on ConnectivityGateway.isOnline)', () async {
+      var lookupCompleted = false;
+      final hang = Completer<List<InternetAddress>>();
+
+      final gateway = ConnectivityGateway(
+        lookup: (host) async {
+          final result = await hang.future;
+          lookupCompleted = true;
+          return result;
+        },
+      );
+
+      final stopwatch = Stopwatch()..start();
+      final online = await gateway.isOnline;
+      stopwatch.stop();
+
+      // isOnline must not block on the lookup: it resolves via the 2s
+      // timeout, well under the lookup's (never-completing) future.
+      expect(online, isFalse);
+      expect(stopwatch.elapsed, lessThan(const Duration(seconds: 3)));
+
+      // The underlying lookup is still in flight — this is exactly the
+      // documented, accepted leak. It is bounded because it is a single
+      // independent Future that finishes (and is reclaimed) once the
+      // fake "OS resolver" below completes it; it does not hang forever.
+      expect(lookupCompleted, isFalse);
+      hang.complete(<InternetAddress>[]);
+      await Future<void>.delayed(Duration.zero);
+      expect(lookupCompleted, isTrue);
+    });
   });
 }
