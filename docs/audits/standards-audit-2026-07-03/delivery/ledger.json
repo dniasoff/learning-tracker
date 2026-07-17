@@ -3250,13 +3250,24 @@
   {
    "id": "AUD-scheduler-03",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Add a profileId ownership check to GoalRepositoryImpl.updateGoal/deleteGoal and unify its profileId source",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "30810557a3c054f0ecdc8a3d65defba074703554"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-scheduler-03 AC1 OK: goal_repository_impl.dart:42 createGoal throws GoalProfileMismatchException when profileId != _profileId; AC permits validate-instead-of-drop",
+    "AUD-scheduler-03 AC1 OK: _profileId (ctor line 15/20) is single source of truth; getGoals already used it, createGoal now reconciled to it",
+    "AUD-scheduler-03 AC2 OK: updateGoal guard at :112 fires after not-found check, before DAO write at :153",
+    "AUD-scheduler-03 AC2 OK: deleteGoal guard at :192 fires before goalDao.deleteGoal at :199 and before sync tombstone",
+    "AUD-scheduler-03 AC2 OK: typed error = GoalProfileMismatchException extends PermissionException extends AppException (app_exception.dart:98); Exception not Error (EH-4)",
+    "AUD-scheduler-03 AC3 OK: test:394 group builds two instances (profileId 1 and 0) sharing one db (:397-398, :419-420)",
+    "AUD-scheduler-03 AC3 OK: profile B cannot update (:397) or delete (:419) profile A goal; asserts throw AND row unmodified/still present, not mocks",
+    "AUD-scheduler-03 AC3 OK: red-first proven by my mutation - neutralizing 3 guards makes exactly the 3 new tests fail (14+/3-), so throwsA is not vacuous"
+   ],
+   "notes": "Confirmed accurate. Added GoalProfileMismatchException; all 3 methods now validate against _profileId, throw on mismatch. Red-first: 3 tests written first, captured failing, then fixed. All ACs met. Swept 6 caller test files - all pass unchanged."
   },
   {
    "id": "AUD-scheduler-05",
