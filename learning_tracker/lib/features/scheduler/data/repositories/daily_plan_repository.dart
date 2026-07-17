@@ -30,7 +30,7 @@ class DailyPlanRepository {
     required DateTime now,
     required Future<List<DailyTask>> Function() buildPlan,
   }) async {
-    final planDate = DateUtils.extractLocalDate(now);
+    final planDate = LocalDayUtils.extractLocalDate(now);
 
     final hasPlan = await _db.dailyPlanDao.hasPlanForDay(
       profileId: profileId,
@@ -60,7 +60,7 @@ class DailyPlanRepository {
     required DateTime now,
     required Future<List<DailyTask>> Function() buildPlan,
   }) async {
-    final planDate = DateUtils.extractLocalDate(now);
+    final planDate = LocalDayUtils.extractLocalDate(now);
     await _db.dailyPlanDao.deletePlanForDay(
       profileId: profileId,
       planDate: planDate,

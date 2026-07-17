@@ -66,14 +66,14 @@ class StreakService {
     // (completionDao.getCompletionsByProfile would work too, but reading
     // streak_events avoids a join and the view overhead.)
     final activeDates = <DateTime>{};
-    final startLocal = DateUtils.extractLocalDate(startUtc);
-    final endLocal = DateUtils.extractLocalDate(endUtc);
+    final startLocal = LocalDayUtils.extractLocalDate(startUtc);
+    final endLocal = LocalDayUtils.extractLocalDate(endUtc);
 
     // Re-read events directly to enumerate per-day activity.
     final events = await _provider.readEvents(profileId: _profileId);
     for (final event in events) {
       if (event.eventType != 'completion') continue;
-      final localDate = DateUtils.extractLocalDate(event.eventTimestamp);
+      final localDate = LocalDayUtils.extractLocalDate(event.eventTimestamp);
       if (!localDate.isBefore(startLocal) && !localDate.isAfter(endLocal)) {
         activeDates.add(localDate);
       }

@@ -563,7 +563,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
         preferred.lastReorderAt ?? DateTime.fromMillisecondsSinceEpoch(0);
   }
 
-  final todayDate = DateUtils.extractLocalDate(now);
+  final todayDate = LocalDayUtils.extractLocalDate(now);
   final result = <DailyTask>[];
 
   for (final curriculum in activeCurricula) {
@@ -623,7 +623,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
             if (anchorUtc.isBefore(DateTime.utc(2020, 1, 1))) {
               anchor = todayDate;
             } else {
-              anchor = DateUtils.extractLocalDate(anchorUtc);
+              anchor = LocalDayUtils.extractLocalDate(anchorUtc);
             }
           }
 
@@ -808,7 +808,9 @@ Future<List<DailyTask>> _buildProjectionTasks({
       // derivation skip (and the track go silently unscheduled) once real
       // wall-clock time advanced past a test's fixed target date.
       final startLocal = todayDate;
-      final endLocal = DateUtils.extractLocalDate(goal.targetDate!.toLocal());
+      final endLocal = LocalDayUtils.extractLocalDate(
+        goal.targetDate!.toLocal(),
+      );
       if (!endLocal.isBefore(startLocal)) {
         final studyDaysInWindow = await db.studyDayConfigDao
             .countStudyDaysInInclusiveDateRangeForTrack(
@@ -859,7 +861,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
     final studyDaysPerWeek = studyWeekdays.isEmpty ? 7 : studyWeekdays.length;
     final paceWindowStudyDays = pacePeriod == 'per_week' ? studyDaysPerWeek : 1;
 
-    final anchor = DateUtils.extractLocalDate(startedAt);
+    final anchor = LocalDayUtils.extractLocalDate(startedAt);
 
     // Items completed strictly before the track's anchor date are "prior
     // completions" — e.g. bulk Mark-Prior-Completions rows, which carry a
@@ -880,7 +882,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
           (c) =>
               (c.stageId == firstStage.id ||
                   c.stageId == firstStage.stageOrder) &&
-              DateUtils.extractLocalDate(c.completedAt).isBefore(anchor),
+              LocalDayUtils.extractLocalDate(c.completedAt).isBefore(anchor),
         )
         .map((c) => c.sefariaRef)
         .toSet();
@@ -1253,7 +1255,7 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
             ))
             .first;
 
-    final todayDate = DateUtils.extractLocalDate(now);
+    final todayDate = LocalDayUtils.extractLocalDate(now);
     final DateTime configuredStartDate;
     if (enrollment.trackingStartDate == null) {
       configuredStartDate = todayDate;
@@ -1263,7 +1265,7 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
       if (anchorUtc.isBefore(DateTime.utc(2020, 1, 1))) {
         configuredStartDate = todayDate;
       } else {
-        configuredStartDate = DateUtils.extractLocalDate(anchorUtc);
+        configuredStartDate = LocalDayUtils.extractLocalDate(anchorUtc);
       }
     }
     result.removeWhere(

@@ -190,7 +190,7 @@ Future<ProgressPaceCalculator?> curriculumPaceStatus(
   if (track == null) return null;
 
   // trackStartDate = local-day midnight of the track's activatedAt.
-  final trackStartDate = DateUtils.extractLocalDate(track.activatedAt);
+  final trackStartDate = LocalDayUtils.extractLocalDate(track.activatedAt);
 
   // Use scoped item count for pace calculation.
   final totalItems = await ref.watch(
@@ -219,7 +219,7 @@ Future<ProgressPaceCalculator?> curriculumPaceStatus(
   final liveRefs = <String>{};
   final bulkRefs = <String>{};
   for (final c in allCompletions) {
-    final local = DateUtils.extractLocalDate(c.completedAt);
+    final local = LocalDayUtils.extractLocalDate(c.completedAt);
     if (local.isBefore(trackStartDate)) {
       bulkRefs.add(c.sefariaRef);
     } else {
@@ -237,7 +237,7 @@ Future<ProgressPaceCalculator?> curriculumPaceStatus(
   // fires, the date filter regressed.
   if (liveProgress > 0) {
     final leaked = allCompletions.where((c) {
-      final local = DateUtils.extractLocalDate(c.completedAt);
+      final local = LocalDayUtils.extractLocalDate(c.completedAt);
       return !local.isBefore(trackStartDate) &&
           c.completedAt.isBefore(DateTime(2001));
     });
@@ -249,8 +249,8 @@ Future<ProgressPaceCalculator?> curriculumPaceStatus(
     }
   }
 
-  final targetDate = DateUtils.extractLocalDate(goal.targetDate!.toLocal());
-  final today = DateUtils.extractLocalDate(now);
+  final targetDate = LocalDayUtils.extractLocalDate(goal.targetDate!.toLocal());
+  final today = LocalDayUtils.extractLocalDate(now);
 
   return ProgressPaceCalculator.compute(
     totalItems: totalItems,

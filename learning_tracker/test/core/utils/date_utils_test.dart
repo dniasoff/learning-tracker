@@ -57,10 +57,10 @@ void main() {
     });
   });
 
-  group('DateUtils - Local Date Extraction', () {
+  group('LocalDayUtils - Local Date Extraction', () {
     test('extractLocalDate returns date-only DateTime', () {
       final utc = DateTime.utc(2026, 2, 9, 23, 30, 45);
-      final localDate = DateUtils.extractLocalDate(utc);
+      final localDate = LocalDayUtils.extractLocalDate(utc);
 
       // Should be date-only (time components zeroed)
       expect(localDate.hour, 0);
@@ -73,7 +73,7 @@ void main() {
     test('extractLocalDate converts to local timezone', () {
       // Create UTC time that might be different local date
       final utc = DateTime.utc(2026, 2, 10, 2, 0, 0); // 2am UTC on Feb 10
-      final localDate = DateUtils.extractLocalDate(utc);
+      final localDate = LocalDayUtils.extractLocalDate(utc);
 
       // Convert manually to verify
       final expectedLocal = utc.toLocal();
@@ -86,7 +86,7 @@ void main() {
       // UTC time: Feb 10 at 02:00 UTC
       // In UTC-5, this is Feb 9 at 21:00 (9pm)
       final utc = DateTime.utc(2026, 2, 10, 2, 0, 0);
-      final localDate = DateUtils.extractLocalDate(utc);
+      final localDate = LocalDayUtils.extractLocalDate(utc);
 
       final local = utc.toLocal();
       expect(localDate.year, local.year);
@@ -95,19 +95,19 @@ void main() {
     });
   });
 
-  group('DateUtils - Same Local Day', () {
+  group('LocalDayUtils - Same Local Day', () {
     test('isSameLocalDay returns true for same local date', () {
       final utc1 = DateTime.utc(2026, 2, 9, 10, 0, 0);
       final utc2 = DateTime.utc(2026, 2, 9, 14, 0, 0);
 
-      expect(DateUtils.isSameLocalDay(utc1, utc2), isTrue);
+      expect(LocalDayUtils.isSameLocalDay(utc1, utc2), isTrue);
     });
 
     test('isSameLocalDay returns false for different local dates', () {
       final utc1 = DateTime.utc(2026, 2, 9, 10, 0, 0);
       final utc2 = DateTime.utc(2026, 2, 10, 10, 0, 0);
 
-      expect(DateUtils.isSameLocalDay(utc1, utc2), isFalse);
+      expect(LocalDayUtils.isSameLocalDay(utc1, utc2), isFalse);
     });
 
     test('isSameLocalDay handles timezone offset correctly', () {
@@ -116,7 +116,7 @@ void main() {
       final utc1 = DateTime.utc(2026, 2, 9, 14, 0, 0);
       final utc2 = DateTime.utc(2026, 2, 9, 23, 0, 0);
 
-      final sameDay = DateUtils.isSameLocalDay(utc1, utc2);
+      final sameDay = LocalDayUtils.isSameLocalDay(utc1, utc2);
 
       // Verify by checking local dates
       final local1 = utc1.toLocal();
@@ -137,15 +137,15 @@ void main() {
         final utc1 = DateTime.utc(2026, 2, 9, 4, 0, 0); // Early morning UTC
         final utc2 = DateTime.utc(2026, 2, 10, 4, 0, 0); // Next day same time
 
-        expect(DateUtils.isSameLocalDay(utc1, utc2), isFalse);
+        expect(LocalDayUtils.isSameLocalDay(utc1, utc2), isFalse);
       },
     );
   });
 
-  group('DateUtils - Start/End of Local Day', () {
+  group('LocalDayUtils - Start/End of Local Day', () {
     test('startOfLocalDay returns 00:00:00 local time as UTC', () {
       final utc = DateTime.utc(2026, 2, 9, 15, 30, 45);
-      final startOfDay = DateUtils.startOfLocalDay(utc);
+      final startOfDay = LocalDayUtils.startOfLocalDay(utc);
 
       // Convert back to local to verify
       final local = startOfDay.toLocal();
@@ -161,7 +161,7 @@ void main() {
 
     test('endOfLocalDay returns 23:59:59.999 local time as UTC', () {
       final utc = DateTime.utc(2026, 2, 9, 15, 30, 45);
-      final endOfDay = DateUtils.endOfLocalDay(utc);
+      final endOfDay = LocalDayUtils.endOfLocalDay(utc);
 
       // Convert back to local to verify
       final local = endOfDay.toLocal();
@@ -177,39 +177,39 @@ void main() {
 
     test('startOfLocalDay and endOfLocalDay span same local day', () {
       final utc = DateTime.utc(2026, 2, 9, 15, 30, 45);
-      final start = DateUtils.startOfLocalDay(utc);
-      final end = DateUtils.endOfLocalDay(utc);
+      final start = LocalDayUtils.startOfLocalDay(utc);
+      final end = LocalDayUtils.endOfLocalDay(utc);
 
-      expect(DateUtils.isSameLocalDay(start, end), isTrue);
+      expect(LocalDayUtils.isSameLocalDay(start, end), isTrue);
     });
 
     test('startOfLocalDay is before endOfLocalDay', () {
       final utc = DateTime.utc(2026, 2, 9, 15, 30, 45);
-      final start = DateUtils.startOfLocalDay(utc);
-      final end = DateUtils.endOfLocalDay(utc);
+      final start = LocalDayUtils.startOfLocalDay(utc);
+      final end = LocalDayUtils.endOfLocalDay(utc);
 
       expect(start.isBefore(end), isTrue);
     });
   });
 
-  group('DateUtils - Streak Day Boundary (P5)', () {
+  group('LocalDayUtils - Streak Day Boundary (P5)', () {
     test('two completions on same local date count as same day', () {
       // Simulate two completions on same local calendar day
       // Use times well within the same UTC day to avoid timezone boundary issues
       final completion1 = DateTime.utc(2026, 2, 9, 14, 0, 0);
       final completion2 = DateTime.utc(2026, 2, 9, 18, 0, 0);
 
-      final localDate1 = DateUtils.extractLocalDate(completion1);
-      final localDate2 = DateUtils.extractLocalDate(completion2);
+      final localDate1 = LocalDayUtils.extractLocalDate(completion1);
+      final localDate2 = LocalDayUtils.extractLocalDate(completion2);
 
       expect(localDate1, equals(localDate2));
-      expect(DateUtils.isSameLocalDay(completion1, completion2), isTrue);
+      expect(LocalDayUtils.isSameLocalDay(completion1, completion2), isTrue);
     });
 
     test('completion near midnight maps to correct local date', () {
       // UTC completion at 23:00 maps to correct local date
       final utcCompletion = DateTime.utc(2026, 2, 9, 23, 0, 0);
-      final localDate = DateUtils.extractLocalDate(utcCompletion);
+      final localDate = LocalDayUtils.extractLocalDate(utcCompletion);
 
       // Verify it uses local timezone
       final expectedLocal = utcCompletion.toLocal();
@@ -225,7 +225,7 @@ void main() {
       // Should map to Feb 9 local date
 
       final utcCompletion = DateTime.utc(2026, 2, 10, 4, 0, 0);
-      final localDate = DateUtils.extractLocalDate(utcCompletion);
+      final localDate = LocalDayUtils.extractLocalDate(utcCompletion);
 
       final local = utcCompletion.toLocal();
       expect(localDate.year, local.year);

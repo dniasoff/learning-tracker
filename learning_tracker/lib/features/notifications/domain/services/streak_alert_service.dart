@@ -107,8 +107,8 @@ class StreakAlertService {
 
   Future<bool> _hasCompletionsToday() async {
     final now = _clock();
-    final startOfDay = DateUtils.startOfLocalDay(now);
-    final endOfDay = DateUtils.endOfLocalDay(now);
+    final startOfDay = LocalDayUtils.startOfLocalDay(now);
+    final endOfDay = LocalDayUtils.endOfLocalDay(now);
 
     return await _db.completionDao.hasCompletionsInDateRangeByProfile(
       startOfDay,

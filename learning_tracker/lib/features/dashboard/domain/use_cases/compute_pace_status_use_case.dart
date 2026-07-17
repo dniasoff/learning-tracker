@@ -121,7 +121,7 @@ class ComputePaceStatusUseCase {
   static Map<DateTime, int> buildDailyCounts(Iterable<DateTime> completedAts) {
     final counts = <DateTime, int>{};
     for (final completedAt in completedAts) {
-      final local = DateUtils.extractLocalDate(completedAt);
+      final local = LocalDayUtils.extractLocalDate(completedAt);
       final utcDay = DateTime.utc(local.year, local.month, local.day);
       counts[utcDay] = (counts[utcDay] ?? 0) + 1;
     }

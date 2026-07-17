@@ -84,13 +84,13 @@ void main() {
       expect(calendar.length, 2);
       expect(
         calendar.contains(
-          DateUtils.extractLocalDate(DateTimeFactory.utc(2026, 3, 10, 12)),
+          LocalDayUtils.extractLocalDate(DateTimeFactory.utc(2026, 3, 10, 12)),
         ),
         isTrue,
       );
       expect(
         calendar.contains(
-          DateUtils.extractLocalDate(DateTimeFactory.utc(2026, 3, 12, 8)),
+          LocalDayUtils.extractLocalDate(DateTimeFactory.utc(2026, 3, 12, 8)),
         ),
         isTrue,
       );
