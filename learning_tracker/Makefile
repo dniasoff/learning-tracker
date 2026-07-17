@@ -733,17 +733,19 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/db3_batch_check.$$$$.log; \
 	fi; \
-	echo "37/40 — SM-7: no ad-hoc ParentAnalyticsRepositoryImpl/RewardMilestoneService construction inside the AUD-sync-05 fix sites (local_data_upload_service.dart, outbox_sync_write_facade.dart, reward_settings_merge_delegate.dart)"; \
+	echo "37/40 — SM-7: no ad-hoc ParentAnalyticsRepositoryImpl/RewardMilestoneService construction inside the AUD-sync-05 fix sites (local_data_upload_service.dart, outbox_sync_write_facade.dart, reward_settings_merge_delegate.dart) plus the AUD-core-navigation-04 fix site (restore_guard.dart)"; \
 	if grep -nE "final +[A-Za-z_][A-Za-z0-9_]* += +(ParentAnalyticsRepositoryImpl|RewardMilestoneService)\(" \
 	    lib/features/sync/data/local_data_upload_service.dart \
 	    lib/features/sync/data/outbox_sync_write_facade.dart \
 	    lib/features/sync/data/reward_settings_merge_delegate.dart \
+	    lib/core/navigation/guards/restore_guard.dart \
 	    | grep -q .; then \
-	  echo "  Ad-hoc mid-method Repository/Service construction reintroduced — inject via a constructor/factory parameter instead (AUD-sync-05, SM-7):"; \
+	  echo "  Ad-hoc mid-method Repository/Service construction reintroduced — inject via a constructor/factory parameter instead (AUD-sync-05/AUD-core-navigation-04, SM-7):"; \
 	  grep -nE "final +[A-Za-z_][A-Za-z0-9_]* += +(ParentAnalyticsRepositoryImpl|RewardMilestoneService)\(" \
 	    lib/features/sync/data/local_data_upload_service.dart \
 	    lib/features/sync/data/outbox_sync_write_facade.dart \
-	    lib/features/sync/data/reward_settings_merge_delegate.dart; \
+	    lib/features/sync/data/reward_settings_merge_delegate.dart \
+	    lib/core/navigation/guards/restore_guard.dart; \
 	  FAIL=1; \
 	fi; \
 	echo "38/40 — DB-2/DB-3: TrackLearningOrderDao.upsertOrder never regresses to an awaited per-row into( loop (AUD-core-database-05)"; \

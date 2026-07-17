@@ -16,7 +16,10 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart'
     show DeviceRestoreRoute;
+import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
+import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:mocktail/mocktail.dart';
@@ -28,6 +31,69 @@ class MockNavigationResolver extends Mock implements NavigationResolver {}
 class MockStackRouter extends Mock implements StackRouter {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
+/// Fake [ParentAnalyticsRepository] for AUD-core-navigation-04 (SM-7): proves
+/// [RestoreGuard] can have its analytics dependency substituted via the
+/// constructor seam without also faking the completion rows in
+/// [UserDatabase] — mirroring the `local_data_upload_service_test.dart`
+/// precedent (AUD-sync-05).
+///
+/// Only [getAllCompletions] is exercised by [RestoreGuard.onNavigation] —
+/// the remaining methods are unused by that path and throw if ever called,
+/// so an accidental new dependency on them fails loudly instead of silently
+/// returning empty data.
+class _FakeParentAnalyticsRepository implements ParentAnalyticsRepository {
+  _FakeParentAnalyticsRepository(this._completions);
+
+  final List<Completion> _completions;
+  int getAllCompletionsCallCount = 0;
+
+  @override
+  Future<List<Completion>> getAllCompletions({
+    required CrossProfileScope scope,
+  }) async {
+    getAllCompletionsCallCount++;
+    return _completions;
+  }
+
+  @override
+  Future<List<Completion>> getCompletionsByCurriculum(
+    String curriculumId, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<List<Completion>> getCompletionsForContent(
+    String sefariaRef, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<List<Completion>> getCompletionsByDateRange(
+    DateTime start,
+    DateTime end, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<bool> hasCompletionsInDateRange(
+    DateTime start,
+    DateTime end, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<int> getAggregateCount(
+    String curriculumId, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<Map<String, int>> getTrackBreakdown(
+    String curriculumId, {
+    required CrossProfileScope scope,
+  }) => throw UnimplementedError();
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -395,6 +461,78 @@ void main() {
         verifyNever(() => router2.replace(any<PageRouteInfo>()));
       },
     );
+  });
+
+  // ── AUD-core-navigation-04 (SM-7): injected analytics repository seam ─────
+  //
+  // RestoreGuard must read completions from an injectable
+  // ParentAnalyticsRepository dependency rather than hand-constructing
+  // ParentAnalyticsRepositoryImpl(db) inline in onNavigation() — mirroring
+  // the LocalDataUploadService precedent (AUD-sync-05). Proven by starting
+  // from a completely empty real DB (which on its own signals "new device")
+  // and injecting a fake repository whose non-empty completions list must be
+  // the thing that flips the outcome — that can only happen if onNavigation
+  // is actually calling through the injected seam.
+  group('injected analyticsRepository (AUD-core-navigation-04, SM-7)', () {
+    test(
+      'onNavigation reads completions from the injected buildAnalyticsRepository, '
+      'not from a self-constructed ParentAnalyticsRepositoryImpl',
+      () async {
+        // Real DB is completely empty — no completions, no profiles — so
+        // without the injected seam this would be treated as a new device.
+        final fakeRepo = _FakeParentAnalyticsRepository([
+          Completion(
+            id: 999,
+            profileId: 1,
+            curriculumId: 'talmud_bavli',
+            sefariaRef: 'Injected Ref 1:1',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: 0,
+            completedAt: DateTimeFactory.nowUtc(),
+            points: 5,
+          ),
+        ]);
+
+        final guard = RestoreGuard(
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
+          getDatabase: () => db,
+          hasCloudAccount: () => true,
+          buildAnalyticsRepository: (_) => fakeRepo,
+        );
+
+        await guard.onNavigation(resolver, router);
+
+        expect(
+          fakeRepo.getAllCompletionsCallCount,
+          1,
+          reason: 'onNavigation must call the injected repository',
+        );
+        // The fake's non-empty completion is the ONLY thing that could
+        // prevent a redirect here (the real DB has zero rows of either
+        // kind) — proving onNavigation used the injected seam instead of
+        // constructing its own ParentAnalyticsRepositoryImpl.
+        verify(() => resolver.next()).called(1);
+        verifyNever(() => resolver.next(false));
+        verifyNever(() => router.replace(any<PageRouteInfo>()));
+      },
+    );
+
+    test('defaults to the real ParentAnalyticsRepositoryImpl when '
+        'buildAnalyticsRepository is omitted', () async {
+      // No override supplied — production behaviour (real, empty DB ⇒ new
+      // device) must be unchanged.
+      final guard = RestoreGuard(
+        deviceRestoreRoute: () => const DeviceRestoreRoute(),
+        getDatabase: () => db,
+        hasCloudAccount: () => true,
+      );
+
+      await guard.onNavigation(resolver, router);
+
+      verify(() => resolver.next(false)).called(1);
+      verify(() => router.replace(any<PageRouteInfo>())).called(1);
+    });
   });
 
   // ── Fail-safe: unexpected throw → fail OPEN (restore is optional), no hang ─

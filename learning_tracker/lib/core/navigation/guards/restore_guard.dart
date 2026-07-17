@@ -22,12 +22,30 @@ class RestoreGuard extends AutoRouteGuard {
     required UserDatabase Function() getDatabase,
     required bool Function() hasCloudAccount,
     required PageRouteInfo Function() deviceRestoreRoute,
+    // AUD-core-navigation-04 (SM-7): optional so tests can substitute a fake
+    // [ParentAnalyticsRepository] without also faking the whole Drift
+    // database it reads, mirroring the `local_data_upload_service.dart`
+    // precedent (AUD-sync-05). Production callers omit this and get the
+    // real DB-backed implementation.
+    //
+    // This is a *factory* (not a fixed instance) because — like
+    // [getDatabase] itself — the guard is a long-lived singleton whose
+    // backing [UserDatabase] can change mid-session (account switch swaps
+    // the per-account DB file; see [resetForNewSession]). The factory is
+    // invoked fresh on every check against whatever [getDatabase] returns
+    // at that moment, so a fixed repository captured once at construction
+    // time would silently keep reading the wrong account's database.
+    ParentAnalyticsRepository Function(UserDatabase)? buildAnalyticsRepository,
   }) : _getDatabase = getDatabase,
        _hasCloudAccount = hasCloudAccount,
-       _deviceRestoreRoute = deviceRestoreRoute;
+       _deviceRestoreRoute = deviceRestoreRoute,
+       _buildAnalyticsRepository =
+           buildAnalyticsRepository ?? ParentAnalyticsRepositoryImpl.new;
 
   final UserDatabase Function() _getDatabase;
   final bool Function() _hasCloudAccount;
+  final ParentAnalyticsRepository Function(UserDatabase)
+  _buildAnalyticsRepository;
 
   /// Builds the [PageRouteInfo] to redirect to on a detected new-device
   /// sign-in. Injected by the caller (the app-layer router wiring) rather
@@ -84,7 +102,7 @@ class RestoreGuard extends AutoRouteGuard {
       }
 
       final db = _getDatabase();
-      final analytics = ParentAnalyticsRepositoryImpl(db);
+      final analytics = _buildAnalyticsRepository(db);
       final completions = await analytics.getAllCompletions(
         scope: CrossProfileScope.syncRestore,
       );
