@@ -7,6 +7,13 @@
 /// break loudly here — in the one place that owns the shape — instead of
 /// silently diverging from what `DriftMergeStore`/`SyncKv` has already
 /// persisted for existing rows.
+///
+/// AUD-core-ids-02: pins the `NaturalKey.forLearnerProfile` contract —
+/// `profileIdOrRow` was previously typed as non-nullable `Object` and the
+/// fallback branch was gated on `profileIdOrRow.toString().isNotEmpty`,
+/// which was true for every realistic value, making `fallbackProfileId`
+/// unreachable. `profileIdOrRow` is now nullable and `null` is what
+/// triggers the fallback.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -109,5 +116,46 @@ void main() {
 
       expect(key.value, '1|bavli|Berakhot 2a|2026-07-01T00:00:00.000Z');
     });
+  });
+
+  // AUD-core-ids-02: NaturalKey.forLearnerProfile's fallbackProfileId branch
+  // was unreachable — profileIdOrRow was typed as non-nullable Object and the
+  // branch condition was `profileIdOrRow.toString().isNotEmpty`, which is
+  // true for every realistic value (an int, a non-empty String, or the
+  // default `Instance of 'X'`). The only way to hit the fallback was to pass
+  // a literal empty string, an undocumented sentinel with zero callers.
+  //
+  // This group pins the intended contract: omitting/nulling profileIdOrRow
+  // falls back to fallbackProfileId, and a present profileIdOrRow always wins.
+  group('NaturalKey.forLearnerProfile', () {
+    test('falls back to fallbackProfileId when profileIdOrRow is null', () {
+      final key = NaturalKey.forLearnerProfile(
+        profileIdOrRow: null,
+        fallbackProfileId: 42,
+      );
+
+      expect(key.value, '42');
+    });
+
+    test('uses profileIdOrRow.toString() when it is provided', () {
+      final key = NaturalKey.forLearnerProfile(
+        profileIdOrRow: 7,
+        fallbackProfileId: 42,
+      );
+
+      expect(key.value, '7');
+    });
+
+    test(
+      'uses a non-int profileIdOrRow (e.g. a row object) via toString()',
+      () {
+        final key = NaturalKey.forLearnerProfile(
+          profileIdOrRow: 'row-123',
+          fallbackProfileId: 42,
+        );
+
+        expect(key.value, 'row-123');
+      },
+    );
   });
 }
