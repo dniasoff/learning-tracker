@@ -15,6 +15,20 @@
 /// in-memory DB (mirrors recent_activity_reactivity_test.dart's pattern):
 /// only `userDatabaseProvider`, `activeProfileIdProvider`, and
 /// `contentRepositoryProvider` (the leaf-content source) are overridden.
+///
+/// AUD-progress-03 bounce (w4r1c20): the AUD-progress-03 N+1 batching fix
+/// introduced `trackCompletionsByProfileProvider` /
+/// `trackLedgerEntriesByProfileProvider` — autoDispose `FutureProvider`s that
+/// back `lifetimePercentage` — without the `completionCommittedProvider`
+/// watch their F13 siblings (`priorImportsByProfileProvider` /
+/// `completionsByProfileForLifetimeProvider`) carry. The parent provider
+/// itself still watches `completionCommittedProvider` and rebuilds, but it
+/// reads the STALE cached `.future` of the un-invalidated batched children,
+/// so `lifetimePercentage` never advances past its initial value after a
+/// commit. This file previously asserted only `currentCyclePercentage`
+/// (sourced fresh via `TrackProgressService`, unaffected by the batching
+/// bug), so the regression went undetected. The second test below asserts
+/// `lifetimePercentage` freshness directly.
 library;
 
 import 'package:drift/drift.dart' show Value;
@@ -237,5 +251,58 @@ void main() {
         expect(second.single.currentCyclePercentage, closeTo(0.1, 1e-9));
       },
     );
+
+    test('lifetimePercentage (backed by the AUD-progress-03 batched providers) '
+        'reflects a new completion after completionCommittedProvider tick — '
+        'AUD-progress-03 bounce regression (w4r1c20)', () async {
+      final container = _makeContainer(db);
+      addTearDown(container.dispose);
+
+      // Keep the autoDispose family alive across both reads.
+      final sub = container.listen(
+        trackDualProgressMetricsProvider(_profileId),
+        (_, __) {},
+      );
+      addTearDown(sub.close);
+
+      // Initial read: no completions yet → 0% lifetime progress.
+      final first = await container.read(
+        trackDualProgressMetricsProvider(_profileId).future,
+      );
+      expect(first, hasLength(1));
+      expect(
+        first.single.lifetimePercentage,
+        0.0,
+        reason: 'no completions seeded yet',
+      );
+
+      // Seed a live completion directly in the DB — mirrors what the real
+      // write path persists before it also ticks completionCommittedProvider.
+      await _seedLiveCompletion(db, trackId, DateTime.utc(2026, 6, 1));
+
+      // Signal reactive update — the provider must rebuild automatically.
+      container.read(completionCommittedProvider.notifier).increment();
+      await Future<void>.microtask(() {});
+
+      final second = await container.read(
+        trackDualProgressMetricsProvider(_profileId).future,
+      );
+
+      expect(
+        second.single.lifetimePercentage,
+        greaterThan(first.single.lifetimePercentage),
+        reason:
+            'trackCompletionsByProfileProvider / '
+            'trackLedgerEntriesByProfileProvider (which back '
+            'lifetimePercentage) must re-fetch when '
+            'completionCommittedProvider ticks, mirroring the '
+            'completionCommittedProvider watch their F13 siblings '
+            '(priorImportsByProfileProvider / '
+            'completionsByProfileForLifetimeProvider) carry — otherwise '
+            'the parent rebuilds but reads stale cached children and '
+            'lifetimePercentage never advances past its initial value',
+      );
+      expect(second.single.lifetimePercentage, closeTo(0.1, 1e-9));
+    });
   });
 }
