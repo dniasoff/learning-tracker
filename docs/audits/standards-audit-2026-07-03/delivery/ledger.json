@@ -8698,13 +8698,17 @@
   {
    "id": "AUD-core-navigation-03",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete the two orphaned .gitkeep files in now-populated guards/ and test/core/utils/ dirs",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "ee83ac9ddcfd4b93dfe6435aba94742cc588572e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-navigation-03 AC1 OK: find of both dirs -name .gitkeep returns empty (exit 0); dirs still hold 5 guard + 8 test files; deleted blobs = git empty-blob"
+   ],
+   "notes": "Re-verified both .gitkeep files present as 0-byte files, dirs populated (5 guard files, 7 test files). git rm both. AC check: find ...guards ...utils -name .gitkeep returns empty. Pure hygiene deletion, no behavioral change."
   },
   {
    "id": "AUD-core-preferences-06",
