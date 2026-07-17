@@ -1036,6 +1036,14 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    lib/core/auth/auth_providers.dart; \
 	  FAIL=1; \
 	fi; \
+	echo "73/73 — Rule-0 (ratchet): no NEW stray .gitkeep in a non-empty lib/ directory (AUD-core-constants-02)"; \
+	if ! dart run tool/check_gitkeep_stray.dart > /tmp/gitkeep_stray_check.$$$$.log 2>&1; then \
+	  cat /tmp/gitkeep_stray_check.$$$$.log; \
+	  rm -f /tmp/gitkeep_stray_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/gitkeep_stray_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
