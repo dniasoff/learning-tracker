@@ -105,7 +105,21 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
               children: [
                 IconButton(
                   onPressed: () => context.maybePop(),
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                  // AX-3 / AUD-progress-02: hand-rolled header row, not
+                  // AppBar's automatic leading back button, so Flutter
+                  // supplies no implicit semantics here. `tooltip` alone
+                  // does not populate `SemanticsData.label` on the current
+                  // Flutter SDK (it only sets `.tooltip`), so the Icon also
+                  // carries `semanticLabel`, which Flutter surfaces as
+                  // `Semantics(label:)` — the field TalkBack/VoiceOver read.
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  icon: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 18,
+                    semanticLabel: MaterialLocalizations.of(
+                      context,
+                    ).backButtonTooltip,
+                  ),
                 ),
                 Expanded(
                   child: Text(
