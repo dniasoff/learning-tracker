@@ -4054,13 +4054,18 @@
   {
    "id": "AUD-core-content-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "content_grouping.dart groupItemsByNextLevel's maxBrowseDepth clamp silently reintroduces fixed bug R5-6",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "88aaa8e4f74661f7396a5b68c1ffb270e3713e53"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-content-04 AC1 OK: test calls fn at currentDepth==maxBrowseDepth==3, asserts non-empty+length 2; passes (pre-fix returned [] = real red)",
+    "AUD-core-content-04 AC2 OK: private _groupItemsByNextLevel deleted (grep NONE); screen now calls shared groupItemsByNextLevel"
+   ],
+   "notes": "Confirmed: shared fn had pre-fix return-[] guard; screen had a separately-fixed private duplicate. Ported clamp into shared fn, deleted duplicate, wired screen to shared fn. AC1: red-first test added (RED confirmed), GREEN after fix. AC2: no private copy remains."
   },
   {
    "id": "AUD-t-cross-25",
