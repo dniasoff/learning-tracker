@@ -5981,13 +5981,19 @@
   {
    "id": "AUD-core-auth-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Add a getIdToken(forceRefresh) primitive so a synced write hitting permission-denied/unauthenticated can recover",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "8cca49416898a9a713b8c0dbf27fa121e2776f4b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-auth-01 AC1 OK: getIdToken({forceRefresh}) added to gateway+repo; mock tests verify forceRefresh:true passthrough (both impl_test files), green by my run",
+    "AUD-core-auth-01 AC2 OK: _withTokenRefreshRetry (outbox:524) refresh(true) once+1 retry; tests assert forceRefreshCalls==[true] then success/backoff",
+    "AUD-core-auth-01 not-fake-done: real pushCompletionsBatch rethrows perm-denied unwrapped (gateway_impl:276), pipeline propagates, prod wired providers:117"
+   ],
+   "notes": "Verified getIdToken absent repo-wide. Added getIdToken(forceRefresh) to gateway+repo. Added OutboxProcessor retry: on permission-denied, refresh token once, retry push once, else normal backoff. Wired to production provider. Both ACs covered by new tests."
   },
   {
    "id": "AUD-account-19",
