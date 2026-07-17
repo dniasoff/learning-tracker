@@ -1,9 +1,8 @@
-// Extra coverage for TrackDao — deactivateTrack personal track guard,
-// InvalidTrackOperationException.toString, and BaseDao accessor methods.
+// Extra coverage for TrackDao — deactivateTrack personal track guard and
+// BaseDao accessor methods.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -37,17 +36,12 @@ void main() {
     );
   });
 
-  // =========================================================================
-  // InvalidTrackOperationException
-  // =========================================================================
-
-  group('InvalidTrackOperationException', () {
-    test('toString includes the message', () {
-      const ex = InvalidTrackOperationException('test error message');
-      expect(ex.toString(), contains('test error message'));
-      expect(ex.toString(), contains('InvalidTrackOperationException'));
-    });
-  });
+  // AUD-core-exceptions-01: the former "InvalidTrackOperationException"
+  // group here tested only the exception's own toString() formatting — no
+  // production code throws it (deactivateTrack has been a no-op alias for
+  // retireTrack since W3.22/W3.28, per the group above). The class was dead
+  // code and has been deleted; its dedicated toString coverage is removed
+  // with it rather than kept as tests-for-tests.
 
   // =========================================================================
   // TrackDao — BaseDao accessors (table, idColumn, profileIdColumn)
