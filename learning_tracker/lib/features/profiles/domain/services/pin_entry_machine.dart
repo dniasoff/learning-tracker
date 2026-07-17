@@ -263,17 +263,27 @@ class PinEntryMachine {
   /// happened is guaranteed to observe `busy == true` and be swallowed by
   /// [appendDigit]'s guard.
   Future<void> _advanceToConfirm(String firstPin) async {
-    _emit(
-      _state.copyWith(
-        busy: true,
-        firstPin: firstPin,
-        step: PinFlowStep.confirm,
-        digits: '',
-      ),
-    );
-    await Future<void>.microtask(() {});
-    if (!_isActive()) return;
-    _emit(_state.copyWith(busy: false));
+    try {
+      _emit(
+        _state.copyWith(
+          busy: true,
+          firstPin: firstPin,
+          step: PinFlowStep.confirm,
+          digits: '',
+        ),
+      );
+      await Future<void>.microtask(() {});
+      if (!_isActive()) return;
+      _emit(_state.copyWith(busy: false));
+    } finally {
+      // AUD-profiles-11 (SM-5) unconditional backstop, matching the other
+      // 3 async handlers below — no PinService call happens on this path
+      // today, but the guarantee ("busy never leaves a member still true")
+      // should hold uniformly rather than depending on that staying true.
+      if (_isActive() && _state.busy) {
+        _emit(_state.copyWith(busy: false));
+      }
+    }
   }
 
   // --- Setup (enter -> confirm -> save) ---
@@ -337,6 +347,34 @@ class PinEntryMachine {
           digits: '',
         ),
       );
+    } catch (e, st) {
+      // AUD-profiles-11 (SM-5): any OTHER PinService exception (bcrypt
+      // hashing error, secure-storage read failure) used to go uncaught
+      // here, leaving `busy` stuck true forever — appendDigit/backspace
+      // both early-return while busy is true, permanently freezing the
+      // keypad. Widen the catch so busy is always cleared and the flow
+      // surfaces a generic, closed PinFlowError instead of crashing.
+      AppLogger.instance.warning(
+        event: 'pin_entry_change_verify_current_unexpected_error',
+        fields: {},
+        exception: e,
+        stackTrace: st,
+      );
+      if (!_isActive()) return;
+      _emit(
+        _state.copyWith(
+          busy: false,
+          error: PinFlowError.unexpected,
+          digits: '',
+        ),
+      );
+    } finally {
+      // AUD-profiles-11 (SM-5) unconditional backstop: belt-and-suspenders
+      // on top of the catch-all above — busy must never leave this method
+      // still true, on any exit path.
+      if (_isActive() && _state.busy) {
+        _emit(_state.copyWith(busy: false));
+      }
     }
   }
 
@@ -424,6 +462,34 @@ class PinEntryMachine {
           digits: '',
         ),
       );
+    } catch (e, st) {
+      // AUD-profiles-11 (SM-5): any OTHER PinService exception out of
+      // setProfilePin (bcrypt hashing error, secure-storage write failure,
+      // disk full) used to go uncaught here, leaving `busy` stuck true
+      // forever and permanently freezing the setup/change keypad.
+      AppLogger.instance.warning(
+        event: 'pin_entry_${_state.mode.name}_confirm_save_unexpected_error',
+        fields: {},
+        exception: e,
+        stackTrace: st,
+      );
+      if (!_isActive()) return;
+      _emit(
+        _state.copyWith(
+          busy: false,
+          error: PinFlowError.unexpected,
+          step: PinFlowStep.enterNew,
+          firstPin: null,
+          digits: '',
+        ),
+      );
+    } finally {
+      // AUD-profiles-11 (SM-5) unconditional backstop: belt-and-suspenders
+      // on top of the catch-all above — busy must never leave this method
+      // still true, on any exit path.
+      if (_isActive() && _state.busy) {
+        _emit(_state.copyWith(busy: false));
+      }
     }
   }
 
@@ -470,6 +536,32 @@ class PinEntryMachine {
           digits: '',
         ),
       );
+    } catch (e, st) {
+      // AUD-profiles-11 (SM-5): any OTHER PinService exception (bcrypt
+      // hashing error, secure-storage read failure) used to go uncaught
+      // here, leaving `busy` stuck true forever and permanently freezing
+      // the verify keypad — this is the load-bearing parent-PIN gate.
+      AppLogger.instance.warning(
+        event: 'pin_entry_verify_unexpected_error',
+        fields: {},
+        exception: e,
+        stackTrace: st,
+      );
+      if (!_isActive()) return;
+      _emit(
+        _state.copyWith(
+          busy: false,
+          error: PinFlowError.unexpected,
+          digits: '',
+        ),
+      );
+    } finally {
+      // AUD-profiles-11 (SM-5) unconditional backstop: belt-and-suspenders
+      // on top of the catch-all above — busy must never leave this method
+      // still true, on any exit path.
+      if (_isActive() && _state.busy) {
+        _emit(_state.copyWith(busy: false));
+      }
     }
   }
 }

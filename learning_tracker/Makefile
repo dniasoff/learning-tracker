@@ -1112,7 +1112,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/eh3_profiles_log_less_catch_check.$$$$.log; \
 	fi; \
-	echo "80/82 — EH-2/SM-5 Rule-0: no unguarded await <prefs-or-dao-call> in a Future<void> Notifier method across the AUD-core-preferences-04 scope (core/preferences, notifications, sacred_time, scheduler, tracks/setup, onboarding providers)"; \
+	echo "80/83 — EH-2/SM-5 Rule-0: no unguarded await <prefs-or-dao-call> in a Future<void> Notifier method across the AUD-core-preferences-04 scope (core/preferences, notifications, sacred_time, scheduler, tracks/setup, onboarding providers)"; \
 	if ! dart run tool/check_guarded_persist.dart > /tmp/check_guarded_persist.$$$$.log 2>&1; then \
 	  cat /tmp/check_guarded_persist.$$$$.log; \
 	  rm -f /tmp/check_guarded_persist.$$$$.log; \
@@ -1120,7 +1120,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/check_guarded_persist.$$$$.log; \
 	fi; \
-	echo "81/82 — SM-6: every @Riverpod(keepAlive: true) in lib/features/sacred_time/presentation/providers/{cities_provider,sacred_location_provider,sacred_windows_provider}.dart carries an inline // keepAlive: justification comment on the line immediately above (diff-scoped to this batch per AUD-sacred_time-07; other repo-wide keepAlive sites remain tracked separately, not yet in this gate)"; \
+	echo "81/83 — SM-6: every @Riverpod(keepAlive: true) in lib/features/sacred_time/presentation/providers/{cities_provider,sacred_location_provider,sacred_windows_provider}.dart carries an inline // keepAlive: justification comment on the line immediately above (diff-scoped to this batch per AUD-sacred_time-07; other repo-wide keepAlive sites remain tracked separately, not yet in this gate)"; \
 	if awk 'FNR==1 { prev = "" } /@Riverpod\(keepAlive: true\)/ && prev !~ /\/\/[ \t]*keepAlive:/ { print FILENAME":"FNR": "$$0 } { prev = $$0 }' \
 	    lib/features/sacred_time/presentation/providers/cities_provider.dart \
 	    lib/features/sacred_time/presentation/providers/sacred_location_provider.dart \
@@ -1133,7 +1133,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    lib/features/sacred_time/presentation/providers/sacred_windows_provider.dart; \
 	  FAIL=1; \
 	fi; \
-	echo "82/82 — AUD-scheduler-19: no hand-written 'bool operator ==' under lib/features/scheduler/domain/ outside the documented judgment-call files (delta_value.dart, goal_entity.dart, overdue_types.dart — see docs/coding-standards.md #documented-judgment-calls); other repo-wide hand-rolled-equality sites (e.g. features/account/domain/models/auth_state.dart, features/progress/domain/models/lifetime_knowledge.dart, features/profiles/domain/models/profile_session.dart, features/progress/domain/services/pace_calculator.dart) are pre-existing and tracked separately, not yet in this gate"; \
+	echo "82/83 — AUD-scheduler-19: no hand-written 'bool operator ==' under lib/features/scheduler/domain/ outside the documented judgment-call files (delta_value.dart, goal_entity.dart, overdue_types.dart — see docs/coding-standards.md #documented-judgment-calls); other repo-wide hand-rolled-equality sites (e.g. features/account/domain/models/auth_state.dart, features/progress/domain/models/lifetime_knowledge.dart, features/profiles/domain/models/profile_session.dart, features/progress/domain/services/pace_calculator.dart) are pre-existing and tracked separately, not yet in this gate"; \
 	if grep -rn "bool operator ==" lib/features/scheduler/domain/ --include="*.dart" \
 	    | grep -v "\.g\.dart:" | grep -v "\.freezed\.dart:" \
 	    | grep -v "domain/models/delta_value.dart:" \
@@ -1148,6 +1148,14 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    | grep -v "domain/models/goal_entity.dart:" \
 	    | grep -v "domain/projection/overdue_types.dart:"; \
 	  FAIL=1; \
+	fi; \
+	echo "83/83 — SM-5 Rule-0: every hand-rolled state.copyWith(busy|loading: true) in a @riverpod Notifier method or PinEntryMachine member carries a paired finally backstop or routes through AsyncValue.guard, so an untyped PinService/repository exception can never leave the flag stuck true and freeze the gated UI (AUD-profiles-11)"; \
+	if ! dart run tool/check_sm5_busy_stuck.dart > /tmp/sm5_busy_stuck_check.$$$$.log 2>&1; then \
+	  cat /tmp/sm5_busy_stuck_check.$$$$.log; \
+	  rm -f /tmp/sm5_busy_stuck_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/sm5_busy_stuck_check.$$$$.log; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \

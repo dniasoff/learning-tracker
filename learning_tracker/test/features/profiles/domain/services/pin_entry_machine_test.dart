@@ -239,6 +239,106 @@ void main() {
     );
   });
 
+  // ── busy never sticks true on an untyped PinService exception ─────────
+  // (AUD-profiles-11). Originally landed against PinFlowController directly;
+  // AUD-profiles-06 later consolidated the transition logic these 4 sites
+  // live in into this shared PinEntryMachine, so the regression coverage
+  // moves with the implementation.
+  group('PinEntryMachine — busy never sticks true on untyped PinService '
+      'exception (AUD-profiles-11)', () {
+    test('verify mode: a generic StateError from verifyProfilePin clears '
+        'busy and surfaces PinFlowError.unexpected', () async {
+      final ps = _MockPinService();
+      when(
+        () => ps.verifyProfilePin(1, '1234'),
+      ).thenThrow(StateError('bcrypt hashing error'));
+      final b = _build(pinService: ps, initialMode: PinFlowMode.verify);
+
+      _enterDigits(b.machine, '1234');
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(b.machine.state.busy, isFalse);
+      expect(b.machine.state.error, PinFlowError.unexpected);
+
+      // The keypad must still accept input — busy isn't stuck.
+      b.machine.appendDigit('1');
+      expect(b.machine.state.digits, '1');
+    });
+
+    test(
+      'change mode verifyCurrent: a generic StateError from '
+      'verifyProfilePin clears busy and surfaces PinFlowError.unexpected',
+      () async {
+        final ps = _MockPinService();
+        when(
+          () => ps.verifyProfilePin(1, '0000'),
+        ).thenThrow(StateError('secure-storage read failure'));
+        final b = _build(pinService: ps, initialMode: PinFlowMode.change);
+
+        _enterDigits(b.machine, '0000');
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        expect(b.machine.state.busy, isFalse);
+        expect(b.machine.state.error, PinFlowError.unexpected);
+        expect(b.machine.state.step, PinFlowStep.verifyCurrent);
+
+        b.machine.appendDigit('1');
+        expect(b.machine.state.digits, '1');
+      },
+    );
+
+    test('setup mode confirm+save: a generic StateError from setProfilePin '
+        'clears busy and surfaces PinFlowError.unexpected', () async {
+      final ps = _MockPinService();
+      when(
+        () => ps.setProfilePin(1, '1234'),
+      ).thenThrow(StateError('disk full'));
+      final b = _build(pinService: ps, initialMode: PinFlowMode.setup);
+
+      _enterDigits(b.machine, '1234'); // enterNew -> confirm
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(b.machine.state.step, PinFlowStep.confirm);
+
+      _enterDigits(b.machine, '1234'); // confirm -> save (throws)
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(b.machine.state.busy, isFalse);
+      expect(b.machine.state.error, PinFlowError.unexpected);
+      expect(b.machine.state.step, PinFlowStep.enterNew);
+
+      b.machine.appendDigit('1');
+      expect(b.machine.state.digits, '1');
+    });
+
+    test('change mode confirm+save: a generic StateError from setProfilePin '
+        'clears busy and surfaces PinFlowError.unexpected', () async {
+      final ps = _MockPinService();
+      when(() => ps.verifyProfilePin(1, '0000')).thenAnswer((_) async => true);
+      when(
+        () => ps.setProfilePin(1, '1234'),
+      ).thenThrow(StateError('disk full'));
+      final b = _build(pinService: ps, initialMode: PinFlowMode.change);
+
+      _enterDigits(b.machine, '0000'); // verifyCurrent -> enterNew
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(b.machine.state.step, PinFlowStep.enterNew);
+
+      _enterDigits(b.machine, '1234'); // enterNew -> confirm
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(b.machine.state.step, PinFlowStep.confirm);
+
+      _enterDigits(b.machine, '1234'); // confirm -> save (throws)
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      expect(b.machine.state.busy, isFalse);
+      expect(b.machine.state.error, PinFlowError.unexpected);
+      expect(b.machine.state.step, PinFlowStep.enterNew);
+
+      b.machine.appendDigit('1');
+      expect(b.machine.state.digits, '1');
+    });
+  });
+
   // ── isActive() guard (SM-4 parity) ─────────────────────────────────────
   group('PinEntryMachine — isActive guard (SM-4 parity)', () {
     test(
