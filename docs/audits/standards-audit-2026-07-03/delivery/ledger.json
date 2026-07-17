@@ -3016,13 +3016,20 @@
   {
    "id": "AUD-core-learning-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Wire core/learning/completion_constants.dart's kBulkPriorSentinelMs into its would-be callers instead of leaving it dead and re-duplicated 3x",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "704cdb855792c18b2fc7dda4caba70d136aea41a"
+   ],
+   "reviewRounds": 2,
+   "acVerified": [
+    "AUD-core-learning-01 AC1 OK: grep 946684800000 in lib/ -> 1 hit (completion_constants.dart:19); 4 named sentinel sites now 1 def",
+    "AUD-core-learning-01 AC1 OK: kChartAllTimeFloor (chart_data_service.dart:29) is distinct chart-floor concept, not a named site -> legit exclusion",
+    "AUD-core-learning-01 AC2 OK: completion_constants.dart has 6 real importers (scheduler,track_detail,ledger_impl,use_case,streak_restorer,bulk_prior)",
+    "AUD-core-learning-01 AC3 OK: points_service, chart_data_service(+recent), epic_25_16 streak, test/features/scheduler/ all pass post-dedup"
+   ],
+   "notes": "2/3 named sites already deduped by prior commit. Fixed rest: SchedulerEngine now forwards to core's constants; removed BulkPriorCompletionService's re-grown dup; updated 8 downstream files. AC1-3 verified. Cherry-picked matching fix from sibling worktree, resolved conflicts, re-ran gates."
   },
   {
    "id": "AUD-core-sync-20",
