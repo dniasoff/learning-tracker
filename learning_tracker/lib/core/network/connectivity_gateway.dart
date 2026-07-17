@@ -22,6 +22,20 @@ class ConnectivityGateway {
   /// lookup succeeds, `false` otherwise.
   Future<bool> get isOnline async {
     try {
+      // Accepted tradeoff (AUD-core-network-03): `.timeout()` only races a
+      // Timer against `_lookup`'s Future — dart:io exposes no cancellable
+      // primitive for `InternetAddress.lookup`, so on timeout the
+      // OS-level DNS resolution keeps running in the background with no
+      // handle to cancel it.
+      //
+      // Bounded impact: each abandoned lookup is a single independent
+      // Future that terminates on its own once the OS resolver completes
+      // or gives up (it does not hang forever), after which Dart's GC
+      // reclaims it — there is no unbounded accumulation over the life of
+      // the app. `isOnline` is only invoked from user-initiated actions
+      // (sign-in, delete-account, account-picker — see call sites), not
+      // from a tight retry loop, so the number of concurrently
+      // in-flight abandoned lookups stays small in practice.
       final result = await _lookup(
         'dns.google',
       ).timeout(const Duration(seconds: 2));
