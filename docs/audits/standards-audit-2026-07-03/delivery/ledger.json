@@ -4032,13 +4032,18 @@
   {
    "id": "AUD-core-analytics-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Inject an overridable clock into streakMilestoneAnalyticsObserverProvider instead of hardcoding SystemLocalDayClock",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "6ae0ef4ea796acc458664d99a6cf2ada8061bdb5"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-analytics-02 AC1 OK: FakeLocalDayClock via localDayClockProvider.override; DateTime.now() poll loop gone, now analytics.milestoneFired.timeout (test:136,159,176)",
+    "AUD-core-analytics-02 AC2 OK: isolated happy-path resolves at timer '00:00 +1' (sub-second) vs prior 5s poll"
+   ],
+   "notes": "Confirmed present at observer.dart:47 (hardcoded SystemLocalDayClock). Fixed via ref.watch(localDayClockProvider). Red-first: reverted fix, reran test vs unfixed code -> failed (5s timeout). Reapplied -> green. Test uses fixed clock + Completer wait, no polling; runtime now sub-second."
   },
   {
    "id": "AUD-core-content-04",
