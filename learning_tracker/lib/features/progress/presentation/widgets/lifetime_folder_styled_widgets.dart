@@ -14,7 +14,11 @@ class LifetimeFolderGradients {
     return const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF153E8C), AppTheme.brandBlue, Color(0xFF3D7DDA)],
+      colors: [
+        AppColors.progressLifetimeCardGradientStart,
+        AppTheme.brandBlue,
+        AppColors.progressLifetimeCardGradientEnd,
+      ],
       stops: [0.0, 0.45, 1.0],
     );
   }
@@ -24,19 +28,27 @@ class LifetimeFolderGradients {
     return const LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [Color(0xFFE8EEF8), Color(0xFFF2F6FD), Color(0xFFF8FAFF)],
+      colors: [
+        AppColors.progressLifetimePageBgTop,
+        AppColors.progressLifetimePageBgMid,
+        AppColors.progressLifetimePageBgBottom,
+      ],
     );
   }
 
   /// App bar on Settings lifetime screens (forest charcoal, no blue).
-  static const Color settingsAppBar = Color(0xFF2C382F);
+  static const Color settingsAppBar = AppColors.progressSettingsAppBar;
 
   /// Settings → Add what you've learned: warm paper tone, no blue.
   static LinearGradient get settingsPageBackground {
     return const LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [Color(0xFFEDE8E1), Color(0xFFF4F1EA), Color(0xFFFAF8F5)],
+      colors: [
+        AppColors.progressSettingsPageBgTop,
+        AppColors.progressSettingsPageBgMid,
+        AppColors.progressSettingsPageBgBottom,
+      ],
     );
   }
 
@@ -45,7 +57,11 @@ class LifetimeFolderGradients {
     return const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF263529), Color(0xFF3A5240), Color(0xFF5C7560)],
+      colors: [
+        AppColors.progressSettingsCardGradientStart,
+        AppColors.progressSettingsCardGradientMid,
+        AppColors.progressSettingsCardGradientEnd,
+      ],
       stops: [0.0, 0.48, 1.0],
     );
   }
@@ -376,7 +392,7 @@ class _LifetimeFolderTreeNodeState
   Widget build(BuildContext context) {
     final color = switch (widget.node.state) {
       LifetimeNodeState.full => AppColors.statusSuccessMuted,
-      LifetimeNodeState.partial => const Color(0xFFFFD26A),
+      LifetimeNodeState.partial => AppColors.progressLifetimePartial,
       LifetimeNodeState.none => Colors.white.withValues(alpha: 0.5),
     };
     final indent = widget.depth * 20.0;
@@ -514,10 +530,10 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
         : switch (visual) {
             MarkingRowVisual.direct => AppColors.statusSuccessMuted,
             MarkingRowVisual.implicit ||
-            MarkingRowVisual.partial => const Color(0xFFFFD26A),
+            MarkingRowVisual.partial => AppColors.progressLifetimePartial,
             MarkingRowVisual.none =>
               lightSurface
-                  ? const Color(0xFFB8C0CC)
+                  ? AppColors.progressLifetimeNoneOnLight
                   : Colors.white.withValues(alpha: 0.5),
           };
     // Indeterminate: some-but-not-all descendants selected. Drives the

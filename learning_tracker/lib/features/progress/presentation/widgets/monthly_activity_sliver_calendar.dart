@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Pure-Dart companion value object for the Drift-generated
@@ -293,7 +294,7 @@ class _MiniDayCell extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 1),
       decoration: BoxDecoration(
         color: isActive
-            ? const Color(0xFF103BAC)
+            ? AppColors.progressStreakActiveDay
             : Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(2),
       ),
@@ -354,7 +355,7 @@ class _FullDayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const activeColor = Color(0xFF103BAC);
+    const activeColor = AppColors.progressStreakActiveDay;
     return Container(
       width: 34,
       height: 34,

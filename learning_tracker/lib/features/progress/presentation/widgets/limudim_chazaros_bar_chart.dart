@@ -11,7 +11,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 const Color _kLimudColor = AppColors.blueMid;
 
 /// Chazara (stage ≥ 2 / review) segment colour.
-const Color _kChazaraColor = Color(0xFFF2A93B);
+const Color _kChazaraColor = AppColors.progressChazaraSegment;
 
 /// Two-colour stacked bar chart for the Recent Activity screen.
 ///
@@ -109,7 +109,7 @@ class LimudimChazarosBarChart extends ConsumerWidget {
                             weekdayLabel[d.weekday] ?? '',
                             style: const TextStyle(
                               fontSize: 9,
-                              color: Color(0xFF8A91A5),
+                              color: AppColors.progressBarAxisLabel,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -227,7 +227,7 @@ class _LegendDot extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: const Color(0xFF5E6678),
+            color: AppColors.progressBarLegendLabel,
             fontWeight: FontWeight.w700,
           ),
         ),

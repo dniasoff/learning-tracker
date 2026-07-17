@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/curriculum_level_name.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
@@ -160,7 +161,7 @@ class _CurriculumCompleteHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const gold = Color(0xFFFFB300);
+    const gold = AppColors.gamifTierGoldMutedIcon;
     final label = curriculumCompleteSiyumLabel(
       curriculumId: milestone.curriculumId,
       terms: terms,
@@ -192,7 +193,7 @@ class _CurriculumCompleteHero extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF7A4F00),
+                      color: AppColors.progressSiyumHeroText,
                     ),
                   ),
                   const SizedBox(height: 2),

@@ -530,4 +530,90 @@ abstract final class AppColors {
   static const Color gamifTierEliteLockIcon = Color(0xFFC2185B);
   static const Color gamifTierCustomBorder = Color(0xFFE0E0E0);
   static const Color gamifTierCustomIconBg = Color(0xFFF5F5F5);
+
+  // ---------------------------------------------------------------------------
+  // Progress feature (AUD-progress-04) — streak calendar active-day fill,
+  // lifetime-folder gradients/state colours, points/streak tier-counter
+  // accents, and the limud/chazara bar-chart axis tones. Centralised here so
+  // no lib/features/progress/**/*.dart widget file embeds a raw
+  // Color(0x...) literal; the identical streak-active blue and lifetime
+  // partial-amber were previously hand-retyped in two files/call-sites each.
+  // ---------------------------------------------------------------------------
+
+  /// Streak-calendar / monthly-activity "active day" fill (was independently
+  /// retyped as `const activeColor = Color(0xFF103BAC)` in both
+  /// streak_calendar.dart and monthly_activity_sliver_calendar.dart).
+  static const Color progressStreakActiveDay = Color(0xFF103BAC);
+
+  /// Streak-calendar "today" ring colour drawn on an inactive day cell.
+  static const Color progressStreakTodayRing = Color(0xFF9FA8BD);
+
+  /// Lifetime-folder tree-node / marking-row "partial" state fill (was
+  /// independently retyped at two call sites in
+  /// lifetime_folder_styled_widgets.dart).
+  static const Color progressLifetimePartial = Color(0xFFFFD26A);
+
+  /// Lifetime-folder marking-row "none" state fill on a light surface.
+  static const Color progressLifetimeNoneOnLight = Color(0xFFB8C0CC);
+
+  /// Points-over-time bar-chart fill.
+  static const Color progressPointsBarFill = Color(0xFFF2D9B3);
+
+  /// Progress/dashboard shared tier-counter row — streak accent.
+  static const Color progressTierStreakAccent = Color(0xFFFF6F77);
+
+  /// Progress/dashboard shared tier-counter row — points accent.
+  static const Color progressTierPointsAccent = Color(0xFFE4A100);
+
+  /// Siyumim "curriculum complete" hero card — dark-amber text, paired with
+  /// [gamifTierGoldMutedIcon] (same gold reused for the hero card's
+  /// fill/border/icon — see siyumim_grouped_view.dart).
+  static const Color progressSiyumHeroText = Color(0xFF7A4F00);
+
+  /// Limud/chazara stacked-bar chart — chazara (review-segment) colour.
+  static const Color progressChazaraSegment = Color(0xFFF2A93B);
+
+  /// Limud/chazara bar chart — weekday-axis label colour.
+  static const Color progressBarAxisLabel = Color(0xFF8A91A5);
+
+  /// Limud/chazara bar chart — legend label colour.
+  static const Color progressBarLegendLabel = Color(0xFF5E6678);
+
+  /// Lifetime-folder card gradient — top-left stop (deep blue).
+  static const Color progressLifetimeCardGradientStart = Color(0xFF153E8C);
+
+  /// Lifetime-folder card gradient — bottom-right stop (bright blue).
+  static const Color progressLifetimeCardGradientEnd = Color(0xFF3D7DDA);
+
+  /// Lifetime-folder page-background gradient — top stop.
+  static const Color progressLifetimePageBgTop = Color(0xFFE8EEF8);
+
+  /// Lifetime-folder page-background gradient — middle stop.
+  static const Color progressLifetimePageBgMid = Color(0xFFF2F6FD);
+
+  /// Lifetime-folder page-background gradient — bottom stop.
+  static const Color progressLifetimePageBgBottom = Color(0xFFF8FAFF);
+
+  /// Lifetime-folder Settings app bar (forest charcoal, no blue).
+  static const Color progressSettingsAppBar = Color(0xFF2C382F);
+
+  /// Lifetime-folder Settings page-background gradient — top stop (warm
+  /// paper tone, no blue).
+  static const Color progressSettingsPageBgTop = Color(0xFFEDE8E1);
+
+  /// Lifetime-folder Settings page-background gradient — middle stop.
+  static const Color progressSettingsPageBgMid = Color(0xFFF4F1EA);
+
+  /// Lifetime-folder Settings page-background gradient — bottom stop.
+  static const Color progressSettingsPageBgBottom = Color(0xFFFAF8F5);
+
+  /// Lifetime-folder Settings card gradient — top-left stop (forest/sage,
+  /// matches the growth metaphor, no blue).
+  static const Color progressSettingsCardGradientStart = Color(0xFF263529);
+
+  /// Lifetime-folder Settings card gradient — middle stop.
+  static const Color progressSettingsCardGradientMid = Color(0xFF3A5240);
+
+  /// Lifetime-folder Settings card gradient — bottom-right stop.
+  static const Color progressSettingsCardGradientEnd = Color(0xFF5C7560);
 }
