@@ -3369,13 +3369,13 @@
   {
    "id": "AUD-core-network-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P2",
    "title": "Convert ContentItem/CurriculumHierarchyConfig/FetchResult to @freezed instead of hand-rolled or absent equality",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (parked-batch01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. One unreviewed fix commit exists, not merged to dev: 8efe12df on worktree-wf_4a60514d-55f-34 (fix(core-network): AUD-core-network-01 - convert ContentItem/CurriculumHierarchyConfig/FetchResult to @freezed) - no code landed this pass. Worktree and branch left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
   },
   {
    "id": "AUD-core-sync-27",
@@ -7175,13 +7175,13 @@
   {
    "id": "AUD-core-domain-07",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P3",
    "title": "Migrate core/domain/value_objects/ hand-written ==/hashCode/toString classes to @freezed",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (parked-batch01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. Two unreviewed fix commits exist, neither merged to dev: e793c96e on worktree-wf_4a60514d-55f-130 and 82bab00a on worktree-wf_4a60514d-55f-65 (both fix(core/domain): AUD-core-domain-07 - migrate value objects to @freezed, duplicate/retry attempts) - no code landed this pass. Worktrees and branches left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
   },
   {
    "id": "AUD-t-gamification-04",
@@ -10617,13 +10617,13 @@
   {
    "id": "AUD-core-navigation-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P3",
    "title": "Inject ParentAnalyticsRepository into RestoreGuard instead of constructing it inline",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (parked-batch01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. Two unreviewed fix commits exist, neither merged to dev: 3da59ea8 on worktree-wf_4a60514d-55f-123 and 290d05d0 on worktree-wf_4a60514d-55f-75 (both fix(navigation): AUD-core-navigation-04 - inject ParentAnalyticsRepository into RestoreGuard, duplicate/retry attempts) - no code landed this pass. Worktrees and branches left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
   },
   {
    "id": "AUD-core-constants-02",
