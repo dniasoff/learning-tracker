@@ -5152,13 +5152,18 @@
   {
    "id": "AUD-core-labels-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Deduplicate the CurriculumId storageKey→enum linear scan repeated in curriculum_label_providers.dart and curriculum_label_renderer.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "165448f02a4c93c0cec87721f57cdb7d566eab67"
+   ],
+   "reviewRounds": 2,
+   "acVerified": [
+    "AUD-core-labels-02 AC1 OK: providers(25,86,131)+renderer(156,200) call CurriculumId.fromStorageKey(); local helpers deleted",
+    "AUD-core-labels-02 AC2 intent OK: 9 for-loop storageKey scans collapsed to factory; 5 residual hits = all-curricula enumeration, no storageKey compare"
+   ],
+   "notes": "Added CurriculumId.fromStorageKey(); fixed in-batch sites (AC1) + 7 more genuine dup sites (9->1). AC2 grep: 1 hit is the factory (carve-out), 5 remain in 4 files that only enumerate curricula (no storageKey compare) - finding's why-text calls these 'context only'; see commit msg. Merged --no-ff onto dev (w4r1c16, mergeSha 165448f02a4c93c0cec87721f57cdb7d566eab67). Post-rebase gate: make audit PASSED (all greps clean), flutter analyze clean (no issues found), make arb-parity clean (touchedStrings, 1536 EN keys all present in HE). gatePolicy=overlap-tested: rebase vs dev overlapped in 2 files (text_display_screen.dart, curriculum_progress_screen.dart); ran payload.testsToRun (curriculum_id_test.dart) plus suites covering the overlapping files (curriculum_progress_screen_test.dart, text_display_screen_deep_l1_test.dart, text_display_screen_test.dart) -- 83 tests, all passed."
   },
   {
    "id": "AUD-core-sync-25",
