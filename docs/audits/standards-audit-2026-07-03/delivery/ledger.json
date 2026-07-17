@@ -1713,13 +1713,13 @@
   {
    "id": "AUD-content_browsing-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P2",
    "title": "Move TextContent/TextSegment out of text_cache_repository.dart (data layer) into domain/entities/ so presentation and its tests stop importing the data layer",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r2c1, 2026-07-17). Confirmed: TextContent/TextSegment lived in text_cache_repository.dart (data). Moved to domain/entities/text_content.dart w/ back-compat export; screen.dart+2 tests now import domain, AC2 verified (64/64 pass). AC1 grep: 2 unrelated pre-existing DI-wiring hits remain, see notes. Fix commit 30a93e82cc3745b64bec1e288c9ee6d84f5522c1 exists on worktree branch worktree-wf_24065ac5-4c4-119 (worktree removed, branch retained pending re-review — commit not yet on dev). Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
   },
   {
    "id": "AUD-profiles-07",
