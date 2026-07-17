@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/codec/goal_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/scheduler/domain/exceptions/goal_profile_mismatch_exception.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/repositories/goal_repository.dart';
 
@@ -32,6 +33,18 @@ class GoalRepositoryImpl implements GoalRepository {
     String dateType = 'gregorian',
     String? paceGranularity,
   }) async {
+    // AUD-scheduler-03: profileId is a redundant caller-supplied parameter —
+    // the single source of truth for "which profile owns this repository
+    // instance" is _profileId. Validate rather than silently trust it, so a
+    // mismatched caller (bug or malicious input) cannot create a goal
+    // attributed to a profile other than the one this repository instance
+    // represents.
+    if (profileId != _profileId) {
+      throw GoalProfileMismatchException(
+        'createGoal: profileId=$profileId does not match this repository '
+        'instance\'s profile ($_profileId)',
+      );
+    }
     return await _database.transaction(() async {
       final now = DateTimeFactory.nowUtc();
       final (goalType, targetDate, paceValue, pacePeriod) =
@@ -92,6 +105,16 @@ class GoalRepositoryImpl implements GoalRepository {
       final existing = await _database.goalDao.getGoalById(goalId);
       if (existing == null) {
         throw ArgumentError('Goal not found: $goalId');
+      }
+      // AUD-scheduler-03: the DAO layer does not scope getGoalById/updateGoal
+      // by profile, so this repository-layer check is the last line of
+      // defense against mutating another profile's goal.
+      if (existing.profileId != _profileId) {
+        throw GoalProfileMismatchException(
+          'updateGoal: goal $goalId belongs to profile '
+          '${existing.profileId}, not this repository instance\'s profile '
+          '($_profileId)',
+        );
       }
 
       final now = DateTimeFactory.nowUtc();
@@ -161,13 +184,23 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<void> deleteGoal(int goalId) async {
     // Retrieve the entity before deleting so we can sync the deletion
     final existing = await _database.goalDao.getGoalById(goalId);
+    // Deleting an already-absent goal is a no-op (idempotent delete).
+    if (existing == null) return;
+    // AUD-scheduler-03: the DAO layer does not scope
+    // getGoalById/deleteGoal by profile, so this repository-layer check is
+    // the last line of defense against deleting another profile's goal.
+    if (existing.profileId != _profileId) {
+      throw GoalProfileMismatchException(
+        'deleteGoal: goal $goalId belongs to profile ${existing.profileId}, '
+        'not this repository instance\'s profile ($_profileId)',
+      );
+    }
+
     await _database.goalDao.deleteGoal(goalId);
 
     // Sync deletion to Firestore
-    if (existing != null) {
-      final entity = _toEntity(existing);
-      await _syncDeleteGoal(entity);
-    }
+    final entity = _toEntity(existing);
+    await _syncDeleteGoal(entity);
   }
 
   /// Decomposes a [PaceTarget] into the four raw DB columns

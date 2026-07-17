@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
+import 'package:learning_tracker/features/scheduler/domain/exceptions/goal_profile_mismatch_exception.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 
 import '../../../../helpers/test_database.dart';
@@ -431,6 +432,78 @@ void main() {
               'entry',
         );
         expect(payload.keys, containsAll(['firestore_id', 'curriculum_id']));
+      });
+    });
+
+    // AUD-scheduler-03 — repository-layer profile ownership backstop.
+    //
+    // GoalRepositoryImpl is constructed per-profile (see
+    // `goalRepositoryProvider`), but prior to this fix updateGoal/deleteGoal
+    // loaded the row by bare goalId with no check that it belongs to the
+    // repository instance's own `_profileId`, and createGoal's explicit
+    // `profileId` argument was never cross-checked against `_profileId`
+    // either. These tests construct two repository instances — one per
+    // profile — sharing a single DB and assert profile B's repository can
+    // neither update nor delete a goal owned by profile A, and that
+    // createGoal rejects a profileId argument that disagrees with the
+    // repository's own profile.
+    group('cross-profile ownership (AUD-scheduler-03)', () {
+      test('updateGoal throws GoalProfileMismatchException for a goal owned '
+          'by another profile, and leaves it unmodified', () async {
+        final repoProfile1 = GoalRepositoryImpl(database: db, profileId: 1);
+        final repoProfile0 = GoalRepositoryImpl(database: db, profileId: 0);
+
+        final goal = await repoProfile1.createGoal(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackId: trackId,
+          targetPercent: 50.0,
+        );
+
+        expect(
+          () => repoProfile0.updateGoal(goalId: goal.id!, targetPercent: 90.0),
+          throwsA(isA<GoalProfileMismatchException>()),
+        );
+
+        final untouched = await repoProfile1.getGoals(CurriculumId.mishnayos);
+        expect(untouched, hasLength(1));
+        expect(untouched.single.targetPercent, 50.0);
+      });
+
+      test('deleteGoal throws GoalProfileMismatchException for a goal owned '
+          'by another profile, and leaves it in place', () async {
+        final repoProfile1 = GoalRepositoryImpl(database: db, profileId: 1);
+        final repoProfile0 = GoalRepositoryImpl(database: db, profileId: 0);
+
+        final goal = await repoProfile1.createGoal(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackId: trackId,
+          targetPercent: 50.0,
+        );
+
+        expect(
+          () => repoProfile0.deleteGoal(goal.id!),
+          throwsA(isA<GoalProfileMismatchException>()),
+        );
+
+        final stillThere = await repoProfile1.getGoals(CurriculumId.mishnayos);
+        expect(stillThere, hasLength(1));
+      });
+
+      test('createGoal throws GoalProfileMismatchException when the profileId '
+          'argument disagrees with the repository profile', () async {
+        final repoProfile1 = GoalRepositoryImpl(database: db, profileId: 1);
+
+        expect(
+          () => repoProfile1.createGoal(
+            profileId: 0,
+            curriculumId: CurriculumId.mishnayos,
+            trackId: trackId,
+            targetPercent: 50.0,
+          ),
+          throwsA(isA<GoalProfileMismatchException>()),
+        );
       });
     });
   });

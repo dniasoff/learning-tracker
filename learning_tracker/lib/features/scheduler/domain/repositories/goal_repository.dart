@@ -11,7 +11,10 @@ abstract class GoalRepository {
   /// - `null` for "no goal" / goalType='none'
   ///
   /// [profileId] is the learner profile that owns the goal (must match the
-  /// track's profile when creating from add-track / onboarding).
+  /// track's profile when creating from add-track / onboarding). It must
+  /// also match the profile the repository instance itself was constructed
+  /// for — implementations throw `GoalProfileMismatchException`
+  /// (AUD-scheduler-03) otherwise.
   Future<GoalEntity> createGoal({
     required int profileId,
     required CurriculumId curriculumId,
@@ -34,6 +37,10 @@ abstract class GoalRepository {
   /// [paceGranularity] is the typed learning-unit granularity. When provided,
   /// it takes precedence over any previously stored unit. Passing
   /// [clearLearningUnit] == `true` removes the learning unit entirely.
+  ///
+  /// [goalId] must belong to the profile the repository instance was
+  /// constructed for — implementations throw `GoalProfileMismatchException`
+  /// (AUD-scheduler-03) otherwise.
   Future<GoalEntity> updateGoal({
     required int goalId,
     double? targetPercent,
@@ -45,5 +52,10 @@ abstract class GoalRepository {
   });
 
   /// Delete a goal.
+  ///
+  /// [goalId] must belong to the profile the repository instance was
+  /// constructed for — implementations throw `GoalProfileMismatchException`
+  /// (AUD-scheduler-03) otherwise. Deleting an already-absent goal is a
+  /// no-op.
   Future<void> deleteGoal(int goalId);
 }
