@@ -153,7 +153,7 @@ class CurriculumLabelRenderer {
     TransliterationVariant transliterationVariant =
         TransliterationVariant.ashkenazi,
   }) {
-    final id = _resolveCurriculumId(item.curriculumId);
+    final id = CurriculumId.fromStorageKey(item.curriculumId);
     if (id == null) {
       return useHebrew ? item.displayNameHe : item.displayNameEn;
     }
@@ -197,7 +197,7 @@ class CurriculumLabelRenderer {
     TransliterationVariant transliterationVariant =
         TransliterationVariant.ashkenazi,
   }) {
-    final id = _resolveCurriculumId(item.curriculumId);
+    final id = CurriculumId.fromStorageKey(item.curriculumId);
     if (id == null) return null;
 
     final rawSegments = _rawSegmentsFromItem(item);
@@ -269,13 +269,5 @@ class CurriculumLabelRenderer {
     if (item.level3 != null) segs.add(item.level3!);
     if (item.level4 != null) segs.add(item.level4!);
     return segs;
-  }
-
-  /// Map [ContentItem.curriculumId] (storage key string) to [CurriculumId].
-  static CurriculumId? _resolveCurriculumId(String storageKey) {
-    for (final id in CurriculumId.values) {
-      if (id.storageKey == storageKey) return id;
-    }
-    return null;
   }
 }

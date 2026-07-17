@@ -689,9 +689,6 @@ class ChartDataService {
   /// Resolve a storage-key string to [CurriculumId], or null if null/unknown.
   static CurriculumId? _resolveCurriculum(String? key) {
     if (key == null) return null;
-    for (final c in CurriculumId.values) {
-      if (c.storageKey == key) return c;
-    }
-    return null;
+    return CurriculumId.fromStorageKey(key);
   }
 }

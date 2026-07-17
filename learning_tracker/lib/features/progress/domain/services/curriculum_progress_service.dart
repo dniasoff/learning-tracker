@@ -107,12 +107,8 @@ class CurriculumProgressService {
   /// Map a curriculum storage key to its [CurriculumId]. Falls back to
   /// [CurriculumId.mishnayos] for unrecognised keys so callers always get a
   /// non-null enum to thread into the label renderer.
-  static CurriculumId _resolveCurriculumId(String storageKey) {
-    for (final id in CurriculumId.values) {
-      if (id.storageKey == storageKey) return id;
-    }
-    return CurriculumId.mishnayos;
-  }
+  static CurriculumId _resolveCurriculumId(String storageKey) =>
+      CurriculumId.fromStorageKey(storageKey) ?? CurriculumId.mishnayos;
 
   static List<HierarchyLevelProgress> _buildLevel1Progress({
     required CurriculumId curriculumEnum,

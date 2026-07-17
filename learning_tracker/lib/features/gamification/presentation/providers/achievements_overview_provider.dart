@@ -66,13 +66,6 @@ class AchievementTrackFilterVm {
   final String sortLabel;
 }
 
-CurriculumId? _curriculumForStorageKey(String key) {
-  for (final c in CurriculumId.values) {
-    if (c.storageKey == key) return c;
-  }
-  return null;
-}
-
 String _trackLabelEn(CurriculumId? c, String rawKey) {
   if (c != null) return curriculumEnglishName(c);
   return rawKey;
@@ -109,7 +102,7 @@ final achievementsOverviewProvider =
       final filterOptions = <AchievementTrackFilterVm>[];
 
       for (final track in rewardTracks) {
-        final curriculum = _curriculumForStorageKey(track.curriculumId);
+        final curriculum = CurriculumId.fromStorageKey(track.curriculumId);
         final label = _trackLabelEn(curriculum, track.curriculumId);
 
         final milestones = await service.getMilestonesForTrack(track.id);

@@ -27,16 +27,9 @@ class CurriculumProgressScreen extends ConsumerWidget {
 
   final String curriculumId;
 
-  CurriculumId? _curriculumEnum() {
-    for (final c in CurriculumId.values) {
-      if (c.storageKey == curriculumId) return c;
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final curriculum = _curriculumEnum();
+    final curriculum = CurriculumId.fromStorageKey(curriculumId);
     final terms = domainTermLabels(ref);
     final l10n = AppLocalizations.of(context)!;
     final progressAsync = ref.watch(curriculumProgressProvider(curriculumId));

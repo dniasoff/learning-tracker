@@ -29,6 +29,20 @@ enum CurriculumId {
   /// Canonical string key used in database and content_items table.
   final String storageKey;
 
+  /// Resolve a [CurriculumId] from its [storageKey] string — the raw
+  /// value read from the database / `content_items` table or a
+  /// `ContentItem.curriculumId`. Returns null when [key] does not match
+  /// any known curriculum.
+  ///
+  /// This is the single canonical storageKey→enum lookup; call sites
+  /// must not re-implement the linear scan themselves.
+  static CurriculumId? fromStorageKey(String key) {
+    for (final id in CurriculumId.values) {
+      if (id.storageKey == key) return id;
+    }
+    return null;
+  }
+
   /// Display name in English.
   String get displayNameEn => switch (this) {
     CurriculumId.mishnayos => 'Mishnayos',
