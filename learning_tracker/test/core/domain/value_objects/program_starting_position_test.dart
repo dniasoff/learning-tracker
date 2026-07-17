@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
-import 'package:learning_tracker/core/exceptions/validation_exception.dart';
+import 'package:learning_tracker/core/exceptions/app_exception.dart';
 
 /// B2 regression tests — ProgramStartingPosition window enforcement.
 ///
@@ -71,6 +71,40 @@ void main() {
         () => ProgramStartingPosition.create(startDate: future, today: today),
         throwsA(isA<ValidationException>()),
       );
+    });
+
+    // AUD-core-domain-06 (EH-5): StartDateWindowException must expose a
+    // stable, locale-independent identifier alongside its developer-facing
+    // free-text message, so presentation can resolve the user-facing string
+    // via AppLocalizations/ARB instead of displaying `message` directly (see
+    // AppErrorView._configFor in app_error_view_test.dart for the EN+HE
+    // resolution proof). The identifier is the inherited
+    // `ValidationException.validationCode` field — every current
+    // ValidationException leaf, including this one, carries
+    // ValidationErrorCode.invalidInput without needing a leaf-specific
+    // override.
+    test(
+      'StartDateWindowException exposes a stable validationCode (future date)',
+      () {
+        final future = today.add(const Duration(days: 1));
+        try {
+          ProgramStartingPosition.create(startDate: future, today: today);
+          fail('expected StartDateWindowException');
+        } on StartDateWindowException catch (e) {
+          expect(e.validationCode, ValidationErrorCode.invalidInput);
+        }
+      },
+    );
+
+    test('StartDateWindowException exposes a stable validationCode '
+        '(too-far-in-past date)', () {
+      final thirtyOneAgo = today.subtract(const Duration(days: 31));
+      try {
+        ProgramStartingPosition.create(startDate: thirtyOneAgo, today: today);
+        fail('expected StartDateWindowException');
+      } on StartDateWindowException catch (e) {
+        expect(e.validationCode, ValidationErrorCode.invalidInput);
+      }
     });
 
     test('sefariaRef is preserved when provided', () {

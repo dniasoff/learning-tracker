@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/providers/crashlytics_provider.dart';
@@ -245,6 +246,75 @@ void main() {
         // body instead.
         expect(find.text(l10n.appErrorViewInvalidDataTitle), findsOneWidget);
         expect(find.text(l10n.appErrorViewInvalidDataBody), findsOneWidget);
+      },
+    );
+  });
+
+  group('AppErrorView — StartDateWindowException (AUD-core-domain-06)', () {
+    // Real production exception (not a test double) — thrown by the actual
+    // domain factory so this proves the live B2 window invariant, not a
+    // stand-in. EH-5: the raw English message baked into the exception at
+    // construction (see program_starting_position.dart) must never reach the
+    // UI; AppErrorView must resolve the inherited ValidationErrorCode via
+    // ARB instead, in both supported locales.
+    final today = DateTime(2026, 5, 20);
+    StartDateWindowException throwFutureDateException() {
+      try {
+        ProgramStartingPosition.create(
+          startDate: today.add(const Duration(days: 1)),
+          today: today,
+        );
+      } on StartDateWindowException catch (e) {
+        return e;
+      }
+      throw StateError('expected StartDateWindowException');
+    }
+
+    testWidgets(
+      'EN: renders the resolved ARB body, never the raw developer message',
+      (tester) async {
+        final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+        final crashlytics = _RecordingCrashlyticsService();
+        final exception = throwFutureDateException();
+        await tester.pumpWidget(
+          _buildWidget(error: exception, crashlytics: crashlytics),
+        );
+        await tester.pump();
+
+        expect(find.text(exception.message), findsNothing);
+        expect(find.textContaining('cannot be in the future'), findsNothing);
+        expect(find.text(l10n.appErrorViewInvalidDataTitle), findsOneWidget);
+        expect(find.text(l10n.appErrorViewInvalidDataBody), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'HE: renders the Hebrew ARB body, never the raw (English) developer '
+      'message',
+      (tester) async {
+        final l10nHe = await AppLocalizations.delegate.load(const Locale('he'));
+        final l10nEn = await AppLocalizations.delegate.load(const Locale('en'));
+        final crashlytics = _RecordingCrashlyticsService();
+        final exception = throwFutureDateException();
+        await tester.pumpWidget(
+          _buildWidget(
+            error: exception,
+            crashlytics: crashlytics,
+            locale: const Locale('he'),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text(exception.message), findsNothing);
+        expect(find.textContaining('cannot be in the future'), findsNothing);
+        expect(find.text(l10nHe.appErrorViewInvalidDataTitle), findsOneWidget);
+        expect(find.text(l10nHe.appErrorViewInvalidDataBody), findsOneWidget);
+        // Sanity: the Hebrew string genuinely differs from English, so this
+        // couldn't trivially pass via a reintroduced hardcoded English literal.
+        expect(
+          l10nHe.appErrorViewInvalidDataBody,
+          isNot(equals(l10nEn.appErrorViewInvalidDataBody)),
+        );
       },
     );
   });
