@@ -60,6 +60,7 @@ class _StubAppRouter extends AppRouter {
         restoreGuard: RestoreGuard(
           getDatabase: () => throw StateError('restoreGuard db not needed'),
           hasCloudAccount: () => false,
+          deviceRestoreRoute: () => const DeviceRestoreRoute(),
         ),
         profileGuard: _StubProfileGuard(),
         childModeGuard: _StubChildModeGuard(),
@@ -67,6 +68,7 @@ class _StubAppRouter extends AppRouter {
           pinService: _MockPinService(),
           promptForPin: () async => false,
           getScope: () => null,
+          pinSetupRoute: () => const PinFlowSetupRoute(),
           onSessionAuthenticated: (_) {},
           onSessionLocked: () {},
         ),
@@ -87,6 +89,7 @@ class _StubProfileGuard extends ProfileGuard {
         setSelectedProfileId: (_) {},
         getAccountId: () => 1,
         isTutoredSession: () => false,
+        profilePickerRoute: () => const ProfilePickerRoute(),
       );
 }
 

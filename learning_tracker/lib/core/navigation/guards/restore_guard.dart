@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
-import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
@@ -22,11 +21,22 @@ class RestoreGuard extends AutoRouteGuard {
   RestoreGuard({
     required UserDatabase Function() getDatabase,
     required bool Function() hasCloudAccount,
+    required PageRouteInfo Function() deviceRestoreRoute,
   }) : _getDatabase = getDatabase,
-       _hasCloudAccount = hasCloudAccount;
+       _hasCloudAccount = hasCloudAccount,
+       _deviceRestoreRoute = deviceRestoreRoute;
 
   final UserDatabase Function() _getDatabase;
   final bool Function() _hasCloudAccount;
+
+  /// Builds the [PageRouteInfo] to redirect to on a detected new-device
+  /// sign-in. Injected by the caller (the app-layer router wiring) rather
+  /// than imported here — `core/navigation/` must not depend on
+  /// `app/router/` (AUD-core-navigation-01: this guard used to import
+  /// `core/navigation/app_router.dart`, a re-export shim for
+  /// `app/router/app_router.dart`, which itself imports this file — a real
+  /// app→core→app import cycle).
+  final PageRouteInfo Function() _deviceRestoreRoute;
 
   /// Cache the result so we only check once per session.
   bool? _isNewDevice;
@@ -92,7 +102,7 @@ class RestoreGuard extends AutoRouteGuard {
 
       if (_isNewDevice!) {
         _log.info(event: 'restore_guard_redirecting_to_device_restore');
-        unawaited(router.replace(const DeviceRestoreRoute()));
+        unawaited(router.replace(_deviceRestoreRoute()));
         resolver.next(false);
       } else {
         resolver.next();

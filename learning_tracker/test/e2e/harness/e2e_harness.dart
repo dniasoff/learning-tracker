@@ -530,12 +530,14 @@ class E2EHarness {
       getDatabase: () => _db,
       // Never has a cloud account in headless tests — skip restore screen.
       hasCloudAccount: () => false,
+      deviceRestoreRoute: () => const DeviceRestoreRoute(),
     )..markRestoreComplete();
 
     _pinGuard = PinGuard(
       pinService: _NullPinService(),
       promptForPin: () async => false,
       getScope: () => profileId != null ? PinScope.parent(profileId) : null,
+      pinSetupRoute: () => const PinFlowSetupRoute(),
     );
     return AppRouter(
       authGuard: AuthGuard(),
@@ -547,6 +549,7 @@ class E2EHarness {
         getAccountId: () =>
             profileId != null ? (_identity!._resolvedAccountId ?? 1) : 1,
         isTutoredSession: () => false,
+        profilePickerRoute: () => const ProfilePickerRoute(),
       ),
       childModeGuard: ChildModeGuard(
         getDatabase: () => _db,

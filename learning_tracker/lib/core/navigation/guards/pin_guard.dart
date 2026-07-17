@@ -1,5 +1,4 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
@@ -28,6 +27,7 @@ class PinGuard extends AutoRouteGuard {
     required this.pinService,
     required this.promptForPin,
     required this.getScope,
+    required this.pinSetupRoute,
     this.onSessionAuthenticated,
     this.onSessionLocked,
   });
@@ -41,6 +41,15 @@ class PinGuard extends AutoRouteGuard {
   /// Resolves the [PinScope] required by the route being navigated to, or
   /// `null` if access should be denied (e.g. no active profile selected).
   final PinScope? Function() getScope;
+
+  /// Builds the [PageRouteInfo] to push when no PIN has been set yet for the
+  /// resolved scope. Injected by the caller (the app-layer router wiring)
+  /// rather than imported here — `core/navigation/` must not depend on
+  /// `app/router/` (AUD-core-navigation-01: this guard used to import
+  /// `core/navigation/app_router.dart`, a re-export shim for
+  /// `app/router/app_router.dart`, which itself imports this file — a real
+  /// app→core→app import cycle).
+  final PageRouteInfo Function() pinSetupRoute;
 
   /// Called when a `(scope, profileId)` becomes authenticated this session.
   final void Function(PinScope scope)? onSessionAuthenticated;
@@ -100,7 +109,7 @@ class PinGuard extends AutoRouteGuard {
 
       final hasPinSet = await _hasPin(scope);
       if (!hasPinSet) {
-        final result = await router.push<bool>(const PinFlowSetupRoute());
+        final result = await router.push<bool>(pinSetupRoute());
         final ok = result ?? false;
         if (ok) {
           _authenticatedScope = scope;

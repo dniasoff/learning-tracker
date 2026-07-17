@@ -40,6 +40,7 @@ final routerProvider = Provider<AppRouter>((ref) {
     restoreGuard: RestoreGuard(
       getDatabase: getDb,
       hasCloudAccount: () => ref.read(authStateProvider).isCloudBorn,
+      deviceRestoreRoute: () => const DeviceRestoreRoute(),
     ),
     profileGuard: ProfileGuard(
       getDatabase: getDb,
@@ -49,6 +50,7 @@ final routerProvider = Provider<AppRouter>((ref) {
       getAccountId: () => ref.read(currentAccountIdProvider),
       isTutoredSession: () =>
           ref.read(activeTutoredProfileSelectionProvider) != null,
+      profilePickerRoute: () => const ProfilePickerRoute(),
     ),
     childModeGuard: ChildModeGuard(
       getDatabase: getDb,
@@ -62,6 +64,7 @@ final routerProvider = Provider<AppRouter>((ref) {
     ),
     pinGuard: PinGuard(
       pinService: pinSvc,
+      pinSetupRoute: () => const PinFlowSetupRoute(),
       // C2: dispatch the prompt on the resolved PinScope. Tutor-scoped routes
       // verify against the Tutor PIN service (keyed on the tutor's OWN profile
       // id); parent-scoped routes use the existing parent-PIN dialog.

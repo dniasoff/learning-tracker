@@ -201,6 +201,7 @@ void main() {
       // Build a PinGuard wired exactly like routerProvider: onSessionLocked
       // clears parentPinAuthenticatedProfileId.
       final guard = PinGuard(
+        pinSetupRoute: () => _FakePageRouteInfo(),
         pinService: _StubPinService(),
         promptForPin: () async => true,
         getScope: () => const PinScope.parent(3),

@@ -282,6 +282,7 @@ void main() {
         pinService: PinService(_MockSecureStorage()),
         promptForPin: () async => false,
         getScope: () => null,
+        pinSetupRoute: () => const PageRouteInfo('PinFlowSetupRoute'),
       );
       expect(guard, isA<AutoRouteGuard>());
     });

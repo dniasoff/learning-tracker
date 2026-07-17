@@ -75,6 +75,17 @@ grep -r "import 'package:learning_tracker/features/" \
   lib/core/ --include="*.dart"
 ```
 
+#### Rule 1a — No `core/` → `app/` imports
+
+`lib/core/` MUST NOT import anything from `lib/app/` either — the same invariant as Rule 1, applied to the other end of the `app → features → core` chain. Unlike Rule 1, this one has zero legacy debt, so its `make audit` grep is a **hard gate**, not warn-only (AUD-core-navigation-01: `core/navigation/guards/{pin,profile,restore}_guard.dart` used to import `core/navigation/app_router.dart`, a re-export shim for `app/router/app_router.dart`, which itself imports those same guard files — a real app→core→app import cycle. Fixed by having the app-layer router wiring inject the target `PageRouteInfo` into each guard's constructor instead of the guard importing the route class itself.)
+
+**Audit:** inner check 70 (hard gate)
+
+```bash
+grep -r "import 'package:learning_tracker/app/" \
+  lib/core/ --include="*.dart"
+```
+
 ### Rule 2 — No cross-feature deep imports
 
 `lib/features/X/` MUST NOT import directly from `lib/features/Y/<anything-other-than-Y.dart>`.
