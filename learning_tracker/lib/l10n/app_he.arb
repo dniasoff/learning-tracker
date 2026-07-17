@@ -658,6 +658,7 @@
   "tutorModeExit": "יציאה",
   "tutoredEntryPermissionDenied": "הגישה נדחתה — ייתכן שההרשאה בוטלה.",
   "tutoredEntryError": "לא ניתן לטעון את נתוני התלמיד. אנא נסה שנית.",
+  "tutoredEntryAborted": "לא ניתן לפתוח את פרופיל התלמיד בחשבון זה. אנא נסה שנית.",
   "viewingChildBanner": "מצב הורה — צופה ב-{name}",
   "viewingChildBannerExit": "יציאה ממצב הורה",
   "switchIntoChildTitle": "מעבר לתצוגת ילד",

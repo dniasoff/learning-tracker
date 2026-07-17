@@ -805,6 +805,7 @@
   "tutorModeExit": "Exit",
   "tutoredEntryPermissionDenied": "Access denied — the grant may have been revoked.",
   "tutoredEntryError": "Could not load talmid data. Please try again.",
+  "tutoredEntryAborted": "Could not open the talmid profile on this account. Please try again.",
   "viewingChildBanner": "Parent mode — viewing {name}",
   "@viewingChildBanner": {
     "placeholders": {
