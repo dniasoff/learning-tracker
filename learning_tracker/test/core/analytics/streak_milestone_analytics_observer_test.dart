@@ -192,6 +192,83 @@ void main() {
       );
     });
   });
+
+  group(
+    'streakMilestoneAnalyticsObserverProvider — EH-4 (AUD-core-analytics-04)',
+    () {
+      test('a genuine programming-error Error (not Exception, not the '
+          'anticipated closed-db StateError) propagates to the StreamProvider '
+          'error state instead of being swallowed as a warning', () async {
+        final buggyAnalytics = _BuggyAnalyticsService();
+        final db = inMemoryDb();
+        await seedProfile(db);
+
+        // Seed 7 consecutive streak events ENDING TODAY so currentStreak
+        // == 7 and the milestone loop actually calls the (buggy) analytics
+        // service, which throws a bare `Error` subtype synchronously — the
+        // exact "real bug, not a recoverable runtime condition" scenario
+        // EH-4 says must never be caught by a bare `catch (e, st)`.
+        // Anchored relative to "now" (see the happy-path test above) —
+        // a hardcoded past date stops being a *current* streak once the
+        // calendar advances past it.
+        final todayUtc = DateTime.now().toUtc();
+        final base = DateTime.utc(
+          todayUtc.year,
+          todayUtc.month,
+          todayUtc.day,
+        ).subtract(const Duration(days: 6));
+        for (var i = 0; i < 7; i++) {
+          final day = base.add(Duration(days: i));
+          await db.streakEventDao.appendEvent(
+            StreakEventsCompanion.insert(
+              profileId: 1,
+              eventType: 'completion',
+              dayUtc: day,
+              eventTimestamp: day,
+              clientDeviceId: const Value(null),
+            ),
+          );
+        }
+
+        final container = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWithValue(db),
+            activeProfileIdProvider.overrideWithValue(1),
+            analyticsServiceProvider.overrideWithValue(buggyAnalytics),
+          ],
+        );
+        addTearDown(container.dispose);
+        addTearDown(db.close);
+
+        final sub = container.listen(
+          streakMilestoneAnalyticsObserverProvider,
+          (_, __) {},
+        );
+        addTearDown(sub.close);
+
+        // Poll until the provider settles into an error state or the
+        // milestone has clearly had a chance to fire and be swallowed.
+        final deadline = DateTime.now().add(const Duration(seconds: 5));
+        var state = container.read(streakMilestoneAnalyticsObserverProvider);
+        while (DateTime.now().isBefore(deadline) && !state.hasError) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          state = container.read(streakMilestoneAnalyticsObserverProvider);
+        }
+
+        expect(
+          state.hasError,
+          isTrue,
+          reason:
+              'a bare Error subtype (a genuine programming bug, not '
+              'Exception and not the anticipated closed-db StateError) '
+              'must propagate to the StreamProvider error state — '
+              'swallowing it as a logger.warning() masks real bugs '
+              '(EH-4)',
+        );
+        expect(state.error, isA<_SimulatedBugError>());
+      });
+    },
+  );
 }
 
 // ── Test doubles ──────────────────────────────────────────────────────────────
@@ -229,5 +306,26 @@ class _MilestoneAwaitingAnalyticsService extends AnalyticsService {
         !_milestoneFired.isCompleted) {
       _milestoneFired.complete();
     }
+  }
+}
+
+/// A bare `Error` — never `Exception`, never `StateError` — standing in for
+/// a genuine programming bug (e.g. `NoSuchMethodError`, `TypeError`,
+/// `RangeError`). EH-4 requires this class of failure to propagate rather
+/// than be swallowed as a warning.
+class _SimulatedBugError extends Error {
+  @override
+  String toString() => 'simulated real bug (not Exception, not StateError)';
+}
+
+/// An [AnalyticsService] whose [logEvent] throws a bare [_SimulatedBugError]
+/// *synchronously* (not via a failed [Future]) — the same call shape as
+/// [AnalyticsService.logStreakMilestoneReached]'s non-`async` delegation to
+/// [logEvent], so the throw happens before `.catchError` is ever attached
+/// and is caught by the observer's own `try`/`catch`.
+class _BuggyAnalyticsService extends AnalyticsService {
+  @override
+  Future<void> logEvent(String name, {Map<String, Object?>? parameters}) {
+    throw _SimulatedBugError();
   }
 }
