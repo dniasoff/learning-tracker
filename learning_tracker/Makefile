@@ -1133,7 +1133,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    lib/features/sacred_time/presentation/providers/sacred_windows_provider.dart; \
 	  FAIL=1; \
 	fi; \
-	echo "82/83 — AUD-scheduler-19: no hand-written 'bool operator ==' under lib/features/scheduler/domain/ outside the documented judgment-call files (delta_value.dart, goal_entity.dart, overdue_types.dart — see docs/coding-standards.md #documented-judgment-calls); other repo-wide hand-rolled-equality sites (e.g. features/account/domain/models/auth_state.dart, features/progress/domain/models/lifetime_knowledge.dart, features/profiles/domain/models/profile_session.dart, features/progress/domain/services/pace_calculator.dart) are pre-existing and tracked separately, not yet in this gate"; \
+	echo "82/83 — AUD-scheduler-19: no hand-written 'bool operator ==' under lib/features/scheduler/domain/ outside the documented judgment-call files (delta_value.dart, goal_entity.dart, overdue_types.dart — see docs/coding-standards.md #documented-judgment-calls); other repo-wide hand-rolled-equality sites (e.g. features/account/domain/models/auth_state.dart; features/progress/domain/models/lifetime_knowledge.dart and features/progress/domain/services/pace_calculator.dart converted to @freezed by AUD-progress-14; features/profiles/domain/models/profile_session.dart converted separately) are pre-existing and tracked separately, not yet in this gate"; \
 	if grep -rn "bool operator ==" lib/features/scheduler/domain/ --include="*.dart" \
 	    | grep -v "\.g\.dart:" | grep -v "\.freezed\.dart:" \
 	    | grep -v "domain/models/delta_value.dart:" \
