@@ -2164,13 +2164,18 @@
   {
    "id": "AUD-core-utils-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Rename core/utils/date_utils.dart's DateUtils class off the Flutter SDK's own DateUtils name",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "f1a4abb14f97417f9aeb4d05fd2d3b7d00ef7a36"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-utils-01 AC1 OK: grep -rn '^class DateUtils' lib/ returns no matches (exit 1); renamed to LocalDayUtils at date_utils.dart:57",
+    "AUD-core-utils-01 AC2 OK: goal_setup_screen.dart:1 has no 'hide DateUtils' (grep exit 1) and analyze is clean, so it compiles with no ambiguity"
+   ],
+   "notes": "Re-verified: class DateUtils existed at date_utils.dart:57, goal_setup_screen.dart had hide DateUtils. Renamed to LocalDayUtils; updated 12 lib/ + 4 test/ call sites; removed hide clause. Flutter's own DateUtils.getDaysInMonth site untouched (unrelated import). Both ACs green."
   },
   {
    "id": "AUD-account-09",
