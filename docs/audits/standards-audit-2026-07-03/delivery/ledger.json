@@ -540,13 +540,19 @@
     {
       "id": "AUD-profiles-03",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P1",
       "title": "Fix ProfilePickerScreen._showDeleteDialog forking deleteProfileFlow and regressing Bug B",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "95c1f7183daf7c3d954ce186755b8fedf02768ce"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-03 AC1 OK: profile_picker_screen.dart:264 calls shared deleteProfileFlow; private _showDeleteDialog fork gone (via 648e815f); no clear/invalidate in picker",
+        "AUD-profiles-03 AC2 OK: F4 drives real longPress->delete->confirm, asserts real selectedProfileIdProvider==2 not null; runs+passes, behavioral not mock",
+        "AUD-profiles-03 AC3 OK: grep clear() outside edit_delete_actions has no delete fork; rest are sign-out/switch/onboarding/stale-id (providers:88-98 justified)"
+      ],
+      "notes": "AC1/AC3 already satisfied by sibling fix AUD-profiles-04 (648e815f) which deleted the private delete fork. Only AC2 (regression test via Picker's long-press UI) was open. Added F4 test; red-first proved via temporary uncommitted revert (failed as expected), then passes on current code."
     },
     {
       "id": "AUD-scheduler-02",
