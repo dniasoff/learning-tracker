@@ -31,13 +31,7 @@ class LearningTrackCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    CurriculumId? curriculum;
-    for (final c in CurriculumId.values) {
-      if (c.storageKey == track.curriculumId) {
-        curriculum = c;
-        break;
-      }
-    }
+    final curriculum = CurriculumId.fromStorageKey(track.curriculumId);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 

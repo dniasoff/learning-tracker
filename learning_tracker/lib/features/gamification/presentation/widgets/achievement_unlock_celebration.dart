@@ -17,18 +17,11 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-CurriculumId? _curriculumForStorageKey(String key) {
-  for (final c in CurriculumId.values) {
-    if (c.storageKey == key) return c;
-  }
-  return null;
-}
-
 Future<String> _resolveTrackLabel(WidgetRef ref, int trackId) async {
   final db = ref.read(userDatabaseProvider);
   final track = await db.trackDao.getTrackById(trackId);
   if (track == null) return '';
-  final c = _curriculumForStorageKey(track.curriculumId);
+  final c = CurriculumId.fromStorageKey(track.curriculumId);
   if (c != null) return curriculumLabelText(ref, curriculum: c);
   return track.curriculumId;
 }

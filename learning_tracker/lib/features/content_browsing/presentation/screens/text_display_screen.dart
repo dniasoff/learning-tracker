@@ -161,10 +161,7 @@ class TextDisplayScreen extends ConsumerWidget {
 CurriculumId? _curriculumIdForRef(String sefariaRef, ContentIndex index) {
   final item = index.lookup(sefariaRef);
   if (item == null) return null;
-  for (final id in CurriculumId.values) {
-    if (id.storageKey == item.curriculumId) return id;
-  }
-  return null;
+  return CurriculumId.fromStorageKey(item.curriculumId);
 }
 
 /// Loading view with spinner and message.

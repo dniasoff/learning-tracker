@@ -22,7 +22,7 @@ Future<String> renderedDisplayForRef(Ref ref, String sefariaRef) async {
   if (item == null) {
     return sefariaRef.replaceAll('_', ' ');
   }
-  final id = _curriculumIdFromStorageKey(item.curriculumId);
+  final id = CurriculumId.fromStorageKey(item.curriculumId);
   if (id == null) {
     return useHebrew ? item.displayNameHe : item.displayNameEn;
   }
@@ -83,7 +83,7 @@ Future<String?> renderedParentForRef(Ref ref, String sefariaRef) async {
   final item = await _findContentItem(ref, sefariaRef);
   if (item == null) return null;
 
-  final id = _curriculumIdFromStorageKey(item.curriculumId);
+  final id = CurriculumId.fromStorageKey(item.curriculumId);
   if (id == null) return null;
 
   final rawSegments = <String>[item.level1];
@@ -128,7 +128,7 @@ Future<List<String>> renderedBreadcrumbForRef(
   if (item == null) {
     return [sefariaRef.replaceAll('_', ' ')];
   }
-  final id = _curriculumIdFromStorageKey(item.curriculumId);
+  final id = CurriculumId.fromStorageKey(item.curriculumId);
   if (id == null) return [item.displayNameEn];
 
   final rawSegments = <String>[item.level1];
@@ -183,11 +183,4 @@ List<String?> _hebrewNamesForPath(
 Future<ContentItem?> _findContentItem(Ref ref, String sefariaRef) async {
   final index = await ref.watch(contentIndexProvider.future);
   return index.lookup(sefariaRef);
-}
-
-CurriculumId? _curriculumIdFromStorageKey(String key) {
-  for (final id in CurriculumId.values) {
-    if (id.storageKey == key) return id;
-  }
-  return null;
 }
