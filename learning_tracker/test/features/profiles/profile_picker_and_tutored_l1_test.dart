@@ -7,7 +7,10 @@
 //
 //  A. TutoredChildrenSection — standalone widget tests
 //     A1. Loading → renders nothing (SizedBox.shrink)
-//     A2. Error  → renders nothing (SizedBox.shrink)
+//     A2. Error  → renders nothing (SizedBox.shrink) AND logs via AppLogger
+//         (AUD-profiles-15: the error branch previously discarded the error
+//         and stack trace with no log call — a persistently failing grants
+//         query left zero diagnostic trace).
 //     A3. Empty grants list → renders nothing
 //     A4. Active + pending grants absent → renders nothing
 //     A5. One active grant → "TALMID PROFILES" header + child name + Tutoring status + Tutor badge
@@ -41,6 +44,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -255,23 +259,43 @@ void main() {
     });
 
     // A2 ─ error
-    testWidgets('A2: error state — section renders nothing (silent fail)', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _buildSection(
-          () => Future<List<TutorGrant>>.error(Exception('network')),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+    testWidgets(
+      'A2: error state — section renders nothing (silent-UI fail) but logs '
+      'via AppLogger (AUD-profiles-15)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildSection(
+            () => Future<List<TutorGrant>>.error(Exception('network')),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
-      // Error path maps to SizedBox.shrink — no header, no retry button.
-      expect(find.text('TALMID PROFILES'), findsNothing);
-      expect(find.text('Retry'), findsNothing);
+        // Error path maps to SizedBox.shrink — no header, no retry button.
+        expect(find.text('TALMID PROFILES'), findsNothing);
+        expect(find.text('Retry'), findsNothing);
 
-      await _teardown(tester);
-    });
+        // AUD-profiles-15: hiding the section on load failure is a
+        // defensible UX call, but the failure must still leave a trace in
+        // AppLogger for diagnosing a persistently failing grants query
+        // (e.g. a Firestore rule regression on the tutoring collection).
+        final history = AppLogger.instance.talker.history
+            .map((e) => e.generateTextMessage())
+            .toList();
+        expect(
+          history.any((m) => m.contains('tutored_children_grants_load_error')),
+          isTrue,
+          reason:
+              'Expected the swallowed incomingTutorGrantsProvider error to '
+              'be logged via AppLogger (event: '
+              '"tutored_children_grants_load_error") instead of the error '
+              'branch silently falling through to SizedBox.shrink with no '
+              'diagnostic trail. Talker history: $history',
+        );
+
+        await _teardown(tester);
+      },
+    );
 
     // A3 ─ empty grants
     testWidgets('A3: empty grants list — section hidden entirely', (
