@@ -8571,13 +8571,18 @@
   {
    "id": "AUD-core-content-05",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Consolidate the duplicate 0-indexed/1-indexed level-value accessors in content_grouping.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "af7f3487f1e7e6af0e8a5e1d209f41f27b6442a8"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-content-05 AC1 OK: content_grouping.dart:74 has one accessor levelValueAt; _levelValueAt deleted; zero code refs (grep hits only a doc comment)",
+    "AUD-core-content-05 AC2 OK: coarse_unit_leaf_refs_test unchanged (not in diff) + passes 10/10; index map identical so grouping preserved; screen+nav pass exit 0"
+   ],
+   "notes": "Confirmed duplicate accessors: private 0-idx _levelValueAt (internal-only) vs public 1-idx levelValueAt (used in 6 files). Deleted _levelValueAt; rerouted to levelValueAt(item, nextLevel). New test pins depth mapping, fails on the off-by-one hazard, passes on the fix."
   },
   {
    "id": "AUD-core-content-07",
