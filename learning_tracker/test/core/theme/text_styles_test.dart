@@ -1,10 +1,19 @@
-// Tests for AppTextStyles — covers Hebrew text style getters (lines 112-139)
-// and helper methods (lines 146-164).
-import 'package:flutter/material.dart';
+// Tests for AppTextStyles — covers Hebrew text style getters.
+//
+// AUD-core-theme-01: getTextDirection/getStyleForContent were removed as
+// dead code (zero callers anywhere outside this file and the Story 25.20
+// acceptance test — see AC2), so their test groups were removed with them
+// per that finding's acceptance criteria.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
 
 void main() {
+  // AppTextStyles' English getters build on GoogleFonts.plusJakartaSans
+  // (AUD-core-theme-01), which checks the asset bundle via
+  // ServicesBinding.instance as a side effect — needs a binding even though
+  // these are otherwise-plain (non-widget-pumping) unit tests.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   // =========================================================================
   // Hebrew text style getters
   // =========================================================================
@@ -45,48 +54,6 @@ void main() {
       final style = AppTextStyles.hebrewBodySmall;
       expect(style.fontFamily, AppTextStyles.hebrewFontFamily);
       expect(style.fontSize, greaterThan(AppTextStyles.bodySmall.fontSize!));
-    });
-  });
-
-  // =========================================================================
-  // getTextDirection
-  // =========================================================================
-
-  group('AppTextStyles.getTextDirection', () {
-    test('returns ltr for empty string', () {
-      expect(AppTextStyles.getTextDirection(''), TextDirection.ltr);
-    });
-
-    test('returns ltr for English text', () {
-      expect(AppTextStyles.getTextDirection('Hello'), TextDirection.ltr);
-    });
-
-    test('returns rtl for Hebrew text', () {
-      expect(AppTextStyles.getTextDirection('שלום'), TextDirection.rtl);
-    });
-
-    test('returns rtl for mixed English+Hebrew text', () {
-      expect(AppTextStyles.getTextDirection('Hello שלום'), TextDirection.rtl);
-    });
-  });
-
-  // =========================================================================
-  // getStyleForContent
-  // =========================================================================
-
-  group('AppTextStyles.getStyleForContent', () {
-    const baseStyle = TextStyle(fontSize: 14, fontFamily: 'Roboto');
-
-    test('returns base style unchanged for English text', () {
-      final style = AppTextStyles.getStyleForContent('Hello', baseStyle);
-      expect(style.fontFamily, 'Roboto');
-      expect(style.fontSize, 14);
-    });
-
-    test('returns Hebrew style for Hebrew text', () {
-      final style = AppTextStyles.getStyleForContent('שלום', baseStyle);
-      expect(style.fontFamily, AppTextStyles.hebrewFontFamily);
-      expect(style.fontSize, 16); // 14 + 2
     });
   });
 }
