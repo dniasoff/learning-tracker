@@ -152,12 +152,22 @@ abstract class GoalEntity with _$GoalEntity {
       paceGranularity?.storageKey ?? rawLearningUnit;
 
   /// Firestore document ID (deterministic per P4).
-  /// Uses curriculum + targetPercent + createdAt for uniqueness
-  /// since multiple goals per curriculum are allowed.
+  ///
+  /// Uses curriculum + createdAt for uniqueness since multiple goals per
+  /// curriculum are allowed.
+  ///
+  /// AUD-scheduler-16: must only be built from fields [updateGoal] can never
+  /// change (curriculumId, createdAt) — `id`/`trackId` are per-device
+  /// autoincrement values that can legitimately differ across devices for
+  /// the "same" goal (see [GoalMerger]'s track-id resolution), and
+  /// `targetPercent` is a routinely-edited field. Keying on any of those
+  /// would make an ordinary edit (or a cross-device sync) compute a
+  /// different id, so `_syncGoal` would push a brand-new Firestore document
+  /// instead of updating the original — orphaning the old one forever,
+  /// since `deleteGoal` only ever removes the CURRENT firestoreId's doc.
   String get firestoreId {
     final parts = <String>[
       curriculumId.storageKey,
-      targetPercent.toStringAsFixed(1),
       createdAt.millisecondsSinceEpoch.toString(),
     ];
     return parts.join('_');

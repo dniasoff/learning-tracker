@@ -123,14 +123,44 @@ void main() {
       expect(entity.firestoreId, contains(CurriculumId.mishnayos.storageKey));
     });
 
-    test('firestoreId contains targetPercent formatted to 1 decimal', () {
+    // AUD-scheduler-16: firestoreId previously included targetPercent, a
+    // field `updateGoal` can change — this made an ordinary goal-percent
+    // edit compute a different id and orphan the original Firestore
+    // document. Replaced with the inverse invariant: firestoreId must be
+    // STABLE across a targetPercent change (see the two tests below).
+    test('firestoreId does NOT change when only targetPercent differs '
+        '(AUD-scheduler-16)', () {
+      final created = DateTime.utc(2026, 1, 1);
+      final a = GoalEntity(
+        curriculumId: CurriculumId.bavli,
+        targetPercent: 50.0,
+        createdAt: created,
+        updatedAt: created,
+      );
+      final b = GoalEntity(
+        curriculumId: CurriculumId.bavli,
+        targetPercent: 75.5,
+        createdAt: created,
+        updatedAt: created,
+      );
+      expect(
+        a.firestoreId,
+        equals(b.firestoreId),
+        reason:
+            'targetPercent is routinely edited via updateGoal — keying '
+            'firestoreId on it orphans the original Firestore document '
+            'on every percent edit.',
+      );
+    });
+
+    test('firestoreId does not contain a formatted targetPercent', () {
       final entity = GoalEntity(
         curriculumId: CurriculumId.bavli,
         targetPercent: 75.5,
         createdAt: DateTime.utc(2026, 1, 1),
         updatedAt: DateTime.utc(2026, 1, 1),
       );
-      expect(entity.firestoreId, contains('75.5'));
+      expect(entity.firestoreId, isNot(contains('75.5')));
     });
 
     test('firestoreId contains createdAt millisecondsSinceEpoch', () {
@@ -160,7 +190,9 @@ void main() {
       expect(a.firestoreId, isNot(b.firestoreId));
     });
 
-    test('firestoreId format is curriculum_percent_epoch', () {
+    // AUD-scheduler-16: format is curriculum_epoch — targetPercent dropped
+    // since updateGoal can change it (see the stability tests above).
+    test('firestoreId format is curriculum_epoch', () {
       final created = DateTime.utc(2026, 1, 1);
       final entity = GoalEntity(
         curriculumId: CurriculumId.mishnayos,
@@ -169,10 +201,13 @@ void main() {
         updatedAt: created,
       );
       final id = entity.firestoreId;
-      final parts = id.split('_');
-      // curriculum | percent | epoch (epoch may have underscores too in long numbers)
-      expect(parts.length, greaterThanOrEqualTo(3));
-      expect(parts.first, CurriculumId.mishnayos.storageKey);
+      expect(
+        id,
+        equals(
+          '${CurriculumId.mishnayos.storageKey}_'
+          '${created.millisecondsSinceEpoch}',
+        ),
+      );
     });
   });
 

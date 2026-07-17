@@ -433,6 +433,38 @@ void main() {
         );
         expect(payload.keys, containsAll(['firestore_id', 'curriculum_id']));
       });
+
+      // AUD-scheduler-16: firestoreId must not key off targetPercent (a
+      // field updateGoal can change) — otherwise a routine "adjust my goal
+      // target %" edit computes a different id, and _syncGoal pushes a
+      // brand-new Firestore document instead of updating the original,
+      // permanently orphaning the old one (deleteGoal only ever removes the
+      // CURRENT firestoreId's doc).
+      test('updateGoal changing only targetPercent pushes the SAME '
+          'firestoreId as the create call (AUD-scheduler-16)', () async {
+        final created = await repoWithSync.createGoal(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackId: trackId,
+          targetPercent: 50.0,
+        );
+        expect(syncFacade.goalPayloads, hasLength(1));
+        final createdId = syncFacade.goalPayloads.first['id'];
+        syncFacade.goalPayloads.clear();
+
+        await repoWithSync.updateGoal(goalId: created.id!, targetPercent: 75.0);
+
+        expect(syncFacade.goalPayloads, hasLength(1));
+        final updatedId = syncFacade.goalPayloads.first['id'];
+        expect(
+          updatedId,
+          equals(createdId),
+          reason:
+              'updateGoal must resolve to the SAME Firestore document as '
+              'the original create — changing targetPercent must not '
+              'orphan the create-time document.',
+        );
+      });
     });
 
     // AUD-scheduler-03 — repository-layer profile ownership backstop.
