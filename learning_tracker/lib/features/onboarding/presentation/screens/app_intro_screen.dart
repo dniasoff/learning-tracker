@@ -4,8 +4,8 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
     show kPermissionsPrompted;

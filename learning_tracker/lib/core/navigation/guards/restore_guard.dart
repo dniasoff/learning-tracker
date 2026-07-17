@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/navigation/app_router.dart';
 
 final _log = AppLogger.instance;
 

@@ -8,14 +8,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/app_shell.dart'
     show ProfileSwitcherBar;
+import 'package:learning_tracker/app/router/guards/auth_guard.dart';
 import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
 import 'package:learning_tracker/app/router/router_provider.dart' as rp;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
