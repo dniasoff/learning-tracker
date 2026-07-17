@@ -19,9 +19,9 @@ import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denie
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 
 import '../../../helpers/drift_memory.dart';
+import '../../../helpers/fake_clock.dart';
 
 // ── Fake AnalyticsService ────────────────────────────────────────────────────
 
@@ -436,16 +436,13 @@ void main() {
     late FakeLocalDayClock clock;
 
     setUp(() {
-      clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
-      useLocalDayClock(clock);
+      clock = installFakeClock(DateTime.utc(2026, 5, 14));
       processor = OutboxProcessor(
         outboxDao: db.outboxDao,
         pipeline: pipeline,
         clock: clock,
       );
     });
-
-    tearDown(resetLocalDayClock);
 
     Future<List<String>> pendingCompletionKeys() async {
       final rows = await db.outboxDao.getPendingByKind(
@@ -753,16 +750,13 @@ void main() {
     late FakeLocalDayClock clock;
 
     setUp(() {
-      clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
-      useLocalDayClock(clock);
+      clock = installFakeClock(DateTime.utc(2026, 5, 14));
       processor = OutboxProcessor(
         outboxDao: db.outboxDao,
         pipeline: pipeline,
         clock: clock,
       );
     });
-
-    tearDown(resetLocalDayClock);
 
     test('non-completion row with attempts=1 is skipped while backoff window '
         'is active, then retried once the window elapses', () async {
@@ -846,8 +840,7 @@ void main() {
     late _FakeAnalyticsService analytics;
 
     setUp(() {
-      clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
-      useLocalDayClock(clock);
+      clock = installFakeClock(DateTime.utc(2026, 5, 14));
       analytics = _FakeAnalyticsService();
       processor = OutboxProcessor(
         outboxDao: db.outboxDao,
@@ -856,8 +849,6 @@ void main() {
         analytics: analytics,
       );
     });
-
-    tearDown(resetLocalDayClock);
 
     test('non-completion row with attempts == 10 is permanently skipped and '
         'never pushed', () async {
@@ -1008,8 +999,7 @@ void main() {
       late _FakeAnalyticsService analytics;
 
       setUp(() {
-        clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
-        useLocalDayClock(clock);
+        clock = installFakeClock(DateTime.utc(2026, 5, 14));
         analytics = _FakeAnalyticsService();
         processor = OutboxProcessor(
           outboxDao: db.outboxDao,
@@ -1018,8 +1008,6 @@ void main() {
           analytics: analytics,
         );
       });
-
-      tearDown(resetLocalDayClock);
 
       test('a permission-denied non-completion push failure fires '
           'sync_permission_denied — not only from pullOnLaunch', () async {
@@ -1096,8 +1084,7 @@ void main() {
     late _FakeTokenRefresher refresher;
 
     setUp(() {
-      clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
-      useLocalDayClock(clock);
+      clock = installFakeClock(DateTime.utc(2026, 5, 14));
       refresher = _FakeTokenRefresher();
       processor = OutboxProcessor(
         outboxDao: db.outboxDao,
@@ -1106,8 +1093,6 @@ void main() {
         refreshIdToken: refresher.call,
       );
     });
-
-    tearDown(resetLocalDayClock);
 
     test(
       'non-completion push: permission-denied then success — exactly one '
@@ -1526,16 +1511,13 @@ void main() {
     late FakeLocalDayClock clock;
 
     setUp(() {
-      clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
-      useLocalDayClock(clock);
+      clock = installFakeClock(DateTime.utc(2026, 5, 14));
       processor = OutboxProcessor(
         outboxDao: db.outboxDao,
         pipeline: pipeline,
         clock: clock,
       );
     });
-
-    tearDown(resetLocalDayClock);
 
     test('all rows are retained in the outbox when every push fails '
         '(simulating offline / network unavailable)', () async {
@@ -1844,9 +1826,7 @@ void main() {
     //      proceed (guard was properly reset, not wedged by step 3).
     test('R6-13: a drain arriving after staleAfter reclaims the guard, '
         'proceeds to push, and the next drain is not blocked', () async {
-      final clock = FakeLocalDayClock(DateTime.utc(2026, 5, 31));
-      useLocalDayClock(clock);
-      addTearDown(resetLocalDayClock);
+      final clock = installFakeClock(DateTime.utc(2026, 5, 31));
 
       // A pipeline whose batch call parks until released — lets us keep a
       // drain in-flight while advancing the clock.

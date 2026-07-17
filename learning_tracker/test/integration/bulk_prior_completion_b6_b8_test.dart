@@ -22,7 +22,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/learning/completion_constants.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
@@ -33,6 +32,8 @@ import 'package:learning_tracker/features/learning/domain/repositories/bookmark_
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:mocktail/mocktail.dart';
+
+import '../helpers/fake_clock.dart';
 
 // ── Minimal stubs ────────────────────────────────────────────────────────────
 
@@ -410,8 +411,7 @@ void main() {
         // a wall-clock before/after window (a real, if narrow, flake
         // surface under slow/loaded CI).
         final fixedNow = DateTime.utc(2026, 3, 1, 12, 0, 0);
-        useLocalDayClock(FakeLocalDayClock(fixedNow));
-        addTearDown(resetLocalDayClock);
+        installFakeClock(fixedNow);
 
         await service.expungePriorCompletions(
           profileId: profileId,

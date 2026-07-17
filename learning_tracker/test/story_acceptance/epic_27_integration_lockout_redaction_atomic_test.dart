@@ -21,7 +21,6 @@ import 'package:flutter_test/flutter_test.dart'
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
@@ -32,6 +31,7 @@ import 'package:talker/talker.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart' show seedProfile;
+import '../helpers/fake_clock.dart';
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -100,8 +100,7 @@ void main() {
       setUp(() async {
         // Seed at a fixed instant; PinService reads through DateTimeFactory
         // which goes through `currentLocalDayClock`.
-        fakeClock = FakeLocalDayClock(DateTime.utc(2026, 5, 13, 12));
-        useLocalDayClock(fakeClock);
+        fakeClock = installFakeClock(DateTime.utc(2026, 5, 13, 12));
 
         storage = _createInMemorySecureStorage();
         pinService = PinService(
@@ -112,10 +111,6 @@ void main() {
           lockoutDurationMinutes: 15,
         );
         await pinService.setParentPin('1234');
-      });
-
-      tearDown(() {
-        resetLocalDayClock();
       });
 
       test('5 failed attempts trigger the 15-minute cooldown — '

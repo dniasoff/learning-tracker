@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_log_event.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';
@@ -22,6 +21,7 @@ import 'package:learning_tracker/features/learning/data/repositories/completion_
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../helpers/fake_clock.dart';
 import '../helpers/test_database.dart';
 
 class _MockSyncEngine extends Mock implements SyncWriteFacade {}
@@ -56,7 +56,7 @@ void main() {
       // below, instead of the real wall clock. Matches the pattern in
       // `epic_27_integration_lockout_redaction_atomic_test.dart`'s AC1
       // group.
-      useLocalDayClock(FakeLocalDayClock(today));
+      installFakeClock(today);
 
       db = createTestDatabase();
       await seedProfile(db);
@@ -121,7 +121,6 @@ void main() {
 
     tearDown(() async {
       await db.close();
-      resetLocalDayClock();
     });
 
     test('50 items × 3 stages with awardGamificationPoints=false → '

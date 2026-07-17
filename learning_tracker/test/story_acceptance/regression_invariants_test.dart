@@ -23,7 +23,6 @@ import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
@@ -32,6 +31,7 @@ import 'package:learning_tracker/features/tracks/setup/presentation/screens/trac
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart';
+import '../helpers/fake_clock.dart';
 
 void main() {
   group('Invariant net — 2026-05-17 quality crisis', tags: ['invariants'], () {
@@ -219,8 +219,7 @@ void main() {
             // otherwise flake this test for a reason unrelated to the code
             // under test.
             final fixedNow = DateTime.utc(2026, 6, 1, 12);
-            useLocalDayClock(FakeLocalDayClock(fixedNow));
-            addTearDown(resetLocalDayClock);
+            installFakeClock(fixedNow);
 
             final originalActivatedAt = fixedNow.subtract(
               const Duration(days: 5),

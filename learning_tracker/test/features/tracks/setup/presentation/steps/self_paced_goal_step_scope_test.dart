@@ -30,7 +30,6 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart'
@@ -44,6 +43,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../../helpers/drift_memory.dart';
+import '../../../../../helpers/fake_clock.dart';
 import '../../../../../helpers/pump_app.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -197,10 +197,8 @@ void main() {
   });
 
   setUp(() {
-    useLocalDayClock(FakeLocalDayClock(_fixedNow));
+    installFakeClock(_fixedNow);
   });
-
-  tearDown(resetLocalDayClock);
 
   group('TS-2 — SelfPacedGoalStep.scopeSelections parameter', () {
     testWidgets(
