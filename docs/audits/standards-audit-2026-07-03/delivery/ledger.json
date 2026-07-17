@@ -9862,13 +9862,19 @@
   {
    "id": "AUD-progress-13",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove the unused HierarchyLevelProgress.levelLabel field and its 'Level 1'/'Level 2' fallback computation",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "e48c63cd3d01d8c4ebc4e74ce3e05c50e767d7d0"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-progress-13 AC1 OK: .levelLabel grep = 0 lib/, 1 test/ = unrelated CurriculumLabels.levelLabel( at curriculum_label_variant_test:203 (finding predicted this).",
+    "AUD-progress-13 AC2 OK: curriculum_progress_service_test.dart never asserts removed field (only plural levelLabels input, still used at service:153). Nothing to update.",
+    "AUD-progress-13 dead-code confirmed: hierarchy_progress_card.dart reads levelName/level/subLevels, never levelLabel; 0 non-definitional reads in lib/."
+   ],
+   "notes": "Confirmed hierarchy_progress_card.dart never reads .levelLabel, only .levelName. Removed the field + threading/fallback in the service; updated 10 test sites (none asserted the value). Post-fix grep only hits the unrelated pre-existing CurriculumLabels.levelLabel( method."
   },
   {
    "id": "AUD-t-progress-07",
