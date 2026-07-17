@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -13,6 +16,7 @@ void main() {
     Widget child, {
     bool hebrewTermsScript = true,
     TransliterationVariant? variant,
+    List<Override> overrides = const [],
   }) {
     SharedPreferences.setMockInitialValues({
       'hebrew_terms_script_p0': hebrewTermsScript,
@@ -21,6 +25,7 @@ void main() {
       overrides: [
         if (variant != null)
           currentTransliterationVariantProvider.overrideWithValue(variant),
+        ...overrides,
       ],
       child: MaterialApp(home: Scaffold(body: child)),
     );
@@ -260,6 +265,115 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('משנה א'), findsOneWidget);
+    });
+  });
+
+  group('CurriculumLabel.item — breadcrumb/parent modes resolve ancestor '
+      'Hebrew names (AUD-core-labels-01)', () {
+    // Mishnayos has 2 named ancestor levels (Seder, Masechta) above the
+    // ordinal Perek/Mishna levels — exactly the shape that exposed the
+    // bug (ancestor levels rendered from raw storage-key values, not
+    // their Hebrew names).
+    const sederItem = ContentItem(
+      curriculumId: 'mishnayos',
+      level1: 'Seder Zeraim',
+      displayNameHe: 'סדר זרעים',
+      displayNameEn: 'Seder Zeraim',
+      sefariaRef: 'Seder_Zeraim',
+      sortOrder: 0,
+      isLeaf: false,
+    );
+    const masechtaItem = ContentItem(
+      curriculumId: 'mishnayos',
+      level1: 'Seder Zeraim',
+      level2: 'Berakhot',
+      displayNameHe: 'מסכת ברכות',
+      displayNameEn: 'Mishnah Berakhot',
+      sefariaRef: 'Mishnah_Berakhot',
+      sortOrder: 1,
+      isLeaf: false,
+    );
+    const perekItem = ContentItem(
+      curriculumId: 'mishnayos',
+      level1: 'Seder Zeraim',
+      level2: 'Berakhot',
+      level3: '1',
+      displayNameHe: 'משנה ברכות א',
+      displayNameEn: 'Mishnah Berakhot 1',
+      sefariaRef: 'Mishnah_Berakhot.1',
+      sortOrder: 2,
+      isLeaf: false,
+    );
+    const leafItem = ContentItem(
+      curriculumId: 'mishnayos',
+      level1: 'Seder Zeraim',
+      level2: 'Berakhot',
+      level3: '1',
+      level4: '1',
+      displayNameHe: 'משנה ברכות א:א',
+      displayNameEn: 'Mishnah Berakhot 1:1',
+      sefariaRef: 'Mishnah_Berakhot.1.1',
+      sortOrder: 3,
+      isLeaf: true,
+    );
+    final allItems = [sederItem, masechtaItem, perekItem, leafItem];
+
+    // Backs the async ancestor-Hebrew-name lookup
+    // (renderedDisplayForRef/renderedParentForRef) with an in-memory
+    // fixture instead of the real bundled content DB.
+    List<Override> contentOverrides() => [
+      curriculumContentProvider(
+        CurriculumId.mishnayos,
+      ).overrideWith((ref) async => allItems),
+      contentIndexProvider.overrideWith(
+        (ref) async =>
+            ContentIndex.fromCurricula({CurriculumId.mishnayos: allItems}),
+      ),
+    ];
+
+    testWidgets('breadcrumb mode: every segment renders Hebrew, no raw Latin '
+        'ancestor names', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const CurriculumLabel.item(
+            leafItem,
+            mode: CurriculumLabelMode.breadcrumb,
+          ),
+          hebrewTermsScript: true,
+          overrides: contentOverrides(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      const expected = 'זרעים › ברכות › פרק א › משנה א';
+      expect(
+        RegExp('[A-Za-z]').hasMatch(expected),
+        isFalse,
+        reason: 'sanity-check the expected fixture is pure Hebrew',
+      );
+      expect(find.text(expected), findsOneWidget);
+      // The bug rendered ancestor segments from the raw storage key —
+      // guard explicitly against that regression.
+      expect(find.textContaining('Seder Zeraim'), findsNothing);
+      expect(find.textContaining('Berakhot'), findsNothing);
+    });
+
+    testWidgets('parent mode: named ancestor segment renders Hebrew, not raw '
+        '"Berakhot"', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const CurriculumLabel.item(
+            perekItem,
+            mode: CurriculumLabelMode.parent,
+          ),
+          hebrewTermsScript: true,
+          overrides: contentOverrides(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('ברכות'), findsOneWidget);
+      expect(find.text('Berakhot'), findsNothing);
     });
   });
 
