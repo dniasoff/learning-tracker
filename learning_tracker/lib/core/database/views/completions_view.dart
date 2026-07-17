@@ -29,5 +29,6 @@ abstract class CompletionsView extends View {
     completionEvents.trackId,
     completionEvents.points,
     completionEvents.eventTimestamp,
+    completionEvents.stageIdFormat,
   ]).from(completionEvents);
 }

@@ -206,7 +206,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 36;
+  int get schemaVersion => 37;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -215,7 +215,7 @@ class UserDatabase extends _$UserDatabase {
   static const _completionsViewSql =
       'CREATE VIEW completions_view AS '
       'SELECT id, profile_id, curriculum_id, sefaria_ref, stage_id, '
-      'track_type, track_id, points, event_timestamp '
+      'track_type, track_id, points, event_timestamp, stage_id_format '
       'FROM completion_events '
       'WHERE purged_at IS NULL';
 
@@ -239,6 +239,8 @@ class UserDatabase extends _$UserDatabase {
       // AUD-guardrails-01 (v33): additive composite index on goals.
       // AUD-core-database-09 (v35): real FK on points_ledger.redemptionId.
       // AUD-t-cross-06 (v36): profileId FK added to track_learning_order.
+      // AUD-scheduler-15 (v37): additive stage_id_format marker on
+      //            completion_events, one-time-tagged for pre-existing rows.
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 25) {
           await m.createTable(pointsBalance);
@@ -657,6 +659,69 @@ class UserDatabase extends _$UserDatabase {
             );
 
             await customStatement('PRAGMA foreign_keys = ON');
+          }
+        }
+        if (from < 37) {
+          // AUD-scheduler-15: completion_events.stage_id has always been
+          // ambiguous — CompletionWriter only ever writes a stageOrder
+          // ordinal, but older app versions wrote a stage_definitions.id.
+          // Both value spaces are small positive integers that can
+          // coincide (most sharply once StageDefinitionRepository.
+          // reorderStages moves a stage's order away from its id), so
+          // SchedulerCompletionRepositoryImpl.resolveStageOrder's per-read
+          // "does this look like a known stageOrder" guess could silently
+          // resolve to the WRONG stage.
+          //
+          // Additive nullable column (safe: existing rows get NULL, and
+          // readers fall back to the historical guess for NULL rows —
+          // unchanged behaviour, no regression). We then run a ONE-TIME
+          // backfill that tags every row we CAN classify deterministically:
+          //  - stage_id matches a CURRENT stageOrder for that row's own
+          //    (profile_id, curriculum_id) -> 'stageOrder' (mirrors
+          //    resolveStageOrder's pre-v37 priority, so already-correct
+          //    rows stay correct).
+          //  - else stage_id matches a CURRENT stage id for that row's own
+          //    (profile_id, curriculum_id) -> 'legacyId' (the previously-
+          //    ambiguous, now-disambiguated case).
+          //  - else (the stage no longer exists) -> left NULL; already
+          //    unresolvable today, unaffected.
+          // A row whose stage_id coincidentally matches BOTH a stageOrder
+          // and a different stage's id is tagged 'stageOrder' (same as
+          // today's guess) — a true collision carries no surviving signal
+          // to reconstruct after the fact, so this migration does not (and
+          // cannot) resolve it, but it also does not regress it. No NEW
+          // ambiguous row can ever be created again: CompletionWriter now
+          // stamps every insert with an explicit tag.
+          await m.addColumn(completionEvents, completionEvents.stageIdFormat);
+
+          final hasStageDefinitions = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'stage_definitions'",
+          ).get();
+          final hasCompletionEvents = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'completion_events'",
+          ).get();
+          if (hasStageDefinitions.isNotEmpty &&
+              hasCompletionEvents.isNotEmpty) {
+            await customStatement(
+              "UPDATE completion_events SET stage_id_format = 'stageOrder' "
+              'WHERE stage_id_format IS NULL AND EXISTS ('
+              '  SELECT 1 FROM stage_definitions sd '
+              '  WHERE sd.profile_id = completion_events.profile_id '
+              '    AND sd.curriculum_id = completion_events.curriculum_id '
+              '    AND sd.stage_order = completion_events.stage_id'
+              ')',
+            );
+            await customStatement(
+              "UPDATE completion_events SET stage_id_format = 'legacyId' "
+              'WHERE stage_id_format IS NULL AND EXISTS ('
+              '  SELECT 1 FROM stage_definitions sd '
+              '  WHERE sd.profile_id = completion_events.profile_id '
+              '    AND sd.curriculum_id = completion_events.curriculum_id '
+              '    AND sd.id = completion_events.stage_id'
+              ')',
+            );
           }
         }
       },

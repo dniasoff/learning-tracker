@@ -32,6 +32,7 @@ class Completion {
     required this.completedAt,
     required this.points,
     this.derivedFromEvents = true,
+    this.stageIdFormat,
   });
 
   final int id;
@@ -44,6 +45,11 @@ class Completion {
   final DateTime completedAt;
   final int points;
   final bool derivedFromEvents;
+
+  /// AUD-scheduler-15: explicit marker for what [stageId] encodes —
+  /// `'stageOrder'`, `'legacyId'`, or `null` (unknown / pre-v37 row the
+  /// migration could not classify). See `CompletionEvents.stageIdFormat`.
+  final String? stageIdFormat;
 }
 
 /// DAO for the completions view (C1).
@@ -78,6 +84,7 @@ class CompletionDao extends DatabaseAccessor<UserDatabase>
     completedAt: v.eventTimestamp,
     points: v.points,
     derivedFromEvents: true,
+    stageIdFormat: v.stageIdFormat,
   );
 
   // ── Cross-profile internals (DNI-338) ───────────────────────────────────

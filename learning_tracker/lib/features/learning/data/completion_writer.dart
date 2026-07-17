@@ -185,6 +185,10 @@ class CompletionWriter {
                 trackId: Value<int?>(cmd.trackId),
                 points: Value(cmd.points),
                 eventTimestamp: cmd.completedAt,
+                // AUD-scheduler-15: every writer (this one) exclusively
+                // sources stageId from a stage's stageOrder — stamp the
+                // marker explicitly so no NEW row is ever ambiguous.
+                stageIdFormat: const Value('stageOrder'),
               ),
             ),
             mode: InsertMode.insertOrIgnore,
@@ -531,6 +535,7 @@ class CompletionWriter {
     completedAt: v.eventTimestamp,
     points: v.points,
     derivedFromEvents: true,
+    stageIdFormat: v.stageIdFormat,
   );
 
   /// Reconstructs a [Completion] from a raw event row — used when the
@@ -546,6 +551,7 @@ class CompletionWriter {
     completedAt: e.eventTimestamp,
     points: e.points,
     derivedFromEvents: true,
+    stageIdFormat: e.stageIdFormat,
   );
 
   Future<CompletionWriteResult> commit(CompletionCommand cmd) async {
@@ -590,6 +596,7 @@ class CompletionWriter {
             completedAt: cmd.completedAt,
             points: existingEvent.points,
             derivedFromEvents: true,
+            stageIdFormat: existingEvent.stageIdFormat,
           );
           return CompletionWriteResult(completion: rebuilt, isNew: true);
         }
@@ -625,6 +632,7 @@ class CompletionWriter {
             completedAt: cmd.completedAt,
             points: existingEvent.points,
             derivedFromEvents: true,
+            stageIdFormat: existingEvent.stageIdFormat,
           );
           return CompletionWriteResult(
             completion: upgradedCompletion,
@@ -651,6 +659,7 @@ class CompletionWriter {
           completedAt: existingEvent.eventTimestamp,
           points: existingEvent.points,
           derivedFromEvents: true,
+          stageIdFormat: existingEvent.stageIdFormat,
         );
         return CompletionWriteResult(
           completion: activeCompletion,
@@ -671,6 +680,10 @@ class CompletionWriter {
           trackId: Value<int?>(cmd.trackId),
           points: Value(cmd.points),
           eventTimestamp: cmd.completedAt,
+          // AUD-scheduler-15: this writer exclusively sources stageId from
+          // a stage's stageOrder — stamp the marker explicitly so no NEW
+          // row is ever ambiguous.
+          stageIdFormat: const Value('stageOrder'),
         ),
       );
 
