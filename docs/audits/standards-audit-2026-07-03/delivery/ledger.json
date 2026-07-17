@@ -1732,13 +1732,18 @@
   {
    "id": "AUD-core-logging-02",
    "wave": 4,
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Remove or explicitly justify AppLogger.setupFlutterErrorHandlers — dead code duplicating crashlytics_bootstrap.dart's live handlers",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c18, 2026-07-17). review agent lost (quota) mid-review of worktree branch worktree-wf_4a60514d-55f-31 (tip 3e8c9321). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this wave-4 pass. Unreviewed fix commit 3e8c9321 (fix(core/logging): AUD-core-logging-02 - remove dead setupFlutterErrorHandlers) exists on the worktree branch only, not merged to dev - no code landed this pass. Worktree removed per cleanup protocol; branch left in place (unmerged patch, per git-cherry check) for a future harvest/relaunch pass, per the AUD-t-cross-64/AUD-t-cross-81 precedent."
+   "commits": [
+    "12a9c7c7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-logging-02 AC1 OK: grep -rn 'setupFlutterErrorHandlers' lib/ -> no matches",
+    "AUD-core-logging-02 AC2 OK: grep -rn 'setupFlutterErrorHandlers' test/ -> no matches; no test exercises an unreachable code path"
+   ],
+   "notes": "GATE-REPAIR wave-4: harvested the previously-blocked worktree fix commit 3e8c9321 (worktree-wf_4a60514d-55f-31, cherry-picked onto dev as 12a9c7c7) instead of leaving it stranded. Deleted the dead AppLogger.setupFlutterErrorHandlers method and its 3 pinning tests; remaining 21 tests in logger_test.dart pass unchanged. flutter test test/core/logging/ test/app/bootstrap/ -> 85/85 passed. flutter analyze clean. make audit clean. Branch worktree-wf_4a60514d-55f-31 and worktree removed as residue."
   },
   {
    "id": "AUD-core-database-06",
@@ -3368,14 +3373,21 @@
   },
   {
    "id": "AUD-core-network-01",
-   "wave": "parked",
-   "status": "blocked",
+   "wave": 4,
+   "status": "merged",
    "severity": "P2",
    "title": "Convert ContentItem/CurriculumHierarchyConfig/FetchResult to @freezed instead of hand-rolled or absent equality",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (parked-batch01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. One unreviewed fix commit exists, not merged to dev: 8efe12df on worktree-wf_4a60514d-55f-34 (fix(core-network): AUD-core-network-01 - convert ContentItem/CurriculumHierarchyConfig/FetchResult to @freezed) - no code landed this pass. Worktree and branch left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
+   "commits": [
+    "b3ab909c",
+    "7f0847ff"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-network-01 AC1 OK: dart run build_runner build regenerates ContentItem/CurriculumHierarchyConfig/FetchResult as @freezed, no manual ==/hashCode remaining",
+    "AUD-core-network-01 AC2 OK: aud_core_network_01_freezed_equality_test.dart proves two ContentItems differing only in sortOrder/displayNameHe are NOT ==",
+    "AUD-core-network-01 AC3 OK: levelLabels cannot be mutated through the public CurriculumHierarchyConfig API (EqualUnmodifiableListView, UnsupportedError on mutation)"
+   ],
+   "notes": "GATE-REPAIR wave-4: harvested the previously-blocked worktree fix commit 8efe12df (worktree-wf_4a60514d-55f-34, cherry-picked onto dev as b3ab909c). The worktree branch predated AUD-core-content-03 (7f917407, landed on dev after this branch diverged), which added a regression test (content_tree_sort_hoist_test.dart) that subclassed ContentItem via `extends` with a generative constructor - incompatible with ContentItem's new @freezed factory-only shape. Fixed in follow-up commit 7f0847ff by changing the test double from `extends` to `implements` (composition over an inner real ContentItem), preserving the exact same instrumentation technique and assertions per TQ-7 (no test weakened). flutter analyze clean; flutter test test/core/network/ test/core/content/ test/features/content_browsing/ epic_02/epic_05/epic_28 story acceptance all pass; make audit clean. Branch worktree-wf_4a60514d-55f-34 and worktree removed as residue."
   },
   {
    "id": "AUD-core-sync-27",
@@ -7174,14 +7186,19 @@
   },
   {
    "id": "AUD-core-domain-07",
-   "wave": "parked",
-   "status": "blocked",
+   "wave": 4,
+   "status": "merged",
    "severity": "P3",
    "title": "Migrate core/domain/value_objects/ hand-written ==/hashCode/toString classes to @freezed",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (parked-batch01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. Two unreviewed fix commits exist, neither merged to dev: e793c96e on worktree-wf_4a60514d-55f-130 and 82bab00a on worktree-wf_4a60514d-55f-65 (both fix(core/domain): AUD-core-domain-07 - migrate value objects to @freezed, duplicate/retry attempts) - no code landed this pass. Worktrees and branches left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
+   "commits": [
+    "bba1b40d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-domain-07 AC1 OK: all 5 live value objects (pin, program_starting_position, schedule_spec's Delay/Weekly/Rolling, sefaria_ref, study_day_pattern) now @freezed; scope.dart/stage_order.dart were already deleted as dead code by AUD-core-domain-05 before this fix, so out of scope",
+    "AUD-core-domain-07 AC2 OK: test/core/domain/value_objects/ equality/hashCode/toString tests pass unmodified, 160/160 (same count pre/post migration)"
+   ],
+   "notes": "GATE-REPAIR wave-4: two duplicate/retry worktree fix attempts existed for this finding - e793c96e (worktree-wf_4a60514d-55f-130) and 82bab00a (worktree-wf_4a60514d-55f-65). Verified 82bab00a was stale: it was built against an ancestor predating AUD-core-domain-05 (e5b4fe00, merged to dev), and tries to migrate scope.dart/stage_order.dart, which AUD-core-domain-05 had already deleted as dead speculative generality - those two files do not exist on current dev. e793c96e correctly scoped to the 5 files still live post-AUD-core-domain-05 and was cherry-picked onto dev cleanly as bba1b40d. flutter analyze clean; flutter test test/core/domain/value_objects/ 160/160 passed; make audit clean. Both worktrees/branches (55f-130, 55f-65) removed as residue; 82bab00a's patch is superseded, not merged."
   },
   {
    "id": "AUD-t-gamification-04",
@@ -10616,14 +10633,18 @@
   },
   {
    "id": "AUD-core-navigation-04",
-   "wave": "parked",
-   "status": "blocked",
+   "wave": 4,
+   "status": "merged",
    "severity": "P3",
    "title": "Inject ParentAnalyticsRepository into RestoreGuard instead of constructing it inline",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (parked-batch01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. Two unreviewed fix commits exist, neither merged to dev: 3da59ea8 on worktree-wf_4a60514d-55f-123 and 290d05d0 on worktree-wf_4a60514d-55f-75 (both fix(navigation): AUD-core-navigation-04 - inject ParentAnalyticsRepository into RestoreGuard, duplicate/retry attempts) - no code landed this pass. Worktrees and branches left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
+   "commits": [
+    "ea6b9512"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-navigation-04 AC1 OK: ParentAnalyticsRepositoryImpl is now injected into RestoreGuard via an optional buildAnalyticsRepository factory constructor param (default ParentAnalyticsRepositoryImpl.new); make audit SM-7 Rule-0 checker extended to cover restore_guard.dart"
+   ],
+   "notes": "GATE-REPAIR wave-4: two duplicate/retry worktree fix attempts existed for this finding - 3da59ea8 (worktree-wf_4a60514d-55f-123) and 290d05d0 (worktree-wf_4a60514d-55f-75), same commit message/content but built against different ancestors. Verified 3da59ea8 matches current dev's restore_guard.dart shape (constructor already carries deviceRestoreRoute, which 3da59ea8's diff accounts for and 290d05d0's stale base does not); cherry-picked cleanly onto dev as ea6b9512 (auto-merged trivial context in docs/coding-standards.md and Makefile). flutter test test/core/navigation/restore_guard_test.dart (14/14) + restore_guard_reset_test.dart + app_shell_test.dart + app_shell_an6_test.dart (34 total) all passed; SM-7 Rule-0 checker demonstrated flip-to-FAIL-and-back; make audit clean. Both worktrees/branches (55f-123, 55f-75) removed as residue; 290d05d0's patch is superseded, not merged."
   },
   {
    "id": "AUD-core-constants-02",
