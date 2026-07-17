@@ -10607,13 +10607,19 @@
   {
    "id": "AUD-core-constants-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove stray .gitkeep placeholder files from non-empty lib/ directories",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "9bdf956825006aae44d6b0cf37b078d1111d6539"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-constants-02 AC1 OK: check_gitkeep_stray.dart wired into make audit 72/72; FIRES exit 1 when I re-added lib/core/constants/.gitkeep (reverted clean)",
+    "AUD-core-constants-02 AC1 baseline OK: recomputed 47 offender dirs from git ls-files lib = byte-identical to inline _baseline; constants NOT baselined",
+    "AUD-core-constants-02 AC2 OK: git diff shows 'deleted file mode 100644' for the .gitkeep; dir now holds only the 3 real .dart source files"
+   ],
+   "notes": "Re-verified: .gitkeep still present alongside 3 tracked files; deleted (AC2). Added tool/check_gitkeep_stray.dart as make-audit check 72/72 (AC1), failing on any lib/ dir with .gitkeep + tracked sibling; ratchets 47 pre-existing offenders. Red-first: exit 1 pre-fix, 0 post-fix."
   },
   {
    "id": "AUD-t-cross-56",
