@@ -155,10 +155,13 @@ Future<void> deleteProfileFlow(
   ref.invalidate(selectedProfileProvider);
 }
 
-/// Shared profile edit form (name, mode display, avatar picker).
+/// Shared profile edit form (name, mode, avatar picker).
 ///
-/// Mode is shown but not editable on edit (matching the existing Manage
-/// Learners behaviour — only name + avatar are persisted).
+/// AUD-profiles-13: mode IS editable via the [SegmentedButton] below and IS
+/// persisted on save — [editProfileFlow] passes `result.mode` through to
+/// `repo.updateProfile` (the PP-2 fix). Promoting a child profile to adult
+/// here also triggers [editProfileFlow]'s R-PR4 side effect: that profile's
+/// stored child/tutor PINs are cleared from secure storage.
 class ProfileEditFormDialog extends StatefulWidget {
   final String title;
   final String? initialName;
