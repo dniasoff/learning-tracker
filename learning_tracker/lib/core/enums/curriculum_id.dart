@@ -44,6 +44,16 @@ enum CurriculumId {
     return null;
   }
 
+  /// Every curriculum id, in the canonical learning order (declaration
+  /// order — see this class's doc comment for the rationale).
+  ///
+  /// Call sites that need "every curriculum" (build a per-curriculum map,
+  /// invalidate a provider for each curriculum, etc.) should read through
+  /// this accessor rather than referencing `CurriculumId.values` directly,
+  /// so the enumeration has a single named seam — mirroring
+  /// [fromStorageKey] being the single seam for storageKey resolution.
+  static List<CurriculumId> get all => values;
+
   /// Display name in English.
   String get displayNameEn => switch (this) {
     CurriculumId.mishnayos => 'Mishnayos',

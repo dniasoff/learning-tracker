@@ -42,7 +42,7 @@ class DashboardScreen extends ConsumerWidget {
     ref.invalidate(lifetimeSummariesProvider(profileId));
     // ignore: deprecated_member_use
     ref.invalidate(globalLifetimeCurriculaProvider(profileId));
-    for (final c in CurriculumId.values) {
+    for (final c in CurriculumId.all) {
       ref.invalidate(
         lifetimeDataProvider((profileId: profileId, curriculumId: c)),
       );
