@@ -5058,13 +5058,18 @@
   {
    "id": "AUD-core-content-03",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Hoist the child-list sort out of the per-curriculum loop in ContentTree.fromCurricula",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "4d738c7d5580d2f4747bd37f73568d6ba99d88d1"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-content-03 AC1 OK: curriculum loop closes L124, sort runs once at L130-132 outside it; RED confirmed by reverting prod file, restored clean.",
+    "AUD-core-content-03 AC2 OK: epic_25 L998-1011 'children sorted by sortOrder' passed in 94/94 run."
+   ],
+   "notes": "Confirmed: sort loop sat inside the outer curriculum loop, re-sorting the full map each iteration. Moved it after the loop so it runs once. AC1 verified by inspection. AC2 verified: all 93 tests in epic_25_schema_core_test.dart pass post-fix. Red-first test: RED (Expected:24 Actual:30) then GREEN."
   },
   {
    "id": "AUD-core-content-02",
