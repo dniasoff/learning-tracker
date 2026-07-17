@@ -575,7 +575,19 @@ Future<TrackDualProgressMetric?> _computeTrackDualProgressMetric({
       final delta = calendarPos.delta;
       overdueCount = delta < 0 ? (-delta - 1).clamp(0, 9999) : 0;
       todayDueCount = delta > 0 ? 0 : 1;
-    } catch (_) {
+    } catch (e, st) {
+      // AUD-progress-06 (EH-3): a programCalendarPositionProvider failure
+      // used to fall through to overdueCount/todayDueCount = 0 with zero
+      // breadcrumb — a falsely reassuring "nothing overdue" on the
+      // dashboard per-track row with no way to diagnose it. Log via
+      // AppLogger before falling back, matching the F20 pattern used by
+      // _safeLoadLeaves/_safeHeLabelLookup below.
+      AppLogger.instance.warning(
+        event: 'track_dual_progress_calendar_position_failed',
+        fields: {'trackId': track.id, 'curriculum': curriculum.storageKey},
+        exception: e,
+        stackTrace: st,
+      );
       overdueCount = 0;
       todayDueCount = 0;
     }
@@ -788,7 +800,22 @@ Future<List<ContentItem>?> _safeLoadLeavesForTrack(
       scopeValues: scopes.map((s) => s.scopeValue).toList(),
     );
     return allItems.where((item) => item.isLeaf).toList();
-  } catch (_) {
+  } catch (e, st) {
+    // AUD-progress-06 (EH-3): a getScopedContent failure used to fall
+    // through to `null` with zero breadcrumb — the track just vanished
+    // from trackDualProgressMetricsProvider's output with no trace. Log
+    // via AppLogger before returning null, matching the F20 pattern used
+    // by _safeLoadLeaves/_safeHeLabelLookup above.
+    AppLogger.instance.warning(
+      event: 'lifetime_safe_load_failed',
+      fields: {
+        'curriculum': curriculum.storageKey,
+        'phase': 'scoped_leaves_for_track',
+        'trackId': trackId,
+      },
+      exception: e,
+      stackTrace: st,
+    );
     return null;
   }
 }
