@@ -37,7 +37,7 @@ learning_tracker/
 │   │   │   ├── content/           # ContentDatabase — schema v5
 │   │   │   └── registry/          # DeviceRegistryDatabase — schema v1
 │   │   ├── enums/                # CurriculumId, TrackType, UserMode
-│   │   ├── exceptions/           # DuplicateCompletionException
+│   │   ├── exceptions/           # AppException hierarchy (app_exception.dart)
 │   │   ├── logging/              # AppLogger with sensitive data filtering
 │   │   ├── navigation/           # auto_route config (40+ routes, 5 guards)
 │   │   │   └── guards/           # Auth, Profile, Restore, ChildMode, Pin (parameterized by PinScope)
