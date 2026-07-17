@@ -358,32 +358,68 @@ void main() {
     // below instead key off the check's stable description text (the
     // "SM-7" / "AUD-sync-05" identifiers), which only changes if the
     // check's own scope or fix-site list changes.
+    // Wave-4 gate-repair follow-up: re-pinned after the AUD-core-navigation-04
+    // gate-repair broadened this check's own echo text into two clauses (the
+    // RewardMilestoneService fix-site clause below, plus a separate
+    // ParentAnalyticsRepositoryImpl-anywhere-in-lib clause) — the combined
+    // "ParentAnalyticsRepositoryImpl/RewardMilestoneService" phrase this
+    // constant previously expected no longer appears verbatim anywhere in
+    // the Makefile, so this test could never have matched a real clean run
+    // since that change landed. Keyed on the stable prefix both wordings
+    // have always shared.
     const smSevenDescription =
-        'SM-7: no ad-hoc ParentAnalyticsRepositoryImpl/RewardMilestoneService '
-        'construction inside the AUD-sync-05 fix sites';
+        'SM-7: no ad-hoc RewardMilestoneService construction inside the '
+        'AUD-sync-05 fix sites';
 
     test(
       'clean on the AUD-sync-05 fix sites (no ad-hoc Repository/Service '
       'construction)',
       () async {
-        final result = await Process.run('make', [
-          'audit',
-        ], workingDirectory: packageDir);
-        expect(
-          result.stdout.toString(),
-          contains(smSevenDescription),
-          reason:
-              'make audit must run the SM-7 AUD-sync-05 scoped check '
-              '(matched on its stable description, not its N/total '
-              'position).\nstdout=${result.stdout}\nstderr=${result.stderr}',
+        // Wave-4 gate-repair follow-up: capture via a redirected temp file
+        // rather than relying on Process.run's in-memory stdout pipe.
+        // `make audit`'s full output now exceeds 100KB (83 checks, including
+        // 2 large warn-only cross-import listings) and this specific
+        // shell-out reproducibly hit "grep: write error: Broken pipe" plus a
+        // truncated capture when run inside a flutter_tester test isolate in
+        // this environment — NOT reproducible via a bare `dart run`/shell
+        // invocation of the identical `make audit` call (isolated and
+        // confirmed: a standalone script doing the same Process.run
+        // completed in ~56s with the full ~107KB of output and exit 0).
+        // File redirection sidesteps whatever pipe/relay limit the test
+        // isolate imposes without changing what this test asserts.
+        // Keyed off the process id and a fresh Object's identity hash, NOT
+        // a wall-clock read: TQ-6 (check 61/62) bans a non-hermetic wall
+        // clock in test/, and this is just a unique-filename seed, not a
+        // clock dependency, so process-local entropy keeps it out of that
+        // gate while still being unique per run.
+        final tmp = File(
+          '${Directory.systemTemp.path}/make_audit_sm7_${pid}_'
+          '${identityHashCode(Object())}.log',
         );
-        expect(
-          result.exitCode,
-          0,
-          reason:
-              'the three AUD-sync-05 fix sites must be clean.\n'
-              'stdout=${result.stdout}\nstderr=${result.stderr}',
-        );
+        try {
+          final shellResult = await Process.run('sh', [
+            '-c',
+            'make audit > ${_shellQuote(tmp.path)} 2>&1',
+          ], workingDirectory: packageDir);
+          final output = tmp.existsSync() ? await tmp.readAsString() : '';
+          expect(
+            output,
+            contains(smSevenDescription),
+            reason:
+                'make audit must run the SM-7 AUD-sync-05 scoped check '
+                '(matched on its stable description, not its N/total '
+                'position).\noutput=$output\nstderr=${shellResult.stderr}',
+          );
+          expect(
+            shellResult.exitCode,
+            0,
+            reason:
+                'the three AUD-sync-05 fix sites must be clean.\n'
+                'output=$output\nstderr=${shellResult.stderr}',
+          );
+        } finally {
+          if (tmp.existsSync()) tmp.deleteSync();
+        }
       },
       // AUD-guardrails-17 (see file-level NOTE above): shells out to
       // `make audit`; see the longer rationale on the 25/26 test above.
