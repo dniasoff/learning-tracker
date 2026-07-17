@@ -3472,13 +3472,19 @@
   {
    "id": "AUD-content_browsing-06",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Remove dead cloud-content-download and text-download-status code paths",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "2dc0628c"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-content_browsing-06 AC1 OK: grep for 3 providers in lib/ = no hits (exit 1); all deleted from cloud_content_providers.dart(+.g) and text_display_providers.dart(+.g)",
+    "AUD-content_browsing-06 AC2a OK: flutter analyze -> No issues found (after content.db.gz regen)",
+    "AUD-content_browsing-06 AC2b OK: tests not orphaned; cloud_content_service pinned by EH4 checker exit(1); TextDownloadService used at epic_02:1063; both pass"
+   ],
+   "notes": "3 dead providers confirmed via grep, deleted (cloud_content_providers.dart+.g.dart, 2 dead fns in text_display_providers.dart). Kept cloud_content_service.dart (pinned by AUD-content_browsing-09 gate) & text_download_service.dart (real caller in epic_02_content_test.dart; deleting = TQ-7 violation)."
   },
   {
    "id": "AUD-t-content_browsing-04",
