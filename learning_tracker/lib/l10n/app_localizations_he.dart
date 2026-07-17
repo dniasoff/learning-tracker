@@ -2465,9 +2465,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get errorSaveFailed => 'השמירה נכשלה. נסו שוב.';
 
   @override
-  String errorSearchFailed(String error) {
-    return 'החיפוש נכשל: $error';
-  }
+  String get cityPickerSearchErrorDatabase =>
+      'לא הצלחנו לטעון את רשימת הערים. נסו להתקין מחדש את האפליקציה.';
+
+  @override
+  String get cityPickerSearchErrorGeneric => 'החיפוש נכשל. נסו שוב.';
 
   @override
   String errorSearchError(String error) {
@@ -2765,9 +2767,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get sacredTimeLocationServicesOff => 'שירותי המיקום כבויים במכשיר זה.';
 
   @override
-  String sacredTimeLocationDetectError(String message) {
-    return 'לא ניתן לזהות מיקום: $message';
-  }
+  String get sacredTimeLocationDetectErrorTimeout =>
+      'לא ניתן לזהות מיקום: הבקשה נמשכה זמן רב מדי. נסו שוב בשטח פתוח, או בחרו עיר במקום.';
+
+  @override
+  String get sacredTimeLocationDetectErrorGeneric =>
+      'לא ניתן לזהות מיקום. נסו שוב, או בחרו עיר במקום.';
 
   @override
   String get newPasswordLabel => 'סיסמה חדשה';

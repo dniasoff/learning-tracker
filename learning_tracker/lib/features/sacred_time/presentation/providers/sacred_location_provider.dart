@@ -70,7 +70,10 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
       case LocationFetchError():
         AppLogger.instance.warning(
           event: 'sacred_location_detect_error',
-          fields: {'message': result.message},
+          fields: {
+            'code': result.code.name,
+            if (result.debugDetail != null) 'debugDetail': result.debugDetail,
+          },
         );
     }
     return result;

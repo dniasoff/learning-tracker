@@ -39,6 +39,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/cities_repository.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/city_search_exception.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -196,6 +198,12 @@ enum _GeoScenario {
   permissionWhileInUse,
   success,
   error,
+  // AUD-sacred_time-03 (EH-5): getCurrentPosition() throws a TimeoutException
+  // for this scenario — the common indoor/poor-signal case after the service's
+  // 15s GPS timeLimit elapses — distinct from the plain `error` Exception
+  // scenario, since it must classify to LocationErrorCode.timeout rather than
+  // .unknown.
+  timeout,
   // A genuine programming-bug scenario (e.g. a plugin-level type mismatch),
   // distinct from `error` (an ordinary Exception the service is expected to
   // catch and convert to LocationFetchError). getCurrentPosition() throws a
@@ -230,6 +238,8 @@ class _FakeGeolocatorPlatform extends Fake
         return LocationPermission.whileInUse;
       case _GeoScenario.error:
         return LocationPermission.whileInUse;
+      case _GeoScenario.timeout:
+        return LocationPermission.whileInUse;
       case _GeoScenario.programmingError:
         return LocationPermission.whileInUse;
     }
@@ -253,6 +263,12 @@ class _FakeGeolocatorPlatform extends Fake
   }) async {
     if (scenario == _GeoScenario.error) {
       throw Exception('GPS hardware failure');
+    }
+    if (scenario == _GeoScenario.timeout) {
+      throw TimeoutException(
+        'Time limit reached while waiting for position update.',
+        const Duration(seconds: 15),
+      );
     }
     if (scenario == _GeoScenario.programmingError) {
       // Simulates a genuine programming bug (e.g. a plugin-level type
@@ -519,6 +535,61 @@ void main() {
         }
       },
     );
+
+    // AUD-sacred_time-03 (EH-5) — red-first regression: before the fix, a
+    // raw SqliteException (e.g. "no such table: cities") propagated straight
+    // out of searchByPrefix/topCitiesByCountry into citySearchProvider's
+    // AsyncError, and from there to e.toString() in the UI. Point the repo
+    // at a valid-but-schemaless SQLite file (no `cities` table) so the query
+    // throws that raw SqliteException, and assert it never reaches the
+    // caller untyped.
+    group('I/O error conversion (EH-2/EH-5)', () {
+      late Directory brokenDir;
+      late CitiesRepository brokenRepo;
+
+      setUp(() {
+        brokenDir = Directory.systemTemp.createTempSync('cities_broken_');
+        // An empty-but-valid SQLite file: opens fine, but any query against
+        // the (never-created) `cities` table throws a raw SqliteException.
+        sqlite3.open('${brokenDir.path}/cities_v1.sqlite').dispose();
+        PathProviderPlatform.instance = _FakePathProvider(brokenDir.path);
+        brokenRepo = CitiesRepository();
+      });
+
+      tearDown(() {
+        brokenRepo.dispose();
+        brokenDir.deleteSync(recursive: true);
+        // Restore the seeded fixture path for any subsequent CitiesRepository
+        // test in this file.
+        PathProviderPlatform.instance = _FakePathProvider(tempDir.path);
+      });
+
+      test('searchByPrefix converts a raw SqliteException into a typed '
+          'CitySearchException(database)', () async {
+        await expectLater(
+          brokenRepo.searchByPrefix('je'),
+          throwsA(
+            isA<CitySearchException>()
+                .having((e) => e.code, 'code', CitySearchErrorCode.database)
+                .having((e) => e.debugDetail, 'debugDetail', isNotNull),
+          ),
+        );
+      });
+
+      test('topCitiesByCountry converts a raw SqliteException into a typed '
+          'CitySearchException(database)', () async {
+        await expectLater(
+          brokenRepo.topCitiesByCountry('IL'),
+          throwsA(
+            isA<CitySearchException>().having(
+              (e) => e.code,
+              'code',
+              CitySearchErrorCode.database,
+            ),
+          ),
+        );
+      });
+    });
   });
 
   // ── LocationService ─────────────────────────────────────────────────────────
@@ -581,7 +652,7 @@ void main() {
     );
 
     test(
-      'detectCurrent → LocationFetchError on GPS hardware exception',
+      'detectCurrent → LocationFetchError(unknown) on GPS hardware exception',
       () async {
         GeolocatorPlatform.instance = _FakeGeolocatorPlatform(
           _GeoScenario.error,
@@ -591,9 +662,35 @@ void main() {
         final result = await const LocationService().detectCurrent();
         expect(result, isA<LocationFetchError>());
         final error = result as LocationFetchError;
-        expect(error.message, contains('GPS hardware failure'));
+        // AUD-sacred_time-03 (EH-5): a stable code, not a raw message. A
+        // plain Exception (not a TimeoutException) classifies as unknown.
+        expect(error.code, LocationErrorCode.unknown);
+        // debugDetail retains the raw text for logs only — never rendered.
+        expect(error.debugDetail, contains('GPS hardware failure'));
       },
     );
+
+    // AUD-sacred_time-03 (EH-5) — red-first regression: before the fix,
+    // LocationFetchError carried e.toString() verbatim (a raw, untranslated
+    // TimeoutException message) instead of a stable, localizable code. This
+    // asserts the 15s GPS timeLimit's TimeoutException classifies distinctly
+    // from a generic Exception.
+    test('detectCurrent → LocationFetchError(timeout) on GPS TimeoutException '
+        '(AUD-sacred_time-03 EH-5)', () async {
+      GeolocatorPlatform.instance = _FakeGeolocatorPlatform(
+        _GeoScenario.timeout,
+      );
+      GeocodingPlatform.instance = _FakeGeocodingPlatform();
+
+      final result = await const LocationService().detectCurrent();
+      expect(result, isA<LocationFetchError>());
+      final error = result as LocationFetchError;
+      expect(error.code, LocationErrorCode.timeout);
+      expect(
+        error.debugDetail,
+        contains('Time limit reached while waiting for position update'),
+      );
+    });
 
     // AUD-sacred_time-06 (EH-4): the outer `on Object catch (e)` at
     // location_service.dart:73 must not swallow programming errors
@@ -1006,7 +1103,10 @@ void main() {
       'detect → LocationFetchError returns result without updating state',
       () async {
         final fakeService = _FakeLocationService(
-          const LocationFetchError('timeout'),
+          const LocationFetchError(
+            LocationErrorCode.timeout,
+            debugDetail: 'timeout',
+          ),
         );
         final container = _makeContainer(locationService: fakeService);
         addTearDown(container.dispose);
@@ -1017,7 +1117,7 @@ void main() {
 
         expect(result, isA<LocationFetchError>());
         final error = result as LocationFetchError;
-        expect(error.message, 'timeout');
+        expect(error.code, LocationErrorCode.timeout);
         expect(container.read(sacredLocationProvider), isNull);
       },
     );

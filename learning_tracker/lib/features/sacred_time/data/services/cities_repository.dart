@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:learning_tracker/features/sacred_time/domain/models/city.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/city_search_exception.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
@@ -50,20 +51,22 @@ class CitiesRepository {
   Future<List<City>> searchByPrefix(String query, {int limit = 50}) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return const [];
-    final db = await _open();
-    final pattern = '${trimmed.toLowerCase()}%';
-    final rows = db.select(
-      '''
-      SELECT id, name, country_code, admin1, latitude, longitude, timezone,
-             population
-      FROM cities
-      WHERE ascii_lower LIKE ?
-      ORDER BY population DESC
-      LIMIT ?
-      ''',
-      [pattern, limit],
-    );
-    return rows.map(_rowToCity).toList(growable: false);
+    return _guarded(() async {
+      final db = await _open();
+      final pattern = '${trimmed.toLowerCase()}%';
+      final rows = db.select(
+        '''
+        SELECT id, name, country_code, admin1, latitude, longitude, timezone,
+               population
+        FROM cities
+        WHERE ascii_lower LIKE ?
+        ORDER BY population DESC
+        LIMIT ?
+        ''',
+        [pattern, limit],
+      );
+      return rows.map(_rowToCity).toList(growable: false);
+    });
   }
 
   /// Top N most populous cities for the given country (used as the empty-state
@@ -72,19 +75,37 @@ class CitiesRepository {
     String countryCode, {
     int limit = 50,
   }) async {
-    final db = await _open();
-    final rows = db.select(
-      '''
-      SELECT id, name, country_code, admin1, latitude, longitude, timezone,
-             population
-      FROM cities
-      WHERE country_code = ?
-      ORDER BY population DESC
-      LIMIT ?
-      ''',
-      [countryCode.toUpperCase(), limit],
-    );
-    return rows.map(_rowToCity).toList(growable: false);
+    return _guarded(() async {
+      final db = await _open();
+      final rows = db.select(
+        '''
+        SELECT id, name, country_code, admin1, latitude, longitude, timezone,
+               population
+        FROM cities
+        WHERE country_code = ?
+        ORDER BY population DESC
+        LIMIT ?
+        ''',
+        [countryCode.toUpperCase(), limit],
+      );
+      return rows.map(_rowToCity).toList(growable: false);
+    });
+  }
+
+  /// Runs [body], converting any raw I/O/SQLite [Exception] into a typed
+  /// [CitySearchException] instead of letting it reach callers (and from
+  /// there `citySearchProvider`'s `AsyncValue.error`) untyped (EH-2, EH-5).
+  /// Never catches [Error] subtypes (EH-4) — a programming bug must still
+  /// crash loudly with its stack trace.
+  Future<T> _guarded<T>(Future<T> Function() body) async {
+    try {
+      return await body();
+    } on Exception catch (e) {
+      throw CitySearchException(
+        CitySearchErrorCode.database,
+        debugDetail: e.toString(),
+      );
+    }
   }
 
   void dispose() {

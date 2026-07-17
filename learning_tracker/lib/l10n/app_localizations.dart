@@ -4407,11 +4407,17 @@ abstract class AppLocalizations {
   /// **'Failed to save. Please try again.'**
   String get errorSaveFailed;
 
-  /// No description provided for @errorSearchFailed.
+  /// AUD-sacred_time-03 (EH-5): shown when citySearchProvider's AsyncError carries a CitySearchException with CitySearchErrorCode.database — never the raw exception text.
   ///
   /// In en, this message translates to:
-  /// **'Search failed: {error}'**
-  String errorSearchFailed(String error);
+  /// **'We couldn\'t load the city list. Try reinstalling the app.'**
+  String get cityPickerSearchErrorDatabase;
+
+  /// AUD-sacred_time-03 (EH-5): shown when citySearchProvider's AsyncError carries CitySearchErrorCode.unknown (or any error not shaped as CitySearchException) — never the raw exception text.
+  ///
+  /// In en, this message translates to:
+  /// **'Search failed. Please try again.'**
+  String get cityPickerSearchErrorGeneric;
 
   /// No description provided for @errorSearchError.
   ///
@@ -4893,11 +4899,17 @@ abstract class AppLocalizations {
   /// **'Location services are turned off on this device.'**
   String get sacredTimeLocationServicesOff;
 
-  /// No description provided for @sacredTimeLocationDetectError.
+  /// AUD-sacred_time-03 (EH-5): shown when LocationFetchError carries LocationErrorCode.timeout — never the raw exception text.
   ///
   /// In en, this message translates to:
-  /// **'Could not detect location: {message}'**
-  String sacredTimeLocationDetectError(String message);
+  /// **'Could not detect location: the request timed out. Try again outdoors, or choose a city instead.'**
+  String get sacredTimeLocationDetectErrorTimeout;
+
+  /// AUD-sacred_time-03 (EH-5): shown when LocationFetchError carries LocationErrorCode.unknown — never the raw exception text.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not detect location. Try again, or choose a city instead.'**
+  String get sacredTimeLocationDetectErrorGeneric;
 
   /// No description provided for @newPasswordLabel.
   ///

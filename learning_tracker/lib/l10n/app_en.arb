@@ -1288,11 +1288,13 @@
   },
   "errorLoadingPoints": "Error loading points",
   "errorSaveFailed": "Failed to save. Please try again.",
-  "errorSearchFailed": "Search failed: {error}",
-  "@errorSearchFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+  "cityPickerSearchErrorDatabase": "We couldn't load the city list. Try reinstalling the app.",
+  "@cityPickerSearchErrorDatabase": {
+    "description": "AUD-sacred_time-03 (EH-5): shown when citySearchProvider's AsyncError carries a CitySearchException with CitySearchErrorCode.database — never the raw exception text."
+  },
+  "cityPickerSearchErrorGeneric": "Search failed. Please try again.",
+  "@cityPickerSearchErrorGeneric": {
+    "description": "AUD-sacred_time-03 (EH-5): shown when citySearchProvider's AsyncError carries CitySearchErrorCode.unknown (or any error not shaped as CitySearchException) — never the raw exception text."
   },
   "errorSearchError": "Search error: {error}",
   "@errorSearchError": {
@@ -1492,11 +1494,13 @@
   "sacredTimeLocationPermissionPermanentlyDenied": "Location permission permanently denied. Open system settings to allow.",
   "sacredTimeLocationPermissionDenied": "Location permission denied.",
   "sacredTimeLocationServicesOff": "Location services are turned off on this device.",
-  "sacredTimeLocationDetectError": "Could not detect location: {message}",
-  "@sacredTimeLocationDetectError": {
-    "placeholders": {
-      "message": { "type": "String" }
-    }
+  "sacredTimeLocationDetectErrorTimeout": "Could not detect location: the request timed out. Try again outdoors, or choose a city instead.",
+  "@sacredTimeLocationDetectErrorTimeout": {
+    "description": "AUD-sacred_time-03 (EH-5): shown when LocationFetchError carries LocationErrorCode.timeout — never the raw exception text."
+  },
+  "sacredTimeLocationDetectErrorGeneric": "Could not detect location. Try again, or choose a city instead.",
+  "@sacredTimeLocationDetectErrorGeneric": {
+    "description": "AUD-sacred_time-03 (EH-5): shown when LocationFetchError carries LocationErrorCode.unknown — never the raw exception text."
   },
   "newPasswordLabel": "New Password",
   "confirmNewPasswordLabel": "Confirm New Password",

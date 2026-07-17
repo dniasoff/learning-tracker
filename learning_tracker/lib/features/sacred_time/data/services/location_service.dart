@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:geocoding/geocoding.dart' as geo;
 import 'package:geolocator/geolocator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 
 /// Outcome of a permission/location request.
@@ -23,8 +26,16 @@ class LocationFetchServiceDisabled extends LocationFetchResult {
 }
 
 class LocationFetchError extends LocationFetchResult {
-  const LocationFetchError(this.message);
-  final String message;
+  const LocationFetchError(this.code, {this.debugDetail});
+
+  /// Stable, localizable failure category (EH-5). Presentation resolves the
+  /// user-facing string through `AppLocalizations`/ARB, keyed on this code —
+  /// never on [debugDetail].
+  final LocationErrorCode code;
+
+  /// Raw exception text, retained for logs/diagnostics only (e.g.
+  /// `AppLogger`). Must never be rendered to the user.
+  final String? debugDetail;
 }
 
 /// Wraps geolocator + geocoding so the rest of the feature can be unit-tested
@@ -71,7 +82,16 @@ class LocationService {
         ),
       );
     } on Exception catch (e) {
-      return LocationFetchError(e.toString());
+      // AUD-sacred_time-03 (EH-5): classify into a stable code — never a
+      // pre-formatted human message. The 15s timeLimit above makes
+      // TimeoutException the common indoor/poor-signal case; anything else
+      // falls back to unknown. debugDetail is retained for logs only — it
+      // must never be rendered to the user.
+      final code = switch (e) {
+        TimeoutException() => LocationErrorCode.timeout,
+        _ => LocationErrorCode.unknown,
+      };
+      return LocationFetchError(code, debugDetail: e.toString());
     }
   }
 

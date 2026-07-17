@@ -29,6 +29,7 @@ import 'package:learning_tracker/features/notifications/domain/services/notifica
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/permission_prompt_screen.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:mocktail/mocktail.dart';
@@ -552,7 +553,7 @@ void main() {
       tester,
     ) async {
       final locationNotif = _locationNotifier(
-        const LocationFetchError('timeout'),
+        const LocationFetchError(LocationErrorCode.timeout),
       );
 
       await tester.pumpWidget(
