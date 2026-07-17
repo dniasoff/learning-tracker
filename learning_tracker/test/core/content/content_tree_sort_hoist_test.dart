@@ -49,26 +49,65 @@ class _AccessCounter {
 /// A [ContentItem] whose `sortOrder` getter reports every access to an
 /// [_AccessCounter] before delegating to the real field. Constructed only
 /// by tests, via ContentTree's public `fromCurricula` API — production code
-/// is unaware of this subclass and unmodified by it.
-class _CountingContentItem extends ContentItem {
+/// is unaware of this class and unmodified by it.
+///
+/// Implements (rather than extends) [ContentItem]: since AUD-core-network-01
+/// made ContentItem `@freezed` (factory-constructors only, no generative
+/// constructor to `super(...)` into), `extends` is no longer possible —
+/// `implements` needs no super-constructor call, so it still works and
+/// preserves the exact same observation technique (instrumenting the one
+/// getter the sort comparator reads) with zero change to what's asserted.
+class _CountingContentItem implements ContentItem {
   _CountingContentItem({
-    required super.curriculumId,
-    required super.level1,
-    required super.displayNameHe,
-    required super.displayNameEn,
-    required super.sefariaRef,
-    required super.sortOrder,
-    required super.isLeaf,
+    required String curriculumId,
+    required String level1,
+    required String displayNameHe,
+    required String displayNameEn,
+    required String sefariaRef,
+    required int sortOrder,
+    required bool isLeaf,
     required _AccessCounter counter,
-  }) : _counter = counter;
+  }) : _inner = ContentItem(
+         curriculumId: curriculumId,
+         level1: level1,
+         displayNameHe: displayNameHe,
+         displayNameEn: displayNameEn,
+         sefariaRef: sefariaRef,
+         sortOrder: sortOrder,
+         isLeaf: isLeaf,
+       ),
+       _counter = counter;
 
+  final ContentItem _inner;
   final _AccessCounter _counter;
 
   @override
   int get sortOrder {
     _counter.value++;
-    return super.sortOrder;
+    return _inner.sortOrder;
   }
+
+  @override
+  String get curriculumId => _inner.curriculumId;
+  @override
+  String get level1 => _inner.level1;
+  @override
+  String? get level2 => _inner.level2;
+  @override
+  String? get level3 => _inner.level3;
+  @override
+  String? get level4 => _inner.level4;
+  @override
+  String get displayNameHe => _inner.displayNameHe;
+  @override
+  String get displayNameEn => _inner.displayNameEn;
+  @override
+  String get sefariaRef => _inner.sefariaRef;
+  @override
+  bool get isLeaf => _inner.isLeaf;
+
+  @override
+  $ContentItemCopyWith<ContentItem> get copyWith => _inner.copyWith;
 }
 
 /// Builds [count] top-level leaves (level1 only, so they all land under the
