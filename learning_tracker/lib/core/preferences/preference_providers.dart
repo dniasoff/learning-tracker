@@ -64,9 +64,18 @@ void _bindObserver<T>(
   int profileId,
   void Function(T value) onValue,
 ) {
-  final sub = pref.observe(profileId).listen(onValue);
+  // SM-4: guard the post-await state write. `pref.read(...)` awaits
+  // SharedPreferences.getInstance() internally; if the container/ref is
+  // disposed while that read is still in flight, the `.then` continuation
+  // must no-op instead of touching `state` on an unmounted Ref.
+  void guardedOnValue(T value) {
+    if (!ref.mounted) return;
+    onValue(value);
+  }
+
+  final sub = pref.observe(profileId).listen(guardedOnValue);
   ref.onDispose(sub.cancel);
-  pref.read(profileId).then(onValue);
+  pref.read(profileId).then(guardedOnValue);
 }
 
 /// Shared IL-1 sentinel guard for keepAlive preference notifiers whose
