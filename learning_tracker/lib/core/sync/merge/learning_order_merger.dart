@@ -9,6 +9,7 @@
 /// `updated_at` via [MergeStore.persistUpdatedAt].
 library;
 
+import 'package:learning_tracker/core/ids/natural_key.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/learning_order_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -42,7 +43,12 @@ class LearningOrderMerger implements EntityMerger {
         final remoteUpdatedAt = decoded.updatedAt;
         if (remoteUpdatedAt == null) continue;
 
-        final naturalKey = '${decoded.curriculumId}|${decoded.sefariaRef}';
+        // AUD-core-ids-01: route through NaturalKey.forLearningOrder instead
+        // of hand-rolling the `|`-separated shape.
+        final naturalKey = NaturalKey.forLearningOrder(
+          curriculumId: decoded.curriculumId,
+          sefariaRef: decoded.sefariaRef,
+        ).value;
         final localUpdatedAt = await _store.currentUpdatedAt(
           kind: kind,
           profileId: profileId,

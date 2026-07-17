@@ -13,6 +13,7 @@
 /// `updated_at` via [MergeStore.persistUpdatedAt].
 library;
 
+import 'package:learning_tracker/core/ids/natural_key.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/stage_definition_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -53,8 +54,13 @@ class StageDefinitionMerger implements EntityMerger {
         final remoteUpdatedAt = decoded.updatedAt;
         if (remoteUpdatedAt == null) continue;
 
-        final naturalKey =
-            '${decoded.curriculumId}|${decoded.trackId}|${decoded.stageOrder}';
+        // AUD-core-ids-01: route through NaturalKey.forStageDefinition
+        // instead of hand-rolling the `|`-separated shape.
+        final naturalKey = NaturalKey.forStageDefinition(
+          curriculumId: decoded.curriculumId,
+          trackId: decoded.trackId,
+          stageOrder: decoded.stageOrder,
+        ).value;
         final localUpdatedAt = await _store.currentUpdatedAt(
           kind: kind,
           profileId: profileId,
