@@ -259,11 +259,17 @@ class DomainTermLabels {
     if (key == HebrewTerms.stageLearnEn) return 'Limud';
     // PP-5: normalise "Review N" → "Chazara N" (numbered chazara aliases).
     if (key == 'Review') return HebrewTerms.stageChazaraPrefixEn; // 'Chazara'
-    final reviewNumbered = RegExp(r'^Review (\d+)$');
-    final m = reviewNumbered.firstMatch(key);
+    final m = _reviewNumbered.firstMatch(key);
     if (m != null) return '${HebrewTerms.stageChazaraPrefixEn} ${m.group(1)}';
     return key;
   }
+
+  // AUD-core-labels-04: hoisted out of _normaliseEnglishStageName so the
+  // pattern is compiled once rather than on every call (this method runs
+  // once per StageBreakdownEntry.stageName in list rendering — see
+  // resolveStoredStageName's doc comment). Mirrors curriculum_label.dart's
+  // `static final RegExp _hebrew` pattern.
+  static final RegExp _reviewNumbered = RegExp(r'^Review (\d+)$');
 
   // Program-label resolution (per-LearningProgramData / per-CalendarProgramEntry)
   // lives in `features/scheduler/domain/labels/program_label_resolver.dart`.
