@@ -97,40 +97,6 @@ void main() {
       // Should contain Hebrew characters
       expect(formatted, contains(RegExp(r'[\u0590-\u05FF]')));
     });
-
-    test('formatHebrewDate with useEnglish=false uses Hebrew', () {
-      final jewishDate = JewishDate.initDate(
-        jewishYear: 5786,
-        jewishMonth: JewishDate.TEVES,
-        jewishDayOfMonth: 11,
-      );
-
-      final formatted = HebrewCalendarUtils.formatHebrewDate(
-        jewishDate,
-        useEnglish: false,
-      );
-
-      // Should contain Hebrew characters
-      expect(formatted, contains(RegExp(r'[\u0590-\u05FF]')));
-    });
-
-    test('formatHebrewDate with useEnglish=true uses transliteration', () {
-      final jewishDate = JewishDate.initDate(
-        jewishYear: 5786,
-        jewishMonth: JewishDate.TEVES,
-        jewishDayOfMonth: 11,
-      );
-
-      final formatted = HebrewCalendarUtils.formatHebrewDate(
-        jewishDate,
-        useEnglish: true,
-      );
-
-      // Should not be empty
-      expect(formatted, isNotEmpty);
-      // English format typically contains month name
-      expect(formatted.toLowerCase(), contains('teves'));
-    });
   });
 
   group('HebrewCalendarUtils - Hebrew Leap Year', () {
@@ -171,88 +137,6 @@ void main() {
       expect(hebrewDate2.getJewishYear(), 5784);
       expect(hebrewDate1.getJewishMonth(), JewishDate.ADAR);
       expect(hebrewDate2.getJewishMonth(), JewishDate.ADAR_II);
-    });
-  });
-
-  group('HebrewCalendarUtils - Shabbos Detection', () {
-    test('returns true for Saturday', () {
-      // Feb 8, 2026 is a Sunday, so Feb 7 is Saturday
-      final saturday = DateTime.utc(2026, 2, 7);
-      expect(saturday.weekday, DateTime.saturday);
-      expect(HebrewCalendarUtils.isShabbos(saturday), isTrue);
-    });
-
-    test('returns true for Friday evening (at or after 18:00)', () {
-      // Feb 6, 2026 is a Friday — Shabbat begins at sunset (~18:00)
-      final fridayEvening = DateTime(2026, 2, 6, 18, 0);
-      expect(fridayEvening.weekday, DateTime.friday);
-      expect(HebrewCalendarUtils.isShabbos(fridayEvening), isTrue);
-
-      final fridayNight = DateTime(2026, 2, 6, 21, 30);
-      expect(HebrewCalendarUtils.isShabbos(fridayNight), isTrue);
-    });
-
-    test('returns false for Friday before 18:00', () {
-      // Friday afternoon is not yet Shabbat
-      final fridayAfternoon = DateTime(2026, 2, 6, 17, 59);
-      expect(fridayAfternoon.weekday, DateTime.friday);
-      expect(HebrewCalendarUtils.isShabbos(fridayAfternoon), isFalse);
-    });
-
-    test('returns false for weekdays (not Friday evening)', () {
-      final weekdays = [
-        DateTime.utc(2026, 2, 8), // Sunday
-        DateTime.utc(2026, 2, 9), // Monday
-        DateTime.utc(2026, 2, 10), // Tuesday
-        DateTime.utc(2026, 2, 11), // Wednesday
-        DateTime.utc(2026, 2, 12), // Thursday
-        DateTime(2026, 2, 13, 12, 0), // Friday midday (not yet sunset)
-      ];
-
-      for (final date in weekdays) {
-        expect(HebrewCalendarUtils.isShabbos(date), isFalse, reason: '$date');
-      }
-    });
-
-    test('returns true for known Shabbos dates', () {
-      // Feb 14, 2026 is a Saturday
-      final shabbos = DateTime.utc(2026, 2, 14);
-      expect(shabbos.weekday, DateTime.saturday);
-      expect(HebrewCalendarUtils.isShabbos(shabbos), isTrue);
-    });
-  });
-
-  group('HebrewCalendarUtils - Yom Tov Detection', () {
-    test('returns true for Rosh Hashana', () {
-      // Rosh Hashana 5786: Sep 23-24, 2025
-      final roshHashana1 = DateTime.utc(2025, 9, 23);
-      final roshHashana2 = DateTime.utc(2025, 9, 24);
-
-      expect(HebrewCalendarUtils.isYomTov(roshHashana1), isTrue);
-      expect(HebrewCalendarUtils.isYomTov(roshHashana2), isTrue);
-    });
-
-    test('returns true for Yom Kippur', () {
-      // Yom Kippur 5786: Oct 2, 2025
-      final yomKippur = DateTime.utc(2025, 10, 2);
-      expect(HebrewCalendarUtils.isYomTov(yomKippur), isTrue);
-    });
-
-    test('returns true for Pesach', () {
-      // Pesach 5786: Apr 1-8, 2026
-      final pesach = DateTime.utc(2026, 4, 1);
-      expect(HebrewCalendarUtils.isYomTov(pesach), isTrue);
-    });
-
-    test('returns true for Sukkos', () {
-      // Sukkos 5787: Sep 25 - Oct 2, 2026
-      final sukkos = DateTime.utc(2026, 9, 25);
-      expect(HebrewCalendarUtils.isYomTov(sukkos), isTrue);
-    });
-
-    test('returns false for regular weekdays', () {
-      final regularDay = DateTime.utc(2026, 2, 9);
-      expect(HebrewCalendarUtils.isYomTov(regularDay), isFalse);
     });
   });
 

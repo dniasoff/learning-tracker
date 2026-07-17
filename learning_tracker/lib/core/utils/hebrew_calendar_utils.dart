@@ -73,29 +73,6 @@ class HebrewCalendarUtils {
     return jewishDate.getGregorianCalendar().toUtc();
   }
 
-  /// Checks if a given Gregorian date is Shabbos (Friday sunset to Saturday nightfall).
-  /// Returns true if the date falls on Saturday, or on Friday at or after 18:00
-  /// (approximate sunset).
-  ///
-  /// Note: 18:00 local time is used as an approximate sunset time.
-  /// For precise zmanim (sunset/nightfall), use ComplexZmanimCalendar with a GeoLocation.
-  static bool isShabbos(DateTime gregorianDate) {
-    if (gregorianDate.weekday == DateTime.saturday) return true;
-    // Friday evening approximation: 18:00 local time as sunset
-    if (gregorianDate.weekday == DateTime.friday && gregorianDate.hour >= 18) {
-      return true;
-    }
-    return false;
-  }
-
-  /// Checks if a given Gregorian date is a Yom Tov (Jewish holiday).
-  /// Returns true for major holidays: Rosh Hashana, Yom Kippur, Pesach,
-  /// Shavuos, Sukkos, and Simchas Torah.
-  static bool isYomTov(DateTime gregorianDate) {
-    final jewishCalendar = JewishCalendar.fromDateTime(gregorianDate);
-    return jewishCalendar.isYomTov();
-  }
-
   /// Checks if a given Hebrew year is a leap year (has Adar I and Adar II).
   /// In leap years, month 12 is Adar I and month 13 is Adar II.
   static bool isHebrewLeapYear(int hebrewYear) {
@@ -105,19 +82,6 @@ class HebrewCalendarUtils {
       jewishDayOfMonth: 1,
     );
     return jewishDate.isJewishLeapYear();
-  }
-
-  /// Formats a Hebrew date with custom formatting options.
-  /// By default returns Hebrew format like "י״ב טבת תשפ״ו".
-  ///
-  /// Set [useEnglish] to true for transliterated format like "11 Teves 5786".
-  static String formatHebrewDate(
-    JewishDate jewishDate, {
-    bool useEnglish = false,
-  }) {
-    final formatter = HebrewDateFormatter();
-    formatter.hebrewFormat = !useEnglish;
-    return formatter.format(jewishDate);
   }
 
   /// Returns the Hebrew month name for display.
