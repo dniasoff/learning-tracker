@@ -40,7 +40,7 @@ List<ContentItem> groupItemsByNextLevel({
   final uniqueItems = <String, ContentItem>{};
 
   for (final item in items) {
-    final rawValue = _levelValueAt(item, effectiveDepth);
+    final rawValue = levelValueAt(item, nextLevel);
     if (rawValue == null || uniqueItems.containsKey(rawValue)) continue;
 
     final renderedHe = CurriculumLabelRenderer.renderValue(
@@ -79,15 +79,6 @@ List<ContentItem> groupItemsByNextLevel({
   return uniqueItems.values.toList()
     ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 }
-
-/// Returns the raw level value for [item] at the given 0-indexed [depth].
-String? _levelValueAt(ContentItem item, int depth) => switch (depth) {
-  0 => item.level1,
-  1 => item.level2,
-  2 => item.level3,
-  3 => item.level4,
-  _ => null,
-};
 
 /// Returns the raw level value for [item] at the given 1-indexed [level].
 String? levelValueAt(ContentItem item, int level) => switch (level) {
