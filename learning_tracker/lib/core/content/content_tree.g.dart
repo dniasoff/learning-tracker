@@ -59,4 +59,4 @@ final class ContentTreeProvider
   }
 }
 
-String _$contentTreeHash() => r'b8727cc556d8f5d40f0dae125dcb5e46ddaaf034';
+String _$contentTreeHash() => r'58018b4f3fb68cbe3888edcb42d072d24e28bc77';

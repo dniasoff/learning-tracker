@@ -17,6 +17,7 @@ part of 'active_profile_provider.dart';
 ///
 /// `keepAlive` ensures the state survives route changes.
 /// Default value 0 represents the legacy/default profile.
+// keepAlive: read from many screens across navigation, must survive route/widget-tree changes.
 
 @ProviderFor(ActiveProfileId)
 final activeProfileIdProvider = ActiveProfileIdProvider._();
@@ -30,6 +31,7 @@ final activeProfileIdProvider = ActiveProfileIdProvider._();
 ///
 /// `keepAlive` ensures the state survives route changes.
 /// Default value 0 represents the legacy/default profile.
+// keepAlive: read from many screens across navigation, must survive route/widget-tree changes.
 final class ActiveProfileIdProvider
     extends $NotifierProvider<ActiveProfileId, int> {
   /// Holds the active profile ID for the current session.
@@ -41,6 +43,7 @@ final class ActiveProfileIdProvider
   ///
   /// `keepAlive` ensures the state survives route changes.
   /// Default value 0 represents the legacy/default profile.
+  // keepAlive: read from many screens across navigation, must survive route/widget-tree changes.
   ActiveProfileIdProvider._()
     : super(
         from: null,
@@ -79,6 +82,7 @@ String _$activeProfileIdHash() => r'49a4f4b10a5f18e4a94fc8ad925448de982f8c66';
 ///
 /// `keepAlive` ensures the state survives route changes.
 /// Default value 0 represents the legacy/default profile.
+// keepAlive: read from many screens across navigation, must survive route/widget-tree changes.
 
 abstract class _$ActiveProfileId extends $Notifier<int> {
   int build();

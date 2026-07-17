@@ -498,7 +498,7 @@ final class CurriculumPaceStatusProvider
 }
 
 String _$curriculumPaceStatusHash() =>
-    r'38f20fb74b10fd79d05aa4fc06fa6047c76ebe71';
+    r'e7d2254b68c7bcad07a7128818c9bea2c4096e69';
 
 /// Pace status for a curriculum (null if no goal exists).
 ///

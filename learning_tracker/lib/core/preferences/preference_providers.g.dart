@@ -10,12 +10,14 @@ part of 'preference_providers.dart';
 // ignore_for_file: type=lint, type=warning
 /// Long-lived singleton holding the [HebrewTermsPreference] object. Riverpod
 /// keeps it alive so the underlying broadcast stream survives route changes.
+// keepAlive: profile-scoped store; lives for the app session.
 
 @ProviderFor(hebrewTermsPreference)
 final hebrewTermsPreferenceProvider = HebrewTermsPreferenceProvider._();
 
 /// Long-lived singleton holding the [HebrewTermsPreference] object. Riverpod
 /// keeps it alive so the underlying broadcast stream survives route changes.
+// keepAlive: profile-scoped store; lives for the app session.
 
 final class HebrewTermsPreferenceProvider
     extends
@@ -27,6 +29,7 @@ final class HebrewTermsPreferenceProvider
     with $Provider<HebrewTermsPreference> {
   /// Long-lived singleton holding the [HebrewTermsPreference] object. Riverpod
   /// keeps it alive so the underlying broadcast stream survives route changes.
+  // keepAlive: profile-scoped store; lives for the app session.
   HebrewTermsPreferenceProvider._()
     : super(
         from: null,
@@ -256,6 +259,7 @@ String _$textDisplayPreferenceHash() =>
 /// Whether to render Jewish learning terms in Hebrew script for the active
 /// profile. This is the **only** `core/` entry point for the toggle —
 /// `core/labels/` reads here, never via `features/settings/`.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
 
 @ProviderFor(UseHebrewTerms)
 final useHebrewTermsProvider = UseHebrewTermsProvider._();
@@ -263,11 +267,13 @@ final useHebrewTermsProvider = UseHebrewTermsProvider._();
 /// Whether to render Jewish learning terms in Hebrew script for the active
 /// profile. This is the **only** `core/` entry point for the toggle —
 /// `core/labels/` reads here, never via `features/settings/`.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
 final class UseHebrewTermsProvider
     extends $NotifierProvider<UseHebrewTerms, bool> {
   /// Whether to render Jewish learning terms in Hebrew script for the active
   /// profile. This is the **only** `core/` entry point for the toggle —
   /// `core/labels/` reads here, never via `features/settings/`.
+  // keepAlive: mirrors a persisted preference; must survive widget unmounts.
   UseHebrewTermsProvider._()
     : super(
         from: null,
@@ -295,11 +301,12 @@ final class UseHebrewTermsProvider
   }
 }
 
-String _$useHebrewTermsHash() => r'f195c98e66067bf6e06aa6938500d0d87ab9ff69';
+String _$useHebrewTermsHash() => r'610da147b2765c18b0076a8bda948ea81f49609c';
 
 /// Whether to render Jewish learning terms in Hebrew script for the active
 /// profile. This is the **only** `core/` entry point for the toggle —
 /// `core/labels/` reads here, never via `features/settings/`.
+// keepAlive: mirrors a persisted preference; must survive widget unmounts.
 
 abstract class _$UseHebrewTerms extends $Notifier<bool> {
   bool build();
@@ -351,7 +358,7 @@ final class UseHebrewDateProvider
   }
 }
 
-String _$useHebrewDateHash() => r'0cd87792b3a8d9680b749ccc28e7134b83f630b5';
+String _$useHebrewDateHash() => r'fe75bc26ace42d9b911709b1345f0387b06871c0';
 
 abstract class _$UseHebrewDate extends $Notifier<bool> {
   bool build();
@@ -403,7 +410,7 @@ final class ShowNikudPrefProvider
   }
 }
 
-String _$showNikudPrefHash() => r'e33780ebd7271b03865f716402234fd4c6a3030c';
+String _$showNikudPrefHash() => r'eb9e053fa3a9aaa79b261325cc829f69dd698cf2';
 
 abstract class _$ShowNikudPref extends $Notifier<bool> {
   bool build();
@@ -428,6 +435,7 @@ abstract class _$ShowNikudPref extends $Notifier<bool> {
 /// providers to localize background text where no BuildContext is available;
 /// invalidated on a runtime device-locale change by
 /// `LearningTrackerApp.didChangeLocales`.
+// keepAlive: read by background notification code with no widget listener.
 
 @ProviderFor(currentAppLocale)
 final currentAppLocaleProvider = CurrentAppLocaleProvider._();
@@ -437,6 +445,7 @@ final currentAppLocaleProvider = CurrentAppLocaleProvider._();
 /// providers to localize background text where no BuildContext is available;
 /// invalidated on a runtime device-locale change by
 /// `LearningTrackerApp.didChangeLocales`.
+// keepAlive: read by background notification code with no widget listener.
 
 final class CurrentAppLocaleProvider
     extends $FunctionalProvider<Locale, Locale, Locale>
@@ -446,6 +455,7 @@ final class CurrentAppLocaleProvider
   /// providers to localize background text where no BuildContext is available;
   /// invalidated on a runtime device-locale change by
   /// `LearningTrackerApp.didChangeLocales`.
+  // keepAlive: read by background notification code with no widget listener.
   CurrentAppLocaleProvider._()
     : super(
         from: null,
@@ -593,7 +603,7 @@ final class CurrentTransliterationVariantProvider
 }
 
 String _$currentTransliterationVariantHash() =>
-    r'75105f12591aeebefccb7fdec59f66cfc3faf02e';
+    r'3832e1b2f28d4895649b24a616a29476d8055dee';
 
 abstract class _$CurrentTransliterationVariant
     extends $Notifier<TransliterationVariant> {
@@ -647,7 +657,7 @@ final class CurrentFontSizeProvider
   }
 }
 
-String _$currentFontSizeHash() => r'23a78efcac238b0c7a754b41e5acd5c42544dd49';
+String _$currentFontSizeHash() => r'df2d40b56f5e0cd7d6be8da8964fc5b17b0ae7dc';
 
 abstract class _$CurrentFontSize extends $Notifier<FontSize> {
   FontSize build();
