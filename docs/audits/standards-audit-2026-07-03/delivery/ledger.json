@@ -2044,13 +2044,23 @@
   {
    "id": "AUD-scheduler-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Add regression tests for GoalRepositoryImpl's not-found and delete-sync payload paths",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "8b3ab436e261d1b883113087769ddf4fc89b3c49"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-scheduler-04 AC1 OK: my compiling mutant impl.dart:93 ArgumentError->StateError killed the test (exit 1, test:173); revert -> green.",
+    "AUD-scheduler-04 AC1 OK: builder's red was only a compile-fail (degenerate), but my compiling mutant proves the assertion discriminates, so AC met substantively.",
+    "AUD-scheduler-04 AC1 OK: un-awaited expect(()=>future, throwsA) at test:167-176 does fire (AsyncMatcher outstanding-callback) - proven by killed mutant, not assumed.",
+    "AUD-scheduler-04 AC2 OK rename: impl.dart:252 'firestore_id'->'firestoreId' -> delete-payload test FAILED exit 1 at test:421, matching builder's claimed red.",
+    "AUD-scheduler-04 AC2 OK drop: deleted impl.dart:253 'curriculum_id' -> delete-payload test FAILED exit 1. Both rename AND drop caught, as AC2 requires.",
+    "AUD-scheduler-04 AC2 OK mirrors R4-6: new test:404-434 matches existing createGoal payload test:354-380 shape, fresh syncFacade per test (setUp test:343-352).",
+    "AUD-scheduler-04 recorder OK: no-op deleteGoal stub replaced by deletePayloads recorder (test:15, 23-25), per the finding's recommendation."
+   ],
+   "notes": "Verified unchanged since 4018a91c: updateGoal's ArgumentError branch and _syncDeleteGoal's payload were uncovered. Added recorder + 2 tests. Red-first: broke null-check (compile fail) and renamed firestore_id->firestoreId (Actual: <null>), reverted byte-identical to HEAD; both pass clean (16/16)."
   },
   {
    "id": "AUD-t-settings-04",
