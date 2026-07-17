@@ -238,7 +238,11 @@ class HierarchySelectionPanelState
                       Icon(
                         breadcrumbSeparatorIcon(Directionality.of(context)),
                         size: 16,
-                        color: Colors.grey,
+                        // AUD-content_browsing-08: use the theme separator
+                        // color (matches breadcrumb_navigation.dart's chevron)
+                        // instead of a raw Colors.grey literal so this
+                        // repaints on a future theme/brand change.
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                       Builder(
                         builder: (context) {
