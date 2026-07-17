@@ -1065,7 +1065,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    | grep -vE '^\s*//' | grep -nE "\.toString\(\)|\.message"; \
 	  FAIL=1; \
 	fi; \
-	echo "76/76 — SM-6: every @Riverpod(keepAlive: true) in lib/core/preferences/preference_providers.dart carries an inline // keepAlive: justification comment within 2 lines above (diff-scoped to this file per AUD-core-preferences-05)"; \
+	echo "76/77 — SM-6: every @Riverpod(keepAlive: true) in lib/core/preferences/preference_providers.dart carries an inline // keepAlive: justification comment within 2 lines above (diff-scoped to this file per AUD-core-preferences-05)"; \
 	if awk '/@Riverpod\(keepAlive: true\)/ && prev1 !~ /\/\/[ \t]*keepAlive:/ && prev2 !~ /\/\/[ \t]*keepAlive:/ { print NR": "$$0 } { prev2 = prev1; prev1 = $$0 }' \
 	    lib/core/preferences/preference_providers.dart | grep -q .; then \
 	  echo "  @Riverpod(keepAlive: true) missing an inline // keepAlive: <reason> justification comment"; \
@@ -1074,6 +1074,16 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	    lib/core/preferences/preference_providers.dart; \
 	  FAIL=1; \
 	fi; \
+	echo "77/77 — SM-6: every @Riverpod(keepAlive: true) under lib/features/content_browsing/presentation/providers/ carries an inline // keepAlive: justification comment within 2 lines above (AUD-content_browsing-07; cloud_content_providers.dart is out of scope — deleted as dead code by AUD-content_browsing-06)"; \
+	for f in lib/features/content_browsing/presentation/providers/content_providers.dart \
+	         lib/features/content_browsing/presentation/providers/text_display_providers.dart; do \
+	  if awk '/@Riverpod\(keepAlive: true\)/ { if (prev1 !~ /\/\/[ \t]*keepAlive:/ && prev2 !~ /\/\/[ \t]*keepAlive:/) print FILENAME":"NR": "$$0 } { prev2 = prev1; prev1 = $$0 }' "$$f" | grep -q .; then \
+	    echo "  $$f: @Riverpod(keepAlive: true) missing an inline // keepAlive: <reason> justification"; \
+	    echo "  comment within 2 lines above (SM-6, docs/coding-standards.md:167, AUD-content_browsing-07):"; \
+	    awk '/@Riverpod\(keepAlive: true\)/ { if (prev1 !~ /\/\/[ \t]*keepAlive:/ && prev2 !~ /\/\/[ \t]*keepAlive:/) print FILENAME":"NR": "$$0 } { prev2 = prev1; prev1 = $$0 }' "$$f"; \
+	    FAIL=1; \
+	  fi; \
+	done; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \

@@ -13,6 +13,7 @@ part of 'content_providers.dart';
 /// keepAlive: true ensures the in-memory content cache persists for the
 /// lifetime of the app — rebuilding this provider would discard cached data.
 /// Loads hierarchy content from bundled assets.
+// keepAlive: singleton in-memory content cache must survive rebuilds for the app's lifetime.
 
 @ProviderFor(contentRepository)
 final contentRepositoryProvider = ContentRepositoryProvider._();
@@ -22,6 +23,7 @@ final contentRepositoryProvider = ContentRepositoryProvider._();
 /// keepAlive: true ensures the in-memory content cache persists for the
 /// lifetime of the app — rebuilding this provider would discard cached data.
 /// Loads hierarchy content from bundled assets.
+// keepAlive: singleton in-memory content cache must survive rebuilds for the app's lifetime.
 
 final class ContentRepositoryProvider
     extends
@@ -36,6 +38,7 @@ final class ContentRepositoryProvider
   /// keepAlive: true ensures the in-memory content cache persists for the
   /// lifetime of the app — rebuilding this provider would discard cached data.
   /// Loads hierarchy content from bundled assets.
+  // keepAlive: singleton in-memory content cache must survive rebuilds for the app's lifetime.
   ContentRepositoryProvider._()
     : super(
         from: null,
@@ -163,6 +166,7 @@ final class CurriculumContentFamily extends $Family
 /// Lets widgets that have a Sefaria ref (daily-task cards, completion
 /// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
 /// without having to plumb the Hebrew name through the model layer.
+// keepAlive: built from a full-curriculum scan; must survive last-listener-disappear so repeat lookups stay cheap.
 
 @ProviderFor(curriculumHeNames)
 final curriculumHeNamesProvider = CurriculumHeNamesFamily._();
@@ -172,6 +176,7 @@ final curriculumHeNamesProvider = CurriculumHeNamesFamily._();
 /// Lets widgets that have a Sefaria ref (daily-task cards, completion
 /// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
 /// without having to plumb the Hebrew name through the model layer.
+// keepAlive: built from a full-curriculum scan; must survive last-listener-disappear so repeat lookups stay cheap.
 
 final class CurriculumHeNamesProvider
     extends
@@ -188,6 +193,7 @@ final class CurriculumHeNamesProvider
   /// Lets widgets that have a Sefaria ref (daily-task cards, completion
   /// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
   /// without having to plumb the Hebrew name through the model layer.
+  // keepAlive: built from a full-curriculum scan; must survive last-listener-disappear so repeat lookups stay cheap.
   CurriculumHeNamesProvider._({
     required CurriculumHeNamesFamily super.from,
     required CurriculumId super.argument,
@@ -239,6 +245,7 @@ String _$curriculumHeNamesHash() => r'33bd58d7620e0125654dcbfe883676f9b8503958';
 /// Lets widgets that have a Sefaria ref (daily-task cards, completion
 /// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
 /// without having to plumb the Hebrew name through the model layer.
+// keepAlive: built from a full-curriculum scan; must survive last-listener-disappear so repeat lookups stay cheap.
 
 final class CurriculumHeNamesFamily extends $Family
     with
@@ -257,6 +264,7 @@ final class CurriculumHeNamesFamily extends $Family
   /// Lets widgets that have a Sefaria ref (daily-task cards, completion
   /// history, etc.) show the canonical Hebrew form when Hebrew Terms is on,
   /// without having to plumb the Hebrew name through the model layer.
+  // keepAlive: built from a full-curriculum scan; must survive last-listener-disappear so repeat lookups stay cheap.
 
   CurriculumHeNamesProvider call(CurriculumId curriculumId) =>
       CurriculumHeNamesProvider._(argument: curriculumId, from: this);
