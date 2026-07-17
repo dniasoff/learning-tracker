@@ -2168,13 +2168,13 @@
   {
    "id": "AUD-profiles-11",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P2",
    "title": "Widen PinFlowController's catch scopes and add a finally so busy never sticks true on an untyped PinService exception",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c8, 2026-07-17). review agent lost (quota); no review completed for this item in this run, no code change produced, no mergeable diff. Prior status was 'parked' (roadmap section-4 uncited - parked per PO-approved scope 2026-07-03) — carried here for record; re-review required to resolve."
   },
   {
    "id": "AUD-account-12",
