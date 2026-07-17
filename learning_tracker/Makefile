@@ -1017,6 +1017,16 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	  grep -rn "import 'package:learning_tracker/app/" lib/core/ --include="*.dart"; \
 	  FAIL=1; \
 	fi; \
+	echo "71/71 — PF-3: no RegExp( compiled inside a lib/core/labels/ method body — hoist to a static final field (AUD-core-labels-04)"; \
+	if grep -rn "RegExp(" lib/core/labels/ --include="*.dart" \
+	    | grep -v "static final RegExp" | grep -v "static const RegExp" | grep -q .; then \
+	  echo "  RegExp(...) compiled inside a method body under lib/core/labels/ — hoist to a private"; \
+	  echo "  'static final RegExp' class field (mirrors curriculum_label.dart's _hebrew pattern) to"; \
+	  echo "  avoid reallocating the pattern on every call (PF-3, AUD-core-labels-04):"; \
+	  grep -rn "RegExp(" lib/core/labels/ --include="*.dart" \
+	    | grep -v "static final RegExp" | grep -v "static const RegExp"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
