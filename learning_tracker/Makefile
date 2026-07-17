@@ -999,6 +999,14 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	  grep -rn "package:learning_tracker/.*/\(sync_engine\|firestore_data_source\|offline_queue\)\.dart" test/; \
 	  FAIL=1; \
 	fi; \
+	echo "69/69 — SM-6 doc hygiene: no lib/ doc comment claims 'Keeps alive' unless the file is actually annotated keepAlive: true (AUD-core-analytics-03)"; \
+	for f in $$(grep -rlE '^\s*///.*[Kk]eeps alive' lib/ --include="*.dart" 2>/dev/null); do \
+	  if ! grep -q "keepAlive: true" "$$f"; then \
+	    echo "  $$f has a doc comment claiming 'Keeps alive' but is NOT annotated keepAlive: true — reword to avoid colliding with Riverpod's keepAlive terminology (AUD-core-analytics-03):"; \
+	    grep -nE '^\s*///.*[Kk]eeps alive' "$$f"; \
+	    FAIL=1; \
+	  fi; \
+	done; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \

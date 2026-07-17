@@ -17,7 +17,8 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
-/// Keeps alive to monitor streak milestones for the active profile.
+/// Stays active while watched to monitor streak milestones for the active
+/// profile.
 ///
 /// Reads the streak stream and fires [AnalyticsEvent.streakMilestoneReached]
 /// the first time [currentStreak] reaches or crosses each milestone value in
