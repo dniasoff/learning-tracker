@@ -477,18 +477,6 @@ void main() {
             );
           }
         });
-
-        test(
-          'HebrewTerms.getCurriculumDisplayName delegates to displayNameHe',
-          () {
-            for (final id in CurriculumId.values) {
-              expect(
-                HebrewTerms.getCurriculumDisplayName(id),
-                id.displayNameHe,
-              );
-            }
-          },
-        );
       });
 
       // ── AC-4: Learning process wizard presets use Hebrew ──

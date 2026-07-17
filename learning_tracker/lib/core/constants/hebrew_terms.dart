@@ -1,5 +1,3 @@
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-
 /// Canonical DB-stored sentinel for the "Learn" stage's Hebrew name
 /// (AUD-onboarding-14).
 ///
@@ -180,13 +178,6 @@ class HebrewTerms {
   static const String uiTalmidChochom = 'תלמיד חכם';
 
   // ── Helpers ──────────────────────────────────────────────────────────────
-
-  /// Returns the Hebrew display name for [id].
-  ///
-  /// Delegates to [CurriculumId.displayNameHe] — the single authoritative
-  /// source for curriculum Hebrew names. The old `curriculumDisplayNames` map
-  /// has been removed to eliminate duplication (Defect 8).
-  static String getCurriculumDisplayName(CurriculumId id) => id.displayNameHe;
 
   /// Returns the Hebrew stage name for a 0-based [stageIndex].
   ///

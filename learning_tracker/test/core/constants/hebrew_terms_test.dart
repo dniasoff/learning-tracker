@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 void main() {
   group('HebrewTerms', () {
@@ -67,47 +66,6 @@ void main() {
       test('returns null for already-Hebrew names (idempotent)', () {
         expect(HebrewTerms.toHebrew('לימוד'), isNull);
         expect(HebrewTerms.toHebrew('חזרה א׳'), isNull);
-      });
-    });
-
-    group('getCurriculumDisplayName', () {
-      test('returns Hebrew for every CurriculumId', () {
-        for (final id in CurriculumId.values) {
-          final name = HebrewTerms.getCurriculumDisplayName(id);
-          expect(
-            name,
-            isNotEmpty,
-            reason: '${id.name} should have Hebrew name',
-          );
-          expect(name, id.displayNameHe);
-        }
-      });
-
-      test('specific values match expected Hebrew', () {
-        expect(
-          HebrewTerms.getCurriculumDisplayName(CurriculumId.mishnayos),
-          'משניות',
-        );
-        expect(
-          HebrewTerms.getCurriculumDisplayName(CurriculumId.bavli),
-          'תלמוד בבלי',
-        );
-        expect(
-          HebrewTerms.getCurriculumDisplayName(CurriculumId.chumash),
-          'חומש',
-        );
-      });
-    });
-
-    group('getCurriculumDisplayName', () {
-      test('returns displayNameHe for every CurriculumId', () {
-        for (final id in CurriculumId.values) {
-          expect(
-            HebrewTerms.getCurriculumDisplayName(id),
-            id.displayNameHe,
-            reason: '${id.storageKey} should return displayNameHe',
-          );
-        }
       });
     });
 
