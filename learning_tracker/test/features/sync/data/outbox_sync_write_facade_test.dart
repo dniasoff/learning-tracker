@@ -14,9 +14,14 @@
 /// below.
 library;
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
+import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
@@ -181,4 +186,52 @@ void main() {
       );
     },
   );
+
+  group('OutboxSyncWriteFacade.pushUiPreferencesSnapshot — use_hebrew_calendar '
+      'default (AUD-core-preferences-02)', () {
+    test('a fresh profile that only changed an unrelated preference (font '
+        'size) still pushes use_hebrew_calendar matching what the UI '
+        'displays (HebrewDatePreference().defaultValue)', () async {
+      // No use_hebrew_calendar key of any kind is set — only the
+      // unrelated font-size preference is touched, mirroring a profile
+      // that opened Settings and changed text size without ever
+      // touching the calendar toggle.
+      SharedPreferences.setMockInitialValues({
+        ProfileScopedPreferenceKeys.textFontSize(_profileId): 2,
+      });
+
+      final db = inMemoryDb();
+      addTearDown(db.close);
+      await seedProfile(db);
+
+      final facade = OutboxSyncWriteFacade(
+        outboxDao: db.outboxDao,
+        database: db,
+        resolveProfileId: () => _profileId,
+        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 29)),
+      );
+
+      await facade.pushUiPreferencesSnapshot();
+
+      final rows = await db.select(db.outbox).get();
+      final uiRows = rows
+          .where((r) => r.entityKind == OutboxEntityKind.uiPreferences)
+          .toList();
+      expect(uiRows, hasLength(1));
+
+      final payload = jsonDecode(uiRows.single.payload) as Map<String, dynamic>;
+
+      final uiDisplayedValue = HebrewDatePreference().defaultValue;
+      expect(
+        payload['use_hebrew_calendar'],
+        uiDisplayedValue,
+        reason:
+            'pushUiPreferencesSnapshot()\'s use_hebrew_calendar must '
+            'equal what the UI displays (HebrewDatePreference '
+            'default=true) even when only a sibling preference '
+            'changed — otherwise a second device/restore silently '
+            'shows the Gregorian calendar (AUD-core-preferences-02).',
+      );
+    });
+  });
 }
