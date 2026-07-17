@@ -106,5 +106,25 @@ void main() {
       expect(out.length, 2);
       expect(out.map((t) => t.trackId), [1, 2]);
     });
+
+    // AUD-core-content-06: collapseDafTasks used a bare ContentIndex.lookup
+    // that couldn't tolerate stray whitespace in a task's stored ref, so a
+    // daf whose amudim disagree by whitespace failed to collapse into one
+    // card. Routing through ProgramRefResolver.lookupWithVariants (the same
+    // normalization dashboard/scheduler/reader are meant to share per FR16)
+    // fixes it without touching the exact-match fast path.
+    test('collapses a daf whose stored ref has stray whitespace via '
+        'ProgramRefResolver variant matching', () {
+      final tasks = [
+        _task('Berakhot  2a'), // double space — stray-whitespace variant
+        _task('Berakhot 2b'),
+      ];
+      final out = collapseDafTasks(
+        tasks,
+        coarsePacedTrackIds: {1},
+        index: index,
+      );
+      expect(out.map((t) => t.contentItemSefariaRef), ['Berakhot  2a']);
+    });
   });
 }
