@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/widgets/scrollable_fill_body.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
@@ -111,22 +112,22 @@ class _LockScreen extends StatelessWidget {
       case SacredWindowKind.shabbos:
         return const _LockSpec(
           icon: Icons.local_fire_department_outlined,
-          background: Color(0xFF11215C),
+          background: AppColors.sacredTimeLockShabbosBg,
         );
       case SacredWindowKind.yomTov:
         return const _LockSpec(
           icon: Icons.celebration_outlined,
-          background: Color(0xFF4A2A8A),
+          background: AppColors.accentPurpleDeep,
         );
       case SacredWindowKind.shabbosYomTov:
         return const _LockSpec(
           icon: Icons.celebration_outlined,
-          background: Color(0xFF31246C),
+          background: AppColors.sacredTimeLockShabbosYomTovBg,
         );
       case SacredWindowKind.yomKippur:
         return const _LockSpec(
           icon: Icons.menu_book_outlined,
-          background: Color(0xFF1A2333),
+          background: AppColors.sacredTimeLockYomKippurBg,
         );
     }
   }

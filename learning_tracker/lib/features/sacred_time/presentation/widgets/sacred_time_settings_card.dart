@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
@@ -33,7 +34,7 @@ class SacredTimeSettingsCard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x12061D56),
+            color: AppColors.notifCardShadow,
             blurRadius: 16,
             offset: Offset(0, 6),
           ),
@@ -85,7 +86,7 @@ class _Header extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: const BoxDecoration(
-        color: Color(0xFF11389F),
+        color: AppColors.sacredTimeHeaderBg,
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       child: Row(

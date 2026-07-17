@@ -895,6 +895,36 @@ original 19 plus these 13) references the "Onboarding intro carousel"
 section of `AppColors`. With the marker temporarily enabled, the rule found
 **zero** hits across all 5 files post-fix.
 
+**AUD-sacred_time-09 update (2026-07-17):** fixed the 6 raw `Color(0xFF…)` /
+`Color(0x…)` hex-literal constructor calls the finding's evidence named
+across `sacred_time_lock_overlay.dart` (4 — the per-window-kind lock-screen
+background palette) and `sacred_time_settings_card.dart` (2 — the header
+background and card drop-shadow); all now reference a new "Sacred Time
+feature" section of `AppColors` (`sacredTimeLockShabbosBg`,
+`sacredTimeLockShabbosYomTovBg`, `sacredTimeLockYomKippurBg`,
+`sacredTimeHeaderBg`), reusing the pre-existing `accentPurpleDeep` and
+`notifCardShadow` tokens where the hex values were already identical
+byte-for-byte. The finding's own evidence also counted 7 `Colors.white`
+usages in the same two files toward its "13 raw Color()/Colors.white
+literals" total; those are unchanged, deliberately — `Colors.white` is a
+named Flutter constant, not a `Color(0x…)` hex literal, and this rule's own
+test suite (`no_color_literal_outside_theme_test.dart`, "does not flag named
+Color constants") documents that exclusion as intentional, matching how
+`Colors.white` is used untouched as an on-accent colour throughout
+`AppTheme` and every other feature in this codebase. Verification did not
+use the manual-marker CLI scratch-run technique documented above (unreliable
+to reproduce and not part of any repeatable gate); instead
+`packages/custom_lints/test/sacred_time_no_color_literal_regression_test.dart`
+calls `NoColorLiteralOutsideTheme().testAnalyzeAndRun()` — the same
+programmatic API the rule's own unit tests use — directly against the real
+files on disk (not a fixture copy), which sidesteps the plugin-discovery
+problem entirely since it never goes through `dart run custom_lint`. Run
+before the fix it failed with 4 + 2 real hits (captured red); run after, it
+passes with zero. This test is wired into `make lint-rules-test` /
+`make audit` like every other rule test, so it is a live, repeatable gate
+against regressions in these two files going forward — not a one-time
+observation.
+
 ---
 
 ## Custom Lints Reference
