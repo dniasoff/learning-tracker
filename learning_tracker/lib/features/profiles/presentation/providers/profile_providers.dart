@@ -166,7 +166,5 @@ Future<ProfileModel?> selectedProfile(Ref ref) async {
 @Riverpod(keepAlive: true)
 ProfileSession profileSession(Ref ref) {
   final id = ref.watch(selectedProfileIdProvider);
-  return id != null
-      ? ProfileSession(profileId: id)
-      : const ProfileSession.none();
+  return id != null ? ProfileSession(profileId: id) : ProfileSession.none();
 }
