@@ -6930,13 +6930,19 @@
   {
    "id": "AUD-core-network-03",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Cancel or document the leaked DNS-lookup Future in ConnectivityGateway.isOnline on timeout",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "5e889fabe3d8625689c73e4983ff66be901c79e4"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-network-03 AC1 OK (doc branch): gateway.dart:25-38 documents the leak (no cancellable dart:io lookup) and bound (single GC'd Future, not a retry loop)",
+    "AUD-core-network-03 bound verified: only isOnline consumer is account_actions.dart:226 (delete-account); no retry loop reaches it",
+    "AUD-core-network-03 test OK: gateway_test.dart:53-85 behavioral (false via real 2s timeout, hung lookup left in flight) - not a mock"
+   ],
+   "notes": "Re-verified: leak still present; dart:io has no cancellable DNS primitive. Not refuted. Satisfied AC's comment branch: documented tradeoff+bound inline. Added regression test proving timeout resolves false without blocking on a hung lookup."
   },
   {
    "id": "AUD-t-cross-97",
