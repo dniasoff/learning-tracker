@@ -8587,13 +8587,17 @@
   {
    "id": "AUD-core-content-07",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove or wire up HierarchyBrowserState's unused currentPath/canGoBack public getters",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "f27147d7aa58f58578664c9314e0aa42c4033b53"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-content-07 AC1 OK: both getters deleted; grep lib/ finds no getter ref; sole caller uses only navigateBack/clearNavigation via _browserKey"
+   ],
+   "notes": "Re-verified: grep confirmed getters (L100/103) never read via GlobalKey in lib/ or test/. Sole caller only calls .navigateBack()/.clearNavigation() and keeps its own parallel state. Deleted the two dead getters + doc comments per recommendation's delete branch."
   },
   {
    "id": "AUD-t-cross-71",
