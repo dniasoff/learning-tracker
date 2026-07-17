@@ -25,10 +25,21 @@ abstract class ProfileModel with _$ProfileModel {
   ///
   /// Prefer this over direct string comparisons (`profile.mode == 'child'`).
   /// Falls back to [ProfileMode.adult] for any unrecognised [mode] value.
-  ProfileMode get profileMode => switch (mode) {
-    'child' => ProfileMode.child,
-    _ => ProfileMode.adult, // 'adult' + defensive fallback
-  };
+  ///
+  /// Delegates to [ProfileMode.tryFromStorageKey] rather than
+  /// re-implementing the string↔enum mapping here (AUD-core-domain-04: the
+  /// two mappings had drifted to different error-handling semantics — throw
+  /// vs. silent default — for what is meant to be the same conversion).
+  /// This deliberately uses [ProfileMode.tryFromStorageKey] rather than
+  /// wrapping the throwing [ProfileMode.fromStorageKey] in a try/catch: EH-4
+  /// (`docs/coding-standards.md`) forbids catching `Error` subtypes as
+  /// control flow, and [ProfileMode.fromStorageKey] throws [ArgumentError]
+  /// (an [Error]) for exactly this case — see the "never the right way to
+  /// get a fallback" note on [ProfileMode.tryFromStorageKey] itself, which
+  /// mirrors `AccountTier.tryFromStorageKey` / `DeviceAccountX.accountTier`'s
+  /// established EH-4-compliant shape.
+  ProfileMode get profileMode =>
+      ProfileMode.tryFromStorageKey(mode) ?? ProfileMode.adult;
 
   /// Converts a Drift [drift.LearnerProfile] row into a domain [ProfileModel].
   factory ProfileModel.fromDriftRow(drift.LearnerProfile row) => ProfileModel(

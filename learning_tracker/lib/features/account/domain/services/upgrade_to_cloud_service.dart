@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/account_tier.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/firebase_error_code.dart';
@@ -197,7 +198,7 @@ class UpgradeToCloudService {
     if (registry != null && accountId != null) {
       await registry!.updateAccountTier(
         accountId!,
-        'cloudBorn',
+        AccountTier.cloud.storageKey,
         firebaseUid: refreshed.uid,
         email: email,
       );
@@ -236,7 +237,7 @@ class UpgradeToCloudService {
       if (registry != null && accountId != null) {
         await registry!.updateAccountTier(
           accountId!,
-          'cloudBorn',
+          AccountTier.cloud.storageKey,
           firebaseUid: refreshed.uid,
         );
       }
@@ -339,7 +340,7 @@ class UpgradeToCloudService {
     if (registry != null && accountId != null) {
       await registry!.updateAccountTier(
         accountId!,
-        'cloudBorn',
+        AccountTier.cloud.storageKey,
         firebaseUid: refreshed.uid,
         email: cloudEmail,
       );
@@ -376,7 +377,7 @@ class UpgradeToCloudService {
     if (registry != null && accountId != null) {
       await registry!.updateAccountTier(
         accountId!,
-        'cloudBorn',
+        AccountTier.cloud.storageKey,
         firebaseUid: refreshed.uid,
         email: cloudEmail,
       );
