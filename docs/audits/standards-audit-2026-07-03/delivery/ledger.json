@@ -10559,13 +10559,17 @@
   {
    "id": "AUD-core-labels-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Hoist the RegExp allocated on every call inside DomainTermLabels._normaliseEnglishStageName",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "a89a06809789e0ff7cf9af684c743edd854abe59"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-labels-04 AC1 OK: RegExp hoisted to static final _reviewNumbered (line 272); grep lib/core/labels/ shows 2 RegExp, both static-final fields, none in method body."
+   ],
+   "notes": "Confirmed live: RegExp allocated per call in _normaliseEnglishStageName. Hoisted to static final _reviewNumbered, mirroring curriculum_label.dart's _hebrew. Added AC-named checker (audit 69/69); RED before fix, GREEN after. 120/120 labels tests pass."
   },
   {
    "id": "AUD-core-navigation-04",
