@@ -17,6 +17,7 @@ part of 'profile_providers.dart';
 /// brief signed-out window (e.g. between sign-up and the
 /// `setLocalBornSession` call that lands onboarding) so DAO calls that
 /// happen before auth-state settles keep their previous behavior.
+// keepAlive: read from DAO call sites throughout the account's session, must survive unrelated rebuilds.
 
 @ProviderFor(currentAccountId)
 final currentAccountIdProvider = CurrentAccountIdProvider._();
@@ -30,6 +31,7 @@ final currentAccountIdProvider = CurrentAccountIdProvider._();
 /// brief signed-out window (e.g. between sign-up and the
 /// `setLocalBornSession` call that lands onboarding) so DAO calls that
 /// happen before auth-state settles keep their previous behavior.
+// keepAlive: read from DAO call sites throughout the account's session, must survive unrelated rebuilds.
 
 final class CurrentAccountIdProvider extends $FunctionalProvider<int, int, int>
     with $Provider<int> {
@@ -42,6 +44,7 @@ final class CurrentAccountIdProvider extends $FunctionalProvider<int, int, int>
   /// brief signed-out window (e.g. between sign-up and the
   /// `setLocalBornSession` call that lands onboarding) so DAO calls that
   /// happen before auth-state settles keep their previous behavior.
+  // keepAlive: read from DAO call sites throughout the account's session, must survive unrelated rebuilds.
   CurrentAccountIdProvider._()
     : super(
         from: null,
@@ -78,11 +81,13 @@ final class CurrentAccountIdProvider extends $FunctionalProvider<int, int, int>
 String _$currentAccountIdHash() => r'49a36871feb359d35d08592973d7e6ceb9282cec';
 
 /// Provider for the ProfileRepository implementation.
+// keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
 
 @ProviderFor(profileRepository)
 final profileRepositoryProvider = ProfileRepositoryProvider._();
 
 /// Provider for the ProfileRepository implementation.
+// keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
 
 final class ProfileRepositoryProvider
     extends
@@ -93,6 +98,7 @@ final class ProfileRepositoryProvider
         >
     with $Provider<ProfileRepository> {
   /// Provider for the ProfileRepository implementation.
+  // keepAlive: stateless repository facade over the DB, cheap to keep for the app's lifetime.
   ProfileRepositoryProvider._()
     : super(
         from: null,
@@ -130,14 +136,17 @@ final class ProfileRepositoryProvider
 String _$profileRepositoryHash() => r'c9296d2f6106fde461c56e63533441e6ca991519';
 
 /// The currently selected profile ID. Null means no profile selected yet.
+// keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
 
 @ProviderFor(SelectedProfileId)
 final selectedProfileIdProvider = SelectedProfileIdProvider._();
 
 /// The currently selected profile ID. Null means no profile selected yet.
+// keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
 final class SelectedProfileIdProvider
     extends $NotifierProvider<SelectedProfileId, int?> {
   /// The currently selected profile ID. Null means no profile selected yet.
+  // keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
   SelectedProfileIdProvider._()
     : super(
         from: null,
@@ -168,6 +177,7 @@ final class SelectedProfileIdProvider
 String _$selectedProfileIdHash() => r'7b2ad48d035d9a0a6211950b76474f43941d5d66';
 
 /// The currently selected profile ID. Null means no profile selected yet.
+// keepAlive: the session's profile selection must survive route changes and unrelated rebuilds.
 
 abstract class _$SelectedProfileId extends $Notifier<int?> {
   int? build();
@@ -214,6 +224,7 @@ abstract class _$SelectedProfileId extends $Notifier<int?> {
 ///
 /// Watched by the app shell so it runs on every auth-valid mount. Returns the
 /// id that was selected (existing or newly healed), or null when signed-out.
+// keepAlive: the app shell watches this once per auth transition, must survive unrelated rebuilds.
 
 @ProviderFor(autoSelectedProfileId)
 final autoSelectedProfileIdProvider = AutoSelectedProfileIdProvider._();
@@ -245,6 +256,7 @@ final autoSelectedProfileIdProvider = AutoSelectedProfileIdProvider._();
 ///
 /// Watched by the app shell so it runs on every auth-valid mount. Returns the
 /// id that was selected (existing or newly healed), or null when signed-out.
+// keepAlive: the app shell watches this once per auth transition, must survive unrelated rebuilds.
 
 final class AutoSelectedProfileIdProvider
     extends $FunctionalProvider<AsyncValue<int?>, int?, FutureOr<int?>>
@@ -276,6 +288,7 @@ final class AutoSelectedProfileIdProvider
   ///
   /// Watched by the app shell so it runs on every auth-valid mount. Returns the
   /// id that was selected (existing or newly healed), or null when signed-out.
+  // keepAlive: the app shell watches this once per auth transition, must survive unrelated rebuilds.
   AutoSelectedProfileIdProvider._()
     : super(
         from: null,
@@ -446,6 +459,7 @@ String _$selectedProfileHash() => r'b66d723d4e6e5829b73400bb6febf572535e6e4f';
 /// talk about "a session" rather than a nullable integer. This is the
 /// canonical read path for profile-selection state; write path stays on
 /// `selectedProfileIdProvider.notifier` (select / clear).
+// keepAlive: wraps selectedProfileIdProvider, which is itself keepAlive — must not defeat that.
 
 @ProviderFor(profileSession)
 final profileSessionProvider = ProfileSessionProvider._();
@@ -456,6 +470,7 @@ final profileSessionProvider = ProfileSessionProvider._();
 /// talk about "a session" rather than a nullable integer. This is the
 /// canonical read path for profile-selection state; write path stays on
 /// `selectedProfileIdProvider.notifier` (select / clear).
+// keepAlive: wraps selectedProfileIdProvider, which is itself keepAlive — must not defeat that.
 
 final class ProfileSessionProvider
     extends $FunctionalProvider<ProfileSession, ProfileSession, ProfileSession>
@@ -466,6 +481,7 @@ final class ProfileSessionProvider
   /// talk about "a session" rather than a nullable integer. This is the
   /// canonical read path for profile-selection state; write path stays on
   /// `selectedProfileIdProvider.notifier` (select / clear).
+  // keepAlive: wraps selectedProfileIdProvider, which is itself keepAlive — must not defeat that.
   ProfileSessionProvider._()
     : super(
         from: null,
@@ -499,4 +515,4 @@ final class ProfileSessionProvider
   }
 }
 
-String _$profileSessionHash() => r'da5f63dda22c5030184d117a52ae744f61055dba';
+String _$profileSessionHash() => r'd0706e695f8d6717d283d7d665c1aa1f7bd0937a';
