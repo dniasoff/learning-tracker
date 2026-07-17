@@ -24,6 +24,10 @@
 //     F3. Last-profile delete dialog shows "Delete your only profile?" title
 //         (AUD-profiles-04: now exercised end-to-end via the canonical
 //         deleteProfileFlow — no longer blocked by a disabled menu tile)
+//     F4. Deleting the CURRENTLY-SELECTED profile via the long-press menu
+//         auto-switches selectedProfileIdProvider to a remaining profile,
+//         never clears it to null (Bug B — AUD-profiles-03 regression gap:
+//         F1-F3 never passed a selectedId matching the deleted profile)
 //
 //  G. ProfilePickerScreen visual structure
 //     G1. Picker title "Who is learning?" and subtitle always shown
@@ -731,6 +735,101 @@ void main() {
         await _teardown(tester);
       },
     );
+
+    // F4 — AUD-profiles-03: ProfilePickerScreen's delete path must route
+    // through the shared deleteProfileFlow (not a private duplicate) so that
+    // deleting the CURRENTLY-SELECTED profile auto-switches
+    // selectedProfileIdProvider to a remaining profile rather than clearing
+    // it to null (Bug B). profile_edit_delete_actions_test.dart already
+    // covers deleteProfileFlow directly; this drives the same regression
+    // end-to-end through the Picker's long-press menu, which F1-F3 never did
+    // (none of them pass a selectedId matching the deleted profile).
+    testWidgets('F4: deleting the currently-selected profile via long-press '
+        'auto-switches selectedProfileIdProvider to a remaining profile', (
+      tester,
+    ) async {
+      final db = UserDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 't@t.com',
+              tier: 'localBorn',
+              displayName: 'Test',
+              createdAt: _epoch,
+              updatedAt: _epoch,
+            ),
+          );
+      await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: accountId,
+              displayName: 'Avi',
+              mode: 'adult',
+              createdAt: _epoch,
+              updatedAt: _epoch,
+            ),
+          );
+      await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: accountId,
+              displayName: 'Yosef',
+              mode: 'child',
+              createdAt: _epoch,
+              updatedAt: _epoch,
+            ),
+          );
+
+      final profiles = [
+        _adult(id: 1, name: 'Avi'),
+        _child(id: 2, name: 'Yosef'),
+      ];
+      await tester.pumpWidget(
+        _buildPicker(
+          router: router,
+          profiles: profiles,
+          db: db,
+          // Avi (id=1), the profile about to be deleted, is ALSO the
+          // currently-selected profile.
+          selectedId: 1,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Long-press → open manage sheet → tap Delete → confirm the dialog.
+      await tester.longPress(find.text('Avi'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Delete'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Delete Profile?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Bug B: selectedProfileIdProvider must auto-switch to the one
+      // remaining profile (Yosef, id=2) — never clear to null.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ProfilePickerScreen)),
+      );
+      expect(
+        container.read(selectedProfileIdProvider),
+        2,
+        reason:
+            "deleting the currently-selected profile via the Picker's "
+            'long-press menu must auto-switch to a remaining profile, not '
+            'clear the selection to null (Bug B / AUD-profiles-03)',
+      );
+
+      await _teardown(tester);
+    });
   });
 
   // ────────────────────────────────────────────────────────────────────────────
