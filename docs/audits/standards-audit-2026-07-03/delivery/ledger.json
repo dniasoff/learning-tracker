@@ -5357,13 +5357,19 @@
     {
       "id": "AUD-content_browsing-03",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Inject analyticsServiceProvider into MarkLiveCompletionUseCase so tutor_live_mark_blocked actually fires",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "73a5d96a38a4a08f809184bd96d9abcc15ffb9a5"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-content_browsing-03 AC1 OK: invariant_test:115-142 overrides analyticsServiceProvider w/ fake, drives tutor attempt, asserts countOf(tutorLiveMarkBlocked)==1",
+        "AUD-content_browsing-03 fix OK: text_display_screen.dart:677 injects analytics: ref.read(analyticsServiceProvider) at sole lib/ site (grep=1)",
+        "AUD-content_browsing-03 red-first OK: t3 source guard asserts injected string, unique to fix site -> red on revert"
+      ],
+      "notes": "Sole construction site omitted analytics:, so tutor_live_mark_blocked never fired. Fixed via ref.read(analyticsServiceProvider). Branch unreachable via UI (button disabled for tutors) - defense-in-depth. AC met via behavioral test + source test, RED before/GREEN after."
     },
     {
       "id": "AUD-dashboard-05",
