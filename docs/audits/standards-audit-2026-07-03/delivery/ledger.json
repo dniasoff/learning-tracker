@@ -1700,13 +1700,19 @@
     {
       "id": "AUD-profiles-07",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Delete four dead domain-layer files in features/profiles/domain (pin_flow_machine.dart, profile_creation_use_case.dart, set_parent_pin_use_case.dart, verify_parent_pin_use_case.dart)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "315d484398ec3fd3eced4a2614376fb05afb980b"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-07 AC1 OK: grep of all 4 class names over lib/+test/ = zero hits (exit 1); other public types also zero; enums kept, live-used by pin_flow_controller+screen",
+        "AUD-profiles-07 AC2 OK: build_runner exit 0 (3430 outputs); flutter analyze 'No issues found!' after content.db.gz asset regen",
+        "AUD-profiles-07 AC3 OK: both orphaned tests deleted in db1b8123; use_cases test dir now empty; zero refs to deleted types remain"
+      ],
+      "notes": "All 4 classes had zero external refs (confirmed). Deleted 3 use-case files + 2 orphaned tests. Kept pin_flow_machine.dart (enums live-used elsewhere) but removed the dead PinFlowMachine class + support types (~290 lines) and fixed a false comment. Grep for all 4 names now zero hits."
     },
     {
       "id": "AUD-t-cross-08",
