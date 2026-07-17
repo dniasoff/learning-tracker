@@ -227,7 +227,7 @@ class ContentTree {
 @Riverpod(keepAlive: true)
 Future<ContentTree> contentTree(Ref ref) async {
   final byCurriculum = <CurriculumId, List<ContentItem>>{};
-  for (final c in CurriculumId.values) {
+  for (final c in CurriculumId.all) {
     byCurriculum[c] = await ref.watch(curriculumContentProvider(c).future);
   }
   return ContentTree.fromCurricula(byCurriculum);

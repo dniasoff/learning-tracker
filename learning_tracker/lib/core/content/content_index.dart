@@ -110,7 +110,7 @@ class ContentIndex {
 @Riverpod(keepAlive: true)
 Future<ContentIndex> contentIndex(Ref ref) async {
   final byCurriculum = <CurriculumId, List<ContentItem>>{};
-  for (final c in CurriculumId.values) {
+  for (final c in CurriculumId.all) {
     byCurriculum[c] = await ref.watch(curriculumContentProvider(c).future);
   }
   return ContentIndex.fromCurricula(byCurriculum);

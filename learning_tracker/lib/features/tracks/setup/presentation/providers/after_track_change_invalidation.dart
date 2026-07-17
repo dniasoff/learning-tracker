@@ -49,13 +49,13 @@ Future<void> onTrackChanged(WidgetRef ref, int profileId) async {
   // ignore: deprecated_member_use
   ref.invalidate(globalLifetimeCurriculaProvider(profileId));
   ref.invalidate(progressOverviewStatsProvider);
-  for (final c in CurriculumId.values) {
+  for (final c in CurriculumId.all) {
     ref.invalidate(
       lifetimeDataProvider((profileId: profileId, curriculumId: c)),
     );
   }
 
-  for (final c in CurriculumId.values) {
+  for (final c in CurriculumId.all) {
     ref.invalidate(dashboardCompletionPercentageProvider(c));
     ref.invalidate(dashboardLastCompletionProvider(c));
     ref.invalidate(dashboardPaceStatusProvider(c));
