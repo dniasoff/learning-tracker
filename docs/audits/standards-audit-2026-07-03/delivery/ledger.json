@@ -2811,13 +2811,19 @@
   {
    "id": "AUD-core-network-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or reconnect the superseded Sefaria-REST fetcher pipeline (curriculum_content_fetcher.dart + its 989-line test suite)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "0e2d21b6fbbad18800cffb863e7e0878dc552f3c"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-network-02 AC1 OK: real caller `final dio = createSefariaClient();` at tool/seed_content.dart:32; dio flows to all 7 fetchers (reconnected branch)",
+    "AUD-core-network-02 AC2 OK: content-database.md l.166 + source-tree-analysis.md l.80 annotate seed_content.dart/sefaria as fallback; referenced files all exist",
+    "AUD-core-network-02 AC3 OK: no Makefile target references seed_content.dart; `make seed` (l.262) canonical; seed-build.md documents seed_content.dart as fallback"
+   ],
+   "notes": "Confirmed. Chose recommendation option (b) reconnect not (a) delete: docs/api-contracts.md documents this pipeline as intentional; 2 live DONE acceptance tests pin it as required, so deletion violates TQ-7. Red-first test added/confirmed. Docs updated; all 3 ACs verified."
   },
   {
    "id": "AUD-gamification-11",
