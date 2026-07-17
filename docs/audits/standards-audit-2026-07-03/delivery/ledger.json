@@ -2303,13 +2303,22 @@
   {
    "id": "AUD-progress-06",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Log the two silent catch blocks in lifetime_knowledge_providers.dart via AppLogger",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "7c8161d81c8f9775c4681924fd06ca5988efdf1d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-progress-06 AC1 OK: file:578-593 catch(e,st) -> AppLogger.warning(track_dual_progress_calendar_position_failed) BEFORE overdue/todayDue=0",
+    "AUD-progress-06 AC1 OK: file:803-818 catch(e,st) -> AppLogger.warning(lifetime_safe_load_failed) BEFORE return null in _safeLoadLeavesForTrack",
+    "AUD-progress-06 AC2 OK: grep 'catch (_)' = no match (exit 1); all 4 catches (578,726,747,803) are catch(e,st) + adjacent AppLogger.warning",
+    "AUD-progress-06 red-first OK: src reverted to merge-base -> both tests red (+0 -2); restored -> 24/24 green. Behavioral, not mock-asserting",
+    "AUD-progress-06 fallback preserved OK: asserts overdue/todayDue==0 and track still dropped; logging-only diff",
+    "AUD-progress-06 Rule-4 OK: file:19 imports core/logging/logger.dart (AppLogger), no raw Talker"
+   ],
+   "notes": "Confirmed still present: both catch(_) log-less. Red-first test forced each failure, both red pre-fix. Fixed via AppLogger.warning matching file's F20 pattern; fallback values unchanged. Grep: all 4 catches now log, no bare catch(_) left."
   },
   {
    "id": "AUD-scheduler-17",
