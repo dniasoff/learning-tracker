@@ -9903,13 +9903,19 @@
   {
    "id": "AUD-sacred_time-08",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Reduce precision of persisted/synced SacredLocation coordinates and confirm the Sacred Time card is parent-gated",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "46ec272c787de97608f6bd54965bfc3c47ddee31"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-sacred_time-08 AC1 OK: _roundCoordinate rounds lat/long 3dp at sole persist path (prefs.dart:54-57); test asserts raw 40.713/-74.006; PV-7 documents it",
+    "AUD-sacred_time-08 AC2 OK: pinGuard provider (AN-2 mirror) wired settings_screen.dart:129-136; _detect/_pickCity gate via PIN dialog+early return; both paths tested",
+    "AUD-sacred_time-08 AC3 OK: coding-standards.md PV-7 records rounding + Parent-PIN-gate decision with DEC-26 reference"
+   ],
+   "notes": "Verify block: coords never sync (DEC-26); real defect was missing PIN gate. Fixed 3 ACs: writeLocation rounds coords to 3dp; Detect/Choose-City require Parent PIN for children (new provider, mirrors AN-2); coding-standards.md PV-7 records decision. Red-first confirmed."
   },
   {
    "id": "AUD-sacred_time-09",
