@@ -3099,13 +3099,22 @@
     {
       "id": "AUD-core-theme-01",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Retire or theme-align text_styles.dart's AppTextStyles, which hardcodes Roboto and diverges from AppTheme's Plus Jakarta Sans",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "694036cfc220b3ec61cfb543b9b426f9a45a9ffd"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-theme-01 AC1 OK: all 12 English getters now GoogleFonts.plusJakartaSans; text_display_screen .copyWith sites override only color/size/height, never fontFamily",
+        "AUD-core-theme-01 AC1 OK: hebrew_text keeps ambient PlusJakartaSans primary + Hebrew fallback; new widget test reads resolved fontFamily=PlusJakartaSans",
+        "AUD-core-theme-01 AC2 OK: getTextDirection/getStyleForContent deleted; grep=zero callers (only comments); orphaned tests removed from 2 files",
+        "AUD-core-theme-01 AC2 OK: no TQ-7 - only dead-code coverage dropped; AC5 Hebrew claim still covered by surviving hebrewBodyLarge/hebrewHeadlineLarge Noto tests",
+        "AUD-core-theme-01 AC3 OK: stale 'must be placed in assets/fonts' comment corrected at text_styles.dart:11-15 (fonts already bundled)",
+        "AUD-core-theme-01 red-first OK: reverting both source files to base fails all 3 new tests (+0 -3), pass after fix"
+      ],
+      "notes": "Evidence confirmed. Fixed: English getters use GoogleFonts.plusJakartaSans; hebrew_text.dart keeps themed family, Hebrew as fallback; removed dead getTextDirection/getStyleForContent + orphaned tests; fixed stale comment. Red-first test: RED then GREEN."
     },
     {
       "id": "AUD-t-account-03",
