@@ -5069,13 +5069,18 @@
   {
    "id": "AUD-core-content-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Fix ContentTree.parent()'s off-by-one when a leaf precedes its container in source order",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "ce4d4b3e281d6e085070e9bec68b16098be3bb98"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-content-02 AC1 OK: content_tree_test.dart asserts parent('Berakhot 2a:1')=='Berakhot 2a' not grandparent; 1/1 pass; red-first confirmed",
+    "AUD-core-content-02 AC2 OK: epic_25_schema_core_test.dart 93/93 pass incl story_26_14 leaf-parent test 15/15"
+   ],
+   "notes": "Red test confirmed: leaf-before-container fixture returned grandparent 'Berakhot 2' not parent 'Berakhot 2a'. Fixed pass-2 to start leaves at own ancestor key. Literal fix regressed an existing epic_25 test; generalized to climb-until-found so both ACs pass."
   },
   {
    "id": "AUD-t-cross-17",
