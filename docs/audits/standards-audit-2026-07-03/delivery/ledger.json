@@ -5730,13 +5730,19 @@
   {
    "id": "AUD-sacred_time-05",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Move LocationFetchResult out of data/services/location_service.dart so presentation stops importing data/ directly",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "9ba51c1db642b3237e329ba0e9bf330e324ef195"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-sacred_time-05 AC1 OK: sealed LocationFetchResult + 4 variants moved verbatim to domain/models/, removed from data/services/location_service.dart",
+    "AUD-sacred_time-05 AC2 OK: grep 'sacred_time/data/' over presentation/{screens,widgets}/ = 0 hits; card + permission_prompt_screen repointed to domain",
+    "AUD-sacred_time-05 AC3 OK: flutter analyze clean; make audit byte-identical merge-base vs HEAD; custom_lint clean exit 0 (AG-5 mirror green)"
+   ],
+   "notes": "Evidence confirmed exactly. Moved LocationFetchResult sealed hierarchy verbatim from data/services/location_service.dart to new domain/models/location_fetch_result.dart; repointed 4 lib/ importers + 4 test files. All 3 ACs pass via grep + flutter analyze + make audit."
   },
   {
    "id": "AUD-sacred_time-06",
