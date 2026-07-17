@@ -406,13 +406,19 @@
   {
    "id": "AUD-core-domain-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P1",
    "title": "Fix ScheduleSpec.weekly/.rolling to throw ArgumentError instead of assert() (silently unenforced in release builds)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "654c5003736b975c306a6033fa6fb719053672df"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-domain-01 AC1 OK: schedule_spec.dart:128-144,171-179 use explicit throw ArgumentError.value (no assert, grep exit 1); throwsArgumentError tests pass",
+    "AUD-core-domain-01 AC2 OK: schedule_spec_test.dart exists+ran; covers empty(l65), out-of-range(l69-82), windowSize<=0(l137-143), fromParts null(l203-215)",
+    "AUD-core-domain-01 AC3 OK: mirror schedule_spec_test.dart present; make audit AG-5 check_test_mirroring passes"
+   ],
+   "notes": "Re-verified assert() present, docstring promised ArgumentError. Replaced with explicit throw ArgumentError (ScopeLevel/StageOrder pattern). Added schedule_spec_test.dart (36 tests, restores AG-5 mirroring). Red-first caught AssertionError-not-ArgumentError fails. Fixed 3 tests asserting old error."
   },
   {
    "id": "AUD-core-labels-01",
