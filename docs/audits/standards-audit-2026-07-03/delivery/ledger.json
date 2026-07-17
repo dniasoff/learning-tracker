@@ -5439,13 +5439,18 @@
     {
       "id": "AUD-content_browsing-05",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Populate content_browsing.dart barrel with real exports so Rule 2 has a legal import path",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "b7238613cf8cc64072e77de736f619e0011e0697"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-content_browsing-05 AC1 OK: content_browsing.dart:26,35 export ContentRepository (8 ext consumers) + content_providers.dart (ext-consumed) - real external types",
+        "AUD-content_browsing-05 AC2 OK: curriculum_label_providers.dart:6 (+3 core files) switched to barrel; flutter analyze = No issues found on clean tree"
+      ],
+      "notes": "Confirmed: barrel had 0 exports; 3 target symbols deep-imported by 10+ external files (grep-verified). Populated barrel per progress.dart pattern. ContentItemTile has zero external consumers so deliberately not exported. Migrated AC-named example plus 3 sibling deep imports to barrel. Both ACs met."
     },
     {
       "id": "AUD-content_browsing-03",
