@@ -517,22 +517,6 @@ Future<int> overdueCountForCurriculum(
       .length;
 }
 
-/// Returns the day-level amnesty cutoff for [lastReorderAt]: midnight of
-/// the device-local date on which the reorder occurred, encoded as pseudo-UTC
-/// midnight (the same encoding [ScheduledUnit.date] uses).
-///
-/// Schedule entries are dated to UTC midnight of the unit's local day, while
-/// `lastReorderAt` is a real instant (e.g. activation at 15:00 UTC).  A naive
-/// `scheduledDate.isBefore(lastReorderAt)` would treat same-day schedule
-/// entries as "before" the reorder and amnesty them — wiping today's overdue
-/// for a track activated yesterday.  The amnesty rule (§10.1) is "items
-/// scheduled on days strictly before the day of the reorder", so we normalize
-/// to midnight of the device-local date here.
-DateTime _amnestyDayCutoffUtc(DateTime lastReorderAt) {
-  final local = lastReorderAt.toLocal();
-  return DateTime.utc(local.year, local.month, local.day);
-}
-
 /// Derives the overdue and dueToday task lists from the pure projection.
 ///
 /// This is the authoritative source of truth for the overdue/today buckets
@@ -718,21 +702,17 @@ Future<List<DailyTask>> _buildProjectionTasks({
               // lastReorderAt (e.g. track activation at 15:00 UTC) is wrongly
               // treated as "after" same-day schedule entries (00:00 UTC), and
               // those entries get silently amnestied even though the user
-              // still owes that day's work.
-              final rawAmnestyCutoff = _amnestyDayCutoffUtc(progLastReorderAt);
-              // Back-date fix: a freshly-enrolled program track has
-              // lastReorderAt == creation day (today) while its anchor
-              // (trackingStartDate) is in the past. The raw cutoff would then
-              // amnesty the ENTIRE intended back-date window — every
-              // back-dated daf scheduled before today gets silently stripped,
-              // so a track started "4 days behind" shows no overdue. Programs
-              // are calendar-anchored (never user-reordered), so clamp the
-              // cutoff to the anchor: overdue on/after trackingStartDate is
-              // never amnestied, while a genuine re-anchor (anchor == today)
-              // still yields no spurious overdue.
-              final progAmnestyCutoff = rawAmnestyCutoff.isAfter(anchor)
-                  ? anchor
-                  : rawAmnestyCutoff;
+              // still owes that day's work. See [amnestyDayCutoffUtc] for the
+              // full rationale.
+              final rawAmnestyCutoff = amnestyDayCutoffUtc(progLastReorderAt);
+              // Back-date fix: clamp the cutoff to the anchor so a
+              // freshly-enrolled program track's intended back-date window
+              // survives. See [clampAmnestyCutoffToAnchor] for the full
+              // rationale.
+              final progAmnestyCutoff = clampAmnestyCutoffToAnchor(
+                rawAmnestyCutoff,
+                anchor,
+              );
               final progScheduleIndex = <String, DateTime>{
                 for (final unit in schedule) unit.sefariaRef: unit.date,
               };
@@ -940,7 +920,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
     final lastReorderAt =
         trackLastReorderAtMap[curriculum] ??
         DateTime.fromMillisecondsSinceEpoch(0);
-    final amnestyCutoff = _amnestyDayCutoffUtc(lastReorderAt);
+    final amnestyCutoff = amnestyDayCutoffUtc(lastReorderAt);
     final scheduleIndex = <String, DateTime>{
       for (final unit in schedule) unit.sefariaRef: unit.date,
     };

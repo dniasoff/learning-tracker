@@ -9,15 +9,21 @@
 ///   [MissingPaceError]  — thrown when a self-paced track has no pace set.
 ///
 /// Functions:
-///   [programSchedule]   — build the schedule for a program track.
-///   [selfPacedSchedule] — build the schedule for a self-paced track.
-///   [elapsedStudyDays]  — count study days in [anchor, today).
-///   [project]           — compute overdue / dueToday / review from a schedule
-///                         and a completion set.
+///   [programSchedule]            — build the schedule for a program track.
+///   [selfPacedSchedule]          — build the schedule for a self-paced track.
+///   [elapsedStudyDays]           — count study days in [anchor, today).
+///   [project]                    — compute overdue / dueToday / review from a
+///                                 schedule and a completion set.
+///   [amnestyDayCutoffUtc]        — day-level reorder-amnesty cutoff
+///                                 (architecture §10.1).
+///   [clampAmnestyCutoffToAnchor] — clamp the amnesty cutoff to a program's
+///                                 anchor (§10.1 back-date fix).
 ///
 /// Layering: pure Dart domain layer — no Flutter, Riverpod, Drift, or Firebase.
 library;
 
+export 'amnesty_cutoff.dart'
+    show amnestyDayCutoffUtc, clampAmnestyCutoffToAnchor;
 export 'overdue_projection.dart' show project;
 export 'overdue_schedule.dart'
     show elapsedStudyDays, programSchedule, selfPacedSchedule;

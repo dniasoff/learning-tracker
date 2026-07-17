@@ -217,10 +217,11 @@ void main() {
         // UTC — i.e. the same midnight as the Y1 schedule entry.
         final midDayYesterday = DateTime.utc(2026, 5, 20, 15, 0, 0);
 
-        // Mimic the production day-level cutoff (see
-        // scheduler_providers.dart:_amnestyDayCutoffUtc).
-        final local = midDayYesterday.toLocal();
-        final cutoff = DateTime.utc(local.year, local.month, local.day);
+        // Call the real production day-level cutoff (AUD-scheduler-09: was a
+        // hand-retyped copy of scheduler_providers.dart's private
+        // _amnestyDayCutoffUtc; now a shared pure function both the
+        // production filter and this test call).
+        final cutoff = amnestyDayCutoffUtc(midDayYesterday);
 
         final scheduleIndex = <String, DateTime>{
           for (final unit in schedule) unit.sefariaRef: unit.date,
@@ -269,15 +270,14 @@ void main() {
         expect(projection.dueToday, contains('D25'));
 
         // Freshly-created track: lastReorderAt == creation day (today).
+        // Call the real production cutoff + clamp (AUD-scheduler-09: was a
+        // hand-retyped copy of scheduler_providers.dart's private helper and
+        // inline clamp expression; now the same shared pure functions the
+        // production filter calls).
         final lastReorderAt = today;
-        DateTime dayCutoff(DateTime d) {
-          final l = d.toLocal();
-          return DateTime.utc(l.year, l.month, l.day);
-        }
-
-        final rawCutoff = dayCutoff(lastReorderAt);
+        final rawCutoff = amnestyDayCutoffUtc(lastReorderAt);
         // The fix: clamp the program cutoff to the anchor.
-        final clampedCutoff = rawCutoff.isAfter(anchor) ? anchor : rawCutoff;
+        final clampedCutoff = clampAmnestyCutoffToAnchor(rawCutoff, anchor);
 
         final scheduleIndex = <String, DateTime>{
           for (final u in schedule) u.sefariaRef: u.date,
