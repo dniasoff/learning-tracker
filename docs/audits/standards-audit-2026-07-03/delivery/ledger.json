@@ -7090,13 +7090,17 @@
     {
       "id": "AUD-profiles-15",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Log TutoredChildrenSection's AsyncValue error branch instead of swallowing it silently",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "f1586abe4856cceb26fabb3177c2a61d59eab165"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-15 AC1 OK: tutored_children_section.dart:52-57 error branch calls AppLogger.instance.warning(event) before SizedBox.shrink()"
+      ],
+      "notes": "Verified log-less error branch at line 47. Fixed: now calls AppLogger.instance.warning(event: 'tutored_children_grants_load_error', exception:, stackTrace:) before SizedBox.shrink(). Red-first test added to A2; confirmed red pre-fix, green post-fix. AC satisfied. Merged --no-ff onto dev (w4r1c34, mergeSha f1586abe4856cceb26fabb3177c2a61d59eab165). Post-rebase gate: make audit PASSED (all greps clean), flutter analyze clean (No issues found). gatePolicy=overlap-tested: rebase vs dev tip overlapped on learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart, so ran flutter test --concurrency=2 on payload.testsToRun (profile_picker_and_tutored_l1_test.dart) plus suites covering the overlapping file (tutored_children_section_pull_state_error_test.dart, profile_picker_deep_l1_test.dart, profile_picker_screen_l1_test.dart, ws3_3c_talmid_access_pin_test.dart, ws3_3b_tutor_invitations_surface_test.dart) - all 93 tests passed, including the AC1 log assertion (warning event 'tutored_children_grants_load_error' fired). touchedStrings=false, so make arb-parity was not required."
     },
     {
       "id": "AUD-progress-12",
