@@ -131,7 +131,7 @@ void main() {
       //
       // D16 (2026-05-31) reversed Story 25.16's original UTC-day choice: the
       // streak now buckets by LOCAL day so the headline agrees with the
-      // Recent-Activity calendar dots (which use DateUtils.extractLocalDate),
+      // Recent-Activity calendar dots (which use LocalDayUtils.extractLocalDate),
       // the scheduler, and LocalDayClock. Timestamps here use ~noon UTC so the
       // local date is identical across every real timezone (offset within
       // ±12h), keeping the assertions deterministic regardless of the host TZ.

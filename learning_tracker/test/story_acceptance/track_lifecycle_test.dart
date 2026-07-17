@@ -367,7 +367,7 @@ void main() {
           DailyPlansCompanion.insert(
             profileId: profileId,
             curriculumId: CurriculumId.mishnayos.storageKey,
-            planDate: DateUtils.extractLocalDate(threeDaysAgo),
+            planDate: LocalDayUtils.extractLocalDate(threeDaysAgo),
             sefariaRef: 'ref_0',
             stageOrder: 1,
             stageDefinitionId: 1,

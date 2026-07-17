@@ -3,7 +3,7 @@
 ///
 /// Rules (Story 25.16 + D16 — LOCAL day boundaries, matching the rest of the
 /// app: `LocalDayClock`, the scheduler, and the streak-calendar feed which all
-/// bucket by local day via `DateUtils.extractLocalDate`):
+/// bucket by local day via `LocalDayUtils.extractLocalDate`):
 ///
 ///   * Only `completion` events count.
 ///   * Each distinct LOCAL day with at least one completion is a "day".
@@ -30,7 +30,7 @@ class StreakState {
 
   /// Local-day midnight of the most-recent completion (null when there are
   /// no completions). D16: this is a LOCAL date, not UTC — it matches the
-  /// calendar feed's `DateUtils.extractLocalDate`.
+  /// calendar feed's `LocalDayUtils.extractLocalDate`.
   final DateTime? lastCompletionDayLocal;
 
   static const empty = StreakState(
@@ -46,7 +46,7 @@ class StreakReducer {
   /// Reduce [events] into a [StreakState] relative to [today].
   ///
   /// [dayOf] maps a timestamp to its day bucket and defaults to
-  /// [DateUtils.extractLocalDate] (LOCAL day). It is injectable so tests can
+  /// [LocalDayUtils.extractLocalDate] (LOCAL day). It is injectable so tests can
   /// pin a fixed UTC offset deterministically without depending on the host
   /// machine's timezone (the D16 regression contrasts local vs UTC bucketing).
   StreakState reduce(
@@ -54,7 +54,7 @@ class StreakReducer {
     required DateTime today,
     DateTime Function(DateTime)? dayOf,
   }) {
-    final toDay = dayOf ?? DateUtils.extractLocalDate;
+    final toDay = dayOf ?? LocalDayUtils.extractLocalDate;
     final todayDay = toDay(today);
 
     final days = <DateTime>{};

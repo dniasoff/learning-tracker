@@ -467,8 +467,8 @@ Future<PaceStatus?> dashboardPaceStatus(
   int? studyDaysInWindow;
   int? studyDaysPerWeek;
   if (paceTarget is DeadlineTarget) {
-    final start = DateUtils.extractLocalDate(now);
-    final end = DateUtils.extractLocalDate(paceTarget.dueDate.toLocal());
+    final start = LocalDayUtils.extractLocalDate(now);
+    final end = LocalDayUtils.extractLocalDate(paceTarget.dueDate.toLocal());
     studyDaysInWindow = end.isBefore(start)
         ? 0
         : await db.studyDayConfigDao.countStudyDaysInInclusiveDateRangeForTrack(

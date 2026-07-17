@@ -67,18 +67,18 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
 
   // 3–4. Use the same local calendar day as the scheduler / add-track flow
   // (clock is UTC per P5; calendar_cycles keys are local YYYY-MM-DD).
-  final todayLocal = DateUtils.extractLocalDate(clockUtc);
+  final todayLocal = LocalDayUtils.extractLocalDate(clockUtc);
   final startLocal = enrollment.trackingStartDate != null
       ? (enrollment.trackingStartDate!.isBefore(DateTime.utc(2020, 1, 1))
             ? todayLocal
-            : DateUtils.extractLocalDate(enrollment.trackingStartDate!))
+            : LocalDayUtils.extractLocalDate(enrollment.trackingStartDate!))
       : (() {
           final rawRef = enrollment.trackingStartRef;
           if (rawRef == null || !rawRef.startsWith('offset:'))
             return todayLocal;
           final parsed = int.tryParse(rawRef.substring('offset:'.length));
           if (parsed == null) return todayLocal;
-          return DateUtils.extractLocalDate(
+          return LocalDayUtils.extractLocalDate(
             clockUtc.add(Duration(days: parsed.clamp(-30, 30))),
           );
         })();

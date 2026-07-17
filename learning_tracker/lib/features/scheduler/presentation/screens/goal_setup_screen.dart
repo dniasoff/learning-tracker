@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide DateUtils;
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -374,9 +374,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
               // time-of-day (raw .difference().inDays truncates durations
               // shorter than 24 h to 0, wrongly triggering "deadline passed"
               // when the deadline is still tomorrow).
-              final daysRemaining = DateUtils.extractLocalDate(
+              final daysRemaining = LocalDayUtils.extractLocalDate(
                 _targetDate!.toLocal(),
-              ).difference(DateUtils.extractLocalDate(_now())).inDays;
+              ).difference(LocalDayUtils.extractLocalDate(_now())).inDays;
               if (daysRemaining <= 0) {
                 return Text(
                   // R1-(7): use l10n.

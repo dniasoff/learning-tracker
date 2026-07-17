@@ -25,7 +25,7 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
 /// so the next read rebuilds the task list.
 Future<void> onTrackChanged(WidgetRef ref, int profileId) async {
   final now = ref.read(clockProvider);
-  final planDate = DateUtils.extractLocalDate(now);
+  final planDate = LocalDayUtils.extractLocalDate(now);
   final db = ref.read(userDatabaseProvider);
 
   // Rebuild track lists first so dashboard/hub show the new row without waiting

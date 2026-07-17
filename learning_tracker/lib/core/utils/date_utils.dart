@@ -53,8 +53,15 @@ class DateTimeFactory {
   }
 }
 
-/// Utilities for date operations following P5 pattern.
-class DateUtils {
+/// Utilities for local-day date operations following P5 pattern.
+///
+/// Named `LocalDayUtils` (not `DateUtils`) so it does not shadow
+/// `package:flutter/material.dart`'s own `abstract final class DateUtils`
+/// (AG-4 — public top-level symbol names unique across `lib/`; AUD-core-utils-01).
+/// Flutter's `DateUtils.isSameDay` is a raw field compare; this class's
+/// [isSameLocalDay] is deliberately UTC→local-day aware per the P5
+/// streak-boundary pattern — the two are not interchangeable.
+class LocalDayUtils {
   /// Extracts the local date (year, month, day) from a UTC DateTime.
   /// Per P5: streak day boundary uses local timezone.
   ///
