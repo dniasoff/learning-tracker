@@ -7598,13 +7598,18 @@
     {
       "id": "AUD-core-widgets-02",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Delete or wire up orphaned CurriculumIndicator and TrackProgressBar widgets (zero production callers)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "dfcfc9221542035151045e2ae14679d90d41cf55"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-widgets-02 AC1 OK: 4 D entries in diff; both widgets+tests absent from tree; grep CurriculumIndicator/TrackProgressBar across lib+test = 0 matches",
+        "AUD-core-widgets-02 AC2 OK: flutter analyze 'No issues found!' exit 0 after deletion; build_runner OK; no orphaned imports/exports"
+      ],
+      "notes": "Re-verified zero production callers via grep (only widgets' own test files referenced them). Deleted both widget files + both test files per recommendation. TQ-7 OK: deleted tests covered only these now-deleted, already-unreachable widgets."
     },
     {
       "id": "AUD-t-account-05",
