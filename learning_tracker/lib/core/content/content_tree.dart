@@ -121,11 +121,14 @@ class ContentTree {
           }
         }
       }
+    }
 
-      // Sort each child list by sortOrder so display is stable.
-      for (final list in childrenByContainerKey.values) {
-        list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-      }
+    // Sort each child list by sortOrder so display is stable. Runs once,
+    // after every curriculum has been indexed above — sorting inside the
+    // curriculum loop would re-sort each earlier curriculum's already-sorted
+    // list on every subsequent iteration (AUD-core-content-03).
+    for (final list in childrenByContainerKey.values) {
+      list.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     }
 
     // Second pass: fill in parent refs for containers and for any leaves whose
