@@ -41,6 +41,7 @@ import 'package:learning_tracker/features/sacred_time/data/services/cities_repos
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/city_search_exception.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';

@@ -5,7 +5,7 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
-import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 

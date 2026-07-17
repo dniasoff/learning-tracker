@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/guarded_persist.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/sacred_time_preferences.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
