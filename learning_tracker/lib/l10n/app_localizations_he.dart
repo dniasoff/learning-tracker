@@ -1757,6 +1757,10 @@ class AppLocalizationsHe extends AppLocalizations {
       'הזינו את הקוד כדי למחוק פרופיל זה.';
 
   @override
+  String get pinDialogSubtitleLocationAccess =>
+      'הזינו את הקוד כדי לשנות את מיקום המכשיר.';
+
+  @override
   String get pinBackspace => 'מחק';
 
   @override

@@ -2,20 +2,64 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// AUD-sacred_time-08: whether Sacred Time's location actions (Detect /
+/// Choose City) require a Parent PIN challenge before executing.
+///
+/// DEC-26 made location a DEVICE-scoped setting, so [SacredTimeSettingsCard]
+/// is shown to every profile — including children — in Settings' DEVICE
+/// section, and `SettingsRoute` itself carries no route-level PIN/child-mode
+/// guard (see `app_router.dart`: `/` → `settings` vs. the PIN-guarded
+/// `/parent-mode/*` routes). Changing the device's physical location is
+/// still an escalating action from a child context, so it is gated the same
+/// way ProfileSwitcherSheet gates its escalating actions (AN-2,
+/// `switcherSheetPinGuardRequiredProvider`): true only when the active
+/// profile is a child with a configured Parent PIN.
+final sacredTimeLocationPinGuardRequiredProvider = FutureProvider<bool>((
+  ref,
+) async {
+  final profiles =
+      ref.watch(profileListStreamProvider).asData?.value ?? <ProfileModel>[];
+  final activeId = ref.watch(activeProfileIdProvider);
+  final active = profiles.where((p) => p.id == activeId).firstOrNull;
+  if (active == null || active.profileMode != ProfileMode.child) return false;
+  final pinService = ref.read(pinServiceProvider);
+  return pinService.hasProfilePin(activeId);
+});
+
 /// Settings card for the Sacred Time feature. Hard-on (no disable toggle).
 /// Lets the user choose location source (detect / manual city), refresh, and
 /// flip the in-Israel one-day-chag override.
 class SacredTimeSettingsCard extends ConsumerWidget {
-  const SacredTimeSettingsCard({super.key});
+  const SacredTimeSettingsCard({
+    super.key,
+    this.pinGuardRequired = false,
+    this.activeProfileId = 0,
+  });
+
+  /// AUD-sacred_time-08: gates the location actions behind a Parent PIN
+  /// challenge (see [sacredTimeLocationPinGuardRequiredProvider]).
+  ///
+  /// This card has no DB-backed provider dependency of its own — the caller
+  /// (`SettingsScreen`, which already watches the active profile for other
+  /// purposes) resolves the guard and threads it down as a plain bool/id
+  /// pair. Callers that omit it (every pre-existing construction site,
+  /// including tests) default to no guard, matching pre-fix behaviour.
+  final bool pinGuardRequired;
+
+  /// Active profile id passed through to the Parent PIN dialog. Ignored
+  /// when [pinGuardRequired] is false.
+  final int activeProfileId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -60,7 +104,10 @@ class SacredTimeSettingsCard extends ConsumerWidget {
                 const SizedBox(height: 16),
                 _LocationRow(location: location),
                 const SizedBox(height: 12),
-                _LocationActions(),
+                _LocationActions(
+                  pinGuardRequired: pinGuardRequired,
+                  activeProfileId: activeProfileId,
+                ),
                 const Divider(height: 28),
                 _InIsraelRow(value: inIsrael),
               ],
@@ -177,6 +224,14 @@ class _LocationRow extends StatelessWidget {
 }
 
 class _LocationActions extends ConsumerStatefulWidget {
+  const _LocationActions({
+    required this.pinGuardRequired,
+    required this.activeProfileId,
+  });
+
+  final bool pinGuardRequired;
+  final int activeProfileId;
+
   @override
   ConsumerState<_LocationActions> createState() => _LocationActionsState();
 }
@@ -214,6 +269,12 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
   }
 
   Future<void> _detect() async {
+    // AUD-sacred_time-08: escalating action from a child context — verify
+    // the Parent PIN first (mirrors ProfileSwitcherSheet's AN-2
+    // `_guardEscalating`). Checked before `_detecting` flips so a cancelled
+    // PIN prompt never leaves the button stuck in its loading state.
+    if (widget.pinGuardRequired && !await _verifyParentPin()) return;
+    if (!mounted) return;
     setState(() => _detecting = true);
     try {
       final result = await ref.read(sacredLocationProvider.notifier).detect();
@@ -225,7 +286,23 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
   }
 
   Future<void> _pickCity() async {
+    // AUD-sacred_time-08: same escalating-action gate as _detect above.
+    if (widget.pinGuardRequired && !await _verifyParentPin()) return;
+    if (!mounted) return;
     await context.pushRoute(const CityPickerRoute());
+  }
+
+  /// AUD-sacred_time-08: shows the Parent PIN verification dialog and
+  /// returns whether it succeeded. Mirrors ProfileSwitcherSheet's
+  /// `_guardEscalating` (AN-2).
+  Future<bool> _verifyParentPin() {
+    final l10n = AppLocalizations.of(context)!;
+    return showParentPinVerificationDialog(
+      context,
+      profileId: widget.activeProfileId,
+      pinService: ref.read(pinServiceProvider),
+      subtitle: l10n.pinDialogSubtitleLocationAccess,
+    );
   }
 
   void _showOutcome(LocationFetchResult result) {

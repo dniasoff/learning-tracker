@@ -117,7 +117,23 @@ class SettingsScreen extends ConsumerWidget {
               // DEC-26: Sacred Time / location is DEVICE-scoped, so its card lives
               // under the DEVICE section (it was previously mis-placed under
               // PROFILE).
-              const SacredTimeSettingsCard(),
+              //
+              // AUD-sacred_time-08: SettingsRoute carries no PIN/child-mode
+              // route guard (see app_router.dart), so a child on a shared
+              // device could otherwise trigger the card's location actions
+              // with no parent authentication. Gate the card's own
+              // escalating actions (AN-2 pattern) instead of gating the
+              // whole Settings screen, which children legitimately need for
+              // their own profile preferences.
+              SacredTimeSettingsCard(
+                pinGuardRequired:
+                    ref
+                        .watch(sacredTimeLocationPinGuardRequiredProvider)
+                        .asData
+                        ?.value ??
+                    false,
+                activeProfileId: activeProfileId,
+              ),
               const SizedBox(height: 24),
             ],
             // ── PROFILE section (D2/WS4.settings) ─────────────────────────────

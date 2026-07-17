@@ -3147,6 +3147,12 @@ abstract class AppLocalizations {
   /// **'Enter the PIN to delete this profile.'**
   String get pinDialogSubtitleDeleteProfile;
 
+  /// PIN dialog subtitle shown when a child profile taps Detect or Choose City on the Sacred Time settings card (AUD-sacred_time-08).
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the PIN to change the device location.'**
+  String get pinDialogSubtitleLocationAccess;
+
   /// Accessibility label for the backspace/delete button on the PIN keypad.
   ///
   /// In en, this message translates to:

@@ -61,7 +61,13 @@ const _baseline = <String>{
   'lib/features/onboarding/presentation/screens/bulk_mark_screen.dart:776',
   'lib/features/onboarding/presentation/widgets/intro_mishna_page.dart:66',
   'lib/features/scheduler/presentation/widgets/pace_indicator.dart:82',
-  'lib/features/settings/presentation/screens/settings_screen.dart:302',
+  // AUD-sacred_time-08: re-pinned from :302 — the SacredTimeSettingsCard
+  // Parent-PIN-gate wiring (sacredTimeLocationPinGuardRequiredProvider watch
+  // + pinGuardRequired/activeProfileId passed to the card) added near the
+  // top of this file's DEVICE section pushed this SAME pre-existing,
+  // still-unaddressed AX-2 hit down by 16 lines. No content at this site
+  // changed.
+  'lib/features/settings/presentation/screens/settings_screen.dart:318',
   // AUD-t-track_setup-01: re-pinned from :513 — the testability-seam
   // extraction (smartDefaultTrackName + its imports, added near the top of
   // this file so _getSmartDefault can delegate to a ref-free pure function)
