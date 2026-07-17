@@ -302,13 +302,19 @@
   {
    "id": "AUD-core-preferences-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P1",
    "title": "Align readUseHebrewCalendar's stale '?? false' default with HebrewDatePreference.defaultValue=true",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "46e671b34d8bd5c3d08bb5a880abc45e58af0a34"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-preferences-02 AC1 OK: prefs_keys.dart:56 return true + :54 ?? true match defaultValue; test asserts true for profiles 3 and 0 (PASS)",
+    "AUD-core-preferences-02 AC2 OK: new hebrew_date_preference_test.dart (AG-5 mirror) asserts both codepaths agree for never-written profile 42; ratchet clean (PASS)",
+    "AUD-core-preferences-02 AC3 OK: outbox test seeds only font-size on fresh profile, asserts pushed use_hebrew_calendar == defaultValue; facade:260 uses fixed helper (PASS)"
+   ],
+   "notes": "Re-verified bug still present (?? false / return false vs defaultValue=true). Red-first tests failed pre-fix (Expected true, Actual false). Fixed default to true; HebrewDatePreference now delegates to readUseHebrewCalendar (TextDisplayPreference pattern). All 3 ACs met."
   },
   {
    "id": "AUD-learning-02",
