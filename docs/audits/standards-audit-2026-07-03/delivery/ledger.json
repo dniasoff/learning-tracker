@@ -7240,13 +7240,19 @@
     {
       "id": "AUD-core-widgets-03",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace raw Color(0xFF...) literals in core/widgets with AppColors/AppTheme constants (stat_card.dart duplicates AppColors.blueNavy verbatim)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "3933686afe51182855e8e1e187b51caffa00f319"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-widgets-03 AC1 OK: grep 'Color(0[xX]' in lib/core/widgets = 0 matches; 0xFF03174C and 0xFF929BAA = 0 each (stronger whole-dir form met)",
+        "AUD-core-widgets-03 AC2 OK: zero raw Color(0x) remain so rule passes clean; rule unit test 9/9; added test mirrors rule and fires red on 10 pre-fix sites",
+        "AUD-core-widgets-03 dedup OK: blueNavy=0xFF03174C exact; all 7 new AppColors constants match source hex; goldens pass byte-identical (40/40)"
+      ],
+      "notes": "Re-verified all 10 sites present pre-fix (matches sites:10). Red test failed w/ exactly 10 violations. Deduped 0xFF03174C->blueNavy, 0xFF929BAA->new preferenceSubtitleGrey; named 5 remaining one-offs. Test now green; grep confirms zero raw literals left."
     },
     {
       "id": "AUD-t-cross-73",
