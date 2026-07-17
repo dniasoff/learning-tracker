@@ -7738,13 +7738,18 @@
     {
       "id": "AUD-profiles-22",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Tag every keepAlive:true provider in features/profiles with the grep-able // keepAlive: justification SM-6 requires",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "6a2e4e49c7e4c10c7a9e25febb3a930e3eae762a"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-22 AC1 OK: all 8 keepAlive sites in the 4 named files carry a // keepAlive: tag on the immediately preceding line (grep+diff confirmed)",
+        "AUD-profiles-22 AC1 checker OK: Makefile Rule-0 awk gate (76/76) exists; proved red on synthetic untagged site, green on real tree"
+      ],
+      "notes": "Re-verified: all 8 sites had only prose /// comments, no literal `// keepAlive:` tag. Added tag above each @Riverpod(keepAlive: true). Added Rule-0 Makefile check 76/76 (mirrors 72/75). Demonstrated red (8 matches) pre-fix, green (0) post-fix; clean under full make audit."
     },
     {
       "id": "AUD-t-scheduler-09",
