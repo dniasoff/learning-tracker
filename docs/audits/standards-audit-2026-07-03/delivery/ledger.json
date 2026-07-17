@@ -8111,13 +8111,18 @@
     {
       "id": "AUD-content_browsing-08",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Replace raw Colors.* literals with theme colors in content_browsing widgets",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "46499971d1b146188c6a4e1ba5e9ab364504976c"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-content_browsing-08 AC1 OK: rule only flags Color(0x..), never Colors.* so zero hits; all 3 raw literals removed, grep finds only comment lines",
+        "AUD-content_browsing-08 AC1 OK (checker): source-scan test fires RED on 3 parent-blob hits (1 grey, 2 white), GREEN now; stands in for dead custom_lint"
+      ],
+      "notes": "Re-verified all 3 sites present; replaced Colors.grey/Colors.white with theme.colorScheme.onSurfaceVariant/.onPrimary. Named AC checker never inspects Colors.* per its own tests; added source-scan regression test as live checker (precedent AUD-tutoring-18). Confirmed red via git stash then green."
     },
     {
       "id": "AUD-t-content_browsing-07",
