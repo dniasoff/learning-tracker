@@ -34,12 +34,27 @@ class SacredTimePreferences {
     );
   }
 
+  /// AUD-sacred_time-08: rounds a coordinate to 3 decimal places (~111m at
+  /// the equator) before it is persisted.
+  ///
+  /// DEC-26 already keeps Sacred Time's lat/long device-local and out of the
+  /// synced `ui_preferences` payload (see `outbox_sync_write_facade.dart`),
+  /// so this is defense-in-depth rather than a cloud-privacy fix: a
+  /// full-precision GPS fix can pinpoint a home to within a few metres, and
+  /// nothing downstream (zmanim/halachic-time calculation, or any future
+  /// log/export path) needs more than ~100m precision. 3 decimal places also
+  /// matches what the Sacred Time card's location row already displays
+  /// (`toStringAsFixed(3)`), so the persisted value never carries more
+  /// precision than the UI shows. See docs/coding-standards.md "Privacy &
+  /// Child Data" PV-7 for the full decision record.
+  static double _roundCoordinate(double value) => (value * 1000).round() / 1000;
+
   static Future<void> writeLocation(
     SharedPreferences prefs,
     SacredLocation loc,
   ) async {
-    await prefs.setDouble(_latKey, loc.latitude);
-    await prefs.setDouble(_longKey, loc.longitude);
+    await prefs.setDouble(_latKey, _roundCoordinate(loc.latitude));
+    await prefs.setDouble(_longKey, _roundCoordinate(loc.longitude));
     await prefs.setString(_sourceKey, loc.source.name);
     await prefs.setInt(_fixedAtKey, loc.fixedAt.toUtc().millisecondsSinceEpoch);
     if (loc.countryCode != null) {

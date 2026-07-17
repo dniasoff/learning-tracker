@@ -968,6 +968,10 @@
   "@pinDialogSubtitleDeleteProfile": {
     "description": "PIN dialog subtitle shown in the delete-profile context."
   },
+  "pinDialogSubtitleLocationAccess": "Enter the PIN to change the device location.",
+  "@pinDialogSubtitleLocationAccess": {
+    "description": "PIN dialog subtitle shown when a child profile taps Detect or Choose City on the Sacred Time settings card (AUD-sacred_time-08)."
+  },
   "pinBackspace": "Delete",
   "@pinBackspace": {
     "description": "Accessibility label for the backspace/delete button on the PIN keypad."

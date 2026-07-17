@@ -1769,6 +1769,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter the PIN to delete this profile.';
 
   @override
+  String get pinDialogSubtitleLocationAccess =>
+      'Enter the PIN to change the device location.';
+
+  @override
   String get pinBackspace => 'Delete';
 
   @override

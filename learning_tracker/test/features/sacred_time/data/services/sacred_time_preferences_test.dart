@@ -63,8 +63,11 @@ void main() {
       final read = SacredTimePreferences.readLocation(prefs);
 
       expect(read, isNotNull);
-      expect(read!.latitude, closeTo(31.7683, 0.0001));
-      expect(read.longitude, closeTo(35.2137, 0.0001));
+      // AUD-sacred_time-08: writeLocation rounds to 3 decimal places
+      // (~111m) before persisting, so the round-trip is lossy by design —
+      // assert the exact rounded values, not raw round-trip fidelity.
+      expect(read!.latitude, 31.768);
+      expect(read.longitude, 35.214);
       expect(read.source, SacredLocationSource.detected);
       expect(read.countryCode, 'IL');
       expect(read.cityLabel, 'Jerusalem');
@@ -73,6 +76,27 @@ void main() {
         read.fixedAt.millisecondsSinceEpoch,
         fixedAt.millisecondsSinceEpoch,
       );
+    });
+
+    test('AUD-sacred_time-08: rounds latitude/longitude to 3 decimal places '
+        '(~111m) before persisting, as defense-in-depth for a full-precision '
+        'GPS fix even though DEC-26 already keeps location device-local and '
+        'out of the synced ui_preferences payload', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final loc = SacredLocation(
+        latitude: 40.712834567,
+        longitude: -74.005974321,
+        source: SacredLocationSource.detected,
+        fixedAt: DateTime.utc(2026, 1, 1),
+      );
+
+      await SacredTimePreferences.writeLocation(prefs, loc);
+
+      // Assert the raw persisted SharedPreferences value itself (not just
+      // the round-tripped model) is rounded — that's the byte-for-byte
+      // value any future log/export/sync path would see.
+      expect(prefs.getDouble('sacred_time_latitude'), 40.713);
+      expect(prefs.getDouble('sacred_time_longitude'), -74.006);
     });
 
     test('reads location without countryCode and cityLabel', () async {
