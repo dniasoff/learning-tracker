@@ -7213,13 +7213,20 @@
     {
       "id": "AUD-core-preferences-05",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Add '// keepAlive:' justification comments to the 8 bare keepAlive:true providers in preference_providers.dart",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "01cc8fda1095acde1e30295257a7933db47d2be4"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-core-preferences-05 AC1 OK: all 11 keepAlive:true sites have // keepAlive: on line immediately above; checker awk = 0 hits on real file",
+        "AUD-core-preferences-05 AC1 checker-fires OK: comment-deleted fixture yields hit line 199; Makefile block sets FAIL=1 -> exit 1",
+        "AUD-core-preferences-05 AC1 wired OK: make audit exit0 prints 76/76 SM-6 preferences check + '=== audit PASSED ==='",
+        "AUD-core-preferences-05 SM-6 OK: coding-standards.md:167 requires justification, :169 [Pending] grep - builder shipped it"
+      ],
+      "notes": "Re-verified, no drift, CONFIRMED. Tagged all 11 keepAlive sites with `// keepAlive: <reason>` (AC's grep is file-wide, not just 8 evidence sites). Shipped Makefile checker 76/76 (2-line-lookback grep, mirrors auth_providers.dart's 72/75); fires on a broken fixture, clean on real file."
     },
     {
       "id": "AUD-core-widgets-03",
