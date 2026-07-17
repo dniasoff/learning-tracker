@@ -1287,11 +1287,11 @@ abstract class AppLocalizations {
   /// **'Search content'**
   String get searchContent;
 
-  /// No description provided for @errorWithMessage.
+  /// AUD-progress-08: generic failure message for an AsyncValue error branch — never interpolate the raw exception (EH-5).
   ///
   /// In en, this message translates to:
-  /// **'Error: {error}'**
-  String errorWithMessage(String error);
+  /// **'Something went wrong. Please try again.'**
+  String get errorWithMessage;
 
   /// No description provided for @errorLoadingTasks.
   ///
@@ -3375,11 +3375,11 @@ abstract class AppLocalizations {
   /// **'Loading your journey...'**
   String get loadingYourJourney;
 
-  /// No description provided for @failedToLoadJourney.
+  /// AUD-progress-08: generic failure message — never interpolate the raw exception (EH-5).
   ///
   /// In en, this message translates to:
-  /// **'Failed to load journey: {error}'**
-  String failedToLoadJourney(String error);
+  /// **'Failed to load journey. Please try again.'**
+  String get failedToLoadJourney;
 
   /// No description provided for @journeyEmptyTitle.
   ///
@@ -7065,11 +7065,11 @@ abstract class AppLocalizations {
   /// **'Loading progress...'**
   String get curriculumProgressLoading;
 
-  /// Error message shown in CurriculumProgressScreen when progress data fails to load.
+  /// AUD-progress-08: generic failure message shown in CurriculumProgressScreen when progress data fails to load — never interpolate the raw exception (EH-5).
   ///
   /// In en, this message translates to:
-  /// **'Failed to load progress: {error}'**
-  String curriculumProgressLoadFailed(String error);
+  /// **'Failed to load progress. Please try again.'**
+  String get curriculumProgressLoadFailed;
 
   /// Tooltip for the settings gear IconButton in CurriculumProgressScreen's AppBar, which navigates to CurriculumSettingsRoute.
   ///
@@ -7425,17 +7425,17 @@ abstract class AppLocalizations {
   /// **'Loading lifetime knowledge…'**
   String get lifetimeKnowledgeLoading;
 
-  /// Body error message when the Lifetime Knowledge per-curriculum tree fails to load.
+  /// AUD-progress-08: generic body error message when the Lifetime Knowledge per-curriculum tree fails to load — never interpolate the raw exception (EH-5).
   ///
   /// In en, this message translates to:
-  /// **'Failed to load: {error}'**
-  String lifetimeKnowledgeLoadError(String error);
+  /// **'Failed to load. Please try again.'**
+  String get lifetimeKnowledgeLoadError;
 
-  /// Header error message when the Lifetime Knowledge header counters fail to load.
+  /// AUD-progress-08: generic header error message when the Lifetime Knowledge header counters fail to load — never interpolate the raw exception (EH-5).
   ///
   /// In en, this message translates to:
-  /// **'Failed to load counters: {error}'**
-  String lifetimeKnowledgeCounterError(String error);
+  /// **'Failed to load counters. Please try again.'**
+  String get lifetimeKnowledgeCounterError;
 
   /// Retry action label on the Lifetime Knowledge error states.
   ///

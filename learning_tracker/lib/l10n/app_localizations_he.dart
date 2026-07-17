@@ -690,9 +690,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get searchContent => 'חיפוש תוכן';
 
   @override
-  String errorWithMessage(String error) {
-    return 'שגיאה: $error';
-  }
+  String get errorWithMessage => 'משהו השתבש. נסה שוב.';
 
   @override
   String errorLoadingTasks(String error) {
@@ -1882,9 +1880,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get loadingYourJourney => 'טוענים את המסע...';
 
   @override
-  String failedToLoadJourney(String error) {
-    return 'נכשל בטעינת המסע: $error';
-  }
+  String get failedToLoadJourney => 'נכשל בטעינת המסע. נסה שוב.';
 
   @override
   String get journeyEmptyTitle => 'עדיין אין סיומים';
@@ -4087,9 +4083,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get curriculumProgressLoading => 'טוענים נתוני התקדמות...';
 
   @override
-  String curriculumProgressLoadFailed(String error) {
-    return 'שגיאה בטעינת ההתקדמות: $error';
-  }
+  String get curriculumProgressLoadFailed => 'שגיאה בטעינת ההתקדמות. נסה שוב.';
 
   @override
   String get curriculumProgressSettingsTooltip => 'הגדרות קורס הלימוד';
@@ -4401,14 +4395,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get lifetimeKnowledgeLoading => 'טוען ידע כולל…';
 
   @override
-  String lifetimeKnowledgeLoadError(String error) {
-    return 'נכשל בטעינה: $error';
-  }
+  String get lifetimeKnowledgeLoadError => 'נכשל בטעינה. נסה שוב.';
 
   @override
-  String lifetimeKnowledgeCounterError(String error) {
-    return 'נכשל בטעינת מונים: $error';
-  }
+  String get lifetimeKnowledgeCounterError => 'נכשל בטעינת מונים. נסה שוב.';
 
   @override
   String get lifetimeKnowledgeRetry => 'נסה שוב';

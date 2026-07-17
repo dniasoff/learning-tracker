@@ -65,7 +65,7 @@ class SiyumimMilestonesScreen extends ConsumerWidget {
         child: journeyAsync.when(
           loading: () => const LoadingIndicator(),
           error: (error, _) => ErrorDisplay(
-            message: l10n.failedToLoadJourney(error.toString()),
+            message: l10n.failedToLoadJourney,
             onRetry: () =>
                 ref.invalidate(journeyViewModelProvider(effectiveProfileId)),
           ),

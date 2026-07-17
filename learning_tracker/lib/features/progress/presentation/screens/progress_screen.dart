@@ -65,8 +65,7 @@ class ProgressScreen extends ConsumerWidget {
         child: SafeArea(
           child: activeCurriculaAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) =>
-                Center(child: Text(l10n.errorWithMessage(error.toString()))),
+            error: (error, _) => Center(child: Text(l10n.errorWithMessage)),
             data: (activeCurricula) {
               if (activeCurricula.isEmpty) {
                 return EmptyState(
@@ -288,7 +287,7 @@ class _PerTrackSection extends ConsumerWidget {
       ),
       error: (error, _) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Text(l10n.errorWithMessage(error.toString())),
+        child: Text(l10n.errorWithMessage),
       ),
       data: (metrics) {
         if (metrics.isEmpty) return const SizedBox.shrink();

@@ -198,7 +198,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: ErrorDisplay(
-                  message: l10n.curriculumProgressLoadFailed(error.toString()),
+                  message: l10n.curriculumProgressLoadFailed,
                   onRetry: () =>
                       ref.invalidate(curriculumProgressProvider(curriculumId)),
                 ),

@@ -321,11 +321,9 @@
   "learner": "לומד",
   "learningTracker": "מעקב לימוד",
   "searchContent": "חיפוש תוכן",
-  "errorWithMessage": "שגיאה: {error}",
+  "errorWithMessage": "משהו השתבש. נסה שוב.",
   "@errorWithMessage": {
-    "placeholders": {
-      "error": {"type": "String"}
-    }
+    "description": "AUD-progress-08: generic failure message for an AsyncValue error branch — never interpolate the raw exception (EH-5)."
   },
   "errorLoadingTasks": "שגיאה בטעינת המשימות: {error}",
   "@errorLoadingTasks": {
@@ -866,11 +864,9 @@
     }
   },
   "loadingYourJourney": "טוענים את המסע...",
-  "failedToLoadJourney": "נכשל בטעינת המסע: {error}",
+  "failedToLoadJourney": "נכשל בטעינת המסע. נסה שוב.",
   "@failedToLoadJourney": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "AUD-progress-08: generic failure message — never interpolate the raw exception (EH-5)."
   },
   "journeyEmptyTitle": "עדיין אין סיומים",
   "journeyEmptyBody": "כשתסיימו מסכתא או ספר, הוא יירשם כאן כאבן דרך קבועה.",
@@ -1993,11 +1989,9 @@
 
   "curriculumProgressBreakdownByLevel": "פירוט לפי רמה",
   "curriculumProgressLoading": "טוענים נתוני התקדמות...",
-  "curriculumProgressLoadFailed": "שגיאה בטעינת ההתקדמות: {error}",
+  "curriculumProgressLoadFailed": "שגיאה בטעינת ההתקדמות. נסה שוב.",
   "@curriculumProgressLoadFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "AUD-progress-08: generic failure message shown in CurriculumProgressScreen when progress data fails to load — never interpolate the raw exception (EH-5)."
   },
   "curriculumProgressSettingsTooltip": "הגדרות קורס הלימוד",
 
@@ -2309,19 +2303,13 @@
   "@lifetimeKnowledgeLoading": {
     "description": "Loading indicator message on the Lifetime Knowledge screen body."
   },
-  "lifetimeKnowledgeLoadError": "נכשל בטעינה: {error}",
+  "lifetimeKnowledgeLoadError": "נכשל בטעינה. נסה שוב.",
   "@lifetimeKnowledgeLoadError": {
-    "description": "Body error message when the Lifetime Knowledge per-curriculum tree fails to load.",
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "AUD-progress-08: generic body error message when the Lifetime Knowledge per-curriculum tree fails to load — never interpolate the raw exception (EH-5)."
   },
-  "lifetimeKnowledgeCounterError": "נכשל בטעינת מונים: {error}",
+  "lifetimeKnowledgeCounterError": "נכשל בטעינת מונים. נסה שוב.",
   "@lifetimeKnowledgeCounterError": {
-    "description": "Header error message when the Lifetime Knowledge header counters fail to load.",
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "AUD-progress-08: generic header error message when the Lifetime Knowledge header counters fail to load — never interpolate the raw exception (EH-5)."
   },
   "lifetimeKnowledgeRetry": "נסה שוב",
   "@lifetimeKnowledgeRetry": {
