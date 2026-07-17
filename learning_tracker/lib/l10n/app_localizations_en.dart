@@ -4547,31 +4547,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'No learning activity in this range yet.';
 
   @override
-  String get monthlyActivityCalendarNoData => 'No activity data';
-
-  @override
-  String monthlyActivityCalendarMonthHeader(String month, int activeDays) {
-    String _temp0 = intl.Intl.pluralLogic(
-      activeDays,
-      locale: localeName,
-      other: '$activeDays active days',
-      one: '1 active day',
-    );
-    return '$month  —  $_temp0';
-  }
-
-  @override
-  String monthlyActivityCalendarCompletionsCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count completions',
-      one: '1 completion',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get redeemScreenTitle => 'Redeem Prizes';
 
   @override
