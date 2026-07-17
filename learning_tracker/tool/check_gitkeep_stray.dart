@@ -1,5 +1,6 @@
-/// Rule-0 checker — no stray `.gitkeep` placeholder in a non-empty `lib/`
-/// directory (AUD-core-constants-02).
+/// Rule-0 checker — no `.gitkeep` placeholder in a non-empty `lib/`
+/// directory, anywhere in the tree (AUD-core-constants-02, AC1: "flags
+/// ANY .gitkeep whose directory contains another tracked file").
 ///
 /// A `.gitkeep` file exists only to make git track an otherwise-empty
 /// directory (git does not track empty directories at all). Once a
@@ -15,19 +16,23 @@
 /// `.gitkeep` whose directory contains another **tracked** file", and a
 /// filesystem-only scan would also flag directories that hold only
 /// gitignored/generated content, where the `.gitkeep` still does its job.
+/// A directory that holds ONLY a `.gitkeep` (genuinely empty otherwise) is
+/// never flagged — the `.gitkeep` is load-bearing there.
 ///
-/// This checker's own first run surfaced the same pattern in 47 other
-/// `lib/` directories, independently of AUD-core-constants-02's single
-/// named evidence site (that finding's own `why` field calls this out
-/// explicitly as "an informal repo-wide grep ... context only, not a full
-/// audit"). Cleaning up that wider backlog is out of THIS finding's scope
-/// — a drive-by, not this finding's job — so it is tolerated via
-/// [_baseline], the same ratchet shape as
+/// This checker's own first run surfaced the same redundant-`.gitkeep`
+/// pattern in 47 other `lib/` directories, independently of
+/// AUD-core-constants-02's single named evidence site (that finding's own
+/// `why` field calls this out explicitly as "an informal repo-wide grep
+/// ... context only, not a full audit"). Those 47 have since been cleaned
+/// up (their `.gitkeep`s deleted; the directories stay tracked via their
+/// other files), so this checker now enforces AC1 literally: it flags ANY
+/// redundant `.gitkeep`, tolerating none. There is deliberately no
+/// baseline/exemption set — unlike the ratchet shape used by
 /// `tool/check_notifications_duplicate_test_classes.dart` (AUD-t-
-/// notifications-03) and `tool/check_test_mirroring.dart` (AG-5). The gate
-/// fails only on a NEW stray `.gitkeep` outside that tracked list, or on
-/// `lib/core/constants` regressing back to having one. Shrink [_baseline]
-/// as each directory's stale `.gitkeep` is deleted.
+/// notifications-03) and `tool/check_test_mirroring.dart` (AG-5), this
+/// finding's AC does not say "no NEW violations"; it says "any". Do not
+/// reintroduce a baseline/exemption set to paper over a new violation —
+/// delete the offending `.gitkeep` instead.
 ///
 /// Usage:
 ///   dart run tool/check_gitkeep_stray.dart
@@ -39,68 +44,13 @@
 ///     touching this repo's real git index.
 ///
 /// Exit codes:
-///   0 — no non-baselined `lib/` directory carries both a `.gitkeep` and
-///       another git-tracked file
-///   1 — one or more directories violate that outside [_baseline] (prints
-///       the offending directories)
+///   0 — no `lib/` directory carries both a `.gitkeep` and another
+///       git-tracked file
+///   1 — one or more directories violate that (prints the offending
+///       directories)
 library;
 
 import 'dart:io';
-
-/// Pre-existing backlog this checker tolerates — discovered by this
-/// checker's own first run, out of AUD-core-constants-02's named scope
-/// (that finding names only `lib/core/constants/.gitkeep`). Never add to
-/// this set to paper over a NEW violation; shrink it as directories are
-/// cleaned up.
-const _baseline = <String>{
-  'lib/app/bootstrap',
-  'lib/app/restore',
-  'lib/app/router',
-  'lib/app/sync_runtime',
-  'lib/core/database/daos',
-  'lib/core/logging',
-  'lib/core/theme',
-  'lib/features/account/data/repositories',
-  'lib/features/account/domain/repositories',
-  'lib/features/account/presentation/providers',
-  'lib/features/account/presentation/screens',
-  'lib/features/account/presentation/widgets',
-  'lib/features/content_browsing/data/repositories',
-  'lib/features/content_browsing/domain/repositories',
-  'lib/features/content_browsing/presentation/providers',
-  'lib/features/content_browsing/presentation/screens',
-  'lib/features/content_browsing/presentation/widgets',
-  'lib/features/gamification/presentation/providers',
-  'lib/features/gamification/presentation/screens',
-  'lib/features/gamification/presentation/widgets',
-  'lib/features/learning/data/repositories',
-  'lib/features/learning/domain/entities',
-  'lib/features/learning/domain/repositories',
-  'lib/features/learning/domain/use_cases',
-  'lib/features/learning/presentation/providers',
-  'lib/features/learning/presentation/screens',
-  'lib/features/notifications/domain/repositories',
-  'lib/features/notifications/presentation/providers',
-  'lib/features/notifications/presentation/screens',
-  'lib/features/notifications/presentation/widgets',
-  'lib/features/onboarding/presentation/providers',
-  'lib/features/onboarding/presentation/screens',
-  'lib/features/onboarding/presentation/widgets',
-  'lib/features/progress/data/repositories',
-  'lib/features/progress/domain/repositories',
-  'lib/features/progress/presentation/providers',
-  'lib/features/progress/presentation/screens',
-  'lib/features/progress/presentation/widgets',
-  'lib/features/scheduler/data/repositories',
-  'lib/features/scheduler/domain/repositories',
-  'lib/features/scheduler/presentation/providers',
-  'lib/features/scheduler/presentation/screens',
-  'lib/features/scheduler/presentation/widgets',
-  'lib/features/settings/presentation/providers',
-  'lib/features/settings/presentation/screens',
-  'lib/features/settings/presentation/widgets',
-  'lib/features/sync/presentation/providers',
-};
 
 void main(List<String> args) {
   final rootIndex = args.indexOf('--root');
@@ -130,7 +80,7 @@ void main(List<String> args) {
   byDir.forEach((dir, files) {
     final hasGitkeep = files.any((f) => f.endsWith('/.gitkeep'));
     final hasOtherTrackedFile = files.any((f) => !f.endsWith('/.gitkeep'));
-    if (hasGitkeep && hasOtherTrackedFile && !_baseline.contains(dir)) {
+    if (hasGitkeep && hasOtherTrackedFile) {
       violations.add(dir);
     }
   });
@@ -151,8 +101,7 @@ void main(List<String> args) {
   }
 
   stdout.writeln(
-    'Stray .gitkeep check passed — no non-baselined lib/ directory carries '
-    'a .gitkeep alongside another git-tracked file '
-    '(${_baseline.length} pre-existing baselined director${_baseline.length == 1 ? 'y' : 'ies'} tolerated).',
+    'Stray .gitkeep check passed — no lib/ directory carries a .gitkeep '
+    'alongside another git-tracked file.',
   );
 }
