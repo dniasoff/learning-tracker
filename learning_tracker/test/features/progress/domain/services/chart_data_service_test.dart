@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -5,6 +7,66 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 
 import '../../../../helpers/drift_memory.dart';
+
+const _chartDataServicePath =
+    'lib/features/progress/domain/services/chart_data_service.dart';
+
+/// Extracts the implementation of a method named [methodName] from Dart
+/// [source] — either the expression body of an arrow function (`=> expr;`)
+/// or the statement block of a `{ ... }` body. Search starts at the `})`
+/// that closes the method's named-parameter list, so it works for both
+/// forms without needing a full Dart parser.
+///
+/// Used by the AUD-progress-05 regression test below to assert structurally
+/// that `getCumulativeProgressLive` delegates to `getCumulativeProgress`
+/// rather than carrying its own independent copy of the query/bucketing
+/// logic (Fowler duplicated code).
+String _extractMethodImpl(String source, String methodName) {
+  final sigIndex = source.indexOf('$methodName(');
+  if (sigIndex == -1) {
+    fail('$methodName not found in $_chartDataServicePath');
+  }
+
+  final paramsEnd = source.indexOf('})', sigIndex);
+  if (paramsEnd == -1) {
+    fail('could not find end of parameter list for $methodName');
+  }
+
+  var i = paramsEnd + 2; // just after '})'
+  while (source[i] == ' ' || source[i] == '\n') {
+    i++;
+  }
+  if (source.startsWith('async', i)) {
+    i += 'async'.length;
+    while (source[i] == ' ' || source[i] == '\n') {
+      i++;
+    }
+  }
+
+  if (source[i] == '=' && source[i + 1] == '>') {
+    // Arrow-function body: read until the statement-terminating ';' at
+    // bracket depth 0.
+    var j = i + 2;
+    var depth = 0;
+    while (!(depth == 0 && source[j] == ';')) {
+      if (source[j] == '(' || source[j] == '{' || source[j] == '[') depth++;
+      if (source[j] == ')' || source[j] == '}' || source[j] == ']') depth--;
+      j++;
+    }
+    return source.substring(i + 2, j).trim();
+  } else if (source[i] == '{') {
+    // Block body: brace-match to find the end.
+    var depth = 1;
+    var j = i + 1;
+    while (depth > 0) {
+      if (source[j] == '{') depth++;
+      if (source[j] == '}') depth--;
+      j++;
+    }
+    return source.substring(i + 1, j - 1).trim();
+  }
+  fail('unexpected body form for $methodName at offset $i');
+}
 
 void main() {
   late UserDatabase db;
@@ -397,6 +459,94 @@ void main() {
           expect(result!.first.expectedTotal, greaterThanOrEqualTo(3.0));
         },
       );
+    });
+
+    // AUD-progress-05 — getDailyCompletionsLive / getCumulativeProgressLive
+    // were byte-identical duplicates of getDailyCompletions /
+    // getCumulativeProgress (~140 duplicated lines, no behavioral
+    // difference). getDailyCompletionsLive had zero callers (dead code) and
+    // is deleted outright; getCumulativeProgressLive is still called from
+    // recent_activity_providers.dart and is kept as a one-line delegate for
+    // callsite stability, per the finding's recommendation.
+    //
+    // These are source-inspection tests (mirroring the
+    // aud_core_widgets_03_no_color_literals_test.dart pattern) rather than
+    // behavioral ones: nothing about the two methods' *output* was ever
+    // wrong, so a black-box behavioral test can't distinguish "coincidentally
+    // identical" from "duplicated logic that will silently diverge next
+    // time only one twin gets touched" — the actual defect. Reading
+    // `_chartDataServicePath`'s own text is the only way to assert the
+    // duplication is gone.
+    group('*Live methods (AUD-progress-05 — no independent duplicate logic)', () {
+      late String source;
+
+      setUp(() {
+        source = File(_chartDataServicePath).readAsStringSync();
+      });
+
+      test('getDailyCompletionsLive no longer exists (was dead-code duplicate '
+          'of getDailyCompletions)', () {
+        expect(
+          source.contains('getDailyCompletionsLive'),
+          isFalse,
+          reason:
+              'getDailyCompletionsLive duplicated getDailyCompletions with '
+              'zero callers (verified dead code) — AUD-progress-05 requires '
+              'it be deleted.',
+        );
+      });
+
+      test('getCumulativeProgressLive delegates to getCumulativeProgress in '
+          'one line, carrying no independent query/bucketing logic', () {
+        final body = _extractMethodImpl(source, 'getCumulativeProgressLive');
+
+        expect(
+          body.contains('getCumulativeProgress('),
+          isTrue,
+          reason:
+              'getCumulativeProgressLive must delegate to '
+              'getCumulativeProgress — got body:\n$body',
+        );
+
+        const independentLogicMarkers = [
+          '_effectiveStartDate',
+          '_bucketizeCumulative',
+          '_db.completionDao',
+          '_extractLocalDate',
+        ];
+        for (final marker in independentLogicMarkers) {
+          expect(
+            body.contains(marker),
+            isFalse,
+            reason:
+                'getCumulativeProgressLive still reimplements query/bucketing '
+                'logic independently (found "$marker") instead of delegating '
+                '— AUD-progress-05 body:\n$body',
+          );
+        }
+      });
+
+      test('getCumulativeProgressLive returns the exact result of '
+          'getCumulativeProgress for identical inputs (behavioral parity '
+          'preserved by the delegation)', () async {
+        await insertCompletion(completedAt: DateTime(2026, 3, 1, 10));
+        await insertCompletion(
+          completedAt: DateTime(2026, 3, 2, 10),
+          sefariaRef: 'ref_2',
+        );
+
+        final direct = await service.getCumulativeProgress(
+          startDate: DateTime(2026, 3, 1),
+          endDate: DateTime(2026, 3, 3),
+        );
+        final viaLive = await service.getCumulativeProgressLive(
+          startDate: DateTime(2026, 3, 1),
+          endDate: DateTime(2026, 3, 3),
+        );
+
+        expect(viaLive.map((p) => p.total), direct.map((p) => p.total));
+        expect(viaLive.map((p) => p.date), direct.map((p) => p.date));
+      });
     });
   });
 }

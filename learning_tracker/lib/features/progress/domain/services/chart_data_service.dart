@@ -199,101 +199,26 @@ class ChartDataService {
     );
   }
 
-  /// Track-learning counterpart of [getDailyCompletions] for the Recent
-  /// Activity screen.
-  ///
-  /// Recent Activity counts **track learning** (live + bulk-mark in-track),
-  /// not engagement-only — the unified rule places everything except points
-  /// and streak in the track-learning tier. This method gives screens a
-  /// simple, non-stacked daily count (for tooltips, totals) without
-  /// re-implementing the SQL. The method name retains the historic "Live"
-  /// suffix for callsite stability; the filter is [trackAchievement].
-  ///
-  /// Bucketing matches [getDailyCompletions].
-  Future<List<DailyCompletionData>> getDailyCompletionsLive({
-    required DateTime startDate,
-    required DateTime endDate,
-    String? curriculumId,
-  }) async {
-    final curriculum = _resolveCurriculum(curriculumId);
-    final effectiveStart = await _effectiveStartDate(
-      requestedStart: startDate,
-      requestedEnd: endDate,
-      curriculumId: curriculum,
-      tier: CompletionTierFilter.trackAchievement,
-    );
-
-    final completions = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
-      tier: CompletionTierFilter.trackAchievement,
-      curriculumId: curriculum,
-      since: effectiveStart,
-      until: _endOfDay(endDate),
-    );
-
-    final counts = <DateTime, int>{};
-    for (final c in completions) {
-      final localDate = _extractLocalDate(c.completedAt);
-      counts[localDate] = (counts[localDate] ?? 0) + 1;
-    }
-
-    return _bucketizeDaily(
-      counts: counts,
-      startDate: effectiveStart,
-      endDate: endDate,
-    );
-  }
-
   /// Track-learning counterpart of [getCumulativeProgress] for the Recent
   /// Activity screen. Both live and bulk-mark-in-track completions contribute
-  /// to the running total — only lifetime-only imports are excluded. The
-  /// method name retains the historic "Live" suffix for callsite stability;
-  /// the filter is [trackAchievement].
+  /// to the running total — only lifetime-only imports are excluded.
+  ///
+  /// The method name retains the historic "Live" suffix for callsite
+  /// stability, but [getCumulativeProgress] already defaults to the same
+  /// [CompletionTierFilter.trackAchievement] tier this method used to
+  /// duplicate independently, so it is now a one-line delegate rather than a
+  /// second ~45-line copy of the query/bucketing logic (AUD-progress-05 —
+  /// the twin previously risked silently diverging from
+  /// [getCumulativeProgress] the next time only one of them got touched).
   Future<List<CumulativeProgressPoint>> getCumulativeProgressLive({
     required DateTime startDate,
     required DateTime endDate,
     String? curriculumId,
-  }) async {
-    final curriculum = _resolveCurriculum(curriculumId);
-    final effectiveStart = await _effectiveStartDate(
-      requestedStart: startDate,
-      requestedEnd: endDate,
-      curriculumId: curriculum,
-      tier: CompletionTierFilter.trackAchievement,
-    );
-
-    final beforeStartCutoff = effectiveStart.subtract(
-      const Duration(milliseconds: 1),
-    );
-    final priorRows = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
-      tier: CompletionTierFilter.trackAchievement,
-      curriculumId: curriculum,
-      until: beforeStartCutoff,
-    );
-    final cumulativeBeforeStart = priorRows.length;
-
-    final completions = await _db.completionDao.getCompletionsByTier(
-      profileId: _profileId,
-      tier: CompletionTierFilter.trackAchievement,
-      curriculumId: curriculum,
-      since: effectiveStart,
-      until: _endOfDay(endDate),
-    );
-
-    final dailyCounts = <DateTime, int>{};
-    for (final c in completions) {
-      final localDate = _extractLocalDate(c.completedAt);
-      dailyCounts[localDate] = (dailyCounts[localDate] ?? 0) + 1;
-    }
-
-    return _bucketizeCumulative(
-      counts: dailyCounts,
-      startDate: effectiveStart,
-      endDate: endDate,
-      cumulativeBeforeStart: cumulativeBeforeStart,
-    );
-  }
+  }) => getCumulativeProgress(
+    startDate: startDate,
+    endDate: endDate,
+    curriculumId: curriculumId,
+  );
 
   /// Live-only counterpart of [getStreakCalendar] for the Recent Activity
   /// engagement-tier lens. Lights up only days with a live in-session mark —
