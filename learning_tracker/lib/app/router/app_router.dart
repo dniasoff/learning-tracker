@@ -250,16 +250,11 @@ class AppRouter extends RootStackRouter {
       page: PinFlowSetupRoute.page,
       guards: [authGuard, childModeGuard],
     ),
-    AutoRoute(
-      path: '/parent-mode/pin-entry',
-      page: PinFlowVerifyRoute.page,
-      guards: [authGuard, childModeGuard],
-    ),
-    AutoRoute(
-      path: '/parent-mode/pin-change',
-      page: PinFlowChangeRoute.page,
-      guards: [authGuard, childModeGuard],
-    ),
+    // AUD-profiles-06: PinFlowVerifyRoute/PinFlowChangeRoute were registered
+    // here but never pushed anywhere in lib/ — the real verify/change UX goes
+    // through the modal dialogs (parent_pin_keypad_dialog.dart), not a routed
+    // screen. Removed along with their PinFlowScreen route wrappers; see the
+    // "Route wrapper" doc comment in pin_flow_screen.dart.
     AutoRoute(
       path: '/parent-mode/tracks',
       page: ParentTrackManagementRoute.page,

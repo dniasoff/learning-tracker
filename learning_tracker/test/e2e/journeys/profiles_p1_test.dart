@@ -13,9 +13,10 @@
 ///            bcrypt PIN verification against secure storage — not available
 ///            headlessly. Use an integration test on device.
 ///   E2E-714  Change PIN flow
-///            SKIP — device/harness: PinFlowChangeRoute requires verifyProfilePin
-///            (real bcrypt hash round-trip against FlutterSecureStorage) which
-///            the _NullPinService stub does not implement.
+///            SKIP — device/harness: showParentPinChangeDialog requires
+///            verifyProfilePin (real bcrypt hash round-trip against
+///            FlutterSecureStorage) which the _NullPinService stub does not
+///            implement.
 ///   E2E-715  Tutor enters talmid context — first time, online
 ///            SKIP — device/harness: TutorPinEntryGate calls _fireEntryPullAndNavigate
 ///            which triggers TutoredPullService.pull → Firestore network call not
@@ -604,11 +605,15 @@ void main() {
   // ── E2E-714 ──────────────────────────────────────────────────────────────────
 
   group('E2E-714 — Change PIN flow', () {
-    testWidgets('device/harness: PinFlowChangeRoute requires verifyProfilePin '
-        '(real bcrypt hash round-trip against FlutterSecureStorage); '
-        '_NullPinService stub does not implement it.', (tester) async {
-      // Device integration test required.
-    }, skip: true);
+    testWidgets(
+      'device/harness: showParentPinChangeDialog requires verifyProfilePin '
+      '(real bcrypt hash round-trip against FlutterSecureStorage); '
+      '_NullPinService stub does not implement it.',
+      (tester) async {
+        // Device integration test required.
+      },
+      skip: true,
+    );
   });
 
   // ── E2E-715 ──────────────────────────────────────────────────────────────────

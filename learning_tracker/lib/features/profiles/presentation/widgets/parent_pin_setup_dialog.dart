@@ -1,10 +1,9 @@
-import 'dart:async' show unawaited;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_entry_machine.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/pin_flow_error_text.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Shows a modal that walks the parent through setting a 4-digit parent PIN
@@ -45,150 +44,54 @@ class _ParentPinSetupDialog extends ConsumerStatefulWidget {
 }
 
 class _ParentPinSetupDialogState extends ConsumerState<_ParentPinSetupDialog> {
-  String? _firstPin;
-  String? _errorMessage;
-  bool _isConfirmStep = false;
-  String _digits = '';
-  bool _busy = false;
+  // AUD-profiles-06: the digit-buffer/busy/lockout transitions (including the
+  // PP-1 busy-lock-before-reset fix) now live in one place — PinEntryMachine —
+  // shared with PinFlowController and the verify/change dialogs, instead of
+  // being hand-rolled again here.
+  late final PinEntryMachine _machine = PinEntryMachine(
+    pinService: () => ref.read(pinServiceProvider),
+    profileId: () => widget.profileId,
+    onStateChanged: _onMachineStateChanged,
+    isActive: () => mounted,
+    initialMode: PinFlowMode.setup,
+  );
 
-  void _appendDigit(String d) {
-    if (_busy) return;
-    if (_digits.length >= 4) return;
-    setState(() {
-      _digits += d;
-      _errorMessage = null;
-    });
-    if (_digits.length == 4) {
-      unawaited(_onFourDigits());
-    }
-  }
-
-  Future<void> _onFourDigits() async {
-    if (_busy) return;
-    if (_digits.length != 4) return;
-
-    final l10n = AppLocalizations.of(context)!;
-    final pin = _digits;
-
-    if (!_isConfirmStep) {
-      if (!mounted) return;
-      // PP-1 fix: raise _busy synchronously BEFORE resetting _digits so that
-      // any 5th+ digit queued by a rapid tap is swallowed by the `_busy` guard
-      // in _appendDigit. Without this, a queued digit lands as digit-1 of the
-      // confirm PIN and produces either a spurious mismatch or an unintended
-      // leading digit.
-      //
-      // The transition lock: set _busy=true so _appendDigit immediately
-      // returns for any queued tap, then perform the step flip, then release
-      // _busy after yielding one microtask so the confirm keypad is
-      // interactive on the next frame.
-      setState(() {
-        _busy = true;
-        _firstPin = pin;
-        _isConfirmStep = true;
-        _digits = '';
-      });
-      // Release the lock after yielding — any taps queued BEFORE this await
-      // are rejected by _busy; taps after are welcome into the fresh confirm
-      // buffer (digits == '', length < 4, _busy == false).
-      await Future<void>.microtask(() {
-        if (mounted) setState(() => _busy = false);
-      });
-      return;
-    }
-
-    if (pin != _firstPin) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = l10n.pinsDoNotMatch;
-        _isConfirmStep = false;
-        _firstPin = null;
-        _digits = '';
-      });
-      return;
-    }
-
+  void _onMachineStateChanged(PinFlowState state) {
     if (!mounted) return;
-    setState(() {
-      _busy = true;
-      _errorMessage = null;
-    });
-
-    try {
-      await ref.read(pinServiceProvider).setProfilePin(widget.profileId, pin);
-      if (mounted) Navigator.of(context).pop(true);
-    } on InvalidPinFormatException catch (e) {
-      // AUD-onboarding-16: PinService throws a typed InvalidPinFormatException
-      // whose .message is a plain String (AppException.message) — no cast
-      // needed. This dialog's own l10n resolution of PIN-service errors is
-      // tracked separately (AUD-profiles-09, scoped to pin_flow_controller.dart
-      // / pin_flow_screen.dart) — kept behavior-neutral (same message text)
-      // pending that fix.
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = e.message;
-        _isConfirmStep = false;
-        _firstPin = null;
-        _digits = '';
-        _busy = false;
-      });
-    } on ArgumentError catch (e, st) {
-      // AUD-profiles-20: ArgumentError.message is typed Object? (dynamic),
-      // not String — reading it with an unchecked `as String?` cast (the
-      // previous code here) would throw a TypeError the moment any caller
-      // constructed one with a non-String message (e.g.
-      // ArgumentError.value(42, 'pin', 99)). Read it null-safely via
-      // `?.toString()` purely for diagnostics; the user-facing text is a
-      // generic localized fallback, never the raw message.
-      if (!mounted) return;
-      AppLogger.instance.warning(
-        event: 'parent_pin_setup_dialog_unexpected_argument_error',
-        fields: {'detail': e.message?.toString() ?? 'no message'},
-        exception: e,
-        stackTrace: st,
-      );
-      setState(() {
-        _errorMessage = l10n.pinFailedToSave;
-        _isConfirmStep = false;
-        _firstPin = null;
-        _digits = '';
-        _busy = false;
-      });
+    if (state.completed) {
+      // Success — dismiss the dialog. No intermediate rebuild needed; the
+      // dialog is leaving the tree.
+      Navigator.of(context).pop(true);
+      return;
     }
-  }
-
-  void _backspace() {
-    if (_busy) return;
-    if (_digits.isEmpty) return;
-    setState(() {
-      _digits = _digits.substring(0, _digits.length - 1);
-      _errorMessage = null;
-    });
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final state = _machine.state;
     final name = widget.profileName ?? l10n.userFallbackDisplayName;
+    final isConfirmStep = state.step == PinFlowStep.confirm;
 
-    final title = _isConfirmStep
+    final title = isConfirmStep
         ? l10n.confirmNewPin
         : l10n.setParentPinDialogTitle;
-    final subtitle = _isConfirmStep
+    final subtitle = isConfirmStep
         ? l10n.confirmNewPinSubtitle
         : l10n.setParentPinDialogSubtitle(name);
 
     return PinKeypadDialogFrame(
       title: title,
       subtitle: subtitle,
-      digits: _digits,
-      errorMessage: _errorMessage,
+      digits: state.digits,
+      errorMessage: resolvePinFlowErrorText(state.error, l10n),
       lockedOut: false,
       lockoutMinutes: 0,
-      busy: _busy,
+      busy: state.busy,
       onClose: () {},
-      onDigit: _appendDigit,
-      onBackspace: _backspace,
+      onDigit: _machine.appendDigit,
+      onBackspace: _machine.backspace,
       onCancel: () {},
       showCloseButton: false,
       showKeypadCancel: false,
