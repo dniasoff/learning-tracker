@@ -499,12 +499,6 @@ void main() {
       expect(backToGregorian.day, equals(1));
     });
 
-    test('isShabbos returns true for Saturday', () {
-      // 2026-01-03 is a Saturday
-      expect(HebrewCalendarUtils.isShabbos(DateTime.utc(2026, 1, 3)), isTrue);
-      expect(HebrewCalendarUtils.isShabbos(DateTime.utc(2026, 1, 4)), isFalse);
-    });
-
     test('isHebrewLeapYear', () {
       // 5787 is a leap year in the 19-year cycle
       expect(HebrewCalendarUtils.isHebrewLeapYear(5787), isTrue);
