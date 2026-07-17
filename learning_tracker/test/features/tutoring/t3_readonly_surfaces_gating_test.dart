@@ -396,6 +396,37 @@ void main() {
             'so the domain guard is enforced even if the UI button is bypassed',
       );
     });
+
+    // AUD-content_browsing-03: the sole production construction site of
+    // MarkLiveCompletionUseCase omitted the optional `analytics:` argument,
+    // so `_analytics` stayed null inside the use case and the null-aware
+    // `_analytics?.logEvent(...)` silently no-op'd — tutor_live_mark_blocked
+    // (W7.11) never fired anywhere in production, leaving ops with zero
+    // dashboard visibility into how often the tutor write-boundary is hit.
+    // A behavioral widget test can't drive this branch: the FilledButton's
+    // onPressed is unconditionally null whenever isTutor is true (see the
+    // "AC5: live-mark button disabled" test above), so the tutor-guard
+    // branch inside MarkLiveCompletionUseCase.call() is unreachable via any
+    // real UI interaction today — it exists purely as defense-in-depth for
+    // a future call site (keyboard shortcut, notification action) that
+    // bypasses the UI, per the construction site's own comment. This
+    // source-content check is therefore the regression guard tied to the
+    // actual site; the paired behavioral assertion (that the
+    // analyticsServiceProvider-sourced value, once wired in, fires
+    // tutor_live_mark_blocked exactly once for a tutor attempt) lives in
+    // test/features/tutoring/mark_live_completion_invariant_test.dart.
+    test('AUD-content_browsing-03: MarkLiveCompletionUseCase construction '
+        'injects analyticsServiceProvider', () {
+      expect(
+        textDisplaySrc,
+        contains('analytics: ref.read(analyticsServiceProvider)'),
+        reason:
+            'the sole production construction site of '
+            'MarkLiveCompletionUseCase must inject analyticsServiceProvider '
+            'so tutor_live_mark_blocked (W7.11) actually fires — otherwise '
+            '`_analytics` stays null and the event silently never fires',
+      );
+    });
   });
 
   group('T3.gating — TutorPermissions invariant', () {

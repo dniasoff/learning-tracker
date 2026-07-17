@@ -9,7 +9,9 @@
 @Tags(['tutor_mode', 'invariant'])
 library;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -109,6 +111,35 @@ void main() {
         expect(analytics.countOf(AnalyticsEvent.tutorLiveMarkBlocked), 0);
       },
     );
+
+    // AUD-content_browsing-03: the production construction site in
+    // text_display_screen.dart resolves its AnalyticsService via
+    // `ref.read(analyticsServiceProvider)` (not a directly-constructed
+    // fake), so this test drives the same tutor-attempt scenario through a
+    // ProviderContainer override of analyticsServiceProvider — proving the
+    // provider-sourced value flows into the use case and fires the event
+    // exactly once, the way the fixed call site does.
+    test('text_display_screen construction pattern: tutor-session attempt via '
+        'analyticsServiceProvider override fires tutor_live_mark_blocked '
+        'exactly once', () async {
+      final fakeAnalytics = FakeAnalyticsService();
+      final container = ProviderContainer(
+        overrides: [analyticsServiceProvider.overrideWithValue(fakeAnalytics)],
+      );
+      addTearDown(container.dispose);
+
+      final useCase = MarkLiveCompletionUseCase<void>(
+        session: _tutorSession(),
+        analytics: container.read(analyticsServiceProvider),
+      );
+
+      await expectLater(
+        () => useCase.call(() async {}),
+        throwsA(isA<TutorWriteForbiddenException>()),
+      );
+
+      expect(fakeAnalytics.countOf(AnalyticsEvent.tutorLiveMarkBlocked), 1);
+    });
 
     test(
       'child-self session never fires AnalyticsEvent.tutorLiveMarkBlocked',
