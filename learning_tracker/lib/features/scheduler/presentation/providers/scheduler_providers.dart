@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
+import 'package:learning_tracker/core/content/program_ref_resolver.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -104,7 +105,14 @@ List<DailyTask> collapseDafTasks(
       out.add(t);
       continue;
     }
-    final item = index.lookup(t.contentItemSefariaRef);
+    // AUD-core-content-06: route through ProgramRefResolver's shared
+    // whitespace/transliteration normalization (FR16) instead of a bare
+    // ContentIndex.lookup, so a daf whose stored ref has a stray-whitespace
+    // variant still groups with its sibling amudim.
+    final item = ProgramRefResolver.lookupWithVariants(
+      index,
+      t.contentItemSefariaRef,
+    );
     final dafKey = item == null
         ? t.contentItemSefariaRef
         : coarseUnitKeyForItem(item);

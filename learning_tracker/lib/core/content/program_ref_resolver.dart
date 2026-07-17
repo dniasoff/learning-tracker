@@ -1,10 +1,14 @@
 import 'package:learning_tracker/core/content/content_index.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 
 /// Source of a raw, calendar-style sefaria ref for a given program day.
 ///
 /// Abstracted so the resolver can be tested without spinning up a real
-/// calendar service. Production wires this to the local calendar engine
-/// (DNI-330).
+/// calendar service. Not currently wired to any production implementation —
+/// no ticket tracks production `ProgramRefSource` wiring yet (DNI-330 is
+/// Story 25.9, the `core/labels/` rebuild; it is unrelated to calendar-ref
+/// resolution). See [ProgramRefResolver]'s doc comment for the current
+/// wiring status.
 abstract class ProgramRefSource {
   /// Returns the raw calendar ref (e.g. `Hullin 7`, `Mishnah Berakhot 1:1`)
   /// for [programId] at [dayOffset] (0 = anchor day, 1 = next day, …).
@@ -14,9 +18,25 @@ abstract class ProgramRefSource {
 
 /// Single resolver mapping `(programId, dayOffset) → canonical sefariaRef`.
 ///
-/// Dashboard, scheduler, and reader all consume this same resolver so they
-/// agree on which `ContentItem` a calendar entry points to (FR16). The
-/// resolver never falls back to the raw display string — if no
+/// Built under DNI-329 (Story 25.8) to close FR16 ("dashboard, scheduler,
+/// and reader all consume this same resolver so they agree on which
+/// `ContentItem` a calendar entry points to"). FR16 is only partially
+/// realized as of this writing:
+///  - No production site calls [resolve] with a real `programId`/
+///    `dayOffset` — [ProgramRefSource] has zero production implementations.
+///  - Scheduler's own calendar-to-content matching
+///    (`resolveProgramTodayRefs` in `sefaria_ref_matcher.dart`) is a
+///    separate, independently-evolved fuzzy matcher (range expansion,
+///    container fallback, etc.) that this class does not share.
+///  - Scheduler's daf-grouping (`collapseDafTasks` in
+///    `scheduler_providers.dart`) uses [lookupWithVariants] so that one
+///    lookup at least shares this class's normalization rules instead of a
+///    bare [ContentIndex.lookup].
+///  - Dashboard and the reader (`text_display_screen.dart`) still call
+///    [ContentIndex.lookup] directly.
+/// Full FR16 consolidation is not yet tracked under a ticket.
+///
+/// The resolver never falls back to the raw display string — if no
 /// [ContentIndex] entry matches, [resolve] returns null. T1.7 forbids
 /// persisting human-readable strings as sefariaRefs because the reader
 /// breaks on them.
@@ -36,14 +56,25 @@ class ProgramRefResolver {
       dayOffset: dayOffset,
     );
     if (raw == null) return null;
+    return lookupWithVariants(index, raw)?.sefariaRef;
+  }
 
+  /// Resolves [ref] against [index], trying whitespace/transliteration
+  /// variants (see [_refVariants]) when an exact match fails.
+  ///
+  /// Static and index-only (no [ProgramRefSource] needed) so callers that
+  /// already hold a ref string — rather than a `(programId, dayOffset)`
+  /// pair — can share this class's normalization rules instead of a bare
+  /// [ContentIndex.lookup]. Used by [resolve] and by
+  /// `collapseDafTasks` in `scheduler_providers.dart`.
+  static ContentItem? lookupWithVariants(ContentIndex index, String ref) {
     // Fast path: exact match against the canonical key.
-    final direct = index.lookup(raw);
-    if (direct != null) return direct.sefariaRef;
+    final direct = index.lookup(ref);
+    if (direct != null) return direct;
 
-    for (final candidate in _refVariants(raw)) {
+    for (final candidate in _refVariants(ref)) {
       final hit = index.lookup(candidate);
-      if (hit != null) return hit.sefariaRef;
+      if (hit != null) return hit;
     }
     return null;
   }
