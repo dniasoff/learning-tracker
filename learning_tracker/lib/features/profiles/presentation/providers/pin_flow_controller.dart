@@ -284,6 +284,10 @@ class PinFlowController extends _$PinFlowController {
     state = state.copyWith(busy: true, error: null);
     try {
       await pinService.setProfilePin(profileId, pin);
+      // SM-4: the container can be disposed while the bcrypt/secure-storage
+      // write above is in flight (e.g. app teardown); resuming and touching
+      // `state` on a disposed ref throws UnmountedRefException.
+      if (!ref.mounted) return;
       // Clear digits immediately so the completion frame shows an empty
       // keypad instead of 4 filled dots while maybePop() is in-flight.
       state = state.copyWith(
@@ -297,6 +301,8 @@ class PinFlowController extends _$PinFlowController {
       // AUD-onboarding-16) maps to a closed PinFlowError; the screen resolves
       // the user-facing text via AppLocalizations through an exhaustive
       // switch — the exception's dev-facing .message is never surfaced.
+      // SM-4: the await above may have raced a container disposal.
+      if (!ref.mounted) return;
       state = state.copyWith(
         busy: false,
         error: PinFlowError.invalidPinFormat,
@@ -318,6 +324,8 @@ class PinFlowController extends _$PinFlowController {
         exception: e,
         stackTrace: st,
       );
+      // SM-4: the await above may have raced a container disposal.
+      if (!ref.mounted) return;
       state = state.copyWith(
         busy: false,
         error: PinFlowError.unexpected,
@@ -345,6 +353,10 @@ class PinFlowController extends _$PinFlowController {
         state = state.copyWith(busy: true, error: null);
         try {
           final ok = await pinService.verifyProfilePin(profileId, pin);
+          // SM-4: the container can be disposed while the verify call above
+          // is in flight; resuming and touching `state` on a disposed ref
+          // throws UnmountedRefException.
+          if (!ref.mounted) return;
           if (ok) {
             state = state.copyWith(
               busy: false,
@@ -359,6 +371,8 @@ class PinFlowController extends _$PinFlowController {
             );
           }
         } on PinLockoutException catch (e) {
+          // SM-4: the await above may have raced a container disposal.
+          if (!ref.mounted) return;
           state = state.copyWith(
             busy: false,
             lockedOut: true,
@@ -385,15 +399,55 @@ class PinFlowController extends _$PinFlowController {
           return;
         }
         state = state.copyWith(busy: true, error: null);
-        await pinService.setProfilePin(profileId, pin);
-        // Clear digits so the completion frame shows an empty keypad while
-        // maybePop() is in-flight (same fix as _handleSetup).
-        state = state.copyWith(
-          busy: false,
-          completed: true,
-          step: PinFlowStep.done,
-          digits: '',
-        );
+        // AUD-profiles-05: same try/catch pattern as _handleSetup's confirm
+        // step — this step previously had no try/catch at all, so a typed
+        // PinService failure here (or an UnmountedRefException from a
+        // container disposed mid-await) went unguarded/unconverted.
+        try {
+          await pinService.setProfilePin(profileId, pin);
+          // SM-4: the container can be disposed while the write above is in
+          // flight (e.g. app teardown).
+          if (!ref.mounted) return;
+          // Clear digits so the completion frame shows an empty keypad while
+          // maybePop() is in-flight (same fix as _handleSetup).
+          state = state.copyWith(
+            busy: false,
+            completed: true,
+            step: PinFlowStep.done,
+            digits: '',
+          );
+        } on InvalidPinFormatException {
+          // AUD-profiles-09: see the matching catch in _handleSetup — the
+          // typed PinService failure maps to a closed PinFlowError, resolved
+          // to text by the screen via an exhaustive switch.
+          if (!ref.mounted) return;
+          state = state.copyWith(
+            busy: false,
+            error: PinFlowError.invalidPinFormat,
+            step: PinFlowStep.enterNew,
+            firstPin: null,
+            digits: '',
+          );
+        } on ArgumentError catch (e, st) {
+          // AUD-profiles-20: see the matching catch in _handleSetup — read
+          // ArgumentError.message null-safely via `?.toString()` purely for
+          // diagnostics; the user-facing state stays the typed, generic
+          // PinFlowError.unexpected.
+          AppLogger.instance.warning(
+            event: 'pin_flow_change_unexpected_argument_error',
+            fields: {'detail': e.message?.toString() ?? 'no message'},
+            exception: e,
+            stackTrace: st,
+          );
+          if (!ref.mounted) return;
+          state = state.copyWith(
+            busy: false,
+            error: PinFlowError.unexpected,
+            step: PinFlowStep.enterNew,
+            firstPin: null,
+            digits: '',
+          );
+        }
 
       case PinFlowStep.done:
         break;
@@ -415,6 +469,10 @@ class PinFlowController extends _$PinFlowController {
     state = state.copyWith(busy: true, error: null);
     try {
       final ok = await pinService.verifyProfilePin(profileId, pin);
+      // SM-4: the container can be disposed while the verify call above is
+      // in flight; resuming and touching `state` on a disposed ref throws
+      // UnmountedRefException.
+      if (!ref.mounted) return;
       if (ok) {
         // Clear digits so the completion frame shows an empty keypad while
         // maybePop() is in-flight.
@@ -428,6 +486,8 @@ class PinFlowController extends _$PinFlowController {
         state = state.copyWith(busy: false, error: _incorrectPin(), digits: '');
       }
     } on PinLockoutException catch (e) {
+      // SM-4: the await above may have raced a container disposal.
+      if (!ref.mounted) return;
       state = state.copyWith(
         busy: false,
         lockedOut: true,
