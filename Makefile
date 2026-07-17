@@ -182,6 +182,11 @@ audit:
 	echo "$$HITS"; \
 	\
 	echo ""; \
+	echo "[10b/12] Positioned(left:|right:) — RTL violation (AX-1, AUD-profiles-23)"; \
+	HITS=$$(dart run tool/check_positioned_rtl.dart 2>&1) || FAIL=1; \
+	echo "$$HITS"; \
+	\
+	echo ""; \
 	echo "[11/12] import package:cloud_firestore / firebase_storage outside core/sync + core/auth (NFR3)"; \
 	HITS=$$(grep -rnE "^import 'package:(cloud_firestore|firebase_storage)" "$$LIB/" \
 	  --include='*.dart' \
