@@ -7297,13 +7297,19 @@
   {
    "id": "AUD-scheduler-19",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Convert scheduler domain value types to @freezed instead of hand-rolled or missing equality",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "f84ff8fa8bd93c90b3f425b72a6ee31391307fe2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-scheduler-19 AC1 OK: 4 DTOs converted to @freezed (git diff); 9 other classes named+justified in coding-standards.md Documented Judgment Calls table = 13/13",
+    "AUD-scheduler-19 AC2 OK: make audit check 80 greps scheduler/domain for op==; fired on injected temp violation, clean after removal; FAIL=1(Makefile:1129)->exit1(1131)",
+    "AUD-scheduler-19 AC2 scope OK: scheduler-only scoping matches accepted convention (audit checks 72/76/77/78 same pattern); AC1 limits finding to 13 scheduler classes"
+   ],
+   "notes": "13/13 sites verified. 4 no-equality DTOs converted to @freezed (red test failed pre-fix, green post). Other 9 (sealed unions + zero-codegen file) documented as judgment call per finding's own recommendation. AC2 checker: audit 80/80, diff-scoped, fires on broken fixture then clean."
   },
   {
    "id": "AUD-gamification-21",
