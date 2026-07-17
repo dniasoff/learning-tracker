@@ -7807,13 +7807,18 @@
   {
    "id": "AUD-core-constants-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete dead HebrewTerms.getCurriculumDisplayName — unused, violates Rule 5 displayNameHe placement, tested twice by duplicate groups",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "b766b934c5c8702ec3789504194e3f269dd31e6e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-constants-01 AC1 OK: `grep -rn getCurriculumDisplayName lib/ test/` returns no results (exit 1)",
+    "AUD-core-constants-01 AC2 OK: `grep group('getCurriculumDisplayName'` in hebrew_terms_test.dart returns nothing (exit 1); both dup groups gone"
+   ],
+   "notes": "Confirmed 0 prod callers; verified corrected 3-site count still held (incl. epic_18 test). Deleted delegate + unused import; removed both dup test groups + the epic_18 test case using it; kept sibling AC-2 test. Both ACs verified via grep."
   },
   {
    "id": "AUD-docs-23",
