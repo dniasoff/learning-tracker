@@ -1666,13 +1666,18 @@
   {
    "id": "AUD-progress-08",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Stop interpolating raw error.toString() into localized error messages across progress screens",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "23b728d5e2cee53b872d5a2953156acef50dd2de"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-progress-08 AC1 OK: grep exception-ident .toString() in lib/features/progress/ = 0 hits; all 6 diff sites now no-arg getters",
+    "AUD-progress-08 AC2 OK: rule pre-exists+registered; added test fires on violation shape, clean on fixed (6/6 my run); 0 hits in progress"
+   ],
+   "notes": "Re-verified: all 6 sites still had error.toString() in l10n calls. Dropped {error} placeholder from 5 ARB keys, regenerated l10n dart files, fixed all 6 sites (AC1 via grep). Added no_e_to_string_in_ui_test.dart proving the pre-existing rule fires on violation shape, clean on fixed shape (AC2)."
   },
   {
    "id": "AUD-t-scheduler-01",
