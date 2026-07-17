@@ -134,13 +134,29 @@ final class DelaySchedule extends ScheduleSpec {
 /// [daysOfWeek] holds ISO weekday numbers (Mon = 1, …, Sun = 7).
 /// Must have at least one value; all values must be in [1, 7].
 final class WeeklySchedule extends ScheduleSpec {
+  // Uses explicit `if (...) throw ArgumentError(...)` checks in the
+  // constructor body (not `assert`) so the invariant is enforced in
+  // release/profile builds too — `assert` is stripped from those builds,
+  // which would otherwise let this factory's documented
+  // `Throws [ArgumentError]` contract silently fail exactly where users
+  // run the app.
   WeeklySchedule(List<int> daysOfWeek)
-    : assert(daysOfWeek.isNotEmpty, 'daysOfWeek must not be empty'),
-      assert(
-        daysOfWeek.every((d) => d >= 1 && d <= 7),
-        'daysOfWeek values must be 1 (Mon) through 7 (Sun)',
-      ),
-      daysOfWeek = List.unmodifiable(daysOfWeek);
+    : daysOfWeek = List.unmodifiable(daysOfWeek) {
+    if (this.daysOfWeek.isEmpty) {
+      throw ArgumentError.value(
+        daysOfWeek,
+        'daysOfWeek',
+        'daysOfWeek must not be empty.',
+      );
+    }
+    if (!this.daysOfWeek.every((d) => d >= 1 && d <= 7)) {
+      throw ArgumentError.value(
+        daysOfWeek,
+        'daysOfWeek',
+        'daysOfWeek values must be 1 (Mon) through 7 (Sun).',
+      );
+    }
+  }
 
   @override
   final List<int> daysOfWeek;
@@ -164,8 +180,18 @@ final class WeeklySchedule extends ScheduleSpec {
 ///
 /// [windowSize] must be positive (>= 1).
 final class RollingSchedule extends ScheduleSpec {
-  RollingSchedule(this.windowSize)
-    : assert(windowSize > 0, 'windowSize must be positive, got $windowSize');
+  // Uses an explicit `if (...) throw ArgumentError(...)` check (not
+  // `assert`) so the invariant is enforced in release/profile builds too —
+  // see the note on WeeklySchedule's constructor above for why.
+  RollingSchedule(this.windowSize) {
+    if (windowSize <= 0) {
+      throw ArgumentError.value(
+        windowSize,
+        'windowSize',
+        'windowSize must be positive.',
+      );
+    }
+  }
 
   final int windowSize;
 
