@@ -3304,13 +3304,13 @@
     {
       "id": "AUD-scheduler-05",
       "wave": "parked",
-      "status": "parked",
+      "status": "blocked",
       "severity": "P2",
       "title": "Decouple ProgramLabelResolver from Flutter/Riverpod so its label logic can be unit-tested without pumpWidget",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "notes": "blocked (parked-r01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. One unreviewed fix commit exists, not merged to dev: cfd33e5660c8032ea897c6780674816a3f3107e4 on worktree-wf_24065ac5-4c4-26 (fix(scheduler): decouple ProgramLabelResolver from WidgetRef/Ref (AUD-scheduler-05)) - no code landed this pass. Independently re-verified against the current tree: lib/features/scheduler/domain/labels/program_label_resolver.dart still imports package:flutter/widgets.dart and package:flutter_riverpod/flutter_riverpod.dart, with WidgetRef/Ref-typed factory constructors intact. Worktree and branch left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
     },
     {
       "id": "AUD-t-cross-20",
@@ -5839,13 +5839,13 @@
     {
       "id": "AUD-scheduler-12",
       "wave": "parked",
-      "status": "parked",
+      "status": "blocked",
       "severity": "P2",
       "title": "Move scheduler_providers.dart's projection/plan-building business logic into the domain layer",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "notes": "blocked (parked-r01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. Two unreviewed fix commits exist, neither merged to dev: 92c5b0f09f12b4099f2c9eb2dd2bbcb58f380f50 on worktree-wf_24065ac5-4c4-94 and f0e234a43612c71d1641ea608f6f6baeafa7ea19 on worktree-wf_24065ac5-4c4-39 (both refactor(scheduler): extract projection/plan business logic to domain layer (AUD-scheduler-12), duplicate/retry attempts, matching file stats) - no code landed this pass. Independently re-verified against the current tree: no daily_task_projection_service.dart exists anywhere under learning_tracker/, and scheduler_providers.dart still carries the projection/plan business logic inline. Worktrees and branches left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
     },
     {
       "id": "AUD-scheduler-10",
@@ -8428,13 +8428,13 @@
     {
       "id": "AUD-progress-14",
       "wave": "parked",
-      "status": "parked",
+      "status": "blocked",
       "severity": "P3",
       "title": "Replace hand-rolled ==/hashCode on PaceCalculator, LifetimeLeafProvenance and RecentActivityWindow with @freezed or a record",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "notes": "blocked (parked-r01, wave-4 chunk, 2026-07-17). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this pass. Two unreviewed fix commits exist, neither merged to dev: 2341462a34bd0b8e332d4ef78559cb00924b98b8 on worktree-wf_24065ac5-4c4-111 and 87e534c1aae9fe03a73d40b24c00aab550731ee1 on worktree-wf_24065ac5-4c4-67 (both fix(progress): AUD-progress-14 - replace hand-rolled == on 3 progress domain models with @freezed/record, overlapping but not byte-identical retry attempts) - no code landed this pass. Independently re-verified against the current tree: pace_calculator.dart:209 and lifetime_knowledge.dart:67 still carry hand-rolled operator== overrides; no *.freezed.dart companion exists for either model. Worktrees and branches left in place for a future harvest/relaunch pass, per the AUD-core-logging-02/AUD-t-cross-64/AUD-t-cross-81 precedent."
     },
     {
       "id": "AUD-progress-10",
