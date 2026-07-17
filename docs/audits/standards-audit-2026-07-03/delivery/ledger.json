@@ -9591,13 +9591,17 @@
     {
       "id": "AUD-profiles-13",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Fix ProfileEditFormDialog's doc comment claiming profile mode is not editable on edit",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "4c7baa04fa3ebcae02a285ba0c788cfe41c2bd17"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-profiles-13 AC1 OK: doc comment L158-164 now accurate; verified editable SegmentedButton L239-254, persist L41-46, R-PR4 PIN-clear L69-78; stale text removed"
+      ],
+      "notes": "Re-verified: comment still claimed mode 'shown but not editable' while SegmentedButton is interactive and editProfileFlow persists result.mode (PP-2). Still valid. Updated comment: mode IS editable/persisted, cross-ref R-PR4 PIN-clearing. Doc-only change. Merged --no-ff onto dev (w4r1c32, mergeSha 4c7baa04fa3ebcae02a285ba0c788cfe41c2bd17). Post-rebase gate: make audit PASSED (all greps clean), flutter analyze clean (No issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (only learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart touched, no overlap with dev's changed paths since merge-base), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate. touchedStrings=false, so make arb-parity was not required."
     },
     {
       "id": "AUD-profiles-21",
