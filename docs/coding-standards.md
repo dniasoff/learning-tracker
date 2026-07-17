@@ -20,6 +20,7 @@ Every rule carries an enforcement status:
 ## Table of Contents
 
 - [Rule 0 — A standard ships with its checker](#rule-0--a-standard-ships-with-its-checker)
+- [Documented Judgment Calls](#documented-judgment-calls)
 - [Layering Rules](#layering-rules) (Rules 1–5)
 - [State Management — Riverpod 3](#state-management--riverpod-3) (SM)
 - [Error Handling](#error-handling) (EH)
@@ -55,6 +56,24 @@ Corollaries:
 - Every checker failure prints `file:line` and a one-line reason, and exits non-zero — agents self-correct only on signals they can read.
 - Promote high-value audit greps into custom_lint rules over time so violations surface in-editor while the grep remains the CI backstop.
 - Rules in this doc marked **[Pending]** are debt against Rule 0; burn the list down.
+
+---
+
+## Documented Judgment Calls
+
+A standard can also be **deliberately not applied** at a specific site, instead of being satisfied — as long as the exception is recorded here with a concrete reason, so it reads as an explicit engineering decision rather than silent drift. Recording an exemption here does not exempt it from Rule 0: the checker named for the parent rule must still keep the *undocumented* case (any site not listed below) failing the gate.
+
+### Domain/state models are immutable `@freezed` classes — hand-rolled-equality exemptions
+
+**Rule:** [File Naming Conventions](#file-naming-conventions) — "Domain/state models are immutable `@freezed` classes (generated `==`/`copyWith`); never hand-write `==`/`hashCode` for data classes."
+
+| Site | Reason |
+|------|--------|
+| `lib/features/scheduler/domain/models/delta_value.dart` — `DateDelta`, `PaceDelta`, `DateScheduleDelta`, `PaceScheduleDelta` | Sealed `ScheduleDelta` union, pattern-matched by type across ~170 call sites in `lib/`/`test/`. The hand-rolled `==`/`hashCode`/`toString` on all four variants is already field-correct and has not drifted since introduction — the shotgun-surgery risk Rule 0's parent rule warns about (a future field addition silently breaking equality) is theoretical here, not a live defect. Migrating a heavily pattern-matched sealed hierarchy to `@freezed`'s generated union for a P3 hygiene gain carries call-site-rewrite risk disproportionate to the defect (AUD-scheduler-19). |
+| `lib/features/scheduler/domain/models/goal_entity.dart` — `DeadlineTarget`, `PacePeriodTarget` | Same sealed-union shape and rationale as above (`PaceTarget`), ~160 call sites (AUD-scheduler-19). |
+| `lib/features/scheduler/domain/projection/overdue_types.dart` — `ScheduledUnit`, `StudyDayPattern`, `ProjectionResult` | The file's own top-of-file docstring states a deliberate design constraint: this module is "immutable plain Dart — no codegen, no Flutter, no Riverpod, no Drift, no Firebase" so it can be constructed and exercised in unit tests with zero `build_runner` dependency. `@freezed` requires a generated `part` file, which would violate that constraint. The hand-rolled `==`/`hashCode` here is already field-correct (AUD-scheduler-19). |
+
+**Enforce:** [Enforced] `make audit` check 82/82 — greps `lib/features/scheduler/domain/` for a hand-written `bool operator ==`, excluding generated files (`.g.dart`/`.freezed.dart`) and the three files listed above. Any *new* hand-rolled equality in scheduler domain code outside this documented list fails the gate. The equivalent flat DTOs that had **no** equality override at all (`SchedulerCompletion`, `SchedulerContentItem`, `SchedulerStage`, `SchedulerOrderItem` in `lib/features/scheduler/domain/repositories/`) were converted to `@freezed` rather than added to this list — they carried a live correctness gap (identity-only comparison), not just future-maintenance debt, and had no sealed-hierarchy or zero-codegen constraint blocking the migration. Repo-wide hand-rolled-equality sites outside `features/scheduler/domain/` (e.g. `features/account/domain/models/auth_state.dart`, `features/progress/domain/models/lifetime_knowledge.dart`, `features/profiles/domain/models/profile_session.dart`, `features/progress/domain/services/pace_calculator.dart`) are pre-existing and tracked separately, not yet in this gate.
 
 ---
 
@@ -595,7 +614,7 @@ Additional conventions:
 - **No abbreviations** in file names. `authentication_repository.dart`, not `auth_repo.dart`.
 - **No `_utils.dart` god-files.** Each utility gets a focused name: `hebrew_calendar_utils.dart`, not `utils.dart`.
 - **Acceptance test files** follow the pattern `epic_NN_<slug>_test.dart`. Story-level tests inside the file are tagged with `tags: ['story_NN_M']`.
-- Domain/state models are immutable `@freezed` classes (generated `==`/`copyWith`); never hand-write `==`/`hashCode` for data classes — hand-rolled equality drifts from the fields and silently breaks rebuild-skipping. Records are for small private multi-value returns only; promote to a named class the moment the tuple crosses a public API.
+- Domain/state models are immutable `@freezed` classes (generated `==`/`copyWith`); never hand-write `==`/`hashCode` for data classes — hand-rolled equality drifts from the fields and silently breaks rebuild-skipping. Records are for small private multi-value returns only; promote to a named class the moment the tuple crosses a public API. Documented exceptions to this rule are tracked in [Documented Judgment Calls](#documented-judgment-calls), not silently allowed (AUD-scheduler-19).
 
 ---
 
@@ -775,6 +794,7 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 44 | Tier-4 doc-lint: every `docs/stories/implementation/*.md` marked `Status: ready-for-dev`/`backlog`/`todo` has its "Key Files" table targets resolving under `lib/` (exact path or by basename) — `tool/check_stale_story_file_targets.dart` (AUD-docs-03). Ratcheted against a tracked baseline (`tool/story_stale_file_targets_baseline.txt`) of pre-existing, out-of-scope drift; a NEW violation fails the gate. |
 | 46 | AG-8 doc-lint: `docs/explainers/sync-subsystem.md`'s stated `EntityMerger` count matches the actual `*_merger.dart` file count under `lib/core/sync/merge/` — `tool/check_sync_explainer_merger_count.dart` (AUD-docs-18). Not a ratchet; fails on any mismatch or on a doc that drops the count claim entirely. |
 | 73 | Repo hygiene: no `.gitkeep` in any `lib/` directory that already contains another git-tracked file — `tool/check_gitkeep_stray.dart` (AUD-core-constants-02). A `.gitkeep` exists only to make git track an otherwise-empty directory; once real files land, it's redundant. Not a ratchet — flags ANY redundant `.gitkeep`, zero tolerated (no baseline/exemption set). Directories that hold only a `.gitkeep` are left alone; it's load-bearing there. |
+| 82 | No hand-written `bool operator ==` under `lib/features/scheduler/domain/` outside the three documented judgment-call files (AUD-scheduler-19; see [Documented Judgment Calls](#documented-judgment-calls)). Not a ratchet — zero tolerated outside the documented list. |
 
 The table above has known gaps between the last-renumbered entries (34–36, 45, 47–72 exist in the Makefile but aren't yet reflected here) — tracked under the same Makefile/doc consolidation noted at the top of this section.
 

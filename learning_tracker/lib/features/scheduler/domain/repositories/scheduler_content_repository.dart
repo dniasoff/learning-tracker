@@ -1,4 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+
+part 'scheduler_content_repository.freezed.dart';
 
 /// Scheduler-local content item representation.
 ///
@@ -7,22 +10,18 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 /// pace in coarse units (`paceGranularity == 'perek'` etc.). Only the levels
 /// the source data populates are non-null; for 3-level books `level4` is
 /// null.
-class SchedulerContentItem {
-  const SchedulerContentItem({
-    required this.sefariaRef,
-    required this.sortOrder,
-    this.level1,
-    this.level2,
-    this.level3,
-    this.level4,
-  });
+@freezed
+abstract class SchedulerContentItem with _$SchedulerContentItem {
+  const SchedulerContentItem._();
 
-  final String sefariaRef;
-  final int sortOrder;
-  final String? level1;
-  final String? level2;
-  final String? level3;
-  final String? level4;
+  const factory SchedulerContentItem({
+    required String sefariaRef,
+    required int sortOrder,
+    String? level1,
+    String? level2,
+    String? level3,
+    String? level4,
+  }) = _SchedulerContentItem;
 
   /// The coarse-unit key — all level values up to (but excluding) the
   /// leaf. For a 4-level item (e.g. Mishnayos `Seder|Masechta|Perek|Mishna`)

@@ -1,14 +1,15 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
-/// Scheduler-local learning order item representation.
-class SchedulerOrderItem {
-  const SchedulerOrderItem({
-    required this.sefariaRef,
-    required this.userSortOrder,
-  });
+part 'scheduler_learning_order_repository.freezed.dart';
 
-  final String sefariaRef;
-  final int userSortOrder;
+/// Scheduler-local learning order item representation.
+@freezed
+abstract class SchedulerOrderItem with _$SchedulerOrderItem {
+  const factory SchedulerOrderItem({
+    required String sefariaRef,
+    required int userSortOrder,
+  }) = _SchedulerOrderItem;
 }
 
 /// Abstract repository for learning order consumed by the scheduler.
