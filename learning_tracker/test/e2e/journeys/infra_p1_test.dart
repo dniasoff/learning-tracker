@@ -119,7 +119,9 @@ import 'package:learning_tracker/features/notifications/presentation/providers/n
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart'
     show activeProfileIdProvider;
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart'
-    show LocationFetchSuccess, LocationService;
+    show LocationService;
+import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart'
+    show LocationFetchSuccess;
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart'
     show SacredLocation, SacredLocationSource;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart'

@@ -4,39 +4,8 @@ import 'package:geocoding/geocoding.dart' as geo;
 import 'package:geolocator/geolocator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/location_error_code.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/location_fetch_result.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
-
-/// Outcome of a permission/location request.
-sealed class LocationFetchResult {
-  const LocationFetchResult();
-}
-
-class LocationFetchSuccess extends LocationFetchResult {
-  const LocationFetchSuccess(this.location);
-  final SacredLocation location;
-}
-
-class LocationFetchPermissionDenied extends LocationFetchResult {
-  const LocationFetchPermissionDenied({required this.permanentlyDenied});
-  final bool permanentlyDenied;
-}
-
-class LocationFetchServiceDisabled extends LocationFetchResult {
-  const LocationFetchServiceDisabled();
-}
-
-class LocationFetchError extends LocationFetchResult {
-  const LocationFetchError(this.code, {this.debugDetail});
-
-  /// Stable, localizable failure category (EH-5). Presentation resolves the
-  /// user-facing string through `AppLocalizations`/ARB, keyed on this code —
-  /// never on [debugDetail].
-  final LocationErrorCode code;
-
-  /// Raw exception text, retained for logs/diagnostics only (e.g.
-  /// `AppLogger`). Must never be rendered to the user.
-  final String? debugDetail;
-}
 
 /// Wraps geolocator + geocoding so the rest of the feature can be unit-tested
 /// against a fake. Pure data — no Riverpod, no SharedPreferences.
