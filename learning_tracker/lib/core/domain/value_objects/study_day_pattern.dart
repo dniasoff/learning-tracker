@@ -1,3 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'study_day_pattern.freezed.dart';
+
 /// Kind of day in a study schedule.
 ///
 /// Mirrors [features/scheduler/domain/models/day_type.dart] `DayType` but
@@ -37,7 +41,8 @@ enum DayKind {
 ///
 /// ## Equality
 /// Two [WeeklyStudyDayPattern]s are equal when they have identical weekday→DayKind
-/// mappings (order-independent Map equality).
+/// mappings (order-independent Map equality — freezed-generated `==` uses
+/// deep collection equality for Map fields).
 ///
 /// ## Usage
 /// ```dart
@@ -51,13 +56,29 @@ enum DayKind {
 ///
 /// final kind = pattern.dayKindFor(clock.today().weekday);
 /// ```
-class WeeklyStudyDayPattern {
+///
+/// ## Construction
+/// The only production constructor is the validating default constructor
+/// [WeeklyStudyDayPattern.new] (plus the [WeeklyStudyDayPattern.allStudy] /
+/// [WeeklyStudyDayPattern.weekdaysStudy] convenience factories that route
+/// through it) — [WeeklyStudyDayPattern._raw] is library-private, so a
+/// pattern with an out-of-range weekday or zero study days can never be
+/// constructed from outside this file. `==`/`hashCode`/`toString` are
+/// freezed-generated from [entries].
+@Freezed(map: FreezedMapOptions.none, when: FreezedWhenOptions.none)
+abstract class WeeklyStudyDayPattern with _$WeeklyStudyDayPattern {
+  const WeeklyStudyDayPattern._();
+
+  /// Private, validated constructor. Reached only via
+  /// [WeeklyStudyDayPattern.new].
+  const factory WeeklyStudyDayPattern._raw(Map<int, DayKind> entries) =
+      _WeeklyStudyDayPattern;
+
   /// Creates a [WeeklyStudyDayPattern] from [entries] (weekday 1..7 → [DayKind]).
   ///
   /// All entries must use weekday values 1..7; at least one must be
   /// [DayKind.study]. Throws [ArgumentError] on violation.
-  WeeklyStudyDayPattern(Map<int, DayKind> entries)
-    : _entries = Map.unmodifiable(entries) {
+  factory WeeklyStudyDayPattern(Map<int, DayKind> entries) {
     for (final key in entries.keys) {
       if (key < 1 || key > 7) {
         throw ArgumentError.value(
@@ -72,9 +93,8 @@ class WeeklyStudyDayPattern {
         'WeeklyStudyDayPattern must contain at least one study day.',
       );
     }
+    return WeeklyStudyDayPattern._raw(Map.unmodifiable(entries));
   }
-
-  final Map<int, DayKind> _entries;
 
   // ---------------------------------------------------------------------------
   // Factory constructors
@@ -102,7 +122,7 @@ class WeeklyStudyDayPattern {
   /// Returns the [DayKind] for [weekday] (ISO 8601, 1=Mon…7=Sun).
   ///
   /// Defaults to [DayKind.study] when [weekday] is not in the pattern.
-  DayKind dayKindFor(int weekday) => _entries[weekday] ?? DayKind.study;
+  DayKind dayKindFor(int weekday) => entries[weekday] ?? DayKind.study;
 
   /// Whether [weekday] (ISO 8601) is a study day in this pattern.
   bool isStudyDay(int weekday) => dayKindFor(weekday) == DayKind.study;
@@ -112,36 +132,5 @@ class WeeklyStudyDayPattern {
 
   /// The count of weekdays mapped to [DayKind.study].
   int get studyDaysPerWeek =>
-      _entries.values.where((d) => d == DayKind.study).length;
-
-  /// An unmodifiable view of the weekday→DayKind mapping.
-  Map<int, DayKind> get entries => _entries;
-
-  // ---------------------------------------------------------------------------
-  // Equality + hash
-  // ---------------------------------------------------------------------------
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    if (other is! WeeklyStudyDayPattern) return false;
-    if (_entries.length != other._entries.length) return false;
-    for (final entry in _entries.entries) {
-      if (other._entries[entry.key] != entry.value) return false;
-    }
-    return true;
-  }
-
-  @override
-  int get hashCode => Object.hashAll(
-    _entries.entries.map((e) => Object.hash(e.key, e.value)).toList()..sort(),
-  );
-
-  @override
-  String toString() {
-    final days = _entries.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
-    final repr = days.map((e) => '${e.key}:${e.value.name}').join(', ');
-    return 'WeeklyStudyDayPattern{$repr}';
-  }
+      entries.values.where((d) => d == DayKind.study).length;
 }

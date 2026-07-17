@@ -1,3 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'schedule_spec.freezed.dart';
+
 /// Sealed domain value object for a stage's review schedule.
 ///
 /// Replaces the old nullable quartet
@@ -10,10 +14,10 @@
 /// - [DelaySchedule] — item is due `delayDays` days after the previous
 ///   stage was completed. This is the default for all built-in stages.
 /// - [WeeklySchedule] — review occurs on specific day(s) of the week.
-///   [daysOfWeek] contains ISO weekday numbers (Mon=1 … Sun=7) and must
-///   have at least one entry with all values in the range [1, 7].
-/// - [RollingSchedule] — always review the last N items. [windowSize] must
-///   be positive.
+///   [WeeklySchedule.daysOfWeek] contains ISO weekday numbers (Mon=1 … Sun=7)
+///   and must have at least one entry with all values in the range [1, 7].
+/// - [RollingSchedule] — always review the last N items.
+///   [RollingSchedule.windowSize] must be positive.
 ///
 /// ### Storage
 /// The repository encodes a [ScheduleSpec] as three database columns
@@ -24,6 +28,16 @@
 ///
 /// Use [ScheduleSpec.fromParts] to reconstruct from the raw column values,
 /// and the `storageKey` / accessors to write back.
+///
+/// ### Freezed and per-variant validation
+/// Each variant ([DelaySchedule], [WeeklySchedule], [RollingSchedule]) is its
+/// own `@freezed` class rather than one shared `@freezed sealed class` union,
+/// so [WeeklySchedule] and [RollingSchedule] can keep validating their own
+/// invariants (`Throws [ArgumentError]`) directly in their public
+/// constructor — freezed's union-member factories must be `const` (no
+/// constructor body), which cannot run that validation. `ScheduleSpec`
+/// itself stays a plain hand-written `sealed` base (no fields of its own to
+/// generate `==`/`hashCode`/`toString` for).
 sealed class ScheduleSpec {
   const ScheduleSpec();
 
@@ -108,82 +122,81 @@ sealed class ScheduleSpec {
 /// stage was completed.
 ///
 /// [delayDays] == 0 means "due immediately" (the Learn/לימוד stage).
-final class DelaySchedule extends ScheduleSpec {
-  const DelaySchedule(this.delayDays);
+@Freezed(map: FreezedMapOptions.none, when: FreezedWhenOptions.none)
+abstract class DelaySchedule extends ScheduleSpec with _$DelaySchedule {
+  const DelaySchedule._() : super();
 
-  @override
-  final int delayDays;
+  const factory DelaySchedule(int delayDays) = _DelaySchedule;
 
   @override
   String get storageKey => 'delay';
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is DelaySchedule && other.delayDays == delayDays);
-
-  @override
-  int get hashCode => Object.hash(runtimeType, delayDays);
-
-  @override
-  String toString() => 'DelaySchedule(delayDays: $delayDays)';
 }
 
 /// Weekly schedule: the item is due on specific day(s) of the week.
 ///
 /// [daysOfWeek] holds ISO weekday numbers (Mon = 1, …, Sun = 7).
 /// Must have at least one value; all values must be in [1, 7].
-final class WeeklySchedule extends ScheduleSpec {
-  // Uses explicit `if (...) throw ArgumentError(...)` checks in the
-  // constructor body (not `assert`) so the invariant is enforced in
-  // release/profile builds too — `assert` is stripped from those builds,
-  // which would otherwise let this factory's documented
-  // `Throws [ArgumentError]` contract silently fail exactly where users
-  // run the app.
-  WeeklySchedule(List<int> daysOfWeek)
-    : daysOfWeek = List.unmodifiable(daysOfWeek) {
-    if (this.daysOfWeek.isEmpty) {
+///
+/// ## Construction
+/// The only production constructor is the validating default constructor
+/// [WeeklySchedule.new] — [WeeklySchedule._raw] is library-private, so an
+/// out-of-range or empty [daysOfWeek] can never be constructed from outside
+/// this file.
+@Freezed(map: FreezedMapOptions.none, when: FreezedWhenOptions.none)
+abstract class WeeklySchedule extends ScheduleSpec with _$WeeklySchedule {
+  const WeeklySchedule._() : super();
+
+  /// Private, validated constructor. Reached only via [WeeklySchedule.new].
+  const factory WeeklySchedule._raw(List<int> daysOfWeek) = _WeeklySchedule;
+
+  // Validates with explicit `if (...) throw ArgumentError(...)` checks (not
+  // `assert`) so the invariant is enforced in release/profile builds too —
+  // `assert` is stripped from those builds, which would otherwise let this
+  // constructor's documented `Throws [ArgumentError]` contract silently fail
+  // exactly where users run the app.
+  factory WeeklySchedule(List<int> daysOfWeek) {
+    final immutable = List<int>.unmodifiable(daysOfWeek);
+    if (immutable.isEmpty) {
       throw ArgumentError.value(
         daysOfWeek,
         'daysOfWeek',
         'daysOfWeek must not be empty.',
       );
     }
-    if (!this.daysOfWeek.every((d) => d >= 1 && d <= 7)) {
+    if (!immutable.every((d) => d >= 1 && d <= 7)) {
       throw ArgumentError.value(
         daysOfWeek,
         'daysOfWeek',
         'daysOfWeek values must be 1 (Mon) through 7 (Sun).',
       );
     }
+    return WeeklySchedule._raw(immutable);
   }
 
   @override
-  final List<int> daysOfWeek;
-
-  @override
   String get storageKey => 'weekly';
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is WeeklySchedule && _listEquals(other.daysOfWeek, daysOfWeek));
-
-  @override
-  int get hashCode => Object.hashAll([runtimeType, ...daysOfWeek]);
-
-  @override
-  String toString() => 'WeeklySchedule(daysOfWeek: $daysOfWeek)';
 }
 
 /// Rolling-window schedule: always review the last [windowSize] items.
 ///
 /// [windowSize] must be positive (>= 1).
-final class RollingSchedule extends ScheduleSpec {
+///
+/// ## Construction
+/// The only production constructor is the validating default constructor
+/// [RollingSchedule.new] — [RollingSchedule._raw] is library-private, so a
+/// non-positive [windowSize] can never be constructed from outside this
+/// file.
+@Freezed(map: FreezedMapOptions.none, when: FreezedWhenOptions.none)
+abstract class RollingSchedule extends ScheduleSpec with _$RollingSchedule {
+  const RollingSchedule._() : super();
+
+  /// Private, validated constructor. Reached only via [RollingSchedule.new].
+  const factory RollingSchedule._raw(int windowSize) = _RollingSchedule;
+
   // Uses an explicit `if (...) throw ArgumentError(...)` check (not
   // `assert`) so the invariant is enforced in release/profile builds too —
   // see the note on WeeklySchedule's constructor above for why.
-  RollingSchedule(this.windowSize) {
+  factory RollingSchedule(int windowSize) {
     if (windowSize <= 0) {
       throw ArgumentError.value(
         windowSize,
@@ -191,9 +204,8 @@ final class RollingSchedule extends ScheduleSpec {
         'windowSize must be positive.',
       );
     }
+    return RollingSchedule._raw(windowSize);
   }
-
-  final int windowSize;
 
   @override
   String get storageKey => 'rolling';
@@ -201,25 +213,4 @@ final class RollingSchedule extends ScheduleSpec {
   /// Exposes `rollingWindowSize` under the standard accessor name.
   @override
   int? get rollingWindowSize => windowSize;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is RollingSchedule && other.windowSize == windowSize);
-
-  @override
-  int get hashCode => Object.hash(runtimeType, windowSize);
-
-  @override
-  String toString() => 'RollingSchedule(windowSize: $windowSize)';
-}
-
-// ── Internal helpers ─────────────────────────────────────────────────────────
-
-bool _listEquals(List<int> a, List<int> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
 }

@@ -1,4 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/exceptions/validation_exception.dart';
+
+part 'program_starting_position.freezed.dart';
 
 /// Allowed look-back window in days (B2 constraint).
 ///
@@ -27,17 +30,24 @@ const int kMaxLookBackDays = 30;
 /// Supersedes the old `offset:N|ref:<sefariaRef>` substring grammar encoded
 /// in the `startingRef` string field of [AddTrackResult]. VOs are preferred
 /// over encoded strings (T14 / primitive-obsession sweep).
-class ProgramStartingPosition {
-  /// The chosen program start date (local-day boundary at midnight local time).
-  final DateTime startDate;
+///
+/// ### Construction
+/// The only production constructors are the validating factories
+/// [ProgramStartingPosition.create] and [ProgramStartingPosition.fromLegacyGrammar]
+/// — [ProgramStartingPosition._raw] is library-private, so an instance
+/// outside the `[today − 30 days, today]` window can never be constructed
+/// from outside this file. `==`/`hashCode`/`toString` are freezed-generated
+/// from [startDate] and [sefariaRef].
+@Freezed(map: FreezedMapOptions.none, when: FreezedWhenOptions.none)
+abstract class ProgramStartingPosition with _$ProgramStartingPosition {
+  const ProgramStartingPosition._();
 
-  /// The ref to the Sefaria content item to start at, if the user specified
-  /// a content-based starting position (e.g. "Berakhot 42a").
-  ///
-  /// `null` when the position is purely date-based (offset from today).
-  final String? sefariaRef;
-
-  const ProgramStartingPosition._({required this.startDate, this.sefariaRef});
+  /// Private, validated constructor. Reached only via
+  /// [ProgramStartingPosition.create] / [ProgramStartingPosition.fromLegacyGrammar].
+  const factory ProgramStartingPosition._raw({
+    required DateTime startDate,
+    String? sefariaRef,
+  }) = _ProgramStartingPosition;
 
   /// Factory that validates the date window.
   ///
@@ -71,7 +81,7 @@ class ProgramStartingPosition {
       );
     }
 
-    return ProgramStartingPosition._(
+    return ProgramStartingPosition._raw(
       startDate: startDay,
       sefariaRef: sefariaRef,
     );
@@ -114,7 +124,7 @@ class ProgramStartingPosition {
     required DateTime today,
   }) {
     if (rawStartingRef == null || rawStartingRef.isEmpty) {
-      return ProgramStartingPosition._(startDate: _dayOnly(today));
+      return ProgramStartingPosition._raw(startDate: _dayOnly(today));
     }
 
     var offset = 0;
@@ -158,20 +168,6 @@ class ProgramStartingPosition {
     }
     return parts.isEmpty ? '' : parts.join('|');
   }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is ProgramStartingPosition &&
-          other.startDate == startDate &&
-          other.sefariaRef == sefariaRef);
-
-  @override
-  int get hashCode => Object.hash(startDate, sefariaRef);
-
-  @override
-  String toString() =>
-      'ProgramStartingPosition(startDate: $startDate, sefariaRef: $sefariaRef)';
 
   /// Trim a [DateTime] to local-day midnight (year/month/day only).
   static DateTime _dayOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);

@@ -1,3 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'pin.freezed.dart';
+
 /// Typed value object for a 4-digit ASCII numeric PIN.
 ///
 /// Used for the Parent PIN and (in future) the Tutor PIN. Wraps the raw
@@ -21,15 +25,20 @@
 /// ```dart
 /// final hash = BCrypt.hashpw(pin.value, BCrypt.gensalt());
 /// ```
-class Pin {
-  const Pin._(this.value);
+///
+/// ## Construction
+/// The only production constructors are the validating factories [Pin.parse]
+/// and [Pin.tryParse] below — [Pin._raw] is library-private, so an invalid
+/// [Pin] can never be constructed from outside this file. `==`/`hashCode`
+/// are freezed-generated from [value]; `toString` is hand-written (not
+/// freezed-generated) so the digit string is never leaked via logging.
+@Freezed(map: FreezedMapOptions.none, when: FreezedWhenOptions.none)
+abstract class Pin with _$Pin {
+  const Pin._();
 
-  /// The 4-character digit string.
-  final String value;
-
-  // ---------------------------------------------------------------------------
-  // Constructors
-  // ---------------------------------------------------------------------------
+  /// Private, validated constructor. Reached only via [Pin.parse] /
+  /// [Pin.tryParse].
+  const factory Pin._raw(String value) = _Pin;
 
   static final _digitRegex = RegExp(r'^\d{4}$');
 
@@ -40,28 +49,19 @@ class Pin {
     if (!_digitRegex.hasMatch(raw)) {
       throw FormatException('Pin must be exactly 4 ASCII decimal digits.', raw);
     }
-    return Pin._(raw);
+    return Pin._raw(raw);
   }
 
   /// Returns a [Pin] for [raw], or `null` when [raw] is not a valid PIN.
   static Pin? tryParse(String? raw) {
     if (raw == null) return null;
-    return _digitRegex.hasMatch(raw) ? Pin._(raw) : null;
+    return _digitRegex.hasMatch(raw) ? Pin._raw(raw) : null;
   }
 
-  // ---------------------------------------------------------------------------
-  // Equality + hash
-  // ---------------------------------------------------------------------------
-
-  /// Two [Pin]s are equal when their digit strings are identical.
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || other is Pin && other.value == value;
-
-  @override
-  int get hashCode => value.hashCode;
-
   /// Returns a masked form of the PIN for safe display/logging.
+  ///
+  /// Hand-written (not freezed-generated) so the digit string is never
+  /// leaked via `toString`/logging.
   @override
   String toString() => 'Pin(****)';
 }

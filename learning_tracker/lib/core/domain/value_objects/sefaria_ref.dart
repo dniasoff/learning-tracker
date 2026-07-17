@@ -1,3 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'sefaria_ref.freezed.dart';
+
 /// Typed value object wrapping a Sefaria reference string.
 ///
 /// A Sefaria reference is a structured identifier for a unit of Jewish text,
@@ -19,15 +23,21 @@
 /// print(ref.titlePart);   // 'Mishnah Berakhot'
 /// print(ref.addressPart); // '1:1'
 /// ```
-class SefariaRef {
-  /// Constructs a [SefariaRef] from a validated, already-trimmed [value].
-  ///
-  /// Prefer [SefariaRef.parse] or [SefariaRef.tryParse] at boundaries where
-  /// the raw string may not yet be validated.
-  const SefariaRef._(this.value);
+///
+/// ## Construction
+/// The only production constructors are the validating factories
+/// [SefariaRef.parse], [SefariaRef.tryParse] and [SefariaRef.fromString]
+/// below — [SefariaRef._raw] is library-private, so an empty [SefariaRef]
+/// can never be constructed from outside this file. `==`/`hashCode` are
+/// freezed-generated from [value]; `toString` is hand-written (not
+/// freezed-generated) to keep the existing `SefariaRef(value)` display form.
+@Freezed(map: FreezedMapOptions.none, when: FreezedWhenOptions.none)
+abstract class SefariaRef with _$SefariaRef {
+  const SefariaRef._();
 
-  /// The canonical string form of this reference.
-  final String value;
+  /// Private, validated constructor. Reached only via [SefariaRef.parse] /
+  /// [SefariaRef.tryParse] / [SefariaRef.fromString].
+  const factory SefariaRef._raw(String value) = _SefariaRef;
 
   // ---------------------------------------------------------------------------
   // Constructors
@@ -42,14 +52,14 @@ class SefariaRef {
     if (trimmed.isEmpty) {
       throw FormatException('SefariaRef cannot be empty.', raw);
     }
-    return SefariaRef._(trimmed);
+    return SefariaRef._raw(trimmed);
   }
 
   /// Returns a [SefariaRef] for [raw], or `null` when [raw] is empty / blank.
   static SefariaRef? tryParse(String? raw) {
     if (raw == null) return null;
     final trimmed = _normalise(raw);
-    return trimmed.isEmpty ? null : SefariaRef._(trimmed);
+    return trimmed.isEmpty ? null : SefariaRef._raw(trimmed);
   }
 
   /// Convenience factory — same as [SefariaRef.parse] but named for symmetry
@@ -104,18 +114,12 @@ class SefariaRef {
   bool get isYerushalmi => value.toLowerCase().startsWith('jerusalem talmud ');
 
   // ---------------------------------------------------------------------------
-  // Equality + hash
+  // toString
   // ---------------------------------------------------------------------------
 
-  /// Two [SefariaRef]s are equal when their canonical [value]s are identical
-  /// (exact, case-sensitive — Sefaria refs are case-sensitive).
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || other is SefariaRef && other.value == value;
-
-  @override
-  int get hashCode => value.hashCode;
-
+  /// Hand-written (not freezed-generated) to keep the existing
+  /// `SefariaRef(value)` display form (freezed's default would render
+  /// `SefariaRef(value: value)`).
   @override
   String toString() => 'SefariaRef($value)';
 
