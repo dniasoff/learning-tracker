@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/preference_list_tile.dart';
 
@@ -79,7 +80,7 @@ class PreferenceSegmentedTile<T> extends StatelessWidget {
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         fontSize: 19,
-                        color: const Color(0xFF1D2432),
+                        color: AppColors.preferenceTitleInk,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -87,7 +88,7 @@ class PreferenceSegmentedTile<T> extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF929BAA),
+                          color: AppColors.preferenceSubtitleGrey,
                           fontSize: 15,
                         ),
                       ),
@@ -114,7 +115,9 @@ class PreferenceSegmentedTile<T> extends StatelessWidget {
             style: SegmentedButton.styleFrom(
               selectedBackgroundColor: AppTheme.brandBlueBright,
               selectedForegroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFFD7DEEA)),
+              side: const BorderSide(
+                color: AppColors.preferenceSegmentedBorder,
+              ),
             ),
           ),
         ],

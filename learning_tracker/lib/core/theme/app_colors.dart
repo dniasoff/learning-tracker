@@ -616,4 +616,38 @@ abstract final class AppColors {
 
   /// Lifetime-folder Settings card gradient — bottom-right stop.
   static const Color progressSettingsCardGradientEnd = Color(0xFF5C7560);
+
+  // ---------------------------------------------------------------------------
+  // Core widgets (AUD-core-widgets-03) — shared primitives in lib/core/widgets/
+  // (StatCard, PreferenceListTile, PreferenceSegmentedTile, the app dialog
+  // shell). stat_card.dart independently hardcoded AppColors.blueNavy's exact
+  // hex (0xFF03174C) instead of referencing it, and preference_list_tile.dart
+  // / preference_segmented_tile.dart independently hardcoded the identical
+  // 0xFF929BAA subtitle grey; both duplicates now reference a single
+  // definition. Centralised here so no lib/core/widgets/*.dart file embeds a
+  // raw Color(0x...) literal.
+  // ---------------------------------------------------------------------------
+
+  /// [StatCard] highlighted-variant background (coral).
+  static const Color statCardHighlightCoral = Color(0xFFFF6E76);
+
+  /// [StatCard] default (non-highlighted) value text colour.
+  static const Color statCardValueInk = Color(0xFF11182C);
+
+  /// [StatCard] default (non-highlighted) label text colour.
+  static const Color statCardLabelMuted = Color(0xFF7C8595);
+
+  /// Subtitle text colour shared by [PreferenceListTile] and
+  /// [PreferenceSegmentedTile] — was independently hand-typed as the
+  /// identical hex literal in both files.
+  static const Color preferenceSubtitleGrey = Color(0xFF929BAA);
+
+  /// [PreferenceSegmentedTile] header-row title text colour.
+  static const Color preferenceTitleInk = Color(0xFF1D2432);
+
+  /// [PreferenceSegmentedTile]'s [SegmentedButton] unselected border colour.
+  static const Color preferenceSegmentedBorder = Color(0xFFD7DEEA);
+
+  /// [showAppConfirmDialog]'s cancel-button background (light mode).
+  static const Color dialogCancelButtonBg = Color(0xFFF0F1F5);
 }

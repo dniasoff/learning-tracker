@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 
 /// A tappable stat card primitive used across the Progress overview and the
 /// dashboard's task-category stat grid.
@@ -70,14 +71,15 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveCardColor =
-        cardColor ?? (highlighted ? const Color(0xFFFF6E76) : Colors.white);
+        cardColor ??
+        (highlighted ? AppColors.statCardHighlightCoral : Colors.white);
     final effectiveValueColor =
-        valueColor ?? (highlighted ? Colors.white : const Color(0xFF11182C));
+        valueColor ?? (highlighted ? Colors.white : AppColors.statCardValueInk);
     final effectiveLabelColor =
         labelColor ??
         (highlighted
             ? Colors.white.withValues(alpha: 0.82)
-            : const Color(0xFF7C8595));
+            : AppColors.statCardLabelMuted);
 
     final radius = BorderRadius.circular(borderRadius);
     final hasIcon = icon != null && iconColor != null;
@@ -86,7 +88,7 @@ class StatCard extends StatelessWidget {
       color: effectiveCardColor,
       borderRadius: radius,
       elevation: 0,
-      shadowColor: const Color(0xFF03174C).withValues(alpha: 0.08),
+      shadowColor: AppColors.blueNavy.withValues(alpha: 0.08),
       child: InkWell(
         onTap: onTap,
         borderRadius: radius,
@@ -101,7 +103,7 @@ class StatCard extends StatelessWidget {
             borderRadius: radius,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF03174C).withValues(alpha: 0.08),
+                color: AppColors.blueNavy.withValues(alpha: 0.08),
                 blurRadius: 14,
                 offset: const Offset(0, 6),
               ),

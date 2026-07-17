@@ -287,7 +287,7 @@ class _ConfirmDialogBody extends StatelessWidget {
                   : AppTheme.brandInkMuted,
               backgroundColor: isDark
                   ? AppTheme.darkSurfaceSoft
-                  : const Color(0xFFF0F1F5),
+                  : AppColors.dialogCancelButtonBg,
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),
