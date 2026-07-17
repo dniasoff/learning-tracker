@@ -8496,13 +8496,18 @@
   {
    "id": "AUD-core-analytics-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Type streak_milestone_analytics_observer.dart's two catch blocks to Exception — bare Object catches swallow Error subtypes as warnings",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "ea4d4de8f39f0eece7239230f79479317e3586b5"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-analytics-04 AC1 OK: catches typed L81/L94 `on Exception`, L107 `on StateError`; grep bare `} catch (` = none",
+    "AUD-core-analytics-04 AC2 OK: 3 R6-3 tests untouched (diff pure-add) and pass; full file 4/4 green via flutter test --concurrency=2"
+   ],
+   "notes": "Probe: closed-DB throws StateError not Exception; naive on-Exception on both breaks R6-3 test1 (verified via revert-rerun). Fix: inner catch->on Exception; outer catch split into on Exception + explicit on StateError (D17 race), matching codebase precedent. Other Errors propagate. AC1+AC2 verified."
   },
   {
    "id": "AUD-t-cross-61",
