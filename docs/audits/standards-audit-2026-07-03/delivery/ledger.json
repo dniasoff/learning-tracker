@@ -2776,13 +2776,19 @@
   {
    "id": "AUD-core-domain-05",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Wire up or delete the 4 unused core/domain/value_objects/ types (Pin, StageOrder, ScopeLevel/ScopeValue/CurriculumScope, CalendarSystem)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "aeca1c416df71b4886e79645ee9153487be64c8c"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-core-domain-05 AC1 OK: Pin has 2 prod imports (pin_service:8, set_parent_pin_use_case:15); 3 lib VOs + 3 tests deleted; 0 dangling refs",
+    "AUD-core-domain-05 AC2 OK: set_parent_pin_use_case.dart:52 uses Pin.tryParse; _isNumeric + ^\\d{4}$ regex removed; grep _isNumeric lib/ = none",
+    "AUD-core-domain-05 AC3 OK: grep '^class CurriculumScope' lib/ = 1 hit (user_database.g.dart:2041 Drift row); domain dup deleted"
+   ],
+   "notes": "Wired Pin into PinService (real duplicate) + set_parent_pin_use_case.dart (AC2 site), removing hand-rolled regexes. Deleted StageOrder/ScopeLevel+ScopeValue+CurriculumScope(domain)/CalendarSystem + tests: zero call sites, no adoption plan. AC1/AC2/AC3 all satisfied and self-checked via grep. Merged --no-ff onto dev (cid w4r1c14, mergeSha aeca1c416df71b4886e79645ee9153487be64c8c). Post-rebase gate: make audit 67/67 greps clean, flutter analyze clean (no issues), root make arb-parity clean (touchedStrings; 1536 English keys all present in Hebrew). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base e90545391e7bab571f24c3f6e118044f1550e724), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-core-navigation-01",
