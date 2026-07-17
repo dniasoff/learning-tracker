@@ -222,11 +222,17 @@ abstract class _$SelectedProfileId extends $Notifier<int?> {
 /// rows, e.g. a pre-existing track) and select it. After this an authenticated
 /// account always has ≥1 profile selected.
 ///
-/// Watched by the app shell so it runs on every auth-valid mount. Returns the
-/// id that was selected (existing or newly healed), or null when signed-out.
-// keepAlive: the app shell watches this once per auth transition, must survive unrelated rebuilds.
+/// AUD-profiles-21 (SM-2 — provider `build` must be pure): all of the above
+/// self-heal logic used to run directly inside `build()`, so merely
+/// watching/reading this provider silently wrote to
+/// `selectedProfileIdProvider` (a sibling provider) and to the database
+/// (`ensureDefaultProfile`). `build()` now only mirrors the current
+/// selection; the effect lives in [ensureSelected], an explicit method
+/// invoked by the app shell's post-frame auth-valid effect (see
+/// `app_shell.dart`) — never from `build()`.
+// keepAlive: the app shell triggers ensureSelected() once per auth transition, must survive unrelated rebuilds.
 
-@ProviderFor(autoSelectedProfileId)
+@ProviderFor(AutoSelectedProfileId)
 final autoSelectedProfileIdProvider = AutoSelectedProfileIdProvider._();
 
 /// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
@@ -254,13 +260,17 @@ final autoSelectedProfileIdProvider = AutoSelectedProfileIdProvider._();
 /// rows, e.g. a pre-existing track) and select it. After this an authenticated
 /// account always has ≥1 profile selected.
 ///
-/// Watched by the app shell so it runs on every auth-valid mount. Returns the
-/// id that was selected (existing or newly healed), or null when signed-out.
-// keepAlive: the app shell watches this once per auth transition, must survive unrelated rebuilds.
-
+/// AUD-profiles-21 (SM-2 — provider `build` must be pure): all of the above
+/// self-heal logic used to run directly inside `build()`, so merely
+/// watching/reading this provider silently wrote to
+/// `selectedProfileIdProvider` (a sibling provider) and to the database
+/// (`ensureDefaultProfile`). `build()` now only mirrors the current
+/// selection; the effect lives in [ensureSelected], an explicit method
+/// invoked by the app shell's post-frame auth-valid effect (see
+/// `app_shell.dart`) — never from `build()`.
+// keepAlive: the app shell triggers ensureSelected() once per auth transition, must survive unrelated rebuilds.
 final class AutoSelectedProfileIdProvider
-    extends $FunctionalProvider<AsyncValue<int?>, int?, FutureOr<int?>>
-    with $FutureModifier<int?>, $FutureProvider<int?> {
+    extends $AsyncNotifierProvider<AutoSelectedProfileId, int?> {
   /// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
   ///
   /// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
@@ -286,9 +296,15 @@ final class AutoSelectedProfileIdProvider
   /// rows, e.g. a pre-existing track) and select it. After this an authenticated
   /// account always has ≥1 profile selected.
   ///
-  /// Watched by the app shell so it runs on every auth-valid mount. Returns the
-  /// id that was selected (existing or newly healed), or null when signed-out.
-  // keepAlive: the app shell watches this once per auth transition, must survive unrelated rebuilds.
+  /// AUD-profiles-21 (SM-2 — provider `build` must be pure): all of the above
+  /// self-heal logic used to run directly inside `build()`, so merely
+  /// watching/reading this provider silently wrote to
+  /// `selectedProfileIdProvider` (a sibling provider) and to the database
+  /// (`ensureDefaultProfile`). `build()` now only mirrors the current
+  /// selection; the effect lives in [ensureSelected], an explicit method
+  /// invoked by the app shell's post-frame auth-valid effect (see
+  /// `app_shell.dart`) — never from `build()`.
+  // keepAlive: the app shell triggers ensureSelected() once per auth transition, must survive unrelated rebuilds.
   AutoSelectedProfileIdProvider._()
     : super(
         from: null,
@@ -305,17 +321,64 @@ final class AutoSelectedProfileIdProvider
 
   @$internal
   @override
-  $FutureProviderElement<int?> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<int?> create(Ref ref) {
-    return autoSelectedProfileId(ref);
-  }
+  AutoSelectedProfileId create() => AutoSelectedProfileId();
 }
 
 String _$autoSelectedProfileIdHash() =>
-    r'15240541b7b94129e4e50b02844af6dac9751067';
+    r'7d0cbfb9ffbca580047c472d599db7744a739f7e';
+
+/// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
+///
+/// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
+/// session, the app skips the interactive sign-in flow (which is the only
+/// place that calls `selectedProfileIdProvider.notifier.select(...)`, see
+/// `sign_in_controller.dart`). Without this effect the in-memory
+/// `selectedProfileIdProvider` stays `null`, so `activeProfileIdProvider`
+/// returns `0` and any write into a `profile_id`-FK'd table (e.g.
+/// `stage_definitions` during track creation) fails with
+/// `SqliteException(787): FOREIGN KEY constraint failed`.
+///
+/// Mirrors the single-profile branch of `_navigateAfterSignIn` (line ~536 of
+/// sign_in_controller): whenever auth transitions to signed-in AND no profile
+/// is selected yet, select the account's first profile.
+///
+/// BUG D1 (round 2 — the real crux): the previous fix only handled the case
+/// where ≥1 profile already existed. This account (a cloud account whose
+/// profiles never materialised locally — restored / skipped-onboarding) has
+/// ZERO rows in `learner_profiles`, so `profiles.first` had nothing to select
+/// and `profileId` stayed `0`. An authenticated account must NEVER operate at
+/// `profile_id = 0`. So when the account has no profile we self-heal by
+/// creating a default adult profile (and adopting any orphaned `profile_id = 0`
+/// rows, e.g. a pre-existing track) and select it. After this an authenticated
+/// account always has ≥1 profile selected.
+///
+/// AUD-profiles-21 (SM-2 — provider `build` must be pure): all of the above
+/// self-heal logic used to run directly inside `build()`, so merely
+/// watching/reading this provider silently wrote to
+/// `selectedProfileIdProvider` (a sibling provider) and to the database
+/// (`ensureDefaultProfile`). `build()` now only mirrors the current
+/// selection; the effect lives in [ensureSelected], an explicit method
+/// invoked by the app shell's post-frame auth-valid effect (see
+/// `app_shell.dart`) — never from `build()`.
+// keepAlive: the app shell triggers ensureSelected() once per auth transition, must survive unrelated rebuilds.
+
+abstract class _$AutoSelectedProfileId extends $AsyncNotifier<int?> {
+  FutureOr<int?> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<int?>, int?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<int?>, int?>,
+              AsyncValue<int?>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
 
 /// Profiles for the current account.
 

@@ -16,6 +16,15 @@
 /// `ensureDefaultProfile`) and selects it. These tests pin that behaviour:
 /// after an auth-valid startup, `selectedProfileIdProvider` is always non-null
 /// and holds a valid (non-zero) profile id.
+///
+/// AUD-profiles-21 (SM-2 — provider `build` must be pure): the self-heal
+/// effect used to live directly in `autoSelectedProfileId`'s `build()`, so
+/// merely watching/reading the provider silently wrote to
+/// `selectedProfileIdProvider` and the database. The effect now lives in the
+/// explicit `ensureSelected()` method — `build()` only mirrors the current
+/// selection. These tests invoke `ensureSelected()` (never `.future`) to
+/// exercise the effect, plus one test pinning that `.future` alone stays
+/// inert.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -119,6 +128,22 @@ const _signedIn = AuthState.signedIn(
 
 void main() {
   group('autoSelectedProfileId (BUG D1)', () {
+    test('AUD-profiles-21: build() is a pure read — merely awaiting `.future` '
+        'must NOT self-heal or select a profile (SM-2)', () async {
+      final result = _container(authState: _signedIn, profiles: []);
+      final container = result.container;
+
+      // A widget doing a plain `ref.watch(autoSelectedProfileIdProvider)`
+      // exercises exactly this path. Before AUD-profiles-21 this alone
+      // triggered `ensureDefaultProfile` (a DB write) and
+      // `selectedProfileIdProvider.notifier.select(...)` (a sibling-
+      // provider write) from inside build().
+      await container.read(autoSelectedProfileIdProvider.future);
+
+      expect(result.repo.ensureCalls, 0);
+      expect(container.read(selectedProfileIdProvider), isNull);
+    });
+
     test(
       'auth-valid cold start with null selection selects the first profile',
       () async {
@@ -131,9 +156,9 @@ void main() {
         // where the sign-in flow never ran).
         expect(container.read(selectedProfileIdProvider), isNull);
 
-        final selected = await container.read(
-          autoSelectedProfileIdProvider.future,
-        );
+        final selected = await container
+            .read(autoSelectedProfileIdProvider.notifier)
+            .ensureSelected();
 
         // The effect selected the account's first profile…
         expect(selected, 7);
@@ -153,9 +178,9 @@ void main() {
       // The picker / sign-in flow already chose profile 8.
       container.read(selectedProfileIdProvider.notifier).select(8);
 
-      final selected = await container.read(
-        autoSelectedProfileIdProvider.future,
-      );
+      final selected = await container
+          .read(autoSelectedProfileIdProvider.notifier)
+          .ensureSelected();
 
       expect(selected, 8);
       expect(container.read(selectedProfileIdProvider), 8);
@@ -167,9 +192,9 @@ void main() {
         profiles: [_profile(id: 7)],
       ).container;
 
-      final selected = await container.read(
-        autoSelectedProfileIdProvider.future,
-      );
+      final selected = await container
+          .read(autoSelectedProfileIdProvider.notifier)
+          .ensureSelected();
 
       expect(selected, isNull);
       expect(container.read(selectedProfileIdProvider), isNull);
@@ -185,9 +210,9 @@ void main() {
       // FK-fail.
       expect(container.read(selectedProfileIdProvider), isNull);
 
-      final selected = await container.read(
-        autoSelectedProfileIdProvider.future,
-      );
+      final selected = await container
+          .read(autoSelectedProfileIdProvider.notifier)
+          .ensureSelected();
 
       // The self-heal ran exactly once and created a profile.
       expect(result.repo.ensureCalls, 1);
@@ -221,9 +246,9 @@ void main() {
         container.read(selectedProfileIdProvider.notifier).select(42);
         expect(container.read(selectedProfileIdProvider), 42);
 
-        final selected = await container.read(
-          autoSelectedProfileIdProvider.future,
-        );
+        final selected = await container
+            .read(autoSelectedProfileIdProvider.notifier)
+            .ensureSelected();
 
         // After self-healing, the stale id must NOT be returned.
         expect(selected, isNot(42));
