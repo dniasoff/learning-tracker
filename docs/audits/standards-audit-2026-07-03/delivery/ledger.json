@@ -1731,14 +1731,14 @@
   },
   {
    "id": "AUD-core-logging-02",
-   "wave": "parked",
-   "status": "parked",
+   "wave": 4,
+   "status": "blocked",
    "severity": "P2",
    "title": "Remove or explicitly justify AppLogger.setupFlutterErrorHandlers — dead code duplicating crashlytics_bootstrap.dart's live handlers",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c18, 2026-07-17). review agent lost (quota) mid-review of worktree branch worktree-wf_4a60514d-55f-31 (tip 3e8c9321). Previously parked (roadmap section-4 uncited, PO-approved scope 2026-07-03); reopened for this wave-4 pass. Unreviewed fix commit 3e8c9321 (fix(core/logging): AUD-core-logging-02 - remove dead setupFlutterErrorHandlers) exists on the worktree branch only, not merged to dev - no code landed this pass. Worktree removed per cleanup protocol; branch left in place (unmerged patch, per git-cherry check) for a future harvest/relaunch pass, per the AUD-t-cross-64/AUD-t-cross-81 precedent."
   },
   {
    "id": "AUD-core-database-06",
