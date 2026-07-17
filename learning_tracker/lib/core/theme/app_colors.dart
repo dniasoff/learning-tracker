@@ -650,4 +650,26 @@ abstract final class AppColors {
 
   /// [showAppConfirmDialog]'s cancel-button background (light mode).
   static const Color dialogCancelButtonBg = Color(0xFFF0F1F5);
+
+  // ---------------------------------------------------------------------------
+  // Sacred Time feature (AUD-sacred_time-09) — the lock-overlay's
+  // per-window-kind background palette (Shabbos / Yom Tov / Shabbos+Yom Tov /
+  // Yom Kippur) and the settings-card header background. Centralised here so
+  // no lib/features/sacred_time/**/*.dart widget file embeds a raw
+  // Color(0x...) literal. Yom Tov reuses [accentPurpleDeep] and the settings
+  // card's drop-shadow reuses [notifCardShadow] — both were already
+  // identical hex values independently retyped here.
+  // ---------------------------------------------------------------------------
+
+  /// Lock-overlay background — plain Shabbos window.
+  static const Color sacredTimeLockShabbosBg = Color(0xFF11215C);
+
+  /// Lock-overlay background — Shabbos + Yom Tov combined window.
+  static const Color sacredTimeLockShabbosYomTovBg = Color(0xFF31246C);
+
+  /// Lock-overlay background — Yom Kippur window.
+  static const Color sacredTimeLockYomKippurBg = Color(0xFF1A2333);
+
+  /// Settings-card header background, paired with the lock-badge icon.
+  static const Color sacredTimeHeaderBg = Color(0xFF11389F);
 }
