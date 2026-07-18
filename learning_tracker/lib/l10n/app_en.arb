@@ -1428,6 +1428,8 @@
   "resetToDefaultOrder": "Reset to Default Order",
   "resetToDefaultOrderDialogTitle": "Reset to Default Order",
   "resetToDefaultOrderDialogBody": "This will restore the natural Sefaria order for this curriculum. Your custom ordering will be lost.",
+  "learningOrderSaveFailed": "Couldn't save the new order. Please try again.",
+  "learningOrderResetFailed": "Couldn't reset the order. Please try again.",
   "reorderConfirmTitle": "Reorder Content?",
   "reorderConfirmBody": "Reordering will clear your {overdueCount} outstanding overdue item(s). Consider completing them first.",
   "@reorderConfirmBody": {

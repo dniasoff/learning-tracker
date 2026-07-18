@@ -2663,6 +2663,12 @@ class AppLocalizationsHe extends AppLocalizations {
       'פעולה זו תשחזר את הסדר הטבעי של ספריא עבור קורס לימוד זה. הסדר המותאם אישית שלכם יאבד.';
 
   @override
+  String get learningOrderSaveFailed => 'שמירת הסדר החדש נכשלה. נסו שוב.';
+
+  @override
+  String get learningOrderResetFailed => 'איפוס הסדר נכשל. נסו שוב.';
+
+  @override
   String get reorderConfirmTitle => 'לשנות סדר תוכן?';
 
   @override

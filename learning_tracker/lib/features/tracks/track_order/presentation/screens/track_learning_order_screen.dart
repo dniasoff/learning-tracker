@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/widgets/reorder_confirm_dialog.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -173,6 +174,7 @@ class _TrackLearningOrderScreenState
     );
     if (!confirmed || !mounted) return;
 
+    final previous = _localSedarim;
     final items = List<LearningOrderItem>.from(_localSedarim!);
     final moved = items.removeAt(oldIndex);
     items.insert(newIndex, moved);
@@ -184,7 +186,7 @@ class _TrackLearningOrderScreenState
         )
         .toList();
     setState(() => _localSedarim = updated);
-    unawaited(_persistSedarim(updated));
+    unawaited(_persistSedarim(updated, previous));
   }
 
   Future<void> _onReorderMasechtos(int oldIndex, int newIndex) async {
@@ -200,6 +202,7 @@ class _TrackLearningOrderScreenState
     );
     if (!confirmed || !mounted) return;
 
+    final previous = _localMasechtos;
     final items = List<LearningOrderItem>.from(_localMasechtos!);
     final moved = items.removeAt(oldIndex);
     items.insert(newIndex, moved);
@@ -211,15 +214,30 @@ class _TrackLearningOrderScreenState
         )
         .toList();
     setState(() => _localMasechtos = updated);
-    _persistMasechtos(updated);
+    unawaited(_persistMasechtos(updated, previous));
   }
 
-  Future<void> _persistSedarim(List<LearningOrderItem> items) async {
+  Future<void> _persistSedarim(
+    List<LearningOrderItem> items,
+    List<LearningOrderItem>? previous,
+  ) async {
     final mySeq = ++_sedarimSaveSeq;
     final args = (trackId: widget.trackId, curriculumId: widget.curriculumId);
-    await ref
-        .read(trackLearningOrderRepositoryProvider)
-        .saveSedarimOrder(widget.trackId, items);
+    try {
+      await ref
+          .read(trackLearningOrderRepositoryProvider)
+          .saveSedarimOrder(widget.trackId, items);
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(
+        event: 'track_sedarim_order_save_failed: trackId=${widget.trackId}',
+        exception: e,
+        stackTrace: st,
+      );
+      if (!mounted || mySeq != _sedarimSaveSeq) return;
+      setState(() => _localSedarim = previous);
+      _showOrderSaveError();
+      return;
+    }
     if (!mounted || mySeq != _sedarimSaveSeq) return;
     ref.invalidate(trackSedarimOrderProvider(args));
     // Reordering sedarim shifts the natural grouping of masechtos below.
@@ -234,12 +252,46 @@ class _TrackLearningOrderScreenState
     setState(() => _localMasechtos = List.from(freshMasechtos));
   }
 
-  void _persistMasechtos(List<LearningOrderItem> items) {
+  Future<void> _persistMasechtos(
+    List<LearningOrderItem> items,
+    List<LearningOrderItem>? previous,
+  ) async {
     final args = (trackId: widget.trackId, curriculumId: widget.curriculumId);
-    ref
-        .read(trackLearningOrderRepositoryProvider)
-        .saveMasechtosOrder(widget.trackId, items)
-        .then((_) => ref.invalidate(trackMasechtosOrderProvider(args)));
+    try {
+      await ref
+          .read(trackLearningOrderRepositoryProvider)
+          .saveMasechtosOrder(widget.trackId, items);
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(
+        event: 'track_masechtos_order_save_failed: trackId=${widget.trackId}',
+        exception: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      setState(() => _localMasechtos = previous);
+      _showOrderSaveError();
+      return;
+    }
+    if (!mounted) return;
+    ref.invalidate(trackMasechtosOrderProvider(args));
+  }
+
+  void _showOrderSaveError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.learningOrderSaveFailed),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showOrderResetError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.learningOrderResetFailed),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> _resetToDefault(BuildContext context) async {
@@ -250,9 +302,20 @@ class _TrackLearningOrderScreenState
     // Bump the save sequence so any in-flight sedarim persist can't resolve
     // last and clobber the reset with its stale masechtos snapshot.
     final mySeq = ++_sedarimSaveSeq;
-    await ref
-        .read(trackLearningOrderRepositoryProvider)
-        .resetToDefault(widget.trackId);
+    try {
+      await ref
+          .read(trackLearningOrderRepositoryProvider)
+          .resetToDefault(widget.trackId);
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(
+        event: 'track_order_reset_failed: trackId=${widget.trackId}',
+        exception: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      _showOrderResetError();
+      return;
+    }
     if (!mounted || mySeq != _sedarimSaveSeq) return;
 
     // Invalidate both providers, then await the fresh default orders and seed

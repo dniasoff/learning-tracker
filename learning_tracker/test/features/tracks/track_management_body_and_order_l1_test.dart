@@ -30,6 +30,9 @@
 //    19. Reorder callback persists order via TrackLearningOrderRepository
 //    20. Race-safety: _sedarimSaveSeq prevents stale fetch overwriting newer edit
 //    21. Hebrew-locale smoke — renders without overflow
+//    22. saveSedarimOrder throw → error SnackBar + sedarim reverts (AUD-tracks-08)
+//    23. saveMasechtosOrder throw → error SnackBar + masechtos reverts (AUD-tracks-08)
+//    24. resetToDefault throw → error SnackBar shown (AUD-tracks-08)
 
 @Tags(['tracks', 'track_management_body', 'track_learning_order'])
 library;
@@ -1084,6 +1087,121 @@ void main() {
         await teardown(tester);
       },
     );
+  });
+
+  group('TrackLearningOrderScreen — save/reset failure surfaces error '
+      '(AUD-tracks-08)', () {
+    testWidgets(
+      '22. saveSedarimOrder throws → error SnackBar shown and the sedarim '
+      'order reverts to its pre-reorder value',
+      (tester) async {
+        final items = [
+          _orderItem('Seder Zeraim', 0),
+          _orderItem('Seder Moed', 1),
+        ];
+        when(
+          () =>
+              repo.saveSedarimOrder(any<int>(), any<List<LearningOrderItem>>()),
+        ).thenThrow(Exception('disk full'));
+
+        await tester.pumpWidget(
+          _buildOrderApp(repo: repo, sedarimFactory: () => Future.value(items)),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(_renderedRefs(tester), ['Seder Zeraim', 'Seder Moed']);
+
+        final listFinder = find.byType(ReorderableListView).first;
+        final listWidget = tester.widget<ReorderableListView>(listFinder);
+        listWidget.onReorderItem?.call(0, 1);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // A visible error affordance appears — the failure is not
+        // silently swallowed.
+        expect(find.byType(SnackBar), findsOneWidget);
+
+        // The optimistic reorder is rolled back: the list still shows
+        // the order that was actually persisted (the pre-reorder one).
+        expect(_renderedRefs(tester), ['Seder Zeraim', 'Seder Moed']);
+
+        await teardown(tester);
+      },
+    );
+
+    testWidgets('23. saveMasechtosOrder throws → error SnackBar shown and the '
+        'masechtos order reverts to its pre-reorder value', (tester) async {
+      final sedarim = [_orderItem('Seder Zeraim', 0)];
+      final masechtos = [
+        _orderItem('Masechta Berachos', 0),
+        _orderItem('Masechta Shabbos', 1),
+      ];
+      when(
+        () =>
+            repo.saveMasechtosOrder(any<int>(), any<List<LearningOrderItem>>()),
+      ).thenThrow(Exception('outbox push failed'));
+
+      await tester.pumpWidget(
+        _buildOrderApp(
+          repo: repo,
+          sedarimFactory: () => Future.value(sedarim),
+          masechtosFactory: () => Future.value(masechtos),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        _renderedRefs(tester),
+        containsAllInOrder(['Masechta Berachos', 'Masechta Shabbos']),
+      );
+
+      // The second ReorderableListView is the masechtos list.
+      final listFinder = find.byType(ReorderableListView).at(1);
+      final listWidget = tester.widget<ReorderableListView>(listFinder);
+      listWidget.onReorderItem?.call(0, 1);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        _renderedRefs(tester),
+        containsAllInOrder(['Masechta Berachos', 'Masechta Shabbos']),
+      );
+
+      await teardown(tester);
+    });
+
+    testWidgets('24. resetToDefault throws → error SnackBar shown and the '
+        'pre-reset order is left untouched', (tester) async {
+      final items = [_orderItem('Seder Zeraim', 0)];
+      when(
+        () => repo.resetToDefault(any<int>()),
+      ).thenThrow(Exception('offline — cannot reach outbox'));
+
+      await tester.pumpWidget(
+        _buildOrderApp(repo: repo, sedarimFactory: () => Future.value(items)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(_renderedRefs(tester), ['Seder Zeraim']);
+
+      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Reset'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(SnackBar), findsOneWidget);
+
+      // Local state is left as-is — no clobbering by a failed reset.
+      expect(_renderedRefs(tester), ['Seder Zeraim']);
+
+      await teardown(tester);
+    });
   });
 
   group('TrackLearningOrderScreen — RTL smoke', () {
