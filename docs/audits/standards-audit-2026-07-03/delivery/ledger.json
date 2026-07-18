@@ -1234,13 +1234,18 @@
     {
       "id": "AUD-tracks-07",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P1",
       "title": "Surface a user-visible error when EditTrackScreen._save() swallows a non-'permission-denied' TutorWriteException",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "dd5e782cb089b640fb5d51d6cd42f41089892467"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-tracks-07 AC1 OK: new test (line 864) throws code:internal, taps Save+confirm, asserts SnackBar+errorSaveTrackFailed; verified RED pre-fix (line 916), GREEN 45/45",
+        "AUD-tracks-07 AC2 OK: edit_track_screen.dart:295-323 catch shows snackbar every code + AppLogger.error for non-perm-denied; matches recommendation"
+      ],
+      "notes": "Evidence matched HEAD, no drift. Catch only handled 'permission-denied'; other codes swallowed silently. Red test (code:'internal') failed pre-fix (0 SnackBars). Fix: else-branch logs via AppLogger.error + shows errorSaveTrackFailed snackbar. Test green, 45/45 pass."
     },
     {
       "id": "AUD-tutoring-01",
