@@ -4738,13 +4738,18 @@
     {
       "id": "AUD-settings-06",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Replace duplicated inline curriculumTracks lookups with the existing TrackDao.getTrackByProfileAndCurriculum",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "d851cefb8136e3dea608097f47e470a7c546772d"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-settings-06 AC1a OK: both sites now call db.trackDao.getTrackByProfileAndCurriculum; grep shows 0 remaining db.select(db.curriculumTracks) in the 2 files",
+        "AUD-settings-06 AC1b OK: make audit check 84/84 greps the pattern outside core/database/; injected fixture -> grep non-empty -> FAIL=1 -> exit1, checker truly fires"
+      ],
+      "notes": "Re-verified: inline queries still present, not stale. Replaced with trackDao.getTrackByProfileAndCurriculum at both sites (identical semantics). Added audit check 84/84, fired on fixture then clean. analyze 0 issues, 98/98 tests pass, audit PASSED."
     },
     {
       "id": "AUD-settings-04",
