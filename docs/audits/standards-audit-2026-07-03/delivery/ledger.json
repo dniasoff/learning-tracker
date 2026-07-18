@@ -4765,13 +4765,18 @@
     {
       "id": "AUD-settings-04",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Batch DataExportImportService.importData()'s 16 per-row insert loops instead of awaiting each row individually",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "c71fc5c2dc43758636086ede0e403d783af29fec"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-settings-04 AC1 OK (code-review): all 16 evidence loops now batch/insertAll; grep: 0 `.into(`, 16 batch calls, all inside transaction()",
+        "AUD-settings-04 AC1 OK (test): revert to ade4de06^ fails count test 'less than <1200>/Actual <1200>'; restored -> 0 runInsert, rows land, passes"
+      ],
+      "notes": "All 16 evidence sites re-verified present. Rewrote all 16 importData() loops to batch()/insertAll (AUD-core-database-06 pattern). Confirmed 0 remaining awaited per-row inserts. Both AC paths delivered: grep + red-first insert-count test on 1,200-row fixture."
     },
     {
       "id": "AUD-sync-04",
