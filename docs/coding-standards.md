@@ -694,6 +694,8 @@ test/
 
 Presentation code (`features/*/presentation/**`) must not import from `features/*/data/**` — data access flows through providers over domain interfaces (this is the vertical complement to Rules 1–2). **[Pending]** audit grep.
 
+**Composition-root carve-out:** a provider file under `presentation/providers/` that *constructs* a concrete `data/repositories/*_impl.dart` class to bind it to its domain interface (the DI wiring/composition-root step, e.g. `ContentRepository contentRepository(Ref ref) => ContentRepositoryImpl();`) is the sanctioned exception to the rule above. The rule targets domain-model/entity leaks — a data-layer file defining a type presentation has to import just to compile (the bug AUD-content_browsing-04 fixed by moving `TextContent`/`TextSegment` into `domain/entities/`) — not the one-line construction call a provider needs to bind interface to impl. This is the established, repo-wide pattern: `content_providers.dart`, `text_display_providers.dart`, `auth_providers.dart`, `track_providers.dart`, `profile_providers.dart`, `bookmark_providers.dart`, `learning_ledger_providers.dart`, `completion_providers.dart`, `progress_providers.dart`, `scheduler_providers.dart`, `audit_log_providers.dart`, `tutor_grant_providers.dart`, and `onboarding_providers.dart` all import a `data/repositories/*_impl.dart` for exactly this reason. When the `[Pending]` grep above is implemented, it must exclude these composition-root construction imports (e.g. scope to non-provider-construction usages, or allowlist `presentation/providers/*_providers.dart`) rather than banning any `data/` import path-wise.
+
 ---
 
 ## profileId-in-PK Invariant
