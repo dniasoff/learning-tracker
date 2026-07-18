@@ -1157,6 +1157,15 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/sm5_busy_stuck_check.$$$$.log; \
 	fi; \
+	echo "84/84 — Fowler duplication: no inline db.select(db.curriculumTracks) (profileId, curriculumId) -> track lookup outside core/database/ — call TrackDao.getTrackByProfileAndCurriculum instead (AUD-settings-06). Excludes lib/features/scheduler/domain/services/study_day_toggle_service.dart, a pre-existing occurrence outside this finding's scope, tracked separately, not yet in this gate"; \
+	CT_SETTINGS06_HITS=$$(grep -rn "db\.select(db\.curriculumTracks)" lib/ --include="*.dart" \
+	    | grep -v "lib/core/database/" \
+	    | grep -v "lib/features/scheduler/domain/services/study_day_toggle_service.dart"); \
+	if [ -n "$$CT_SETTINGS06_HITS" ]; then \
+	  echo "  The following sites re-implement TrackDao.getTrackByProfileAndCurriculum inline instead of reusing it (AUD-settings-06):"; \
+	  echo "$$CT_SETTINGS06_HITS"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
