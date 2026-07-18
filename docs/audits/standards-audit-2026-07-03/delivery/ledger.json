@@ -2890,13 +2890,18 @@
     {
       "id": "AUD-settings-09",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Route UserProfileHeaderCard through feature barrels instead of 6 deep cross-feature imports; settings.dart barrel is dead (Rule 2)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "9d0eea42a5bc08486a2db30e785e03b2f02bae2f"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-settings-09 AC1 OK: check 15/15 flagged scratch deep import, silent on barrel; fires on 5 real violations - checker alive (Makefile:420-429)",
+        "AUD-settings-09 AC2 OK: widget imports only account.dart+profiles.dart barrels; both export all symbols used; analyze clean; Y.dart is Rule-2 barrel"
+      ],
+      "notes": "AC1 (checker fires) already true pre-existing; re-verified via scratch fixture: make audit WARN-listed it, clean after removal. AC2 fixed: routed 6 deep imports through account.dart/profiles.dart barrels. analyze clean, tests pass. settings.dart dead-barrel is separate, out of scope."
     },
     {
       "id": "AUD-core-preferences-04",
