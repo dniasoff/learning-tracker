@@ -184,6 +184,10 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         context,
         initialDate: _deadline,
       );
+      // AUD-tracks-09 (SM-4 widget analog): the wizard can be backed out of
+      // while the date picker dialog is open, disposing this State before
+      // the awaited Future resolves. Guard before touching setState.
+      if (!mounted) return;
       if (picked != null) {
         setState(() {
           _deadline = picked;
@@ -199,6 +203,9 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year + 5),
     );
+    // AUD-tracks-09 (SM-4 widget analog): same mounted guard as above for
+    // the Gregorian date picker branch.
+    if (!mounted) return;
     if (picked != null) {
       setState(() {
         _deadline = picked;
