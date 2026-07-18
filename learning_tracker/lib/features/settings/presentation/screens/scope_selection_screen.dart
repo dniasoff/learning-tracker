@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
@@ -389,16 +388,14 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
 
-    // Look up trackId for this curriculum
-    final track =
-        await (db.select(db.curriculumTracks)
-              ..where(
-                (t) =>
-                    t.profileId.equals(profileId) &
-                    t.curriculumId.equals(widget.curriculumId.storageKey),
-              )
-              ..limit(1))
-            .getSingleOrNull();
+    // Look up trackId for this curriculum.
+    // AUD-settings-06: reuse TrackDao's (profileId, curriculumId) -> track
+    // lookup instead of re-implementing it inline (see the DAO method's doc
+    // comment for the tutored-mirror id-resolution rule this centralizes).
+    final track = await db.trackDao.getTrackByProfileAndCurriculum(
+      profileId,
+      widget.curriculumId.storageKey,
+    );
     final trackId = track?.id ?? 0;
 
     if (_selectAll) {
