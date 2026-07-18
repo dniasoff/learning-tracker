@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/core/widgets/reorder_confirm_dialog.dart';
@@ -133,6 +134,7 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
     );
     if (!confirmed || !mounted) return;
 
+    final previous = _localOrder;
     final items = List<LearningOrderItem>.from(_localOrder!);
     final moved = items.removeAt(oldIndex);
     items.insert(newIndex, moved);
@@ -151,12 +153,48 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
     });
 
     // Persist asynchronously via use case.
+    unawaited(_persistOrder(updated, previous));
+  }
+
+  Future<void> _persistOrder(
+    List<LearningOrderItem> items,
+    List<LearningOrderItem>? previous,
+  ) async {
     final useCase = ref.read(saveLearningOrderUseCaseProvider);
-    unawaited(
-      useCase(widget.curriculumId, updated).then((_) {
-        // Invalidate provider so other screens see updated order
-        ref.invalidate(learningOrderProvider(widget.curriculumId));
-      }),
+    try {
+      await useCase(widget.curriculumId, items);
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(
+        event:
+            'learning_order_save_failed: curriculumId=${widget.curriculumId}',
+        exception: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      setState(() => _localOrder = previous);
+      _showOrderSaveError();
+      return;
+    }
+    if (!mounted) return;
+    // Invalidate provider so other screens see updated order.
+    ref.invalidate(learningOrderProvider(widget.curriculumId));
+  }
+
+  void _showOrderSaveError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.learningOrderSaveFailed),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showOrderResetError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context)!.learningOrderResetFailed),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -165,7 +203,19 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
     if (!confirmed) return;
 
     final repository = ref.read(learningOrderRepositoryProvider);
-    await repository.resetToDefault(widget.curriculumId);
+    try {
+      await repository.resetToDefault(widget.curriculumId);
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(
+        event:
+            'learning_order_reset_failed: curriculumId=${widget.curriculumId}',
+        exception: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      _showOrderResetError();
+      return;
+    }
     if (!mounted) return;
 
     // Invalidate the provider, then await the fresh default order and seed it

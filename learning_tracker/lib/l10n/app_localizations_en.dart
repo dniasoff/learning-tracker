@@ -2691,6 +2691,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'This will restore the natural Sefaria order for this curriculum. Your custom ordering will be lost.';
 
   @override
+  String get learningOrderSaveFailed =>
+      'Couldn\'t save the new order. Please try again.';
+
+  @override
+  String get learningOrderResetFailed =>
+      'Couldn\'t reset the order. Please try again.';
+
+  @override
   String get reorderConfirmTitle => 'Reorder Content?';
 
   @override

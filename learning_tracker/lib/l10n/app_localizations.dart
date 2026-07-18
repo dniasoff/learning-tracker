@@ -4731,6 +4731,18 @@ abstract class AppLocalizations {
   /// **'This will restore the natural Sefaria order for this curriculum. Your custom ordering will be lost.'**
   String get resetToDefaultOrderDialogBody;
 
+  /// No description provided for @learningOrderSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the new order. Please try again.'**
+  String get learningOrderSaveFailed;
+
+  /// No description provided for @learningOrderResetFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reset the order. Please try again.'**
+  String get learningOrderResetFailed;
+
   /// No description provided for @reorderConfirmTitle.
   ///
   /// In en, this message translates to:

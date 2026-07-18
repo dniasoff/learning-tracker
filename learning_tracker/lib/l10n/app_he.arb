@@ -1244,6 +1244,8 @@
   "resetToDefaultOrder": "איפוס לסדר ברירת מחדל",
   "resetToDefaultOrderDialogTitle": "איפוס לסדר ברירת מחדל",
   "resetToDefaultOrderDialogBody": "פעולה זו תשחזר את הסדר הטבעי של ספריא עבור קורס לימוד זה. הסדר המותאם אישית שלכם יאבד.",
+  "learningOrderSaveFailed": "שמירת הסדר החדש נכשלה. נסו שוב.",
+  "learningOrderResetFailed": "איפוס הסדר נכשל. נסו שוב.",
   "reorderConfirmTitle": "לשנות סדר תוכן?",
   "reorderConfirmBody": "שינוי הסדר יאפס את {overdueCount} הפריטים הפיגורים שלך. שקול להשלים אותם קודם.",
   "@reorderConfirmBody": {
