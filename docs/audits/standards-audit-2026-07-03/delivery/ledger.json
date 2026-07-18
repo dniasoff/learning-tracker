@@ -608,13 +608,18 @@
     {
       "id": "AUD-tracks-08",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P1",
       "title": "Surface reorder/reset save failures to the user in the learning-order screens instead of silently swallowing them",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "54b1fbdb0f20aa0c0bc21d7d9f978d412f46d06b"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-tracks-08 AC1 OK: throwing stubs for all 4 repo methods (sedarim/masechtos/order/reset) assert SnackBar + local revert; 37 tests green",
+        "AUD-tracks-08 AC2 OK: no .then( remains; 3 unawaited(_persistX) wrap helpers with internal try/on Exception catch -> handled+reverted, never swallowed"
+      ],
+      "notes": "Re-verified: 5 sites still unwrapped. Red-first tests captured raw exception + no SnackBar. Fixed: try/on Exception catch + AppLogger + localized SnackBar (no e.toString()) + local-state revert on all 4 named repo calls. Both ACs verified via grep + 5 passing tests."
     },
     {
       "id": "AUD-app-01",
