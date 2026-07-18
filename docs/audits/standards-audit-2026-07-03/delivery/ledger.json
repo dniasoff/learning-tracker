@@ -10095,13 +10095,13 @@
     {
       "id": "AUD-scheduler-20",
       "wave": "parked",
-      "status": "parked",
+      "status": "skipped-refuted",
       "severity": "P3",
       "title": "Delete or properly @Deprecated the dead, self-documented-buggy toggleStudyDay provider",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "notes": "skipped-refuted (merge-lane w4r1c24, 2026-07-19). Ledger row was previously parked (\"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); reclassified to skipped-refuted because the underlying target was affirmatively removed by ancestor commits, not merely left deferred. Already fixed in code, independently confirmed: toggleStudyDayProvider was deleted outright by ancestor commit 4d46ca0f (fix(AUD-scheduler-06): delete dead StudyDayConfigRepositoryImpl/toggleStudyDay), and its coverage-test reference was separately deleted by ancestor commit 3ef9453a (fix(test): AUD-t-cross-15 - delete tautological generated-providers coverage test, add AG-3 checker); both commits are confirmed ancestors of this branch's current HEAD. Independently re-verified against the current tree: `grep -rn toggleStudyDay learning_tracker/lib/ learning_tracker/test/` returns 0 matches. Both ACs already satisfied; no code change made."
     },
     {
       "id": "AUD-scheduler-24",
