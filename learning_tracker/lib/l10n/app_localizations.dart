@@ -7215,6 +7215,12 @@ abstract class AppLocalizations {
   /// **'Track progress'**
   String get trackProgress;
 
+  /// AUD-tracks-01: label for the Track Detail / track-card completion row sourced from dashboardTrackCompletionPercentageProvider (all-time, multi-stage gate) when the track has no chazara stages. Deliberately distinct from `trackProgress` (which labels the time-gated, since-reactivation currentCyclePercentage from trackDualProgressMetricsProvider) so the two differently-sourced percentages are never shown under the same label. Bare counterpart of `carouselCompletion` ("Completion (with {chazara})") for tracks without a chazara stage.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion'**
+  String get trackCompletionLabel;
+
   /// Action tile in Track Detail screen to bulk-mark prior learning (lifetime-only credit, no streak/points).
   ///
   /// In en, this message translates to:

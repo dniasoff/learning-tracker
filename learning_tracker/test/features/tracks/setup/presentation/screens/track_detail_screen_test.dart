@@ -85,10 +85,21 @@ TrackDualProgressMetric _dualMetric({
 /// Overrides every external dependency [TrackDetailScreen] reads so the
 /// screen renders synchronously off in-memory data — no real Drift DB
 /// queries beyond the user DB (used for the goal lookup).
+///
+/// [dashboardCompletion] and [currentCycle] are deliberately independent
+/// parameters (AUD-tracks-01): [dashboardCompletion] feeds
+/// [dashboardTrackCompletionPercentageProvider] (the all-time, multi-stage
+/// completion gate) while [currentCycle] feeds
+/// [trackDualProgressMetricsProvider]'s `currentCyclePercentage` (the
+/// time-gated, since-reactivation metric). The two providers are
+/// documented as computing genuinely different numbers — a fixture that
+/// derives both from one shared value can never catch them disagreeing on
+/// screen.
 List<Override> _overridesFor({
   required UserDatabase db,
   required CurriculumTrack track,
   required CurriculumId curriculum,
+  required double dashboardCompletion,
   required double currentCycle,
   required double lifetime,
 }) {
@@ -112,7 +123,7 @@ List<Override> _overridesFor({
     ),
     dashboardTrackCompletionPercentageProvider(
       track.id,
-    ).overrideWith((ref) async => currentCycle),
+    ).overrideWith((ref) async => dashboardCompletion),
     dashboardHasProgramEnrollmentProvider(
       curriculum,
     ).overrideWith((ref) async => false),
@@ -174,6 +185,7 @@ void main() {
             track: track,
             curriculum: CurriculumId.mishnayos,
             // 0.35 → 35%, 0.74 → 74% (adaptive precision: whole numbers, no dp)
+            dashboardCompletion: 0.35,
             currentCycle: 0.35,
             lifetime: 0.74,
           ),
@@ -200,6 +212,71 @@ void main() {
       );
     });
 
+    testWidgets(
+      'AUD-tracks-01: divergent dashboard-completion and current-cycle '
+      'values never render two different percentages under the same '
+      '"Track progress" label',
+      (tester) async {
+        final track = _track();
+        await tester.pumpWidget(
+          _wrap(
+            track: track,
+            overrides: _overridesFor(
+              db: db,
+              track: track,
+              curriculum: CurriculumId.mishnayos,
+              // Deliberately different from currentCycle so a fixture that
+              // (pre-fix) reused one shared value could never reproduce the
+              // divergence — dashboardTrackCompletionPercentageProvider
+              // (all-time, multi-stage) vs trackDualProgressMetricsProvider's
+              // currentCyclePercentage (time-gated, since-reactivation).
+              dashboardCompletion: 0.62,
+              currentCycle: 0.20,
+              lifetime: 0.74,
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // The dual-metrics row (top) must show the current-cycle number
+        // under "Track progress".
+        expect(
+          find.text('Track progress: 20%'),
+          findsOneWidget,
+          reason:
+              'The header row must surface currentCyclePercentage (20%) '
+              'under the "Track progress" label.',
+        );
+
+        // The bare "Track progress" label (no colon/value suffix) must
+        // never appear standalone — that was the second, differently-sourced
+        // row (dashboardTrackCompletionPercentageProvider's 62%) reusing the
+        // same label text as the row above it, making two different numbers
+        // look like they shared one meaning.
+        expect(
+          find.text('Track progress'),
+          findsNothing,
+          reason:
+              'A second row must not reuse the bare "Track progress" label '
+              'for a value sourced from a different provider/formula — the '
+              'screen must never show two different percentages under the '
+              'same label.',
+        );
+
+        // The dashboardTrackCompletionPercentageProvider-sourced number
+        // (62%) must still render, but under its own, distinct label.
+        expect(
+          find.text('62%'),
+          findsOneWidget,
+          reason:
+              'dashboardTrackCompletionPercentageProvider\'s value must '
+              'still be visible on screen — just not mislabeled as '
+              '"Track progress".',
+        );
+      },
+    );
+
     testWidgets('zero-valued metrics still render both labels at 0%', (
       tester,
     ) async {
@@ -211,6 +288,7 @@ void main() {
             db: db,
             track: track,
             curriculum: CurriculumId.mishnayos,
+            dashboardCompletion: 0.0,
             currentCycle: 0.0,
             lifetime: 0.0,
           ),
@@ -238,6 +316,7 @@ void main() {
             db: db,
             track: track,
             curriculum: CurriculumId.mishnayos,
+            dashboardCompletion: 0.0,
             currentCycle: 0.0,
             lifetime: 0.0,
           ),
@@ -271,6 +350,7 @@ void main() {
             db: db,
             track: track,
             curriculum: CurriculumId.mishnayos,
+            dashboardCompletion: 0.0,
             currentCycle: 0.0,
             lifetime: 0.0,
           ),
@@ -374,7 +454,8 @@ void main() {
             db: db,
             track: track,
             curriculum: CurriculumId.bavli,
-            currentCycle: 0.0, // 0% → remaining == total
+            dashboardCompletion: 0.0, // 0% → remaining == total
+            currentCycle: 0.0,
             lifetime: 0.0,
           ),
           // 100 amudim (leaf) collapse to 50 dapim (coarse).
@@ -447,6 +528,7 @@ void main() {
             db: db,
             track: track,
             curriculum: CurriculumId.bavli,
+            dashboardCompletion: 0.0,
             currentCycle: 0.0,
             lifetime: 0.0,
           ),
@@ -494,6 +576,7 @@ void main() {
               db: db,
               track: track,
               curriculum: CurriculumId.mishnayos,
+              dashboardCompletion: 0.1,
               currentCycle: 0.1,
               lifetime: 0.2,
             ),

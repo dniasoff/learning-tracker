@@ -4223,6 +4223,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get trackProgress => 'התקדמות מסלול';
 
   @override
+  String get trackCompletionLabel => 'השלמה';
+
+  @override
   String get trackMarkPreviouslyLearned => 'סמן כנלמד בעבר';
 
   @override

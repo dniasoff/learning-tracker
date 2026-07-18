@@ -454,9 +454,22 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             Row(
               children: [
                 Text(
+                  // AUD-tracks-01: this row is sourced from
+                  // dashboardTrackCompletionPercentageProvider (all-time,
+                  // multi-stage gate) via [cyclePercentDisplay] — a
+                  // different formula from the dual-metrics row above,
+                  // which is labelled with [trackProgressLabel] and driven
+                  // by trackDualProgressMetricsProvider's time-gated
+                  // currentCyclePercentage. Reusing trackProgressLabel here
+                  // made two differently-sourced numbers appear under the
+                  // identical "Track progress" label whenever the two
+                  // formulas diverged. l10n.trackCompletionLabel is the
+                  // bare, non-chazara counterpart of l10n.carouselCompletion
+                  // ("Completion (with {chazara})") and must never be
+                  // conflated with trackProgressLabel again.
                   trackHasChazara
                       ? l10n.carouselCompletion(chazaraTerm)
-                      : trackProgressLabel,
+                      : l10n.trackCompletionLabel,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppTheme.brandInkMuted,
                     fontWeight: FontWeight.w700,

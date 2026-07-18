@@ -2112,6 +2112,10 @@
   "@trackProgress": {
     "description": "Canonical vocabulary: per-track progress percentage."
   },
+  "trackCompletionLabel": "השלמה",
+  "@trackCompletionLabel": {
+    "description": "AUD-tracks-01: label for the track-completion row, distinct from trackProgress."
+  },
   "trackMarkPreviouslyLearned": "סמן כנלמד בעבר",
   "@trackMarkPreviouslyLearned": {
     "description": "Action tile in Track Detail screen to bulk-mark prior learning."

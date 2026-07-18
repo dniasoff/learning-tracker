@@ -4263,6 +4263,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackProgress => 'Track progress';
 
   @override
+  String get trackCompletionLabel => 'Completion';
+
+  @override
   String get trackMarkPreviouslyLearned => 'Mark as previously learned';
 
   @override
