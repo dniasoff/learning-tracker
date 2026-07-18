@@ -4876,13 +4876,20 @@
     {
       "id": "AUD-tracks-09",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Add a mounted guard after the awaited date-picker calls in SelfPacedGoalStep._pickDeadline",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "022487bbfcba9dda852aea9f13b5de4f9a2936d8",
+        "ad5151e50dc758f97d0a572da66907e9054b0ea4"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-tracks-09 AC1 OK: both await sites guarded — step_goal.dart:190 (after HebrewDatePicker.show) and :208 (after showLearningAppDatePicker), before setState",
+        "AUD-tracks-09 AC2 OK: new widget test unmounts step mid-pick on real DatePickerDialog, taps OK, asserts takeException isNull; passes green",
+        "AUD-tracks-09 red-first OK: reverting the 2 guards to HEAD~1 makes same test crash 'setState() called after dispose()' at step_goal.dart:203 — genuinely exercises defect"
+      ],
+      "notes": "Both await sites in _pickDeadline lacked `if (!mounted) return;`. Added guard after each await. Red-first test reproduced exact predicted crash pre-fix ('setState() called after dispose(): _SelfPacedGoalStepState' at step_goal.dart:203), passed after fix. Both ACs met. Merged --no-ff onto dev (w4r1c13, mergeSha ad5151e50dc758f97d0a572da66907e9054b0ea4). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (no issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base 2a0d1dda15bbcab9eaf978ceb00e177819b7409e), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
     },
     {
       "id": "AUD-t-tracks-03",
