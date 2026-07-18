@@ -291,13 +291,19 @@
     {
       "id": "AUD-tracks-01",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P1",
       "title": "Fix duplicate 'Track progress' label on TrackDetailScreen showing two differently-sourced percentages",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "0bfc0b2d30574c5149415847ac3bcfa3a5936149",
+        "f89dc18dee30f0720ff3d49912a3c1a063cb7be1"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-tracks-01 AC1 OK: new test uses dashboard=0.62 vs cycle=0.20; asserts 'Track progress' findsNothing +'62%' once; red-first (fails line257 pre-fix)",
+        "AUD-tracks-01 AC2 OK: _overridesFor now has separate dashboardCompletion+currentCycle params feeding the two providers; 8 call sites updated (test:102,124-137)"
+      ],
+      "notes": "Confirmed reused-label bug across two differently-sourced providers. Added distinct trackCompletionLabel ARB string, swapped fallback. Red-first test failed pre-fix, passes post-fix. _overridesFor split into independent dashboardCompletion/currentCycle params (AC#2). Both AC satisfied."
     },
     {
       "id": "AUD-core-preferences-02",
