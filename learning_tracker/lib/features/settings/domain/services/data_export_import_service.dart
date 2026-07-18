@@ -588,49 +588,64 @@ class DataExportImportService {
       // Preserve original IDs so that all profileId FKs in other tables
       // remain valid without remapping. No PII: email is a placeholder;
       // real email/firebaseUid are re-hydrated from the cloud on next sign-in.
+      // AUD-settings-04 (DB-3): rows are collected into a list and written
+      // with a single batch()/insertAll round trip instead of an awaited
+      // per-row insert loop. Already inside the transaction() above (DB-2),
+      // so batch() reuses it rather than opening its own.
+      final accountRows = <AccountsCompanion>[];
       for (final u in data['userProfiles'] as List) {
         final map = u as Map<String, dynamic>;
         final originalId = map['id'] as int? ?? 0;
-        await _database
-            .into(_database.accounts)
-            .insert(
-              AccountsCompanion(
-                id: Value(originalId),
-                email: Value('restored-$originalId.placeholder'),
-                tier: Value((map['tier'] as String?) ?? 'localBorn'),
-                displayName: Value(map['displayName'] as String),
-                createdAt: Value(DateTime.parse(map['createdAt'] as String)),
-                updatedAt: Value(DateTime.parse(map['updatedAt'] as String)),
-              ),
-            );
+        accountRows.add(
+          AccountsCompanion(
+            id: Value(originalId),
+            email: Value('restored-$originalId.placeholder'),
+            tier: Value((map['tier'] as String?) ?? 'localBorn'),
+            displayName: Value(map['displayName'] as String),
+            createdAt: Value(DateTime.parse(map['createdAt'] as String)),
+            updatedAt: Value(DateTime.parse(map['updatedAt'] as String)),
+          ),
+        );
+      }
+      if (accountRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.accounts, accountRows),
+        );
       }
 
       // --- Import learner profiles ---
       // Preserve original `id` values so that all profileId FKs in
       // completions, bookmarks, goals, etc. remain valid after import.
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final learnerProfileRows = <LearnerProfilesCompanion>[];
       for (final p in (data['learnerProfiles'] as List? ?? [])) {
         final map = p as Map<String, dynamic>;
         final originalId = map['id'] as int?;
-        await _database
-            .into(_database.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion(
-                id: originalId != null
-                    ? Value(originalId)
-                    : const Value.absent(),
-                accountId: Value(map['accountId'] as int),
-                displayName: Value(map['displayName'] as String),
-                mode: Value(map['mode'] as String),
-                avatarIndex: Value(map['avatarIndex'] as int? ?? 0),
-                createdAt: Value(DateTime.parse(map['createdAt'] as String)),
-                updatedAt: Value(DateTime.parse(map['updatedAt'] as String)),
-              ),
-            );
+        learnerProfileRows.add(
+          LearnerProfilesCompanion(
+            id: originalId != null ? Value(originalId) : const Value.absent(),
+            accountId: Value(map['accountId'] as int),
+            displayName: Value(map['displayName'] as String),
+            mode: Value(map['mode'] as String),
+            avatarIndex: Value(map['avatarIndex'] as int? ?? 0),
+            createdAt: Value(DateTime.parse(map['createdAt'] as String)),
+            updatedAt: Value(DateTime.parse(map['updatedAt'] as String)),
+          ),
+        );
+      }
+      if (learnerProfileRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.learnerProfiles, learnerProfileRows),
+        );
       }
 
       // --- Import curriculum tracks ---
       // Preserve original `id` values so that all trackId FKs in
       // stage_definitions, completions, goals, etc. remain valid after import.
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final curriculumTrackRows = <CurriculumTracksCompanion>[];
       for (final t in data['curriculumTracks'] as List) {
         final map = t as Map<String, dynamic>;
         final originalTrackId = map['id'] as int?;
@@ -645,121 +660,152 @@ class DataExportImportService {
                 : TrackState.active.storageKey);
         final rawStateChangedAt =
             map['stateChangedAt'] as String? ?? map['deactivatedAt'] as String?;
-        await _database
-            .into(_database.curriculumTracks)
-            .insert(
-              CurriculumTracksCompanion(
-                id: originalTrackId != null
-                    ? Value(originalTrackId)
-                    : const Value.absent(),
-                profileId: Value(map['profileId'] as int? ?? 0),
-                curriculumId: Value(map['curriculumId'] as String),
-                state: Value(state),
-                stateChangedAt: Value(
-                  rawStateChangedAt != null
-                      ? DateTime.parse(rawStateChangedAt)
-                      : DateTimeFactory.nowUtc(),
-                ),
-                activatedAt: Value(
-                  DateTime.parse(map['activatedAt'] as String),
-                ),
-                paceResetDate: Value(
-                  map['paceResetDate'] != null
-                      ? DateTime.parse(map['paceResetDate'] as String)
-                      : null,
-                ),
-              ),
-            );
+        curriculumTrackRows.add(
+          CurriculumTracksCompanion(
+            id: originalTrackId != null
+                ? Value(originalTrackId)
+                : const Value.absent(),
+            profileId: Value(map['profileId'] as int? ?? 0),
+            curriculumId: Value(map['curriculumId'] as String),
+            state: Value(state),
+            stateChangedAt: Value(
+              rawStateChangedAt != null
+                  ? DateTime.parse(rawStateChangedAt)
+                  : DateTimeFactory.nowUtc(),
+            ),
+            activatedAt: Value(DateTime.parse(map['activatedAt'] as String)),
+            paceResetDate: Value(
+              map['paceResetDate'] != null
+                  ? DateTime.parse(map['paceResetDate'] as String)
+                  : null,
+            ),
+          ),
+        );
+      }
+      if (curriculumTrackRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.curriculumTracks, curriculumTrackRows),
+        );
       }
 
       // --- Import curriculum scopes ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final curriculumScopeRows = <CurriculumScopesCompanion>[];
       for (final s in (data['curriculumScopes'] as List? ?? [])) {
         final map = s as Map<String, dynamic>;
-        await _database
-            .into(_database.curriculumScopes)
-            .insert(
-              CurriculumScopesCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                trackId: map['trackId'] as int,
-                scopeLevel: map['scopeLevel'] as int,
-                scopeValue: map['scopeValue'] as String,
-                createdAt: DateTime.parse(map['createdAt'] as String),
-              ),
-            );
+        curriculumScopeRows.add(
+          CurriculumScopesCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            curriculumId: map['curriculumId'] as String,
+            trackId: map['trackId'] as int,
+            scopeLevel: map['scopeLevel'] as int,
+            scopeValue: map['scopeValue'] as String,
+            createdAt: DateTime.parse(map['createdAt'] as String),
+          ),
+        );
+      }
+      if (curriculumScopeRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.curriculumScopes, curriculumScopeRows),
+        );
       }
 
       // --- Import profile programs ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final profileProgramRows = <ProfileProgramsCompanion>[];
       for (final p in (data['profilePrograms'] as List? ?? [])) {
         final map = p as Map<String, dynamic>;
-        await _database
-            .into(_database.profilePrograms)
-            .insert(
-              ProfileProgramsCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumType: map['curriculumType'] as String,
-                programId: map['programId'] as int,
-                trackingStartDate: Value(
-                  map['trackingStartDate'] != null
-                      ? DateTime.parse(map['trackingStartDate'] as String)
-                      : null,
-                ),
-                trackingStartRef: Value(map['trackingStartRef'] as String?),
-              ),
-            );
+        profileProgramRows.add(
+          ProfileProgramsCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            curriculumType: map['curriculumType'] as String,
+            programId: map['programId'] as int,
+            trackingStartDate: Value(
+              map['trackingStartDate'] != null
+                  ? DateTime.parse(map['trackingStartDate'] as String)
+                  : null,
+            ),
+            trackingStartRef: Value(map['trackingStartRef'] as String?),
+          ),
+        );
+      }
+      if (profileProgramRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.profilePrograms, profileProgramRows),
+        );
       }
 
       // --- Import stage definitions ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final stageDefinitionRows = <StageDefinitionsCompanion>[];
       for (final s in data['stageDefinitions'] as List) {
         final map = s as Map<String, dynamic>;
         // Back-compat: old exports had quartet fields; new exports have `schedule`.
         final scheduleJson = _resolveScheduleJson(map);
-        await _database
-            .into(_database.stageDefinitions)
-            .insert(
-              StageDefinitionsCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                trackId: map['trackId'] as int? ?? 0,
-                stageOrder: map['stageOrder'] as int,
-                stageName: map['stageName'] as String,
-                isDefault: Value(map['isDefault'] as bool? ?? false),
-                schedule: Value(scheduleJson),
-              ),
-            );
+        stageDefinitionRows.add(
+          StageDefinitionsCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            curriculumId: map['curriculumId'] as String,
+            trackId: map['trackId'] as int? ?? 0,
+            stageOrder: map['stageOrder'] as int,
+            stageName: map['stageName'] as String,
+            isDefault: Value(map['isDefault'] as bool? ?? false),
+            schedule: Value(scheduleJson),
+          ),
+        );
+      }
+      if (stageDefinitionRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.stageDefinitions, stageDefinitionRows),
+        );
       }
 
       // --- Import point configs ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final pointConfigRows = <PointConfigsCompanion>[];
       for (final p in data['pointConfigs'] as List) {
         final map = p as Map<String, dynamic>;
-        await _database
-            .into(_database.pointConfigs)
-            .insert(
-              PointConfigsCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                trackId: map['trackId'] as int? ?? 0,
-                stageOrder: map['stageOrder'] as int,
-                points: map['points'] as int,
-              ),
-            );
+        pointConfigRows.add(
+          PointConfigsCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            curriculumId: map['curriculumId'] as String,
+            trackId: map['trackId'] as int? ?? 0,
+            stageOrder: map['stageOrder'] as int,
+            points: map['points'] as int,
+          ),
+        );
+      }
+      if (pointConfigRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.pointConfigs, pointConfigRows),
+        );
       }
 
       // --- Import study day configs ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final studyDayConfigRows = <StudyDayConfigsCompanion>[];
       for (final c in (data['studyDayConfigs'] as List? ?? [])) {
         final map = c as Map<String, dynamic>;
-        await _database
-            .into(_database.studyDayConfigs)
-            .insert(
-              StudyDayConfigsCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                trackId: map['trackId'] as int? ?? 0,
-                dayOfWeek: map['dayOfWeek'] as int,
-                dayType: Value(map['dayType'] as String? ?? 'study'),
-                updatedAt: DateTime.parse(map['updatedAt'] as String),
-              ),
-            );
+        studyDayConfigRows.add(
+          StudyDayConfigsCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            curriculumId: map['curriculumId'] as String,
+            trackId: map['trackId'] as int? ?? 0,
+            dayOfWeek: map['dayOfWeek'] as int,
+            dayType: Value(map['dayType'] as String? ?? 'study'),
+            updatedAt: DateTime.parse(map['updatedAt'] as String),
+          ),
+        );
+      }
+      if (studyDayConfigRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.studyDayConfigs, studyDayConfigRows),
+        );
       }
 
       // W3.20: `completions` table dropped. Completion history is now stored
@@ -769,6 +815,11 @@ class DataExportImportService {
       // carry the canonical data. No rows are lost.
 
       // --- Import completion events ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop — this is the highest-volume table (years of
+      // daily completions), so this is the site the finding's fixture
+      // (1,000+ completionEvents) targets directly.
+      final completionEventRows = <CompletionEventsCompanion>[];
       for (final e in (data['completionEvents'] as List? ?? [])) {
         final map = e as Map<String, dynamic>;
         final rawTrackId = map['trackId'];
@@ -776,120 +827,152 @@ class DataExportImportService {
         // C3: restore purgedAt tombstone so purged history is not resurrected.
         // Older exports lack 'purgedAt' — treat absence as active (null).
         final rawPurgedAt = map['purgedAt'] as String?;
-        await _database
-            .into(_database.completionEvents)
-            .insert(
-              CompletionEventsCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                sefariaRef: map['sefariaRef'] as String,
-                stageId: map['stageId'] as int,
-                trackType: map['trackType'] as String,
-                trackId: rawTrackId != null
-                    ? Value<int?>(rawTrackId as int)
-                    : const Value<int?>.absent(),
-                points: rawPoints != null
-                    ? Value(rawPoints as int)
-                    : const Value(0),
-                eventTimestamp: DateTime.parse(map['eventTimestamp'] as String),
-                createdAt: Value(DateTime.parse(map['createdAt'] as String)),
-                purgedAt: rawPurgedAt != null
-                    ? Value(DateTime.parse(rawPurgedAt))
-                    : const Value<DateTime?>.absent(),
-              ),
-            );
+        completionEventRows.add(
+          CompletionEventsCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            curriculumId: map['curriculumId'] as String,
+            sefariaRef: map['sefariaRef'] as String,
+            stageId: map['stageId'] as int,
+            trackType: map['trackType'] as String,
+            trackId: rawTrackId != null
+                ? Value<int?>(rawTrackId as int)
+                : const Value<int?>.absent(),
+            points: rawPoints != null
+                ? Value(rawPoints as int)
+                : const Value(0),
+            eventTimestamp: DateTime.parse(map['eventTimestamp'] as String),
+            createdAt: Value(DateTime.parse(map['createdAt'] as String)),
+            purgedAt: rawPurgedAt != null
+                ? Value(DateTime.parse(rawPurgedAt))
+                : const Value<DateTime?>.absent(),
+          ),
+        );
+      }
+      if (completionEventRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.completionEvents, completionEventRows),
+        );
       }
 
       // --- Import daily plans ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final dailyPlanRows = <DailyPlansCompanion>[];
       for (final p in (data['dailyPlans'] as List? ?? [])) {
         final map = p as Map<String, dynamic>;
-        await _database
-            .into(_database.dailyPlans)
-            .insert(
-              DailyPlansCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                planDate: DateTime.parse(map['planDate'] as String),
-                sefariaRef: map['sefariaRef'] as String,
-                stageOrder: map['stageOrder'] as int,
-                stageDefinitionId: map['stageDefinitionId'] as int,
-                trackId: map['trackId'] as int,
-                trackLabel: Value(map['trackLabel'] as String? ?? ''),
-                priority: map['priority'] as String,
-                isOverdue: Value(map['isOverdue'] as bool? ?? false),
-                reason: Value(map['reason'] as String? ?? ''),
-                stageName: Value(map['stageName'] as String? ?? ''),
-                estimatedEffortMinutes: Value(
-                  map['estimatedEffortMinutes'] as int? ?? 3,
-                ),
-                sortOrder: Value(map['sortOrder'] as int? ?? 0),
-                createdAt: DateTime.parse(map['createdAt'] as String),
-              ),
-            );
+        dailyPlanRows.add(
+          DailyPlansCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            curriculumId: map['curriculumId'] as String,
+            planDate: DateTime.parse(map['planDate'] as String),
+            sefariaRef: map['sefariaRef'] as String,
+            stageOrder: map['stageOrder'] as int,
+            stageDefinitionId: map['stageDefinitionId'] as int,
+            trackId: map['trackId'] as int,
+            trackLabel: Value(map['trackLabel'] as String? ?? ''),
+            priority: map['priority'] as String,
+            isOverdue: Value(map['isOverdue'] as bool? ?? false),
+            reason: Value(map['reason'] as String? ?? ''),
+            stageName: Value(map['stageName'] as String? ?? ''),
+            estimatedEffortMinutes: Value(
+              map['estimatedEffortMinutes'] as int? ?? 3,
+            ),
+            sortOrder: Value(map['sortOrder'] as int? ?? 0),
+            createdAt: DateTime.parse(map['createdAt'] as String),
+          ),
+        );
+      }
+      if (dailyPlanRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.dailyPlans, dailyPlanRows),
+        );
       }
 
       // --- Import learning ledger ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final learningLedgerRows = <LearningLedgerCompanion>[];
       for (final e in (data['learningLedger'] as List? ?? [])) {
         final map = e as Map<String, dynamic>;
-        await _database
-            .into(_database.learningLedger)
-            .insert(
-              LearningLedgerCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                ulid: Value(map['ulid'] as String),
-                curriculumId: map['curriculumId'] as String,
-                entryScope: map['entryScope'] as String,
-                unitIdentifier: map['unitIdentifier'] as String,
-                unitDisplayNameHe: map['unitDisplayNameHe'] as String,
-                unitDisplayNameEn: map['unitDisplayNameEn'] as String,
-                trackType: map['trackType'] as String,
-                trackId: Value(map['trackId'] as int?),
-                completedAt: DateTime.parse(map['completedAt'] as String),
-                completionNumber: map['completionNumber'] as int,
-                markedBy: map['markedBy'] as int,
-                isManual: Value(map['isManual'] as bool? ?? false),
-                createdAt: Value(DateTime.parse(map['createdAt'] as String)),
-              ),
-            );
+        learningLedgerRows.add(
+          LearningLedgerCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            ulid: Value(map['ulid'] as String),
+            curriculumId: map['curriculumId'] as String,
+            entryScope: map['entryScope'] as String,
+            unitIdentifier: map['unitIdentifier'] as String,
+            unitDisplayNameHe: map['unitDisplayNameHe'] as String,
+            unitDisplayNameEn: map['unitDisplayNameEn'] as String,
+            trackType: map['trackType'] as String,
+            trackId: Value(map['trackId'] as int?),
+            completedAt: DateTime.parse(map['completedAt'] as String),
+            completionNumber: map['completionNumber'] as int,
+            markedBy: map['markedBy'] as int,
+            isManual: Value(map['isManual'] as bool? ?? false),
+            createdAt: Value(DateTime.parse(map['createdAt'] as String)),
+          ),
+        );
+      }
+      if (learningLedgerRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.learningLedger, learningLedgerRows),
+        );
       }
 
       // --- Import bookmarks ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final bookmarkRows = <BookmarksCompanion>[];
       for (final b in data['bookmarks'] as List) {
         final map = b as Map<String, dynamic>;
-        await _database
-            .into(_database.bookmarks)
-            .insert(
-              BookmarksCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                trackId: map['trackId'] as int? ?? 0,
-                sefariaRef: map['sefariaRef'] as String,
-                updatedAt: DateTime.parse(map['updatedAt'] as String),
-              ),
-            );
+        bookmarkRows.add(
+          BookmarksCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            curriculumId: map['curriculumId'] as String,
+            trackId: map['trackId'] as int? ?? 0,
+            sefariaRef: map['sefariaRef'] as String,
+            updatedAt: DateTime.parse(map['updatedAt'] as String),
+          ),
+        );
+      }
+      if (bookmarkRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.bookmarks, bookmarkRows),
+        );
       }
 
       // --- Import learning order ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final learningOrderRows = <LearningOrderCompanion>[];
       for (final l in data['learningOrder'] as List) {
         final map = l as Map<String, dynamic>;
-        await _database
-            .into(_database.learningOrder)
-            .insert(
-              LearningOrderCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                sefariaRef: map['sefariaRef'] as String,
-                userSortOrder: map['userSortOrder'] as int,
-                updatedAt: Value(
-                  map['updatedAt'] != null
-                      ? DateTime.parse(map['updatedAt'] as String)
-                      : DateTimeFactory.nowUtc(),
-                ),
-              ),
-            );
+        learningOrderRows.add(
+          LearningOrderCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            curriculumId: map['curriculumId'] as String,
+            sefariaRef: map['sefariaRef'] as String,
+            userSortOrder: map['userSortOrder'] as int,
+            updatedAt: Value(
+              map['updatedAt'] != null
+                  ? DateTime.parse(map['updatedAt'] as String)
+                  : DateTimeFactory.nowUtc(),
+            ),
+          ),
+        );
+      }
+      if (learningOrderRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.learningOrder, learningOrderRows),
+        );
       }
 
       // --- Import track learning order ---
+      // AUD-settings-04 (DB-3): the legacy-backup FK resolution below is a
+      // read, not a write, so it still runs per-row; only the write is
+      // batched — rows are collected into a list and written with a single
+      // batch()/insertAll round trip instead of an awaited per-row insert.
+      final trackLearningOrderRows = <TrackLearningOrderCompanion>[];
       for (final t in (data['trackLearningOrder'] as List? ?? [])) {
         final map = t as Map<String, dynamic>;
         final trackId = map['trackId'] as int;
@@ -908,46 +991,54 @@ class DataExportImportService {
           // the v36 migration's own drop-orphans behaviour.
           continue;
         }
-        await _database
-            .into(_database.trackLearningOrder)
-            .insert(
-              TrackLearningOrderCompanion.insert(
-                profileId: profileId,
-                trackId: trackId,
-                sefariaRef: map['sefariaRef'] as String,
-                sortOrder: map['sortOrder'] as int,
-              ),
-            );
+        trackLearningOrderRows.add(
+          TrackLearningOrderCompanion.insert(
+            profileId: profileId,
+            trackId: trackId,
+            sefariaRef: map['sefariaRef'] as String,
+            sortOrder: map['sortOrder'] as int,
+          ),
+        );
+      }
+      if (trackLearningOrderRows.isNotEmpty) {
+        await _database.batch(
+          (b) =>
+              b.insertAll(_database.trackLearningOrder, trackLearningOrderRows),
+        );
       }
 
       // --- Import goals ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final goalRows = <GoalsCompanion>[];
       for (final g in data['goals'] as List) {
         final map = g as Map<String, dynamic>;
-        await _database
-            .into(_database.goals)
-            .insert(
-              GoalsCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                curriculumId: map['curriculumId'] as String,
-                trackId: map['trackId'] as int? ?? 0,
-                targetPercent: Value(
-                  (map['targetPercent'] as num?)?.toDouble() ?? 100.0,
-                ),
-                targetDate: Value(
-                  map['targetDate'] != null
-                      ? DateTime.parse(map['targetDate'] as String)
-                      : null,
-                ),
-                description: Value(map['description'] as String? ?? ''),
-                dateType: Value(map['dateType'] as String? ?? 'gregorian'),
-                goalType: Value(map['goalType'] as String? ?? 'deadline'),
-                paceValue: Value(map['paceValue'] as int?),
-                pacePeriod: Value(map['pacePeriod'] as String?),
-                paceGranularity: Value(map['paceGranularity'] as String?),
-                createdAt: DateTime.parse(map['createdAt'] as String),
-                updatedAt: DateTime.parse(map['updatedAt'] as String),
-              ),
-            );
+        goalRows.add(
+          GoalsCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            curriculumId: map['curriculumId'] as String,
+            trackId: map['trackId'] as int? ?? 0,
+            targetPercent: Value(
+              (map['targetPercent'] as num?)?.toDouble() ?? 100.0,
+            ),
+            targetDate: Value(
+              map['targetDate'] != null
+                  ? DateTime.parse(map['targetDate'] as String)
+                  : null,
+            ),
+            description: Value(map['description'] as String? ?? ''),
+            dateType: Value(map['dateType'] as String? ?? 'gregorian'),
+            goalType: Value(map['goalType'] as String? ?? 'deadline'),
+            paceValue: Value(map['paceValue'] as int?),
+            pacePeriod: Value(map['pacePeriod'] as String?),
+            paceGranularity: Value(map['paceGranularity'] as String?),
+            createdAt: DateTime.parse(map['createdAt'] as String),
+            updatedAt: DateTime.parse(map['updatedAt'] as String),
+          ),
+        );
+      }
+      if (goalRows.isNotEmpty) {
+        await _database.batch((b) => b.insertAll(_database.goals, goalRows));
       }
 
       // W3.20: `streaks` table dropped. Streak state is now derived from
@@ -956,20 +1047,26 @@ class DataExportImportService {
       // here because the corresponding streak_events rows carry the same history.
 
       // --- Import streak events ---
+      // AUD-settings-04 (DB-3): batch()/insertAll instead of an awaited
+      // per-row insert loop.
+      final streakEventRows = <StreakEventsCompanion>[];
       for (final e in (data['streakEvents'] as List? ?? [])) {
         final map = e as Map<String, dynamic>;
-        await _database
-            .into(_database.streakEvents)
-            .insert(
-              StreakEventsCompanion.insert(
-                profileId: map['profileId'] as int? ?? 0,
-                eventType: map['eventType'] as String,
-                dayUtc: DateTime.parse(map['dayUtc'] as String),
-                eventTimestamp: DateTime.parse(map['eventTimestamp'] as String),
-                clientDeviceId: Value(map['clientDeviceId'] as String?),
-                createdAt: Value(DateTime.parse(map['createdAt'] as String)),
-              ),
-            );
+        streakEventRows.add(
+          StreakEventsCompanion.insert(
+            profileId: map['profileId'] as int? ?? 0,
+            eventType: map['eventType'] as String,
+            dayUtc: DateTime.parse(map['dayUtc'] as String),
+            eventTimestamp: DateTime.parse(map['eventTimestamp'] as String),
+            clientDeviceId: Value(map['clientDeviceId'] as String?),
+            createdAt: Value(DateTime.parse(map['createdAt'] as String)),
+          ),
+        );
+      }
+      if (streakEventRows.isNotEmpty) {
+        await _database.batch(
+          (b) => b.insertAll(_database.streakEvents, streakEventRows),
+        );
       }
     });
   }
