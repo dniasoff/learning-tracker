@@ -292,11 +292,33 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
           paceGranularity: newPaceGranularity,
           clearPaceTarget: clearPaceTarget,
         );
-      } on TutorWriteException catch (e) {
-        if (mounted && e.code == 'permission-denied') {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.tutorPermissionDenied)));
+      } on TutorWriteException catch (e, st) {
+        // AUD-tracks-07: 'permission-denied' is one specific, expected
+        // TutorWriteException code (the tutor's permissions changed
+        // server-side). Any other code (e.g. 'internal', 'unavailable',
+        // 'deadline-exceeded' -- all plausible on a flaky mobile
+        // connection, per the throw site in tutored_write_router.dart)
+        // must still surface feedback instead of silently returning: the
+        // Save spinner clears via the outer `finally`, so a swallowed
+        // failure here would leave the user on the same screen with zero
+        // indication anything went wrong.
+        if (e.code != 'permission-denied') {
+          AppLogger.instance.error(
+            event: 'edit_track_save_failed: code=${e.code}',
+            exception: e,
+            stackTrace: st,
+          );
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                e.code == 'permission-denied'
+                    ? l10n.tutorPermissionDenied
+                    : l10n.errorSaveTrackFailed,
+              ),
+            ),
+          );
         }
         return;
       }

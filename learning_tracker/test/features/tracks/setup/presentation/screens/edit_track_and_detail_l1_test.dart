@@ -67,6 +67,8 @@ import 'package:learning_tracker/features/tracks/setup/domain/services/track_edi
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_edit_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit_track_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
+import 'package:learning_tracker/features/tutoring/data/routers/tutored_write_router.dart'
+    show TutorWriteException;
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -855,6 +857,79 @@ void main() {
 
       // After increment, value should be 4.
       expect(find.text('4'), findsWidgets);
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('AUD-tracks-07: editTrack throwing a non-permission-denied '
+        'TutorWriteException surfaces an error SnackBar (not silent failure)', (
+      tester,
+    ) async {
+      final trackId = await seedTrack(db, profileId: 1);
+      await _seedGoal(db, profileId: 1, trackId: trackId);
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+      // 'internal' (a plausible flaky-connection code per
+      // tutored_write_router.dart) — anything other than
+      // 'permission-denied', which is the only code the pre-fix catch
+      // block handled.
+      when(
+        () => mockService.editTrack(
+          trackId: any(named: 'trackId'),
+          goalId: any(named: 'goalId'),
+          profileId: any(named: 'profileId'),
+          curriculum: any(named: 'curriculum'),
+          label: any(named: 'label'),
+          studyDays: any(named: 'studyDays'),
+          chazarahWizard: any(named: 'chazarahWizard'),
+          paceTarget: any(named: 'paceTarget'),
+          paceGranularity: any(named: 'paceGranularity'),
+          clearPaceTarget: any(named: 'clearPaceTarget'),
+        ),
+      ).thenThrow(
+        const TutorWriteException('internal error', code: 'internal'),
+      );
+
+      await tester.pumpWidget(
+        _buildEditApp(
+          track: _track(id: trackId),
+          db: db,
+          mockService: mockService,
+        ),
+      );
+      await _pump(tester);
+
+      await tester.tap(find.text('Save Changes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final dialogSave = find.byType(FilledButton);
+      expect(dialogSave, findsOneWidget);
+      await tester.tap(dialogSave);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Pre-fix: the catch block's `if (e.code == 'permission-denied')`
+      // is false for 'internal', so nothing renders — no SnackBar at
+      // all — and the user is left on the same screen with zero
+      // indication the save failed.
+      expect(
+        find.byType(SnackBar),
+        findsOneWidget,
+        reason:
+            'A non-permission-denied TutorWriteException must surface a '
+            'user-visible error instead of failing silently.',
+      );
+      expect(find.text(l10n.errorSaveTrackFailed), findsOneWidget);
+      // Must NOT show the permission-denied-specific copy — this is a
+      // different failure mode.
+      expect(find.text(l10n.tutorPermissionDenied), findsNothing);
+
+      // The confirmation dialog must be gone (Save flow ran to
+      // completion, not stuck), and the screen must remain (no crash /
+      // unexpected pop).
+      expect(find.text('Apply changes?'), findsNothing);
+      expect(find.byType(EditTrackScreen), findsOneWidget);
 
       await _tearDown(tester);
     });
