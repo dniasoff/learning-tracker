@@ -10378,13 +10378,21 @@
   {
    "id": "AUD-settings-13",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Throw a typed ValidationException, not dart:core FormatException, from DataExportImportService.validateAndPreview",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "5dc04b3b3283546b4f193767cb8302830eccba3b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-settings-13 AC1a OK: import_validation_exception.dart:15 ImportValidationException extends ValidationException, matching sibling last_active_curriculum_exception.dart",
+    "AUD-settings-13 AC1b OK: 4 sites converted at data_export_import_service.dart:465,470,476,479; FormatException grep hits only doc comment :519, zero throws",
+    "AUD-settings-13 AC1c OK: importData raw json.decode reordered after validateAndPreview (service :512-524); AC names importData, so in scope; 2 tests cover it",
+    "AUD-settings-13 AC1d OK: 13 assertions retyped over 5 files; only remaining FormatException in tests is the deliberate isNot(isA<FormatException>()) at new test :19",
+    "AUD-settings-13 AC1e OK: zero lib/ callers (matches verify note); the 2 `on FormatException` sites (drift_merge_store:721, cloud_content_service:326) are unrelated files"
+   ],
+   "notes": "Re-verified 4 FormatException sites. Added ImportValidationException, replaced all 4. Also fixed importData's own unguarded json.decode leaking raw FormatException (AC names importData too). Red-first: retyped 13 test assertions, confirmed 8 red, then green. Added AG-5 mirrored unit test."
   },
   {
    "id": "AUD-t-settings-11",
