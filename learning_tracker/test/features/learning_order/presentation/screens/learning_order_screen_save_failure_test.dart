@@ -15,6 +15,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/repositories/learning_order_repository.dart';
@@ -51,8 +55,10 @@ class _ThrowingRepository implements LearningOrderRepository {
   int resetCallCount = 0;
 
   @override
-  Future<List<LearningOrderItem>> getOrder(CurriculumId curriculumId) async =>
-      _initialOrder;
+  Future<List<LearningOrderItem>> getOrder(
+    CurriculumId curriculumId,
+    List<ContentItem> allItems,
+  ) async => _initialOrder;
 
   @override
   Future<void> saveOrder(
@@ -73,6 +79,61 @@ class _ThrowingRepository implements LearningOrderRepository {
       throw Exception('offline — cannot reach outbox');
     }
   }
+
+  @override
+  Future<void> repairStaleOrderVersion(CurriculumId curriculumId) async {}
+}
+
+/// Minimal [ContentRepository] stub returning empty results for every
+/// member. AUD-tracks-15 (SM-8) moved the content-fetch step from
+/// `LearningOrderRepositoryImpl` up into `learningOrderProvider`, so this
+/// test — which overrides `learningOrderRepositoryProvider` directly with
+/// `_ThrowingRepository` — must override `contentRepositoryProvider` too,
+/// or the real asset-backed implementation would try to load JSON bundles
+/// here.
+class _EmptyContentRepository implements ContentRepository {
+  const _EmptyContentRepository();
+
+  @override
+  Future<List<ContentItem>> getContentForCurriculum(CurriculumId _) async =>
+      const [];
+
+  @override
+  Future<CurriculumHierarchyConfig> getHierarchyConfig(
+    CurriculumId curriculumId,
+  ) async => CurriculumHierarchyConfig(
+    curriculumId: curriculumId.storageKey,
+    levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
+    totalItems: 0,
+  );
+
+  @override
+  Future<List<ContentItem>> filterByLevel({
+    required CurriculumId curriculumId,
+    String? level1,
+    String? level2,
+    String? level3,
+    String? level4,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> getScopedContent({
+    required CurriculumId curriculumId,
+    required int scopeLevel,
+    required List<String> scopeValues,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> search({
+    required CurriculumId curriculumId,
+    required String query,
+  }) async => const [];
+
+  @override
+  Future<ContentItem?> getContentByRef({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async => null;
 }
 
 List<String> _renderedOrder(WidgetTester tester) {
@@ -86,6 +147,9 @@ Widget _buildApp(LearningOrderRepository repo) {
   return ProviderScope(
     overrides: [
       learningOrderRepositoryProvider.overrideWithValue(repo),
+      contentRepositoryProvider.overrideWithValue(
+        const _EmptyContentRepository(),
+      ),
       orderingRestrictedProvider.overrideWith((ref) => Future.value(false)),
       overdueCountForCurriculumProvider(
         CurriculumId.mishnayos,

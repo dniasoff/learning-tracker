@@ -22,7 +22,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../helpers/test_database.dart' show seedProfile;
-import '../mocks/mock_repositories.dart' show MockContentRepository;
 
 class MockSyncWriteFacade extends Mock implements SyncWriteFacade {}
 
@@ -126,7 +125,6 @@ void main() {
           ).thenAnswer((_) async {});
           repo = LearningOrderRepositoryImpl(
             database: db,
-            contentRepository: MockContentRepository(),
             syncEngine: mockFacade,
             profileId: 1,
           );
@@ -160,7 +158,6 @@ void main() {
         test('no push when syncEngine is null (local-born user)', () async {
           final localRepo = LearningOrderRepositoryImpl(
             database: db,
-            contentRepository: MockContentRepository(),
             profileId: 1,
           );
           final items = [

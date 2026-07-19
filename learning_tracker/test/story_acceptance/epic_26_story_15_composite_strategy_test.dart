@@ -19,23 +19,15 @@ import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/repositories/learning_order_repository.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../helpers/test_database.dart' show seedProfileZero;
 
-class _MockContentRepository extends Mock implements ContentRepository {}
-
 void main() {
-  setUpAll(() {
-    registerFallbackValue(CurriculumId.mishnayos);
-  });
-
   // ── AC1: CompositeCurriculumStrategy exists and is data-driven ─────────────
   group(
     'Story 26.15 AC1 — CompositeCurriculumStrategy is data-driven',
@@ -190,20 +182,12 @@ void main() {
     tags: ['story_26_15'],
     () {
       late UserDatabase database;
-      late _MockContentRepository mockContent;
       late LearningOrderRepositoryImpl repo;
 
       setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
         await seedProfileZero(database);
-        mockContent = _MockContentRepository();
-        repo = LearningOrderRepositoryImpl(
-          database: database,
-          contentRepository: mockContent,
-        );
-        when(
-          () => mockContent.getContentForCurriculum(any()),
-        ).thenAnswer((_) async => []);
+        repo = LearningOrderRepositoryImpl(database: database);
       });
 
       tearDown(() async => database.close());
@@ -269,20 +253,12 @@ void main() {
     tags: ['story_26_15'],
     () {
       late UserDatabase database;
-      late _MockContentRepository mockContent;
       late LearningOrderRepositoryImpl repo;
 
       setUp(() async {
         database = UserDatabase(NativeDatabase.memory());
         await seedProfileZero(database);
-        mockContent = _MockContentRepository();
-        repo = LearningOrderRepositoryImpl(
-          database: database,
-          contentRepository: mockContent,
-        );
-        when(
-          () => mockContent.getContentForCurriculum(any()),
-        ).thenAnswer((_) async => []);
+        repo = LearningOrderRepositoryImpl(database: database);
       });
 
       tearDown(() async => database.close());

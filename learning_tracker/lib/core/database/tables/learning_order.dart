@@ -27,9 +27,15 @@ class LearningOrder extends Table {
   /// order was last saved.
   ///
   /// Default 1 is safe for existing rows: if the current seed version exceeds
-  /// the saved version the order is considered stale and the projection is
-  /// re-amnestied (last_reorder_at set to nowUtc) so overdue tasks reset.
-  /// See §10.1 of the architecture spec.
+  /// the saved version the order is considered stale.
+  /// `LearningOrderRepository.repairStaleOrderVersion` (AUD-tracks-06) is the
+  /// one-shot repair that re-amnesties the projection (last_reorder_at set to
+  /// nowUtc) so overdue tasks reset — it is swept once per app start for
+  /// every curriculum by `repairStaleLearningOrders`
+  /// (lib/app/bootstrap/learning_order_repair_bootstrap.dart), wired into
+  /// `bootstrap()`. `LearningOrderRepositoryImpl.getOrder` is a pure read
+  /// (SM-2) and never performs this write itself. See §10.1 of the
+  /// architecture spec.
   IntColumn get learningOrderVersion =>
       integer().withDefault(const Constant(1))();
 

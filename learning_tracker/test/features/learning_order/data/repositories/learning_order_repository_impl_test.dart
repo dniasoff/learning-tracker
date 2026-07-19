@@ -1,19 +1,21 @@
+/// AUD-tracks-15 (SM-8): LearningOrderRepositoryImpl no longer takes a
+/// ContentRepository dependency — getOrder accepts the already-resolved
+/// `List<ContentItem>` directly, so every test below constructs the repo
+/// with only an in-memory database and passes the fixture items straight
+/// into the getOrder calls (no ContentRepository fake required).
+library;
+
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
-import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/drift_memory.dart'
     show seedProfile, seedProfileZero, seedTrack;
-
-class MockContentRepository extends Mock implements ContentRepository {}
 
 ContentItem _makeItem(String ref, {int sortOrder = 0}) {
   return ContentItem(
@@ -54,32 +56,14 @@ class _ThrowingStampUserDatabase extends UserDatabase {
 }
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(CurriculumId.mishnayos);
-  });
-
   late UserDatabase database;
-  late MockContentRepository mockContent;
   late LearningOrderRepositoryImpl repo;
 
   setUp(() async {
     database = UserDatabase(NativeDatabase.memory());
     await seedProfileZero(database);
     await seedProfile(database); // seeds account(1)+profile(1) for DAO tests
-    mockContent = MockContentRepository();
-    repo = LearningOrderRepositoryImpl(
-      database: database,
-      contentRepository: mockContent,
-    );
-
-    // Default stub for getHierarchyConfig
-    when(() => mockContent.getHierarchyConfig(any())).thenAnswer(
-      (_) async => const CurriculumHierarchyConfig(
-        curriculumId: 'mishnayos',
-        levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
-        totalItems: 10,
-      ),
-    );
+    repo = LearningOrderRepositoryImpl(database: database);
   });
 
   tearDown(() async {
@@ -90,38 +74,30 @@ void main() {
     test(
       'getOrder returns items in sortOrder when no custom rows exist (D7 fallback)',
       () async {
-        when(
-          () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer(
-          (_) async => [
-            _makeItem('Shabbat', sortOrder: 2),
-            _makeItem('Berakhot', sortOrder: 0),
-            _makeItem('Peah', sortOrder: 1),
-          ],
-        );
+        final items = [
+          _makeItem('Shabbat', sortOrder: 2),
+          _makeItem('Berakhot', sortOrder: 0),
+          _makeItem('Peah', sortOrder: 1),
+        ];
 
-        final items = await repo.getOrder(CurriculumId.mishnayos);
+        final order = await repo.getOrder(CurriculumId.mishnayos, items);
 
-        expect(items.map((i) => i.sefariaRef).toList(), [
+        expect(order.map((i) => i.sefariaRef).toList(), [
           'Berakhot',
           'Peah',
           'Shabbat',
         ]);
-        expect(items.every((i) => !i.isCustomOrdered), isTrue);
+        expect(order.every((i) => !i.isCustomOrdered), isTrue);
       },
     );
 
     test(
       'getOrder returns custom order when DAO rows exist, overriding content order',
       () async {
-        when(
-          () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer(
-          (_) async => [
-            _makeItem('Berakhot', sortOrder: 0),
-            _makeItem('Shabbat', sortOrder: 1),
-          ],
-        );
+        final items = [
+          _makeItem('Berakhot', sortOrder: 0),
+          _makeItem('Shabbat', sortOrder: 1),
+        ];
 
         // Custom order: Shabbat first. `repo` defaults to profileId 0, so
         // fixtures must be seeded under the same profile it reads from
@@ -144,23 +120,19 @@ void main() {
           ),
         );
 
-        final items = await repo.getOrder(CurriculumId.mishnayos);
+        final order = await repo.getOrder(CurriculumId.mishnayos, items);
 
-        expect(items.map((i) => i.sefariaRef).toList(), [
+        expect(order.map((i) => i.sefariaRef).toList(), [
           'Shabbat',
           'Berakhot',
         ]);
-        expect(items.every((i) => i.isCustomOrdered), isTrue);
+        expect(order.every((i) => i.isCustomOrdered), isTrue);
       },
     );
 
     test(
       'saveOrder writes correct userSortOrder (position index) for each item',
       () async {
-        when(
-          () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer((_) async => []);
-
         final itemsToSave = [
           const LearningOrderItem(
             sefariaRef: 'Shabbat',
@@ -188,14 +160,10 @@ void main() {
     test(
       'resetToDefault deletes all rows; subsequent getOrder falls back to natural order',
       () async {
-        when(
-          () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer(
-          (_) async => [
-            _makeItem('Berakhot', sortOrder: 0),
-            _makeItem('Shabbat', sortOrder: 1),
-          ],
-        );
+        final items = [
+          _makeItem('Berakhot', sortOrder: 0),
+          _makeItem('Shabbat', sortOrder: 1),
+        ];
 
         // Add custom row. `repo` defaults to profileId 0 — see note above.
         await database.learningOrderDao.upsertLearningOrder(
@@ -213,7 +181,7 @@ void main() {
             .getLearningOrderByCurriculum('mishnayos', profileId: 0);
         expect(rows, isEmpty);
 
-        final order = await repo.getOrder(CurriculumId.mishnayos);
+        final order = await repo.getOrder(CurriculumId.mishnayos, items);
         expect(order.every((i) => !i.isCustomOrdered), isTrue);
         expect(order.map((i) => i.sefariaRef).toList(), [
           'Berakhot',
@@ -229,14 +197,10 @@ void main() {
   // silently wiped by) a sibling profile sharing the same curriculum.
   group('AUD-core-database-02 — cross-profile isolation', () {
     test('getOrder(profile 0) excludes rows written for profile 1', () async {
-      when(
-        () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-      ).thenAnswer(
-        (_) async => [
-          _makeItem('Berakhot', sortOrder: 0),
-          _makeItem('Shabbat', sortOrder: 1),
-        ],
-      );
+      final items = [
+        _makeItem('Berakhot', sortOrder: 0),
+        _makeItem('Shabbat', sortOrder: 1),
+      ];
 
       // Seed a custom order row for profile 1 only.
       await database.learningOrderDao.upsertLearningOrder(
@@ -250,7 +214,7 @@ void main() {
 
       // `repo` is scoped to profile 0 (default profileId in the outer
       // setUp) and has no custom order rows of its own.
-      final order = await repo.getOrder(CurriculumId.mishnayos);
+      final order = await repo.getOrder(CurriculumId.mishnayos, items);
 
       expect(
         order.map((i) => i.sefariaRef),
@@ -269,15 +233,6 @@ void main() {
     });
 
     test('resetToDefault(profile 0) leaves profile 1 rows intact', () async {
-      when(
-        () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-      ).thenAnswer(
-        (_) async => [
-          _makeItem('Berakhot', sortOrder: 0),
-          _makeItem('Shabbat', sortOrder: 1),
-        ],
-      );
-
       // Seed profile 1's own custom row.
       await database.learningOrderDao.upsertLearningOrder(
         LearningOrderCompanion.insert(
@@ -330,7 +285,6 @@ void main() {
     'AUD-tracks-16 — reorder-amnesty stamp is atomic with the order write',
     () {
       late UserDatabase faultyDb;
-      late MockContentRepository faultyContent;
       late LearningOrderRepositoryImpl faultyRepo;
 
       setUp(() async {
@@ -342,14 +296,10 @@ void main() {
         // required so the throwing stamp is actually reached.
         await seedTrack(faultyDb, profileId: 0);
 
-        faultyContent = MockContentRepository();
-        when(
-          () => faultyContent.getContentForCurriculum(any()),
-        ).thenAnswer((_) async => []);
-        faultyRepo = LearningOrderRepositoryImpl(
-          database: faultyDb,
-          contentRepository: faultyContent,
-        );
+        // AUD-tracks-15 (SM-8): LearningOrderRepositoryImpl no longer takes
+        // a ContentRepository dependency — saveOrder/resetToDefault under
+        // test here never touch content, so no fake is needed at all.
+        faultyRepo = LearningOrderRepositoryImpl(database: faultyDb);
       });
 
       tearDown(() async {

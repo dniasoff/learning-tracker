@@ -1,19 +1,19 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/tracks/track_order/domain/repositories/track_learning_order_repository.dart';
 import 'package:learning_tracker/features/tracks/track_order/domain/services/masechta_ordering_policy.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 
+/// AUD-tracks-15 (SM-8): this repository only talks to its own DAO
+/// (`UserDatabase.trackLearningOrderDao` / `.trackDao`). It no longer holds
+/// a `ContentRepository` dependency — the content-fetch orchestration lives
+/// in `track_learning_order_providers.dart`, which resolves the curriculum's
+/// content list and passes it in as `allItems` on every call.
 class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
-  TrackLearningOrderRepositoryImpl({
-    required UserDatabase database,
-    required ContentRepository contentRepository,
-  }) : _database = database,
-       _contentRepository = contentRepository;
+  TrackLearningOrderRepositoryImpl({required UserDatabase database})
+    : _database = database;
 
   final UserDatabase _database;
-  final ContentRepository _contentRepository;
 
   /// AUD-t-cross-06: resolves the owning profileId for [trackId] from
   /// `curriculum_tracks` — the single source of truth for track ownership —
@@ -27,11 +27,9 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
     return track.profileId;
   }
 
-  Future<Map<String, ({String he, String en, int sortOrder})>>
-  _buildSedarimIndex(CurriculumId curriculumId) async {
-    final allItems = await _contentRepository.getContentForCurriculum(
-      curriculumId,
-    );
+  Map<String, ({String he, String en, int sortOrder})> _buildSedarimIndex(
+    List<ContentItem> allItems,
+  ) {
     final index = <String, ({String he, String en, int sortOrder})>{};
     for (final item in allItems) {
       if (item.level2 == null && !item.isLeaf) {
@@ -49,11 +47,8 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
   }
 
   Future<Map<String, ({String he, String en, int sortOrder})>>
-  _buildMasechtosIndex(int trackId, CurriculumId curriculumId) async {
-    final allItems = await _contentRepository.getContentForCurriculum(
-      curriculumId,
-    );
-    final sedarimIndex = await _buildSedarimIndex(curriculumId);
+  _buildMasechtosIndex(int trackId, List<ContentItem> allItems) async {
+    final sedarimIndex = _buildSedarimIndex(allItems);
 
     // Convert DAO rows to the savedSederOrder list expected by the policy:
     // only include rows whose sefariaRef matches a known seder, in row order.
@@ -120,18 +115,18 @@ class TrackLearningOrderRepositoryImpl implements TrackLearningOrderRepository {
   @override
   Future<List<LearningOrderItem>> getSedarimOrder(
     int trackId,
-    CurriculumId curriculumId,
+    List<ContentItem> allItems,
   ) async {
-    final index = await _buildSedarimIndex(curriculumId);
+    final index = _buildSedarimIndex(allItems);
     return _getOrderedItems(trackId, index);
   }
 
   @override
   Future<List<LearningOrderItem>> getMasechtosOrder(
     int trackId,
-    CurriculumId curriculumId,
+    List<ContentItem> allItems,
   ) async {
-    final index = await _buildMasechtosIndex(trackId, curriculumId);
+    final index = await _buildMasechtosIndex(trackId, allItems);
     return _getOrderedItems(trackId, index);
   }
 

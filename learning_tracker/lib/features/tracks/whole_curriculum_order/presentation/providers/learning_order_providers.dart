@@ -27,7 +27,6 @@ final learningOrderRepositoryProvider = Provider<LearningOrderRepository>((
   ref,
 ) {
   final database = ref.watch(userDatabaseProvider);
-  final contentRepository = ref.watch(contentRepositoryProvider);
   final syncFacade = ref.watch(syncWriteFacadeProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   // §10.1: pass the current content version for the version-mismatch guard.
@@ -39,7 +38,6 @@ final learningOrderRepositoryProvider = Provider<LearningOrderRepository>((
       .maybeWhen(data: (v) => v, orElse: () => 1);
   return LearningOrderRepositoryImpl(
     database: database,
-    contentRepository: contentRepository,
     syncEngine: syncFacade,
     profileId: profileId,
     currentContentVersion: contentVersion,
@@ -57,13 +55,21 @@ final saveLearningOrderUseCaseProvider = Provider<SaveLearningOrderUseCase>((
 /// Provides the ordered list of drag-level items for a curriculum.
 ///
 /// Family provider keyed by CurriculumId per P3.
+///
+/// AUD-tracks-15 (SM-8): LearningOrderRepositoryImpl no longer depends on
+/// ContentRepository — it only talks to its own DAO. The content-fetch step
+/// lives here instead: resolve the curriculum's content list via
+/// ContentRepository, then pass it into the repository call.
 final learningOrderProvider =
     FutureProvider.family<List<LearningOrderItem>, CurriculumId>((
       ref,
       curriculumId,
     ) async {
+      final allItems = await ref
+          .watch(contentRepositoryProvider)
+          .getContentForCurriculum(curriculumId);
       final repository = ref.watch(learningOrderRepositoryProvider);
-      return repository.getOrder(curriculumId);
+      return repository.getOrder(curriculumId, allItems);
     });
 
 /// Provides whether parent controls ordering (permission setting).

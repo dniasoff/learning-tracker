@@ -2,40 +2,40 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/repositories/learning_order_repository.dart'
     show LearningOrderRepository, ParentControlException;
 
+/// AUD-tracks-15 (SM-8): this repository only talks to its own DAO
+/// (`UserDatabase.learningOrderDao` / `.trackDao`). It no longer holds a
+/// `ContentRepository` dependency — the content-fetch orchestration lives in
+/// `learning_order_providers.dart`, which resolves the curriculum's content
+/// list and passes it in as `allItems` on every `getOrder` call. Mirrors the
+/// same fix applied to `TrackLearningOrderRepositoryImpl`.
 class LearningOrderRepositoryImpl implements LearningOrderRepository {
   LearningOrderRepositoryImpl({
     required UserDatabase database,
-    required ContentRepository contentRepository,
     SyncWriteFacade? syncEngine,
     int profileId = 0,
     int currentContentVersion = 1,
   }) : _database = database,
-       _contentRepository = contentRepository,
        _syncEngine = syncEngine,
        _profileId = profileId,
        _currentContentVersion = currentContentVersion;
 
   final UserDatabase _database;
-  final ContentRepository _contentRepository;
   final SyncWriteFacade? _syncEngine;
   final int _profileId;
   final int _currentContentVersion;
 
   /// Returns a map from sefariaRef → (displayNameHe, displayNameEn, sortOrder)
   /// for all drag-level (level2, non-leaf) items of a curriculum.
-  Future<Map<String, ({String he, String en, int sortOrder})>> _buildRefIndex(
-    CurriculumId curriculumId,
-  ) async {
-    final allItems = await _contentRepository.getContentForCurriculum(
-      curriculumId,
-    );
+  Map<String, ({String he, String en, int sortOrder})> _buildRefIndex(
+    List<ContentItem> allItems,
+  ) {
     final index = <String, ({String he, String en, int sortOrder})>{};
     for (final item in allItems) {
       if (item.level2 != null && !item.isLeaf) {
@@ -53,30 +53,23 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
   }
 
   @override
-  Future<List<LearningOrderItem>> getOrder(CurriculumId curriculumId) async {
+  // AUD-tracks-06: getOrder is a pure read — no DB writes. It is invoked
+  // directly from learningOrderProvider's FutureProvider.family `build`
+  // callback (SM-2: provider build must stay pure). The §10.1
+  // version-mismatch re-amnesty write used to live here as a side effect
+  // of reading; it now lives in [repairStaleOrderVersion], an explicit,
+  // idempotent, one-shot step callers invoke outside of provider build.
+  Future<List<LearningOrderItem>> getOrder(
+    CurriculumId curriculumId,
+    List<ContentItem> allItems,
+  ) async {
     final rows = await _database.learningOrderDao.getLearningOrderByCurriculum(
       curriculumId.storageKey,
       profileId: _profileId,
     );
-    final index = await _buildRefIndex(curriculumId);
+    final index = _buildRefIndex(allItems);
 
     if (rows.isNotEmpty) {
-      // §10.1 — Version guard: if any saved rows carry a different content
-      // version, the order was saved against a different seed.  Re-amnesty
-      // the track so stale overdue tasks are cleared; the order items are
-      // still returned (matched by sefariaRef) so the user keeps their
-      // customisation where refs survived the reseed.
-      final savedVersion = rows.first.learningOrderVersion;
-      if (savedVersion != _currentContentVersion) {
-        AppLogger.instance.warning(
-          event:
-              'learning_order_version_mismatch: saved=$savedVersion '
-              'current=$_currentContentVersion for ${curriculumId.storageKey} '
-              '(profile=$_profileId); re-amnestying track.',
-        );
-        await _stampReorderAt(curriculumId, DateTimeFactory.nowUtc());
-      }
-
       // Custom order exists — return sorted by userSortOrder, enriched with display names
       return rows.map((r) {
         final info = index[r.sefariaRef];
@@ -107,6 +100,41 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
           ),
         )
         .toList();
+  }
+
+  @override
+  Future<void> repairStaleOrderVersion(CurriculumId curriculumId) async {
+    final rows = await _database.learningOrderDao.getLearningOrderByCurriculum(
+      curriculumId.storageKey,
+      profileId: _profileId,
+    );
+    if (rows.isEmpty) return;
+
+    // §10.1 — Version guard: if any saved rows carry a different content
+    // version, the order was saved against a different seed. Re-amnesty the
+    // track so stale overdue tasks are cleared; the order items themselves
+    // are still returned by [getOrder] unaffected (matched by sefariaRef) so
+    // the user keeps their customisation where refs survived the reseed.
+    final savedVersion = rows.first.learningOrderVersion;
+    if (savedVersion == _currentContentVersion) return;
+
+    AppLogger.instance.warning(
+      event:
+          'learning_order_version_mismatch: saved=$savedVersion '
+          'current=$_currentContentVersion for ${curriculumId.storageKey} '
+          '(profile=$_profileId); re-amnestying track.',
+    );
+    await _stampReorderAt(curriculumId, DateTimeFactory.nowUtc());
+
+    // AUD-tracks-06: mark the rows repaired so this is a genuine one-shot —
+    // a second call against the same stale rows now sees the version
+    // already matches and no-ops, instead of re-stamping lastReorderAt on
+    // every invocation.
+    await _database.learningOrderDao.markLearningOrderVersionRepaired(
+      curriculumId.storageKey,
+      profileId: _profileId,
+      version: _currentContentVersion,
+    );
   }
 
   @override

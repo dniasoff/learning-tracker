@@ -5,68 +5,23 @@
 ///  - getMasechtosOrder: default sort, custom sort respecting seder grouping
 ///  - saveSedarimOrder / saveMasechtosOrder: persists refs via dao
 ///  - resetToDefault: clears stored order
+///
+/// AUD-tracks-15 (SM-8): TrackLearningOrderRepositoryImpl no longer takes a
+/// ContentRepository dependency — getSedarimOrder/getMasechtosOrder accept
+/// the already-resolved `List<ContentItem>` directly, so every test below
+/// constructs the repo with only a fake/in-memory database and passes the
+/// fixture items straight into the get* calls (no ContentRepository fake
+/// required).
 library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 
 import '../../../../helpers/drift_memory.dart';
-
-// ---------------------------------------------------------------------------
-// Minimal stub for ContentRepository — returns whatever items are provided.
-// ---------------------------------------------------------------------------
-
-class _StubContentRepository implements ContentRepository {
-  _StubContentRepository(this._items);
-  final List<ContentItem> _items;
-
-  @override
-  Future<List<ContentItem>> getContentForCurriculum(CurriculumId _) async =>
-      _items;
-
-  @override
-  Future<CurriculumHierarchyConfig> getHierarchyConfig(
-    CurriculumId curriculumId,
-  ) async => CurriculumHierarchyConfig(
-    curriculumId: curriculumId.storageKey,
-    levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
-    totalItems: 0,
-  );
-
-  @override
-  Future<List<ContentItem>> filterByLevel({
-    required CurriculumId curriculumId,
-    String? level1,
-    String? level2,
-    String? level3,
-    String? level4,
-  }) async => _items;
-
-  @override
-  Future<List<ContentItem>> getScopedContent({
-    required CurriculumId curriculumId,
-    required int scopeLevel,
-    required List<String> scopeValues,
-  }) async => _items;
-
-  @override
-  Future<List<ContentItem>> search({
-    required CurriculumId curriculumId,
-    required String query,
-  }) async => _items;
-
-  @override
-  Future<ContentItem?> getContentByRef({
-    required CurriculumId curriculumId,
-    required String sefariaRef,
-  }) async => _items.where((i) => i.sefariaRef == sefariaRef).firstOrNull;
-}
 
 // ---------------------------------------------------------------------------
 // Helpers for building content items
@@ -121,13 +76,8 @@ LearningOrderItem _item(String ref, [int order = 0]) => LearningOrderItem(
   userSortOrder: order,
 );
 
-TrackLearningOrderRepositoryImpl _makeRepo(
-  UserDatabase db,
-  List<ContentItem> items,
-) => TrackLearningOrderRepositoryImpl(
-  database: db,
-  contentRepository: _StubContentRepository(items),
-);
+TrackLearningOrderRepositoryImpl _makeRepo(UserDatabase db) =>
+    TrackLearningOrderRepositoryImpl(database: db);
 
 /// Creates a hierarchy:
 ///   Seder Zeraim (L1 container, no L2)
@@ -205,12 +155,9 @@ void main() {
         _seder('Zeraim', sortOrder: 0),
         _seder('Moed', sortOrder: 1),
       ];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
 
-      final result = await repo.getSedarimOrder(
-        trackId,
-        CurriculumId.mishnayos,
-      );
+      final result = await repo.getSedarimOrder(trackId, items);
 
       expect(result.map((i) => i.sefariaRef).toList(), [
         'Zeraim',
@@ -221,11 +168,8 @@ void main() {
     });
 
     test('returns empty list when content has no sedarim containers', () async {
-      final repo = _makeRepo(db, []);
-      final result = await repo.getSedarimOrder(
-        trackId,
-        CurriculumId.mishnayos,
-      );
+      final repo = _makeRepo(db);
+      final result = await repo.getSedarimOrder(trackId, const []);
       expect(result, isEmpty);
     });
 
@@ -235,12 +179,9 @@ void main() {
         _masechta('Zeraim', 'Berakhot', sortOrder: 0),
         _leaf('Berakhot 1:1', seder: 'Zeraim', masechta: 'Berakhot'),
       ];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
 
-      final result = await repo.getSedarimOrder(
-        trackId,
-        CurriculumId.mishnayos,
-      );
+      final result = await repo.getSedarimOrder(trackId, items);
 
       expect(result, hasLength(1));
       expect(result.first.sefariaRef, 'Zeraim');
@@ -256,7 +197,7 @@ void main() {
         _seder('Moed', sortOrder: 1),
         _seder('Nashim', sortOrder: 2),
       ];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
 
       // Save reverse order: Nashim, Moed, Zeraim.
       await repo.saveSedarimOrder(trackId, [
@@ -265,10 +206,7 @@ void main() {
         _item('Zeraim', 2),
       ]);
 
-      final result = await repo.getSedarimOrder(
-        trackId,
-        CurriculumId.mishnayos,
-      );
+      final result = await repo.getSedarimOrder(trackId, items);
       expect(result.map((i) => i.sefariaRef).toList(), [
         'Nashim',
         'Moed',
@@ -282,7 +220,7 @@ void main() {
         _seder('Zeraim', sortOrder: 0),
         _seder('Moed', sortOrder: 1),
       ];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
 
       // Store custom order: Moed first
       await db.trackLearningOrderDao.upsertOrder(0, trackId, [
@@ -290,10 +228,7 @@ void main() {
         'Zeraim',
       ]);
 
-      final result = await repo.getSedarimOrder(
-        trackId,
-        CurriculumId.mishnayos,
-      );
+      final result = await repo.getSedarimOrder(trackId, items);
 
       expect(result.map((i) => i.sefariaRef).toList(), ['Moed', 'Zeraim']);
       expect(result.every((i) => i.isCustomOrdered), isTrue);
@@ -309,22 +244,16 @@ void main() {
         _masechta('Zeraim', 'Berakhot', sortOrder: 0),
         _masechta('Zeraim', 'Peah', sortOrder: 1),
       ];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
 
-      final result = await repo.getMasechtosOrder(
-        trackId,
-        CurriculumId.mishnayos,
-      );
+      final result = await repo.getMasechtosOrder(trackId, items);
       expect(result.map((i) => i.sefariaRef).toList(), ['Berakhot', 'Peah']);
       expect(result.every((i) => !i.isCustomOrdered), isTrue);
     });
 
     test('returns empty list when no masechtos present', () async {
-      final repo = _makeRepo(db, [_seder('Zeraim')]);
-      final result = await repo.getMasechtosOrder(
-        trackId,
-        CurriculumId.mishnayos,
-      );
+      final repo = _makeRepo(db);
+      final result = await repo.getMasechtosOrder(trackId, [_seder('Zeraim')]);
       expect(result, isEmpty);
     });
 
@@ -334,12 +263,9 @@ void main() {
         _masechta('Zeraim', 'Berakhot', sortOrder: 0),
         _leaf('Berakhot 1:1', seder: 'Zeraim', masechta: 'Berakhot'),
       ];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
 
-      final result = await repo.getMasechtosOrder(
-        trackId,
-        CurriculumId.mishnayos,
-      );
+      final result = await repo.getMasechtosOrder(trackId, items);
 
       expect(result, hasLength(1));
       expect(result.first.sefariaRef, 'Berakhot');
@@ -351,7 +277,7 @@ void main() {
         _masechta('Zeraim', 'Berakhot', sortOrder: 0),
         _masechta('Zeraim', 'Peah', sortOrder: 1),
       ];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
 
       // Custom: Peah first
       await db.trackLearningOrderDao.upsertOrder(0, trackId, [
@@ -359,10 +285,7 @@ void main() {
         'Berakhot',
       ]);
 
-      final result = await repo.getMasechtosOrder(
-        trackId,
-        CurriculumId.mishnayos,
-      );
+      final result = await repo.getMasechtosOrder(trackId, items);
 
       expect(result.map((i) => i.sefariaRef).toList(), ['Peah', 'Berakhot']);
       expect(result.every((i) => i.isCustomOrdered), isTrue);
@@ -373,11 +296,7 @@ void main() {
 
   group('saveSedarimOrder', () {
     test('persists refs via DAO in the given order', () async {
-      final items = [
-        _seder('Moed', sortOrder: 1),
-        _seder('Zeraim', sortOrder: 0),
-      ];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
 
       await repo.saveSedarimOrder(trackId, [
         _item('Moed', 0),
@@ -395,8 +314,7 @@ void main() {
     });
 
     test('upserts on second call (does not duplicate)', () async {
-      final items = [_seder('Zeraim')];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
       await repo.saveSedarimOrder(trackId, [_item('Zeraim')]);
       // Call again with same item.
       await repo.saveSedarimOrder(trackId, [_item('Zeraim', 0)]);
@@ -406,7 +324,7 @@ void main() {
     });
 
     test('saves empty list without error', () async {
-      final repo = _makeRepo(db, []);
+      final repo = _makeRepo(db);
       await repo.saveSedarimOrder(trackId, []);
       final rows = await db.trackLearningOrderDao.getByTrack(0, trackId);
       expect(rows, isEmpty);
@@ -415,12 +333,7 @@ void main() {
 
   group('saveMasechtosOrder', () {
     test('persists masechta refs via DAO in the given order', () async {
-      final items = [
-        _seder('Zeraim', sortOrder: 0),
-        _masechta('Zeraim', 'Berakhot', sortOrder: 0),
-        _masechta('Zeraim', 'Peah', sortOrder: 1),
-      ];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
 
       await repo.saveMasechtosOrder(trackId, [
         _item('Peah', 0),
@@ -442,10 +355,7 @@ void main() {
   group('reorder-write + stampReorderAt atomicity (AUD-core-database-05)', () {
     test('saveSedarimOrder rolls back the order write when the stampReorderAt '
         'update fails, leaving the pre-reorder order intact', () async {
-      final repo = _makeRepo(db, [
-        _seder('Zeraim', sortOrder: 0),
-        _seder('Moed', sortOrder: 1),
-      ]);
+      final repo = _makeRepo(db);
 
       // Seed a pre-existing order — this is what must survive a failed
       // reorder attempt untouched.
@@ -482,7 +392,7 @@ void main() {
 
     test('resetToDefault rolls back deleteByTrack when the stampReorderAt '
         'update fails, leaving the pre-reset order intact', () async {
-      final repo = _makeRepo(db, []);
+      final repo = _makeRepo(db);
       await db.trackLearningOrderDao.upsertOrder(0, trackId, ['Zeraim']);
 
       await db.customStatement('''
@@ -511,10 +421,7 @@ void main() {
 
   group('resetToDefault', () {
     test('clears all stored learning order rows for the track', () async {
-      final repo = _makeRepo(db, [
-        _seder('Zeraim', sortOrder: 0),
-        _seder('Moed', sortOrder: 1),
-      ]);
+      final repo = _makeRepo(db);
 
       await repo.saveSedarimOrder(trackId, [
         _item('Moed', 0),
@@ -527,7 +434,7 @@ void main() {
     });
 
     test('is a no-op when no custom order exists', () async {
-      final repo = _makeRepo(db, []);
+      final repo = _makeRepo(db);
       await repo.resetToDefault(trackId);
       expect(await db.trackLearningOrderDao.getByTrack(0, trackId), isEmpty);
     });
@@ -537,7 +444,7 @@ void main() {
         _seder('Moed', sortOrder: 1),
         _seder('Zeraim', sortOrder: 0),
       ];
-      final repo = _makeRepo(db, items);
+      final repo = _makeRepo(db);
 
       // Save reverse so Moed comes first.
       await repo.saveSedarimOrder(trackId, [
@@ -548,10 +455,7 @@ void main() {
       await repo.resetToDefault(trackId);
 
       // Default is by sortOrder: Zeraim (0) then Moed (1).
-      final result = await repo.getSedarimOrder(
-        trackId,
-        CurriculumId.mishnayos,
-      );
+      final result = await repo.getSedarimOrder(trackId, items);
       expect(result.map((i) => i.sefariaRef).toList(), ['Zeraim', 'Moed']);
       expect(result.every((i) => !i.isCustomOrdered), isTrue);
     });
@@ -561,7 +465,7 @@ void main() {
     // 'clears all stored learning order rows for the track' above (seeding
     // rows via the DAO directly instead of via saveSedarimOrder makes no
     // difference: resetToDefault/deleteByTrack never consult the repo's
-    // ContentRepository, as confirmed by TrackLearningOrderRepositoryImpl —
+    // content items, as confirmed by TrackLearningOrderRepositoryImpl —
     // resetToDefault only calls trackLearningOrderDao.deleteByTrack +
     // trackDao.stampReorderAt, neither of which reads `items`).
 
@@ -580,7 +484,7 @@ void main() {
       await db.trackLearningOrderDao.upsertOrder(0, trackId, ['Zeraim']);
       await db.trackLearningOrderDao.upsertOrder(1, otherTrackId, ['Moed']);
 
-      final repo = _makeRepo(db, []);
+      final repo = _makeRepo(db);
       await repo.resetToDefault(trackId);
 
       expect(await db.trackLearningOrderDao.getByTrack(0, trackId), isEmpty);
@@ -599,11 +503,8 @@ void main() {
       test(
         'returns sedarim in default sort order when no custom order saved',
         () async {
-          final repo = _makeRepo(db, _mishnaItems());
-          final result = await repo.getSedarimOrder(
-            trackId,
-            CurriculumId.mishnayos,
-          );
+          final repo = _makeRepo(db);
+          final result = await repo.getSedarimOrder(trackId, _mishnaItems());
 
           // The fake content has "Seder Zeraim" as the only L1-only container.
           expect(result, hasLength(1));
@@ -613,14 +514,11 @@ void main() {
       );
 
       test('returns sedarim in custom order after saveSedarimOrder', () async {
-        final repo = _makeRepo(db, _mishnaItems());
+        final repo = _makeRepo(db);
         // Our fake only has one seder so we just verify the ref is present.
         await repo.saveSedarimOrder(trackId, [_item('Seder Zeraim')]);
 
-        final result = await repo.getSedarimOrder(
-          trackId,
-          CurriculumId.mishnayos,
-        );
+        final result = await repo.getSedarimOrder(trackId, _mishnaItems());
 
         expect(result, hasLength(1));
         expect(result.first.isCustomOrdered, isTrue);
@@ -634,11 +532,8 @@ void main() {
       test(
         'returns masechtos in default sort order when no custom order saved',
         () async {
-          final repo = _makeRepo(db, _mishnaItems());
-          final result = await repo.getMasechtosOrder(
-            trackId,
-            CurriculumId.mishnayos,
-          );
+          final repo = _makeRepo(db);
+          final result = await repo.getMasechtosOrder(trackId, _mishnaItems());
 
           // The fake content has "Berakhot" as the only L2 container.
           expect(result, hasLength(1));
@@ -650,13 +545,10 @@ void main() {
       test(
         'returns masechtos in custom order after saveMasechtosOrder',
         () async {
-          final repo = _makeRepo(db, _mishnaItems());
+          final repo = _makeRepo(db);
           await repo.saveMasechtosOrder(trackId, [_item('Berakhot')]);
 
-          final result = await repo.getMasechtosOrder(
-            trackId,
-            CurriculumId.mishnayos,
-          );
+          final result = await repo.getMasechtosOrder(trackId, _mishnaItems());
 
           expect(result, hasLength(1));
           expect(result.first.isCustomOrdered, isTrue);
@@ -667,11 +559,10 @@ void main() {
 
   // AUD-app-04: removed the former "(F1 extra)" groups here — they re-ran
   // saveSedarimOrder / saveMasechtosOrder / resetToDefault against the
-  // _mishnaItems() fixture, but those three methods never consult
-  // ContentRepository/the content-item list at all (see
-  // TrackLearningOrderRepositoryImpl.saveSedarimOrder,
-  // .saveMasechtosOrder, .resetToDefault — each only calls
-  // trackLearningOrderDao.upsertOrder/deleteByTrack + trackDao
+  // _mishnaItems() fixture, but those three methods never consult the
+  // content-item list at all (see TrackLearningOrderRepositoryImpl
+  // .saveSedarimOrder, .saveMasechtosOrder, .resetToDefault — each only
+  // calls trackLearningOrderDao.upsertOrder/deleteByTrack + trackDao
   // .stampReorderAt), so persisting/resetting 1-2 refs against the
   // _mishnaItems() fixture exercises byte-for-byte the same DAO code path
   // already covered by the 'saveSedarimOrder' / 'saveMasechtosOrder' /
@@ -680,5 +571,5 @@ void main() {
   // hierarchy IS still exercised (and remains) in the getSedarimOrder /
   // getMasechtosOrder (mishna hierarchy) groups above, where it's
   // genuinely load-bearing: those two methods DO walk the nested
-  // level1/level2/isLeaf hierarchy via ContentRepository.
+  // level1/level2/isLeaf hierarchy over the passed-in allItems.
 }

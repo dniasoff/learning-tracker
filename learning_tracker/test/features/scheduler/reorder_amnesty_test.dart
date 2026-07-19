@@ -4,31 +4,24 @@
 ///   A. Reorder stamps lastReorderAt and the projection filters pre-reorder
 ///      overdue items (amnesty fires).
 ///   B. Pace change does NOT stamp lastReorderAt; overdue items remain.
-///   C. learning_order_version mismatch on getOrder triggers amnesty +
-///      warning telemetry log.
+///   C. learning_order_version mismatch: [LearningOrderRepositoryImpl.getOrder]
+///      is a pure read and never stamps lastReorderAt (AUD-tracks-06, SM-2);
+///      the explicit, idempotent [LearningOrderRepositoryImpl.repairStaleOrderVersion]
+///      one-shot step triggers the amnesty + warning telemetry log instead.
 library;
 
-import 'package:drift/drift.dart' hide isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
-import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/drift_memory.dart';
-
-// ---------------------------------------------------------------------------
-// Mock
-// ---------------------------------------------------------------------------
-
-class MockContentRepository extends Mock implements ContentRepository {}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -75,32 +68,20 @@ List<ScheduledUnit> _buildSchedule({
 // ---------------------------------------------------------------------------
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(CurriculumId.mishnayos);
-  });
-
   late UserDatabase db;
-  late MockContentRepository mockContent;
+  // AUD-tracks-15 (SM-8): LearningOrderRepositoryImpl no longer takes a
+  // ContentRepository dependency — getOrder accepts the already-resolved
+  // `List<ContentItem>` directly, so tests below pass this fixture list
+  // straight into getOrder calls instead of stubbing a mock.
+  final allItems = [
+    _makeItem('Berakhot', sortOrder: 0),
+    _makeItem('Shabbat', sortOrder: 1),
+    _makeItem('Peah', sortOrder: 2),
+  ];
 
   setUp(() async {
     db = UserDatabase(NativeDatabase.memory());
     await seedProfile(db); // inserts account(1)+profile(1)
-    mockContent = MockContentRepository();
-
-    when(() => mockContent.getHierarchyConfig(any())).thenAnswer(
-      (_) async => const CurriculumHierarchyConfig(
-        curriculumId: 'mishnayos',
-        levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
-        totalItems: 10,
-      ),
-    );
-    when(() => mockContent.getContentForCurriculum(any())).thenAnswer(
-      (_) async => [
-        _makeItem('Berakhot', sortOrder: 0),
-        _makeItem('Shabbat', sortOrder: 1),
-        _makeItem('Peah', sortOrder: 2),
-      ],
-    );
   });
 
   tearDown(() async => db.close());
@@ -323,11 +304,7 @@ void main() {
           );
       expect(trackId, isPositive);
 
-      final repo = LearningOrderRepositoryImpl(
-        database: db,
-        contentRepository: mockContent,
-        profileId: 1,
-      );
+      final repo = LearningOrderRepositoryImpl(database: db, profileId: 1);
 
       // Act: save a custom order
       await repo.saveOrder(CurriculumId.mishnayos, [
@@ -362,11 +339,7 @@ void main() {
             ),
           );
 
-      final repo = LearningOrderRepositoryImpl(
-        database: db,
-        contentRepository: mockContent,
-        profileId: 1,
-      );
+      final repo = LearningOrderRepositoryImpl(database: db, profileId: 1);
 
       // Act: reset to default
       await repo.resetToDefault(CurriculumId.mishnayos);
@@ -465,7 +438,19 @@ void main() {
   // ────────────────────────────────────────────────────────────────────────────
 
   group('Scenario C — learning_order_version guard', () {
-    test('getOrder: version mismatch stamps lastReorderAt (amnesty)', () async {
+    // weaken-ok: AUD-tracks-06 — this test previously asserted the OPPOSITE
+    // (getOrder DOES stamp lastReorderAt on a version mismatch). That WAS
+    // exactly the SM-2 violation the finding reports: getOrder is invoked
+    // directly from learningOrderProvider's FutureProvider.family `build`
+    // callback, so every cold start / invalidation while the mismatch
+    // persisted silently re-stamped lastReorderAt = now, permanently
+    // suppressing overdue-item detection for that curriculum. The repair
+    // write now lives in the explicit, idempotent
+    // [LearningOrderRepositoryImpl.repairStaleOrderVersion] step instead —
+    // see the next test, which proves that method still performs the
+    // amnesty stamp exactly once.
+    test('getOrder: version mismatch does NOT write to the DB, even across '
+        'repeated calls (provider build must stay a pure read)', () async {
       // Arrange: a track exists with no prior lastReorderAt
       final activatedAt = DateTime.utc(2026, 1, 1);
       final trackId = await db
@@ -493,23 +478,91 @@ void main() {
       // Repo is initialised with currentContentVersion = 2 (simulates reseed)
       final repo = LearningOrderRepositoryImpl(
         database: db,
-        contentRepository: mockContent,
         profileId: 1,
         currentContentVersion: 2,
       );
 
-      // Act: getOrder — version mismatch should trigger re-amnesty
-      await repo.getOrder(CurriculumId.mishnayos);
+      // Act: call getOrder() TWICE — this is what learningOrderProvider's
+      // FutureProvider.family build callback does on every cold start /
+      // invalidation. AC: lastReorderAt must be stamped at most once, not
+      // on every call — here it must not be stamped at all by getOrder.
+      // AUD-tracks-15: getOrder now also takes the pre-resolved content
+      // list instead of fetching it itself.
+      await repo.getOrder(CurriculumId.mishnayos, allItems);
+      await repo.getOrder(CurriculumId.mishnayos, allItems);
 
-      // Assert: lastReorderAt is now stamped
+      // Assert: lastReorderAt is still unset — getOrder never writes.
       final track = await db.trackDao.getTrackById(trackId);
       expect(track, isNotNull);
       expect(
         track!.lastReorderAt,
+        isNull,
+        reason:
+            'getOrder is a pure read (SM-2) — the version-mismatch '
+            're-amnesty write must never happen as a side effect of '
+            'reading the order, no matter how many times it is called.',
+      );
+    });
+
+    test('repairStaleOrderVersion: stamps lastReorderAt on a version mismatch, '
+        'and a second call against the same stale rows is a no-op '
+        '(one-shot repair)', () async {
+      // Arrange: a track exists with no prior lastReorderAt
+      final activatedAt = DateTime.utc(2026, 1, 1);
+      final trackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              stateChangedAt: activatedAt,
+              activatedAt: activatedAt,
+            ),
+          );
+
+      // Insert a learning_order row with version = 1
+      await db.learningOrderDao.upsertLearningOrder(
+        LearningOrderCompanion.insert(
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot',
+          userSortOrder: 0,
+          learningOrderVersion: const Value(1),
+        ),
+      );
+
+      // Repo is initialised with currentContentVersion = 2 (simulates reseed)
+      final repo = LearningOrderRepositoryImpl(
+        database: db,
+        profileId: 1,
+        currentContentVersion: 2,
+      );
+
+      // Act: first call — version mismatch present → repairs + stamps.
+      await repo.repairStaleOrderVersion(CurriculumId.mishnayos);
+
+      final afterFirst = await db.trackDao.getTrackById(trackId);
+      expect(afterFirst, isNotNull);
+      expect(
+        afterFirst!.lastReorderAt,
         isNotNull,
         reason:
-            'learning_order_version mismatch must trigger '
-            'stampReorderAt on the active track',
+            'learning_order_version mismatch must trigger stampReorderAt '
+            'on the active track',
+      );
+      final firstStampMs = afterFirst.lastReorderAt!.millisecondsSinceEpoch;
+
+      // Act: second call — the first call already marked the rows
+      // repaired, so this must be a genuine no-op, not a second stamp.
+      await repo.repairStaleOrderVersion(CurriculumId.mishnayos);
+
+      final afterSecond = await db.trackDao.getTrackById(trackId);
+      expect(
+        afterSecond!.lastReorderAt!.millisecondsSinceEpoch,
+        equals(firstStampMs),
+        reason:
+            'A one-shot repair must not re-stamp lastReorderAt on a '
+            'second call once the stale rows have already been repaired.',
       );
     });
 
@@ -547,13 +600,12 @@ void main() {
 
         final repo = LearningOrderRepositoryImpl(
           database: db,
-          contentRepository: mockContent,
           profileId: 1,
           currentContentVersion: 5, // same as saved
         );
 
         // Act
-        await repo.getOrder(CurriculumId.mishnayos);
+        await repo.getOrder(CurriculumId.mishnayos, allItems);
 
         // Assert: lastReorderAt is untouched (compare via milliseconds)
         final track = await db.trackDao.getTrackById(trackId);
@@ -580,7 +632,6 @@ void main() {
 
       final repo = LearningOrderRepositoryImpl(
         database: db,
-        contentRepository: mockContent,
         profileId: 1,
         currentContentVersion: 7,
       );

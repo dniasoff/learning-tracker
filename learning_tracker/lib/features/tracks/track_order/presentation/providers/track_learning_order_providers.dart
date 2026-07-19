@@ -10,28 +10,39 @@ final trackLearningOrderRepositoryProvider =
     Provider<TrackLearningOrderRepository>((ref) {
       return TrackLearningOrderRepositoryImpl(
         database: ref.watch(userDatabaseProvider),
-        contentRepository: ref.watch(contentRepositoryProvider),
       );
     });
 
 typedef _TrackCurriculumArgs = ({int trackId, CurriculumId curriculumId});
 
+// AUD-tracks-15 (SM-8): TrackLearningOrderRepositoryImpl no longer depends
+// on ContentRepository — it only talks to its own DAO. The content-fetch +
+// index-build orchestration lives here instead: each provider resolves the
+// curriculum's content list via ContentRepository, then passes it into the
+// repository call.
+
 final trackSedarimOrderProvider =
     FutureProvider.family<List<LearningOrderItem>, _TrackCurriculumArgs>((
       ref,
       args,
-    ) {
+    ) async {
+      final allItems = await ref
+          .watch(contentRepositoryProvider)
+          .getContentForCurriculum(args.curriculumId);
       return ref
           .watch(trackLearningOrderRepositoryProvider)
-          .getSedarimOrder(args.trackId, args.curriculumId);
+          .getSedarimOrder(args.trackId, allItems);
     });
 
 final trackMasechtosOrderProvider =
     FutureProvider.family<List<LearningOrderItem>, _TrackCurriculumArgs>((
       ref,
       args,
-    ) {
+    ) async {
+      final allItems = await ref
+          .watch(contentRepositoryProvider)
+          .getContentForCurriculum(args.curriculumId);
       return ref
           .watch(trackLearningOrderRepositoryProvider)
-          .getMasechtosOrder(args.trackId, args.curriculumId);
+          .getMasechtosOrder(args.trackId, allItems);
     });

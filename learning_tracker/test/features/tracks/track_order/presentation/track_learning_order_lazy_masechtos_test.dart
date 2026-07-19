@@ -20,8 +20,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tracks/track_order/domain/repositories/track_learning_order_repository.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart';
@@ -61,13 +65,13 @@ class _LargeFixtureTrackRepository implements TrackLearningOrderRepository {
   @override
   Future<List<LearningOrderItem>> getSedarimOrder(
     int trackId,
-    CurriculumId curriculumId,
+    List<ContentItem> allItems,
   ) async => const [];
 
   @override
   Future<List<LearningOrderItem>> getMasechtosOrder(
     int trackId,
-    CurriculumId curriculumId,
+    List<ContentItem> allItems,
   ) async => [for (var i = 0; i < _kMasechtosCount; i++) _item('Siman_$i', i)];
 
   @override
@@ -84,6 +88,58 @@ class _LargeFixtureTrackRepository implements TrackLearningOrderRepository {
 
   @override
   Future<void> resetToDefault(int trackId) async {}
+}
+
+/// Minimal [ContentRepository] stub — [_LargeFixtureTrackRepository] never
+/// reads the `allItems` argument it's passed, but AUD-tracks-15 (SM-8) moved
+/// the content-fetch step out of the repository and up into
+/// `trackSedarimOrderProvider`/`trackMasechtosOrderProvider`, so
+/// `contentRepositoryProvider` must be overridden here too or the real
+/// asset-backed implementation would try to load JSON bundles in this
+/// widget test.
+class _EmptyContentRepository implements ContentRepository {
+  const _EmptyContentRepository();
+
+  @override
+  Future<List<ContentItem>> getContentForCurriculum(CurriculumId _) async =>
+      const [];
+
+  @override
+  Future<CurriculumHierarchyConfig> getHierarchyConfig(
+    CurriculumId curriculumId,
+  ) async => CurriculumHierarchyConfig(
+    curriculumId: curriculumId.storageKey,
+    levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
+    totalItems: 0,
+  );
+
+  @override
+  Future<List<ContentItem>> filterByLevel({
+    required CurriculumId curriculumId,
+    String? level1,
+    String? level2,
+    String? level3,
+    String? level4,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> getScopedContent({
+    required CurriculumId curriculumId,
+    required int scopeLevel,
+    required List<String> scopeValues,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> search({
+    required CurriculumId curriculumId,
+    required String query,
+  }) async => const [];
+
+  @override
+  Future<ContentItem?> getContentByRef({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async => null;
 }
 
 void main() {
@@ -104,6 +160,9 @@ void main() {
           overrides: [
             userDatabaseProvider.overrideWith((ref) => db),
             trackLearningOrderRepositoryProvider.overrideWithValue(repo),
+            contentRepositoryProvider.overrideWithValue(
+              const _EmptyContentRepository(),
+            ),
             overdueCountForCurriculumProvider(
               _kCurriculumId,
             ).overrideWith((ref) async => 0),

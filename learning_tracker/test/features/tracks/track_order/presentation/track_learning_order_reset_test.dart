@@ -14,8 +14,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tracks/track_order/domain/repositories/track_learning_order_repository.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart';
@@ -29,6 +33,58 @@ import '../../../../helpers/drift_memory.dart';
 const _kTrackId = 1;
 const _kCurriculumId = CurriculumId.mishnayos;
 
+/// Minimal [ContentRepository] stub returning empty results for every
+/// member. AUD-tracks-15 (SM-8) moved the content-fetch step from
+/// `TrackLearningOrderRepositoryImpl` up into `trackSedarimOrderProvider`/
+/// `trackMasechtosOrderProvider`, so this test — which controls the read
+/// timeline via `_ControlledTrackRepository` rather than real content — must
+/// override `contentRepositoryProvider` too, or the real asset-backed
+/// implementation would try to load JSON bundles here.
+class _EmptyContentRepository implements ContentRepository {
+  const _EmptyContentRepository();
+
+  @override
+  Future<List<ContentItem>> getContentForCurriculum(CurriculumId _) async =>
+      const [];
+
+  @override
+  Future<CurriculumHierarchyConfig> getHierarchyConfig(
+    CurriculumId curriculumId,
+  ) async => CurriculumHierarchyConfig(
+    curriculumId: curriculumId.storageKey,
+    levelLabels: const ['Seder', 'Masechta', 'Perek', 'Mishna'],
+    totalItems: 0,
+  );
+
+  @override
+  Future<List<ContentItem>> filterByLevel({
+    required CurriculumId curriculumId,
+    String? level1,
+    String? level2,
+    String? level3,
+    String? level4,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> getScopedContent({
+    required CurriculumId curriculumId,
+    required int scopeLevel,
+    required List<String> scopeValues,
+  }) async => const [];
+
+  @override
+  Future<List<ContentItem>> search({
+    required CurriculumId curriculumId,
+    required String query,
+  }) async => const [];
+
+  @override
+  Future<ContentItem?> getContentByRef({
+    required CurriculumId curriculumId,
+    required String sefariaRef,
+  }) async => null;
+}
+
 LearningOrderItem _item(String ref, int sortOrder, {bool custom = false}) =>
     LearningOrderItem(
       sefariaRef: ref,
@@ -40,6 +96,13 @@ LearningOrderItem _item(String ref, int sortOrder, {bool custom = false}) =>
 
 /// Repository whose sedarim reads complete on the test's command, so the test
 /// controls the resolution order and can model the stale-read race.
+///
+/// AUD-tracks-15 (SM-8): getSedarimOrder/getMasechtosOrder now take the
+/// already-resolved content list rather than a CurriculumId — this fake
+/// ignores it (its whole point is to model the DAO-read race, not real
+/// content), and the widget tree's `contentRepositoryProvider` is overridden
+/// with `EmptyContentRepository` below so `trackSedarimOrderProvider`'s new
+/// content-fetch step resolves instantly instead of hitting real assets.
 class _ControlledTrackRepository implements TrackLearningOrderRepository {
   final List<Completer<List<LearningOrderItem>>> sedarimReads = [];
   bool wasReset = false;
@@ -47,7 +110,7 @@ class _ControlledTrackRepository implements TrackLearningOrderRepository {
   @override
   Future<List<LearningOrderItem>> getSedarimOrder(
     int trackId,
-    CurriculumId curriculumId,
+    List<ContentItem> allItems,
   ) {
     final completer = Completer<List<LearningOrderItem>>();
     sedarimReads.add(completer);
@@ -57,7 +120,7 @@ class _ControlledTrackRepository implements TrackLearningOrderRepository {
   @override
   Future<List<LearningOrderItem>> getMasechtosOrder(
     int trackId,
-    CurriculumId curriculumId,
+    List<ContentItem> allItems,
   ) async => const [];
 
   @override
@@ -102,6 +165,9 @@ void main() {
           overrides: [
             userDatabaseProvider.overrideWith((ref) => inMemoryDb()),
             trackLearningOrderRepositoryProvider.overrideWithValue(repo),
+            contentRepositoryProvider.overrideWithValue(
+              const _EmptyContentRepository(),
+            ),
             overdueCountForCurriculumProvider(
               _kCurriculumId,
             ).overrideWith((ref) async => 0),

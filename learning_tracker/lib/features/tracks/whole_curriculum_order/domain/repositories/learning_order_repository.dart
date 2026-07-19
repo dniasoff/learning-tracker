@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 
 /// Thrown by [LearningOrderRepository.saveOrder] when the caller is in child
@@ -19,7 +20,15 @@ abstract class LearningOrderRepository {
   ///
   /// Returns custom order if rows exist in learning_order table;
   /// otherwise falls back to `ContentItem.sortOrder` (natural Sefaria order).
-  Future<List<LearningOrderItem>> getOrder(CurriculumId curriculumId);
+  ///
+  /// [allItems] is the full flat content tree for [curriculumId] (as
+  /// returned by `ContentRepository.getContentForCurriculum`). Callers
+  /// resolve it before calling in — AUD-tracks-15/SM-8: this repository
+  /// never talks to `ContentRepository` directly, only to its own DAO.
+  Future<List<LearningOrderItem>> getOrder(
+    CurriculumId curriculumId,
+    List<ContentItem> allItems,
+  );
 
   /// Save a new custom order for a curriculum.
   ///
@@ -37,4 +46,19 @@ abstract class LearningOrderRepository {
 
   /// Reset to default order by deleting all learning_order rows for curriculum.
   Future<void> resetToDefault(CurriculumId curriculumId);
+
+  /// Repairs a stale §10.1 `learningOrderVersion` guard for [curriculumId].
+  ///
+  /// AUD-tracks-06: this write was formerly a side effect of [getOrder],
+  /// which meant every `learningOrderProvider` `FutureProvider.family` build
+  /// call (cold start, invalidation, ...) silently re-stamped
+  /// `lastReorderAt = now` while a version mismatch persisted — an SM-2
+  /// violation (provider `build` must stay a pure read) that also
+  /// permanently suppressed overdue-item detection after a reseed. The
+  /// repair now lives here as an explicit, idempotent, one-shot step:
+  /// no-ops when no rows exist, or when the saved version already matches
+  /// the current content version; otherwise stamps `lastReorderAt` on the
+  /// active track and marks the rows as repaired so a second call against
+  /// the same stale rows is a genuine no-op rather than a repeated write.
+  Future<void> repairStaleOrderVersion(CurriculumId curriculumId);
 }

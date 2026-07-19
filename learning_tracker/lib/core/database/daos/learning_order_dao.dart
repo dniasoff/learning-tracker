@@ -127,4 +127,24 @@ class LearningOrderDao extends DatabaseAccessor<UserDatabase>
                 t.profileId.equals(profileId),
           ))
           .go();
+
+  /// Bulk-stamp [learningOrderVersion] onto every row of [curriculumId] /
+  /// [profileId] without touching `userSortOrder`, `sefariaRef`, or
+  /// `updatedAt`.
+  ///
+  /// Used by [LearningOrderRepositoryImpl.repairStaleOrderVersion] (AUD-tracks-06)
+  /// to mark a §10.1 version-mismatch repair as done, so the repair is a
+  /// genuine one-shot: a subsequent call against the same rows sees the
+  /// version already matches and no-ops instead of re-stamping.
+  Future<int> markLearningOrderVersionRepaired(
+    String curriculumId, {
+    required int profileId,
+    required int version,
+  }) =>
+      (update(learningOrder)..where(
+            (t) =>
+                t.curriculumId.equals(curriculumId) &
+                t.profileId.equals(profileId),
+          ))
+          .write(LearningOrderCompanion(learningOrderVersion: Value(version)));
 }
