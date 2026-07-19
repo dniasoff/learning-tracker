@@ -384,11 +384,11 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	  FAIL=1; \
 	fi; \
 	echo "10/15 — Every TODO/FIXME/XXX comment carries a Linear id DNI-#### (AG-6)"; \
-	if grep -rnP '//\s*(TODO|FIXME|XXX)\b' lib/ test/ integration_test/ --include="*.dart" \
+	if grep -rnP '(//|/\*)\s*(TODO|FIXME|XXX)\b' lib/ test/ integration_test/ --include="*.dart" \
 	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]" \
 	    | grep -v "^lib/firebase_options.dart:" | grep -q .; then \
 	  echo "  TODO/FIXME/XXX with no DNI-#### Linear id — file or link a ticket (AG-6):"; \
-	  grep -rnP '//\s*(TODO|FIXME|XXX)\b' lib/ test/ integration_test/ --include="*.dart" \
+	  grep -rnP '(//|/\*)\s*(TODO|FIXME|XXX)\b' lib/ test/ integration_test/ --include="*.dart" \
 	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]" \
 	    | grep -v "^lib/firebase_options.dart:"; \
 	  FAIL=1; \

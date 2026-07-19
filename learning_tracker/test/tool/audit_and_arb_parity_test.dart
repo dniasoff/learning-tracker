@@ -174,6 +174,17 @@ void main() {
     // exact spellings; deliberately not spelled out here, since a
     // marker word as the first token of a comment line is exactly the
     // shape this very check matches).
+    //
+    // AUD-guardrails-16 second bounce: the first bounce fix dropped the
+    // `^\s*` line-start anchor to catch trailing and `///` markers, but
+    // the only fixture lines it added were column-0 `//` markers -- the
+    // exact shape the anchor never excluded in the first place -- so the
+    // anchor removal itself was never actually exercised. This bounce
+    // adds a genuinely non-line-start `//` marker and a `///` marker to
+    // close that gap, plus a `/* ... */` block-comment marker to prove
+    // the AC1 gap the reviewer probed (block comments have no `//` at
+    // all, so the grep needed a second alternation, not just an anchor
+    // change) is now closed too.
     test(
       'AC1/AC2: a bare TODO/XXX with no DNI id fails the gate; the '
       'same-style comment with a DNI-#### id passes',
@@ -202,6 +213,21 @@ void main() {
             // Same split rationale as above, applied to XXX ('// XX' + 'X').
             '// XX'
             'X: has no Linear id, MUST be flagged\n'
+            // Second bounce addition: a marker that does NOT start the
+            // line (unlike every case above, which all happen to begin
+            // at column 0). Same split rationale applied ('// TOD' + 'O').
+            'const zzzTrailingMarker = 1; // TOD'
+            'O: trailing marker, not line-start, no Linear id, '
+            'MUST be flagged\n'
+            // Second bounce addition: a `///` doc-comment marker. Same
+            // split rationale applied ('/// TOD' + 'O').
+            '/// TOD'
+            'O: doc-comment marker, no Linear id, MUST be flagged\n'
+            // Second bounce addition: a `/* ... */` block-comment marker
+            // -- the AC1 gap the reviewer probed directly. Same split
+            // rationale applied ('/* TOD' + 'O').
+            '/* TOD'
+            'O: block-comment marker, no Linear id, MUST be flagged */\n'
             'const zzzAuditFixtureDoNotCommit = true;\n',
           );
 
@@ -237,6 +263,31 @@ void main() {
             reason:
                 'an XXX comment that already carries a DNI-#### id must '
                 'NOT be flagged.\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            contains('zzz_audit_fixture_do_not_commit.dart:6'),
+            reason:
+                'a TODO trailing after code on the same line (not '
+                'line-start) must be caught -- proves the AG-6 grep is not '
+                'anchored to the start of the line.\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            contains('zzz_audit_fixture_do_not_commit.dart:7'),
+            reason:
+                'a bare TODO in a `///` doc comment must be caught -- '
+                'proves the AG-6 grep matches `//` anywhere on the line, '
+                'not just a bare `// ` prefix.\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            contains('zzz_audit_fixture_do_not_commit.dart:8'),
+            reason:
+                'a bare TODO in a `/* ... */` block comment must be '
+                'caught (AC1: "any TODO/FIXME/XXX comment") -- proves the '
+                'AG-6 grep also matches block-comment markers, not only '
+                '`//`-style ones.\nstdout=$stdout',
           );
           expect(
             dirty.exitCode,
