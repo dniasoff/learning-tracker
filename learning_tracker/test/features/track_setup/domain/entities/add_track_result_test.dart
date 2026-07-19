@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
-import 'package:learning_tracker/features/tracks/setup/presentation/controllers/add_track_flow_state.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart';
 
 void main() {
@@ -157,51 +156,11 @@ void main() {
     });
   });
 
-  group('Program auto-skip logic', () {
-    // These call the real AddTrackFlowStateX.hasProgramsForCurriculum
-    // (lib/features/tracks/setup/presentation/controllers/add_track_flow_state.dart)
-    // directly instead of re-typing the curriculum list — see
-    // AUD-t-track_setup-01.
-    test('bavli has programs', () {
-      expect(
-        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.bavli),
-        true,
-      );
-    });
-
-    test('mishnaBerurah has programs', () {
-      expect(
-        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.mishnaBerurah),
-        true,
-      );
-    });
-
-    test('mishnayos has programs', () {
-      expect(
-        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.mishnayos),
-        true,
-      );
-    });
-
-    test('chumash has no programs', () {
-      expect(
-        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.chumash),
-        false,
-      );
-    });
-
-    test('mishnehTorah has programs', () {
-      expect(
-        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.mishnehTorah),
-        true,
-      );
-    });
-
-    test('tanach has programs', () {
-      expect(
-        AddTrackFlowStateX.hasProgramsForCurriculum(CurriculumId.tanach),
-        true,
-      );
-    });
-  });
+  // The former 'Program auto-skip logic' group (AddTrackFlowStateX
+  // .hasProgramsForCurriculum) was removed here — AUD-tracks-11 deleted
+  // add_track_flow_state.dart as dead code: the live AddTrackFlow wizard
+  // (add_track_flow_screen.dart) has always used its own independent
+  // _hasProgramStepForCurriculum implementation, never this extension, so
+  // this group pinned behavior nobody exercised in production. See the
+  // finding's commit for the full evidence trail.
 }

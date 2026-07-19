@@ -1112,7 +1112,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/eh3_profiles_log_less_catch_check.$$$$.log; \
 	fi; \
-	echo "80/83 — EH-2/SM-5 Rule-0: no unguarded await <prefs-or-dao-call> in a Future<void> Notifier method across the AUD-core-preferences-04 scope (core/preferences, notifications, sacred_time, scheduler, tracks/setup, onboarding providers)"; \
+	echo "80/83 — EH-2/SM-5 Rule-0: no unguarded await <prefs-or-dao-call> in a Future<void> Notifier method across the AUD-core-preferences-04 scope (core/preferences, notifications, sacred_time, scheduler, onboarding providers; the former tracks/setup entry, add_track_controller.dart, was deleted as dead code by AUD-tracks-11)"; \
 	if ! dart run tool/check_guarded_persist.dart > /tmp/check_guarded_persist.$$$$.log 2>&1; then \
 	  cat /tmp/check_guarded_persist.$$$$.log; \
 	  rm -f /tmp/check_guarded_persist.$$$$.log; \

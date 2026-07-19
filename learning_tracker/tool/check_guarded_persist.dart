@@ -25,12 +25,19 @@
 /// the same method body").
 ///
 /// Scope (deliberate, Rule 0 "ship the checker when you first apply the
-/// rule"): the exact 6 files AUD-core-preferences-04 named, plus (for the
-/// checker's own Rule-0 self-test — see
+/// rule"): 5 of the 6 files AUD-core-preferences-04 originally named, plus
+/// (for the checker's own Rule-0 self-test — see
 /// `test/tool/check_guarded_persist_test.dart`) any `.dart` file dropped
 /// into `test/fixtures/audit/guarded_persist/` (empty in the committed
 /// tree, so it contributes zero violations by default). A codebase-wide
 /// sweep for this shape is future work, not part of this finding.
+///
+/// `lib/features/tracks/setup/presentation/controllers/add_track_controller.dart`
+/// — the 6th originally-named file — was deleted by AUD-tracks-11 as dead
+/// code (zero production call sites; the live AddTrackFlow wizard never
+/// wired through this Riverpod controller). Its guarded-`_persist()` fix
+/// went with it, so it is dropped from scan scope rather than left as a
+/// dangling hard-error on a file that will never exist again.
 ///
 /// Usage:
 ///   dart run tool/check_guarded_persist.dart
@@ -49,7 +56,6 @@ const _scanFiles = [
   'lib/features/notifications/presentation/providers/notification_providers.dart',
   'lib/features/sacred_time/presentation/providers/sacred_location_provider.dart',
   'lib/features/scheduler/presentation/providers/scheduler_providers.dart',
-  'lib/features/tracks/setup/presentation/controllers/add_track_controller.dart',
   'lib/features/onboarding/presentation/providers/onboarding_controller.dart',
 ];
 
@@ -61,7 +67,7 @@ const _scanFiles = [
 const _fixtureScanDir = 'test/fixtures/audit/guarded_persist';
 
 /// Pre-existing violations OUTSIDE AUD-core-preferences-04's named 21 sites
-/// that a full scan of the 6 scoped files also surfaces. Not part of this
+/// that a full scan of the scoped files also surfaces. Not part of this
 /// finding's evidence/acceptance-criteria list — fixing them here would be
 /// a drive-by (scope discipline), so they are baselined the same way
 /// `tool/check_notifications_sync_effect_overrides.dart` (AUD-t-notifications-01)
@@ -70,15 +76,10 @@ const _fixtureScanDir = 'test/fixtures/audit/guarded_persist';
 /// silent no-op or a drive-by-forcing hard gate. Shrink as each is burned
 /// down by its own finding.
 ///
-///   * add_track_controller.dart:clearSaved() — `Future<void> clearSaved()`
-///     loops `await prefs.remove(key)` with no guard. Reachable (called by
-///     `add_track_flow_screen.dart` on wizard completion/exit), but NOT
-///     named in AUD-core-preferences-04's evidence or the 21-site count
-///     (only `_persist()`, reached via `_advance()`/`goBack()`, is named for
-///     this file) — logged as a candidate follow-up, not fixed here.
-const _baseline = {
-  'lib/features/tracks/setup/presentation/controllers/add_track_controller.dart|clearSaved',
-};
+/// Empty as of AUD-tracks-11: the sole entry (add_track_controller.dart's
+/// clearSaved()) was removed along with the file itself — see the
+/// `_scanFiles` doc comment above.
+const _baseline = <String>{};
 
 /// Persistence-shaped call verbs this checker treats as risky: a
 /// SharedPreferences setter/remove, a `ProfileScopedPreference`/DAO-style
