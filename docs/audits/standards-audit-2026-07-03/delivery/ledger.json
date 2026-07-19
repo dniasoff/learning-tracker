@@ -376,13 +376,13 @@
   {
    "id": "AUD-platform-01",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P1",
    "title": "Fix unverifiable Android App Link intent-filters for sign-in/invite deep links (AndroidManifest.xml)",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c1, 2026-07-19). Re-verified valid (live 404). Fixed at c9022519 on stray worktree branch worktree-wf_16899a0e-75c-1: firebase.json hosting block, check_assetlinks_live.sh (AC1 check), check_platform_deep_link_hosting.dart (audit 90/90). Gates green. Blocked: AC1/AC2 need Play Console SHA-256 + firebase deploy creds + a device, none here. See hosting/README.md. Commit not merged here (findingsMerged=[] for this pass, ledger-only mode); left unmerged on the stray worktree branch pending a worktree-branch retention decision (see cid w4r1c1 delivery notes). Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-guardrails-01",
