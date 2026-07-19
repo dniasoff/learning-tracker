@@ -980,6 +980,98 @@ void main() {
         await teardown(tester);
       },
     );
+
+    testWidgets(
+      '19b. a real drag gesture on the drag handle (startGesture -> moveBy '
+      '-> up) completes without a Material assertion failure',
+      (tester) async {
+        // Unlike test 19 above, which calls onReorderItem?.call(0, 1)
+        // directly, this drives the actual gesture/overlay/proxy path:
+        // SliverReorderableList lifts the dragged item into the Overlay
+        // while dragging, which needs its own Material ancestor (supplied
+        // via proxyDecorator) — a synthetic onReorderItem call bypasses
+        // that entirely and would silently pass even if drag were broken.
+        final items = [
+          _orderItem('Seder Zeraim', 0),
+          _orderItem('Seder Moed', 1),
+        ];
+
+        await tester.pumpWidget(
+          _buildOrderApp(repo: repo, sedarimFactory: () => Future.value(items)),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final handle = find.byIcon(Icons.drag_handle).first;
+        final gesture = await tester.startGesture(tester.getCenter(handle));
+        await tester.pump(const Duration(milliseconds: 50));
+        await gesture.moveBy(const Offset(0, 100));
+        await tester.pump(const Duration(milliseconds: 50));
+        await gesture.moveBy(const Offset(0, 100));
+        await tester.pump(const Duration(milliseconds: 50));
+        await gesture.up();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(
+          tester.takeException(),
+          isNull,
+          reason:
+              'a real drag gesture on the drag handle must not throw — '
+              'SliverReorderableList lifts the dragged item into an '
+              'Overlay during drag, which needs its own Material ancestor',
+        );
+
+        await teardown(tester);
+      },
+    );
+
+    testWidgets(
+      '19c. a real drag gesture on the MASECHTOS list drag handle also '
+      'completes without a Material assertion failure',
+      (tester) async {
+        // The masechtos section is a second, independent
+        // SliverReorderableList instance — cover it too rather than
+        // assuming the sedarim fix (19b) also covers it.
+        final sedarim = [_orderItem('Seder Zeraim', 0)];
+        final masechtos = [
+          _orderItem('Masechta Berachos', 0),
+          _orderItem('Masechta Shabbos', 1),
+        ];
+
+        await tester.pumpWidget(
+          _buildOrderApp(
+            repo: repo,
+            sedarimFactory: () => Future.value(sedarim),
+            masechtosFactory: () => Future.value(masechtos),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // The second drag_handle icon belongs to the masechtos list (the
+        // first belongs to the single sedarim row above it).
+        final handle = find.byIcon(Icons.drag_handle).at(1);
+        final gesture = await tester.startGesture(tester.getCenter(handle));
+        await tester.pump(const Duration(milliseconds: 50));
+        await gesture.moveBy(const Offset(0, 100));
+        await tester.pump(const Duration(milliseconds: 50));
+        await gesture.moveBy(const Offset(0, 100));
+        await tester.pump(const Duration(milliseconds: 50));
+        await gesture.up();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(
+          tester.takeException(),
+          isNull,
+          reason:
+              'a real drag gesture on the masechtos drag handle must not '
+              'throw either — both SliverReorderableList instances need '
+              'the proxyDecorator fix, not just the sedarim one',
+        );
+
+        await teardown(tester);
+      },
+    );
   });
 
   group('TrackLearningOrderScreen — race-safety (_sedarimSaveSeq)', () {

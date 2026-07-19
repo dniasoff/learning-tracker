@@ -36,6 +36,17 @@ const _kTrackId = 1;
 const _kCurriculumId = CurriculumId.mishnaBerurah;
 const _kMasechtosCount = 700;
 
+// A viewport-scale ceiling, not just "less than everything". The original
+// `lessThan(_kMasechtosCount)` bound (i.e. lessThan(700)) would still pass
+// at 699 realized rows, which is indistinguishable from the eager-build
+// defect this test guards against. AC2 requires "only a viewport's worth";
+// a phone-sized viewport realizes roughly a dozen ListTile-height rows plus
+// RenderSliverList's cacheExtent look-ahead — measured actual on this
+// fixture is 9. 50 leaves headroom for larger test viewports/screen
+// densities while still failing hard on anything resembling an eager,
+// whole-list build.
+const _kViewportScaleCeiling = 50;
+
 LearningOrderItem _item(String ref, int sortOrder) => LearningOrderItem(
   sefariaRef: ref,
   displayNameHe: ref,
@@ -121,11 +132,15 @@ void main() {
 
       expect(
         realized,
-        lessThan(_kMasechtosCount),
+        lessThan(_kViewportScaleCeiling),
         reason:
             'Only a viewport\'s worth of masechtos rows should be realized '
-            'lazily — found $realized of $_kMasechtosCount, indicating every '
-            'row was eagerly built (the shrinkWrap:true PF-2 defect).',
+            'lazily — found $realized of $_kMasechtosCount, which exceeds '
+            'the viewport-scale ceiling of $_kViewportScaleCeiling and '
+            'indicates every row was eagerly built (the shrinkWrap:true '
+            'PF-2 defect). A bound of lessThan($_kMasechtosCount) would '
+            'let 699 realized rows pass, which is not "a viewport\'s '
+            'worth" per AC2.',
       );
       // A sanity floor: the screen did render *something* — an empty result
       // would trivially satisfy lessThan() without proving the list works.

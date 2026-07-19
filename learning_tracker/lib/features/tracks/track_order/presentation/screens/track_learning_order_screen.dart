@@ -1,4 +1,5 @@
 import 'dart:async' show unawaited;
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -97,6 +98,7 @@ class _TrackLearningOrderScreenState
                       index: index,
                     ),
                     onReorderItem: _onReorderSedarim,
+                    proxyDecorator: _dragProxyDecorator,
                   ),
                 ],
                 if (_localMasechtos != null &&
@@ -124,11 +126,35 @@ class _TrackLearningOrderScreenState
                       index: index,
                     ),
                     onReorderItem: _onReorderMasechtos,
+                    proxyDecorator: _dragProxyDecorator,
                   ),
                 ],
                 const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
               ],
             ),
+    );
+  }
+
+  // Unlike ReorderableListView, SliverReorderableList (used directly here
+  // so the masechtos section can stay lazy — AUD-tracks-05) ships no
+  // default proxyDecorator: while a drag is underway it lifts the dragged
+  // item into the Overlay, outside the Scaffold's Material ancestry, so
+  // DraggableOrderItem's bare ListTile hits debugCheckHasMaterial. Mirror
+  // ReorderableListView's own default decorator (Material + elevation
+  // animation) so the drag proxy has an ancestor Material of its own.
+  Widget _dragProxyDecorator(
+    Widget child,
+    int index,
+    Animation<double> animation,
+  ) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final animValue = Curves.easeInOut.transform(animation.value);
+        final elevation = lerpDouble(0, 6, animValue)!;
+        return Material(elevation: elevation, child: child);
+      },
+      child: child,
     );
   }
 
