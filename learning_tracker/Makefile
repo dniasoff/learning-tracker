@@ -1174,6 +1174,14 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/orphaned_screens_check.$$$$.log; \
 	fi; \
+	echo "86/86 — AUD-guardrails-10: no NEW diverging same-basename tool script between ../tool/** and tool/** (root vs learning_tracker duplicate-tool drift) — RATCHET, only a NEW collision not in the tracked baseline fails the gate"; \
+	if ! dart run tool/check_dup_tool_basename.dart > /tmp/dup_tool_basename_check.$$$$.log 2>&1; then \
+	  cat /tmp/dup_tool_basename_check.$$$$.log; \
+	  rm -f /tmp/dup_tool_basename_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/dup_tool_basename_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \

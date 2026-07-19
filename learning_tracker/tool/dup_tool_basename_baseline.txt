@@ -1,0 +1,15 @@
+# Diverging tool/ basename-collision baseline — tool/check_dup_tool_basename.dart
+# (AUD-guardrails-10 acceptance_criteria[1]).
+#
+# gen_arch_tables.dart: repo-root tool/gen_arch_tables.dart and
+# learning_tracker/tool/gen_arch_tables.dart are two independently-written
+# scripts that happen to share a name and a general purpose (both generate a
+# Markdown table of Drift schema tables) but have materially different
+# implementations. This predates AUD-guardrails-10, is not named by it, and
+# is out of that finding's scope (scope discipline — fix only the assigned
+# finding) — tracked here as a candidate follow-up finding so this ratchet
+# does not fail on a known, pre-existing gap. A NEW diverging basename
+# collision (not listed here) fails `make audit`. Burn this down by deleting
+# or consolidating one of the two copies and removing this line — do NOT add
+# fresh entries to paper over a new violation.
+gen_arch_tables.dart
