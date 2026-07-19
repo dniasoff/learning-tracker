@@ -8883,13 +8883,21 @@
   {
    "id": "AUD-tracks-17",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Add semantics/tooltip to the icon-only close and back buttons in step_starting_position.dart and track_management_body.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "df3ac4600f2777c5b6993f2fcbd98e5123cad8bb"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-17 AC1 OK site1: step_starting_position.dart:279 tooltip: l10n.clearSelection; l10n bound at :198; key in app_en.arb:523 / app_he.arb:435",
+    "AUD-tracks-17 AC1 OK site2: track_management_body.dart:106 tooltip: MaterialLocalizations.of(context).backButtonTooltip (EN 'Back' / HE resolved live)",
+    "AUD-tracks-17 AC2 OK site1: l1_test EN asserts semantics.label=='Clear selection' + bySemanticsLabel; HE bySemanticsLabel finds 1 - both pass (+2)",
+    "AUD-tracks-17 AC2 OK site2: new track_management_body_a11y_test.dart EN label=='Back' + bySemanticsLabel, HE bySemanticsLabel - both pass (+2)",
+    "AUD-tracks-17 red-first VERIFIED by my mutation: removing only Icon(semanticLabel:) (tooltips kept) turned all 4 tests red (+0 -2 each), then restored"
+   ],
+   "notes": "Site1 unchanged, needed fix. Site2 had drifted: tooltip added by unrelated commit, semanticLabel still missing so AC2 unmet - not refuted. Added tooltip+semanticLabel to both (reused existing l10n keys). Red-first 4 tests; both ACs verified."
   },
   {
    "id": "AUD-t-tutoring-10",
