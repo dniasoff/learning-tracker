@@ -45,9 +45,9 @@ class TrackEditService {
     await _database.transaction(() async {
       // 1. Study days — delete-and-replace (same pattern as track creation).
       if (studyDays != null) {
-        await _saveStudyDays(
+        await _database.studyDayConfigDao.replaceAllForTrack(
           profileId: profileId,
-          curriculum: curriculum,
+          curriculumId: curriculum.storageKey,
           trackId: trackId,
           studyDays: studyDays,
         );
@@ -89,27 +89,5 @@ class TrackEditService {
           'TrackEditService: track $trackId edited for ${curriculum.storageKey} '
           '(profile=$profileId)',
     );
-  }
-
-  Future<void> _saveStudyDays({
-    required int profileId,
-    required CurriculumId curriculum,
-    required int trackId,
-    required Map<int, String> studyDays,
-  }) async {
-    final dao = _database.studyDayConfigDao;
-    await dao.deleteConfigsByCurriculumAndProfile(
-      curriculum.storageKey,
-      profileId,
-    );
-    for (final entry in studyDays.entries) {
-      await dao.upsertDayConfig(
-        profileId: profileId,
-        curriculumId: curriculum.storageKey,
-        trackId: trackId,
-        dayOfWeek: entry.key,
-        dayType: entry.value,
-      );
-    }
   }
 }

@@ -336,6 +336,56 @@ void main() {
       );
     });
 
+    group('replaceAllForTrack (AUD-tracks-19)', () {
+      test('inserts the full set in one batched round trip', () async {
+        await db.studyDayConfigDao.replaceAllForTrack(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          trackId: trackId,
+          studyDays: const {1: 'study', 3: 'rest', 5: 'study'},
+        );
+        final rows = await db.studyDayConfigDao
+            .getConfigsByCurriculumAndProfile(curriculumId, profileId);
+        expect(rows, hasLength(3));
+        expect(
+          {for (final r in rows) r.dayOfWeek: r.dayType},
+          {1: 'study', 3: 'rest', 5: 'study'},
+        );
+      });
+
+      test(
+        'replaces a prior set entirely — stale rows are removed, not merged',
+        () async {
+          await db.studyDayConfigDao.seedDefaultsForTrack(trackId: trackId);
+          // Seeded 7 'study' rows exist; replace with a smaller set.
+          await db.studyDayConfigDao.replaceAllForTrack(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            trackId: trackId,
+            studyDays: const {2: 'rest'},
+          );
+          final rows = await db.studyDayConfigDao
+              .getConfigsByCurriculumAndProfile(curriculumId, profileId);
+          expect(rows, hasLength(1));
+          expect(rows.single.dayOfWeek, 2);
+          expect(rows.single.dayType, 'rest');
+        },
+      );
+
+      test('an empty map clears all rows and inserts none', () async {
+        await db.studyDayConfigDao.seedDefaultsForTrack(trackId: trackId);
+        await db.studyDayConfigDao.replaceAllForTrack(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          trackId: trackId,
+          studyDays: const {},
+        );
+        final rows = await db.studyDayConfigDao
+            .getConfigsByCurriculumAndProfile(curriculumId, profileId);
+        expect(rows, isEmpty);
+      });
+    });
+
     group('getLatestUpdatedAt', () {
       test('returns null when no rows exist', () async {
         final t = await db.studyDayConfigDao.getLatestUpdatedAt(

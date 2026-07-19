@@ -113,9 +113,9 @@ class TrackCreationService {
         trackId: trackId,
       );
 
-      await _saveStudyDaysLocal(
+      await _database.studyDayConfigDao.replaceAllForTrack(
         profileId: profileId,
-        curriculumId: curriculum,
+        curriculumId: curriculum.storageKey,
         trackId: trackId,
         studyDays: result.studyDays,
       );
@@ -123,11 +123,14 @@ class TrackCreationService {
       await _database.curriculumScopeDao.clearScopesForTrack(trackId);
       if (result.scopeSelections != null &&
           result.scopeSelections!.isNotEmpty) {
-        await _saveScopes(
+        await _database.curriculumScopeDao.insertScopesForTrack(
           profileId: profileId,
-          curriculumId: curriculum,
+          curriculum: curriculum,
           trackId: trackId,
-          scopes: result.scopeSelections!,
+          scopes: [
+            for (final scope in result.scopeSelections!)
+              (level: scope.level, value: scope.value),
+          ],
         );
       }
 
@@ -342,30 +345,6 @@ class TrackCreationService {
     return (bookmarkRef: bookmarkRef, trackingStartDate: trackingStartDate);
   }
 
-  /// Write study-day config rows for [trackId] (LOCAL only — runs inside the
-  /// creation transaction). Cloud push is deferred to [_pushStudyDaysCloud].
-  Future<void> _saveStudyDaysLocal({
-    required int profileId,
-    required CurriculumId curriculumId,
-    required int trackId,
-    required Map<int, String> studyDays,
-  }) async {
-    final dao = _database.studyDayConfigDao;
-    await dao.deleteConfigsByCurriculumAndProfile(
-      curriculumId.storageKey,
-      profileId,
-    );
-    for (final entry in studyDays.entries) {
-      await dao.upsertDayConfig(
-        profileId: profileId,
-        curriculumId: curriculumId.storageKey,
-        trackId: trackId,
-        dayOfWeek: entry.key,
-        dayType: entry.value,
-      );
-    }
-  }
-
   /// Push the study-day configs to the cloud (network — runs AFTER commit).
   ///
   /// The cloud doc-id is derived from (curriculum_id, day_of_week, track_id)
@@ -387,29 +366,6 @@ class TrackCreationService {
         'day_type': entry.value,
         'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
       });
-    }
-  }
-
-  Future<void> _saveScopes({
-    required int profileId,
-    required CurriculumId curriculumId,
-    required int trackId,
-    required List<ScopeEntry> scopes,
-  }) async {
-    final now = DateTimeFactory.nowUtc();
-    for (final scope in scopes) {
-      await _database
-          .into(_database.curriculumScopes)
-          .insert(
-            CurriculumScopesCompanion.insert(
-              profileId: profileId,
-              curriculumId: curriculumId.storageKey,
-              trackId: trackId,
-              scopeLevel: scope.level,
-              scopeValue: scope.value,
-              createdAt: now,
-            ),
-          );
     }
   }
 

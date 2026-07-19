@@ -208,6 +208,8 @@ const _baseline = <String, int>{
       1,
   'test/features/tracks/setup/domain/services/track_creation_stage_seeding_test.dart':
       1,
+  'test/features/tracks/setup/domain/services/track_study_days_and_scopes_dedup_test.dart':
+      1,
   'test/features/tracks/setup/edit_track_screen_l1_test.dart': 1,
   'test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart':
       2,
