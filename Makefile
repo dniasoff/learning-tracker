@@ -87,12 +87,12 @@ test-epic-27:
 	@cd learning_tracker && flutter test test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart --reporter=expanded
 
 test-all:
-	@echo "Running all tests..."
-	@cd learning_tracker && flutter test
+	@echo "Running all tests (delegates to learning_tracker/Makefile:test for --coverage — AUD-guardrails-13)..."
+	@cd learning_tracker && $(MAKE) test
 
 analyze:
-	@echo "Running dart analyze..."
-	@cd learning_tracker && dart analyze
+	@echo "Running dart analyze (delegates to learning_tracker/Makefile:analyze for --fatal-infos — AUD-guardrails-13)..."
+	@cd learning_tracker && $(MAKE) analyze
 
 format:
 	@echo "Checking dart format..."
@@ -219,7 +219,7 @@ audit:
 	echo "All 12 greps clean."; \
 	echo ""; \
 	echo "Running custom_lint..."; \
-	cd learning_tracker && dart run custom_lint; \
+	cd learning_tracker && dart run custom_lint && \
 	echo "audit PASSED."
 
 arb-parity:
