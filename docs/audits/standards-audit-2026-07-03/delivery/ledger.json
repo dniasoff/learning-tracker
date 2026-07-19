@@ -10141,13 +10141,13 @@
   {
    "id": "AUD-scheduler-21",
    "wave": "parked",
-   "status": "parked",
+   "status": "skipped-refuted",
    "severity": "P3",
    "title": "Delete or wire in the dead scheduler PaceIndicator/ProjectedCompletionText widget file",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "skipped-refuted (merge-lane w4r1c20, 2026-07-19). Ledger row was previously parked (\"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); reclassified to skipped-refuted because the underlying target was affirmatively removed/consolidated by ancestor commits, not merely left deferred. Already fixed in code, independently confirmed: ancestor commit 81d4d12a5c2b04c5cda61d9f914deeb060a9e86e (fix(scheduler): AUD-scheduler-08 - delete dead pace_indicator.dart + test) deleted the scheduler's duplicate lib/features/scheduler/presentation/widgets/pace_indicator.dart and its test outright; ancestor commit a36198911ee40c34acacbedb042f4d0804c3d587 (fix(AUD-repo-01): de-dupe 7 duplicate public type names, land AG-4 audit gate) separately renamed the surviving progress-feature widget's class from PaceIndicator to ProgressPaceIndicator, which independently kills the AG-4 duplicate-name collision this finding also flags. Both commits are confirmed ancestors of this branch's current HEAD. Independently re-verified against the current tree: grep -rn 'class PaceIndicator' learning_tracker/lib/ -> 0 matches; grep -rn 'class ProgressPaceIndicator' learning_tracker/lib/ -> 1 match (lib/features/progress/presentation/widgets/pace_indicator.dart:15); find learning_tracker -iname pace_indicator.dart -> only the single surviving progress-feature file, no orphan. Both ACs (\"Only one public PaceIndicator class exists in lib/, or the two are clearly distinctly named.\" and \"No orphaned widget file with zero production call sites remains.\") are satisfied. Sibling finding AUD-scheduler-08 (targeting the same dead file) is independently already merged/fixed. No code change made."
   },
   {
    "id": "AUD-scheduler-20",
