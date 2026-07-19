@@ -5364,13 +5364,27 @@
   {
    "id": "AUD-guardrails-12",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Fix no_feature_cross_import's _isBarrel to match the documented providers.dart crossing point (or fix the doc)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "16ba230181fd2405980e71e0d2cf10c01eec4ace"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-12 AC1 OK: README:43,52,64-69 = <feature>.dart; coding-standards:110-116 = Y.dart; _isBarrel:47 = '$importedFeature.dart' - all agree",
+    "AUD-guardrails-12 AC1 corroborated: Makefile check 15 awk builds features/b1/b1.dart; learning_tracker/CLAUDE.md:65 says Y.dart - same convention",
+    "AUD-guardrails-12 AC1 OK: git show <merge-base>:docs/coding-standards.md 110-116 already Y.dart w/ AUD-learning-02 note - builder claim verified, not a deferral",
+    "AUD-guardrails-12 AC2 OK: test:244 tracks.dart isTrue; :248 account.dart isTrue; :252 providers.dart isFalse; :257 deep path isFalse; :263 wrong name isFalse",
+    "AUD-guardrails-12 AC2 OK: integration cases test:123/:139 allow tracks/tracks.dart and account/account.dart barrel imports - behavioral, not helper-mirror-only",
+    "AUD-guardrails-12 AC3 OK: dart test in packages/custom_lints -> 'All tests passed!' 219/219, exit 0 (my run)",
+    "AUD-guardrails-12 AC3 OK: dart test no_feature_cross_import_test.dart -> 20/20 pass, exit 0 (my run)",
+    "AUD-guardrails-12 accuracy OK: stale '(or ends with /providers.dart)' clause removed; _isBarrel is exact-match only, no subdir",
+    "AUD-guardrails-12 scope OK: diff <merge-base>..HEAD = packages/custom_lints/README.md only, +6/-6",
+    "AUD-guardrails-12 TQ-7 OK: zero test files in diff; no expects removed, weakened, or skipped",
+    "AUD-guardrails-12 no-op check OK: double '---' at README 71/73 present at merge-base, not introduced here"
+   ],
+   "notes": "coding-standards.md Rule 2 was already reconciled to <feature>.dart by prior AUD-learning-02; lint's _isBarrel and the test assertions already matched too. Only README.md still said providers.dart. Fixed its 4 Rule 2 refs to <feature>.dart to match docs+lint. No lint/test change needed."
   },
   {
    "id": "AUD-guardrails-15",
