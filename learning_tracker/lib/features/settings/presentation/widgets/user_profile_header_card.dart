@@ -30,7 +30,7 @@ enum UserProfileContextRole { selfLearner, parent, tutor }
 
 /// Profile header (avatar, name, email, badges) used on Settings and on
 /// [ParentSettingsScreen] for the active child.
-class UserProfileHeaderCard extends ConsumerStatefulWidget {
+class UserProfileHeaderCard extends ConsumerWidget {
   const UserProfileHeaderCard({
     super.key,
     required this.user,
@@ -45,33 +45,17 @@ class UserProfileHeaderCard extends ConsumerStatefulWidget {
   final UserProfileContextRole contextRole;
 
   @override
-  ConsumerState<UserProfileHeaderCard> createState() =>
-      _UserProfileHeaderCardState();
-}
-
-class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
-  AppUser? _user;
-
-  @override
-  void initState() {
-    super.initState();
-    _user = widget.user;
-  }
-
-  @override
-  void didUpdateWidget(covariant UserProfileHeaderCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.user != oldWidget.user) {
-      _user = widget.user;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    final user = _user;
+    // `this.` disambiguates from the local `user` declared below (Dart
+    // forbids a local initializer referencing its own not-yet-declared
+    // name), and capturing into a local lets flow analysis promote the
+    // null check for the rest of this method (AUD-settings-10: this widget
+    // used to be a ConsumerStatefulWidget solely to re-derive this from
+    // `widget.user` in initState/didUpdateWidget).
+    final user = this.user;
 
     if (user == null) {
       final authState = ref.watch(authStateProvider);
@@ -96,13 +80,13 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
         return const SizedBox.shrink();
       }
       return _wrapSurface(
-        widget.surface,
+        surface,
         _LocalBornProfileRow(
-          surface: widget.surface,
+          surface: surface,
           theme: theme,
           authUser: authState.currentUser!,
         ),
-        onTap: widget.surface == UserProfileHeaderSurface.settings
+        onTap: surface == UserProfileHeaderSurface.settings
             ? () => showAccountActionsSheet(context, ref)
             : null,
       );
@@ -110,12 +94,10 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
 
     final authState = ref.watch(authStateProvider);
     final activeProfileId = ref.watch(activeProfileIdProvider);
-    final profilesAsync = ref.watch(profileListStreamProvider);
+    // `this.` disambiguates the field from the local `activeProfile` below
+    // (same self-reference rule as `user` above).
     final activeProfile =
-        widget.activeProfile ??
-        profilesAsync.asData?.value
-            .where((p) => p.id == activeProfileId)
-            .firstOrNull;
+        this.activeProfile ?? _watchActiveProfileFromList(ref, activeProfileId);
 
     final displayName =
         activeProfile?.displayName ??
@@ -125,11 +107,7 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
     final profileInitial = _profileInitial(displayName);
 
     // Role-context badge: label + colour vary by who is viewing.
-    final (
-      badgeLabel,
-      badgeColor,
-      badgeTextColor,
-    ) = switch (widget.contextRole) {
+    final (badgeLabel, badgeColor, badgeTextColor) = switch (contextRole) {
       UserProfileContextRole.parent => (
         l10n.parentContextBadge,
         AppColors.settingsProfileBadgeParentBg,
@@ -151,12 +129,12 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
     // the synthetic internal address that credential-less offline accounts
     // carry (…@offline.local must never be shown to users).
     final showEmail =
-        widget.contextRole == UserProfileContextRole.selfLearner &&
+        contextRole == UserProfileContextRole.selfLearner &&
         user.email != null &&
         !user.email!.endsWith('@offline.local');
 
     return _wrapSurface(
-      widget.surface,
+      surface,
       onTap: () => showAccountActionsSheet(context, ref),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -343,10 +321,7 @@ class _LocalBornProfileRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeProfileId = ref.watch(activeProfileIdProvider);
-    final profilesAsync = ref.watch(profileListStreamProvider);
-    final activeProfile = profilesAsync.asData?.value
-        .where((p) => p.id == activeProfileId)
-        .firstOrNull;
+    final activeProfile = _watchActiveProfileFromList(ref, activeProfileId);
 
     final displayName =
         activeProfile?.displayName ??
@@ -451,6 +426,24 @@ class _NoBackupInlineText extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Resolves the [ProfileModel] matching [activeProfileId] out of the live
+/// profile-list stream.
+///
+/// AUD-settings-10: this lookup used to be copy-pasted between
+/// [UserProfileHeaderCard]'s and [_LocalBornProfileRow]'s `build` methods.
+/// Shared here and read via [ProviderListenable.select] (PF-1) so callers
+/// rebuild only when the *resolved profile* changes, not on every unrelated
+/// mutation to the full profile list.
+ProfileModel? _watchActiveProfileFromList(WidgetRef ref, int activeProfileId) {
+  return ref.watch(
+    profileListStreamProvider.select(
+      (asyncValue) => asyncValue.asData?.value
+          .where((p) => p.id == activeProfileId)
+          .firstOrNull,
+    ),
+  );
 }
 
 String _profileInitial(String fullName) {
