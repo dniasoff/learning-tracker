@@ -501,4 +501,25 @@ void main() {
       expect(curriculumHebrewName(CurriculumId.bavli), isNotEmpty);
     });
   });
+
+  group('CurriculumLabel.isHebrewText (AUD-tracks-18 canonical detector)', () {
+    // Exposed so other Hebrew-aware widgets (e.g.
+    // TrackLearningOrderScreen's section headers) can share this single
+    // Unicode-range detector instead of hand-rolling a private RegExp copy.
+    test('Hebrew-script text is detected', () {
+      expect(CurriculumLabel.isHebrewText('משניות'), isTrue);
+    });
+
+    test('English-only text is not detected', () {
+      expect(CurriculumLabel.isHebrewText('Mishnayos'), isFalse);
+    });
+
+    test('mixed Hebrew + English text is detected', () {
+      expect(CurriculumLabel.isHebrewText('Seder משניות'), isTrue);
+    });
+
+    test('empty string is not detected', () {
+      expect(CurriculumLabel.isHebrewText(''), isFalse);
+    });
+  });
 }
