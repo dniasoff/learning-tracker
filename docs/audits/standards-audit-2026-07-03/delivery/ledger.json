@@ -5248,13 +5248,21 @@
   {
    "id": "AUD-guardrails-13",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Fix root Makefile's audit/analyze/test-all targets so they stop reporting false passes",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "dd153bd0433427992ba5363fbe75f52b0aeacede",
+    "cfd90e174eff33fac0007904dcfd3a45cfe418d9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-13 AC1 OK: Makefile:219 `;`->`&&`; repro: `;` prints PASSED exit0(bug), `&&` no-PASSED exit1; success path exit0; real custom_lint exit0",
+    "AUD-guardrails-13 AC2-analyze OK: root `make analyze`->inner `dart analyze --fatal-infos`; real run exit0 'No issues found!'",
+    "AUD-guardrails-13 AC2-test-all OK: root `make test-all`->inner `flutter test --coverage`+lcov excl; coverage smoke emitted coverage/lcov.info",
+    "AUD-guardrails-13 AC2-ci OK: `ci: analyze ... test-all`; `make -n ci` resolves to `--fatal-infos` and `--coverage`, inherits both fixes"
+   ],
+   "notes": "Confirmed at HEAD. Changed audit's trailing `;` to `&&` so custom_lint failures propagate exit code; made root analyze/test-all thin wrappers delegating to learning_tracker/Makefile (no more flag drift). Real-text repro: before exit0+PASSED (red), after exit1 (green). Merged --no-ff onto dev (w4r1c4, mergeSha cfd90e174eff33fac0007904dcfd3a45cfe418d9). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (no issues found, 14.5s). gatePolicy=overlap-tested: rebase vs dev tip overlapped on Makefile (merge-base e4306ec15a080d52a3ad2212427be10ce5ba888a); no Dart test suite maps to Makefile (build tooling, not application code), and payload.testsToRun was empty, so no additional flutter test invocation was required beyond the passing make audit + flutter analyze gates."
   },
   {
    "id": "AUD-guardrails-07",
