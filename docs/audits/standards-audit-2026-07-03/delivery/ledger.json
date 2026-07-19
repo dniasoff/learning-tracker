@@ -6918,13 +6918,26 @@
   {
    "id": "AUD-tracks-19",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Deduplicate TrackCreationService/TrackEditService's verbatim study-day persistence loop",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "635a37104e3fe7107fc8720d9a9ddaa0bd8b6758"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-19 AC1 OK: study_day_config_dao.dart:125-143 replaceAllForTrack = delete + single batch(){insertAll}",
+    "AUD-tracks-19 AC1 OK: curriculum_scope_dao.dart:88-117 insertScopesForTrack = batch(){insertAll}",
+    "AUD-tracks-19 AC1 OK: scope delete half = pre-existing clearScopesForTrack at track_creation_service.dart:123",
+    "AUD-tracks-19 AC1 OK: DB-2 respected; also works standalone (DAO tests call it outside any txn, 538/538 pass)",
+    "AUD-tracks-19 AC2 OK: both callers present - track_creation_service.dart:116, track_edit_service.dart:48",
+    "AUD-tracks-19 AC2 OK: _saveStudyDaysLocal/_saveStudyDays/_saveScopes deleted in diff; no copy remains",
+    "AUD-tracks-19 AC2 OK: remaining studyDays.entries loop is _pushStudyDaysCloud (net push, out of DB-3 scope)",
+    "AUD-tracks-19 AC2 OK: deleteConfigsByCurriculumAndProfile now has exactly one caller repo-wide (the helper)",
+    "AUD-tracks-19 behavior OK: PK {profileId,curriculumId,dayOfWeek,trackId}; delete spans all tracks so insertAll cannot conflict",
+    "AUD-tracks-19 no orphan: upsertDayConfig still used at study_day_config_screen.dart:284"
+   ],
+   "notes": "Confirmed duplicate loops still present. Added shared StudyDayConfigDao.replaceAllForTrack (batch insertAll), both services now call it, duplicates deleted. Added CurriculumScopeDao.insertScopesForTrack (batch) replacing hand-rolled loop. Red-first DAO tests, then service regression tests."
   },
   {
    "id": "AUD-tracks-22",
