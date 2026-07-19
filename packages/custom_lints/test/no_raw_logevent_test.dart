@@ -76,6 +76,34 @@ Future<void> build(AnalyticsService analyticsService, String eventName) async {
               'outside analytics_service.dart must be flagged',
         );
       });
+
+      test(
+          'flags a raw logEvent(...) call inside a decoy '
+          'analytics_service.dart living outside lib/core/analytics/ '
+          '(AUD-guardrails-18)', () async {
+        final file = _tmpFileAt(
+          '''
+class AnalyticsService {
+  Future<void> logEvent(String name, {Map<String, Object?>? parameters}) async {}
+}
+
+Future<void> build(AnalyticsService analyticsService) async {
+  await analyticsService.logEvent('custom_event');
+}
+''',
+          'lib/features/x',
+          fileName: 'analytics_service.dart',
+        );
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors.where((e) => e.errorCode.name == _codeName),
+          isNotEmpty,
+          reason: 'A file merely named analytics_service.dart outside the '
+              'authorised lib/core/analytics/ directory must NOT inherit '
+              'the whitelist exemption — the exemption is anchored to the '
+              'directory, not the bare filename',
+        );
+      });
     });
 
     group('allowed — negatives', () {
