@@ -75,13 +75,11 @@ class _TrackLearningOrderScreenState
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_localSedarim != null && _localSedarim!.isNotEmpty) ...[
-                    _buildSectionHeader(
+          : CustomScrollView(
+              slivers: [
+                if (_localSedarim != null && _localSedarim!.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
                       context,
                       theme,
                       CurriculumLabels.topSectionHeader(
@@ -90,26 +88,24 @@ class _TrackLearningOrderScreenState
                         variant: variant,
                       ),
                     ),
-                    ReorderableListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      onReorderItem: _onReorderSedarim,
-                      children: [
-                        for (var i = 0; i < _localSedarim!.length; i++)
-                          DraggableOrderItem(
-                            key: ValueKey(_localSedarim![i].sefariaRef),
-                            item: _localSedarim![i],
-                            index: i,
-                          ),
-                      ],
+                  ),
+                  SliverReorderableList(
+                    itemCount: _localSedarim!.length,
+                    itemBuilder: (context, index) => DraggableOrderItem(
+                      key: ValueKey(_localSedarim![index].sefariaRef),
+                      item: _localSedarim![index],
+                      index: index,
                     ),
-                  ],
-                  if (_localMasechtos != null &&
-                      _localMasechtos!.isNotEmpty &&
-                      CurriculumLabels.hasReorderableLevel2(
-                        widget.curriculumId,
-                      )) ...[
-                    _buildSectionHeader(
+                    onReorderItem: _onReorderSedarim,
+                  ),
+                ],
+                if (_localMasechtos != null &&
+                    _localMasechtos!.isNotEmpty &&
+                    CurriculumLabels.hasReorderableLevel2(
+                      widget.curriculumId,
+                    )) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
                       context,
                       theme,
                       CurriculumLabels.containerSectionHeader(
@@ -119,22 +115,19 @@ class _TrackLearningOrderScreenState
                           ) ??
                           '',
                     ),
-                    ReorderableListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      onReorderItem: _onReorderMasechtos,
-                      children: [
-                        for (var i = 0; i < _localMasechtos!.length; i++)
-                          DraggableOrderItem(
-                            key: ValueKey(_localMasechtos![i].sefariaRef),
-                            item: _localMasechtos![i],
-                            index: i,
-                          ),
-                      ],
+                  ),
+                  SliverReorderableList(
+                    itemCount: _localMasechtos!.length,
+                    itemBuilder: (context, index) => DraggableOrderItem(
+                      key: ValueKey(_localMasechtos![index].sefariaRef),
+                      item: _localMasechtos![index],
+                      index: index,
                     ),
-                  ],
+                    onReorderItem: _onReorderMasechtos,
+                  ),
                 ],
-              ),
+                const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
+              ],
             ),
     );
   }

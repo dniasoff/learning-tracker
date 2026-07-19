@@ -1,6 +1,6 @@
 /// Custom lint rules for the Learning Tracker project.
 ///
-/// Provides eighteen rules:
+/// Provides nineteen rules:
 ///   - [NoColorLiteralOutsideTheme]: warns on direct `Color(0x…)` hex-literal
 ///     constructor calls outside `lib/core/theme/`; use AppColors/AppTheme constants.
 ///   - [NoCurriculumDisplayNameBypass]: prevents access to `.displayNameEn` /
@@ -60,6 +60,11 @@
 ///     onboarding UI text (`Text(`/`errorText:`/`hintText:`/`label:`/etc.)
 ///     under `lib/features/onboarding/presentation/**` — the AX-2 [P]
 ///     literals checker (AUD-onboarding-04).
+///   - [NoShrinkWrapReorderableList]: flags the plain (non-`.builder`)
+///     `ReorderableListView(...)` constructor combined with
+///     `shrinkWrap: true` under `lib/features/**` — shrinkWrap forces
+///     every row to be realized up front regardless of viewport
+///     (AUD-tracks-05, PF-2).
 library learning_tracker_lints;
 
 import 'package:custom_lint_builder/custom_lint_builder.dart';
@@ -80,6 +85,7 @@ import 'src/rules/no_onboarding_raw_string_literal.dart';
 import 'src/rules/no_raw_logevent.dart';
 import 'src/rules/no_raw_talker.dart';
 import 'src/rules/no_ref_after_await_without_mounted_check.dart';
+import 'src/rules/no_shrink_wrap_reorderable_list.dart';
 import 'src/rules/no_side_effect_in_provider_build.dart';
 import 'src/rules/no_unguarded_async_notifier_init.dart';
 import 'src/rules/no_unguarded_state_touch_after_await.dart';
@@ -106,6 +112,7 @@ class _LearningTrackerLintPlugin extends PluginBase {
         NoRawLogEvent(),
         NoRawTalker(),
         NoRefAfterAwaitWithoutMountedCheck(),
+        NoShrinkWrapReorderableList(),
         NoSideEffectInProviderBuild(),
         NoUnguardedAsyncNotifierInit(),
         NoUnguardedStateTouchAfterAwait(),

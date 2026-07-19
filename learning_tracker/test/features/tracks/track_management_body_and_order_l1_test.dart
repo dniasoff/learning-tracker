@@ -963,9 +963,10 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         // Simulate the internal _onReorderSedarim(0, 1) callback
-        // by looking up the ReorderableListView and calling its onReorderItem.
-        final listFinder = find.byType(ReorderableListView).first;
-        final listWidget = tester.widget<ReorderableListView>(listFinder);
+        // by looking up the SliverReorderableList and calling its
+        // onReorderItem.
+        final listFinder = find.byType(SliverReorderableList).first;
+        final listWidget = tester.widget<SliverReorderableList>(listFinder);
         // onReorderItem moves item at index 0 to index 1 (swaps Zeraim/Moed).
         listWidget.onReorderItem?.call(0, 1);
         await tester.pump();
@@ -1034,8 +1035,8 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        final listFinder = find.byType(ReorderableListView).first;
-        final listWidget = tester.widget<ReorderableListView>(listFinder);
+        final listFinder = find.byType(SliverReorderableList).first;
+        final listWidget = tester.widget<SliverReorderableList>(listFinder);
 
         // First reorder — its save is left pending ("slow").
         listWidget.onReorderItem?.call(0, 1);
@@ -1112,8 +1113,8 @@ void main() {
 
         expect(_renderedRefs(tester), ['Seder Zeraim', 'Seder Moed']);
 
-        final listFinder = find.byType(ReorderableListView).first;
-        final listWidget = tester.widget<ReorderableListView>(listFinder);
+        final listFinder = find.byType(SliverReorderableList).first;
+        final listWidget = tester.widget<SliverReorderableList>(listFinder);
         listWidget.onReorderItem?.call(0, 1);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
@@ -1157,9 +1158,9 @@ void main() {
         containsAllInOrder(['Masechta Berachos', 'Masechta Shabbos']),
       );
 
-      // The second ReorderableListView is the masechtos list.
-      final listFinder = find.byType(ReorderableListView).at(1);
-      final listWidget = tester.widget<ReorderableListView>(listFinder);
+      // The second SliverReorderableList is the masechtos list.
+      final listFinder = find.byType(SliverReorderableList).at(1);
+      final listWidget = tester.widget<SliverReorderableList>(listFinder);
       listWidget.onReorderItem?.call(0, 1);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
