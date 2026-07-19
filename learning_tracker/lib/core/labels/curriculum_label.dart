@@ -391,10 +391,18 @@ class CurriculumLabel extends ConsumerWidget {
     textDirection: textDirection ?? _inferDirection(text),
   );
 
-  static TextDirection? _inferDirection(String text) {
-    // Hebrew code block U+0590..U+05FF.
-    return _hebrew.hasMatch(text) ? TextDirection.rtl : null;
-  }
+  static TextDirection? _inferDirection(String text) =>
+      isHebrewText(text) ? TextDirection.rtl : null;
+
+  /// True when [text] contains any Hebrew-script character (Unicode block
+  /// U+0590..U+05FF).
+  ///
+  /// This is the single canonical Hebrew-script detector for `core/labels`
+  /// (AUD-tracks-18): other call sites that need bidi-aware handling of a
+  /// plain label string — not a [CurriculumLabel] widget itself, e.g.
+  /// `TrackLearningOrderScreen`'s section headers — call this instead of
+  /// hand-rolling a private copy of the same Unicode range.
+  static bool isHebrewText(String text) => _hebrew.hasMatch(text);
 
   static final RegExp _hebrew = RegExp('[֐-׿]');
 }

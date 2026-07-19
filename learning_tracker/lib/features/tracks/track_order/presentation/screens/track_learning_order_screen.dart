@@ -153,13 +153,14 @@ class _TrackLearningOrderScreenState
         ),
         // DNI-341: infer RTL for Hebrew-script labels so the header aligns
         // with the list items below it even inside an LTR Directionality.
-        textDirection: _hebrewScript.hasMatch(label) ? TextDirection.rtl : null,
+        // AUD-tracks-18: shares CurriculumLabel's canonical detector instead
+        // of a private RegExp copy.
+        textDirection: CurriculumLabel.isHebrewText(label)
+            ? TextDirection.rtl
+            : null,
       ),
     );
   }
-
-  // Hebrew Unicode block U+0590..U+05FF (same regex as CurriculumLabel).
-  static final RegExp _hebrewScript = RegExp('[֐-׿]');
 
   Future<void> _onReorderSedarim(int oldIndex, int newIndex) async {
     // Reorder-amnesty guard: warn the user if they have outstanding overdue
