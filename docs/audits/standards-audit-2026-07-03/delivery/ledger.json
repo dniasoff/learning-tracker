@@ -6420,13 +6420,13 @@
   {
    "id": "AUD-guardrails-14",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P2",
    "title": "Gate deploy-play-store.yml on a passing CI run for the exact SHA being deployed",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c3, 2026-07-20). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (a0c26b7b23843f24b34332cff175061d4e407565, \"fix(guardrails): AUD-guardrails-14 - gate deploy-play-store.yml on a green ci.yml run for the deploying SHA\", on stray worktree branch worktree-wf_79789e5b-0d2-3) touching .github/workflows/deploy-play-store.yml, tool/check_deploy_ci_gate.mjs, tool/check_deploy_ci_gate.test.mjs -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_79789e5b-0d2-3 confirms the commit is not patch-equivalent to anything already on dev, so per protocol the stray worktree directory was removed but the worktree-wf_79789e5b-0d2-3 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-10, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03.\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-guardrails-16",
