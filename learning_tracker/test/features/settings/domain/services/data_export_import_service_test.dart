@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 
 import '../../../../helpers/data_export_fixtures.dart';
@@ -48,11 +49,11 @@ void main() {
       expect(preview.appVersion, '1.0.0');
     });
 
-    test('throws FormatException for invalid JSON', () {
+    test('throws ImportValidationException for invalid JSON', () {
       expect(
         () => service.validateAndPreview('not json'),
         throwsA(
-          isA<FormatException>().having(
+          isA<ImportValidationException>().having(
             (e) => e.message,
             'message',
             'Invalid JSON format',
@@ -61,14 +62,14 @@ void main() {
       );
     });
 
-    test('throws FormatException when formatVersion is missing', () {
+    test('throws ImportValidationException when formatVersion is missing', () {
       final data = exportPayloadMap()..remove('formatVersion');
       final jsonStr = json.encode(data);
 
       expect(
         () => service.validateAndPreview(jsonStr),
         throwsA(
-          isA<FormatException>().having(
+          isA<ImportValidationException>().having(
             (e) => e.message,
             'message',
             'Missing formatVersion field',
@@ -77,26 +78,29 @@ void main() {
       );
     });
 
-    test('throws FormatException when a required section is missing', () {
-      final data = {
-        'formatVersion': '1',
-        'completions': <dynamic>[],
-        // missing 'goals' and others
-      };
+    test(
+      'throws ImportValidationException when a required section is missing',
+      () {
+        final data = {
+          'formatVersion': '1',
+          'completions': <dynamic>[],
+          // missing 'goals' and others
+        };
 
-      expect(
-        () => service.validateAndPreview(json.encode(data)),
-        throwsA(
-          isA<FormatException>().having(
-            (e) => e.message,
-            'message',
-            contains('Missing required section'),
+        expect(
+          () => service.validateAndPreview(json.encode(data)),
+          throwsA(
+            isA<ImportValidationException>().having(
+              (e) => e.message,
+              'message',
+              contains('Missing required section'),
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
-    test('throws FormatException when a section is not a list', () {
+    test('throws ImportValidationException when a section is not a list', () {
       final data = <String, dynamic>{
         ...exportPayloadMap(),
         'completions': 'not a list',
@@ -105,7 +109,7 @@ void main() {
       expect(
         () => service.validateAndPreview(json.encode(data)),
         throwsA(
-          isA<FormatException>().having(
+          isA<ImportValidationException>().having(
             (e) => e.message,
             'message',
             contains('must be a list'),

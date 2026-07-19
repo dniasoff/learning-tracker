@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
+import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -360,13 +361,13 @@ void main() {
         // Malformed JSON
         expect(
           () => service.validateAndPreview('not json'),
-          throwsA(isA<FormatException>()),
+          throwsA(isA<ImportValidationException>()),
         );
 
         // Valid JSON but missing sections
         expect(
           () => service.validateAndPreview('{"completions": []}'),
-          throwsA(isA<FormatException>()),
+          throwsA(isA<ImportValidationException>()),
         );
 
         // Missing formatVersion
@@ -384,7 +385,7 @@ void main() {
         });
         expect(
           () => service.validateAndPreview(missingVersion),
-          throwsA(isA<FormatException>()),
+          throwsA(isA<ImportValidationException>()),
         );
 
         // Section is not a list
@@ -403,7 +404,7 @@ void main() {
         });
         expect(
           () => service.validateAndPreview(badSection),
-          throwsA(isA<FormatException>()),
+          throwsA(isA<ImportValidationException>()),
         );
       },
     );

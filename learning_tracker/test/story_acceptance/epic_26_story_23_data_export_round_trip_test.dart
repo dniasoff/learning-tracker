@@ -10,6 +10,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
+import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 import 'package:test/test.dart';
 
@@ -563,7 +564,7 @@ void main() {
 
       expect(
         () => _service(db).importData('not json'),
-        throwsA(isA<FormatException>()),
+        throwsA(isA<ImportValidationException>()),
       );
 
       expect(
@@ -574,7 +575,7 @@ void main() {
             // Missing other required sections
           }),
         ),
-        throwsA(isA<FormatException>()),
+        throwsA(isA<ImportValidationException>()),
       );
     });
 

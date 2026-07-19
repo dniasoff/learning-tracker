@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 
 import '../../../../helpers/data_export_fixtures.dart';
@@ -326,12 +327,13 @@ void main() {
       },
     );
 
-    test(
-      'importData is a no-op on invalid JSON (throws FormatException)',
-      () async {
-        expect(() => service.importData('not json'), throwsA(isA<Exception>()));
-      },
-    );
+    test('importData is a no-op on invalid JSON '
+        '(throws ImportValidationException)', () async {
+      expect(
+        () => service.importData('not json'),
+        throwsA(isA<ImportValidationException>()),
+      );
+    });
 
     test('round-trip: exportData → importData preserves track count', () async {
       // Insert a track.
