@@ -5190,13 +5190,23 @@
   {
    "id": "AUD-guardrails-07",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Consolidate the two divergent arb_parity_check.dart implementations",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "b9d1c222f1dbf7d55fd8e2938b4796dab92fb172"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-07 AC1a OK: find -iname 'arb_parity_check*' returns exactly one: ./tool/arb_parity_check.dart",
+    "AUD-guardrails-07 AC1b OK: Makefile:219-221 arb-parity runs '@dart run tool/arb_parity_check.dart', unchanged",
+    "AUD-guardrails-07 AC1c OK: ci.yml:488-489 step 'run: make arb-parity', no working-directory -> root Makefile -> same script",
+    "AUD-guardrails-07 AC1d OK: yaml.safe_load parses ci.yml; arb-parity steps end with make arb-parity at root cwd",
+    "AUD-guardrails-07 AC1e OK: repo-wide grep 'learning_tracker/tool/arb_parity' returns zero remaining refs to the deleted copy",
+    "AUD-guardrails-07 AC1f OK: make arb-parity at repo root exits 0 (1541 keys) - no root pubspec needed, CI invocation resolves",
+    "AUD-guardrails-07 TQ-7 OK: diff = ci.yml + deleted learning_tracker copy only; no test touched, no assertion removed"
+   ],
+   "notes": "Two divergent copies confirmed. Deleted weaker learning_tracker/tool/arb_parity_check.dart; kept root tool/ (covered by existing test). CI job now runs make arb-parity (AG-1), not a stale check on the deleted file. Makefile unchanged. AC verified."
   },
   {
    "id": "AUD-firebase-09",
