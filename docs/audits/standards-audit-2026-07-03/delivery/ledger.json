@@ -11074,13 +11074,19 @@
   {
    "id": "AUD-guardrails-19",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Automate hooks/pre-commit installation instead of relying on manual copy/chmod instructions",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "84b0cd74d56ca5286f2852232ec30c5518687b8b",
+    "1bd1876caf84ee2f4ba4d142c4a2b5969b263864"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-19 AC1 OK: make install-hooks committed (.PHONY+help+recipe); worktree-safe git rev-parse --git-path hooks + cp/chmod; verified installs exec pre-commit",
+    "AUD-guardrails-19 AC2 OK: 4 docs point to it: hooks/README.md:11, CONTRIBUTING.md:176, learning_tracker/README.md:74, docs/development-guide.md:127; cp/chmod removed"
+   ],
+   "notes": "Confirmed evidence held (no hook target in Makefiles; 5 sites had raw cp/chmod). Added make install-hooks (git rev-parse --git-path hooks, worktree-safe) and repointed hooks/README.md, CONTRIBUTING.md, learning_tracker/README.md, docs/development-guide.md, hooks/pre-commit. Both ACs satisfied. Merged --no-ff onto dev (w4r1c10, mergeSha 1bd1876caf84ee2f4ba4d142c4a2b5969b263864). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (no issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base e4306ec15a080d52a3ad2212427be10ce5ba888a), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-guardrails-24",
