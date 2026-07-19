@@ -1220,7 +1220,7 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/dart_test_tags_check.$$$$.log; \
 	fi; \
-	echo "91/91 — Rule-0: no dead UIBackgroundModes entries in ios/Runner/Info.plist — a declared mode must have a matching AppDelegate.swift handler (App Review 2.5.4 friction + misleading signal for future push work, AUD-platform-02)"; \
+	echo "91/92 — Rule-0: no dead UIBackgroundModes entries in ios/Runner/Info.plist — a declared mode must have a matching AppDelegate.swift handler (App Review 2.5.4 friction + misleading signal for future push work, AUD-platform-02)"; \
 	if grep -A2 "UIBackgroundModes" ios/Runner/Info.plist | grep -q .; then \
 	  echo "  ios/Runner/Info.plist declares UIBackgroundModes with no corresponding AppDelegate.swift handler"; \
 	  echo "  (no performFetchWithCompletionHandler/didReceiveRemoteNotification override, no registerForRemoteNotifications() call)."; \
@@ -1228,6 +1228,14 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	  echo "  handler + firebase_messaging dependency in the same change and reference a Linear ticket (AUD-platform-02):"; \
 	  grep -A2 "UIBackgroundModes" ios/Runner/Info.plist; \
 	  FAIL=1; \
+	fi; \
+	echo "92/92 — AUD-platform-01: firebase.json declares a hosting block (auto-served assetlinks.json, appAssociation not disabled) and AndroidManifest.xml's autoVerify sign-in/invite intent-filters still match AuthRepositoryImpl's link domain — static half of the fix; the live half (assetlinks.json actually resolving 200) is tool/check_assetlinks_live.sh, run post-deploy in CI since it needs network access"; \
+	if ! dart run tool/check_platform_deep_link_hosting.dart > /tmp/platform_deep_link_hosting_check.$$$$.log 2>&1; then \
+	  cat /tmp/platform_deep_link_hosting_check.$$$$.log; \
+	  rm -f /tmp/platform_deep_link_hosting_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/platform_deep_link_hosting_check.$$$$.log; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \

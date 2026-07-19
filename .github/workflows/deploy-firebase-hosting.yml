@@ -1,0 +1,90 @@
+name: Deploy Firebase Hosting (deep-link verification host)
+
+# AUD-platform-01: torah-study-tracker.firebaseapp.com currently 404s on
+# everything (no `hosting` block in firebase.json before this fix), so
+# Android can never verify the app as the handler for the /sign-in and
+# /invite `autoVerify="true"` deep links in
+# learning_tracker/android/app/src/main/AndroidManifest.xml — both the
+# email sign-in-continuation flow and the tutor-invite-accept flow
+# dead-end in the system browser. This workflow deploys the hosting site
+# that makes the domain resolve, then runs a live smoke check
+# (tool/check_assetlinks_live.sh) that fails the pipeline if
+# /.well-known/assetlinks.json doesn't come back 200 with this app's
+# package_name and a real fingerprint.
+#
+# manual-dispatch only, like deploy-play-store.yml, and requires TWO new
+# repo secrets that do not exist yet — this workflow cannot succeed until
+# a human with the relevant access adds them (see learning_tracker/hosting/
+# README.md for the full "what still has to happen" list; this is NOT
+# something a code change alone can complete):
+#
+#   FIREBASE_TOKEN            — `firebase login:ci` output (or a service
+#                                account with Firebase Hosting Admin +
+#                                Firebase Authenticated User roles on
+#                                torah-study-tracker), used for both the
+#                                `apps:android:sha:create` registration and
+#                                `deploy --only hosting`.
+#   PLAY_APP_SIGNING_SHA256    — the SHA-256 app signing key certificate
+#                                fingerprint from Play Console → Setup →
+#                                App integrity. NOT the upload-keystore
+#                                fingerprint deploy-play-store.yml prints
+#                                (Google Play App Signing re-signs the
+#                                uploaded bundle with a different key) —
+#                                only a human with Play Console access can
+#                                read this value.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  deploy-hosting:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Guard required secrets are present
+        run: |
+          missing=0
+          if [ -z "${{ secrets.FIREBASE_TOKEN }}" ]; then
+            echo "::error::FIREBASE_TOKEN secret is not set — see this workflow's header comment."
+            missing=1
+          fi
+          if [ -z "${{ secrets.PLAY_APP_SIGNING_SHA256 }}" ]; then
+            echo "::error::PLAY_APP_SIGNING_SHA256 secret is not set — see this workflow's header comment."
+            missing=1
+          fi
+          if [ "$missing" -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Register the release signing certificate fingerprint
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          SHA256: ${{ secrets.PLAY_APP_SIGNING_SHA256 }}
+        run: |
+          firebase apps:android:sha:create \
+            1:346569574648:android:3519edaeb5ce5df9d6130d \
+            "$SHA256" \
+            --project torah-study-tracker
+
+      - name: Deploy Firebase Hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        working-directory: learning_tracker
+        run: firebase deploy --only hosting --project torah-study-tracker
+
+      - name: Verify assetlinks.json is live (fails the pipeline on regression)
+        working-directory: learning_tracker
+        run: |
+          chmod +x tool/check_assetlinks_live.sh
+          ./tool/check_assetlinks_live.sh
