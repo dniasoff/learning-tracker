@@ -1,4 +1,5 @@
 import 'dart:async' show unawaited;
+import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,13 +76,11 @@ class _TrackLearningOrderScreenState
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_localSedarim != null && _localSedarim!.isNotEmpty) ...[
-                    _buildSectionHeader(
+          : CustomScrollView(
+              slivers: [
+                if (_localSedarim != null && _localSedarim!.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
                       context,
                       theme,
                       CurriculumLabels.topSectionHeader(
@@ -90,26 +89,25 @@ class _TrackLearningOrderScreenState
                         variant: variant,
                       ),
                     ),
-                    ReorderableListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      onReorderItem: _onReorderSedarim,
-                      children: [
-                        for (var i = 0; i < _localSedarim!.length; i++)
-                          DraggableOrderItem(
-                            key: ValueKey(_localSedarim![i].sefariaRef),
-                            item: _localSedarim![i],
-                            index: i,
-                          ),
-                      ],
+                  ),
+                  SliverReorderableList(
+                    itemCount: _localSedarim!.length,
+                    itemBuilder: (context, index) => DraggableOrderItem(
+                      key: ValueKey(_localSedarim![index].sefariaRef),
+                      item: _localSedarim![index],
+                      index: index,
                     ),
-                  ],
-                  if (_localMasechtos != null &&
-                      _localMasechtos!.isNotEmpty &&
-                      CurriculumLabels.hasReorderableLevel2(
-                        widget.curriculumId,
-                      )) ...[
-                    _buildSectionHeader(
+                    onReorderItem: _onReorderSedarim,
+                    proxyDecorator: _dragProxyDecorator,
+                  ),
+                ],
+                if (_localMasechtos != null &&
+                    _localMasechtos!.isNotEmpty &&
+                    CurriculumLabels.hasReorderableLevel2(
+                      widget.curriculumId,
+                    )) ...[
+                  SliverToBoxAdapter(
+                    child: _buildSectionHeader(
                       context,
                       theme,
                       CurriculumLabels.containerSectionHeader(
@@ -119,23 +117,44 @@ class _TrackLearningOrderScreenState
                           ) ??
                           '',
                     ),
-                    ReorderableListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      onReorderItem: _onReorderMasechtos,
-                      children: [
-                        for (var i = 0; i < _localMasechtos!.length; i++)
-                          DraggableOrderItem(
-                            key: ValueKey(_localMasechtos![i].sefariaRef),
-                            item: _localMasechtos![i],
-                            index: i,
-                          ),
-                      ],
+                  ),
+                  SliverReorderableList(
+                    itemCount: _localMasechtos!.length,
+                    itemBuilder: (context, index) => DraggableOrderItem(
+                      key: ValueKey(_localMasechtos![index].sefariaRef),
+                      item: _localMasechtos![index],
+                      index: index,
                     ),
-                  ],
+                    onReorderItem: _onReorderMasechtos,
+                    proxyDecorator: _dragProxyDecorator,
+                  ),
                 ],
-              ),
+                const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
+              ],
             ),
+    );
+  }
+
+  // Unlike ReorderableListView, SliverReorderableList (used directly here
+  // so the masechtos section can stay lazy — AUD-tracks-05) ships no
+  // default proxyDecorator: while a drag is underway it lifts the dragged
+  // item into the Overlay, outside the Scaffold's Material ancestry, so
+  // DraggableOrderItem's bare ListTile hits debugCheckHasMaterial. Mirror
+  // ReorderableListView's own default decorator (Material + elevation
+  // animation) so the drag proxy has an ancestor Material of its own.
+  Widget _dragProxyDecorator(
+    Widget child,
+    int index,
+    Animation<double> animation,
+  ) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final animValue = Curves.easeInOut.transform(animation.value);
+        final elevation = lerpDouble(0, 6, animValue)!;
+        return Material(elevation: elevation, child: child);
+      },
+      child: child,
     );
   }
 

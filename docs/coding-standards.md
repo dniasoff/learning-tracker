@@ -446,7 +446,7 @@ The offline account model (credential-less local account, converted on reconnect
 
 **PF-2 — Any collection that can exceed the viewport uses a lazy builder (`ListView.builder`/slivers); heavy CPU work (bulk JSON parse, chart aggregation) runs off the main isolate.**
 **Why:** concrete-children lists build every row up front; any main-isolate computation past the frame budget freezes the UI — the docs name local-DB reads and large parses as canonical isolate cases.
-**Enforce:** [Enforced] `no_eager_list_in_non_lazy_scroll_container` custom lint (AUD-tutoring-08) — flags a `for`/`.map()` widget expansion fed into a non-lazy `ListView(children:)` or a scrollable `Column` under `lib/features/**`, exempting provably-bounded sources (`SomeEnum.values`, `.take(n)`, literal lists). [Pending] review item for >16 ms computations (the off-main-isolate half of this rule).
+**Enforce:** [Enforced] `no_eager_list_in_non_lazy_scroll_container` custom lint (AUD-tutoring-08) — flags a `for`/`.map()` widget expansion fed into a non-lazy `ListView(children:)` or a scrollable `Column` under `lib/features/**`, exempting provably-bounded sources (`SomeEnum.values`, `.take(n)`, literal lists). [Enforced] `no_shrink_wrap_reorderable_list` custom lint (AUD-tracks-05) — flags the plain (non-`.builder`) `ReorderableListView(...)` constructor combined with `shrinkWrap: true` under `lib/features/**`: `shrinkWrap: true` forces the sliver to compute its total scroll extent before an enclosing unbounded-height ancestor can lay out, realizing every row up front regardless of `.builder`/viewport. [Pending] review item for >16 ms computations (the off-main-isolate half of this rule).
 **Source:** docs.flutter.dev/perf/isolates
 
 **PF-3 — `build()` stays free of I/O, awaits, and allocation-heavy loops.**
@@ -975,6 +975,7 @@ Twelve+ custom lint rules live in `packages/custom_lints/` (landed) and run via 
 | `no_unguarded_state_touch_after_await` | `state =`/`setState(...)` after an `await` in a Notifier/State method with no intervening `mounted`/`ref.mounted` guard (SM-4, AUD-onboarding-01) |
 | `no_log_less_catch` | A `catch` under `lib/` with no `AppLogger` call and no `rethrow` — the log-less half of EH-3, including the comment-only shape `empty_catches` misses (AUD-onboarding-11) |
 | `no_ref_after_await_without_mounted_check` | `ref.read`/`ref.watch`/`ref.invalidate`/`ref.refresh`/`ref.listen`/`state = ...` after an earlier `await` in the same async method/closure with no `ref.mounted` guard in between (SM-4, AUD-sync-04) |
+| `no_shrink_wrap_reorderable_list` | The plain (non-`.builder`) `ReorderableListView(...)` constructor combined with `shrinkWrap: true` under `lib/features/**` (PF-2, AUD-tracks-05) |
 
 (This table is not exhaustive of every registered rule — see `packages/custom_lints/lib/learning_tracker_lints.dart` for the authoritative list.)
 
