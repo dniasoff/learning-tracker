@@ -102,14 +102,31 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
   /// [_hebrewNameByValue]/[_parentL1ByValue] from the loaded content) so named
   /// levels render the real Hebrew name in Hebrew mode instead of echoing the
   /// raw English storage key.
-  String _renderValueForLevel(String rawValue, int level) {
-    final terms = domainTermLabels(ref);
-    final variant = ref.watch(currentTransliterationVariantProvider);
+  ///
+  /// [useHebrew]/[variant] are passed in rather than read from `ref`
+  /// internally: this is called both synchronously during `build()`
+  /// (`_renderSelectedValues`, safe to `ref.watch`) and from
+  /// [_buildValueTile], invoked lazily and on demand by the value list's
+  /// `SliverChildBuilderDelegate` — including on later scroll frames, well
+  /// after `build()` has returned. `ref.watch` must only be called while
+  /// this widget is actively building; reading it from that later,
+  /// lazily-invoked call would call `ref.watch` outside the build phase.
+  /// Precomputing the toggle-derived values once during `build()` and
+  /// threading them through as plain data keeps every call site safe,
+  /// mirroring how `core/content/hierarchy_browser.dart` hoists its own
+  /// `ref.watch(currentTransliterationVariantProvider)` out of its
+  /// `itemBuilder`.
+  String _renderValueForLevel(
+    String rawValue,
+    int level, {
+    required bool useHebrew,
+    required TransliterationVariant variant,
+  }) {
     return CurriculumLabelRenderer.renderValue(
       curriculumId: widget.curriculumId,
       level: level,
       rawValue: rawValue,
-      useHebrew: terms.isHebrew,
+      useHebrew: useHebrew,
       hebrewName: _hebrewNameByValue[rawValue],
       parentL1Value: _parentL1ByValue[rawValue],
       transliterationVariant: variant,
@@ -145,8 +162,17 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
   String _renderSelectedValues() {
     final level = _selectedLevel;
     if (level == null) return _selectedValues.join(', ');
+    final terms = domainTermLabels(ref);
+    final variant = ref.watch(currentTransliterationVariantProvider);
     return _selectedValues
-        .map((v) => _renderValueForLevel(v, level))
+        .map(
+          (v) => _renderValueForLevel(
+            v,
+            level,
+            useHebrew: terms.isHebrew,
+            variant: variant,
+          ),
+        )
         .join(', ');
   }
 
@@ -194,144 +220,234 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     // Keep the value→Hebrew-name lookup in step with the loaded content and
     // the currently chosen level so the summary / snackbar / checkbox titles
     // all render proper names (not raw storage keys).
-    if (_selectedLevel != null) {
-      _refreshValueNames(allItems, _selectedLevel!);
+    final selectedLevel = _selectedLevel;
+    if (selectedLevel != null) {
+      _refreshValueNames(allItems, selectedLevel);
     }
-    return ListView(
-      children: [
+    // Computed once per build (not re-derived per row) — the list this
+    // feeds can run into the hundreds for a deep curriculum level (e.g.
+    // Mishna Berurah's "Siman" level, ~697 distinct values), so this is the
+    // collection the AUD-settings-08 fix routes through a lazy
+    // SliverList/SliverChildBuilderDelegate below instead of eagerly
+    // realizing every CheckboxListTile up front.
+    final valuesAtLevel = selectedLevel != null
+        ? _getDistinctValuesAtLevel(allItems, selectedLevel)
+        : const <String>[];
+    // Read once here (safe — still synchronous inside build()) and threaded
+    // through as plain data into the lazy SliverChildBuilderDelegate below;
+    // see _renderValueForLevel's doc comment for why the itemBuilder itself
+    // must never call ref.watch.
+    final termsForValueTiles = domainTermLabels(ref);
+    final variantForValueTiles = ref.watch(
+      currentTransliterationVariantProvider,
+    );
+
+    return CustomScrollView(
+      slivers: [
         // "All" option
-        SwitchListTile(
-          title: Text(
-            AppLocalizations.of(context)!.scopeSelectionTrackEntireCurriculum,
-          ),
-          subtitle: Text(
-            _selectAll
-                ? AppLocalizations.of(context)!.scopeSelectionAllContentIncluded
-                : AppLocalizations.of(
+        SliverToBoxAdapter(
+          child: Column(
+            children: [
+              SwitchListTile(
+                title: Text(
+                  AppLocalizations.of(
                     context,
-                  )!.scopeSelectionOnlySelectedTracked,
+                  )!.scopeSelectionTrackEntireCurriculum,
+                ),
+                subtitle: Text(
+                  _selectAll
+                      ? AppLocalizations.of(
+                          context,
+                        )!.scopeSelectionAllContentIncluded
+                      : AppLocalizations.of(
+                          context,
+                        )!.scopeSelectionOnlySelectedTracked,
+                ),
+                value: _selectAll,
+                onChanged: (value) {
+                  setState(() {
+                    _selectAll = value;
+                    if (value) {
+                      _selectedLevel = null;
+                      _selectedValues.clear();
+                    }
+                  });
+                },
+              ),
+              const Divider(),
+            ],
           ),
-          value: _selectAll,
-          onChanged: (value) {
-            setState(() {
-              _selectAll = value;
-              if (value) {
-                _selectedLevel = null;
-                _selectedValues.clear();
-              }
-            });
-          },
         ),
-        const Divider(),
 
         if (!_selectAll) ...[
-          // Level selection
-          if (_selectedLevel == null) ...[
-            ListTile(
-              title: Text(
-                AppLocalizations.of(context)!.scopeSelectionSelectScopeLevel,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                AppLocalizations.of(
-                  context,
-                )!.scopeSelectionChooseHierarchyLevel,
-              ),
-            ),
-            // Only show levels that make sense for scoping (not leaf level)
-            for (var level = 1; level < _maxLevels; level++)
-              ListTile(
-                title: Text(_labelForLevel(level)),
-                subtitle: Text(
-                  AppLocalizations.of(context)!.scopeSelectionOptionsCount(
-                    _getDistinctValuesAtLevel(allItems, level).length,
+          // Level selection — always a handful of rows (bounded by the
+          // curriculum's depth), so a plain (non-scrolling) Column inside
+          // one sliver is fine; the unbounded collection is the per-value
+          // list below, not this one.
+          if (selectedLevel == null)
+            SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  ListTile(
+                    title: Text(
+                      AppLocalizations.of(
+                        context,
+                      )!.scopeSelectionSelectScopeLevel,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      AppLocalizations.of(
+                        context,
+                      )!.scopeSelectionChooseHierarchyLevel,
+                    ),
                   ),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  setState(() {
-                    _selectedLevel = level;
-                    _selectedValues.clear();
-                  });
-                },
+                  // Only show levels that make sense for scoping (not leaf
+                  // level).
+                  for (var level = 1; level < _maxLevels; level++)
+                    ListTile(
+                      title: Text(_labelForLevel(level)),
+                      subtitle: Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.scopeSelectionOptionsCount(
+                          _getDistinctValuesAtLevel(allItems, level).length,
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        setState(() {
+                          _selectedLevel = level;
+                          _selectedValues.clear();
+                        });
+                      },
+                    ),
+                ],
               ),
-          ] else ...[
-            // Show values at selected level for multi-select
-            ListTile(
-              title: Text(
-                AppLocalizations.of(
-                  context,
-                )!.scopeSelectionSelectLevel(_labelForLevel(_selectedLevel!)),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                AppLocalizations.of(
-                  context,
-                )!.scopeSelectionCountSelected(_selectedValues.length),
-              ),
-              trailing: TextButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedLevel = null;
-                    _selectedValues.clear();
-                  });
-                },
-                child: Text(
-                  AppLocalizations.of(context)!.scopeSelectionChangeLevel,
-                ),
+            )
+          else ...[
+            SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  ListTile(
+                    title: Text(
+                      AppLocalizations.of(context)!.scopeSelectionSelectLevel(
+                        _labelForLevel(selectedLevel),
+                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      AppLocalizations.of(
+                        context,
+                      )!.scopeSelectionCountSelected(_selectedValues.length),
+                    ),
+                    trailing: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectedLevel = null;
+                          _selectedValues.clear();
+                        });
+                      },
+                      child: Text(
+                        AppLocalizations.of(context)!.scopeSelectionChangeLevel,
+                      ),
+                    ),
+                  ),
+                  const Divider(),
+                ],
               ),
             ),
-            const Divider(),
-            ..._buildLevelValueTiles(allItems),
+            // AUD-settings-08 (PF-2): lazy — only the on-screen (plus a
+            // small cache-extent overscan) subset of `valuesAtLevel` is
+            // ever built, unlike the previous bare
+            // `ListView(children: values.map(...).toList())`.
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _buildValueTile(
+                  allItems,
+                  valuesAtLevel,
+                  index,
+                  useHebrew: termsForValueTiles.isHebrew,
+                  variant: variantForValueTiles,
+                ),
+                childCount: valuesAtLevel.length,
+              ),
+            ),
           ],
         ],
 
         // Summary
-        if (_selectedValues.isNotEmpty) ...[
-          const Divider(height: 32),
-          ListTile(
-            title: Text(
-              AppLocalizations.of(context)!.scopeSelectionSummary,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+        if (_selectedValues.isNotEmpty)
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const Divider(height: 32),
+                ListTile(
+                  title: Text(
+                    AppLocalizations.of(context)!.scopeSelectionSummary,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(_renderSelectedValues()),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.scopeSelectionItemsWillBeTracked(
+                      _countLeafItems(allItems),
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
             ),
-            subtitle: Text(_renderSelectedValues()),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              AppLocalizations.of(
-                context,
-              )!.scopeSelectionItemsWillBeTracked(_countLeafItems(allItems)),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-        ],
       ],
     );
   }
 
-  List<Widget> _buildLevelValueTiles(List<ContentItem> allItems) {
-    final values = _getDistinctValuesAtLevel(allItems, _selectedLevel!);
-    return values.map((value) {
-      final isSelected = _selectedValues.contains(value);
-      final leafCount = _countLeafItemsForValue(allItems, value);
-      return CheckboxListTile(
-        title: Text(_renderValueForLevel(value, _selectedLevel!)),
-        subtitle: Text(
-          AppLocalizations.of(context)!.scopeSelectionItemCount(leafCount),
+  /// Builds a single checkbox row for `values[index]` at [_selectedLevel].
+  ///
+  /// Called on demand by the [SliverChildBuilderDelegate] in [_buildBody]
+  /// — only for indices actually realized (visible + cache-extent
+  /// overscan), never eagerly for the whole [values] list. [useHebrew]/
+  /// [variant] are precomputed by the caller — see
+  /// [_renderValueForLevel]'s doc comment for why this method must never
+  /// read them from `ref` itself.
+  Widget _buildValueTile(
+    List<ContentItem> allItems,
+    List<String> values,
+    int index, {
+    required bool useHebrew,
+    required TransliterationVariant variant,
+  }) {
+    final level = _selectedLevel!;
+    final value = values[index];
+    final isSelected = _selectedValues.contains(value);
+    final leafCount = _countLeafItemsForValue(allItems, value);
+    return CheckboxListTile(
+      title: Text(
+        _renderValueForLevel(
+          value,
+          level,
+          useHebrew: useHebrew,
+          variant: variant,
         ),
-        value: isSelected,
-        onChanged: (checked) {
-          setState(() {
-            if (checked ?? false) {
-              _selectedValues.add(value);
-            } else {
-              _selectedValues.remove(value);
-            }
-          });
-        },
-      );
-    }).toList();
+      ),
+      subtitle: Text(
+        AppLocalizations.of(context)!.scopeSelectionItemCount(leafCount),
+      ),
+      value: isSelected,
+      onChanged: (checked) {
+        setState(() {
+          if (checked ?? false) {
+            _selectedValues.add(value);
+          } else {
+            _selectedValues.remove(value);
+          }
+        });
+      },
+    );
   }
 
   List<String> _getDistinctValuesAtLevel(List<ContentItem> items, int level) {

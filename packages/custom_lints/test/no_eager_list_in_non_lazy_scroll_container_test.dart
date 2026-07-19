@@ -293,6 +293,127 @@ Widget build(List<String> grants) {
       );
     });
 
+    group(
+        'violations — AUD-settings-08: helper-method spread reached '
+        'through an if-guard nested spread', () {
+      test(
+        'flags a same-class helper-method spread reached through '
+        '`if (cond) ...[…]` — the ScopeSelectionScreen pre-fix shape',
+        () async {
+          final file = _tmpFileAt(
+            '''
+$_prelude
+class _ScreenState {
+  bool selectAll = true;
+
+  List<Widget> _buildValueTiles(List<String> values) {
+    return values.map((value) => Text(value)).toList();
+  }
+
+  Widget build(List<String> values) {
+    return ListView(
+      children: [
+        Text('header'),
+        if (!selectAll) ...[
+          Text('sub-header'),
+          ..._buildValueTiles(values),
+        ],
+      ],
+    );
+  }
+}
+''',
+            'lib/features/settings/presentation/screens',
+          );
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isNotEmpty,
+            reason: 'A spread of a same-class helper method whose own body '
+                'eagerly `.map().toList()`s an unbounded collection, '
+                'reached through an if-guard + nested list-literal spread, '
+                'must be flagged (AUD-settings-08)',
+          );
+        },
+      );
+
+      test(
+        'does not flag a same-class helper-method spread whose body maps '
+        'a `.take(n)`-capped iterable',
+        () async {
+          final file = _tmpFileAt(
+            '''
+$_prelude
+class _ScreenState {
+  bool selectAll = true;
+
+  List<Widget> _buildValueTiles(List<String> values) {
+    return values.take(5).map((value) => Text(value)).toList();
+  }
+
+  Widget build(List<String> values) {
+    return ListView(
+      children: [
+        if (!selectAll) ...[
+          ..._buildValueTiles(values),
+        ],
+      ],
+    );
+  }
+}
+''',
+            'lib/features/settings/presentation/screens',
+          );
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isEmpty,
+            reason: 'A helper method that itself caps its collection via '
+                '.take(n) is bounded and must not be flagged',
+          );
+        },
+      );
+
+      test(
+        'does not flag a same-class helper-method spread whose body '
+        'returns a small fixed list literal (not a map/generate '
+        'expansion)',
+        () async {
+          final file = _tmpFileAt(
+            '''
+$_prelude
+class _ScreenState {
+  bool selectAll = true;
+
+  List<Widget> _buildFixedTiles() {
+    return [Text('a'), Text('b'), Text('c')];
+  }
+
+  Widget build() {
+    return ListView(
+      children: [
+        if (!selectAll) ...[
+          ..._buildFixedTiles(),
+        ],
+      ],
+    );
+  }
+}
+''',
+            'lib/features/settings/presentation/screens',
+          );
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where((e) => e.errorCode.name == _lintName),
+            isEmpty,
+            reason: 'A helper method whose own body is a small fixed list '
+                'literal (not a map()/List.generate() expansion) must not '
+                'be flagged just because it is spread through an if-guard',
+          );
+        },
+      );
+    });
+
     group('allowed — already-lazy ListView.builder', () {
       test('does not flag ListView.builder', () async {
         final file = _tmpFileAt(

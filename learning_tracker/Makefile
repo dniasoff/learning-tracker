@@ -1166,6 +1166,14 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	  echo "$$CT_SETTINGS06_HITS"; \
 	  FAIL=1; \
 	fi; \
+	echo "85/85 — Rule-0/AG-6 companion: every non-generated *_screen.dart file has an @RoutePage( registration or a Navigator.push/direct-construction call site elsewhere in lib/ — RATCHET, only a NEW orphaned screen not in the tracked baseline fails the gate (AUD-settings-08)"; \
+	if ! dart run tool/check_orphaned_screens.dart > /tmp/orphaned_screens_check.$$$$.log 2>&1; then \
+	  cat /tmp/orphaned_screens_check.$$$$.log; \
+	  rm -f /tmp/orphaned_screens_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/orphaned_screens_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
