@@ -46,6 +46,7 @@
 library;
 
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -227,6 +228,83 @@ final _kChumashItems = [
     isLeaf: true,
   ),
 ];
+
+// ── Mishna Berurah fixture (AUD-settings-08: PF-2 large-level regression) ────
+//
+// A single Sefer ('Mishnah Berurah') with 697 distinct 'Siman' (level-2)
+// values — the exact cardinality the finding's own evidence measured for
+// CurriculumId.mishnaBerurah's 'Siman' level against the real bundled
+// content assets. `_buildLevelValueTiles`'s pre-fix bare
+// `ListView(children: values.map(...).toList())` built all 697
+// CheckboxListTiles synchronously the moment this level was selected; the
+// fix routes them through a `SliverList`/`SliverChildBuilderDelegate` so
+// only the on-screen (plus overscan) subset is ever built.
+const _kMishnaBerurahSefer = 'Mishnah Berurah';
+const _kMishnaBerurahSimanCount = 697;
+
+final _kMishnaBerurahItems = [
+  const ContentItem(
+    curriculumId: 'mishna_berurah',
+    level1: _kMishnaBerurahSefer,
+    displayNameHe: 'משנה ברורה',
+    displayNameEn: _kMishnaBerurahSefer,
+    sefariaRef: 'Mishnah_Berurah',
+    sortOrder: 0,
+    isLeaf: false,
+  ),
+  for (var siman = 1; siman <= _kMishnaBerurahSimanCount; siman++)
+    ContentItem(
+      curriculumId: 'mishna_berurah',
+      level1: _kMishnaBerurahSefer,
+      level2: '$siman',
+      displayNameHe: 'סימן $siman',
+      displayNameEn: '$siman',
+      sefariaRef: 'Mishnah_Berurah.$siman',
+      sortOrder: siman,
+      isLeaf: false,
+    ),
+];
+
+/// Counts every `.where(...)` call made against the wrapped list.
+///
+/// `ScopeSelectionScreen._countLeafItemsForValue` does exactly one
+/// `allItems.where(...)` per `CheckboxListTile` it CONSTRUCTS — so this
+/// count is the number of tiles actually built.
+///
+/// A mounted-element count (`find.byType(CheckboxListTile)`) cannot see
+/// this: verified empirically against the pre-fix `ListView(children:
+/// values.map(...).toList())` source, it reports the same small number
+/// (~6) as the fixed lazy version, because Flutter's `SliverList` windows
+/// the MOUNTED element tree to the viewport regardless of whether the
+/// feeding delegate is eager or lazy — the eager delegate still
+/// front-loads widget CONSTRUCTION (and this `.where()` call inside each
+/// one) for every value before the sliver ever gets a chance to window
+/// anything, even though only the visible few end up mounted. This wrapper
+/// observes that construction-time cost directly instead.
+class _WhereCallCountingItems extends ListBase<ContentItem> {
+  _WhereCallCountingItems(this._base);
+
+  final List<ContentItem> _base;
+  int whereCallCount = 0;
+
+  @override
+  int get length => _base.length;
+
+  @override
+  set length(int newLength) => _base.length = newLength;
+
+  @override
+  ContentItem operator [](int index) => _base[index];
+
+  @override
+  void operator []=(int index, ContentItem value) => _base[index] = value;
+
+  @override
+  Iterable<ContentItem> where(bool Function(ContentItem) test) {
+    whereCallCount++;
+    return _base.where(test);
+  }
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -691,6 +769,98 @@ void main() {
       await _tearDown(tester);
     });
   });
+
+  group(
+    'ScopeSelectionScreen — AUD-settings-08: lazy per-value list (PF-2)',
+    () {
+      testWidgets(
+        'CurriculumId.mishnaBerurah — Siman level (697 distinct values): '
+        'pumpAndSettle completes, the rendered CheckboxListTile count is '
+        'bounded to roughly a screenful (not all 697), and the per-value '
+        'leaf-count computation only ran for the tiles actually built',
+        (tester) async {
+          // Wrapping the fixture list lets this test observe how many tiles
+          // were actually CONSTRUCTED, not just mounted — see
+          // _WhereCallCountingItems' doc comment for why a mounted-element
+          // count alone (find.byType(CheckboxListTile)) cannot, by itself,
+          // distinguish the eager pre-fix shape from the lazy post-fix one:
+          // verified empirically against the pre-fix source, both show the
+          // same small mounted count (~6) because Flutter's SliverList
+          // windows the MOUNTED element tree to the viewport either way. The
+          // eager shape's real cost is front-loaded widget CONSTRUCTION
+          // (evaluating `_countLeafItemsForValue` — one `allItems.where(...)`
+          // call — for every one of the 697 values before the sliver ever
+          // gets a chance to window anything), which this counter captures.
+          final countingItems = _WhereCallCountingItems(_kMishnaBerurahItems);
+          final repo = _makeDefaultRepo(items: countingItems);
+          await _pump(
+            tester,
+            _buildScopeApp(
+              db: _db,
+              contentRepo: repo,
+              curriculum: CurriculumId.mishnaBerurah,
+            ),
+          );
+
+          // Toggle "Track entire curriculum" OFF to reveal level selection.
+          await tester.tap(find.byType(SwitchListTile));
+          await tester.pump();
+
+          // Select the 'Siman' level (level 2 — 'Sefer' is level 1, 'Seif' is
+          // the excluded leaf level; see CurriculumLabels' mishnaBerurah
+          // entry in core/constants/curriculum_defaults.dart).
+          final simanTile = find.widgetWithText(ListTile, 'Siman');
+          expect(
+            simanTile,
+            findsOneWidget,
+            reason: "The 'Siman' level tile must be offered for scoping",
+          );
+          await tester.tap(simanTile);
+
+          // AC2(a): must settle without timing out — the level backs 697
+          // distinct raw values (pumpAndSettle throws if frames keep
+          // scheduling beyond its internal iteration cap).
+          await tester.pumpAndSettle();
+
+          // AC2(b) (literal): the rendered CheckboxListTile count at rest is
+          // bounded to roughly a screenful, not all 697.
+          final renderedCount = find.byType(CheckboxListTile).evaluate().length;
+          expect(
+            renderedCount,
+            lessThan(50),
+            reason:
+                'ScopeSelectionScreen must build the Siman-level checkbox '
+                'list lazily; found $renderedCount realized CheckboxListTiles '
+                'for a 697-value level — a screenful is a couple dozen at '
+                'most (AUD-settings-08)',
+          );
+          expect(
+            renderedCount,
+            greaterThan(0),
+            reason: 'At least the visible rows must still render',
+          );
+
+          // The genuinely-discriminating signal: only the tiles actually
+          // realized (bounded, same order of magnitude as renderedCount)
+          // should ever have had their leaf count computed — never all 697.
+          expect(
+            countingItems.whereCallCount,
+            lessThan(50),
+            reason:
+                'ScopeSelectionScreen._countLeafItemsForValue must only run '
+                'for the CheckboxListTiles the SliverChildBuilderDelegate '
+                'actually builds; found ${countingItems.whereCallCount} '
+                'calls for a 697-value level — the pre-fix eager '
+                '`ListView(children: values.map(...).toList())` shape calls '
+                'this once per value regardless of what is visible '
+                '(AUD-settings-08)',
+          );
+
+          await _tearDown(tester);
+        },
+      );
+    },
+  );
 
   group('ScopeSelectionScreen — scope persistence (Save)', () {
     testWidgets('Save with selectAll=true clears scope rows in DB', (

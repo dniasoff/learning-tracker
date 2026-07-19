@@ -53,6 +53,17 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 ///     `docs/audits/standards-audit-2026-07-03/delivery/findings/
 ///     AUD-scheduler-01.json` (acceptance_criteria[0], "Rule-0: PF-2
 ///     checker").
+///   - AUD-settings-08: `ScopeSelectionScreen._buildBody` fed a plain
+///     `ListView(children: [...])` a `for (final grant in activeGrants)`
+///     -shaped list one level removed — an `if (!_selectAll) ...[…]` guard
+///     spreading a nested list literal whose last element was
+///     `..._buildLevelValueTiles(allItems)`, a same-class helper method
+///     whose OWN body did the eager `values.map((value) => ...).toList()`
+///     expansion. Neither the nested `if`/spread-of-list-literal wrapper
+///     nor the one-hop indirection through a helper method were visible to
+///     the original shapes above, which only inspected `children:`'s
+///     direct elements. See `docs/audits/standards-audit-2026-07-03/
+///     delivery/findings/AUD-settings-08.json` (acceptance_criteria[0]).
 ///
 /// See `packages/custom_lints/README.md` for rule rationale and remediation.
 class NoEagerListInNonLazyScrollContainer extends DartLintRule {
@@ -124,19 +135,13 @@ class NoEagerListInNonLazyScrollContainer extends DartLintRule {
     if (childrenValue == null) return;
 
     // Shape 1: `children: [ …, for (final x in y) Widget(x), … ]`,
-    // `children: [ …, ...xs.map((x) => Widget(x)), … ]`, or
-    // `children: [ …, ...List.generate(n, (i) => Widget(i)), … ]`.
+    // `children: [ …, ...xs.map((x) => Widget(x)), … ]`,
+    // `children: [ …, ...List.generate(n, (i) => Widget(i)), … ]`, or one
+    // of those reached through an `if (cond) ...[…]` guard / a nested
+    // `...[…]` spread-of-list-literal wrapper (AUD-settings-08).
     if (childrenValue is ListLiteral) {
       for (final element in childrenValue.elements) {
-        if (element is ForElement && !_isBoundedForLoop(element)) {
-          reporter.atNode(element, _code);
-          continue;
-        }
-        if (element is SpreadElement &&
-            (_isEagerMapExpansion(element.expression) ||
-                _isEagerListGenerate(element.expression))) {
-          reporter.atNode(element, _code);
-        }
+        _checkCollectionElement(element, reporter);
       }
       return;
     }
@@ -147,9 +152,105 @@ class NoEagerListInNonLazyScrollContainer extends DartLintRule {
     // exactly the AUD-scheduler-01 `ExpansionTile(children: List.generate(
     // tasks.length, ...))` shape.
     if (_isEagerMapExpansion(childrenValue) ||
-        _isEagerListGenerate(childrenValue)) {
+        _isEagerListGenerate(childrenValue) ||
+        _isEagerHelperMethodSpread(childrenValue)) {
       reporter.atNode(childrenValue, _code);
     }
+  }
+
+  /// Inspects one `children:` list-literal element, recursing through the
+  /// two wrapper shapes that can hide an eager expansion from a flat scan
+  /// of top-level elements:
+  ///   - `if (cond) ...[ …eager… ]` / `if (cond) …eager… else …eager…`
+  ///     (`IfElement` — both branches are checked); and
+  ///   - `...[ …eager… ]`, a spread of a NESTED list literal, as opposed to
+  ///     a spread of the eager expression itself (`SpreadElement` whose
+  ///     expression is itself a `ListLiteral`).
+  /// Both shapes appear together in `ScopeSelectionScreen._buildBody`
+  /// (AUD-settings-08): `if (!_selectAll) ...[ …, ..._buildLevelValueTiles(
+  /// allItems) ]`.
+  void _checkCollectionElement(
+    CollectionElement element,
+    ErrorReporter reporter,
+  ) {
+    if (element is ForElement) {
+      if (!_isBoundedForLoop(element)) {
+        reporter.atNode(element, _code);
+      }
+      return;
+    }
+    if (element is IfElement) {
+      _checkCollectionElement(element.thenElement, reporter);
+      final elseElement = element.elseElement;
+      if (elseElement != null) {
+        _checkCollectionElement(elseElement, reporter);
+      }
+      return;
+    }
+    if (element is SpreadElement) {
+      final expr = element.expression;
+      if (expr is ListLiteral) {
+        for (final inner in expr.elements) {
+          _checkCollectionElement(inner, reporter);
+        }
+        return;
+      }
+      if (_isEagerMapExpansion(expr) ||
+          _isEagerListGenerate(expr) ||
+          _isEagerHelperMethodSpread(expr)) {
+        reporter.atNode(element, _code);
+      }
+      return;
+    }
+    // A plain widget-expression element — nothing to check.
+  }
+
+  /// True for a bare (unprefixed — `_helper(...)`, not `x.helper(...)`)
+  /// call to a method declared in the same enclosing class whose OWN body
+  /// returns an eager map/`List.generate` expansion — the AUD-settings-08
+  /// `..._buildLevelValueTiles(allItems)` shape, where
+  /// `_buildLevelValueTiles` is a same-class helper that does
+  /// `return values.map((value) => CheckboxListTile(...)).toList();`. This
+  /// one-hop resolution intentionally does not chase further than a single
+  /// method call — a helper that itself delegates to another helper is not
+  /// covered, matching this rule's existing preference for precision over
+  /// exhaustiveness (see the "does NOT flag" list above).
+  bool _isEagerHelperMethodSpread(Expression expr) {
+    if (expr is! MethodInvocation) return false;
+    if (expr.target != null) return false;
+    final methodName = expr.methodName.name;
+    // 'map'/'toList'/'generate' are handled by the dedicated checks above;
+    // treating them here too would just be a slower, redundant path.
+    if (methodName == 'map' || methodName == 'toList') return false;
+
+    final classDecl = expr.thisOrAncestorOfType<ClassDeclaration>();
+    if (classDecl == null) return false;
+    for (final member in classDecl.members) {
+      if (member is MethodDeclaration && member.name.lexeme == methodName) {
+        return _bodyReturnsEagerExpansion(member.body);
+      }
+    }
+    return false;
+  }
+
+  /// True when [body]'s (single, final) return expression is itself an
+  /// eager map/`List.generate` expansion.
+  bool _bodyReturnsEagerExpansion(FunctionBody body) {
+    if (body is ExpressionFunctionBody) {
+      return _isEagerMapExpansion(body.expression) ||
+          _isEagerListGenerate(body.expression);
+    }
+    if (body is BlockFunctionBody) {
+      for (final stmt in body.block.statements.reversed) {
+        if (stmt is ReturnStatement) {
+          final returned = stmt.expression;
+          if (returned == null) return false;
+          return _isEagerMapExpansion(returned) ||
+              _isEagerListGenerate(returned);
+        }
+      }
+    }
+    return false;
   }
 
   /// True for a bounded for-loop:

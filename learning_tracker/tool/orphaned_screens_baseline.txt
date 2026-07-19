@@ -1,0 +1,16 @@
+# Orphaned-screen baseline — tool/check_orphaned_screens.dart
+# (Rule-0/AG-6 companion, AUD-settings-08 acceptance_criteria[0]).
+#
+# ScopeSelectionScreen is finished-but-unwired feature code: no
+# @RoutePage() annotation, no app_router.dart entry, no Navigator.push
+# call site anywhere in lib/ — reachable today only from its own dedicated
+# widget-test suite (test/features/settings/presentation/screens/
+# scope_lifetime_l1_test.dart). AUD-settings-08 fixed the screen's PF-2
+# violation (the eager per-value CheckboxListTile list) so it is safe to
+# wire in later, but did NOT wire it into navigation — that is a separate,
+# not-yet-filed finding. Tracked here so this ratchet does not fail on a
+# known, deliberately-scoped gap; a NEW orphaned screen (not listed here)
+# fails `make audit`. Burn this down by wiring ScopeSelectionScreen into
+# app_router.dart and removing this line — do NOT add fresh entries to
+# paper over a new violation.
+ScopeSelectionScreen (lib/features/settings/presentation/screens/scope_selection_screen.dart)
