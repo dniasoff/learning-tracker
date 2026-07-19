@@ -1,4 +1,4 @@
-.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.5 test-story-25.7 test-story-25.12 test-story-25.13 test-story-25.16 test-story-25.18 test-story-27.5 test-epic-25 test-epic-27 test-all ci analyze format schema-check audit arb-parity gen-arch-tables linear-sync linear-story linear-check
+.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.5 test-story-25.7 test-story-25.12 test-story-25.13 test-story-25.16 test-story-25.18 test-story-27.5 test-epic-25 test-epic-27 test-all ci analyze format schema-check audit arb-parity gen-arch-tables check-device-e2e-suite-size linear-sync linear-story linear-check
 
 help:
 	@echo "Learning Tracker - Make Commands"
@@ -23,6 +23,7 @@ help:
 	@echo "  make audit              - Run all 12 enforcement greps + custom_lint (NFR19)"
 	@echo "  make arb-parity         - Check app_en.arb keys exist in app_he.arb (NFR14)"
 	@echo "  make gen-arch-tables    - Print Markdown table of all Drift tables + column counts"
+	@echo "  make check-device-e2e-suite-size - Guard against tool/device_e2e run*_full_suite.mjs duplication (AUD-guardrails-08)"
 	@echo "  make ci                 - Run full CI check (analyze + format + schema-check + all tests)"
 	@echo ""
 	@echo "Linear Cache:"
@@ -225,6 +226,48 @@ arb-parity:
 gen-arch-tables:
 	@echo "Generating architecture table list (DNI-391)..."
 	@dart run tool/gen_arch_tables.dart
+
+# check-device-e2e-suite-size — AUD-guardrails-08
+#
+# tool/device_e2e/runN_full_suite.mjs files must import their orchestration
+# and prompt-builder logic from tool/device_e2e/_full_suite_lib.mjs and carry
+# only run-specific data (meta + report intro + a call into the shared
+# runner). Before this fix each runN_full_suite.mjs was a 256-line, ~99%
+# copy-paste of the others; this guards against that regressing, and against
+# the RTL-segmented-controls false-positive lesson (independently
+# rediscovered across run-2/run-3/run-5) getting re-duplicated instead of
+# living once in the shared calibration text.
+check-device-e2e-suite-size:
+	@echo "Checking tool/device_e2e/run*_full_suite.mjs stay run-specific (AUD-guardrails-08)..."
+	@FAIL=0; \
+	if [ ! -f tool/device_e2e/_full_suite_lib.mjs ]; then \
+	  echo "  FAIL: tool/device_e2e/_full_suite_lib.mjs is missing — the shared orchestration module must exist"; \
+	  FAIL=1; \
+	fi; \
+	for f in tool/device_e2e/run*_full_suite.mjs; do \
+	  LINES=$$(wc -l < "$$f"); \
+	  if [ "$$LINES" -gt 60 ]; then \
+	    echo "  FAIL: $$f has $$LINES lines (limit 60) — shared orchestration/prompt-builder logic belongs in tool/device_e2e/_full_suite_lib.mjs, not re-duplicated per run"; \
+	    FAIL=1; \
+	  elif ! grep -q "_full_suite_lib.mjs" "$$f"; then \
+	    echo "  FAIL: $$f does not import tool/device_e2e/_full_suite_lib.mjs"; \
+	    FAIL=1; \
+	  else \
+	    echo "  OK: $$f ($$LINES lines, imports the shared lib)"; \
+	  fi; \
+	done; \
+	CAL_COUNT=$$(grep -o "RTL SegmentedButton auto-mirrors" tool/device_e2e/*.mjs 2>/dev/null | wc -l); \
+	if [ "$$CAL_COUNT" -ne 1 ]; then \
+	  echo "  FAIL: RTL-segmented-controls calibration note must be asserted exactly once across tool/device_e2e/*.mjs (found $$CAL_COUNT)"; \
+	  FAIL=1; \
+	else \
+	  echo "  OK: RTL-segmented-controls calibration note appears exactly once (in the shared module)"; \
+	fi; \
+	if [ $$FAIL -ne 0 ]; then \
+	  echo "check-device-e2e-suite-size FAILED."; \
+	  exit 1; \
+	fi; \
+	echo "check-device-e2e-suite-size PASSED."
 
 ci: analyze format schema-check test-all
 	@echo "✓ CI checks passed"
