@@ -5353,13 +5353,26 @@
   {
    "id": "AUD-settings-08",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Route ScopeSelectionScreen's per-value checkbox list through a lazy builder before wiring the screen into navigation",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "13ba3d1735c95762fcaa9da6380985e9b247b10d"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-settings-08 AC1a OK: tool/check_orphaned_screens.dart wired as make audit 85/85; I injected a probe orphan -> exit 1, removed it -> exit 0",
+    "AUD-settings-08 AC1a OK: --report on real tree lists exactly 1 orphan (ScopeSelectionScreen) = the baselined entry; baseline suppresses nothing else",
+    "AUD-settings-08 AC1b OK: restored pre-fix source, PF-2 rule fired RED with 2 violations (offsets 9631, 11211); clean on the fixed file",
+    "AUD-settings-08 AC1b OK: rule now catches if-guard + nested spread + same-class helper whose body .map().toList()s; 3 new tests, 2 of them negative",
+    "AUD-settings-08 AC1b OK: aud_settings_08 regression test analyzes the REAL production file via testAnalyzeAndRun - a live guard, not fixture-only",
+    "AUD-settings-08 AC2a OK: test pumps mishnaBerurah w/ 697-value Siman fixture, toggles switch off, taps Siman, pumpAndSettle() completes",
+    "AUD-settings-08 AC2b OK: asserts CheckboxListTile count <50 and >0 at rest for 697 values (test lines ~825-841)",
+    "AUD-settings-08 AC2 red-first OK: pre-fix source fails at line 846 (whereCallCount 697 vs <50); with fix 48/48 green",
+    "AUD-settings-08 fix OK: _buildBody is CustomScrollView + SliverList/SliverChildBuilderDelegate; _buildLevelValueTiles fully removed from lib/",
+    "AUD-settings-08 fix OK: ref.watch reads hoisted out of the lazy itemBuilder into build() and threaded as plain data - correct for scroll-frame rebuilds"
+   ],
+   "notes": "Rewrote _buildBody to CustomScrollView+SliverList (lazy). AC1: extended PF-2 lint rule + new orphan-screen checker, wired make audit #85. AC2: widget test w/ 697-item fixture + call-counting wrapper (mounted-count alone doesn't discriminate); red(697) then green captured."
   },
   {
    "id": "AUD-tutoring-08",
