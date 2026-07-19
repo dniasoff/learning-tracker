@@ -8,11 +8,10 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
-import 'package:learning_tracker/core/widgets/reorder_confirm_dialog.dart';
-import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/draggable_order_item.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/reorder_amnesty_guard_mixin.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/reset_order_dialog.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -32,7 +31,8 @@ class TrackLearningOrderScreen extends ConsumerStatefulWidget {
 }
 
 class _TrackLearningOrderScreenState
-    extends ConsumerState<TrackLearningOrderScreen> {
+    extends ConsumerState<TrackLearningOrderScreen>
+    with ReorderAmnestyGuardMixin<TrackLearningOrderScreen> {
   List<LearningOrderItem>? _localSedarim;
   List<LearningOrderItem>? _localMasechtos;
   // Sequence counter so a slow sedarim-save can't overwrite a newer
@@ -163,17 +163,9 @@ class _TrackLearningOrderScreenState
   }
 
   Future<void> _onReorderSedarim(int oldIndex, int newIndex) async {
-    // Reorder-amnesty guard: warn the user if they have outstanding overdue
-    // items that will be cleared by this reorder.
-    final overdueCount = await ref.read(
-      overdueCountForCurriculumProvider(widget.curriculumId).future,
-    );
-    if (!mounted) return;
-    final confirmed = await ReorderConfirmDialog.showIfNeeded(
-      context,
-      overdueCount: overdueCount,
-    );
-    if (!confirmed || !mounted) return;
+    if (!await confirmReorderAmnesty(ref, context, widget.curriculumId)) {
+      return;
+    }
 
     final previous = _localSedarim;
     final items = List<LearningOrderItem>.from(_localSedarim!);
@@ -191,17 +183,9 @@ class _TrackLearningOrderScreenState
   }
 
   Future<void> _onReorderMasechtos(int oldIndex, int newIndex) async {
-    // Reorder-amnesty guard: warn the user if they have outstanding overdue
-    // items that will be cleared by this reorder.
-    final overdueCount = await ref.read(
-      overdueCountForCurriculumProvider(widget.curriculumId).future,
-    );
-    if (!mounted) return;
-    final confirmed = await ReorderConfirmDialog.showIfNeeded(
-      context,
-      overdueCount: overdueCount,
-    );
-    if (!confirmed || !mounted) return;
+    if (!await confirmReorderAmnesty(ref, context, widget.curriculumId)) {
+      return;
+    }
 
     final previous = _localMasechtos;
     final items = List<LearningOrderItem>.from(_localMasechtos!);

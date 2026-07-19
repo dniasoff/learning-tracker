@@ -8,11 +8,10 @@ import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
-import 'package:learning_tracker/core/widgets/reorder_confirm_dialog.dart';
-import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/providers/learning_order_providers.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/draggable_order_item.dart';
+import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/reorder_amnesty_guard_mixin.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/widgets/reset_order_dialog.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -27,7 +26,8 @@ class LearningOrderScreen extends ConsumerStatefulWidget {
       _LearningOrderScreenState();
 }
 
-class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
+class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen>
+    with ReorderAmnestyGuardMixin<LearningOrderScreen> {
   /// Local optimistic list — updated immediately on drag before async save.
   List<LearningOrderItem>? _localOrder;
 
@@ -122,17 +122,9 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
   }
 
   Future<void> _onReorder(int oldIndex, int newIndex) async {
-    // Reorder-amnesty guard: warn the user if they have outstanding overdue
-    // items that will be cleared by this reorder.
-    final overdueCount = await ref.read(
-      overdueCountForCurriculumProvider(widget.curriculumId).future,
-    );
-    if (!mounted) return;
-    final confirmed = await ReorderConfirmDialog.showIfNeeded(
-      context,
-      overdueCount: overdueCount,
-    );
-    if (!confirmed || !mounted) return;
+    if (!await confirmReorderAmnesty(ref, context, widget.curriculumId)) {
+      return;
+    }
 
     final previous = _localOrder;
     final items = List<LearningOrderItem>.from(_localOrder!);
