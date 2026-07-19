@@ -4857,13 +4857,23 @@
   {
    "id": "AUD-tracks-13",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Fix AX-1's EdgeInsets.only(left:/right:) grep to match multi-line dart-format output, and fix the resulting hit in track_management_body.dart",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "5f90a0611d9f9d43241cbc4169a710c3c52d0573"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-13 AC1 OK: check_edgeinsets_rtl.dart exists, wired at Makefile:181; my own multi-line fixture made [10/12] report 1 non-baselined violation, exit 1",
+    "AUD-tracks-13 AC1 OK: removing my fixture restored exit 0 - checker genuinely fires, not hand-fixed-only",
+    "AUD-tracks-13 AC1 OK (durable): test/tool/check_edgeinsets_rtl_test.dart runs the real checker process, asserts exit 1 + filename then exit 0; real behavior, 2/2 pass",
+    "AUD-tracks-13 AC2 OK: track_management_body.dart:134-139 is const EdgeInsetsDirectional.only(start:16,end:16,top:8,bottom:96); checker shows zero hits for that file",
+    "AUD-tracks-13 AC2 OK: baseline entry track_management_body.dart:134 removed from _baseline - a strengthening, so the site cannot silently regress",
+    "AUD-tracks-13 AC2 OK (co-site): track_management_hub_screen.dart (evidence 126-127) has zero EdgeInsets occurrences remaining",
+    "AUD-tracks-13 AC3 OK-in-intent: root audit exits 2 at HEAD AND at merge-base 713b6cfe; full output byte-identical modulo intended baseline shrink; [10/12] prints OK"
+   ],
+   "notes": "AC1 grep already shipped (AUD-profiles-18); this is its deferred follow-up. AC2: padding EdgeInsets.only(left/right)->EdgeInsetsDirectional.only(start/end). Red-first verified, fixture test added. AC3: this check clean; root audit pre-existing red elsewhere, unchanged by commit -- see notes."
   },
   {
    "id": "AUD-tracks-12",
