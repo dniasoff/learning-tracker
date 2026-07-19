@@ -31,7 +31,39 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+-*'
 
 jobs:
+  # ── gate-ci-status (AUD-guardrails-14 / AG-11) ──────────────────────────────
+  # Fails fast, before any build/signing step runs, unless the EXACT SHA being
+  # deployed (github.sha — the dispatched ref's SHA for workflow_dispatch, the
+  # tagged commit for push:tags) has at least one completed, successful ci.yml
+  # run. Without this, a maintainer tagging a commit that never went through
+  # review/CI (emergency hotfix, stale local branch, wrong SHA), or whose
+  # ci.yml run is still red/in-progress, could ship straight to Google Play
+  # production with nothing in the committed config to stop it. See
+  # tool/check_deploy_ci_gate.mjs for the gate logic + its test suite.
+  gate-ci-status:
+    name: gate-ci-status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Run gate unit tests (Rule 0 — the checker's own correctness gate)
+        run: node --test tool/check_deploy_ci_gate.test.mjs
+
+      - name: Require a green ci.yml run for the deploying SHA
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node tool/check_deploy_ci_gate.mjs
+
   deploy:
+    needs: gate-ci-status
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
