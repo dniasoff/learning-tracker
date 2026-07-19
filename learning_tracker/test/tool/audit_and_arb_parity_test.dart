@@ -190,9 +190,18 @@ void main() {
             '// AUDIT FIXTURE - DO NOT COMMIT '
             '(AUD-guardrails-16 / AG-6 check regression test)\n'
             '// TODO(DNI-999999): carries a Linear id, must NOT be flagged\n'
-            '// TODO: has no Linear id, MUST be flagged\n'
+            // AUD-guardrails-16 bounce fix: the AG-6 grep is intentionally
+            // unanchored now (matches `//` anywhere on the line, not just
+            // at line-start), so this literal is split ('// TOD' + 'O')
+            // to keep the source text of THIS test file from self-tripping
+            // check 10/15 -- the concatenated runtime string is unaffected
+            // and still exercises a genuine bare marker in the fixture.
+            '// TOD'
+            'O: has no Linear id, MUST be flagged\n'
             '// XXX(DNI-999999): carries a Linear id, must NOT be flagged\n'
-            '// XXX: has no Linear id, MUST be flagged\n'
+            // Same split rationale as above, applied to XXX ('// XX' + 'X').
+            '// XX'
+            'X: has no Linear id, MUST be flagged\n'
             'const zzzAuditFixtureDoNotCommit = true;\n',
           );
 
