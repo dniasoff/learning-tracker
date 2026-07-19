@@ -1,4 +1,12 @@
 #!/bin/bash
+# RETIRED (Story DNI-121, Canceled — AUD-guardrails-09): part of the
+# abandoned Story-15.13 Cloud Content Storage pipeline
+# (see docs/_archive/superseded/epic-15-stories/15.13-cloud-content-storage.md).
+# No current replacement -- the app ships all content in the bundled
+# Content DB (see docs/explainers/content-database.md); nothing reads from
+# Firebase Storage at runtime. Kept in place only for historical reference;
+# do not run this against the production bucket.
+#
 # Upload curriculum content to Firebase Cloud Storage.
 #
 # Prerequisites:

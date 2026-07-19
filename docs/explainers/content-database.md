@@ -170,7 +170,11 @@ learning_tracker/tool/                  # The build pipeline
 │                                        # hits the live public Sefaria API directly
 │                                        # per curriculum; NOT part of `make seed`
 │                                        # (see docs/seed-build.md)
-├── seed_text_content.dart              # Fetch bilingual text from Sefaria
+├── seed_text_content.dart              # RETIRED (DNI-121, Canceled;
+│                                        # AUD-guardrails-09) -- dead
+│                                        # Story-15.13 pipeline, not part of
+│                                        # `make seed`; superseded by
+│                                        # seed_content_db.dart
 ├── validate_seed_coverage.dart         # CI gate: every (program, date) resolves
 └── verify_seed_calendar.dart           # Cross-check calendar against live Sefaria
 ```

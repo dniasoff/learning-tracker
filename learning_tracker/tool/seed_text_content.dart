@@ -4,6 +4,15 @@ import 'dart:io';
 import 'package:dio/dio.dart'; // Used in tool/ only (dev_dependency)
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 
+/// RETIRED (Story DNI-121, Canceled — AUD-guardrails-09): part of the
+/// abandoned Story-15.13 Cloud Content Storage pipeline
+/// (see docs/_archive/superseded/epic-15-stories/15.13-cloud-content-storage.md).
+/// Its output (`build/text_content/*.json.gz`) is not consumed by anything
+/// in `lib/`, `make seed`, or any CI target. Superseded by the canonical
+/// `tool/seed_content_db.dart` + `make seed` pipeline (see
+/// docs/seed-build.md). Kept in place only for historical reference; do not
+/// wire this into any build path.
+///
 /// Fetches text content (Hebrew with nikud + English) from Sefaria API
 /// for all leaf items in each curriculum's hierarchy JSON.
 ///
