@@ -7877,13 +7877,22 @@
   {
    "id": "AUD-guardrails-21",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Define a retention policy for completed-round device-test workflow.js scripts instead of letting run2/run3 accumulate in tool/ indefinitely",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "e789818d593d4f65f8ed87a5ff206b9bb6a32d56"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-21 AC1 OK: learning_tracker/tool/README.md:10-37 states the *.workflow.js retention rule (keep while unverified / delete once FIX#N landed+re-verified)",
+    "AUD-guardrails-21 AC2 OK: all 6 run2_*/run3_*.workflow.js deleted (6 D entries in diff; ls learning_tracker/tool/*.workflow.js -> No such file)",
+    "AUD-guardrails-21 AC2 rationale OK: README:39-46 records the decision; cited commits exist (6cdd919f, 7519a8bd, 5f182dd3, 9bfbbade, 25170b17, afa2b71a)",
+    "AUD-guardrails-21 links OK: tool/device_e2e/README.md, docs/planning/on-device-exhaustive-test-plan-2026-05-31.md, coding-standards anchor line 754 all resolve",
+    "AUD-guardrails-21 scope OK: diff = 1 file added + 6 deleted; no .dart/test files touched, no TQ-7 surface",
+    "AUD-guardrails-21 no dangling refs OK: dup_tool_basename_baseline.txt clean; audit 86/86 tool-collision ratchet passes"
+   ],
+   "notes": "Added learning_tracker/tool/README.md with a retention rule for *.workflow.js scripts (AC1), then deleted the 6 undocumented run2_*/run3_*.workflow.js files (AC2) - all referenced FIX#7/8/9 have landed+re-verified fix commits (6cdd919f,7519a8bd,5f182dd3,9bfbbade,25170b17,afa2b71a)."
   },
   {
    "id": "AUD-guardrails-36",
