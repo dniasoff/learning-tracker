@@ -11524,13 +11524,13 @@
   {
    "id": "AUD-tracks-20",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P3",
    "title": "Delete dead LearningOrderPreferences singleton (superseded by ProfileScopedPreferenceKeys)",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c32, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (b06a724d86e56ee23966c3d8fb3117cdedfe4917, \"fix(tracks): AUD-tracks-20 - delete dead LearningOrderPreferences singleton\", on stray worktree branch worktree-wf_c12188fb-a5a-64) which deletes the dead whole_curriculum_order/data/preferences/learning_order_preferences.dart static-singleton SharedPreferences wrapper (superseded by ProfileScopedPreferenceKeys via parentControlsOrderingProvider) and removes its stale entry from tool/ag5_unmirrored_baseline.txt -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_c12188fb-a5a-64 confirms the commit is not patch-equivalent to anything already on dev, so per protocol the stray worktree directory was removed but the worktree-wf_c12188fb-a5a-64 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-06, AUD-tracks-10, AUD-tracks-12, AUD-guardrails-09, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-t-tutoring-08",
