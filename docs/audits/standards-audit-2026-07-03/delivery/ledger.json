@@ -8727,13 +8727,13 @@
   {
    "id": "AUD-settings-10",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P3",
    "title": "Remove UserProfileHeaderCard's redundant _user field and de-duplicate/select-narrow the active-profile lookup",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c25, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (7afbccefdc7a3ec9cf5d6816be89cda5169af84c, \"fix(settings): AUD-settings-10 - de-dup active-profile lookup, drop redundant _user state\", on stray worktree branch worktree-wf_c12188fb-a5a-49) which converts UserProfileHeaderCard from a ConsumerStatefulWidget (holding a redundant _user field always set to widget.user) to a plain ConsumerWidget, and extracts the duplicated activeProfileIdProvider+profileListStreamProvider active-profile lookup (previously copy-pasted between this widget's build() and _LocalBornProfileRow.build()) into one shared _watchActiveProfileFromList() helper read via ProviderListenable.select -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_c12188fb-a5a-49 confirms the commit is not patch-equivalent to anything already on dev (still shows \"+\"), and grep of the current tree confirms _UserProfileHeaderCardState/ConsumerStatefulWidget are still present in user_profile_header_card.dart, so per protocol the stray worktree directory was removed but the worktree-wf_c12188fb-a5a-49 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-06, AUD-tracks-10, AUD-tracks-12, AUD-guardrails-09, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-settings-11",
