@@ -12,6 +12,12 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 ///   - `EdgeInsets.only(left:…)` / `…only(right:…)` → `EdgeInsetsDirectional.only(start:…/end:…)`
 ///   - `Alignment.centerLeft` / `.centerRight` → `AlignmentDirectional.centerStart / centerEnd`
 ///   - `TextAlign.left` / `TextAlign.right` → `TextAlign.start` / `TextAlign.end`
+///   - `textDirection: TextDirection.rtl` / `textDirection: TextDirection.ltr`
+///     (a bare literal, unconditionally forcing one direction) → omit the
+///     override and let ambient `Directionality`/locale apply, or compute it
+///     from a locale-aware flag (e.g. `useHebrew ? TextDirection.rtl :
+///     TextDirection.ltr`, which is NOT flagged — it's already
+///     direction-aware; see AUD-tracks-25).
 ///
 /// **Severity: WARNING** — existing code contains many violations; clean up
 /// incrementally. New code must not introduce new violations.
@@ -51,6 +57,23 @@ class NoHardcodedTextDirection extends DartLintRule {
 
   /// The constructor / factory method name that triggers inspection.
   static const _edgeInsetsMethod = 'only';
+
+  // -------------------------------------------------------------------------
+  // Restricted `textDirection:` argument value: a bare `TextDirection.rtl`/
+  // `.ltr` literal (unconditionally forced), as opposed to a computed
+  // expression (ternary keyed off a locale flag, `Directionality.of(...)`,
+  // a variable, etc.) which is direction-aware and allowed.
+  // -------------------------------------------------------------------------
+
+  /// The named-argument label that carries a widget's text direction.
+  static const _textDirectionArg = 'textDirection';
+
+  /// The enum class whose bare member access is restricted when it is the
+  /// direct value of a [_textDirectionArg] argument.
+  static const _textDirectionClass = 'TextDirection';
+
+  /// The [_textDirectionClass] members restricted as a bare literal value.
+  static const _textDirectionValues = {'rtl', 'ltr'};
 
   /// Returns true when [filePath] should be skipped (generated files).
   static bool _isGenerated(String filePath) {
@@ -107,6 +130,26 @@ class NoHardcodedTextDirection extends DartLintRule {
           reporter.atNode(arg, _code);
         }
       }
+    });
+
+    // ------------------------------------------------------------------
+    // 3. `textDirection: TextDirection.rtl` / `textDirection:
+    //    TextDirection.ltr` as a bare literal value on any widget
+    //    constructor (TextFormField, TextField, Text, …). A computed value
+    //    (ternary, `Directionality.of(context)`, a variable/getter, …) is
+    //    NOT the direct child expression of the NamedExpression and is
+    //    therefore not flagged — e.g. `textDirection: useHebrew ?
+    //    TextDirection.rtl : TextDirection.ltr` is allowed (AUD-tracks-25).
+    // ------------------------------------------------------------------
+    context.registry.addNamedExpression((node) {
+      if (node.name.label.name != _textDirectionArg) return;
+
+      final value = node.expression;
+      if (value is! PrefixedIdentifier) return;
+      if (value.prefix.name != _textDirectionClass) return;
+      if (!_textDirectionValues.contains(value.identifier.name)) return;
+
+      reporter.atNode(node, _code);
     });
   }
 }

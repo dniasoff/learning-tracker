@@ -33,7 +33,9 @@
 ///     instead (AUD-core-widgets-01, AX-2/EH-5).
 ///   - [NoHardcodedTextDirection]: warns on hardcoded directional layout values
 ///     that break RTL locales (EdgeInsets.only(left/right), Alignment.centerLeft/
-///     centerRight, TextAlign.left/right).
+///     centerRight, TextAlign.left/right, and a bare `textDirection:
+///     TextDirection.rtl`/`.ltr` literal — a computed/ternary value is
+///     allowed).
 ///   - [NoRawLogEvent]: prevents direct `logEvent(name, …)` calls outside
 ///     `analytics_service.dart`; use typed helper methods instead.
 ///   - [NoRawTalker]: prevents `package:talker/talker.dart` imports outside

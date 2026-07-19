@@ -170,6 +170,10 @@ Warns on the following hardcoded directional values in Dart files:
 | `Alignment.centerRight` | `AlignmentDirectional.centerEnd` |
 | `TextAlign.left` | `TextAlign.start` |
 | `TextAlign.right` | `TextAlign.end` |
+| `textDirection: TextDirection.rtl` (bare literal) | Omit the override (ambient `Directionality`) or compute it from a locale-aware flag |
+| `textDirection: TextDirection.ltr` (bare literal) | Same as above |
+
+A **computed** `textDirection:` value — a ternary keyed off a locale-aware flag (`useHebrew ? TextDirection.rtl : TextDirection.ltr`), `Directionality.of(context)`, a variable, etc. — is direction-aware and is *not* flagged. Only a bare `TextDirection.rtl`/`.ltr` literal used directly as the argument value is banned (AUD-tracks-25).
 
 **Severity: WARNING** — existing code has many legacy violations. New code must not introduce new ones. Clean up incrementally.
 

@@ -65,7 +65,12 @@ class _TrackLabelStepState extends State<TrackLabelStep> {
             TextFormField(
               controller: _controller,
               autofocus: true,
-              textDirection: TextDirection.rtl,
+              // [AUD-tracks-25] This is a free-text "name this track" field
+              // — the user can type in either script regardless of app
+              // locale. No `textDirection:` override: let it fall back to
+              // the ambient `Directionality` (locale-derived), the same as
+              // every other plain text field in the app, instead of forcing
+              // RTL on an English-locale user's cursor/hint anchoring.
               inputFormatters: const [TrimLeadingSpaceFormatter()],
               decoration: InputDecoration(
                 labelText: AppLocalizations.of(context)!.trackNameLabel,

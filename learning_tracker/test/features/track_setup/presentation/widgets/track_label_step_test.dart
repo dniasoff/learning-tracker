@@ -1,8 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_label_step.dart';
 
 import '../../../../helpers/pump_app.dart';
+
+/// Locates the [RenderEditable] backing the [TextFormField]'s [EditableText]
+/// so tests can assert the field's actual *effective* text direction —
+/// `TextField.textDirection` alone can't be read back off the widget tree
+/// when it's left null (it falls back to ambient `Directionality` deep
+/// inside `EditableTextState`), so this walks the render tree the same way
+/// Flutter's own `EditableText` test helpers do.
+RenderEditable _findRenderEditable(WidgetTester tester) {
+  final root = tester.renderObject(find.byType(EditableText));
+  late RenderEditable renderEditable;
+  void recursiveFinder(RenderObject child) {
+    if (child is RenderEditable) {
+      renderEditable = child;
+      return;
+    }
+    child.visitChildren(recursiveFinder);
+  }
+
+  root.visitChildren(recursiveFinder);
+  return renderEditable;
+}
 
 void main() {
   group('TrackLabelStep', () {
@@ -100,6 +122,21 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(TrackLabelStep), findsOneWidget);
+    });
+
+    // [AUD-tracks-25] The name field must not force RTL on an English-locale
+    // free-text field — its effective text direction should follow the
+    // ambient locale (Directionality.of(context)) rather than a hardcoded
+    // `TextDirection.rtl` override.
+    testWidgets('name field has ltr effective text direction under EN '
+        'locale', (tester) async {
+      await tester.pumpWidget(
+        buildWidget(defaultLabel: 'Morning Bavli Study', onComplete: (_) {}),
+      );
+      await tester.pumpAndSettle();
+
+      final renderEditable = _findRenderEditable(tester);
+      expect(renderEditable.textDirection, TextDirection.ltr);
     });
   });
 }
