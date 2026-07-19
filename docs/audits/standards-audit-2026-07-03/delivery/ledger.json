@@ -6057,13 +6057,20 @@
   {
    "id": "AUD-tracks-16",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Wrap saveOrder/resetToDefault's reorder-amnesty stamp in the same transaction as the order write",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "7d6c22625a4303781dbcad96c562f13ff92f16b5"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-16 AC1 OK: _ThrowingStampTrackDao.stampReorderAt throws (test:32-42); saveOrder test asserts learning_order rows isEmpty after throw (test:355-393)",
+    "AUD-tracks-16 AC1 OK red-first: I reverted impl to HEAD~1 -> both new tests RED (00:00 +6 -2); restored -> 8/8 GREEN",
+    "AUD-tracks-16 AC1 OK sibling: resetToDefault delete+stamp rollback asserted hasLength(1) (test:395-424)",
+    "AUD-tracks-16 fix OK: _stampReorderAt now inside transaction() at impl:152 (saveOrder) and impl:180 (resetToDefault); both sites, no third call site"
+   ],
+   "notes": "Confirmed: stamp ran outside the order-write transaction in saveOrder AND resetToDefault. Moved inside transaction() in both. Red-first: fault-injected TrackDao proved rows do NOT roll back pre-fix, DO roll back post-fix."
   },
   {
    "id": "AUD-t-tracks-04",
