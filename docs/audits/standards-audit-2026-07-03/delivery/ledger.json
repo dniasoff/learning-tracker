@@ -6929,13 +6929,20 @@
   {
    "id": "AUD-tracks-22",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Extract the repeated reorder-amnesty confirm-dialog preamble in the tracks reorder screens",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "f72e17e11618b513509c90c15ba47b9e42eda844"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-22 AC1a OK (single impl): grep showIfNeeded lib/ -> 1 invocation, reorder_amnesty_guard_mixin.dart:29; 0 in either screen",
+    "AUD-tracks-22 AC1b OK (3 sites delegate): learning_order_screen.dart:125, track_learning_order_screen.dart:165 + :185 = the 3 evidence sites",
+    "AUD-tracks-22 AC1c OK (one mixin): declared reorder_amnesty_guard_mixin.dart:13; mixed in at learning_order_screen.dart:30, track_learning_order_screen.dart:35",
+    "AUD-tracks-22 AC1d OK (no leftover dupe): overdueCountForCurriculumProvider read from 1 non-generated site (mixin:26); preamble gone from both screens (-34/-20)"
+   ],
+   "notes": "Re-verified: all 3 sites inlined the same ~10-line preamble. Extracted ReorderAmnestyGuardMixin.confirmReorderAmnesty; all 3 delegate to it. AC verified: exactly 1 showIfNeeded( call remains (in mixin), 0 in screens. Behavior unchanged per green regression suite."
   },
   {
    "id": "AUD-t-story-acceptance-34",
