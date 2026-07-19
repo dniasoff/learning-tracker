@@ -1041,6 +1041,63 @@ void main() {
     },
   );
 
+  testWidgets('DeletingAccountOverlay error under Hebrew locale: renders only '
+      'ARB-sourced Hebrew text, never a mocked exception\'s message '
+      '(AUD-settings-07, EH-5/ST-4)', (tester) async {
+    final user = _cloudUser(providers: const []);
+    var callCount = 0;
+    when(() => service.deleteAccount(any<String>())).thenAnswer((_) async {
+      callCount++;
+      if (callCount == 1) {
+        throw const NotAuthenticatedException();
+      }
+    });
+
+    await tester.pumpWidget(
+      _buildApp(
+        child: _DeleteHost(user: user),
+        router: router,
+        authRepo: authRepo,
+        service: service,
+        connectivity: connectivity,
+        registry: registry,
+        userDb: userDb,
+        locale: const Locale('he'),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('trigger'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.enterText(find.byType(TextField), 'DELETE');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(TextButton, 'מחיקת חשבון'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Error state is showing via the fixed, localized Hebrew copy...
+    expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    expect(find.text('המחיקה נתקלה בבעיה. התנתקת מהחשבון.'), findsOneWidget);
+    // ...and NEVER the raw, untranslated exception detail.
+    expect(
+      find.textContaining('NotAuthenticatedException'),
+      findsNothing,
+      reason:
+          'AUD-settings-07 (EH-5): the caught exception\'s raw message/'
+          'toString() must never be rendered in the UI — presentation must '
+          'resolve display text via AppLocalizations only, in every '
+          'locale.',
+    );
+
+    // Resolve second call for clean teardown
+    await tester.tap(find.text('נסה שוב'));
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
   testWidgets(
     'DeletingAccountOverlay retry: re-calls deleteAccount after error',
     (tester) async {

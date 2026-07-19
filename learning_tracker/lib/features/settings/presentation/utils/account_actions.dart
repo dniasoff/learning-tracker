@@ -578,15 +578,19 @@ Future<void> showDeleteLocalAccountFlow(
     } else {
       await router.replaceAll([const SignInRoute()]);
     }
-  } catch (e) {
+  } catch (e, stackTrace) {
+    // EH-5/ST-4: never surface the raw exception's toString() in the UI —
+    // log it for diagnostics and show only the fixed, localized fallback
+    // copy instead.
+    AppLogger.instance.error(
+      event: 'delete_local_account_failed',
+      exception: e,
+      stackTrace: stackTrace,
+    );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            AppLocalizations.of(
-              context,
-            )!.errorDeleteAccountFailed(e.toString()),
-          ),
+          content: Text(AppLocalizations.of(context)!.errorDeleteAccountFailed),
           backgroundColor: Colors.red,
         ),
       );

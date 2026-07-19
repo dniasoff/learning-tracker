@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -600,11 +601,20 @@ class _LifetimeCurriculumMarkingScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.lifetimeMarkSavedCount(batchItems.length))),
       );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.lifetimeMarkSaveError(e.toString()))),
+    } catch (e, stackTrace) {
+      // EH-5/ST-4: never surface the raw exception's toString() in the UI —
+      // log it for diagnostics and show only the fixed, localized fallback
+      // copy instead.
+      AppLogger.instance.error(
+        event: 'lifetime_mark_save_failed',
+        fields: {'curriculumId': _curriculum.storageKey},
+        exception: e,
+        stackTrace: stackTrace,
       );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.lifetimeMarkSaveError)));
     } finally {
       if (mounted) {
         setState(() => _saving = false);

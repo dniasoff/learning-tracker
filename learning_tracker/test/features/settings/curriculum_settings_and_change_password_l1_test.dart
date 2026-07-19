@@ -10,9 +10,11 @@
 //
 //  A. CurriculumSettingsScreen — error branch (uncovered in existing test)
 //     A1. Error state: school icon present in error tile
-//     A2. Error state: subtitle contains "Error:"
+//     A2. Error state: subtitle shows the fixed localized fallback, never
+//         the raw exception (AUD-settings-07, EH-5/ST-4)
 //     A3. Error state: "Program" title visible in error tile
-//     A4. Error state: he-locale smoke renders without crash
+//     A4. Error state: he-locale renders only ARB-sourced Hebrew text,
+//         never the raw exception (AUD-settings-07)
 //
 //  B. ChangePasswordDialog — structure
 //     B1. Dialog title is "Change Password" (l10n changePasswordDialogTitle)
@@ -239,17 +241,34 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets('A2: error subtitle contains "Error:"', (tester) async {
-      await _pumpAndSettle1s(
-        tester,
-        _buildCurriculumApp(db: db, lprOverride: throwingLpr),
-      );
+    testWidgets(
+      'A2: error subtitle shows the localized friendly fallback, never the '
+      'raw exception (AUD-settings-07, EH-5/ST-4)',
+      (tester) async {
+        await _pumpAndSettle1s(
+          tester,
+          _buildCurriculumApp(db: db, lprOverride: throwingLpr),
+        );
 
-      // l10n: curriculumSettingsProgramError → "Error: $error"
-      expect(find.textContaining('Error:'), findsOneWidget);
+        // l10n: curriculumSettingsProgramError is now a fixed,
+        // already-localized fallback (no {error} placeholder) — the raw
+        // exception must never reach the widget tree.
+        expect(
+          find.text("Couldn't load the program. Please try again."),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('test-forced LPR error'),
+          findsNothing,
+          reason:
+              'AUD-settings-07 (EH-5): the caught exception\'s raw message '
+              'must never reach the widget tree — only ARB-sourced text may '
+              'render.',
+        );
 
-      await _teardown(tester);
-    });
+        await _teardown(tester);
+      },
+    );
 
     testWidgets('A3: "Program" title visible in error tile', (tester) async {
       await _pumpAndSettle1s(
@@ -263,7 +282,8 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets('A4: error branch renders under Hebrew locale without crash', (
+    testWidgets('A4: error branch under Hebrew locale renders only ARB-sourced '
+        'Hebrew text, never the raw exception (AUD-settings-07)', (
       tester,
     ) async {
       await _pumpAndSettle1s(
@@ -278,6 +298,10 @@ void main() {
 
       expect(find.byType(Scaffold), findsOneWidget);
       expect(find.byIcon(Icons.school), findsWidgets);
+      // l10n: curriculumSettingsProgramError (he) is a fixed fallback —
+      // the raw (untranslated, English) exception text must never render.
+      expect(find.text('טעינת התוכנית נכשלה. נסו שוב.'), findsOneWidget);
+      expect(find.textContaining('test-forced LPR error'), findsNothing);
 
       await _teardown(tester);
     });

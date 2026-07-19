@@ -96,13 +96,19 @@ Future<void> sendLogsToFirebase({
         ),
       );
     }
-  } catch (e) {
+  } catch (e, stackTrace) {
+    // EH-5/ST-4: never surface the raw exception's toString() in the UI —
+    // log it for diagnostics and show only the fixed, localized fallback
+    // copy instead.
+    logger.error(
+      event: 'send_logs_failed',
+      exception: e,
+      stackTrace: stackTrace,
+    );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.errorSendLogsFailed(e.toString()),
-          ),
+          content: Text(AppLocalizations.of(context)!.errorSendLogsFailed),
         ),
       );
     }

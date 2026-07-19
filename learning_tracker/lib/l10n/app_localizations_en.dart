@@ -973,9 +973,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String lifetimeMarkSaveError(String error) {
-    return 'Could not save lifetime marks: $error';
-  }
+  String get lifetimeMarkSaveError =>
+      'Couldn\'t save your marks. Please try again.';
 
   @override
   String get dashboardStats => 'STATS';
@@ -2535,9 +2534,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'An internet connection is required to delete your account.';
 
   @override
-  String errorDeleteAccountFailed(String error) {
-    return 'Failed to delete account: $error';
-  }
+  String get errorDeleteAccountFailed =>
+      'Failed to delete account. Please try again.';
 
   @override
   String get errorSendLogsMustBeSignedIn => 'Must be signed in to send logs';
@@ -2547,9 +2545,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Sync not available — account not linked to cloud';
 
   @override
-  String errorSendLogsFailed(String error) {
-    return 'Failed to send logs: $error';
-  }
+  String get errorSendLogsFailed => 'Failed to send logs. Please try again.';
 
   @override
   String sendLogsSuccess(int count) {
@@ -3286,9 +3282,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get curriculumSettingsProgramTitle => 'Program';
 
   @override
-  String curriculumSettingsProgramError(String error) {
-    return 'Error: $error';
-  }
+  String get curriculumSettingsProgramError =>
+      'Couldn\'t load the program. Please try again.';
 
   @override
   String get curriculumSettingsChangeProgram => 'Change Program';

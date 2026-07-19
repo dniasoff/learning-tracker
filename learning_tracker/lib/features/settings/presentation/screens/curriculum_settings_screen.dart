@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/app_constants.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
@@ -68,17 +69,31 @@ class _CurriculumSettingsScreenState
                   )!.curriculumSettingsLoadingProgram,
                 ),
               ),
-              error: (e, _) => ListTile(
-                leading: const Icon(Icons.school),
-                title: Text(
-                  AppLocalizations.of(context)!.curriculumSettingsProgramTitle,
-                ),
-                subtitle: Text(
-                  AppLocalizations.of(
-                    context,
-                  )!.curriculumSettingsProgramError(e.toString()),
-                ),
-              ),
+              error: (e, stackTrace) {
+                // EH-5/ST-4: never surface the raw exception's toString() in
+                // the UI (untranslated, un-RTL-shaped English leaks through
+                // to Hebrew users) — log it for diagnostics and show only
+                // the fixed, localized fallback copy instead.
+                AppLogger.instance.error(
+                  event: 'curriculum_settings_program_load_failed',
+                  fields: {'curriculumId': _curriculum.storageKey},
+                  exception: e,
+                  stackTrace: stackTrace,
+                );
+                return ListTile(
+                  leading: const Icon(Icons.school),
+                  title: Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.curriculumSettingsProgramTitle,
+                  ),
+                  subtitle: Text(
+                    AppLocalizations.of(
+                      context,
+                    )!.curriculumSettingsProgramError,
+                  ),
+                );
+              },
               data: (info) => ListTile(
                 leading: const Icon(Icons.school),
                 title: Text(

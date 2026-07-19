@@ -8,7 +8,10 @@
 //   S3. success path: pushDiagnosticLog called with correct uid + field shape
 //   S4. success SnackBar contains entry count
 //   S5. log window filter: only entries within 10 min are included
-//   S6. exception path: SnackBar with errorSendLogsFailed text
+//   S6. exception path: SnackBar shows the fixed localized fallback, never
+//       the raw exception (AUD-settings-07, EH-5/ST-4)
+//   S6b. exception path under Hebrew locale: SnackBar shows only
+//       ARB-sourced Hebrew text (AUD-settings-07)
 //   S7. entries map: ts is ISO-8601, lvl is uppercase, msg present
 //   S8. entry with exception field → 'exc' key present in payload
 //   S9. entry with error field → 'err' key present in payload
@@ -18,6 +21,11 @@
 // account_actions supplement (account_actions_test.dart does not cover):
 //   A1. showDeleteLocalAccountFlow: non-localBorn auth state → exits immediately
 //   A2. showDeleteLocalAccountFlow: localBorn → delete dialog shown
+//   A3. showDeleteLocalAccountFlow: confirmed delete, registry lookup
+//       throws → SnackBar shows the fixed localized fallback, never the
+//       raw exception (AUD-settings-07, EH-5/ST-4)
+//   A4. showDeleteLocalAccountFlow under Hebrew locale: same, ARB-sourced
+//       Hebrew text only (AUD-settings-07)
 
 @Tags(['l1', 'settings', 'settings_utils'])
 library;
@@ -25,8 +33,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -37,6 +48,7 @@ import 'package:learning_tracker/features/settings/presentation/utils/send_logs_
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talker/talker.dart';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -44,6 +56,12 @@ import 'package:talker/talker.dart';
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
 class _MockFirestoreGateway extends Mock implements FirestoreGateway {}
+
+/// AUD-settings-07: used to force showDeleteLocalAccountFlow's catch branch
+/// (account_actions.dart) by making the registry lookup inside
+/// SessionPersistenceService.resolveActiveAccountId throw.
+class _MockDeviceRegistryDatabase extends Mock
+    implements DeviceRegistryDatabase {}
 
 // ─── A1/A2: stub AuthStateNotifiers for showDeleteLocalAccountFlow ────────────
 
@@ -129,14 +147,19 @@ class _DeleteLocalAccountHost extends ConsumerWidget {
 }
 
 /// Host for [_DeleteLocalAccountHost] with the given [authStateNotifier]
-/// overriding [authStateProvider].
+/// overriding [authStateProvider]. [extraOverrides] merges in additional
+/// provider overrides (e.g. a throwing deviceRegistryProvider double).
 Widget _buildDeleteLocalAccountHost({
   required AuthStateNotifier Function() authStateNotifier,
   Locale locale = const Locale('en'),
+  List<Override> extraOverrides = const [],
 }) {
   return ProviderScope(
     retry: (_, __) => null,
-    overrides: [authStateProvider.overrideWith(authStateNotifier)],
+    overrides: [
+      authStateProvider.overrideWith(authStateNotifier),
+      ...extraOverrides,
+    ],
     child: MaterialApp(
       locale: locale,
       localizationsDelegates: const [
@@ -383,9 +406,13 @@ void main() {
   });
 
   // ── S6: exception path → SnackBar with errorSendLogsFailed ───────────────
+  // AUD-settings-07 (EH-5/ST-4): errorSendLogsFailed is now a fixed,
+  // already-localized fallback (no {error} placeholder) — the raw exception
+  // must never reach the widget tree.
 
   testWidgets(
-    'S6: gateway throws → SnackBar contains errorSendLogsFailed text',
+    'S6: gateway throws → SnackBar shows the localized friendly fallback, '
+    'never the raw exception (AUD-settings-07)',
     (tester) async {
       when(() => auth.currentUser).thenReturn(_user());
       when(
@@ -405,12 +432,53 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // errorSendLogsFailed interpolates the error message
-      expect(find.textContaining('upload failed'), findsOneWidget);
+      expect(
+        find.text('Failed to send logs. Please try again.'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('upload failed'),
+        findsNothing,
+        reason:
+            'AUD-settings-07 (EH-5): the caught exception\'s raw message '
+            'must never reach the widget tree — only ARB-sourced text may '
+            'render.',
+      );
 
       await _teardown(tester);
     },
   );
+
+  testWidgets('S6b: gateway throws under Hebrew locale → SnackBar shows only '
+      'ARB-sourced Hebrew text, never the raw exception (AUD-settings-07)', (
+    tester,
+  ) async {
+    when(() => auth.currentUser).thenReturn(_user());
+    when(
+      () => gateway.pushDiagnosticLog(
+        uid: any(named: 'uid'),
+        data: any(named: 'data'),
+      ),
+    ).thenThrow(Exception('upload failed'));
+
+    final logger = _buildLogger([]);
+
+    await tester.pumpWidget(
+      _buildHost(
+        _SendLogsHost(logger: logger, gateway: gateway, auth: auth),
+        locale: const Locale('he'),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('send'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('שליחת היומנים נכשלה. נסו שוב.'), findsOneWidget);
+    expect(find.textContaining('upload failed'), findsNothing);
+
+    await _teardown(tester);
+  });
 
   // ── S7: entry mapping — ts ISO-8601, lvl uppercase, msg present ──────────
 
@@ -679,4 +747,102 @@ void main() {
 
     await _teardown(tester);
   });
+
+  // ── A3: confirmed delete, registry lookup throws → friendly SnackBar ─────
+  // AUD-settings-07 (EH-5/ST-4): showDeleteLocalAccountFlow's catch block
+  // interpolated the raw exception's toString() into errorDeleteAccountFailed.
+  // Force the failure via SessionPersistenceService.resolveActiveAccountId's
+  // registry.findById lookup and assert only the fixed ARB fallback renders.
+
+  testWidgets(
+    'A3: showDeleteLocalAccountFlow — confirmed delete, registry lookup '
+    'throws → SnackBar shows the localized friendly fallback, never the '
+    'raw exception (AUD-settings-07)',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'last_active_account_id': 'acc-forced',
+      });
+      final mockRegistry = _MockDeviceRegistryDatabase();
+      when(
+        () => mockRegistry.findById(any()),
+      ).thenThrow(Exception('test-forced registry lookup failure'));
+
+      await tester.pumpWidget(
+        _buildDeleteLocalAccountHost(
+          authStateNotifier: () => _LocalBornAuthStateNotifier(),
+          extraOverrides: [
+            deviceRegistryProvider.overrideWithValue(mockRegistry),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('trigger-delete-local'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.enterText(find.byType(TextField), 'DELETE');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(TextButton, 'Delete Account'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.text('Failed to delete account. Please try again.'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('test-forced registry lookup failure'),
+        findsNothing,
+        reason:
+            'AUD-settings-07 (EH-5): the caught exception\'s raw message '
+            'must never reach the widget tree — only ARB-sourced text may '
+            'render.',
+      );
+
+      await _teardown(tester);
+    },
+  );
+
+  testWidgets(
+    'A4: showDeleteLocalAccountFlow under Hebrew locale — confirmed delete, '
+    'registry lookup throws → SnackBar shows only ARB-sourced Hebrew text, '
+    'never the raw exception (AUD-settings-07)',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'last_active_account_id': 'acc-forced',
+      });
+      final mockRegistry = _MockDeviceRegistryDatabase();
+      when(
+        () => mockRegistry.findById(any()),
+      ).thenThrow(Exception('test-forced registry lookup failure'));
+
+      await tester.pumpWidget(
+        _buildDeleteLocalAccountHost(
+          authStateNotifier: () => _LocalBornAuthStateNotifier(),
+          locale: const Locale('he'),
+          extraOverrides: [
+            deviceRegistryProvider.overrideWithValue(mockRegistry),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('trigger-delete-local'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.enterText(find.byType(TextField), 'DELETE');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(TextButton, 'מחיקת חשבון'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('מחיקת החשבון נכשלה. נסו שוב.'), findsOneWidget);
+      expect(
+        find.textContaining('test-forced registry lookup failure'),
+        findsNothing,
+      );
+
+      await _teardown(tester);
+    },
+  );
 }

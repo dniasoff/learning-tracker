@@ -970,9 +970,7 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String lifetimeMarkSaveError(String error) {
-    return 'לא ניתן לשמור סימונים: $error';
-  }
+  String get lifetimeMarkSaveError => 'שמירת הסימונים נכשלה. נסו שוב.';
 
   @override
   String get dashboardStats => 'סטטיסטיקה';
@@ -2508,9 +2506,7 @@ class AppLocalizationsHe extends AppLocalizations {
       'נדרש חיבור לאינטרנט כדי למחוק את החשבון.';
 
   @override
-  String errorDeleteAccountFailed(String error) {
-    return 'מחיקת החשבון נכשלה: $error';
-  }
+  String get errorDeleteAccountFailed => 'מחיקת החשבון נכשלה. נסו שוב.';
 
   @override
   String get errorSendLogsMustBeSignedIn => 'יש להיות מחובר כדי לשלוח יומנים';
@@ -2520,9 +2516,7 @@ class AppLocalizationsHe extends AppLocalizations {
       'סנכרון לא זמין — החשבון אינו מקושר לענן';
 
   @override
-  String errorSendLogsFailed(String error) {
-    return 'שליחת היומנים נכשלה: $error';
-  }
+  String get errorSendLogsFailed => 'שליחת היומנים נכשלה. נסו שוב.';
 
   @override
   String sendLogsSuccess(int count) {
@@ -3248,9 +3242,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get curriculumSettingsProgramTitle => 'תוכנית';
 
   @override
-  String curriculumSettingsProgramError(String error) {
-    return 'שגיאה: $error';
-  }
+  String get curriculumSettingsProgramError => 'טעינת התוכנית נכשלה. נסו שוב.';
 
   @override
   String get curriculumSettingsChangeProgram => 'שנה תוכנית';

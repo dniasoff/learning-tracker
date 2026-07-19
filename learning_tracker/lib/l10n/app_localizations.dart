@@ -1755,11 +1755,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{Marked 1 lifetime selection.} other{Marked {count} lifetime selections.}}'**
   String lifetimeMarkSavedCount(int count);
 
-  /// No description provided for @lifetimeMarkSaveError.
+  /// Friendly fallback shown instead of a raw exception when saving lifetime marks fails (EH-5/ST-4).
   ///
   /// In en, this message translates to:
-  /// **'Could not save lifetime marks: {error}'**
-  String lifetimeMarkSaveError(String error);
+  /// **'Couldn\'t save your marks. Please try again.'**
+  String get lifetimeMarkSaveError;
 
   /// No description provided for @dashboardStats.
   ///
@@ -4485,11 +4485,11 @@ abstract class AppLocalizations {
   /// **'An internet connection is required to delete your account.'**
   String get errorDeleteAccountRequiresInternet;
 
-  /// No description provided for @errorDeleteAccountFailed.
+  /// Friendly fallback shown instead of a raw exception when local-account deletion fails (EH-5/ST-4).
   ///
   /// In en, this message translates to:
-  /// **'Failed to delete account: {error}'**
-  String errorDeleteAccountFailed(String error);
+  /// **'Failed to delete account. Please try again.'**
+  String get errorDeleteAccountFailed;
 
   /// No description provided for @errorSendLogsMustBeSignedIn.
   ///
@@ -4503,11 +4503,11 @@ abstract class AppLocalizations {
   /// **'Sync not available — account not linked to cloud'**
   String get errorSendLogsNoGateway;
 
-  /// No description provided for @errorSendLogsFailed.
+  /// Friendly fallback shown instead of a raw exception when diagnostic log upload fails (EH-5/ST-4).
   ///
   /// In en, this message translates to:
-  /// **'Failed to send logs: {error}'**
-  String errorSendLogsFailed(String error);
+  /// **'Failed to send logs. Please try again.'**
+  String get errorSendLogsFailed;
 
   /// No description provided for @sendLogsSuccess.
   ///
@@ -5715,11 +5715,11 @@ abstract class AppLocalizations {
   /// **'Program'**
   String get curriculumSettingsProgramTitle;
 
-  /// No description provided for @curriculumSettingsProgramError.
+  /// Friendly fallback shown instead of a raw exception when loading the curriculum's program fails (EH-5/ST-4).
   ///
   /// In en, this message translates to:
-  /// **'Error: {error}'**
-  String curriculumSettingsProgramError(String error);
+  /// **'Couldn\'t load the program. Please try again.'**
+  String get curriculumSettingsProgramError;
 
   /// No description provided for @curriculumSettingsChangeProgram.
   ///

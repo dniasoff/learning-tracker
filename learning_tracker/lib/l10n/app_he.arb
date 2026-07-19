@@ -464,11 +464,9 @@
       "count": { "type": "int" }
     }
   },
-  "lifetimeMarkSaveError": "לא ניתן לשמור סימונים: {error}",
+  "lifetimeMarkSaveError": "שמירת הסימונים נכשלה. נסו שוב.",
   "@lifetimeMarkSaveError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "Friendly fallback shown instead of a raw exception when saving lifetime marks fails (EH-5/ST-4)."
   },
   "dashboardStats": "סטטיסטיקה",
   "learningLifetimeAllCurricula": "לימוד לכל החיים (כל התוכניות)",
@@ -1132,19 +1130,15 @@
   "errorOnlyOfflineDelete": "ניתן למחוק כאן רק חשבונות לא מקוונים.",
   "errorDeleteProfileRequiresInternet": "נדרש חיבור לאינטרנט כדי למחוק פרופיל.",
   "errorDeleteAccountRequiresInternet": "נדרש חיבור לאינטרנט כדי למחוק את החשבון.",
-  "errorDeleteAccountFailed": "מחיקת החשבון נכשלה: {error}",
+  "errorDeleteAccountFailed": "מחיקת החשבון נכשלה. נסו שוב.",
   "@errorDeleteAccountFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "Friendly fallback shown instead of a raw exception when local-account deletion fails (EH-5/ST-4)."
   },
   "errorSendLogsMustBeSignedIn": "יש להיות מחובר כדי לשלוח יומנים",
   "errorSendLogsNoGateway": "סנכרון לא זמין — החשבון אינו מקושר לענן",
-  "errorSendLogsFailed": "שליחת היומנים נכשלה: {error}",
+  "errorSendLogsFailed": "שליחת היומנים נכשלה. נסו שוב.",
   "@errorSendLogsFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "Friendly fallback shown instead of a raw exception when diagnostic log upload fails (EH-5/ST-4)."
   },
   "sendLogsSuccess": "היומנים נשלחו ({count} רשומות). צפו במסוף Firebase ← diagnostic_logs.",
   "@sendLogsSuccess": {
@@ -1494,11 +1488,9 @@
 
   "curriculumSettingsLoadingProgram": "טוען תוכנית...",
   "curriculumSettingsProgramTitle": "תוכנית",
-  "curriculumSettingsProgramError": "שגיאה: {error}",
+  "curriculumSettingsProgramError": "טעינת התוכנית נכשלה. נסו שוב.",
   "@curriculumSettingsProgramError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "Friendly fallback shown instead of a raw exception when loading the curriculum's program fails (EH-5/ST-4)."
   },
   "curriculumSettingsChangeProgram": "שנה תוכנית",
   "curriculumSettingsChangeProgramSubtitle": "עברו לתוכנית לימוד אחרת",

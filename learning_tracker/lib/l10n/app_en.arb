@@ -606,11 +606,9 @@
       "count": { "type": "int" }
     }
   },
-  "lifetimeMarkSaveError": "Could not save lifetime marks: {error}",
+  "lifetimeMarkSaveError": "Couldn't save your marks. Please try again.",
   "@lifetimeMarkSaveError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "Friendly fallback shown instead of a raw exception when saving lifetime marks fails (EH-5/ST-4)."
   },
   "dashboardStats": "STATS",
   "learningLifetimeAllCurricula": "Learning lifetime (all curricula)",
@@ -1316,19 +1314,15 @@
   "errorOnlyOfflineDelete": "Only offline accounts can be deleted here.",
   "errorDeleteProfileRequiresInternet": "An internet connection is required to delete a profile.",
   "errorDeleteAccountRequiresInternet": "An internet connection is required to delete your account.",
-  "errorDeleteAccountFailed": "Failed to delete account: {error}",
+  "errorDeleteAccountFailed": "Failed to delete account. Please try again.",
   "@errorDeleteAccountFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "Friendly fallback shown instead of a raw exception when local-account deletion fails (EH-5/ST-4)."
   },
   "errorSendLogsMustBeSignedIn": "Must be signed in to send logs",
   "errorSendLogsNoGateway": "Sync not available — account not linked to cloud",
-  "errorSendLogsFailed": "Failed to send logs: {error}",
+  "errorSendLogsFailed": "Failed to send logs. Please try again.",
   "@errorSendLogsFailed": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "Friendly fallback shown instead of a raw exception when diagnostic log upload fails (EH-5/ST-4)."
   },
   "sendLogsSuccess": "Logs sent ({count} entries). View in Firebase console → diagnostic_logs.",
   "@sendLogsSuccess": {
@@ -1754,11 +1748,9 @@
 
   "curriculumSettingsLoadingProgram": "Loading program...",
   "curriculumSettingsProgramTitle": "Program",
-  "curriculumSettingsProgramError": "Error: {error}",
+  "curriculumSettingsProgramError": "Couldn't load the program. Please try again.",
   "@curriculumSettingsProgramError": {
-    "placeholders": {
-      "error": { "type": "String" }
-    }
+    "description": "Friendly fallback shown instead of a raw exception when loading the curriculum's program fails (EH-5/ST-4)."
   },
   "curriculumSettingsChangeProgram": "Change Program",
   "curriculumSettingsChangeProgramSubtitle": "Switch to a different learning program",
