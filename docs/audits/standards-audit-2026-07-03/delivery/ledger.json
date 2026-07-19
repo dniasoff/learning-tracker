@@ -11863,13 +11863,23 @@
   {
    "id": "AUD-guardrails-18",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Anchor no_raw_logevent's analytics_service.dart whitelist check to its directory, not just filename",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "fe92c87f1630da6af71b36bf95cbee77bb988ae1",
+    "74b180387d8fe8d10c5a6204eb9a74c68af8aa58"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-18 AC1 OK: no_raw_logevent.dart:54 now `path.contains('lib/core/analytics/')`; endsWith('analytics_service.dart') removed per diff",
+    "AUD-guardrails-18 AC1 OK (parity): matches siblings no_color_literal_outside_theme.dart:48 and no_curriculum_display_name_bypass.dart:33 dir-anchor form",
+    "AUD-guardrails-18 AC2 OK: regression test at no_raw_logevent_test.dart:80-105 writes decoy lib/features/x/analytics_service.dart, asserts isNotEmpty; green in my run",
+    "AUD-guardrails-18 AC2 OK (red-first, reviewer-run): restored old endsWith predicate -> 7 pass/1 fail, only the new decoy test failed; rule file restored",
+    "AUD-guardrails-18 checker fires: the custom_lint rule is the guardrail artifact and flags the decoy post-fix, not pre-fix",
+    "AUD-guardrails-18 no regression: owner still exempt - whitelist test at line 145 (lib/core/analytics) passes; both real analytics services sit under the anchored dir"
+   ],
+   "notes": "Re-verified: still endsWith('analytics_service.dart') as quoted. Red-first decoy test failed pre-fix. Changed to path.contains('lib/core/analytics/'), matching sibling rules' dir-anchor pattern. Both ACs met: dir-anchored check + passing decoy regression test (8/8 file, 220/220 suite). Merged --no-ff onto dev (w4r1c6, mergeSha 74b180387d8fe8d10c5a6204eb9a74c68af8aa58). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (no issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (merge-base 923c66719cbd04fc09d171bec04960d9f331c56e), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-platform-05",
