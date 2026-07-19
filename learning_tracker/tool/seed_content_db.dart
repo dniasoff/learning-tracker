@@ -313,7 +313,11 @@ Future<void> main(List<String> rawArgs) async {
     'xz',
     ['-9', '--extreme', '-k', '-f', dbPath],
     stdoutEncoding: null,
-    stderrEncoding: null,
+    // AUD-guardrails-20: decode stderr to text so a failure prints xz's
+    // actual human-readable message instead of a raw byte list (`stderr`
+    // would otherwise be a Uint8List, and String-interpolating it below
+    // invokes List.toString(), e.g. "[120, 122, 58, ...]").
+    stderrEncoding: systemEncoding,
   );
   if (xzResult.exitCode != 0) {
     throw StateError('xz failed: ${xzResult.stderr}');
