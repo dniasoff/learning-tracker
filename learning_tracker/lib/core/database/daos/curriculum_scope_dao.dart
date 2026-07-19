@@ -85,6 +85,38 @@ class CurriculumScopeDao extends DatabaseAccessor<UserDatabase>
     });
   }
 
+  /// Batch-insert scope rows for [trackId] in a single round trip.
+  ///
+  /// AUD-tracks-19 (DB-3): replaces an awaited per-row `into().insert()`
+  /// loop that TrackCreationService previously ran directly against the
+  /// table (bypassing the DAO). This does NOT delete first — mixed-level
+  /// breadcrumb selections (level 1 → 2 → 3 as a user drills into the
+  /// hierarchy) mean a single uniform [scopeLevel]/[List<String>] pair (as
+  /// [setScopes] assumes) does not fit; callers that need replace semantics
+  /// clear first (e.g. [clearScopesForTrack]) then call this to insert.
+  Future<void> insertScopesForTrack({
+    required int profileId,
+    required CurriculumId curriculum,
+    required int trackId,
+    required List<({int level, String value})> scopes,
+  }) async {
+    if (scopes.isEmpty) return;
+    final now = DateTimeFactory.nowUtc();
+    await batch((b) {
+      b.insertAll(curriculumScopes, [
+        for (final scope in scopes)
+          CurriculumScopesCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculum.storageKey,
+            trackId: trackId,
+            scopeLevel: scope.level,
+            scopeValue: scope.value,
+            createdAt: now,
+          ),
+      ]);
+    });
+  }
+
   /// Clear all scopes for a profile+curriculum (= track entire curriculum).
   Future<void> clearScopes(int profileId, CurriculumId curriculum) async {
     await (delete(curriculumScopes)..where(

@@ -262,6 +262,68 @@ void main() {
       expect(scopes, isEmpty);
     });
 
+    group('insertScopesForTrack (AUD-tracks-19)', () {
+      test(
+        'batch-inserts mixed-level scope entries in one round trip',
+        () async {
+          await database.curriculumScopeDao.insertScopesForTrack(
+            profileId: 0,
+            curriculum: CurriculumId.mishnayos,
+            trackId: trackId,
+            scopes: const [
+              (level: 1, value: 'Seder Zeraim'),
+              (level: 2, value: 'Berachos'),
+            ],
+          );
+
+          final scopes = await database.curriculumScopeDao.getScopes(
+            0,
+            CurriculumId.mishnayos,
+          );
+          expect(scopes, hasLength(2));
+          expect(
+            {for (final s in scopes) s.scopeLevel: s.scopeValue},
+            {1: 'Seder Zeraim', 2: 'Berachos'},
+          );
+        },
+      );
+
+      test('an empty scopes list inserts nothing', () async {
+        await database.curriculumScopeDao.insertScopesForTrack(
+          profileId: 0,
+          curriculum: CurriculumId.mishnayos,
+          trackId: trackId,
+          scopes: const [],
+        );
+        final scopes = await database.curriculumScopeDao.getScopes(
+          0,
+          CurriculumId.mishnayos,
+        );
+        expect(scopes, isEmpty);
+      });
+
+      test('adds to existing rows rather than replacing them (delete is the '
+          "caller's responsibility, e.g. clearScopesForTrack)", () async {
+        await database.curriculumScopeDao.insertScopesForTrack(
+          profileId: 0,
+          curriculum: CurriculumId.mishnayos,
+          trackId: trackId,
+          scopes: const [(level: 1, value: 'Seder Zeraim')],
+        );
+        await database.curriculumScopeDao.insertScopesForTrack(
+          profileId: 0,
+          curriculum: CurriculumId.mishnayos,
+          trackId: trackId,
+          scopes: const [(level: 1, value: 'Seder Moed')],
+        );
+        final scopes = await database.curriculumScopeDao.getScopes(
+          0,
+          CurriculumId.mishnayos,
+        );
+        expect(scopes, hasLength(2));
+      });
+    });
+
     test('watchScopes emits updates', () async {
       final stream = database.curriculumScopeDao.watchScopes(
         0,

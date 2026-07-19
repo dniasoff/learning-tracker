@@ -109,6 +109,41 @@ class StudyDayConfigDao extends DatabaseAccessor<UserDatabase>
     }
   }
 
+  /// Replace all study-day configs for [trackId]: delete existing rows for
+  /// (curriculumId, profileId), then batch-insert the new set in a single
+  /// round trip.
+  ///
+  /// AUD-tracks-19 (Fowler duplication + DB-3): TrackCreationService and
+  /// TrackEditService previously each carried a byte-for-byte-identical
+  /// private "delete then loop-await-upsert" method; this is now the one
+  /// shared implementation both call, and the per-row awaited loop is
+  /// replaced by a single `batch()`. Callers already run this inside their
+  /// own `transaction()`, so `batch()` reuses it rather than opening a new
+  /// one (DB-2).
+  Future<void> replaceAllForTrack({
+    required int profileId,
+    required String curriculumId,
+    required int trackId,
+    required Map<int, String> studyDays,
+  }) async {
+    await deleteConfigsByCurriculumAndProfile(curriculumId, profileId);
+    if (studyDays.isEmpty) return;
+    final now = DateTimeFactory.nowUtc();
+    await batch((b) {
+      b.insertAll(studyDayConfigs, [
+        for (final entry in studyDays.entries)
+          StudyDayConfigsCompanion.insert(
+            profileId: profileId,
+            curriculumId: curriculumId,
+            trackId: trackId,
+            dayOfWeek: entry.key,
+            dayType: Value(entry.value),
+            updatedAt: now,
+          ),
+      ]);
+    });
+  }
+
   /// Delete all configs for a specific track (used when hard-deleting a track).
   Future<int> deleteConfigsForTrack(int trackId) =>
       (delete(studyDayConfigs)..where((t) => t.trackId.equals(trackId))).go();
