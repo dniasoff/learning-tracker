@@ -5,6 +5,7 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
 import 'package:learning_tracker/features/settings/domain/services/data_export_import_service.dart';
 
 import '../../../../helpers/data_export_fixtures.dart';
@@ -30,23 +31,26 @@ void main() {
       expect(tracks, isEmpty);
     });
 
-    test('importData throws FormatException on malformed JSON', () async {
-      final db = inMemoryDb();
-      addTearDown(() => db.close());
+    test(
+      'importData throws ImportValidationException on malformed JSON',
+      () async {
+        final db = inMemoryDb();
+        addTearDown(() => db.close());
 
-      final service = DataExportImportService(
-        database: db,
-        appVersionFetcher: () async => '1.0.0',
-      );
+        final service = DataExportImportService(
+          database: db,
+          appVersionFetcher: () async => '1.0.0',
+        );
 
-      expect(
-        () => service.importData('not json'),
-        throwsA(isA<FormatException>()),
-      );
-    });
+        expect(
+          () => service.importData('not json'),
+          throwsA(isA<ImportValidationException>()),
+        );
+      },
+    );
 
     test(
-      'importData throws FormatException when formatVersion missing',
+      'importData throws ImportValidationException when formatVersion missing',
       () async {
         final db = inMemoryDb();
         addTearDown(() => db.close());
@@ -60,31 +64,29 @@ void main() {
 
         expect(
           () => service.importData(payload),
-          throwsA(isA<FormatException>()),
+          throwsA(isA<ImportValidationException>()),
         );
       },
     );
 
-    test(
-      'importData throws FormatException when required section missing',
-      () async {
-        final db = inMemoryDb();
-        addTearDown(() => db.close());
+    test('importData throws ImportValidationException when required section '
+        'missing', () async {
+      final db = inMemoryDb();
+      addTearDown(() => db.close());
 
-        final service = DataExportImportService(
-          database: db,
-          appVersionFetcher: () async => '1.0.0',
-        );
+      final service = DataExportImportService(
+        database: db,
+        appVersionFetcher: () async => '1.0.0',
+      );
 
-        // Missing 'completions' section.
-        final payload = jsonEncode(exportPayloadMap()..remove('completions'));
+      // Missing 'completions' section.
+      final payload = jsonEncode(exportPayloadMap()..remove('completions'));
 
-        expect(
-          () => service.importData(payload),
-          throwsA(isA<FormatException>()),
-        );
-      },
-    );
+      expect(
+        () => service.importData(payload),
+        throwsA(isA<ImportValidationException>()),
+      );
+    });
   });
 
   group('DataExportImportService.importData — with data', () {
@@ -168,7 +170,7 @@ void main() {
   });
 
   group('DataExportImportService.validateAndPreview — error cases', () {
-    test('throws FormatException when a section is not a list', () {
+    test('throws ImportValidationException when a section is not a list', () {
       final db = inMemoryDb();
       addTearDown(() => db.close());
 
@@ -184,11 +186,11 @@ void main() {
 
       expect(
         () => service.validateAndPreview(bad),
-        throwsA(isA<FormatException>()),
+        throwsA(isA<ImportValidationException>()),
       );
     });
 
-    test('throws FormatException for completely invalid JSON', () {
+    test('throws ImportValidationException for completely invalid JSON', () {
       final db = inMemoryDb();
       addTearDown(() => db.close());
 
@@ -199,7 +201,7 @@ void main() {
 
       expect(
         () => service.validateAndPreview('{bad json'),
-        throwsA(isA<FormatException>()),
+        throwsA(isA<ImportValidationException>()),
       );
     });
   });

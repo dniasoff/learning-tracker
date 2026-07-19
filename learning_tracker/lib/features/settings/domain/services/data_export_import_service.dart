@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
+import 'package:learning_tracker/features/settings/domain/exceptions/import_validation_exception.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 /// Result of validating an import file.
@@ -454,28 +455,28 @@ class DataExportImportService {
 
   /// Validates a JSON string and returns an [ImportPreview].
   ///
-  /// Throws [FormatException] if the JSON is malformed or missing
-  /// required sections.
+  /// Throws [ImportValidationException] if the JSON is malformed or
+  /// missing required sections.
   ImportPreview validateAndPreview(String jsonString) {
     final Map<String, dynamic> data;
     try {
       data = json.decode(jsonString) as Map<String, dynamic>;
     } catch (e) {
-      throw const FormatException('Invalid JSON format');
+      throw const ImportValidationException('Invalid JSON format');
     }
 
     // Check format version
     if (!data.containsKey('formatVersion')) {
-      throw const FormatException('Missing formatVersion field');
+      throw const ImportValidationException('Missing formatVersion field');
     }
 
     // Check all required sections exist and are lists
     for (final section in _requiredSections) {
       if (!data.containsKey(section)) {
-        throw FormatException('Missing required section: $section');
+        throw ImportValidationException('Missing required section: $section');
       }
       if (data[section] is! List) {
-        throw FormatException('Section "$section" must be a list');
+        throw ImportValidationException('Section "$section" must be a list');
       }
     }
 
@@ -509,13 +510,17 @@ class DataExportImportService {
   /// the imported accounts/profiles are deleted and re-inserted from the
   /// export payload, so re-importing the same profile is idempotent.
   ///
-  /// Runs in a transaction — all or nothing. Throws on failure
-  /// and rolls back all changes.
+  /// Runs in a transaction — all or nothing. Throws
+  /// [ImportValidationException] (via [validateAndPreview]) on malformed
+  /// or incomplete input, and rolls back all changes on any other failure.
   Future<void> importData(String jsonString) async {
-    final data = json.decode(jsonString) as Map<String, dynamic>;
-
-    // Validate first
+    // Validate first — this is the guarded decode. It must run before the
+    // raw `json.decode` below so malformed/incomplete JSON always surfaces
+    // as [ImportValidationException] rather than a bare FormatException
+    // escaping from the second decode (AUD-settings-13).
     validateAndPreview(jsonString);
+
+    final data = json.decode(jsonString) as Map<String, dynamic>;
 
     // The set of accounts and learner profiles this import payload covers.
     // `profileId` throughout the user-data tables is a learner-profile id
