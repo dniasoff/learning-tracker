@@ -80,6 +80,58 @@ class Foo {
       });
     });
 
+    group('violations — textDirection: bare TextDirection literal', () {
+      test('flags textDirection: TextDirection.rtl on a widget', () async {
+        // Mirrors the exact shape of the AUD-tracks-25 defect: a free-text
+        // field forcing RTL unconditionally, regardless of app locale.
+        final file = _tmpFile('''
+import 'package:flutter/material.dart';
+
+class Foo extends StatelessWidget {
+  const Foo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      textDirection: TextDirection.rtl,
+    );
+  }
+}
+''');
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors
+              .where((e) => e.errorCode.name == 'no_hardcoded_text_direction'),
+          isNotEmpty,
+          reason: 'textDirection: TextDirection.rtl must be flagged',
+        );
+      });
+
+      test('flags textDirection: TextDirection.ltr on a widget', () async {
+        final file = _tmpFile('''
+import 'package:flutter/material.dart';
+
+class Foo extends StatelessWidget {
+  const Foo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      textDirection: TextDirection.ltr,
+    );
+  }
+}
+''');
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors
+              .where((e) => e.errorCode.name == 'no_hardcoded_text_direction'),
+          isNotEmpty,
+          reason: 'textDirection: TextDirection.ltr must be flagged',
+        );
+      });
+    });
+
     group('violations — EdgeInsets.only named arguments', () {
       test('flags EdgeInsets.only(left: …)', () async {
         final file = _tmpFile('''
@@ -174,6 +226,69 @@ class Foo {
           isEmpty,
           reason:
               'EdgeInsetsDirectional.only is the correct RTL-safe alternative',
+        );
+      });
+
+      test(
+        'allows textDirection: computed from a locale-aware ternary',
+        () async {
+          // Mirrors scope_views.dart's chooseLevelPrompt pattern, cited in
+          // AUD-tracks-25's recommendation as the correct, direction-aware
+          // shape — the ternary is the argument's direct expression, not a
+          // bare `TextDirection.rtl`/`.ltr` literal, so it must not fire.
+          final file = _tmpFile('''
+import 'package:flutter/material.dart';
+
+class Foo extends StatelessWidget {
+  const Foo({required this.useHebrew, super.key});
+
+  final bool useHebrew;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'x',
+      textDirection: useHebrew ? TextDirection.rtl : TextDirection.ltr,
+    );
+  }
+}
+''');
+          final errors = await rule.testAnalyzeAndRun(file);
+          expect(
+            errors.where(
+              (e) => e.errorCode.name == 'no_hardcoded_text_direction',
+            ),
+            isEmpty,
+            reason:
+                'a ternary keyed off a locale-aware flag is direction-aware '
+                'and must not be flagged',
+          );
+        },
+      );
+
+      test('allows textDirection: Directionality.of(context)', () async {
+        final file = _tmpFile('''
+import 'package:flutter/material.dart';
+
+class Foo extends StatelessWidget {
+  const Foo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'x',
+      textDirection: Directionality.of(context),
+    );
+  }
+}
+''');
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors
+              .where((e) => e.errorCode.name == 'no_hardcoded_text_direction'),
+          isEmpty,
+          reason: 'Directionality.of(context) is the ambient-locale-aware '
+              'default and must not be flagged',
         );
       });
     });
