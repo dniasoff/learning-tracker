@@ -66,6 +66,14 @@ class LearningProgramRepository {
   LearningProgramRepository._create();
 
   /// Legacy singleton — prefer [learningProgramRepositoryProvider].
+  ///
+  /// SM-7 (`docs/coding-standards.md`) bans global/static mutable
+  /// singletons. This has zero `lib/` call sites, but 34 test fixtures
+  /// still read it directly instead of overriding
+  /// `learningProgramRepositoryProvider` (AUD-scheduler-23) — the migration
+  /// backlog is tracked at DNI-446 and the count is ratcheted by
+  /// `make audit` via `tool/check_sm7_learning_program_singleton.dart`.
+  /// Delete this singleton once that backlog reaches zero.
   @Deprecated('Use learningProgramRepositoryProvider via Riverpod instead')
   static final instance = LearningProgramRepository._create();
 
