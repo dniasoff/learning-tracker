@@ -2775,13 +2775,21 @@
   {
    "id": "AUD-tracks-11",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or wire the abandoned AddTrackController/TrackBlueprintDraftRepository/TrackBlueprint migration trio (~1,200 dead lines)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "7f32f27b7371f5faf2654eb64eb2cc69ab325a69"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-11 AC1 OK: all 6 dead source files deleted per git diff --name-status (controller, flow_state, blueprint, repo, repo_impl, use_case)",
+    "AUD-tracks-11 AC1 OK: grep of lib/ test/ tool/ for the 6 symbols = zero code refs; only dangling dartdoc + private _AddTrackFlowState State class",
+    "AUD-tracks-11 AC1 OK: 2 barrel exports dropped from tracks.dart; aggregates/repositories/use_cases/controllers dirs gone from tree",
+    "AUD-tracks-11 AC2 OK: all 5 dedicated dead-code test files deleted per git diff --name-status",
+    "AUD-tracks-11 AC2 OK: deleted guarded_persist test imported only the 2 deleted files; its helper still used by 4 live tests, no orphan"
+   ],
+   "notes": "Re-verified zero production refs outside own files. Live wizard uses raw AddTrackFlow widget + TrackCreationService directly. Deleted 6 dead source + 5 dead-code test files, removed 2 barrel exports + 1 dead test group. Also fixed check_guarded_persist.dart, which hard-errored on the deleted file. Merged --no-ff onto dev (w4r2c2, mergeSha 7f32f27b7371f5faf2654eb64eb2cc69ab325a69). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (no issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base fb3cc5cdedea7cf8f289ee4e4d3adbb595b14adf), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-t-story-acceptance-17",
