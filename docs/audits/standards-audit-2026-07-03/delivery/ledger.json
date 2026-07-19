@@ -8858,13 +8858,20 @@
   {
    "id": "AUD-tracks-21",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete the dead TrackOrder aggregate/OrderingLevel enum or fix its doc comment's false repository contract",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "219a19e4b6c7ab028bda4a35382ff7b1c6cc98a2"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-21 AC1 OK: track_order.dart deleted (git diff 'deleted file mode'); grep TrackOrder|OrderingLevel over lib/ and test/ = 0 hits, no dangling refs",
+    "AUD-tracks-21 AC2 OK (vacuous): 'If kept' unmet - file removed, so hand-rolled ==/hashCode went with it; no @freezed conversion owed",
+    "AUD-tracks-21 AC3 OK: my `flutter analyze` = 'No issues found!' exit 0; `flutter test test/features/tracks/track_order/` = 10 tests all passed, exit 0",
+    "AUD-tracks-21 AC3 OK (adjacent): repository_impl_test + track_management_body_and_order_l1_test = 58 tests all passed, exit 0"
+   ],
+   "notes": "Re-verified vs 4018a91c: no prod refs to TrackOrder/OrderingLevel; doc comment falsely claimed repo returns TrackOrder. Plan: MasechtaOrderingPolicy wired, TrackOrder/OrderingLevel never wired; wiring now disproportionate for P3/S. Deleted track_order.dart; moved live policy tests to AG-5 mirror."
   },
   {
    "id": "AUD-tracks-17",
