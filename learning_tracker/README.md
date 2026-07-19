@@ -71,8 +71,7 @@ dart analyze --fatal-infos
 
 ```bash
 # From repo root
-cp hooks/pre-commit .git/hooks/
-chmod +x .git/hooks/pre-commit
+make install-hooks
 ```
 
 Runs `dart format --set-exit-if-changed` and `dart analyze --fatal-infos`.

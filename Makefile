@@ -1,4 +1,4 @@
-.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.5 test-story-25.7 test-story-25.12 test-story-25.13 test-story-25.16 test-story-25.18 test-story-27.5 test-epic-25 test-epic-27 test-all ci analyze format schema-check audit arb-parity gen-arch-tables check-device-e2e-suite-size linear-sync linear-story linear-check
+.PHONY: help test test-unit test-widget test-integration test-story-4.3 test-story-25.5 test-story-25.7 test-story-25.12 test-story-25.13 test-story-25.16 test-story-25.18 test-story-27.5 test-epic-25 test-epic-27 test-all ci analyze format schema-check audit arb-parity gen-arch-tables check-device-e2e-suite-size install-hooks linear-sync linear-story linear-check
 
 help:
 	@echo "Learning Tracker - Make Commands"
@@ -25,6 +25,9 @@ help:
 	@echo "  make gen-arch-tables    - Print Markdown table of all Drift tables + column counts"
 	@echo "  make check-device-e2e-suite-size - Guard against tool/device_e2e run*_full_suite.mjs duplication (AUD-guardrails-08)"
 	@echo "  make ci                 - Run full CI check (analyze + format + schema-check + all tests)"
+	@echo ""
+	@echo "Setup:"
+	@echo "  make install-hooks      - Install hooks/pre-commit into .git/hooks/ (AUD-guardrails-19)"
 	@echo ""
 	@echo "Linear Cache:"
 	@echo "  make linear-sync        - Full sync of Linear issues to .linear-cache/"
@@ -271,6 +274,22 @@ check-device-e2e-suite-size:
 
 ci: analyze format schema-check test-all
 	@echo "✓ CI checks passed"
+
+# install-hooks — AUD-guardrails-19
+#
+# Installs hooks/pre-commit into this checkout's git hooks directory so the
+# format+analyze gate runs automatically before each commit, without a
+# contributor hand-copying/chmod-ing it. Uses `git rev-parse --git-path
+# hooks` (not a hardcoded `.git/hooks`) so it resolves correctly from a
+# worktree, where hooks live in the shared common git dir, not the
+# worktree-local one.
+install-hooks:
+	@echo "Installing hooks/pre-commit (AUD-guardrails-19)..."
+	@HOOKS_DIR=$$(git rev-parse --git-path hooks); \
+	mkdir -p "$$HOOKS_DIR"; \
+	cp hooks/pre-commit "$$HOOKS_DIR/pre-commit"; \
+	chmod +x "$$HOOKS_DIR/pre-commit"; \
+	echo "Installed hooks/pre-commit -> $$HOOKS_DIR/pre-commit"
 
 linear-sync:
 	@tool/linear-sync.sh sync

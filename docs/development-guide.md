@@ -124,8 +124,7 @@ Not auto-installed. Enable it:
 
 ```bash
 # from repo root
-cp hooks/pre-commit .git/hooks/
-chmod +x .git/hooks/pre-commit
+make install-hooks
 ```
 
 It runs `dart format --set-exit-if-changed` + `dart analyze --fatal-infos` (the same checks CI runs).

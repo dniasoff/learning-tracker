@@ -8,8 +8,7 @@ The pre-commit hook runs `dart format` and `dart analyze` before each commit to 
 
 ```bash
 # From repository root
-cp hooks/pre-commit .git/hooks/
-chmod +x .git/hooks/pre-commit
+make install-hooks
 ```
 
 ### What it does

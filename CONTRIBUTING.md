@@ -173,8 +173,7 @@ Optionally, install the pre-commit hook so formatting and analysis run automatic
 
 ```bash
 # from the repository root
-cp hooks/pre-commit .git/hooks/
-chmod +x .git/hooks/pre-commit
+make install-hooks
 ```
 
 ## Getting help
