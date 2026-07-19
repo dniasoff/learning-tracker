@@ -643,8 +643,8 @@ Future<List<DailyTask>> buildFreshPlan({
     final deadline = goalDeadlines[curriculum];
     final trackId = trackIds[curriculum];
     if (deadline == null || trackId == null) continue;
-    final start = _localDateOnly(now);
-    final end = _localDateOnly(deadline);
+    final start = LocalDayUtils.extractLocalDate(now);
+    final end = LocalDayUtils.extractLocalDate(deadline);
     final n = await db.studyDayConfigDao
         .countStudyDaysInInclusiveDateRangeForTrack(
           trackId: trackId,
@@ -892,10 +892,4 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
   }
 
   return result;
-}
-
-/// Calendar date in the user's local timezone (time stripped).
-DateTime _localDateOnly(DateTime utc) {
-  final l = utc.toLocal();
-  return DateTime(l.year, l.month, l.day);
 }
