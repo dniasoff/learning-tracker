@@ -529,6 +529,14 @@ void main() {
       when(
         () => mockActivationService.deactivate(any<CurriculumId>()),
       ).thenAnswer((_) async {});
+      // AUD-tracks-14: the TS-16 pre-check now also routes through this
+      // service (getActiveCurricula()) instead of reading userDatabaseProvider
+      // directly, so it must be stubbed too — two curricula, matching the two
+      // tracks seeded above, so trackDeletionAllowed() still returns true and
+      // "Archive (keep history)" is shown.
+      when(
+        mockActivationService.getActiveCurricula,
+      ).thenAnswer((_) async => [CurriculumId.mishnayos, CurriculumId.bavli]);
 
       await tester.pumpWidget(
         ProviderScope(

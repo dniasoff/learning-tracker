@@ -151,6 +151,17 @@ class CurriculumActivationService {
     await _syncToFirestore();
   }
 
+  /// Hard-delete ("wipe") a track's completion history and config data.
+  ///
+  /// AUD-tracks-14 (DB-1): [TrackDao.purgeHistory] is transactional and
+  /// outbox-aware on its own, so this is a thin pass-through — but widgets
+  /// must reach it via a service/repository method, never by pulling
+  /// `trackDao` out of `userDatabaseProvider` directly. Mirrors [archive]'s
+  /// layering for the "wipe" branch of the same delete dialog.
+  Future<void> purgeTrackHistory(int trackId) {
+    return _database.trackDao.purgeHistory(trackId);
+  }
+
   /// Toggle a curriculum on or off for the active profile.
   Future<void> toggle(CurriculumId curriculum) async {
     await _database.transaction(() async {

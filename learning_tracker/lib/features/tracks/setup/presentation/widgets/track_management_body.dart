@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
@@ -272,10 +271,13 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
     // TS-16: Pre-check whether Archive/Delete is allowed before showing the
     // dialog. When this track is the only active curriculum, surfacing the
     // destructive actions would only produce a post-commit error snackbar.
+    //
+    // AUD-tracks-14 (DB-1): routed through curriculumActivationServiceProvider
+    // (same provider the 'archive' branch below uses) instead of reading
+    // userDatabaseProvider/trackDao directly from this widget.
     final activeCurricula = await ref
-        .read(userDatabaseProvider)
-        .activeCurriculumDao
-        .getActiveCurriculaByProfile(track.profileId);
+        .read(curriculumActivationServiceProvider)
+        .getActiveCurricula();
     if (!mounted) return;
 
     final canDelete = trackDeletionAllowed(
@@ -346,9 +348,21 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
       return;
     }
 
-    final dao = ref.read(userDatabaseProvider).trackDao;
-    await dao.purgeHistory(track.id);
-    await onTrackChanged(ref, track.profileId);
+    // AUD-tracks-14 (DB-1): wipe goes through the same service the 'archive'
+    // branch above uses, instead of pulling trackDao out of
+    // userDatabaseProvider directly — including try/catch + a localized
+    // error SnackBar for parity with the archive path's error handling.
+    try {
+      await ref
+          .read(curriculumActivationServiceProvider)
+          .purgeTrackHistory(track.id);
+      await onTrackChanged(ref, track.profileId);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.errorGeneric(e.toString()))));
+    }
   }
 
   void _showLastCurriculumError(AppLocalizations l10n) {
