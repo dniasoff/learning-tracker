@@ -122,8 +122,10 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
 
     final updatedAt = DateTimeFactory.nowUtc();
 
-    // Wrap all upserts in a single transaction so a mid-loop crash cannot
-    // leave a half-shuffled state (D7, T2.10).
+    // Wrap all upserts AND the reorder-amnesty stamp in a single transaction
+    // so a mid-loop crash cannot leave a half-shuffled state (D7, T2.10), nor
+    // commit the new order without the amnesty stamp that clears overdue
+    // items scheduled before it (AUD-tracks-16 — DB-2).
     await _database.transaction(() async {
       for (var i = 0; i < items.length; i++) {
         await _database.learningOrderDao.upsertLearningOrder(
@@ -139,13 +141,16 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
           ),
         );
       }
-    });
 
-    // Reorder-amnesty: stamp lastReorderAt on the affected track so the
-    // projection filter clears overdue items that were scheduled before this
-    // reorder. This is a content-order change — not a pace/stage/bookmark
-    // change — so amnesty applies (architecture §10.1).
-    await _stampReorderAt(curriculumId, updatedAt);
+      // Reorder-amnesty: stamp lastReorderAt on the affected track so the
+      // projection filter clears overdue items that were scheduled before
+      // this reorder. This is a content-order change — not a
+      // pace/stage/bookmark change — so amnesty applies (architecture
+      // §10.1). Must be inside the same transaction as the upserts above:
+      // a crash between the two would otherwise commit the new order with
+      // no amnesty stamp (AUD-tracks-16).
+      await _stampReorderAt(curriculumId, updatedAt);
+    });
 
     // Push to Firestore (offline-queued, retry on reconnect).
     await _syncEngine?.pushLearningOrder(
@@ -161,13 +166,19 @@ class LearningOrderRepositoryImpl implements LearningOrderRepository {
   @override
   Future<void> resetToDefault(CurriculumId curriculumId) async {
     final now = DateTimeFactory.nowUtc();
-    await _database.learningOrderDao.deleteAllForCurriculum(
-      curriculumId.storageKey,
-      profileId: _profileId,
-    );
 
-    // Reorder-amnesty: a reset-to-default is a content-order change.
-    await _stampReorderAt(curriculumId, now);
+    // Wrap the delete AND the reorder-amnesty stamp in a single transaction
+    // so a mid-op crash cannot commit the delete without the amnesty stamp
+    // (AUD-tracks-16 — DB-2).
+    await _database.transaction(() async {
+      await _database.learningOrderDao.deleteAllForCurriculum(
+        curriculumId.storageKey,
+        profileId: _profileId,
+      );
+
+      // Reorder-amnesty: a reset-to-default is a content-order change.
+      await _stampReorderAt(curriculumId, now);
+    });
 
     // Push empty order to Firestore so other devices know custom ordering
     // has been cleared (each device falls back to natural content sort).

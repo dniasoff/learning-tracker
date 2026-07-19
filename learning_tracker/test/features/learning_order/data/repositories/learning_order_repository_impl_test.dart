@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -10,7 +11,7 @@ import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/m
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/drift_memory.dart'
-    show seedProfile, seedProfileZero;
+    show seedProfile, seedProfileZero, seedTrack;
 
 class MockContentRepository extends Mock implements ContentRepository {}
 
@@ -25,6 +26,31 @@ ContentItem _makeItem(String ref, {int sortOrder = 0}) {
     sortOrder: sortOrder,
     isLeaf: false,
   );
+}
+
+/// A [TrackDao] whose [stampReorderAt] always throws, simulating a crash /
+/// DB failure during the reorder-amnesty stamp write. Used to prove the
+/// stamp write and the order-mutation write(s) are atomic (AUD-tracks-16).
+class _ThrowingStampTrackDao extends TrackDao {
+  _ThrowingStampTrackDao(super.db);
+
+  @override
+  Future<void> stampReorderAt(int trackId, {DateTime? at}) async {
+    throw Exception(
+      'simulated crash during reorder-amnesty stamp (AUD-tracks-16)',
+    );
+  }
+}
+
+/// [UserDatabase] wired with [_ThrowingStampTrackDao] so any call to
+/// `trackDao.stampReorderAt` throws — the fault-injection seam matches the
+/// established `_ThrowingDaoUserDatabase` pattern used elsewhere in this
+/// test suite (see auth_state_init_exception_guard_test.dart).
+class _ThrowingStampUserDatabase extends UserDatabase {
+  _ThrowingStampUserDatabase(super.e);
+
+  @override
+  late final TrackDao trackDao = _ThrowingStampTrackDao(this);
 }
 
 void main() {
@@ -293,4 +319,106 @@ void main() {
       );
     });
   });
+
+  // AUD-tracks-16: _stampReorderAt used to run OUTSIDE the transaction that
+  // persists the order write in both saveOrder and resetToDefault. A crash
+  // or DB error between the two left the order change committed with the
+  // reorder-amnesty stamp missing (or vice-versa for resetToDefault's
+  // delete). Both writes must now be atomic — a throw from the stamp write
+  // must roll back the order write too.
+  group(
+    'AUD-tracks-16 — reorder-amnesty stamp is atomic with the order write',
+    () {
+      late UserDatabase faultyDb;
+      late MockContentRepository faultyContent;
+      late LearningOrderRepositoryImpl faultyRepo;
+
+      setUp(() async {
+        faultyDb = _ThrowingStampUserDatabase(NativeDatabase.memory());
+        await seedProfileZero(faultyDb);
+        await seedProfile(faultyDb);
+        // _stampReorderAt no-ops silently when no active track exists for the
+        // profile — an active track for profileId 0 (repo's default) is
+        // required so the throwing stamp is actually reached.
+        await seedTrack(faultyDb, profileId: 0);
+
+        faultyContent = MockContentRepository();
+        when(
+          () => faultyContent.getContentForCurriculum(any()),
+        ).thenAnswer((_) async => []);
+        faultyRepo = LearningOrderRepositoryImpl(
+          database: faultyDb,
+          contentRepository: faultyContent,
+        );
+      });
+
+      tearDown(() async {
+        await faultyDb.close();
+      });
+
+      test('saveOrder rolls back the learning_order upserts when the '
+          'reorder-amnesty stamp throws', () async {
+        final itemsToSave = [
+          const LearningOrderItem(
+            sefariaRef: 'Shabbat',
+            displayNameHe: 'שבת',
+            displayNameEn: 'Shabbat',
+            userSortOrder: 0,
+          ),
+          const LearningOrderItem(
+            sefariaRef: 'Berakhot',
+            displayNameHe: 'ברכות',
+            displayNameEn: 'Berakhot',
+            userSortOrder: 1,
+          ),
+        ];
+
+        await expectLater(
+          () => faultyRepo.saveOrder(CurriculumId.mishnayos, itemsToSave),
+          throwsA(isA<Exception>()),
+        );
+
+        final rows = await faultyDb.learningOrderDao
+            .getLearningOrderByCurriculum('mishnayos', profileId: 0);
+        expect(
+          rows,
+          isEmpty,
+          reason:
+              'the learning_order upserts must roll back when the '
+              'reorder-amnesty stamp write fails — both writes belong to '
+              'the same atomic transaction (AUD-tracks-16).',
+        );
+      });
+
+      test('resetToDefault rolls back the learning_order delete when the '
+          'reorder-amnesty stamp throws', () async {
+        // Seed an existing custom row directly through the DAO (not through
+        // the throwing repo) so resetToDefault has something to delete.
+        await faultyDb.learningOrderDao.upsertLearningOrder(
+          LearningOrderCompanion.insert(
+            profileId: 0,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Shabbat',
+            userSortOrder: 0,
+          ),
+        );
+
+        await expectLater(
+          () => faultyRepo.resetToDefault(CurriculumId.mishnayos),
+          throwsA(isA<Exception>()),
+        );
+
+        final rows = await faultyDb.learningOrderDao
+            .getLearningOrderByCurriculum('mishnayos', profileId: 0);
+        expect(
+          rows,
+          hasLength(1),
+          reason:
+              'the learning_order delete must roll back when the '
+              'reorder-amnesty stamp write fails — both writes belong to '
+              'the same atomic transaction (AUD-tracks-16).',
+        );
+      });
+    },
+  );
 }
