@@ -19,7 +19,8 @@
 ///   - [NoFeatureCrossImport]: prevents direct cross-feature deep imports;
 ///     features must communicate only through their barrel `X/X.dart` surface.
 ///   - [NoFirebaseOutsideCore]: prevents Firebase SDK imports outside
-///     `lib/core/auth/` and `lib/core/sync/`.
+///     `lib/core/auth/`, `lib/core/sync/`, `lib/features/auth/`, and
+///     `lib/core/providers/firebase_providers.dart`.
 ///   - [NoHandRolledAsyncStateNotifier]: flags a `Notifier<T>` whose state
 ///     type is a hand-rolled sealed Idle/Loading/Error-shaped union as an
 ///     SM-5 AsyncNotifier-migration candidate (AUD-account-14).
