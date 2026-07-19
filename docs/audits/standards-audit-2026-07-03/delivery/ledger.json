@@ -6361,13 +6361,27 @@
   {
    "id": "AUD-guardrails-06",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Add test coverage for no_e_to_string_in_ui and no_raw_logevent lint rules",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "fb0457fbe9e1aa707df9c7066cf2dcfba6e1bd27"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-06 AC1 OK: all 5 rule identifiers flagged - error:48, e:72, exception:90, err:106, ex:122",
+    "AUD-guardrails-06 AC1 OK: allowed cases per branch - 'count':166, non-presentation:183, .g.dart:202, .freezed.dart:219",
+    "AUD-guardrails-06 AC1 OK: mutating out _isGenerated guard kills the .g.dart/.freezed.dart negatives - not vacuous",
+    "AUD-guardrails-06 AC2 OK: no_raw_logevent_test.dart new (196 lines), analytics_service.dart whitelist case at :141",
+    "AUD-guardrails-06 AC2 OK: violations at :44 (literal name) and :70 (identifier name) via real testAnalyzeAndRun",
+    "AUD-guardrails-06 AC2 OK: mutating out _isWhitelisted guard fails 3 whitelist negatives - discriminating",
+    "AUD-guardrails-06 AC3 OK: dart test packages/custom_lints -> '+198: All tests passed!', exit 0",
+    "AUD-guardrails-06 AC3 OK: targeted run of the 2 files -> 17/17 passed, exit 0",
+    "AUD-guardrails-06 scope OK: numstat = 2 files, 66/0 and 196/0; no product code touched",
+    "AUD-guardrails-06 TQ-7 OK: 0 deleted lines in diff; e_to_string extension strictly append-only",
+    "AUD-guardrails-06 OK: both rules registered (learning_tracker_lints.dart:94, :103) - tests target live rules"
+   ],
+   "notes": "AC1 file already existed (AUD-progress-08) but lacked err/ex identifiers + .g/.freezed exemption branch - extended it. AC2 file did not exist anywhere in repo - created from scratch. AC3: dart test passes 198/198 with both files. gatePolicy=disjoint-skip: rebase file-disjoint from concurrent dev changes; audit+analyze gates run and passed."
   },
   {
    "id": "AUD-core-auth-01",
