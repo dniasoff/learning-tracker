@@ -159,6 +159,106 @@ void main() {
     );
   });
 
+  group('make audit check 10/15 — AG-6 TODO/FIXME Linear id '
+      '(AUD-guardrails-16)', () {
+    // Regression fixture proving the AG-6 grep (Makefile check "10/15")
+    // distinguishes marker comments carrying a DNI-#### Linear id from
+    // ones that don't, across every marker spelling AC1 names. Before
+    // AUD-repo-02 generalized it, the check matched only three hardcoded
+    // literal phrases that no real comment would ever use, so it
+    // enforced nothing (AUD-guardrails-16). AUD-repo-02's fix generalized
+    // two of the three marker spellings but left the third checked only
+    // against its own old literal phrase, so a bare instance of that
+    // third marker with no DNI id still slipped through uncaught -- this
+    // fixture covers all three (see the fixture content below for the
+    // exact spellings; deliberately not spelled out here, since a
+    // marker word as the first token of a comment line is exactly the
+    // shape this very check matches).
+    test(
+      'AC1/AC2: a bare TODO/XXX with no DNI id fails the gate; the '
+      'same-style comment with a DNI-#### id passes',
+      () async {
+        final fixtureFile = File(
+          '$packageDir/lib/zzz_audit_fixture_do_not_commit.dart',
+        );
+
+        Future<ProcessResult> runAudit() =>
+            Process.run('make', ['audit'], workingDirectory: packageDir);
+
+        try {
+          fixtureFile.writeAsStringSync(
+            '// AUDIT FIXTURE - DO NOT COMMIT '
+            '(AUD-guardrails-16 / AG-6 check regression test)\n'
+            '// TODO(DNI-999999): carries a Linear id, must NOT be flagged\n'
+            '// TODO: has no Linear id, MUST be flagged\n'
+            '// XXX(DNI-999999): carries a Linear id, must NOT be flagged\n'
+            '// XXX: has no Linear id, MUST be flagged\n'
+            'const zzzAuditFixtureDoNotCommit = true;\n',
+          );
+
+          final dirty = await runAudit();
+          final stdout = dirty.stdout.toString();
+          expect(
+            stdout,
+            contains('zzz_audit_fixture_do_not_commit.dart:3'),
+            reason:
+                'a TODO with no DNI-#### id must be caught by the AG-6 '
+                'check (10/15).\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            isNot(contains('zzz_audit_fixture_do_not_commit.dart:2')),
+            reason:
+                'a TODO that already carries a DNI-#### id must NOT be '
+                'flagged -- the grep must distinguish the two, not just '
+                'ban TODO/FIXME outright.\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            contains('zzz_audit_fixture_do_not_commit.dart:5'),
+            reason:
+                'a bare XXX comment with no DNI-#### id must also be '
+                'caught by the AG-6 check (10/15), not just the old '
+                'literal "XXX: temporary" phrase (AC1 names XXX '
+                'explicitly).\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            isNot(contains('zzz_audit_fixture_do_not_commit.dart:4')),
+            reason:
+                'an XXX comment that already carries a DNI-#### id must '
+                'NOT be flagged.\nstdout=$stdout',
+          );
+          expect(
+            dirty.exitCode,
+            isNot(0),
+            reason: 'the AG-6 check is a hard gate -- it must fail the build.',
+          );
+        } finally {
+          if (fixtureFile.existsSync()) fixtureFile.deleteSync();
+        }
+
+        final clean = await runAudit();
+        expect(
+          clean.stdout.toString(),
+          isNot(contains('zzz_audit_fixture_do_not_commit.dart')),
+          reason: 'removing the fixture restores a clean pass.',
+        );
+        expect(
+          clean.exitCode,
+          0,
+          reason:
+              'make audit must be fully clean once the fixture is removed.\n'
+              'stdout=${clean.stdout}\nstderr=${clean.stderr}',
+        );
+      },
+      // AUD-guardrails-17 (see file-level NOTE above): shells out to
+      // `make audit` twice; see the longer rationale on the 25/26 test
+      // above.
+      timeout: const Timeout(Duration(minutes: 5)),
+    );
+  });
+
   group('make audit check 15/15 cross-feature-import detector '
       '(AUD-guardrails-02)', () {
     // Mirrors the awk program in Makefile check 15/15 (both occurrences,
