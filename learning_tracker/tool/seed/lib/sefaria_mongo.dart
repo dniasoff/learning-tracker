@@ -1,6 +1,6 @@
 // ignore_for_file: avoid_print
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
+import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:mongo_dart/mongo_dart.dart';
 
 /// Resolves Sefaria refs → cleaned (he, en) text directly from a local Sefaria
