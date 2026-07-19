@@ -154,7 +154,8 @@ audit:
 	  --include='*.dart' \
 	  | grep -v '/core/auth/' \
 	  | grep -v '/core/sync/' \
-	  | grep -v '/features/auth/' || true); \
+	  | grep -v '/features/auth/' \
+	  | grep -v 'core/providers/firebase_providers.dart' || true); \
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \
@@ -187,11 +188,12 @@ audit:
 	echo "$$HITS"; \
 	\
 	echo ""; \
-	echo "[11/12] import package:cloud_firestore / firebase_storage outside core/sync + core/auth (NFR3)"; \
+	echo "[11/12] import package:cloud_firestore / firebase_storage outside core/sync + core/auth + features/auth (NFR3)"; \
 	HITS=$$(grep -rnE "^import 'package:(cloud_firestore|firebase_storage)" "$$LIB/" \
 	  --include='*.dart' \
 	  | grep -v '/core/sync/' \
 	  | grep -v '/core/auth/' \
+	  | grep -v '/features/auth/' \
 	  | grep -v 'core/providers/firebase_providers.dart' || true); \
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\

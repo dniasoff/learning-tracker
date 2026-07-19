@@ -123,8 +123,9 @@ The `Y.dart` barrel is the **only** sanctioned re-export file per feature. Do no
 
 - `lib/core/sync/` — Firestore gateway implementation
 - `lib/core/auth/` and `lib/features/auth/` — authentication repository and providers
+- `lib/core/providers/firebase_providers.dart` — the single Riverpod injection point that constructs the Firebase SDK instances for the rest of the app
 
-All other code receives Firebase instances through injected Riverpod providers (`lib/core/providers/firebase_providers.dart`). No file outside these trees may import `firebase_auth`, `cloud_firestore`, or `firebase_storage` packages directly.
+All other code receives Firebase instances through the injected Riverpod providers exposed by that file. No file outside these trees (and this one file) may import `firebase_auth`, `cloud_firestore`, or `firebase_storage` packages directly.
 
 **Lint:** `no_firebase_outside_core` · **Audit:** inner checks 1–3
 

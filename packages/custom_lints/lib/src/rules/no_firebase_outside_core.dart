@@ -8,9 +8,16 @@ import 'package:custom_lint_builder/custom_lint_builder.dart';
 /// Firebase packages may only be imported from:
 ///   - `lib/core/auth/`   — authentication domain
 ///   - `lib/core/sync/`   — Firestore / Storage sync domain
+///   - `lib/features/auth/` — authentication repository and providers
+///   - `lib/core/providers/firebase_providers.dart` — the sole Riverpod
+///     injection point that constructs the Firebase SDK instances for the
+///     rest of the app
 ///
 /// All other files must go through the domain abstractions exposed by those
 /// layers rather than importing Firebase directly.
+///
+/// This whitelist mirrors docs/coding-standards.md Rule 3 and root
+/// `Makefile` checks 6 and 11 — keep all three in sync (AUD-guardrails-05).
 ///
 /// See `packages/custom_lints/README.md` for rule rationale and remediation.
 class NoFirebaseOutsideCore extends DartLintRule {
@@ -19,8 +26,10 @@ class NoFirebaseOutsideCore extends DartLintRule {
   static const _code = LintCode(
     name: 'no_firebase_outside_core',
     problemMessage:
-        "Firebase packages may only be imported inside lib/core/auth/ or "
-        "lib/core/sync/. Use the domain abstractions from those layers instead.",
+        "Firebase packages may only be imported inside lib/core/auth/, "
+        "lib/core/sync/, lib/features/auth/, or "
+        "lib/core/providers/firebase_providers.dart. Use the domain "
+        "abstractions from those layers instead.",
     errorSeverity: DiagnosticSeverity.ERROR,
   );
 
@@ -37,12 +46,19 @@ class NoFirebaseOutsideCore extends DartLintRule {
   /// Whitelisted:
   ///   - `lib/core/auth/`   — authentication core
   ///   - `lib/core/sync/`   — sync / Firestore core
+  ///   - `lib/features/auth/` — authentication repository and providers
+  ///   - `lib/core/providers/firebase_providers.dart` — sole Riverpod
+  ///     injection point for Firebase SDK instances
   ///   - `*.g.dart`         — generated files
   ///   - `*.freezed.dart`   — generated files
   static bool _isWhitelisted(String filePath) {
     final path = filePath.replaceAll(r'\', '/');
     if (path.contains('lib/core/auth/')) return true;
     if (path.contains('lib/core/sync/')) return true;
+    if (path.contains('lib/features/auth/')) return true;
+    if (path.endsWith('lib/core/providers/firebase_providers.dart')) {
+      return true;
+    }
     if (path.endsWith('.g.dart')) return true;
     if (path.endsWith('.freezed.dart')) return true;
     return false;
