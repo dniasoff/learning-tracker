@@ -10,30 +10,15 @@ part 'add_track_result.freezed.dart';
 /// Domain-layer counterpart to [BulkMarkResult] (presentation), carrying
 /// only the counts the domain needs — avoids pulling a presentation widget
 /// into the domain entity.
-class BulkMarkIntent {
-  const BulkMarkIntent({
-    required this.itemCount,
-    required this.completionCount,
-  });
+@freezed
+abstract class BulkMarkIntent with _$BulkMarkIntent {
+  const factory BulkMarkIntent({
+    /// Number of distinct content items marked.
+    required int itemCount,
 
-  /// Number of distinct content items marked.
-  final int itemCount;
-
-  /// Total completion records written (may exceed [itemCount] if multi-stage).
-  final int completionCount;
-
-  @override
-  bool operator ==(Object other) =>
-      other is BulkMarkIntent &&
-      other.itemCount == itemCount &&
-      other.completionCount == completionCount;
-
-  @override
-  int get hashCode => Object.hash(itemCount, completionCount);
-
-  @override
-  String toString() =>
-      'BulkMarkIntent(itemCount: $itemCount, completionCount: $completionCount)';
+    /// Total completion records written (may exceed [itemCount] if multi-stage).
+    required int completionCount,
+  }) = _BulkMarkIntent;
 }
 
 /// Result returned by [AddTrackFlow] on successful completion.
