@@ -156,6 +156,12 @@ dev_dependencies:
   learning_tracker_lints:
     path: ../packages/custom_lints
   mongo_dart: ^0.10.8
+  # AUD-guardrails-04 fix-bounce: tool/seed/lib/sefaria_mongo.dart is a
+  # plain-Dart CLI lib (no dart:ui embedder), so @visibleForTesting must come
+  # from package:meta, not package:flutter/foundation.dart. meta already
+  # resolves transitively (via flutter); declared directly to satisfy
+  # `depend_on_referenced_packages`. Version pinned by the Flutter SDK.
+  meta: any
 
 # Pin analyzer to 9.0.x so json_serializable >=9 and riverpod_generator ^4.0.3
 # resolve.
