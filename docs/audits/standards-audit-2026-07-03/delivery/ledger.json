@@ -11861,13 +11861,20 @@
   {
    "id": "AUD-guardrails-20",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Decode xz's stderr before interpolating it in seed_content_db.dart's failure message (currently prints a raw byte list)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "4007813ca28c87f91db7c22f759b64375fb07318"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-20 AC1 OK: own repro - pre-fix shape printed 'xz failed: [120, 122, 58, ...]', current source printed 'xz failed: xz: <path>: No such file or directory'",
+    "AUD-guardrails-20 AC2 OK: seed_content_db.dart:320 'stderrEncoding: systemEncoding,' (dart:io at L32); sole Process.runSync('xz') is at L312",
+    "AUD-guardrails-20 red-first OK: reverting L320 to null made test 0 passed/2 failed with byte-list msg; restored -> 2/2 green; tool//test/ tree clean",
+    "AUD-guardrails-20 checker fires OK: test reads the encoding token from real source, so regressing to null fails both asserts unedited (shown empirically)"
+   ],
+   "notes": "Re-verified: xz Process.runSync had stderrEncoding: null -> byte-list printed on failure (confirmed by repro). Fixed to stderrEncoding: systemEncoding. AC1 and AC2 both verified by new test. Red-first: test written first, captured byte-list failure, fixed, reran green."
   },
   {
    "id": "AUD-guardrails-18",
