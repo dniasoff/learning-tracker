@@ -1248,13 +1248,13 @@
   {
    "id": "AUD-tracks-06",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P1",
    "title": "Stop LearningOrderRepositoryImpl.getOrder from writing to the DB as a side effect of a FutureProvider build call",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c3, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commits never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix exists as two commits: 5ea17399a755f3ce1cad26b26b25ac6ec960349b (\"fix(tracks): AUD-tracks-06 - stop getOrder writing to DB in provider build\", on stray worktree branch worktree-wf_c12188fb-a5a-3) which moves LearningOrderRepositoryImpl.getOrder's version-mismatch re-amnesty write out of the FutureProvider.family build callback into a new explicit LearningOrderRepository.repairStaleOrderVersion method, plus a FIX-BOUNCE follow-up 1fc8fd871278dd8a96775c711bc64c3c662dd61c (\"fix(tracks): AUD-tracks-06 bounce - wire repairStaleOrderVersion into bootstrap\") which wires that method into a new lib/app/bootstrap/learning_order_repair_bootstrap.dart fire-and-forget sweep after the bounce reviewer found the extracted method had zero production callers -- but neither commit was ever independently reviewed against the finding's ACs, so nothing is merged here (findingsMerged=[] for this pass). git cherry dev vs both commits confirms neither is patch-equivalent to anything already on dev, so per protocol the stray worktree directories (wf_c12188fb-a5a-3, wf_c12188fb-a5a-22) were removed but the commits were preserved: worktree-wf_c12188fb-a5a-3 already held 5ea17399, and since wf_c12188fb-a5a-22 was a detached-HEAD checkout at 1fc8fd87 with no branch of its own, branch worktree-wf_c12188fb-a5a-22 was created at 1fc8fd87 before removal to avoid losing the commit. Both branches are left intact (not deleted) and flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-10, AUD-tracks-12, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-tracks-07",
