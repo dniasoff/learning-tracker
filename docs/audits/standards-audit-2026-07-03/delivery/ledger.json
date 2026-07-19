@@ -1321,13 +1321,29 @@
   {
    "id": "AUD-tracks-05",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P1",
    "title": "Rebuild TrackLearningOrderScreen's masechtos ReorderableListView with a lazy builder, not shrinkWrap+children",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "022d6d5cb63fd5776ff56ba207c8df5bba8cdf4b"
+   ],
+   "reviewRounds": 2,
+   "acVerified": [
+    "AUD-tracks-05 AC1 OK: checker exists at no_shrink_wrap_reorderable_list.dart:64-78 — matches ReorderableListView + constructorName.name==null + shrinkWrap:true",
+    "AUD-tracks-05 AC1 OK: path scoped to lib/features/** at rule:60-61; negative case for lib/core/widgets asserted in rule test:210-232",
+    "AUD-tracks-05 AC1 OK: checker FIRES on violations — rule test:66-95 and :98-124 assert isNotEmpty on pre-fix-shape fixtures; 3 negative cases assert isEmpty",
+    "AUD-tracks-05 AC1 OK: registered at learning_tracker_lints.dart:113 and run by make audit's lint-rules-test (my run: 215/215, exit 0)",
+    "AUD-tracks-05 AC1 OK: documented in docs/coding-standards.md — PF-2 Enforce line marked [Enforced] plus custom-lints table row",
+    "AUD-tracks-05 AC2 OK: 700-item fixture repo at lazy_masechtos_test.dart:60-87, injected for CurriculumId.mishnaBerurah",
+    "AUD-tracks-05 AC2 OK: RED-FIRST PROVEN BY ME — pre-fix screen restored gives 'Expected: a value less than <50> / Actual: <700>'; HEAD gives all passed",
+    "AUD-tracks-05 AC2 OK: real viewport bound _kViewportScaleCeiling=50 (test:48,135) + greaterThan(0) floor at :147 — 699 rows would fail",
+    "AUD-tracks-05 AC2 OK: bounded settle — pumpAndSettle(100ms, sendSemanticsUpdate, 10s) at test:123-127 completes green",
+    "AUD-tracks-05 fix OK: screen:79-131 now CustomScrollView + 2 SliverReorderableList; zero shrinkWrap left in lib/features ReorderableListView sites",
+    "AUD-tracks-05 bounce-fix OK: SliverReorderableList truly has no default decorator (widgets/reorderable_list.dart:1652); _dragProxyDecorator is verbatim material:448-458",
+    "AUD-tracks-05 bounce-fix OK: RED-FIRST PROVEN BY ME — deleting both proxyDecorator lines makes 19b fail with Material assertion; restored -> green",
+    "AUD-tracks-05 no-regression OK: onReorderItem is the same non-deprecated callback on both widgets (reorderable_list.dart:152,261) — no index-semantics drift"
+   ],
+   "notes": "Re-verified: shrinkWrap:true x2 still present, unchanged. Fixed via CustomScrollView+SliverReorderableList. AC1: custom_lint rule no_shrink_wrap_reorderable_list, 6-case test, wired via lint-rules-test. AC2: red-first 700-item test, RED then GREEN. Updated 4 l1 tests, no weakening."
   },
   {
    "id": "AUD-scheduler-01",
