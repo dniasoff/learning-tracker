@@ -64,9 +64,7 @@ void main() {
       final task = _task();
 
       await tester.pumpWidget(
-        _wrap(
-          DailyTaskCard(task: task, onDismissed: () {}, onCompleted: () {}),
-        ),
+        _wrap(DailyTaskCard(task: task, onDismissed: () {})),
       );
       // Allow the core/preferences Hebrew-terms async load to propagate.
       await tester.pumpAndSettle();
@@ -88,9 +86,7 @@ void main() {
       final task = _task(estimatedEffortMinutes: 5);
 
       await tester.pumpWidget(
-        _wrap(
-          DailyTaskCard(task: task, onDismissed: () {}, onCompleted: () {}),
-        ),
+        _wrap(DailyTaskCard(task: task, onDismissed: () {})),
       );
 
       // Card renders without XP badge (badge was removed in DNI-376).
@@ -106,9 +102,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _wrap(
-          DailyTaskCard(task: task, onDismissed: () {}, onCompleted: () {}),
-        ),
+        _wrap(DailyTaskCard(task: task, onDismissed: () {})),
       );
 
       expect(find.text('Overdue'), findsOneWidget);
@@ -120,9 +114,7 @@ void main() {
       final task = _task(isOverdue: false);
 
       await tester.pumpWidget(
-        _wrap(
-          DailyTaskCard(task: task, onDismissed: () {}, onCompleted: () {}),
-        ),
+        _wrap(DailyTaskCard(task: task, onDismissed: () {})),
       );
 
       expect(find.text('Overdue'), findsNothing);
@@ -132,9 +124,7 @@ void main() {
       final task = _task();
 
       await tester.pumpWidget(
-        _wrap(
-          DailyTaskCard(task: task, onDismissed: () {}, onCompleted: () {}),
-        ),
+        _wrap(DailyTaskCard(task: task, onDismissed: () {})),
       );
 
       // Dismissible wraps the card for swipe-to-skip
@@ -146,13 +136,7 @@ void main() {
       final task = _task();
 
       await tester.pumpWidget(
-        _wrap(
-          DailyTaskCard(
-            task: task,
-            onDismissed: () => dismissed = true,
-            onCompleted: () {},
-          ),
-        ),
+        _wrap(DailyTaskCard(task: task, onDismissed: () => dismissed = true)),
       );
 
       // Swipe end to start (right to left)
@@ -166,9 +150,7 @@ void main() {
       final task = _task(stageOrder: 3, estimatedEffortMinutes: 3);
 
       await tester.pumpWidget(
-        _wrap(
-          DailyTaskCard(task: task, onDismissed: () {}, onCompleted: () {}),
-        ),
+        _wrap(DailyTaskCard(task: task, onDismissed: () {})),
       );
 
       expect(find.text('Chazara 3'), findsOneWidget);

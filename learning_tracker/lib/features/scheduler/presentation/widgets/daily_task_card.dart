@@ -18,15 +18,11 @@ class DailyTaskCard extends ConsumerWidget {
   const DailyTaskCard({
     required this.task,
     required this.onDismissed,
-    required this.onCompleted,
     super.key,
   });
 
   final DailyTask task;
   final VoidCallback onDismissed;
-  // Kept for call-site compatibility; invoked externally when a completion
-  // happens on the text page and the list should refresh.
-  final VoidCallback onCompleted;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

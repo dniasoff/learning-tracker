@@ -107,9 +107,6 @@ class SchedulerScreen extends ConsumerWidget {
                               final task = grouped[curriculum]![index];
                               skipTask(task);
                             },
-                            onTaskCompleted: (curriculum, index) {
-                              ref.invalidate(allDailyTasksProvider);
-                            },
                           )
                         : _TaskList(tasks: visibleTasks),
                   ),
@@ -212,9 +209,6 @@ class _TaskList extends ConsumerWidget {
                   ),
                 ),
               );
-            },
-            onCompleted: () {
-              ref.invalidate(allDailyTasksProvider);
             },
           ),
         );

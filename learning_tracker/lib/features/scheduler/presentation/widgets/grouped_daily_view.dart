@@ -25,13 +25,11 @@ class GroupedDailyView extends ConsumerStatefulWidget {
   const GroupedDailyView({
     required this.schedule,
     required this.onTaskDismissed,
-    required this.onTaskCompleted,
     super.key,
   });
 
   final ComposedDailySchedule schedule;
   final void Function(CurriculumId curriculum, int taskIndex) onTaskDismissed;
-  final void Function(CurriculumId curriculum, int taskIndex) onTaskCompleted;
 
   @override
   ConsumerState<GroupedDailyView> createState() => _GroupedDailyViewState();
@@ -104,7 +102,6 @@ class _GroupedDailyViewState extends ConsumerState<GroupedDailyView> {
               ),
               task: task,
               onDismissed: () => widget.onTaskDismissed(curriculum, i),
-              onCompleted: () => widget.onTaskCompleted(curriculum, i),
             );
           }, childCount: tasks.length),
         ),

@@ -53,11 +53,7 @@ void main() {
     (tester) async {
       await expectNoOverflowAcrossDevices(
         tester,
-        () => DailyTaskCard(
-          task: _task(),
-          onDismissed: () {},
-          onCompleted: () {},
-        ),
+        () => DailyTaskCard(task: _task(), onDismissed: () {}),
         overrides: [
           // English mode so resolveStoredStageName returns the literal stage
           // name regardless of the (empty) SharedPreferences mock.
