@@ -6117,13 +6117,13 @@
   {
    "id": "AUD-tracks-14",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P2",
    "title": "Route TrackManagementBody's hard-delete ('wipe') path through a repository instead of calling trackDao directly (DB-1)",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "not attempted: no-progress cap / loop end"
   },
   {
    "id": "AUD-tracks-16",
