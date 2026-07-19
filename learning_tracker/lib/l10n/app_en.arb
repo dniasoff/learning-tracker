@@ -2170,6 +2170,7 @@
 
   "startingPositionTargetDate": "TARGET DATE",
   "calendarNoLocalEntryFound": "No local calendar entry found for this date.",
+  "calendarEntryLoadFailed": "Couldn't load this date's entry. Check your connection and try again.",
 
   "goalPaceOrDeadlineTitle": "What's your pace or deadline?",
   "goalPaceOrDeadlineSubtitle": "Set a goal.",

@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart';
@@ -37,6 +41,14 @@ class StartingPositionStep extends ConsumerStatefulWidget {
 class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
   List<ContentItem>? _allItems;
   bool _loading = true;
+
+  // AUD-tracks-04 (EH-3): _loadContent's catch clause used to silently
+  // fall through to an empty _containers/_leaves list with no error
+  // affordance and a permanently-disabled Continue button. Track the
+  // failure explicitly so build() can render AppErrorView with retry
+  // instead of an indistinguishable blank list.
+  Object? _loadError;
+  StackTrace? _loadErrorStackTrace;
 
   // Drill-down state: level2 containers → leaf items within selected container.
   List<ContentItem> _containers = [];
@@ -109,10 +121,34 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
         _containerLevelIndex = containerLvl1;
         _leafLevelIndex = leafLvl1;
         _loading = false;
+        _loadError = null;
+        _loadErrorStackTrace = null;
       });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(
+        event: 'tracks_starting_position_load_failed',
+        fields: {'curriculumId': widget.curriculumId.storageKey},
+        exception: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadError = e;
+        _loadErrorStackTrace = st;
+      });
     }
+  }
+
+  /// Retry affordance for [AppErrorView] — re-runs [_loadContent] after a
+  /// load failure (AUD-tracks-04).
+  void _retryLoadContent() {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+      _loadErrorStackTrace = null;
+    });
+    unawaited(_loadContent());
   }
 
   void _onContainerSelected(ContentItem container) {
@@ -143,6 +179,18 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
       return StartingPositionCalendarMode(
         selectedProgram: widget.selectedProgram!,
         onComplete: widget.onComplete,
+      );
+    }
+
+    // AUD-tracks-04: a load failure must surface a distinct, actionable
+    // error affordance — not fall through to an empty container list with
+    // a permanently-disabled Continue button and no indication anything
+    // went wrong.
+    if (_loadError != null) {
+      return AppErrorView(
+        error: _loadError!,
+        stackTrace: _loadErrorStackTrace,
+        onRetry: _retryLoadContent,
       );
     }
 

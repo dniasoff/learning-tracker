@@ -3901,6 +3901,10 @@ class AppLocalizationsHe extends AppLocalizations {
       'לא נמצאה רשומת לוח שנה מקומית לתאריך זה.';
 
   @override
+  String get calendarEntryLoadFailed =>
+      'טעינת הרשומה לתאריך זה נכשלה. בדקו את החיבור ונסו שוב.';
+
+  @override
   String get goalPaceOrDeadlineTitle => 'מה הקצב או המועד שלך?';
 
   @override

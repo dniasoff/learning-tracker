@@ -6735,6 +6735,12 @@ abstract class AppLocalizations {
   /// **'No local calendar entry found for this date.'**
   String get calendarNoLocalEntryFound;
 
+  /// No description provided for @calendarEntryLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this date\'s entry. Check your connection and try again.'**
+  String get calendarEntryLoadFailed;
+
   /// No description provided for @goalPaceOrDeadlineTitle.
   ///
   /// In en, this message translates to:
