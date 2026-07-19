@@ -6316,13 +6316,22 @@
   {
    "id": "AUD-guardrails-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Add automated unit tests for sefaria_mongo.dart's ref/address-parsing engine (currently zero, only a manual eyeball script)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "7eab038c9d4eb9aac94f2adf112795432b33a692"
+   ],
+   "reviewRounds": 2,
+   "acVerified": [
+    "AUD-guardrails-04 AC1a OK: Talmud daf->index at sefaria_mongo_test.dart:32-36 asserts 2a==2, 2b==3, 3a==4, plus bare-daf and non-Talmud contrast",
+    "AUD-guardrails-04 AC1b OK: multi-section range flatten at test:151-167, start[0,1] end[1,0] crosses row boundary via _rowLen; traced vs source:476-497",
+    "AUD-guardrails-04 AC1c OK: comma-bearing longest-prefix at test:62-105, 'Part One, The Prohibition...' beats sibling 'Part One'; matchedLength asserted",
+    "AUD-guardrails-04 AC1d OK: version-priority merge at test:169-199, empty high-priority cell falls through to low-priority; plus non-empty-wins inverse",
+    "AUD-guardrails-04 AC1e OK: no live Mongo - test builds only in-memory SchemaNode/List fixtures; never instantiates Db or SefariaMongo (0 grep hits)",
+    "AUD-guardrails-04 AC2 OK: my run of flutter test --concurrency=2 test/tool/seed/ = 11/11, exit 0, 4s; docker not installed, nothing on 27017"
+   ],
+   "notes": "Re-verified: no test touched sefaria_mongo.dart pre-fix. Added sefaria_mongo_test.dart covering all 4 named scenarios via fixtures, no Mongo/Docker. Exposed 3 pure methods as static+@visibleForTesting (matching firestore_gateway_impl.dart precedent); no behavior change. 10/10 pass. Merged --no-ff onto dev (w4r1c13, mergeSha 7eab038c9d4eb9aac94f2adf112795432b33a692). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (no issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base 713b6cfe902f48f754935f25557a192e71221223), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-guardrails-14",
