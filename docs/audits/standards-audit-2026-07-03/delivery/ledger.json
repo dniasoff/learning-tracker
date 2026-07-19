@@ -11560,13 +11560,22 @@
   {
    "id": "AUD-tracks-25",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Stop hardcoding TextDirection.rtl on TrackLabelStep's free-text field regardless of app locale",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "a0d02c1aa2995f610ed52d173fe22961d0a75c9b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-25 AC1 OK: track_label_step.dart:65-77 TextFormField has zero textDirection args (old line 68 rtl literal gone); falls back to ambient Directionality.",
+    "AUD-tracks-25 AC2 OK: track_label_step_test.dart:130-141 asserts real RenderEditable.textDirection==ltr under default Locale('en'); real render tree, not a mock.",
+    "AUD-tracks-25 AC2 red-first OK: I restored the pre-fix lib file and re-ran: exit 1, only the new test failed (00:00 +5 -1). Refixed -> 6/6.",
+    "AUD-tracks-25 AC3 OK (checker exists): no_hardcoded_text_direction.dart:134-153 addNamedExpression on 'textDirection' + PrefixedIdentifier TextDirection.rtl/.ltr.",
+    "AUD-tracks-25 AC3 OK (fires+clean): my probe ran the rule on the REAL files: post-fix hits=[]; pre-fix hits=[offset 1885 hardcoded directional].",
+    "Scope OK: 6 files, all AUD-tracks-25 (fix, its test, lint rule, rule tests, 2 doc comments). No unrelated edits."
+   ],
+   "notes": "Re-verified: still hardcoded rtl, widget orphaned - not stale. Removed override (AC1). Red-first RenderEditable test failed pre-fix, passed post-fix (AC2). Extended lint to flag bare rtl/ltr, allow ternary/computed; new tests pass, suite 193/193 (AC3)."
   },
   {
    "id": "AUD-tracks-20",
