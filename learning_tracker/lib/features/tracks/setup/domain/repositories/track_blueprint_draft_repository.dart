@@ -1,4 +1,7 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
+
+part 'track_blueprint_draft_repository.freezed.dart';
 
 /// Persists the in-progress [AddTrackState] wizard draft across restarts.
 ///
@@ -30,59 +33,29 @@ abstract interface class TrackBlueprintDraftRepository {
 ///
 /// Fields that cannot be safely serialised (Freezed/deep objects) are omitted;
 /// the wizard re-collects them from scratch when the user continues.
-class AddTrackDraft {
-  const AddTrackDraft({
-    required this.navStepIndex,
-    this.curriculumKey,
-    this.scopeSelectionsJson,
-    this.programId,
-    this.programName,
-    this.studyDays,
-    this.trackLabel,
-  });
+@freezed
+abstract class AddTrackDraft with _$AddTrackDraft {
+  const factory AddTrackDraft({
+    /// Navigation position, corresponding to the [AddTrackStep] ordinal.
+    required int navStepIndex,
 
-  /// Navigation position, corresponding to the [AddTrackStep] ordinal.
-  final int navStepIndex;
+    /// [CurriculumId.storageKey] of the selected curriculum, or `null`.
+    String? curriculumKey,
 
-  /// [CurriculumId.storageKey] of the selected curriculum, or `null`.
-  final String? curriculumKey;
+    /// JSON-encoded list of scope entries (serialised from [ScopeEntry]), or
+    /// null.
+    String? scopeSelectionsJson,
 
-  /// JSON-encoded list of scope entries (serialised from [ScopeEntry]), or null.
-  final String? scopeSelectionsJson;
+    /// Program id if a calendar program was selected, or `null`.
+    int? programId,
 
-  /// Program id if a calendar program was selected, or `null`.
-  final int? programId;
+    /// Human-readable program name if a program was selected.
+    String? programName,
 
-  /// Human-readable program name if a program was selected.
-  final String? programName;
+    /// Study-day config as a `{isoWeekday: dayType}` map, or null.
+    Map<int, String>? studyDays,
 
-  /// Study-day config as a `{isoWeekday: dayType}` map, or null.
-  final Map<int, String>? studyDays;
-
-  /// User-entered track label, or `null`.
-  final String? trackLabel;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is AddTrackDraft &&
-          other.navStepIndex == navStepIndex &&
-          other.curriculumKey == curriculumKey &&
-          other.programId == programId &&
-          other.programName == programName &&
-          other.trackLabel == trackLabel);
-
-  @override
-  int get hashCode => Object.hash(
-    navStepIndex,
-    curriculumKey,
-    programId,
-    programName,
-    trackLabel,
-  );
-
-  @override
-  String toString() =>
-      'AddTrackDraft(step: $navStepIndex, curriculum: $curriculumKey, '
-      'program: $programId, label: $trackLabel)';
+    /// User-entered track label, or `null`.
+    String? trackLabel,
+  }) = _AddTrackDraft;
 }

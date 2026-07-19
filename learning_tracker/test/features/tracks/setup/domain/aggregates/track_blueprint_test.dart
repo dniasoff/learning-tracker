@@ -264,5 +264,54 @@ void main() {
       );
       expect(a, b);
     });
+
+    // AUD-tracks-23 regression: TrackBlueprint's hand-rolled == omitted
+    // studyDays and scopeSelections entirely, so two blueprints differing
+    // only in one of those fields compared equal.
+    test('inequality on different studyDays', () {
+      const a = TrackBlueprint(
+        curriculumId: CurriculumId.bavli,
+        label: 'Bavli',
+        studyDays: {1: 'study'},
+        programSelection: SelfPacedSelection(),
+        stageConfiguration: SingleStageConfiguration(),
+        goalIntent: NoGoalIntent(),
+        bulkMarkIntent: NoBulkMarkIntent(),
+      );
+      const b = TrackBlueprint(
+        curriculumId: CurriculumId.bavli,
+        label: 'Bavli',
+        studyDays: {1: 'skip'},
+        programSelection: SelfPacedSelection(),
+        stageConfiguration: SingleStageConfiguration(),
+        goalIntent: NoGoalIntent(),
+        bulkMarkIntent: NoBulkMarkIntent(),
+      );
+      expect(a == b, isFalse);
+    });
+
+    test('inequality on different scopeSelections', () {
+      const a = TrackBlueprint(
+        curriculumId: CurriculumId.bavli,
+        label: 'Bavli',
+        studyDays: {1: 'study'},
+        scopeSelections: [ScopeEntry(level: 1, value: 'Seder Zeraim')],
+        programSelection: SelfPacedSelection(),
+        stageConfiguration: SingleStageConfiguration(),
+        goalIntent: NoGoalIntent(),
+        bulkMarkIntent: NoBulkMarkIntent(),
+      );
+      const b = TrackBlueprint(
+        curriculumId: CurriculumId.bavli,
+        label: 'Bavli',
+        studyDays: {1: 'study'},
+        scopeSelections: [ScopeEntry(level: 1, value: 'Seder Moed')],
+        programSelection: SelfPacedSelection(),
+        stageConfiguration: SingleStageConfiguration(),
+        goalIntent: NoGoalIntent(),
+        bulkMarkIntent: NoBulkMarkIntent(),
+      );
+      expect(a == b, isFalse);
+    });
   });
 }

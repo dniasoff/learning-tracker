@@ -111,5 +111,26 @@ void main() {
       const b = AddTrackDraft(navStepIndex: 2);
       expect(a == b, isFalse);
     });
+
+    // AUD-tracks-23 regression: the hand-rolled == on AddTrackDraft omitted
+    // scopeSelectionsJson and studyDays entirely, so two drafts differing
+    // only in one of those fields compared equal.
+    test('AddTrackDraft inequality on different scopeSelectionsJson', () {
+      const a = AddTrackDraft(
+        navStepIndex: 1,
+        scopeSelectionsJson: '[{"level":1,"value":"Seder Zeraim"}]',
+      );
+      const b = AddTrackDraft(
+        navStepIndex: 1,
+        scopeSelectionsJson: '[{"level":1,"value":"Seder Moed"}]',
+      );
+      expect(a == b, isFalse);
+    });
+
+    test('AddTrackDraft inequality on different studyDays', () {
+      const a = AddTrackDraft(navStepIndex: 1, studyDays: {1: 'study'});
+      const b = AddTrackDraft(navStepIndex: 1, studyDays: {1: 'skip'});
+      expect(a == b, isFalse);
+    });
   });
 }

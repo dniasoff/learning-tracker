@@ -1,3 +1,4 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
 import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -5,92 +6,42 @@ import 'package:learning_tracker/features/onboarding/domain/models/wizard_result
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 
+part 'track_blueprint.freezed.dart';
+
 // ── GoalIntent ────────────────────────────────────────────────────────────────
 
 /// Sealed intent: what kind of goal (if any) the user attached to this track.
 ///
 /// Replaces the loosely-typed [GoalEntity] nullable field in [AddTrackResult].
-sealed class GoalIntent {
-  const GoalIntent();
-}
+@freezed
+sealed class GoalIntent with _$GoalIntent {
+  /// No goal attached — self-paced / momentum-only track.
+  const factory GoalIntent.none() = NoGoalIntent;
 
-/// No goal attached — self-paced / momentum-only track.
-final class NoGoalIntent extends GoalIntent {
-  const NoGoalIntent();
-
-  @override
-  String toString() => 'NoGoalIntent';
-}
-
-/// Goal specified by the user (may be deadline or pace-based).
-final class SpecifiedGoalIntent extends GoalIntent {
-  const SpecifiedGoalIntent({required this.goal});
-
-  final GoalEntity goal;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is SpecifiedGoalIntent && other.goal == goal);
-
-  @override
-  int get hashCode => goal.hashCode;
-
-  @override
-  String toString() => 'SpecifiedGoalIntent(goal: $goal)';
+  /// Goal specified by the user (may be deadline or pace-based).
+  const factory GoalIntent.specified({required GoalEntity goal}) =
+      SpecifiedGoalIntent;
 }
 
 // ── StageConfiguration ────────────────────────────────────────────────────────
 
 /// Sealed union for the stage/chazara configuration the user chose.
-sealed class StageConfiguration {
-  const StageConfiguration();
-}
+@freezed
+sealed class StageConfiguration with _$StageConfiguration {
+  /// No chazara stages — learn-only track.
+  const factory StageConfiguration.single() = SingleStageConfiguration;
 
-/// No chazara stages — learn-only track.
-final class SingleStageConfiguration extends StageConfiguration {
-  const SingleStageConfiguration();
+  /// Multi-stage chazara schedule configured via the wizard.
+  ///
+  /// [wizardResult] is the full [LearningProcessWizardResult] wrapper (use
+  /// `.wizardResult` to reach the inner `WizardResult`).
+  const factory StageConfiguration.wizard({
+    required LearningProcessWizardResult wizardResult,
+  }) = WizardStageConfiguration;
 
-  @override
-  String toString() => 'SingleStageConfiguration';
-}
-
-/// Multi-stage chazara schedule configured via the wizard.
-final class WizardStageConfiguration extends StageConfiguration {
-  const WizardStageConfiguration({required this.wizardResult});
-
-  /// The full [LearningProcessWizardResult] wrapper (use `.wizardResult` to
-  /// reach the inner [WizardResult]).
-  final LearningProcessWizardResult wizardResult;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is WizardStageConfiguration && other.wizardResult == wizardResult);
-
-  @override
-  int get hashCode => wizardResult.hashCode;
-
-  @override
-  String toString() => 'WizardStageConfiguration(wizardResult: $wizardResult)';
-}
-
-/// Custom schedule-spec override (advanced / non-wizard path).
-final class ScheduleSpecConfiguration extends StageConfiguration {
-  const ScheduleSpecConfiguration({required this.spec});
-
-  final ScheduleSpec spec;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is ScheduleSpecConfiguration && other.spec == spec);
-
-  @override
-  int get hashCode => spec.hashCode;
-
-  @override
-  String toString() => 'ScheduleSpecConfiguration(spec: $spec)';
+  /// Custom schedule-spec override (advanced / non-wizard path).
+  const factory StageConfiguration.scheduleSpec({required ScheduleSpec spec}) =
+      ScheduleSpecConfiguration;
 }
 
 // ── BulkMarkIntent ────────────────────────────────────────────────────────────
@@ -98,92 +49,40 @@ final class ScheduleSpecConfiguration extends StageConfiguration {
 /// Sealed intent: whether/how the user pre-marked prior completions.
 ///
 /// The presentation-layer [BulkMarkResult] collapses to this domain intent.
-sealed class TrackBulkMarkIntent {
-  const TrackBulkMarkIntent();
-}
+@freezed
+sealed class TrackBulkMarkIntent with _$TrackBulkMarkIntent {
+  /// User skipped the bulk-mark step.
+  const factory TrackBulkMarkIntent.none() = NoBulkMarkIntent;
 
-/// User skipped the bulk-mark step.
-final class NoBulkMarkIntent extends TrackBulkMarkIntent {
-  const NoBulkMarkIntent();
-
-  @override
-  String toString() => 'NoBulkMarkIntent';
-}
-
-/// User pre-marked some sections as already completed.
-final class BulkMarkedIntent extends TrackBulkMarkIntent {
-  const BulkMarkedIntent({
-    required this.itemCount,
-    required this.completionCount,
-  });
-
-  /// Number of distinct content items marked.
-  final int itemCount;
-
-  /// Total completion records written (may exceed [itemCount] for multi-stage).
-  final int completionCount;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is BulkMarkedIntent &&
-          other.itemCount == itemCount &&
-          other.completionCount == completionCount);
-
-  @override
-  int get hashCode => Object.hash(itemCount, completionCount);
-
-  @override
-  String toString() =>
-      'BulkMarkedIntent(itemCount: $itemCount, completionCount: $completionCount)';
+  /// User pre-marked some sections as already completed.
+  ///
+  /// [itemCount] is the number of distinct content items marked;
+  /// [completionCount] is the total completion records written (may exceed
+  /// [itemCount] for multi-stage).
+  const factory TrackBulkMarkIntent.marked({
+    required int itemCount,
+    required int completionCount,
+  }) = BulkMarkedIntent;
 }
 
 // ── ProgramSelection ──────────────────────────────────────────────────────────
 
 /// Sealed union for the program the user chose (or didn't).
-sealed class ProgramSelection {
-  const ProgramSelection();
-}
+@freezed
+sealed class ProgramSelection with _$ProgramSelection {
+  /// No structured program — the track is self-paced.
+  const factory ProgramSelection.selfPaced() = SelfPacedSelection;
 
-/// No structured program — the track is self-paced.
-final class SelfPacedSelection extends ProgramSelection {
-  const SelfPacedSelection();
-
-  @override
-  String toString() => 'SelfPacedSelection';
-}
-
-/// User enrolled in a specific calendar-driven program.
-final class CalendarProgramSelection extends ProgramSelection {
-  const CalendarProgramSelection({
-    required this.programId,
-    required this.programName,
-    required this.startingPosition,
-    this.program,
-  });
-
-  final int programId;
-  final String programName;
-  final ProgramStartingPosition startingPosition;
-
-  /// Full program data for reading stage config metadata.
-  final LearningProgramData? program;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is CalendarProgramSelection &&
-          other.programId == programId &&
-          other.programName == programName &&
-          other.startingPosition == startingPosition);
-
-  @override
-  int get hashCode => Object.hash(programId, programName, startingPosition);
-
-  @override
-  String toString() =>
-      'CalendarProgramSelection(programId: $programId, '
-      'programName: $programName, startingPosition: $startingPosition)';
+  /// User enrolled in a specific calendar-driven program.
+  ///
+  /// [program] carries the full program data for reading stage config
+  /// metadata.
+  const factory ProgramSelection.calendar({
+    required int programId,
+    required String programName,
+    required ProgramStartingPosition startingPosition,
+    LearningProgramData? program,
+  }) = CalendarProgramSelection;
 }
 
 // ── TrackBlueprint aggregate ──────────────────────────────────────────────────
@@ -197,41 +96,35 @@ final class CalendarProgramSelection extends ProgramSelection {
 ///
 /// [ProvisionTrackUseCase] consumes a [TrackBlueprint] and uses its typed
 /// fields to build the correct DB writes without inspecting raw strings.
-class TrackBlueprint {
-  const TrackBlueprint({
-    required this.curriculumId,
-    required this.label,
-    required this.studyDays,
-    required this.programSelection,
-    required this.stageConfiguration,
-    required this.goalIntent,
-    required this.bulkMarkIntent,
-    this.scopeSelections,
-  });
+@freezed
+abstract class TrackBlueprint with _$TrackBlueprint {
+  const TrackBlueprint._();
 
-  /// The curriculum this track is for.
-  final CurriculumId curriculumId;
+  const factory TrackBlueprint({
+    /// The curriculum this track is for.
+    required CurriculumId curriculumId,
 
-  /// User-provided (or auto-derived) label for the track.
-  final String label;
+    /// User-provided (or auto-derived) label for the track.
+    required String label,
 
-  /// Map of ISO weekday number → day type ('study'/'skip'/etc.).
-  final Map<int, String> studyDays;
+    /// Map of ISO weekday number → day type ('study'/'skip'/etc.).
+    required Map<int, String> studyDays,
 
-  /// Scope constraints for self-paced tracks (null = entire curriculum).
-  final List<ScopeEntry>? scopeSelections;
+    /// Program or self-paced selection.
+    required ProgramSelection programSelection,
 
-  /// Program or self-paced selection.
-  final ProgramSelection programSelection;
+    /// Stage/chazara configuration.
+    required StageConfiguration stageConfiguration,
 
-  /// Stage/chazara configuration.
-  final StageConfiguration stageConfiguration;
+    /// Goal attached to the track (if any).
+    required GoalIntent goalIntent,
 
-  /// Goal attached to the track (if any).
-  final GoalIntent goalIntent;
+    /// Bulk prior-completion intent (if any).
+    required TrackBulkMarkIntent bulkMarkIntent,
 
-  /// Bulk prior-completion intent (if any).
-  final TrackBulkMarkIntent bulkMarkIntent;
+    /// Scope constraints for self-paced tracks (null = entire curriculum).
+    List<ScopeEntry>? scopeSelections,
+  }) = _TrackBlueprint;
 
   /// True when a structured calendar program was selected.
   bool get isCalendarProgram => programSelection is CalendarProgramSelection;
@@ -309,31 +202,4 @@ class TrackBlueprint {
       bulkMarkIntent: bulkMarkIntent,
     );
   }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is TrackBlueprint &&
-          other.curriculumId == curriculumId &&
-          other.label == label &&
-          other.programSelection == programSelection &&
-          other.stageConfiguration == stageConfiguration &&
-          other.goalIntent == goalIntent &&
-          other.bulkMarkIntent == bulkMarkIntent);
-
-  @override
-  int get hashCode => Object.hash(
-    curriculumId,
-    label,
-    programSelection,
-    stageConfiguration,
-    goalIntent,
-    bulkMarkIntent,
-  );
-
-  @override
-  String toString() =>
-      'TrackBlueprint(curriculumId: $curriculumId, label: $label, '
-      'program: $programSelection, stages: $stageConfiguration, '
-      'goal: $goalIntent, bulk: $bulkMarkIntent)';
 }
