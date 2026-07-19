@@ -4878,13 +4878,13 @@
   {
    "id": "AUD-tracks-12",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P2",
    "title": "Delete or wire up the dead stage-editor mutation path (StageEditorNotifier, StageValidator, Protected/LimitExceeded exceptions)",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c8, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (34b8ec96d24077a79ede4e9c10b286065cdb6ce0, \"fix(tracks): AUD-tracks-12 - delete dead stage-editor mutation path\", on stray worktree branch worktree-wf_c12188fb-a5a-8) deleting StageEditorNotifier's dead addStage/updateStage/deleteStage/reorderStages path in stage_definition_repository_impl.dart + stage_definition_repository.dart + stage_providers.dart, and the two now-unused leaf exceptions (protected_stage_exception.dart, stage_limit_exceeded_exception.dart), while explicitly keeping StageValidator (independent Epic 15 AC coverage); test changes moved the StageValidator group out of the deleted stage_exceptions_test.dart into a new stage_validator_test.dart and updated the 6 adjacent test files (stage_definition_repository_impl_test.dart, ..._26_26_test.dart, content_tile_search_providers_test.dart, stage_sync_test.dart, stage_definition_single_path_test.dart, epic_05_stages_order_test.dart) -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_c12188fb-a5a-8 confirms the commit is not patch-equivalent to anything already on dev, so per protocol the stray worktree directory was removed but the worktree-wf_c12188fb-a5a-8 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-10, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-tracks-09",
