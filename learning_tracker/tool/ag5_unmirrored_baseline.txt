@@ -461,7 +461,6 @@ lib/features/tracks/track_order/domain/services/masechta_ordering_policy.dart
 lib/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart
 lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart
 lib/features/tracks/tracks.dart
-lib/features/tracks/whole_curriculum_order/data/preferences/learning_order_preferences.dart
 lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart
 lib/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart
 lib/features/tracks/whole_curriculum_order/domain/repositories/learning_order_repository.dart
