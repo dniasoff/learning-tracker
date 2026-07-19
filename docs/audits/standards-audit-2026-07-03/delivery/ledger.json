@@ -7467,13 +7467,21 @@
   {
    "id": "AUD-tracks-18",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "De-duplicate the Hebrew-script detection regex in TrackLearningOrderScreen",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "a368364228b0fa438f9964efd1efdb048e35a658"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-18 AC1a OK: repo-wide grep (incl \\u05 escapes, \\p{Hebrew}) -> exactly 1 detector def at curriculum_label.dart:407",
+    "AUD-tracks-18 AC1b OK: track_learning_order_screen.dart:158 calls CurriculumLabel.isHebrewText(label); private _hebrewScript deleted",
+    "AUD-tracks-18 AC1c OK: helper is public in core/labels (curriculum_label.dart:405); _inferDirection delegates to it, no 2nd path",
+    "AUD-tracks-18 AC1d OK: only other Hebrew RegExp is hebrew_utils.dart:7 _nikudPattern (mark stripping) - different concern, not a dup",
+    "AUD-tracks-18 AC1e OK: text_styles.dart has zero RegExp/detection code, confirming builder's 3-sites-to-2-live register correction"
+   ],
+   "notes": "Screen had a private RegExp dup of CurriculumLabel._hebrew. Verify tallied 3 sites incl. text_styles.dart, but that copy was already dead-code-removed by ce97d942; core claim held. Added public CurriculumLabel.isHebrewText(); screen now calls it. Grep confirms 1 canonical def repo-wide."
   },
   {
    "id": "AUD-docs-24",
