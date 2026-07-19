@@ -1182,6 +1182,30 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/dup_tool_basename_check.$$$$.log; \
 	fi; \
+	echo "87/87 — EH-5/ST-4: no raw exception .toString() flows into a Text()/l10n()/AppLocalizations.of() call site under lib/features/settings — grep-based backstop pending custom_lint's no_e_to_string_in_ui repair (AUD-settings-07)"; \
+	if ! dart run tool/check_settings_no_tostring_in_ui.dart > /tmp/settings_tostring_check.$$$$.log 2>&1; then \
+	  cat /tmp/settings_tostring_check.$$$$.log; \
+	  rm -f /tmp/settings_tostring_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/settings_tostring_check.$$$$.log; \
+	fi; \
+	echo "88/88 — SM-8: no lib/features/tracks/ repository file imports another repository file (AUD-tracks-15)"; \
+	if ! dart run tool/check_sm8_repo_repo_imports.dart > /tmp/sm8_repo_repo_imports_check.$$$$.log 2>&1; then \
+	  cat /tmp/sm8_repo_repo_imports_check.$$$$.log; \
+	  rm -f /tmp/sm8_repo_repo_imports_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/sm8_repo_repo_imports_check.$$$$.log; \
+	fi; \
+	echo "89/89 — SM-7 Rule-0: LearningProgramRepository.instance occurrence count under test/ — RATCHET, only growth above the tracked baseline (backlog paydown tracked at DNI-446) fails the gate (AUD-scheduler-23)"; \
+	if ! dart run tool/check_sm7_learning_program_singleton.dart > /tmp/sm7_singleton_check.$$$$.log 2>&1; then \
+	  cat /tmp/sm7_singleton_check.$$$$.log; \
+	  rm -f /tmp/sm7_singleton_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/sm7_singleton_check.$$$$.log; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
