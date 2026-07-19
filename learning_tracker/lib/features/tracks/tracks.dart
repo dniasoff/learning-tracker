@@ -11,8 +11,6 @@ export 'domain/services/curriculum_activation_service.dart';
 export 'setup/domain/entities/add_track_result.dart';
 export 'setup/domain/services/track_creation_service.dart';
 export 'setup/domain/services/track_edit_service.dart';
-export 'setup/presentation/controllers/add_track_controller.dart';
-export 'setup/presentation/controllers/add_track_flow_state.dart';
 export 'setup/presentation/providers/add_track_providers.dart';
 export 'setup/presentation/providers/after_track_change_invalidation.dart';
 export 'setup/presentation/providers/track_edit_providers.dart';

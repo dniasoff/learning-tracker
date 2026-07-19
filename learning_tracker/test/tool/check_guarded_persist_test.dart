@@ -25,7 +25,7 @@ void main() {
 
   group('tool/check_guarded_persist.dart (AUD-core-preferences-04)', () {
     test('exits 0 on the real (fixed) tree — every Future<void> Notifier '
-        'method in the scoped 6 files guards its persistence call', () async {
+        'method in the scoped files guards its persistence call', () async {
       final result = await runCheck();
       expect(
         result.exitCode,
