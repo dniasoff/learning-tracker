@@ -92,7 +92,17 @@ class _TrackManagementBodyState extends ConsumerState<TrackManagementBody> {
         // Learning view.
         leading: widget.showBackButton
             ? IconButton(
-                icon: const Icon(Icons.arrow_back),
+                // AX-3 / AUD-tracks-17: `tooltip:` alone does not populate
+                // `SemanticsData.label` on the current Flutter SDK (it only
+                // sets `.tooltip`), so the Icon also carries
+                // `semanticLabel`, which Flutter surfaces as
+                // `Semantics(label:)` — the field TalkBack/VoiceOver read.
+                icon: Icon(
+                  Icons.arrow_back,
+                  semanticLabel: MaterialLocalizations.of(
+                    context,
+                  ).backButtonTooltip,
+                ),
                 tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                 onPressed: () {
                   if (context.router.canPop()) {

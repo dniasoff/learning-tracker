@@ -265,7 +265,22 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      // AX-3 / AUD-tracks-17: icon-only close button had no
+                      // tooltip/semanticLabel. `tooltip:` alone does not
+                      // populate `SemanticsData.label` on the current
+                      // Flutter SDK (it only sets `.tooltip`), so the Icon
+                      // also carries `semanticLabel`, which Flutter surfaces
+                      // as `Semantics(label:)` — the field TalkBack/
+                      // VoiceOver read. Reuses the existing `clearSelection`
+                      // ARB key already used for the identical
+                      // clear-current-selection affordance in
+                      // lifetime_marking_screen.dart, rather than minting a
+                      // near-duplicate key.
+                      tooltip: l10n.clearSelection,
+                      icon: Icon(
+                        Icons.close,
+                        semanticLabel: l10n.clearSelection,
+                      ),
                       onPressed: _clearSelection,
                       color: theme.colorScheme.onPrimaryContainer,
                     ),

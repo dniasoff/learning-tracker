@@ -725,6 +725,116 @@ void main() {
         addTearDown(() => _tearDown(tester));
       },
     );
+
+    // ── AUD-tracks-17 (AX-3) regression: close-button semantics ─────────────
+    //
+    // The icon-only "close" IconButton that clears the current selection
+    // (shown on the selected-leaf card) had no tooltip/semanticLabel.
+    // `IconButton(tooltip: ...)` alone does not populate
+    // `SemanticsData.label` on the current Flutter SDK (3.44.6) — only
+    // `.tooltip` — so TalkBack/VoiceOver users heard just "button". The fix
+    // adds both `tooltip:` and `Icon(semanticLabel:)`, reusing the existing
+    // `clearSelection` ARB key ("Clear selection" / "נקה בחירה") already
+    // used for the identical clear-current-selection affordance in
+    // lifetime_marking_screen.dart, rather than minting a near-duplicate key.
+
+    Future<void> pumpWithAutoSelectedLeaf(
+      WidgetTester tester, {
+      Locale locale = const Locale('en'),
+    }) async {
+      final contentRepo = _MockContentRepository();
+      const allItems = [
+        ContentItem(
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot',
+          displayNameEn: 'Berakhot',
+          displayNameHe: 'ברכות',
+          level1: 'Zeraim',
+          sortOrder: 0,
+          isLeaf: false,
+        ),
+        ContentItem(
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot 1',
+          displayNameEn: 'Berakhot 1',
+          displayNameHe: 'ברכות א',
+          level1: 'Zeraim',
+          sortOrder: 1,
+          isLeaf: true,
+        ),
+      ];
+      when(
+        () => contentRepo.getContentForCurriculum(any()),
+      ).thenAnswer((_) async => allItems);
+      when(() => contentRepo.getHierarchyConfig(any())).thenAnswer(
+        (_) async => const CurriculumHierarchyConfig(
+          curriculumId: 'mishnayos',
+          levelLabels: ['Seder', 'Masechet'],
+          totalItems: 2,
+        ),
+      );
+
+      await tester.pumpWidget(
+        _buildStartingPositionApp(
+          overrides: _baseOverridesWithContentRepo(contentRepo),
+          selectedProgram: _nonCalendarProgram(),
+          locale: locale,
+        ),
+      );
+      await _settle(tester);
+    }
+
+    testWidgets(
+      'AUD-tracks-17: EN — close (clear-selection) IconButton exposes a '
+      'non-empty Semantics label',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+
+        // Content load auto-selects the first container's first leaf (see
+        // _loadContent), so the close (X) IconButton on the selected-leaf
+        // card renders immediately without any manual tap sequence.
+        await pumpWithAutoSelectedLeaf(tester);
+
+        final closeButton = find.widgetWithIcon(IconButton, Icons.close);
+        expect(closeButton, findsOneWidget);
+
+        final semantics = tester.getSemantics(closeButton);
+        expect(
+          semantics.label,
+          isNotEmpty,
+          reason:
+              'AUD-tracks-17: the icon-only clear-selection button must '
+              'expose a non-empty semantic label so TalkBack/VoiceOver '
+              'announce its purpose.',
+        );
+        expect(semantics.label, 'Clear selection');
+        expect(find.bySemanticsLabel('Clear selection'), findsOneWidget);
+
+        handle.dispose();
+        addTearDown(() => _tearDown(tester));
+      },
+    );
+
+    testWidgets(
+      'AUD-tracks-17: HE — close (clear-selection) IconButton exposes the '
+      'Hebrew clearSelection label',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+
+        await pumpWithAutoSelectedLeaf(tester, locale: const Locale('he'));
+
+        expect(
+          find.bySemanticsLabel('נקה בחירה'),
+          findsOneWidget,
+          reason:
+              'AUD-tracks-17: the Hebrew clear-selection label must be '
+              'exposed on the semantics tree, not an English leak.',
+        );
+
+        handle.dispose();
+        addTearDown(() => _tearDown(tester));
+      },
+    );
   });
 
   // ==========================================================================
