@@ -268,6 +268,113 @@ void main() {
   });
 
   // =========================================================================
+  // importData — stageDefinitions.schedule back-compat (AUD-settings-05)
+  //
+  // _resolveScheduleJson() normalises two export shapes into the
+  // `stage_definitions.schedule` JSON column: the pre-W3.27 quartet
+  // (scheduleType/daysOfWeek/rollingWindowSize/delayDays) and the current
+  // `schedule` field. Every stage-definition fixture elsewhere in this
+  // suite hits only the `default: delay` fallback branch (no scheduleType
+  // at all); these tests cover the other three branches so a legacy-backup
+  // restore of a weekly/rolling schedule is provably correct.
+  // =========================================================================
+
+  group(
+    'DataExportImportService.importData — stageDefinitions schedule back-compat',
+    () {
+      test('legacy scheduleType "weekly" with JSON-string daysOfWeek resolves '
+          'to a weekly schedule column', () async {
+        final payload = exportPayloadMap()
+          ..['userProfiles'] = [userProfileMap(id: 1)]
+          ..['learnerProfiles'] = [learnerProfileMap()]
+          ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
+          ..['stageDefinitions'] = [
+            {
+              ...stageDefinitionMap(trackId: 1),
+              'scheduleType': 'weekly',
+              'daysOfWeek': jsonEncode([1, 3, 5]),
+            },
+          ];
+
+        await service.importData(jsonEncode(payload));
+
+        final stages = await db.select(db.stageDefinitions).get();
+        expect(stages, hasLength(1));
+        final decoded =
+            jsonDecode(stages.first.schedule) as Map<String, dynamic>;
+        expect(decoded['type'], 'weekly');
+        expect(decoded['days_of_week'], [1, 3, 5]);
+      });
+
+      test('legacy scheduleType "weekly" with a native-List daysOfWeek '
+          'resolves to a weekly schedule column', () async {
+        final payload = exportPayloadMap()
+          ..['userProfiles'] = [userProfileMap(id: 1)]
+          ..['learnerProfiles'] = [learnerProfileMap()]
+          ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
+          ..['stageDefinitions'] = [
+            {
+              ...stageDefinitionMap(trackId: 1),
+              'scheduleType': 'weekly',
+              'daysOfWeek': [0, 2, 4],
+            },
+          ];
+
+        await service.importData(jsonEncode(payload));
+
+        final stages = await db.select(db.stageDefinitions).get();
+        expect(stages, hasLength(1));
+        final decoded =
+            jsonDecode(stages.first.schedule) as Map<String, dynamic>;
+        expect(decoded['type'], 'weekly');
+        expect(decoded['days_of_week'], [0, 2, 4]);
+      });
+
+      test('legacy scheduleType "rolling" resolves to a rolling schedule '
+          'column carrying the window size', () async {
+        final payload = exportPayloadMap()
+          ..['userProfiles'] = [userProfileMap(id: 1)]
+          ..['learnerProfiles'] = [learnerProfileMap()]
+          ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
+          ..['stageDefinitions'] = [
+            {
+              ...stageDefinitionMap(trackId: 1),
+              'scheduleType': 'rolling',
+              'rollingWindowSize': 14,
+            },
+          ];
+
+        await service.importData(jsonEncode(payload));
+
+        final stages = await db.select(db.stageDefinitions).get();
+        expect(stages, hasLength(1));
+        final decoded =
+            jsonDecode(stages.first.schedule) as Map<String, dynamic>;
+        expect(decoded['type'], 'rolling');
+        expect(decoded['rolling_window_size'], 14);
+      });
+
+      test('a pre-populated new-schema "schedule" field is passed through '
+          'verbatim, bypassing the legacy quartet', () async {
+        const scheduleJson = '{"type":"delay","delay_days":9}';
+        final payload = exportPayloadMap()
+          ..['userProfiles'] = [userProfileMap(id: 1)]
+          ..['learnerProfiles'] = [learnerProfileMap()]
+          ..['curriculumTracks'] = [curriculumTrackMap(id: 1)]
+          ..['stageDefinitions'] = [
+            stageDefinitionMap(trackId: 1, schedule: scheduleJson),
+          ];
+
+        await service.importData(jsonEncode(payload));
+
+        final stages = await db.select(db.stageDefinitions).get();
+        expect(stages, hasLength(1));
+        expect(stages.first.schedule, scheduleJson);
+      });
+    },
+  );
+
+  // =========================================================================
   // importData — pointConfigs
   // =========================================================================
 
