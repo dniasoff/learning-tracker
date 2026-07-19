@@ -24,8 +24,8 @@
 /// scanned argument list early.
 ///
 /// Broadening this check surfaces pre-existing debt beyond AUD-profiles-18's
-/// own evidence site — 2 further multi-line `EdgeInsets.only(left:/right:)`
-/// sites elsewhere in `lib/`, neither named by this finding. Per scope
+/// own evidence site — further multi-line `EdgeInsets.only(left:/right:)`
+/// sites elsewhere in `lib/`, none of them named by this finding. Per scope
 /// discipline (fix only the dispatched finding; adjacent defects are
 /// follow-ups, not drive-by fixes) those pre-existing sites are baselined
 /// below so this checker hard-fails on the AUD-profiles-18 site (and on any
@@ -33,6 +33,9 @@
 /// debt this finding does not own. Mirrors the baseline/ratchet pattern in
 /// `tool/check_empty_catch_blocks.dart` (AUD-app-06). Shrink this set as
 /// each site is fixed; never add to it for new code.
+///
+/// `track_management_body.dart:134` was one such baselined site; it has
+/// since been fixed by AUD-tracks-13 and removed from the baseline below.
 ///
 /// Usage:
 ///   dart run tool/check_edgeinsets_rtl.dart
@@ -45,11 +48,14 @@ library;
 import 'dart:io';
 
 /// Pre-existing multi-line `EdgeInsets.only(left:/right:)` sites this
-/// checker's broadened (multi-line-aware) scan newly surfaces, neither of
+/// checker's broadened (multi-line-aware) scan newly surfaces, none of
 /// them the AUD-profiles-18 evidence site — out of scope here.
+///
+/// `track_management_body.dart:134` was baselined here by AUD-profiles-18
+/// and has since been fixed by AUD-tracks-13 (replaced with
+/// `EdgeInsetsDirectional.only`), so it has been removed from this set.
 const _baseline = <String>{
   'learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart:111',
-  'learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart:134',
 };
 
 void main() {
