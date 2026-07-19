@@ -1223,13 +1223,27 @@
   {
    "id": "AUD-tracks-04",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P1",
    "title": "Log and surface the swallowed exceptions in step_starting_position.dart._loadContent and step_starting_position_calendar.dart._refreshCalendarEntry instead of silently stranding the user",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "dcca83bbc1b8e659ff5a47bee16344a826afd839"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-04 AC1 site1 OK: step_starting_position.dart:127-133 on Exception catch logs AppLogger.instance.error(curriculumId, exception, st) before setState at :135",
+    "AUD-tracks-04 AC1 site2 OK: calendar.dart:113-119 new catch clause logs AppLogger.instance.error(programKey,e,st) before setState :121 (was try/finally)",
+    "AUD-tracks-04 AC1 OK sig: AppLogger.error(event/fields/exception/stackTrace) real at lib/core/logging/logger.dart:107-112, not a no-op",
+    "AUD-tracks-04 AC2 site1 OK: l1_test.dart:529 asserts AppErrorView findsOneWidget, ListView findsNothing, 'Start here' findsNothing, 'Retry' present",
+    "AUD-tracks-04 AC2 site1 recovery OK: l1_test.dart:592 taps Retry, callCount==2, AppErrorView clears, content renders",
+    "AUD-tracks-04 AC2 site2 OK: l1_test.dart:1063 asserts generic no-entry text findsNothing and distinct load-failed text findsOneWidget, plus Retry",
+    "AUD-tracks-04 AC2 site2 recovery OK: l1_test.dart:1102 Retry -> callCount==2, error text clears, 'Berakhot 7' renders",
+    "AUD-tracks-04 AC2 red-first OK (my run): reverted both lib files to merge-base -> exactly the 4 AUD-tracks-04 tests fail (+46 -4), rest pass. Restored.",
+    "AUD-tracks-04 AC3 OK exists: no_log_less_catch.dart Rule-0 checker + new packages/custom_lints/test/tracks_no_log_less_catch_regression_test.dart on both real prod files",
+    "AUD-tracks-04 AC3 OK passes: dart test regression file -> zero hits on both files; wired into make audit via lint-rules-test dep",
+    "AUD-tracks-04 AC3 OK not-vacuous (my run): checker aimed at merge-base file FAILS 'offset 4462: catch neither logs through AppLogger nor rethrows (EH-3)'"
+   ],
+   "notes": "Both sites live pre-fix (bare catch(_); try/finally, no catch). Both now log via AppLogger.instance.error before setState; site1 renders AppErrorView+retry; site2 shows distinct calendarEntryLoadFailed+Retry not generic text. Red-first: 4 tests fail pre-fix, pass post-fix (AC3 via lint regression). gatePolicy=disjoint-skip (file-disjoint rebase vs dev at merge-base 713b6cfe902f48f754935f25557a192e71221223); make audit + flutter analyze + make arb-parity all green."
   },
   {
    "id": "AUD-tracks-06",
