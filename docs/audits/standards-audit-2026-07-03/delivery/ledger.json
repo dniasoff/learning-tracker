@@ -1248,13 +1248,19 @@
   {
    "id": "AUD-tracks-06",
    "wave": "parked",
-   "status": "blocked",
+   "status": "merged",
    "severity": "P1",
    "title": "Stop LearningOrderRepositoryImpl.getOrder from writing to the DB as a side effect of a FutureProvider build call",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c3, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commits never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix exists as two commits: 5ea17399a755f3ce1cad26b26b25ac6ec960349b (\"fix(tracks): AUD-tracks-06 - stop getOrder writing to DB in provider build\", on stray worktree branch worktree-wf_c12188fb-a5a-3) which moves LearningOrderRepositoryImpl.getOrder's version-mismatch re-amnesty write out of the FutureProvider.family build callback into a new explicit LearningOrderRepository.repairStaleOrderVersion method, plus a FIX-BOUNCE follow-up 1fc8fd871278dd8a96775c711bc64c3c662dd61c (\"fix(tracks): AUD-tracks-06 bounce - wire repairStaleOrderVersion into bootstrap\") which wires that method into a new lib/app/bootstrap/learning_order_repair_bootstrap.dart fire-and-forget sweep after the bounce reviewer found the extracted method had zero production callers -- but neither commit was ever independently reviewed against the finding's ACs, so nothing is merged here (findingsMerged=[] for this pass). git cherry dev vs both commits confirms neither is patch-equivalent to anything already on dev, so per protocol the stray worktree directories (wf_c12188fb-a5a-3, wf_c12188fb-a5a-22) were removed but the commits were preserved: worktree-wf_c12188fb-a5a-3 already held 5ea17399, and since wf_c12188fb-a5a-22 was a detached-HEAD checkout at 1fc8fd87 with no branch of its own, branch worktree-wf_c12188fb-a5a-22 was created at 1fc8fd87 before removal to avoid losing the commit. Both branches are left intact (not deleted) and flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-10, AUD-tracks-12, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
+   "commits": [
+    "c0f383ef"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-06 AC1 OK: reorder_amnesty_test.dart Scenario C calls getOrder() twice in a row with a stale learningOrderVersion and asserts lastReorderAt is never stamped by getOrder (was: stamped every call, the SM-2 violation); a sibling test proves repairStaleOrderVersion stamps it exactly once and no-ops on a second call.",
+    "AUD-tracks-06 AC2 OK: learning_order_providers.dart's learningOrderProvider FutureProvider.family build callback now only calls getOrder (pure read) - grep confirms zero DB write calls in the build callback.",
+    "AUD-tracks-06 REGRESSION bounce OK: repairStaleOrderVersion had zero production callers after the first pass; lib/app/bootstrap/learning_order_repair_bootstrap.dart's repairStaleLearningOrders() sweep (wired into bootstrap()) is now the reachable caller, proven by test/app/bootstrap/learning_order_repair_bootstrap_test.dart exercising the sweep itself, not the repository method directly."
+   ],
+   "notes": "merged (gate-repair, 2026-07-19). GATE-REPAIR: previously blocked citing 'review agent lost (quota)' - not a valid external blocker. Harvested two stray-worktree candidate commits (5ea17399 + FIX-BOUNCE follow-up 1fc8fd87), independently reviewed against the finding's ACs, found correct, and merged together with AUD-tracks-15 (below) since both touch learning_order_repository_impl.dart's getOrder in overlapping ways - see the combined commit c0f383ef for the full reconciliation writeup (both findings' ACs independently verified, three dangling references the merge left behind were fixed to match)."
   },
   {
    "id": "AUD-tracks-07",
@@ -2488,13 +2494,19 @@
   {
    "id": "AUD-tracks-15",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Stop TrackLearningOrderRepositoryImpl importing ContentRepository directly — compose in a service/notifier (SM-8)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "c0f383ef"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-15 AC1 OK: TrackLearningOrderRepositoryImpl no longer imports anything under features/content_browsing/ - confirmed by tool/check_sm8_repo_repo_imports.dart (added this pass, wired into make audit as check 88/88): 'no repository file under lib/features/tracks/ imports another repository file.'",
+    "AUD-tracks-15 AC2 OK: track_learning_order_repository_impl_test.dart constructs TrackLearningOrderRepositoryImpl with only a fake/in-memory database, no ContentRepository fake required (content list is now a plain parameter).",
+    "AUD-tracks-15 AC3 OK, no carve-outs: the bounce review correctly rejected the first pass's _knownOutOfScope allowlist entry for LearningOrderRepositoryImpl (same anti-pattern, same lib/features/tracks/ scope) - both repositories fixed identically, checker has zero exclusions."
+   ],
+   "notes": "merged (gate-repair, 2026-07-19). GATE-REPAIR: previously status=parked with the stale 'roadmap section-4 uncited' note (banned non-disposition). Discovered stray-worktree candidate commits c0b63ce4 (TrackLearningOrderRepositoryImpl fix) + follow-up 23b51321 (closes the AC3 gap by fixing LearningOrderRepositoryImpl too) while investigating the ledger's own parked-f01 reconcile commit (54a582b1), which had already flagged these as unmerged residue. Independently reviewed against all 3 ACs, found correct, but both cherry-picks conflicted with the just-harvested AUD-tracks-06 fix (same getOrder method, same test files) - hand-merged together, see c0f383ef's full writeup. Also fixed a dangling contentRepositoryProvider gap in test/features/tracks/track_order/presentation/track_learning_order_lazy_masechtos_test.dart, a widget test not part of either original commit's diff that would otherwise hang pumpAndSettle trying to load the real asset-backed content DB."
   },
   {
    "id": "AUD-t-cross-26",
@@ -4193,13 +4205,19 @@
   {
    "id": "AUD-guardrails-09",
    "wave": "parked",
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or archive the dead Story-15.13 content-upload pipeline (tool/seed_content.dart, tool/seed_text_content.dart, tool/upload_to_firebase.{js,sh})",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c18, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (e02ef7b4c8711fc670ff37bcea8f00ce5d5366dc, \"fix(tool): AUD-guardrails-09 - retire dead Story-15.13 upload pipeline\", on stray worktree branch worktree-wf_c12188fb-a5a-36) which marks tool/seed_text_content.dart, tool/upload_to_firebase.js, and tool/upload_to_firebase.sh as RETIRED (Story DNI-121, Canceled) and updates docs/explainers/content-database.md and docs/api-contracts.md accordingly, deliberately excluding tool/seed_content.dart from scope (already reconnected as a live manual-fallback tool by sibling finding AUD-core-network-02, commit b76f63d9) -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_c12188fb-a5a-36 confirms the commit is not patch-equivalent to anything already on dev, so per protocol the stray worktree directory was removed but the worktree-wf_c12188fb-a5a-36 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-06, AUD-tracks-10, AUD-tracks-12, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
+   "commits": [
+    "b04f53a1"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-09 AC1 OK (scope-corrected): tool/seed_text_content.dart, tool/upload_to_firebase.{js,sh} carry a RETIRED (Story DNI-121, Canceled) header naming the current replacement; tool/seed_content.dart is deliberately excluded since sibling finding AUD-core-network-02 (already-merged commit b76f63d9) reconnected it as a live manual-fallback tool - retroactively labeling it retired would be false.",
+    "AUD-guardrails-09 AC2 OK: docs/explainers/content-database.md and docs/api-contracts.md no longer list seed_text_content.dart as an active pipeline component.",
+    "AUD-guardrails-09 AC3 OK: grep -rL 'DNI-121|retired' over the 3 kept files returns empty (exit 1)."
+   ],
+   "notes": "merged (gate-repair, 2026-07-19). GATE-REPAIR: previously blocked citing 'review agent lost (quota)'. Harvested stray-worktree candidate commit e02ef7b4, independently reviewed (doc-only retirement headers, correctly excludes the since-reconnected seed_content.dart), found correct, cherry-picked cleanly - zero code-logic changes, only comments/docs."
   },
   {
    "id": "AUD-firebase-10",
@@ -4260,13 +4278,19 @@
   {
    "id": "AUD-guardrails-08",
    "wave": "parked",
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Deduplicate tool/device_e2e/run{2,3,4,5,6,7}_full_suite.mjs into one parameterized orchestration module",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r2c4, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (c87889bcbf51c1c5f65df33fee1f0fbd9f721f98, \"fix(tooling): AUD-guardrails-08 - dedupe device_e2e run{2..7}_full_suite.mjs\", on stray worktree branch worktree-wf_c12188fb-a5a-106) which extracts the shared DEV map, driveGuide/seedPrompt/auditPrompt/verifyPrompt builders, schemas, area partitions, seed specs, and the seed->audit->verify->synthesize phase pipeline out of the six near-identical run2..7_full_suite.mjs files into a new tool/device_e2e/_full_suite_lib.mjs (runFullSuite()), reducing each runN_full_suite.mjs from 256 lines to 18, and adds a `make check-device-e2e-suite-size` Rule-0 checker (root Makefile) covering the finding's 3 acceptance criteria (60-line cap + import present, lib file exists, RTL-segmented-controls calibration note asserted exactly once) -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_c12188fb-a5a-106 confirms the commit is not patch-equivalent to anything already on dev (still shows \"+\"), and the current tree confirms the check-device-e2e-suite-size Makefile target is absent and run2_full_suite.mjs through run7_full_suite.mjs remain full 256-line duplicates, so per protocol the stray worktree directory was removed but the worktree-wf_c12188fb-a5a-106 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-06, AUD-tracks-10, AUD-tracks-12, AUD-guardrails-09, AUD-settings-10, AUD-tracks-20, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
+   "commits": [
+    "6c645a54"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-08 AC1 OK: tool/device_e2e/_full_suite_lib.mjs exports runFullSuite(); every runN_full_suite.mjs imports it instead of redefining the orchestration/prompt-builder logic.",
+    "AUD-guardrails-08 AC2 OK: each runN_full_suite.mjs is now 18 lines (down from 256), checked by the new `make check-device-e2e-suite-size` Rule-0 target (60-line cap).",
+    "AUD-guardrails-08 AC3 OK: grep -c 'RTL SegmentedButton auto-mirrors' tool/device_e2e/*.mjs sums to 1 (asserted once, in the shared module)."
+   ],
+   "notes": "merged (gate-repair, 2026-07-19). GATE-REPAIR: previously blocked citing 'review agent lost (quota)'. Harvested stray-worktree candidate commit c87889bc, independently reviewed (pure tooling dedup, `make check-device-e2e-suite-size` verified PASS post-merge), found correct, cherry-picked cleanly. No Dart/.arb files touched; flutter analyze/audit/arb-parity all re-verified green regardless."
   },
   {
    "id": "AUD-guardrails-10",
@@ -4813,13 +4837,18 @@
   {
    "id": "AUD-settings-07",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace raw e.toString() exception text in settings error messages with the project's own ST-4 friendly-error pattern",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "38f84b4a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-settings-07 AC1 OK: tool/check_settings_no_tostring_in_ui.dart (new, wired into make audit as check 87/87) verifies none of the 5 sites pass exception content into Text(...)/ARB placeholders under lib/features/settings.",
+    "AUD-settings-07 AC2 OK: a Locale('he') widget test was added per error surface (5 total) asserting only ARB-sourced Hebrew text renders, never a mocked exception's message."
+   ],
+   "notes": "merged (gate-repair, 2026-07-19). GATE-REPAIR: previously status=parked with the stale 'roadmap section-4 uncited' note. Discovered stray-worktree candidate commit db51b44c while investigating the ledger's parked-f01 reconcile commit (54a582b1), which had already flagged it as unmerged residue. Independently reviewed against both ACs (ST-4 friendly-error pattern, matches upgrade_to_cloud_screen.dart's established precedent; new tool checker + 5 Hebrew-locale tests), found correct, cherry-picked with one Makefile conflict (a sibling audit-check number collision, renumbered on merge, see the shared wiring commit) - all touched tests + arb-parity green."
   },
   {
    "id": "AUD-settings-06",
@@ -4940,13 +4969,19 @@
   {
    "id": "AUD-tracks-12",
    "wave": "parked",
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or wire up the dead stage-editor mutation path (StageEditorNotifier, StageValidator, Protected/LimitExceeded exceptions)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c8, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (34b8ec96d24077a79ede4e9c10b286065cdb6ce0, \"fix(tracks): AUD-tracks-12 - delete dead stage-editor mutation path\", on stray worktree branch worktree-wf_c12188fb-a5a-8) deleting StageEditorNotifier's dead addStage/updateStage/deleteStage/reorderStages path in stage_definition_repository_impl.dart + stage_definition_repository.dart + stage_providers.dart, and the two now-unused leaf exceptions (protected_stage_exception.dart, stage_limit_exceeded_exception.dart), while explicitly keeping StageValidator (independent Epic 15 AC coverage); test changes moved the StageValidator group out of the deleted stage_exceptions_test.dart into a new stage_validator_test.dart and updated the 6 adjacent test files (stage_definition_repository_impl_test.dart, ..._26_26_test.dart, content_tile_search_providers_test.dart, stage_sync_test.dart, stage_definition_single_path_test.dart, epic_05_stages_order_test.dart) -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_c12188fb-a5a-8 confirms the commit is not patch-equivalent to anything already on dev, so per protocol the stray worktree directory was removed but the worktree-wf_c12188fb-a5a-8 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-10, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
+   "commits": [
+    "5c255372"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-12 AC1 OK red-first: grep for .addStage(/.updateStage(/.deleteStage(/.reorderStages( on lib/ before the fix -> 4 matches, all inside stage_providers.dart (dead notifier calling its own dead repository), no real UI caller; after the fix -> zero matches.",
+    "AUD-tracks-12 AC3 OK: stage_definition_repository_impl_test.dart / ..._26_26_test.dart retain getStagesForCurriculum/resetToDefaults/initializeDefaults coverage (addStage/updateStage/deleteStage/reorderStages groups removed - subject deleted); StageValidator kept + its coverage moved intact to a new stage_validator_test.dart (not deleted, TQ-7).",
+    "flutter test --tags tracks: 328/328 passed; epic_15_multi_profile_test.dart -t story_15_5/story_15_9 green (StageValidator + StageEditorScreen-removed ACs unaffected)."
+   ],
+   "notes": "merged (gate-repair, 2026-07-19). GATE-REPAIR: previously blocked citing 'review agent lost (quota)'. Harvested stray-worktree candidate commit 34b8ec96, independently reviewed against the finding's ACs (dead-code deletion + TQ-7-compliant test removals with reasons for every one), found correct, cherry-picked cleanly, all tests green."
   },
   {
    "id": "AUD-tracks-09",
@@ -6117,13 +6152,20 @@
   {
    "id": "AUD-tracks-14",
    "wave": "parked",
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Route TrackManagementBody's hard-delete ('wipe') path through a repository instead of calling trackDao directly (DB-1)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "not attempted: no-progress cap / loop end"
+   "commits": [
+    "ca293bd9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-14 AC1 OK: track_management_body.dart no longer reads userDatabaseProvider/trackDao (grep confirms zero non-comment hits); both the TS-16 precheck and the wipe call now go through curriculumActivationServiceProvider.",
+    "AUD-tracks-14 AC2 OK: wipe branch wrapped in try/catch with a localized errorGeneric() SnackBar, matching the archive branch's error-handling shape (point_config_screen.dart's catch pattern).",
+    "AUD-tracks-14 AC3 (checker) not yet implementable - DB-1's audit grep is still [Pending] repo-wide per docs/coding-standards.md; manually verified via grep instead.",
+    "flutter test --tags tracks: 328/328 passed; track_management_hub_screen_l1_test.dart, track_management_hub_last_curriculum_guard_test.dart, track_management_body_and_order_l1_test.dart all green."
+   ],
+   "notes": "merged (gate-repair, 2026-07-19). GATE-REPAIR: previous pass left this 'blocked: not attempted / no-progress cap' - an explicitly banned non-completion excuse. Implemented from scratch: added CurriculumActivationService.purgeTrackHistory(trackId) (thin pass-through to the already-transactional/outbox-aware TrackDao.purgeHistory) and routed both TrackManagementBody's TS-16 precheck and its wipe branch through curriculumActivationServiceProvider instead of userDatabaseProvider/trackDao. Deliberately did NOT route through trackRepositoryProvider (whole_curriculum_order's TrackRepository) since that provider pulls in syncWriteFacadeProvider -> authStateProvider -> real Firebase Auth, untested/unmocked in this widget's test suite - curriculumActivationServiceProvider is the already-established, test-safe DB-1 seam this exact widget's archive branch already uses. One test updated (added a getActiveCurricula() mock stub the widget's new precheck call now requires; not a weakened assertion, an added one)."
   },
   {
    "id": "AUD-tracks-16",
@@ -7290,13 +7332,18 @@
   {
    "id": "AUD-scheduler-23",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Migrate scheduler-adjacent tests off the deprecated LearningProgramRepository.instance singleton",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "924f83cf"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-scheduler-23 AC1 OK: tool/check_sm7_learning_program_singleton.dart (new, wired into make audit as check 89/89) is a RATCHET against tool/sm7_learning_program_singleton_baseline.txt (34) - only growth above baseline fails; current tree count (33) passes.",
+    "AUD-scheduler-23 AC2 OK: migration-and-eventual-deletion backlog tracked at Linear DNI-446, referenced from the singleton's doc comment, the checker's own output, and the expanded SM-7 entry in docs/coding-standards.md."
+   ],
+   "notes": "merged (gate-repair, 2026-07-19). GATE-REPAIR: previously status=parked with the stale 'roadmap section-4 uncited' note. Discovered stray-worktree candidate commit df8dbe78 (a duplicate, c84ea870, existed on a second stray branch - same author/message/diff, superseded) while investigating the ledger's parked-f01 reconcile commit (54a582b1). Independently reviewed (RATCHET checker + real Linear ticket, not a fabricated number, matching the AUD-repo-02/DNI-393 precedent this finding's own commit cites), found correct, cherry-picked with one Makefile conflict (audit-check number collision, renumbered on merge)."
   },
   {
    "id": "AUD-t-scheduler-04",
@@ -8820,13 +8867,17 @@
   {
    "id": "AUD-settings-10",
    "wave": "parked",
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove UserProfileHeaderCard's redundant _user field and de-duplicate/select-narrow the active-profile lookup",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c25, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (7afbccefdc7a3ec9cf5d6816be89cda5169af84c, \"fix(settings): AUD-settings-10 - de-dup active-profile lookup, drop redundant _user state\", on stray worktree branch worktree-wf_c12188fb-a5a-49) which converts UserProfileHeaderCard from a ConsumerStatefulWidget (holding a redundant _user field always set to widget.user) to a plain ConsumerWidget, and extracts the duplicated activeProfileIdProvider+profileListStreamProvider active-profile lookup (previously copy-pasted between this widget's build() and _LocalBornProfileRow.build()) into one shared _watchActiveProfileFromList() helper read via ProviderListenable.select -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_c12188fb-a5a-49 confirms the commit is not patch-equivalent to anything already on dev (still shows \"+\"), and grep of the current tree confirms _UserProfileHeaderCardState/ConsumerStatefulWidget are still present in user_profile_header_card.dart, so per protocol the stray worktree directory was removed but the worktree-wf_c12188fb-a5a-49 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-06, AUD-tracks-10, AUD-tracks-12, AUD-guardrails-09, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
+   "commits": [
+    "27a0d4cd"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-settings-10 AC1 OK: user_profile_header_card_l1_test.dart passes unchanged after the refactor (ConsumerStatefulWidget -> ConsumerWidget, deduped active-profile lookup via .select)."
+   ],
+   "notes": "merged (gate-repair, 2026-07-19). GATE-REPAIR: previously blocked citing 'review agent lost (quota)'. Harvested stray-worktree candidate commit 7afbccef, independently reviewed (redundant state removal + PF-1 .select narrowing, matches the finding's recommendation exactly), found correct, cherry-picked cleanly. Also re-ran settings_screen_test.dart + profile_switcher_sheet_test.dart to confirm the user!=null branch (not covered by the l1 test) still resolves correctly - all green."
   },
   {
    "id": "AUD-settings-11",
@@ -11622,13 +11673,17 @@
   {
    "id": "AUD-tracks-20",
    "wave": "parked",
-   "status": "blocked",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete dead LearningOrderPreferences singleton (superseded by ProfileScopedPreferenceKeys)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c32, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (b06a724d86e56ee23966c3d8fb3117cdedfe4917, \"fix(tracks): AUD-tracks-20 - delete dead LearningOrderPreferences singleton\", on stray worktree branch worktree-wf_c12188fb-a5a-64) which deletes the dead whole_curriculum_order/data/preferences/learning_order_preferences.dart static-singleton SharedPreferences wrapper (superseded by ProfileScopedPreferenceKeys via parentControlsOrderingProvider) and removes its stale entry from tool/ag5_unmirrored_baseline.txt -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_c12188fb-a5a-64 confirms the commit is not patch-equivalent to anything already on dev, so per protocol the stray worktree directory was removed but the worktree-wf_c12188fb-a5a-64 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-06, AUD-tracks-10, AUD-tracks-12, AUD-guardrails-09, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
+   "commits": [
+    "8271cae3"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-20 AC1 OK: learning_order_preferences.dart deleted; grep -rn LearningOrderPreferences lib/ test/ returns zero hits post-fix (only self-references pre-fix); tool/ag5_unmirrored_baseline.txt's now-stale entry removed to keep the AG-5 backlog list accurate."
+   ],
+   "notes": "merged (gate-repair, 2026-07-19). GATE-REPAIR: previously blocked citing 'review agent lost (quota)'. Harvested stray-worktree candidate commit b06a724d, independently reviewed (simple dead-code deletion, zero live references confirmed by fresh grep against current tree), found correct, cherry-picked cleanly, all tests green."
   },
   {
    "id": "AUD-t-tutoring-08",
