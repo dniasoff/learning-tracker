@@ -5,7 +5,7 @@
 #
 # What it does:
 #   1. Accepts any pending SDK licences
-#   2. Downloads the 4 missing system images (API 24/29/31/34) via sdkmanager
+#   2. Downloads the 4 missing system images (API 28/29/31/34) via sdkmanager
 #      (API 36.1 is already installed)
 #   3. Creates one AVD per device profile, overwriting if it exists (--force)
 #   4. Tunes RAM/heap in each AVD's config.ini
@@ -63,15 +63,15 @@ foreach ($tool in @($SDK_MGR, $AVD_MGR)) {
 # ---------------------------------------------------------------------------
 $MATRIX = @(
     [ordered]@{
-        api       = "24"
+        api       = "28"
         tag       = "google_apis"
         abi       = "x86_64"
-        device    = "Nexus 5"
-        name      = "lt_api24_nexus5"
+        device    = "pixel_2"
+        name      = "lt_api28_pixel2"
         port      = 5554
         ram_mb    = 1536
         heap_mb   = 256
-        rationale = "Flutter floor (Android 7.0 Nougat) — runtime permission model"
+        rationale = "Android 9 (Pie) — oldest device profile in the matrix; broad low-end/legacy coverage"
     },
     [ordered]@{
         api       = "29"
@@ -202,6 +202,6 @@ Next steps
 ----------
   Start all 5 (headless):   .\tool\emulators-start.ps1
   Connect from WSL2:         tool/adb-connect-wsl.sh
-  Run Flutter on one device: flutter run -d lt_api24_nexus5
+  Run Flutter on one device: flutter run -d lt_api28_pixel2
   Run integration tests:     flutter test integration_test/ -d lt_api29_pixel3
 "@ -ForegroundColor DarkCyan
