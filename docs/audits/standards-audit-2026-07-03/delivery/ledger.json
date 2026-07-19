@@ -8765,13 +8765,21 @@
   {
    "id": "AUD-settings-11",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Route UserProfileHeaderCard's 9 raw Color literals through AppColors tokens (no_color_literal_outside_theme)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "a4beb9b3e345e8f55b00adf4f0fd15de21caead7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-settings-11 AC1 OK: grep -c 'Color(0x' user_profile_header_card.dart => 0 (was 9 at HEAD~1)",
+    "AUD-settings-11 AC1 OK: 9 sites map to exact-hex tokens app_colors.dart:686-707; E65100 reuses accentBurntOrange (:188) per recommendation",
+    "AUD-settings-11 AC2 OK: checker EXISTS - packages/custom_lints/test/settings_no_color_literal_regression_test.dart runs the real rule on the on-disk file",
+    "AUD-settings-11 AC2 OK: checker FIRES - reverted widget to HEAD~1, test red 00:52 +0 -1 with exactly 9 hits; restored, green +1",
+    "AUD-settings-11 AC2 OK: checker WIRED - dart test --reporter=json auto-discovers it, SUCCESS=true; Makefile:310 lint-rules-test, :314 audit depends on it"
+   ],
+   "notes": "Re-verified live: 9 evidence sites still raw literals. Added 6 named AppColors tokens; reused accentBurntOrange for 0xFFE65100 per recommendation. Red-first regression test (sacred_time-09 technique) failed 9/pre-fix, 0/post-fix. Both ACs satisfied."
   },
   {
    "id": "AUD-settings-12",
