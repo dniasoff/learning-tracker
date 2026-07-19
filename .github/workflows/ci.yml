@@ -485,11 +485,5 @@ jobs:
         working-directory: learning_tracker
         run: flutter pub get
 
-      - name: Run ARB parity check (skip gracefully if tool absent)
-        working-directory: learning_tracker
-        run: |
-          if [ -f "tool/arb_parity_check.dart" ]; then
-            dart run tool/arb_parity_check.dart
-          else
-            echo "::notice::tool/arb_parity_check.dart not found — skipping arb-parity check"
-          fi
+      - name: Run ARB parity check (make arb-parity)
+        run: make arb-parity
