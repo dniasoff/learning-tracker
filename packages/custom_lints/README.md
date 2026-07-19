@@ -40,7 +40,7 @@ Text(label.render(item));
 
 ### What it checks
 
-Fails on any `import 'package:learning_tracker/features/X/…'` that appears inside a file under `features/Y/` (a different feature), **unless** the imported path is exactly `providers.dart` (or ends with `/providers.dart`).
+Fails on any `import 'package:learning_tracker/features/X/…'` that appears inside a file under `features/Y/` (a different feature), **unless** the imported path is exactly `X.dart` — the feature's own barrel file (e.g. `features/tracks/tracks.dart`).
 
 ### Why it exists
 
@@ -49,7 +49,7 @@ Following NFR2 / NFR17, features must be independently deployable and testable. 
 - Breaks feature isolation and makes incremental builds unreliable.
 - Makes it impossible to reason about a feature's public API surface.
 
-The single allowed crossing point is `features/<feature>/providers.dart`, which is the deliberate, documented public surface.
+The single allowed crossing point is `features/<feature>/<feature>.dart`, which is the deliberate, documented public surface.
 
 ### How to fix
 
@@ -61,12 +61,12 @@ import 'package:learning_tracker/features/learning/data/repositories/progress_re
 
 **After (correct):**
 ```dart
-// Use the public providers surface:
-import 'package:learning_tracker/features/learning/providers.dart';
-// Then read the provider from Riverpod rather than importing the repo directly.
+// Use the feature's public barrel surface:
+import 'package:learning_tracker/features/learning/learning.dart';
+// Then read the provider (or type) exported from the barrel rather than importing internals directly.
 ```
 
-If the type you need is not yet exposed through `providers.dart`, add it to that file rather than bypassing the boundary.
+If the type you need is not yet exposed through `learning.dart`, add it to that file rather than bypassing the boundary.
 
 ---
 
