@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
@@ -70,48 +69,14 @@ class StageEditorNotifier extends AsyncNotifier<List<StageDefinition>> {
   StageDefinitionRepository get _repository =>
       ref.read(stageDefinitionRepositoryProvider(_curriculum));
 
-  Future<void> addStage(
-    String name, {
-    required int trackId,
-    ScheduleSpec schedule = const DelaySchedule(0),
-  }) async {
-    final profileId = ref.read(activeProfileIdProvider);
-    await _repository.addStage(
-      _curriculum,
-      name,
-      profileId: profileId,
-      trackId: trackId,
-      schedule: schedule,
-    );
-    ref.invalidate(stageListProvider(_curriculum));
-    state = await AsyncValue.guard(
-      () => _repository.getStagesForCurriculum(_curriculum),
-    );
-  }
-
-  Future<void> updateStage(int id, {String? name, int? delayDays}) async {
-    await _repository.updateStage(id, name: name, delayDays: delayDays);
-    ref.invalidate(stageListProvider(_curriculum));
-    state = await AsyncValue.guard(
-      () => _repository.getStagesForCurriculum(_curriculum),
-    );
-  }
-
-  Future<void> deleteStage(int id) async {
-    await _repository.deleteStage(id);
-    ref.invalidate(stageListProvider(_curriculum));
-    state = await AsyncValue.guard(
-      () => _repository.getStagesForCurriculum(_curriculum),
-    );
-  }
-
-  Future<void> reorderStages(List<int> orderedIds) async {
-    await _repository.reorderStages(_curriculum, orderedIds);
-    ref.invalidate(stageListProvider(_curriculum));
-    state = await AsyncValue.guard(
-      () => _repository.getStagesForCurriculum(_curriculum),
-    );
-  }
+  // AUD-tracks-12: addStage/updateStage/deleteStage/reorderStages were
+  // removed — a repo-wide grep found zero UI callers for either these
+  // notifier methods or their StageDefinitionRepository counterparts; the
+  // live stage-configuration path is the chazara wizard's
+  // LearningProcessWizardService.applyWizardResult (see
+  // curriculum_settings_screen.dart), not this notifier. resetToDefaults is
+  // kept because it is intentionally out of this finding's scope (its
+  // corresponding repository method is not part of the AC1 grep target).
 
   Future<void> resetToDefaults({required int trackId}) async {
     final profileId = ref.read(activeProfileIdProvider);

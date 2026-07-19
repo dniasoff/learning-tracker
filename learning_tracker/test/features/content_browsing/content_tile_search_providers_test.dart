@@ -62,7 +62,6 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
@@ -94,26 +93,9 @@ class _FakeStageRepository implements StageDefinitionRepository {
   Future<List<StageDefinition>> getStagesForCurriculum(CurriculumId id) async =>
       [];
 
-  @override
-  Future<StageDefinition> addStage(
-    CurriculumId curriculumId,
-    String name, {
-    required int profileId,
-    required int trackId,
-    ScheduleSpec schedule = const DelaySchedule(0),
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<void> updateStage(int id, {String? name, int? delayDays}) async {}
-
-  @override
-  Future<void> deleteStage(int id) async {}
-
-  @override
-  Future<void> reorderStages(
-    CurriculumId curriculumId,
-    List<int> orderedIds,
-  ) async {}
+  // AUD-tracks-12: addStage/updateStage/deleteStage/reorderStages were
+  // removed from StageDefinitionRepository — zero UI callers — so this fake
+  // no longer needs stub implementations for them.
 
   @override
   Future<void> initializeDefaults(

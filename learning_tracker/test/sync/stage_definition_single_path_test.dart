@@ -10,12 +10,9 @@
 /// (`{trackId}_{stageOrder}`) and matches the listener channel.
 library;
 
-import 'dart:convert';
-
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
-import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -65,7 +62,7 @@ void main() {
         );
 
         // initializeDefaults inserts 3 stages but does NOT push. resetToDefaults
-        // (and addStage) both push via _pushStages → pushStageDefinitions.
+        // pushes via _pushStages → pushStageDefinitions.
         await repo.initializeDefaults(
           CurriculumId.mishnayos,
           profileId: 1,
@@ -103,60 +100,5 @@ void main() {
         }
       },
     );
-
-    test('addStage enqueues exactly one stage_definition row per stage in '
-        'the updated set', () async {
-      final database = db.UserDatabase(NativeDatabase.memory());
-      addTearDown(database.close);
-      await seedProfile(database);
-      final trackId = await _insertTrack(database);
-
-      final facade = OutboxSyncWriteFacade(
-        outboxDao: database.outboxDao,
-        database: database,
-        resolveProfileId: () => 1,
-        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 21)),
-      );
-
-      final repo = StageDefinitionRepositoryImpl(
-        stageDao: database.stageDao,
-        completionDao: database.completionDao,
-        pushStageDefinitions: facade.pushStageDefinitions,
-      );
-
-      await repo.initializeDefaults(
-        CurriculumId.mishnayos,
-        profileId: 1,
-        trackId: trackId,
-      );
-
-      // Clear the outbox so we observe only the addStage push.
-      await database.delete(database.outbox).go();
-
-      // Adding a 4th stage triggers _pushStages → 4 rows enqueued (one
-      // per current stage).
-      await repo.addStage(
-        CurriculumId.mishnayos,
-        'Chazara 3',
-        profileId: 1,
-        trackId: trackId,
-        schedule: const DelaySchedule(30),
-      );
-
-      final rows = await database.select(database.outbox).get();
-      final stageRows = rows.where(
-        (r) => r.entityKind == OutboxEntityKind.stageDefinition,
-      );
-      expect(stageRows, hasLength(4));
-
-      // Every payload carries the stage's natural-key fields so the
-      // gateway can derive the deterministic doc id.
-      for (final row in stageRows) {
-        final payload = jsonDecode(row.payload) as Map<String, dynamic>;
-        expect(payload['track_id'], trackId);
-        expect(payload['stage_order'], isA<int>());
-        expect(payload['curriculum_id'], CurriculumId.mishnayos.storageKey);
-      }
-    });
   });
 }

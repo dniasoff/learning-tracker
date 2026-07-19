@@ -9,15 +9,9 @@ import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/sync/codec/stage_definition_codec.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
-import 'package:learning_tracker/features/tracks/stages/domain/exceptions/protected_stage_exception.dart';
-import 'package:learning_tracker/features/tracks/stages/domain/exceptions/stage_limit_exceeded_exception.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
-import 'package:learning_tracker/features/tracks/stages/domain/services/stage_validator.dart';
-
-/// Maximum number of stages allowed per curriculum.
-const _maxStages = 10;
 
 /// Default stage definitions (לימוד, חזרה א׳, חזרה ב׳).
 const _defaults = [
@@ -79,186 +73,17 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     return rows.map(_rowToModel).toList();
   }
 
-  @override
-  Future<StageDefinition> addStage(
-    CurriculumId curriculumId,
-    String name, {
-    required int profileId,
-    required int trackId,
-    ScheduleSpec schedule = const DelaySchedule(0),
-  }) async {
-    final count = await _stageDao.countStagesForCurriculum(
-      curriculumId.storageKey,
-    );
-    if (count >= _maxStages) {
-      throw StageLimitExceededException(maxStages: _maxStages);
-    }
-
-    final maxOrder =
-        await _stageDao.getMaxStageOrder(curriculumId.storageKey) ?? 0;
-    final newOrder = maxOrder + 1;
-
-    // Validate the stage definition before persisting.
-    final candidate = StageDefinition(
-      id: 0,
-      curriculumId: curriculumId,
-      stageOrder: newOrder,
-      stageName: name,
-      delayDays: schedule.delayDays,
-      isDefault: false,
-      scheduleType: ScheduleType.fromStorageKey(schedule.storageKey),
-      daysOfWeek: schedule.daysOfWeek,
-      rollingWindowSize: schedule.rollingWindowSize,
-    );
-    final validationError = StageValidator.validate(candidate);
-    if (validationError != null) {
-      throw ArgumentError(validationError);
-    }
-
-    final id = await _stageDao.insertStageDefinition(
-      db.StageDefinitionsCompanion.insert(
-        profileId: profileId,
-        curriculumId: curriculumId.storageKey,
-        trackId: trackId,
-        stageOrder: newOrder,
-        stageName: name,
-        isDefault: const Value(false),
-        schedule: Value(_encodeSchedule(schedule)),
-      ),
-    );
-
-    await _pushStages(curriculumId);
-
-    final row = await _stageDao.getStageDefinitionById(id);
-    return _rowToModel(row!);
-  }
-
-  @override
-  Future<void> updateStage(int id, {String? name, int? delayDays}) async {
-    final existing = await _stageDao.getStageDefinitionById(id);
-    if (existing == null) return;
-
-    final curriculumId = _curriculumFromStorageKey(existing.curriculumId);
-    final existingSpec = _decodeSchedule(existing.schedule);
-
-    // Apply the delayDays update (only meaningful for DelaySchedule).
-    final updatedSpec = delayDays != null
-        ? DelaySchedule(delayDays)
-        : existingSpec;
-
-    // Validate the updated stage definition.
-    final candidate = StageDefinition(
-      id: id,
-      curriculumId: curriculumId,
-      stageOrder: existing.stageOrder,
-      stageName: name ?? existing.stageName,
-      delayDays: updatedSpec.delayDays,
-      isDefault: existing.isDefault,
-      scheduleType: ScheduleType.fromStorageKey(updatedSpec.storageKey),
-      daysOfWeek: updatedSpec.daysOfWeek,
-      rollingWindowSize: updatedSpec.rollingWindowSize,
-    );
-    final validationError = StageValidator.validate(candidate);
-    if (validationError != null) {
-      throw ArgumentError(validationError);
-    }
-
-    await _stageDao.updateStageDefinition(
-      db.StageDefinitionsCompanion(
-        id: Value(id),
-        profileId: Value(existing.profileId),
-        curriculumId: Value(existing.curriculumId),
-        trackId: Value(existing.trackId),
-        stageOrder: Value(existing.stageOrder),
-        stageName: Value(name ?? existing.stageName),
-        isDefault: Value(existing.isDefault),
-        schedule: Value(_encodeSchedule(updatedSpec)),
-      ),
-    );
-
-    await _pushStages(curriculumId);
-  }
-
-  @override
-  Future<void> deleteStage(int id) async {
-    final existing = await _stageDao.getStageDefinitionById(id);
-    if (existing == null) return;
-
-    if (existing.stageOrder == 1) {
-      throw const ProtectedStageException();
-    }
-
-    await _stageDao.deleteStageDefinition(id);
-
-    final curriculumId = _curriculumFromStorageKey(existing.curriculumId);
-    await _pushStages(curriculumId);
-  }
-
-  @override
-  Future<void> reorderStages(
-    CurriculumId curriculumId,
-    List<int> orderedIds,
-  ) async {
-    // Guard: Learn stage (stageOrder == 1) must remain at position 1.
-    // Fetch the current Learn stage for this curriculum.
-    final allStages = await _stageDao.getStageDefinitionsByCurriculum(
-      curriculumId.storageKey,
-    );
-    final learnStage = allStages.isNotEmpty
-        ? allStages.firstWhere(
-            (s) => s.stageOrder == 1,
-            orElse: () => allStages.first,
-          )
-        : null;
-    if (learnStage != null &&
-        orderedIds.isNotEmpty &&
-        orderedIds.first != learnStage.id) {
-      throw const ProtectedStageException();
-    }
-
-    // Run the two-pass reorder inside a single transaction so a mid-loop
-    // failure leaves all stages at their original positions.
-    await _stageDao.runTransaction(() async {
-      // Pass 1: set all to negative temporary orders to avoid UNIQUE
-      // constraint violations on (curriculumId, stageOrder).
-      for (var i = 0; i < orderedIds.length; i++) {
-        final stageId = orderedIds[i];
-        final existing = await _stageDao.getStageDefinitionById(stageId);
-        if (existing == null) continue;
-        await _stageDao.updateStageDefinition(
-          db.StageDefinitionsCompanion(
-            id: Value(stageId),
-            profileId: Value(existing.profileId),
-            curriculumId: Value(existing.curriculumId),
-            trackId: Value(existing.trackId),
-            stageOrder: Value(-(i + 1)),
-            stageName: Value(existing.stageName),
-            isDefault: Value(existing.isDefault),
-            schedule: Value(existing.schedule),
-          ),
-        );
-      }
-      // Pass 2: set to final positive orders.
-      for (var i = 0; i < orderedIds.length; i++) {
-        final stageId = orderedIds[i];
-        final existing = await _stageDao.getStageDefinitionById(stageId);
-        if (existing == null) continue;
-        await _stageDao.updateStageDefinition(
-          db.StageDefinitionsCompanion(
-            id: Value(stageId),
-            profileId: Value(existing.profileId),
-            curriculumId: Value(existing.curriculumId),
-            trackId: Value(existing.trackId),
-            stageOrder: Value(i + 1),
-            stageName: Value(existing.stageName),
-            isDefault: Value(existing.isDefault),
-            schedule: Value(existing.schedule),
-          ),
-        );
-      }
-    });
-    await _pushStages(curriculumId);
-  }
+  // AUD-tracks-12: addStage/updateStage/deleteStage/reorderStages were
+  // removed here — zero UI callers (repo-wide grep); the live
+  // stage-configuration path is the chazara wizard's
+  // LearningProcessWizardService.applyWizardResult. The
+  // ProtectedStageException/StageLimitExceededException leaf exceptions
+  // these methods threw were deleted as part of the same fix since they had
+  // no other callers. StageValidator (which addStage/updateStage used to
+  // consult) is kept — unlike the exceptions, it has independent acceptance
+  // coverage decoupled from this repository
+  // (test/story_acceptance/epic_15_multi_profile_test.dart, group "AC:
+  // Stage validation -- each type requires its specific fields").
 
   @override
   Future<void> initializeDefaults(

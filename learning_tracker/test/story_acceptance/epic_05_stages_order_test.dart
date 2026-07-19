@@ -4,21 +4,14 @@ library;
 
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
-import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
-import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../helpers/drift_memory.dart'
     show seedProfile, seedProfileZero, seedTrack;
-
-class _MockContentRepository extends Mock implements ContentRepository {}
 
 ContentItem _makeItem(String ref, {int sortOrder = 0}) {
   return ContentItem(
@@ -34,110 +27,25 @@ ContentItem _makeItem(String ref, {int sortOrder = 0}) {
 }
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(CurriculumId.mishnayos);
-  });
-
   // ── Story 5.1: Custom stage definitions ───────────────────────
-
-  group('Story 5.1 -- Custom stage definitions', tags: ['story_5_1'], () {
-    late UserDatabase database;
-    late int trackId;
-    late StageDefinitionRepositoryImpl repository;
-    const curriculum = CurriculumId.mishnayos;
-
-    setUp(() async {
-      database = UserDatabase(NativeDatabase.memory());
-      await seedProfile(database);
-      trackId = await seedTrack(database, profileId: 1);
-      repository = StageDefinitionRepositoryImpl(
-        stageDao: database.stageDao,
-        completionDao: database.completionDao,
-        pushStageDefinitions:
-            ({
-              required int trackId,
-              required String curriculumId,
-              required List<Map<String, dynamic>> stages,
-              required DateTime updatedAt,
-            }) async {},
-      );
-    });
-
-    tearDown(() async {
-      await database.close();
-    });
-
-    test('user can add a custom chazara stage', () async {
-      await repository.initializeDefaults(
-        curriculum,
-        profileId: 1,
-        trackId: trackId,
-      );
-
-      final newStage = await repository.addStage(
-        curriculum,
-        'Chazara 3',
-        profileId: 1,
-        trackId: trackId,
-        schedule: const DelaySchedule(30),
-      );
-
-      expect(newStage.stageName, 'Chazara 3');
-      expect(newStage.delayDays, 30);
-      expect(newStage.isDefault, false);
-      expect(newStage.stageOrder, 4);
-
-      final all = await repository.getStagesForCurriculum(curriculum);
-      expect(all, hasLength(4));
-    });
-
-    test('user can reorder stages (Learn must stay at position 1)', () async {
-      await repository.initializeDefaults(
-        curriculum,
-        profileId: 1,
-        trackId: trackId,
-      );
-      final stages = await repository.getStagesForCurriculum(curriculum);
-      // Learn must remain first; swap Chazara 1 and Chazara 2 only.
-      final learnId = stages[0].id; // stageOrder == 1
-      final chazara1Id = stages[1].id; // stageOrder == 2
-      final chazara2Id = stages[2].id; // stageOrder == 3
-
-      await repository.reorderStages(curriculum, [
-        learnId,
-        chazara2Id,
-        chazara1Id,
-      ]);
-
-      final reordered = await repository.getStagesForCurriculum(curriculum);
-      expect(reordered[0].stageOrder, 1);
-      expect(reordered[0].stageName, 'לימוד'); // Learn stays at 1
-      expect(reordered[1].stageName, 'חזרה ב׳'); // Chazara 2 moved to 2
-      expect(reordered[2].stageName, 'חזרה א׳'); // Chazara 1 moved to 3
-    });
-
-    test('user can adjust delay days for a stage', () async {
-      await repository.initializeDefaults(
-        curriculum,
-        profileId: 1,
-        trackId: trackId,
-      );
-      final stages = await repository.getStagesForCurriculum(curriculum);
-      final chazara1 = stages.firstWhere((s) => s.stageName == 'חזרה א׳');
-
-      await repository.updateStage(chazara1.id, delayDays: 3);
-
-      final updated = await repository.getStagesForCurriculum(curriculum);
-      final updatedStage = updated.firstWhere((s) => s.id == chazara1.id);
-      expect(updatedStage.delayDays, 3);
-    });
-  });
+  //
+  // AUD-tracks-12: the "Story 5.1 -- Custom stage definitions" group that
+  // used to live here (add/reorder/adjust-delay against
+  // StageDefinitionRepository directly) exercised StageEditorNotifier's
+  // repository mutation path. That path has zero UI callers today — Epic
+  // 15 AC5 ("StageEditorScreen removed") replaced the manual stage editor
+  // with the chazara wizard's LearningProcessWizardService.applyWizardResult
+  // (see curriculum_settings_screen.dart), and this acceptance group was
+  // never updated to match, leaving it as the sole remaining caller of the
+  // now-deleted addStage/updateStage/reorderStages repository methods. It
+  // is removed rather than rewritten because there is no live UI flow left
+  // for it to describe; the wizard flow it was superseded by is covered by
+  // Epic 15's acceptance tests (test/story_acceptance/epic_15_multi_profile_test.dart).
 
   // ── Story 5.2: Custom learning order ──────────────────────────
 
   group('Story 5.2 -- Custom learning order', tags: ['story_5_2'], () {
     late UserDatabase database;
-    late _MockContentRepository mockContent;
     late LearningOrderRepositoryImpl repo;
 
     setUp(() async {
@@ -145,18 +53,7 @@ void main() {
       await seedProfile(database);
       await seedProfileZero(database);
       await seedTrack(database, profileId: 1);
-      mockContent = _MockContentRepository();
-      repo = LearningOrderRepositoryImpl(
-        database: database,
-        contentRepository: mockContent,
-      );
-      when(() => mockContent.getHierarchyConfig(any())).thenAnswer(
-        (_) async => const CurriculumHierarchyConfig(
-          curriculumId: 'mishnayos',
-          levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
-          totalItems: 10,
-        ),
-      );
+      repo = LearningOrderRepositoryImpl(database: database);
     });
 
     tearDown(() async {
@@ -166,16 +63,12 @@ void main() {
     test(
       'LearningOrderRepository.getOrder returns content sort_order when no rows (D7 fallback)',
       () async {
-        when(
-          () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer(
-          (_) async => [
-            _makeItem('Berakhot', sortOrder: 0),
-            _makeItem('Shabbat', sortOrder: 1),
-          ],
-        );
+        final items = [
+          _makeItem('Berakhot', sortOrder: 0),
+          _makeItem('Shabbat', sortOrder: 1),
+        ];
 
-        final order = await repo.getOrder(CurriculumId.mishnayos);
+        final order = await repo.getOrder(CurriculumId.mishnayos, items);
 
         expect(order.map((i) => i.sefariaRef).toList(), [
           'Berakhot',
@@ -188,10 +81,6 @@ void main() {
     test(
       'LearningOrderRepository.saveOrder writes correct rows to learning_order table',
       () async {
-        when(
-          () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer((_) async => []);
-
         const items = [
           LearningOrderItem(
             sefariaRef: 'Shabbat',
@@ -222,14 +111,10 @@ void main() {
     test(
       'LearningOrderRepository.getOrder returns custom order when rows exist',
       () async {
-        when(
-          () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer(
-          (_) async => [
-            _makeItem('Berakhot', sortOrder: 0),
-            _makeItem('Shabbat', sortOrder: 1),
-          ],
-        );
+        final items = [
+          _makeItem('Berakhot', sortOrder: 0),
+          _makeItem('Shabbat', sortOrder: 1),
+        ];
 
         // `repo` defaults to profileId 0 — fixtures must be seeded under the
         // same profile the repository-under-test reads from
@@ -252,7 +137,7 @@ void main() {
           ),
         );
 
-        final order = await repo.getOrder(CurriculumId.mishnayos);
+        final order = await repo.getOrder(CurriculumId.mishnayos, items);
 
         expect(order.map((i) => i.sefariaRef).toList(), [
           'Shabbat',
@@ -265,14 +150,10 @@ void main() {
     test(
       'LearningOrderRepository.resetToDefault deletes all rows; getOrder falls back to natural order',
       () async {
-        when(
-          () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-        ).thenAnswer(
-          (_) async => [
-            _makeItem('Berakhot', sortOrder: 0),
-            _makeItem('Shabbat', sortOrder: 1),
-          ],
-        );
+        final items = [
+          _makeItem('Berakhot', sortOrder: 0),
+          _makeItem('Shabbat', sortOrder: 1),
+        ];
 
         // `repo` defaults to profileId 0 — see note above.
         await database.learningOrderDao.upsertLearningOrder(
@@ -290,7 +171,7 @@ void main() {
             .getLearningOrderByCurriculum('mishnayos', profileId: 0);
         expect(rows, isEmpty);
 
-        final order = await repo.getOrder(CurriculumId.mishnayos);
+        final order = await repo.getOrder(CurriculumId.mishnayos, items);
         expect(order.map((i) => i.sefariaRef).toList(), [
           'Berakhot',
           'Shabbat',
@@ -299,15 +180,11 @@ void main() {
     );
 
     test('user can reorder content items within a curriculum', () async {
-      when(
-        () => mockContent.getContentForCurriculum(CurriculumId.mishnayos),
-      ).thenAnswer(
-        (_) async => [
-          _makeItem('Berakhot', sortOrder: 0),
-          _makeItem('Peah', sortOrder: 1),
-          _makeItem('Shabbat', sortOrder: 2),
-        ],
-      );
+      final items = [
+        _makeItem('Berakhot', sortOrder: 0),
+        _makeItem('Peah', sortOrder: 1),
+        _makeItem('Shabbat', sortOrder: 2),
+      ];
 
       // Move Shabbat to first
       const reordered = [
@@ -333,7 +210,7 @@ void main() {
 
       await repo.saveOrder(CurriculumId.mishnayos, reordered);
 
-      final order = await repo.getOrder(CurriculumId.mishnayos);
+      final order = await repo.getOrder(CurriculumId.mishnayos, items);
       expect(order.map((i) => i.sefariaRef).toList(), [
         'Shabbat',
         'Berakhot',
