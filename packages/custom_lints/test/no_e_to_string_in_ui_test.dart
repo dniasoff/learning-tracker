@@ -98,6 +98,38 @@ Object build(Object exception) => exception.toString();
           reason: 'exception.toString() in presentation/ must be flagged',
         );
       });
+
+      test('flags err.toString() (the short catch-identifier spelling)',
+          () async {
+        final file = _tmpFileNamed(
+          '''
+Object build(Object err) => err.toString();
+''',
+          'another_screen.dart',
+        );
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors.where((e) => e.errorCode.name == _codeName),
+          isNotEmpty,
+          reason: 'err.toString() in presentation/ must be flagged',
+        );
+      });
+
+      test('flags ex.toString() (the abbreviated catch-identifier spelling)',
+          () async {
+        final file = _tmpFileNamed(
+          '''
+Object build(Object ex) => ex.toString();
+''',
+          'another_screen.dart',
+        );
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors.where((e) => e.errorCode.name == _codeName),
+          isNotEmpty,
+          reason: 'ex.toString() in presentation/ must be flagged',
+        );
+      });
     });
 
     group('allowed — negatives (the AUD-progress-08 post-fix shape)', () {
@@ -160,6 +192,40 @@ Object build(Object error) => error.toString();
           reason: 'this rule is scoped to presentation/ only — domain-layer '
               'error.toString() (e.g. for logging) is a separate, '
               'out-of-scope concern',
+        );
+      });
+
+      test('does NOT flag error.toString() in a generated .g.dart file',
+          () async {
+        final file = _tmpFileNamed(
+          '''
+Object build(Object error) => error.toString();
+''',
+          'some_screen.g.dart',
+        );
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors.where((e) => e.errorCode.name == _codeName),
+          isEmpty,
+          reason: 'generated .g.dart files are exempt from this rule even '
+              'inside presentation/',
+        );
+      });
+
+      test('does NOT flag error.toString() in a generated .freezed.dart file',
+          () async {
+        final file = _tmpFileNamed(
+          '''
+Object build(Object error) => error.toString();
+''',
+          'some_state.freezed.dart',
+        );
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors.where((e) => e.errorCode.name == _codeName),
+          isEmpty,
+          reason: 'generated .freezed.dart files are exempt from this rule '
+              'even inside presentation/',
         );
       });
     });
