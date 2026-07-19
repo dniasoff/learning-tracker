@@ -1,4 +1,5 @@
 // ignore_for_file: avoid_print
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 
@@ -149,7 +150,12 @@ class SefariaMongo {
     }
     // Now apply the numeric address (+ optional range) on the node arrays,
     // merging across versions.
-    final collected = _collectAddressed(perVersionNodes, parsed);
+    final collected = collectAddressed(
+      perVersionNodes,
+      start: parsed.start,
+      end: parsed.end,
+      addressTypes: parsed.addressTypes,
+    );
     return collected;
   }
 
@@ -211,29 +217,12 @@ class SefariaMongo {
       // title and the numeric address (URL-derived refs use '.').
       rest = rest.replaceFirst(RegExp(r'^[,\s.]+'), '');
 
-      SchemaNode? matched;
-      var matchedLen = -1;
-      for (final c in node.children) {
-        if (c.isDefault) continue;
-        // Candidate titles: the en-titles, plus the node `key` as a fallback
-        // (some nodes — e.g. Arukh HaShulchan "Introduction" — carry no
-        // explicit title, only a key that the ref uses verbatim).
-        final candidates = [...c.enTitles, c.key];
-        for (final t in candidates) {
-          if (t.isEmpty) continue;
-          if (rest == t || _prefixWithBoundary(rest, t)) {
-            if (t.length > matchedLen) {
-              matched = c;
-              matchedLen = t.length;
-            }
-          }
-        }
-      }
+      final childMatch = matchChild(node, rest);
 
-      if (matched != null) {
-        nodePath.add(matched.key);
-        rest = rest.substring(matchedLen).trim();
-        node = matched;
+      if (childMatch != null) {
+        nodePath.add(childMatch.node.key);
+        rest = rest.substring(childMatch.matchedLength).trim();
+        node = childMatch.node;
       } else {
         // No titled child matched → enter the `default` child (addressing
         // applies directly), else a sole child, else give up.
@@ -269,11 +258,52 @@ class SefariaMongo {
   /// "Principle 1" does NOT match "Principle 10 …". Boundaries: end-of-string,
   /// space, comma, or the address separators '.'/':' (URL-derived refs use
   /// dots, e.g. "Arukh HaShulchan, Yoreh De'ah.201.68-74").
-  bool _prefixWithBoundary(String rest, String title) {
+  static bool _prefixWithBoundary(String rest, String title) {
     if (!rest.startsWith(title)) return false;
     if (rest.length == title.length) return true;
     final next = rest[title.length];
     return next == ' ' || next == ',' || next == '.' || next == ':';
+  }
+
+  /// Find the child of [node] whose title is the LONGEST prefix of [rest]
+  /// (matched with a boundary — see [_prefixWithBoundary]), trying each
+  /// child's en-titles then its `key` as a fallback candidate. Child titles
+  /// may themselves contain commas (e.g. "Part One, The Prohibition Against
+  /// Lashon Hara") and/or end in a number (e.g. "Principle 10"), so this
+  /// never splits on commas/digits — only longest-prefix-with-boundary
+  /// matching disambiguates "Principle 1" from "Principle 10 …".
+  ///
+  /// Returns `null` when no child title prefixes [rest].
+  ///
+  /// Extracted out of [_parse]'s schema-walk loop and made `static` +
+  /// `@visibleForTesting` so the longest-prefix matching rule can be unit
+  /// tested directly against an in-memory [SchemaNode] fixture, without a
+  /// live Mongo connection (AUD-guardrails-04).
+  @visibleForTesting
+  static ({SchemaNode node, int matchedLength})? matchChild(
+    SchemaNode node,
+    String rest,
+  ) {
+    SchemaNode? matched;
+    var matchedLen = -1;
+    for (final c in node.children) {
+      if (c.isDefault) continue;
+      // Candidate titles: the en-titles, plus the node `key` as a fallback
+      // (some nodes — e.g. Arukh HaShulchan "Introduction" — carry no
+      // explicit title, only a key that the ref uses verbatim).
+      final candidates = [...c.enTitles, c.key];
+      for (final t in candidates) {
+        if (t.isEmpty) continue;
+        if (rest == t || _prefixWithBoundary(rest, t)) {
+          if (t.length > matchedLen) {
+            matched = c;
+            matchedLen = t.length;
+          }
+        }
+      }
+    }
+    if (matched == null) return null;
+    return (node: matched, matchedLength: matchedLen);
   }
 
   // ── Address parsing ───────────────────────────────────────────────────────
@@ -329,7 +359,7 @@ class SefariaMongo {
     }
     for (var i = 0; i < parts.length; i++) {
       final at = addressTypes[(offset + i).clamp(0, addressTypes.length - 1)];
-      final idx = _addressToIndex(parts[i].trim(), at);
+      final idx = addressToIndex(parts[i].trim(), at);
       if (idx == null) return null;
       out.add(idx);
     }
@@ -337,7 +367,13 @@ class SefariaMongo {
   }
 
   /// Convert a single address token to a 0-based array index for [addressType].
-  int? _addressToIndex(String token, String addressType) {
+  ///
+  /// `static` + `@visibleForTesting` (AUD-guardrails-04) so the Talmud
+  /// daf→index formula — the arithmetic a silent regression would most
+  /// dangerously slip through, per the finding — can be unit tested directly
+  /// with no live Mongo connection.
+  @visibleForTesting
+  static int? addressToIndex(String token, String addressType) {
     if (addressType == 'Talmud') {
       // Sefaria stores Talmud with daf 1a at chapter index 0, so amud index =
       // (daf-1)*2 + amud  →  2a→2, 2b→3, 3a→4 … (1a/1b slots 0/1 are empty
@@ -377,14 +413,26 @@ class SefariaMongo {
   }
 
   /// Apply the numeric address (with optional range) to the per-version node
-  /// arrays, merging across versions segment-wise, and join to a single string.
-  String _collectAddressed(List<dynamic> perVersionNodes, _ParsedRef p) {
+  /// arrays, merging across versions segment-wise, and join to a single
+  /// string. [start]/[end]/[addressTypes] are the fields of a parsed ref's
+  /// address (an empty [start] means "whole node"; a null [end] means a
+  /// single address, not a range).
+  ///
+  /// `static` + `@visibleForTesting` (AUD-guardrails-04) so multi-section
+  /// range flattening and version-priority merge-first-non-empty can be
+  /// unit tested directly against in-memory fixture node arrays, with no
+  /// live Mongo connection.
+  @visibleForTesting
+  static String collectAddressed(
+    List<dynamic> perVersionNodes, {
+    required List<int> start,
+    required List<int>? end,
+    required List<String> addressTypes,
+  }) {
     // Build the list of leaf "cells" (strings) to emit, in order. For a single
     // address we emit one cell; for a range we emit the inclusive span.
     // Strategy: enumerate the flat index path(s) and, for each, take the first
     // non-empty value across versions (priority-merged).
-    final start = p.start;
-    final end = p.end;
 
     // Helper: fetch a value at a multi-index path from a node array.
     dynamic at(dynamic node, List<int> path) {
@@ -409,7 +457,7 @@ class SefariaMongo {
       return '';
     }
 
-    final depth = p.addressTypes.length;
+    final depth = addressTypes.length;
 
     // Whole-node (no address) → flatten the whole first non-empty version.
     if (start.isEmpty) {
@@ -455,7 +503,7 @@ class SefariaMongo {
     return cells.where((c) => c.isNotEmpty).join('\n');
   }
 
-  int _rowLen(List<dynamic> perVersionNodes, int sec) {
+  static int _rowLen(List<dynamic> perVersionNodes, int sec) {
     for (final node in perVersionNodes) {
       if (node is List && sec >= 0 && sec < node.length) {
         final row = node[sec];
@@ -466,7 +514,7 @@ class SefariaMongo {
   }
 
   /// Flatten a possibly-nested text payload to a single newline-joined string.
-  String _flatten(dynamic v) {
+  static String _flatten(dynamic v) {
     if (v == null) return '';
     if (v is String) return v;
     if (v is List) {
