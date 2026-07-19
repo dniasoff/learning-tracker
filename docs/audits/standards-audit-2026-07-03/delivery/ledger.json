@@ -4255,13 +4255,23 @@
   {
    "id": "AUD-guardrails-10",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Delete or fix the dead, non-compiling tool/seed_content_db.dart fragment at repo root",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "c2ff844d4ec50e3103bac2e59ee55a962785fee9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-10 AC1 OK: root tool/seed_content_db.dart gone (ls: No such file); git show of merge-base copy has 0 hits for 'void main|^import' = the dead fragment",
+    "AUD-guardrails-10 AC1 OK: no root workflow invokes it - grep seed_content_db over root Makefile + .github/ returns nothing; root tool/ has no seed/ or data/",
+    "AUD-guardrails-10 AC1 OK: canonical tool intact - learning_tracker/Makefile:269,272 still run it; seed pipeline dirs exist only under learning_tracker/",
+    "AUD-guardrails-10 AC2 OK: checker EXISTS - learning_tracker/tool/check_dup_tool_basename.dart, byte-compares same-basename scripts across ../tool/** and tool/**",
+    "AUD-guardrails-10 AC2 OK: hard-gate wiring at learning_tracker/Makefile:1177-1184 (FAIL=1 on nonzero); make audit prints 86/86 and exits 0",
+    "AUD-guardrails-10 AC2 OK: FIRES on a real planted collision (my probe, not a fixture) - two diverging zz_probe_review.dart -> exit 1, named it; probe removed",
+    "AUD-guardrails-10 AC2 OK: test drives real script via Process.run asserting exit codes/stderr (no mocks); 5 cases incl. new-collision=1, baselined=0"
+   ],
+   "notes": "Re-verified: root file was a 242-line non-compiling fragment; real tool is learning_tracker/tool/seed_content_db.dart. Deleted root file (AC1). Added RATCHET checker in make audit (86/86). One pre-existing unrelated collision (gen_arch_tables.dart) baselined, out of scope. 5 tests added, green."
   },
   {
    "id": "AUD-docs-21",
