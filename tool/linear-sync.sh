@@ -298,7 +298,7 @@ cmd_sync() {
       .[] |
       "  " + .identifier + ":\n" +
       "    key: " + ((.title | capture("(?:^\\[Epic[- ]|^Epic )(?<num>\\d+)")) | "epic-\(.num)") + "\n" +
-      "    title: \"" + .title + "\"\n" +
+      "    title: " + (.title | tojson) + "\n" +
       "    status: " + .state.name
     ' "$tmpfile"
 
@@ -320,7 +320,7 @@ cmd_sync() {
         end
       ) catch "unknown") + "\n" +
       "    epic: " + (.parent.identifier // "none") + "\n" +
-      "    title: \"" + .title + "\"\n" +
+      "    title: " + (.title | tojson) + "\n" +
       "    status: " + .state.name
     ' "$tmpfile"
   } > "$CACHE_DIR/sprint-status.yaml"
@@ -333,7 +333,7 @@ cmd_sync() {
 
     echo "$issue" | jq -r '
       "identifier: " + .identifier,
-      "title: \"" + .title + "\"",
+      "title: " + (.title | tojson),
       "status: " + .state.name,
       "epic: " + (.parent.identifier // "none"),
       (if (.description // "") == "" then "description: \"\""
@@ -378,14 +378,14 @@ cmd_story() {
   # Write story file (includes comments for cache-only reads)
   echo "$json" | jq -r '
     "identifier: " + .identifier,
-    "title: \"" + .title + "\"",
+    "title: " + (.title | tojson),
     "status: " + .state.name,
     "epic: " + (.parentIssue.identifier // "none"),
     (if (.description // "") == "" then "description: \"\""
      else "description: |\n" + (.description | split("\n") | map("  " + .) | join("\n"))
      end),
     (if (.comments | length) == 0 then "comments: []"
-     else "comments:\n" + ([.comments[] | "  - author: \"" + .user.name + "\"\n    body: |\n" + (.body | split("\n") | map("      " + .) | join("\n"))] | join("\n"))
+     else "comments:\n" + ([.comments[] | "  - author: " + (.user.name | tojson) + "\n    body: |\n" + (.body | split("\n") | map("      " + .) | join("\n"))] | join("\n"))
      end)
   ' > "$CACHE_DIR/stories/$issue_id.yaml"
 
