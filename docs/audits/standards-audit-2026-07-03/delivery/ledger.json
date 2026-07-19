@@ -7862,13 +7862,25 @@
   {
    "id": "AUD-tracks-23",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace hand-rolled ==/hashCode in TrackBlueprint's value objects with @freezed",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "55e5b8218b730ccdaf4e365424f2e6f4355e9669"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-tracks-23 AC1 OK: grep 'operator ==|get hashCode' over the 3 lib files returns exit=1, zero hand-rolled equality remains",
+    "AUD-tracks-23 AC1 OK: all 8 sites @freezed - track_blueprint.dart:11,36,53,74,99; repository:36 AddTrackDraft; add_track_result.dart:13 BulkMarkIntent",
+    "AUD-tracks-23 AC1 OK: track_blueprint.freezed.dart:1436 == uses DeepCollectionEquality on _studyDays AND _scopeSelections; :1441 hashCode hashes both",
+    "AUD-tracks-23 AC1 OK: track_blueprint_draft_repository.freezed.dart:261 == now covers scopeSelectionsJson + _studyDays (both omitted pre-fix)",
+    "AUD-tracks-23 AC1 OK: add_track_result.freezed.dart:230 BulkMarkIntent == generated over itemCount+completionCount",
+    "AUD-tracks-23 AC2 OK: draft_repository_impl_test.dart +2 tests, inequality on scopeSelectionsJson and on studyDays, expect(a == b, isFalse)",
+    "AUD-tracks-23 AC2 OK: track_blueprint_test.dart +2 tests, inequality on studyDays and on scopeSelections, expect(a == b, isFalse)",
+    "AUD-tracks-23 AC2 OK: red-first proven by deleted == in diff (omitted those exact fields); commit body records 4 'Expected: false Actual: true' failures",
+    "AUD-tracks-23 AC2 OK: value (not identity) semantics exercised - pre-existing positive test track_blueprint_test.dart:264 expect(a, b) still passes"
+   ],
+   "notes": "Re-verified sites still hand-rolled at HEAD afd01800. Converted all sealed VOs, TrackBlueprint, AddTrackDraft, BulkMarkIntent to @freezed, preserving class names. Red-first: 4 tests failed pre-fix (Expected:false Actual:true), pass post-fix. Zero remaining hand-rolled == in the 3 files."
   },
   {
    "id": "AUD-t-story-acceptance-30",
