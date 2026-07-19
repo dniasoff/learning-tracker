@@ -8664,13 +8664,22 @@
   {
    "id": "AUD-scheduler-22",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete the dead onCompleted callback chain from DailyTaskCard/GroupedDailyView/SchedulerScreen",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "52f7d925f92f4c3b442caab85e5acb59287de652"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-scheduler-22 AC1 OK: daily_task_card.dart:18-25 declares only task/onDismissed/key; grouped_daily_view.dart:25-33 only schedule/onTaskDismissed/key",
+    "AUD-scheduler-22 AC1 OK: repo-wide grep onCompleted|onTaskCompleted over lib/ test/ integration_test/ = zero hits (only l10n completionButtonCompleted)",
+    "AUD-scheduler-22 AC1 OK: pass-through gone at grouped_daily_view.dart:102; both dead ref.invalidate closures gone at scheduler_screen.dart:107,213",
+    "AUD-scheduler-22 AC2 OK: both test files updated (7 call sites); targeted run of 2 card tests + scheduler_screen_test = All tests passed! 34/34, exit 0",
+    "AUD-scheduler-22 AC2 OK: full flutter test test/features/scheduler/ = 637/637 passed, exit 0",
+    "AUD-scheduler-22 safety OK: at base afd01800 onCompleted existed only at daily_task_card.dart:21,29 (never invoked); scheduler_providers.dart:363 watch intact"
+   ],
+   "notes": "Verified: onCompleted never called in DailyTaskCard.build; wired to redundant ref.invalidate (completionCommittedProvider is real path). Tests passed it unasserted. Removed param + dead closures; updated tests. ACs met: none remain; 34/34 pass."
   },
   {
    "id": "AUD-t-scheduler-08",
