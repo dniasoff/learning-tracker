@@ -4211,13 +4211,27 @@
   {
    "id": "AUD-guardrails-05",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Add lib/features/auth/ and core/providers/firebase_providers.dart to no_firebase_outside_core's whitelist per Rule 3",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "6dfd83680a43f7ddccf49057ffa773f1f6cdde8b",
+    "266a649775d290520ba7cbbb22b58807d4553987"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-05 AC1 OK: no_firebase_outside_core.dart:59 endsWith('lib/core/providers/firebase_providers.dart') return true, inside _isWhitelisted",
+    "AUD-guardrails-05 AC1 OK behavioural: reverted rule to HEAD~1, firebase_providers integration test FAILED pre-fix, passes post-fix - checker fires",
+    "AUD-guardrails-05 AC2 OK: test adds real case 'firebase_storage import allowed in lib/core/providers/firebase_providers.dart' via rule.testAnalyzeAndRun + _tmpFileNamed",
+    "AUD-guardrails-05 AC2 OK non-vacuous: sibling 'violations' tests prove testAnalyzeAndRun DOES emit the code for non-whitelisted files, so isEmpty is meaningful",
+    "AUD-guardrails-05 AC3 OK doc: coding-standards.md:123-126 lists core/sync/, core/auth/+features/auth/, core/providers/firebase_providers.dart",
+    "AUD-guardrails-05 AC3 OK lint: no_firebase_outside_core.dart:56-60 = core/auth/, core/sync/, features/auth/, core/providers/firebase_providers.dart",
+    "AUD-guardrails-05 AC3 OK Makefile check 6: Makefile:155-158 greps -v the same four locations",
+    "AUD-guardrails-05 AC3 OK Makefile check 11: Makefile:194-197 greps -v the same four - all 4 artifacts now identical",
+    "AUD-guardrails-05 AC3 OK no residual drift: only other doc hits are line 773 (inner check 1 description) and 965 (non-enumerative row)",
+    "AUD-guardrails-05 gate-wiring OK: learning_tracker/Makefile 'audit: lint-rules-test' runs custom_lints suite, so new cases sit inside make audit"
+   ],
+   "notes": "Re-verified: confirmed. Lint whitelist missed lib/features/auth/ and firebase_providers.dart; root Makefile checks 6/11 disagreed. Red-first: 4 tests added first, failed pre-fix (4/16), then fixed whitelist+mirror, aligned Makefile checks, updated Rule 3 doc. 16/16 pass; full suite 191/191. Merged --no-ff onto dev (w4r1c14, mergeSha 266a649775d290520ba7cbbb22b58807d4553987). Post-rebase gate: make audit PASSED (all 67 greps clean; one transient red observed on an unrelated earlier attempt on the identical tree, not reproducible across 6 subsequent clean runs of make audit/dart test - pre-existing custom_lints suite timing flake, not caused by this diff), flutter analyze clean (no issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base 713b6cfe902f48f754935f25557a192e71221223), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-guardrails-08",
