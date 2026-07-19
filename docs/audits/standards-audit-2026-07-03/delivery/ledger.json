@@ -4244,13 +4244,13 @@
   {
    "id": "AUD-guardrails-08",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P2",
    "title": "Deduplicate tool/device_e2e/run{2,3,4,5,6,7}_full_suite.mjs into one parameterized orchestration module",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r2c4, 2026-07-19). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (c87889bcbf51c1c5f65df33fee1f0fbd9f721f98, \"fix(tooling): AUD-guardrails-08 - dedupe device_e2e run{2..7}_full_suite.mjs\", on stray worktree branch worktree-wf_c12188fb-a5a-106) which extracts the shared DEV map, driveGuide/seedPrompt/auditPrompt/verifyPrompt builders, schemas, area partitions, seed specs, and the seed->audit->verify->synthesize phase pipeline out of the six near-identical run2..7_full_suite.mjs files into a new tool/device_e2e/_full_suite_lib.mjs (runFullSuite()), reducing each runN_full_suite.mjs from 256 lines to 18, and adds a `make check-device-e2e-suite-size` Rule-0 checker (root Makefile) covering the finding's 3 acceptance criteria (60-line cap + import present, lib file exists, RTL-segmented-controls calibration note asserted exactly once) -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_c12188fb-a5a-106 confirms the commit is not patch-equivalent to anything already on dev (still shows \"+\"), and the current tree confirms the check-device-e2e-suite-size Makefile target is absent and run2_full_suite.mjs through run7_full_suite.mjs remain full 256-line duplicates, so per protocol the stray worktree directory was removed but the worktree-wf_c12188fb-a5a-106 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-06, AUD-tracks-10, AUD-tracks-12, AUD-guardrails-09, AUD-settings-10, AUD-tracks-20, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-guardrails-10",
