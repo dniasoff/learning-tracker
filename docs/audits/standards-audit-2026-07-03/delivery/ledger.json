@@ -10199,13 +10199,22 @@
   {
    "id": "AUD-scheduler-24",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Replace scheduler_providers.dart's duplicate _localDateOnly with the existing DateUtils.extractLocalDate",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "de7192bb5744bc83c37e8f990c6ad9f0a36a5fb1"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-scheduler-24 AC1 OK: grep -rn '_localDateOnly' lib/ test/ -> zero matches; definition deleted from daily_task_projection_service.dart",
+    "AUD-scheduler-24 AC1 OK: call sites canonical - daily_task_projection_service.dart:646 'LocalDayUtils.extractLocalDate(now)' and :647 '(deadline)'",
+    "AUD-scheduler-24 AC1 OK path drift: git show 1cf86d6b (AUD-scheduler-12) moved buildFreshPlan+helper out of scheduler_providers.dart; fixed at real location",
+    "AUD-scheduler-24 AC1 OK symbol drift: 1c85f532 renamed DateUtils->LocalDayUtils (date_utils.dart:64); builder used correct post-rename symbol",
+    "AUD-scheduler-24 AC1 OK no-op proof: deleted body token-identical to date_utils.dart:71-72, behavior-preserving; no red-first test owed for P3 dup",
+    "AUD-scheduler-24 AC1 OK: date_utils.dart already imported at line 31; no new import, no orphan/dead code left behind"
+   ],
+   "notes": "Evidence file drifted: AUD-scheduler-12 moved buildFreshPlan+_localDateOnly to daily_task_projection_service.dart post-verify. Duplication still real there, so fixed not refuted. Removed helper; call sites use LocalDayUtils.extractLocalDate (renamed from DateUtils)."
   },
   {
    "id": "AUD-scheduler-25",
