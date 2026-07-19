@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -36,6 +37,15 @@ class _StartingPositionCalendarModeState
   bool _calendarLoading = false;
   String? _calendarProgramKey;
   CalendarProgramEntry? _calendarEntry;
+
+  // AUD-tracks-04 (EH-3): _refreshCalendarEntry had no catch clause at all
+  // (only `finally`), so a thrown exception propagated as an unhandled
+  // Future rejection (every caller invokes it via `unawaited(...)`). The
+  // widget then rendered the hardcoded "No local calendar entry found for
+  // this date." fallback, mislabelling a real fetch/service failure as
+  // "no data for this date". Track failures explicitly so the UI can show
+  // a distinct, retryable error affordance instead.
+  bool _calendarError = false;
 
   // B2 enforcement — picker bounds from ProgramStartingPosition.allowedWindow().
   // Memoised at build time; today's date is the upper bound.
@@ -88,12 +98,30 @@ class _StartingPositionCalendarModeState
 
   Future<void> _refreshCalendarEntry() async {
     if (_calendarProgramKey == null) return;
-    setState(() => _calendarLoading = true);
+    setState(() {
+      _calendarLoading = true;
+      _calendarError = false;
+    });
     try {
       final service = await ref.read(calendarProgramServiceProvider.future);
       final entry = await service.getEntry(_calendarProgramKey!, _selectedDate);
       if (!mounted) return;
-      setState(() => _calendarEntry = entry);
+      setState(() {
+        _calendarEntry = entry;
+        _calendarError = false;
+      });
+    } on Exception catch (e, st) {
+      AppLogger.instance.error(
+        event: 'tracks_calendar_entry_load_failed',
+        fields: {'programKey': _calendarProgramKey},
+        exception: e,
+        stackTrace: st,
+      );
+      if (!mounted) return;
+      setState(() {
+        _calendarEntry = null;
+        _calendarError = true;
+      });
     } finally {
       if (mounted) setState(() => _calendarLoading = false);
     }
@@ -382,6 +410,31 @@ class _StartingPositionCalendarModeState
           width: 16,
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
+      );
+    }
+    if (_calendarError) {
+      final l10n = AppLocalizations.of(context)!;
+      return Column(
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 20,
+            color: Theme.of(context).colorScheme.error,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.calendarEntryLoadFailed,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
+          const SizedBox(height: 2),
+          TextButton(
+            onPressed: () => unawaited(_refreshCalendarEntry()),
+            child: Text(l10n.actionRetry),
+          ),
+        ],
       );
     }
     if (_calendarEntry != null) {

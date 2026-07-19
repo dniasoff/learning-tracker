@@ -1891,6 +1891,7 @@
 
   "startingPositionTargetDate": "תאריך יעד",
   "calendarNoLocalEntryFound": "לא נמצאה רשומת לוח שנה מקומית לתאריך זה.",
+  "calendarEntryLoadFailed": "טעינת הרשומה לתאריך זה נכשלה. בדקו את החיבור ונסו שוב.",
 
   "goalPaceOrDeadlineTitle": "מה הקצב או המועד שלך?",
   "goalPaceOrDeadlineSubtitle": "הגדר יעד.",

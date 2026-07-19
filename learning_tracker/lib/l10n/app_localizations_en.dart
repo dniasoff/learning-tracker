@@ -3945,6 +3945,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'No local calendar entry found for this date.';
 
   @override
+  String get calendarEntryLoadFailed =>
+      'Couldn\'t load this date\'s entry. Check your connection and try again.';
+
+  @override
   String get goalPaceOrDeadlineTitle => 'What\'s your pace or deadline?';
 
   @override

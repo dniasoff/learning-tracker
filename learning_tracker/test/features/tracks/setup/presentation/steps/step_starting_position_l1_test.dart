@@ -35,6 +35,7 @@ import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarch
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -525,33 +526,121 @@ void main() {
       },
     );
 
-    testWidgets('content error gracefully hides loading indicator', (
-      tester,
-    ) async {
-      final contentRepo = _MockContentRepository();
-      when(
-        () => contentRepo.getContentForCurriculum(any()),
-      ).thenAnswer((_) async => throw Exception('network error'));
-      when(() => contentRepo.getHierarchyConfig(any())).thenAnswer(
-        (_) async => const CurriculumHierarchyConfig(
-          curriculumId: 'mishnayos',
-          levelLabels: ['Seder', 'Masechet', 'Mishna'],
-          totalItems: 0,
-        ),
-      );
+    testWidgets(
+      'content error gracefully hides loading indicator and shows AppErrorView '
+      '(AUD-tracks-04)',
+      (tester) async {
+        final contentRepo = _MockContentRepository();
+        when(
+          () => contentRepo.getContentForCurriculum(any()),
+        ).thenAnswer((_) async => throw Exception('network error'));
+        when(() => contentRepo.getHierarchyConfig(any())).thenAnswer(
+          (_) async => const CurriculumHierarchyConfig(
+            curriculumId: 'mishnayos',
+            levelLabels: ['Seder', 'Masechet', 'Mishna'],
+            totalItems: 0,
+          ),
+        );
 
-      await tester.pumpWidget(
-        _buildStartingPositionApp(
-          overrides: _baseOverridesWithContentRepo(contentRepo),
-          selectedProgram: _nonCalendarProgram(),
-        ),
-      );
-      await _settle(tester);
+        await tester.pumpWidget(
+          _buildStartingPositionApp(
+            overrides: _baseOverridesWithContentRepo(contentRepo),
+            selectedProgram: _nonCalendarProgram(),
+          ),
+        );
+        await _settle(tester);
 
-      // After error, loading indicator should be gone.
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-      addTearDown(() => _tearDown(tester));
-    });
+        // After error, loading indicator should be gone.
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+
+        // AUD-tracks-04: a load failure must render a distinct, retryable
+        // error affordance (AppErrorView) — not silently fall through to a
+        // blank container list with a permanently-disabled "Start here"
+        // button and zero indication anything went wrong.
+        expect(
+          find.byType(AppErrorView),
+          findsOneWidget,
+          reason:
+              'AUD-tracks-04: a thrown repository error must surface '
+              'AppErrorView, not an indistinguishable empty list',
+        );
+        expect(
+          find.widgetWithText(FilledButton, 'Start here'),
+          findsNothing,
+          reason:
+              'AUD-tracks-04: the dead-end permanently-disabled "Start '
+              'here" button must not render once the load has failed',
+        );
+        expect(
+          find.byType(ListView),
+          findsNothing,
+          reason:
+              'AUD-tracks-04: no blank container ListView should render '
+              'on a load failure',
+        );
+        // A retry affordance must be present (AppErrorView's default error
+        // category shows "Retry").
+        expect(find.text('Retry'), findsOneWidget);
+        addTearDown(() => _tearDown(tester));
+      },
+    );
+
+    testWidgets(
+      'AUD-tracks-04: tapping Retry on AppErrorView re-invokes the repository '
+      'and recovers to normal content once it succeeds',
+      (tester) async {
+        final contentRepo = _MockContentRepository();
+        var callCount = 0;
+        when(() => contentRepo.getContentForCurriculum(any())).thenAnswer((
+          _,
+        ) async {
+          callCount++;
+          if (callCount == 1) {
+            throw Exception('network error');
+          }
+          return const [
+            ContentItem(
+              curriculumId: 'mishnayos',
+              sefariaRef: 'Berakhot',
+              displayNameEn: 'Berakhot',
+              displayNameHe: 'ברכות',
+              level1: 'Zeraim',
+              sortOrder: 0,
+              isLeaf: false,
+            ),
+          ];
+        });
+        when(() => contentRepo.getHierarchyConfig(any())).thenAnswer(
+          (_) async => const CurriculumHierarchyConfig(
+            curriculumId: 'mishnayos',
+            levelLabels: ['Seder', 'Masechet', 'Mishna'],
+            totalItems: 0,
+          ),
+        );
+
+        await tester.pumpWidget(
+          _buildStartingPositionApp(
+            overrides: _baseOverridesWithContentRepo(contentRepo),
+            selectedProgram: _nonCalendarProgram(),
+          ),
+        );
+        await _settle(tester);
+
+        expect(find.byType(AppErrorView), findsOneWidget);
+
+        await tester.tap(find.text('Retry'));
+        await _settle(tester);
+
+        expect(callCount, equals(2), reason: 'Retry must re-run _loadContent');
+        expect(
+          find.byType(AppErrorView),
+          findsNothing,
+          reason: 'AppErrorView must clear once the retry succeeds',
+        );
+        expect(find.text('Starting Position'), findsOneWidget);
+        addTearDown(() => _tearDown(tester));
+      },
+    );
 
     testWidgets(
       'selectedProgram=null (no program) shows content-based UI (not calendar)',
@@ -968,6 +1057,89 @@ void main() {
         addTearDown(() => _tearDown(tester));
       },
     );
+
+    // ── AUD-tracks-04 regression: _refreshCalendarEntry error handling ──────
+
+    testWidgets('AUD-tracks-04: a thrown service error shows a distinct error '
+        'affordance, not the misleading "no entry found" fallback', (
+      tester,
+    ) async {
+      final calendarSvc = _MockCalendarProgramService();
+      when(
+        () => calendarSvc.getEntry(any(), any()),
+      ).thenAnswer((_) async => throw Exception('calendar service down'));
+
+      await tester.pumpWidget(
+        _buildCalendarModeApp(
+          overrides: _calendarModeOverrides(calendarSvc),
+          program: _calendarProgram(),
+        ),
+      );
+      await _settle(tester);
+
+      // The generic "no local entry" text mislabels a real fetch failure
+      // as "no data for this date" — it must NOT appear on a thrown error.
+      expect(
+        find.text('No local calendar entry found for this date.'),
+        findsNothing,
+        reason:
+            'AUD-tracks-04: a service exception must not be mislabelled '
+            'as "no entry found for this date"',
+      );
+      // A distinct, dedicated error message must appear instead.
+      expect(
+        find.textContaining("Couldn't load this date's entry"),
+        findsOneWidget,
+        reason:
+            'AUD-tracks-04: a distinct load-failure affordance must be '
+            'shown for a thrown CalendarProgramService error',
+      );
+      // A retry affordance must be present.
+      expect(find.text('Retry'), findsOneWidget);
+      addTearDown(() => _tearDown(tester));
+    });
+
+    testWidgets('AUD-tracks-04: tapping Retry after a calendar service error '
+        're-queries the service and recovers', (tester) async {
+      final calendarSvc = _MockCalendarProgramService();
+      var callCount = 0;
+      const fakeEntry = CalendarProgramEntry(
+        programId: 'daf_yomi',
+        displayNameEn: 'Daf Yomi',
+        displayNameHe: 'דף יומי',
+        todayRef: 'Berakhot 7',
+        apiSource: 'local',
+      );
+      when(() => calendarSvc.getEntry(any(), any())).thenAnswer((_) async {
+        callCount++;
+        if (callCount == 1) {
+          throw Exception('calendar service down');
+        }
+        return fakeEntry;
+      });
+
+      await tester.pumpWidget(
+        _buildCalendarModeApp(
+          overrides: _calendarModeOverrides(calendarSvc),
+          program: _calendarProgram(),
+        ),
+      );
+      await _settle(tester);
+
+      expect(find.text('Retry'), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await _settle(tester);
+
+      expect(callCount, equals(2), reason: 'Retry must re-query the service');
+      expect(
+        find.textContaining("Couldn't load this date's entry"),
+        findsNothing,
+        reason: 'The error affordance must clear once the retry succeeds',
+      );
+      expect(find.text('Berakhot 7'), findsOneWidget);
+      addTearDown(() => _tearDown(tester));
+    });
 
     testWidgets('"Start Here" fires onComplete with offset:N|ref:todayRef '
         'when calendar entry is available', (tester) async {
