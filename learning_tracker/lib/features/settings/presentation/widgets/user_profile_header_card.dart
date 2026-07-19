@@ -132,13 +132,13 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
     ) = switch (widget.contextRole) {
       UserProfileContextRole.parent => (
         l10n.parentContextBadge,
-        const Color(0xFFE8F4FD),
-        const Color(0xFF1565C0),
+        AppColors.settingsProfileBadgeParentBg,
+        AppColors.settingsProfileBadgeParentText,
       ),
       UserProfileContextRole.tutor => (
         l10n.tutorContextBadge,
-        const Color(0xFFFFF3E0),
-        const Color(0xFFE65100),
+        AppColors.settingsProfileBadgeTutorBg,
+        AppColors.accentBurntOrange,
       ),
       UserProfileContextRole.selfLearner => (
         l10n.selfLearnerBadge,
@@ -167,7 +167,7 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
               height: 58,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFFCFD8EA),
+                color: AppColors.settingsProfileAvatarRing,
                 border: Border.all(color: Colors.white, width: 2),
               ),
               child: Container(
@@ -276,7 +276,7 @@ class _SettingsProfileSurface extends StatelessWidget {
         border: Border.all(color: AppColors.surfaceE9),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x121D2939),
+            color: AppColors.settingsProfileCardShadow,
             blurRadius: 16,
             offset: Offset(0, 5),
           ),
@@ -310,7 +310,7 @@ class _ParentProfileSurface extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x140038A8),
+            color: AppColors.settingsProfileParentCardShadow,
             blurRadius: 16,
             offset: Offset(0, 6),
           ),
@@ -430,7 +430,11 @@ class _NoBackupInlineText extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.cloud_off, size: 12, color: Color(0xFFCE8A41)),
+        const Icon(
+          Icons.cloud_off,
+          size: 12,
+          color: AppColors.settingsProfileNoBackupAccent,
+        ),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
@@ -438,7 +442,7 @@ class _NoBackupInlineText extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: const Color(0xFFCE8A41),
+              color: AppColors.settingsProfileNoBackupAccent,
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),

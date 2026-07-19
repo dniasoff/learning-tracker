@@ -672,4 +672,37 @@ abstract final class AppColors {
 
   /// Settings-card header background, paired with the lock-badge icon.
   static const Color sacredTimeHeaderBg = Color(0xFF11389F);
+
+  // ---------------------------------------------------------------------------
+  // Settings feature (AUD-settings-11) — UserProfileHeaderCard's
+  // parent/tutor role-context badge pair, avatar ring, card drop-shadow
+  // tints, and the offline "no backup" cloud-off indicator. Centralised
+  // here so user_profile_header_card.dart no longer hand-types hex
+  // literals; the tutor-badge text colour reuses the pre-existing
+  // [accentBurntOrange] token (same hex, already defined above).
+  // ---------------------------------------------------------------------------
+
+  /// "PARENT" role-context badge background (pale blue).
+  static const Color settingsProfileBadgeParentBg = Color(0xFFE8F4FD);
+
+  /// "PARENT" role-context badge text, paired with
+  /// [settingsProfileBadgeParentBg].
+  static const Color settingsProfileBadgeParentText = Color(0xFF1565C0);
+
+  /// "TUTOR" role-context badge background (pale amber). The tutor badge
+  /// text reuses [accentBurntOrange] — same hex, already defined.
+  static const Color settingsProfileBadgeTutorBg = Color(0xFFFFF3E0);
+
+  /// Profile avatar circle's outer ring fill (shown before the avatar image
+  /// loads / behind the initial-letter avatar).
+  static const Color settingsProfileAvatarRing = Color(0xFFCFD8EA);
+
+  /// Settings-surface profile card drop-shadow (translucent navy-ink).
+  static const Color settingsProfileCardShadow = Color(0x121D2939);
+
+  /// Parent-mode-surface profile card drop-shadow (translucent brand blue).
+  static const Color settingsProfileParentCardShadow = Color(0x140038A8);
+
+  /// Offline "no backup" cloud-off icon + inline warning text (amber-brown).
+  static const Color settingsProfileNoBackupAccent = Color(0xFFCE8A41);
 }
