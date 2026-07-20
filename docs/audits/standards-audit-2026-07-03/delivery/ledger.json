@@ -11055,13 +11055,19 @@
   {
    "id": "AUD-guardrails-37",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "make audit's Rule 3/4 Firebase/Talker-confinement greps scan lib/ only, so tool/lib/dio_client.dart's raw Talker import is invisible to every gate",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "389e43d8c3380ed845aa03c1dc5aa360426cf499"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-37 AC1 OK: coding-standards.md Rule 3 note (~L139) and Rule 4 note (L150) both state tool/lib/ is in scope",
+    "AUD-guardrails-37 AC2a OK: Makefile checks 2/15 and 4/15 now grep 'lib/ tool/lib/'; planted tool/lib/ fixtures fired both",
+    "AUD-guardrails-37 AC2b OK: dio_client.dart added as named exemption under 'Documented Judgment Calls' (L62/78); check4 excludes it, clean tree passes"
+   ],
+   "notes": "Re-verified: dio_client.dart:2 imports raw talker; audit checks 1-4 scanned lib/ only pre-fix. Fixed: Makefile checks 1-4 now also scan tool/lib/ (check 4 excludes the named exemption); coding-standards.md Rule 3/4 state tool/ is in scope; new Documented Judgment Calls entry justifies the exemption."
   },
   {
    "id": "AUD-guardrails-22",
