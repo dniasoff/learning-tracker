@@ -11102,13 +11102,20 @@
   {
    "id": "AUD-guardrails-34",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Refresh learning_tracker/dart_test.yaml's stale tag registry",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "9714c386bf83468a419acc50ca867135eda243e9"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-34 AC1 OK: independent Python DOTALL extraction = 429 used tags, 429 declared; LC_ALL=C comm -23 used-vs-declared EMPTY (not builder tool)",
+    "AUD-guardrails-34 Rule-0 OK: --check exits 1 (reports epic_18) after removing a declared tag, exits 0 when complete; hard gate 90/90 in make audit",
+    "AUD-guardrails-34 idempotency OK: re-running --write leaves committed dart_test.yaml unchanged (git diff empty), no hand-edit drift",
+    "AUD-guardrails-34 no-regression OK: 16 dropped declared tags all absent from used-set (stale); no USED tag lost; old file had only bare keys"
+   ],
+   "notes": "Re-verified live: comm -23 (used @Tags/tags: vs declared) was non-empty, 314/429 undeclared. Built tool/check_dart_test_tags.dart checker; captured red (--check exit 1), regenerated via --write, confirmed green + independent raw comm -23 empty. Wired as make audit check 90/90. gatePolicy=overlap-tested: rebase vs dev overlapped only in learning_tracker/Makefile (this finding's own new gen-dart-test-tags/check-dart-test-tags targets + 90/90 audit-check block vs dev's unrelated check-1..5 tool/lib/ grep-scope widening earlier in the same file) -- non-conflicting hunks, rebase applied cleanly. Ran payload.testsToRun (tool/check_dart_test_tags.dart --check, standalone: exit 0, \"all 429 tag(s) used under test/ are declared\"), plus flutter test suites covering Makefile (grep -rl Makefile test/): schema_check_test.dart, check_edgeinsets_rtl_test.dart, seed_entrypoint_dart_vm_smoke_test.dart (16/16 passed) and audit_and_arb_parity_test.dart run separately via its own tag (flutter test --tags serial-tools --concurrency=1, per its documented ~18min/serial-tools design -- shells out to real make audit repeatedly and contends when mixed into a concurrent run) -- all green. Root make arb-parity clean (touchedStrings). make audit 90/90 and flutter analyze clean post-rebase."
   },
   {
    "id": "AUD-firebase-14",
