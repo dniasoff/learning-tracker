@@ -9276,13 +9276,19 @@
   {
    "id": "AUD-platform-02",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Drop dead UIBackgroundModes (fetch, remote-notification) from ios/Runner/Info.plist — no backing implementation exists",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "2ab7c9a6fc31db55c5042921c2708cf02884d3fc"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-platform-02 AC1 OK: UIBackgroundModes key+array removed; grep -A2 exit 1 (no output); plistlib parses OK, key absent",
+    "AUD-platform-02 AC2 OK: post-fix grep clean; Rule-0 checker is Makefile 91/91 (line 1223-1231), FIRES on HEAD~1 fixture (FAIL=1), clean post-fix",
+    "AUD-platform-02 premise OK: no AppDelegate push handlers, no firebase_messaging (grep exit 1), notifications local via zonedSchedule"
+   ],
+   "notes": "Re-verified: no firebase_messaging dep, no AppDelegate handler, reminders all local via zonedSchedule. Removed UIBackgroundModes from Info.plist. Added Rule-0 grep checker (audit 91/91), fires pre-fix, clean post-fix. grep -A2 UIBackgroundModes Info.plist returns nothing."
   },
   {
    "id": "AUD-guardrails-31",
