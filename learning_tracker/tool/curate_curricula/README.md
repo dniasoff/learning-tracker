@@ -49,19 +49,27 @@ One per curriculum. Each returns `(items, level_labels, max_levels)`.
 | Curriculum | Levels | Status |
 |---|---|---|
 | `bavli` | Seder / Masechta / Daf / Amud | ✅ |
-| `yerushalmi` | Seder / Masechta / Halacha / … | TODO |
-| `mishnayos` | Seder / Masechta / Perek / Mishnah | TODO |
-| `chumash` | Sefer / Parsha / Aliyah / Pasuk | TODO |
-| `nach` | Sefer / Perek / Pasuk | TODO |
-| `mishna_berurah` | Volume / Siman / Seif | TODO |
-| `mussar` | Book / Section | TODO |
-| **`mishneh_torah`** | Sefer / Hilchot / Perek / Halacha | NEW — TODO |
-| **`shulchan_arukh`** | Volume / Siman / Seif | NEW — TODO |
-| **`arukh_hashulchan`** | Volume / Siman / Seif | NEW — TODO |
-| **`kitzur_shulchan_aruch`** | Siman / Seif | NEW — TODO |
-| **`chofetz_chaim`** | Part / Klal / Seif | NEW — TODO |
-| **`sefer_hamitzvot`** | Section / Mitzvah | NEW — TODO |
-| **`pirkei_avot`** | Perek / Mishnah | NEW — TODO |
+| `yerushalmi` | Seder / Masechta / Halacha / … | ✅ |
+| `mishnayos` | Seder / Masechta / Perek / Mishnah | ✅ |
+| `chumash` | Sefer / Parsha / Aliyah / Pasuk | ✅ |
+| `nach` | Sefer / Perek / Pasuk | ✅ |
+| `mishna_berurah` | Volume / Siman / Seif | ✅ |
+| `mussar` | Book / Section | ✅ |
+| `mishneh_torah` | Sefer / Hilchot / Perek / Halacha | ✅ |
+| `shulchan_arukh` | Volume / Siman / Seif | ✅ |
+| `arukh_hashulchan` | Volume / Siman / Seif | ✅ |
+| `kitzur_shulchan_aruch` | Siman / Seif | ✅ |
+| `chofetz_chaim` | Part / Klal / Seif | ✅ |
+| `sefer_hamitzvot` | Section / Mitzvah | ✅ |
+| `shemirat_halashon` | Book / Sefer / Chapter / Verse | ✅ |
+| `pirkei_avot` | Perek / Mishnah | ✅ |
+
+Every row above has a working strategy function in `main.py`'s `STRATEGIES`
+dict and a generated `assets/content/hierarchy/{curriculum}.json`. "✅"
+means implemented and generated, not "reviewed" — per [Validation](#validation),
+only `bavli` has had its `--diff` output checked leaf-by-leaf so far; the
+rest should still get a `--diff` pass and a taxonomy spot-check before being
+treated as fully vetted.
 
 Each strategy walks Sefaria's `Index.nodes` schema (lengths, sectionNames,
 addressTypes) to enumerate atomic refs. Talmud is special-cased for
