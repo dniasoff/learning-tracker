@@ -42,3 +42,18 @@ it asserts against the real backend.
 `journey_01` (signup → create profile → cloud-verify) is the proven reference.
 Full "every screen / every button" coverage is built out journey-by-journey
 against the catalog in `docs/planning/e2e-test-suite-plan.md`.
+
+## Test-data cleanup (manual)
+Each `journey_01` run creates a real Firebase Auth account
+(`e2e<timestamp>@example.com`) plus a Firestore `learner_profiles` doc in the
+live `torah-study-tracker` project, and prints `TEST_UID=<uid>` at the end.
+**Nothing in this repo consumes that line automatically** — no script or
+Makefile target purges the account. Repeated runs accumulate orphaned test
+accounts/docs, so purge them periodically by hand:
+1. Identity Toolkit: delete the account —
+   `accounts:delete` with the printed uid (same auth pattern as
+   `admin_verify_email` in `journey_01_signup_profile.py`), or via the
+   Firebase console (Authentication → Users → filter `e2e`).
+2. Firestore: delete `users/<uid>/learner_profiles` (and the `users/<uid>`
+   doc if empty) via the console or `gcloud firestore` — same filter
+   (`e2e`-prefixed emails / uids collected from recent runs).
