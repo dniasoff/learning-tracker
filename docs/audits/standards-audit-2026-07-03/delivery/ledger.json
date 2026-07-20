@@ -7844,13 +7844,24 @@
   {
    "id": "AUD-guardrails-32",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Log the caught exception at 7 silent/overbroad catch sites across tool/ fetch-and-resolve helpers",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "760620881f3504ab5bb4dee78478d8efecd75960"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-32 AC1 OK: seed_text_content.dart:150-152 catch(e) prints 'ERROR fetching $ref (retry): $e' before return error:true",
+    "AUD-guardrails-32 AC1 OK: seed_text_content.dart:156-158 catch(e) prints 'ERROR fetching $ref: $e' before return error:true",
+    "AUD-guardrails-32 AC1 OK: verify_seed_calendar.dart:202-207 on IOException+on FormatException call _logFetchFailure(stderr.writeln) before retry delay",
+    "AUD-guardrails-32 AC1 OK: extract_books.py:184-186 except Exception as e writes sys.stderr before title=None",
+    "AUD-guardrails-32 AC1 OK: extract_books.py:200-202 except Exception as e writes sys.stderr before continue",
+    "AUD-guardrails-32 AC1 OK: extract_books.py:209-210 except Exception as e writes sys.stderr before children walk",
+    "AUD-guardrails-32 AC1 OK: main.py:87 except Exception as e writes sys.stderr before return None; sys imported line 24",
+    "AUD-guardrails-32 AC2 OK: verify_seed_calendar.dart:202 now 'on IOException/on FormatException'; grep of tool/ shows no bare 'on Object' catch remains"
+   ],
+   "notes": "Re-verified: all 7 sites + bare-Object catch still present (2 Dart sites drifted lines via unrelated commit, pattern unchanged). Logged exception at all 7 sites before existing failure return. Narrowed on Object to IOException/FormatException per EH-4."
   },
   {
    "id": "AUD-t-stages-01",
