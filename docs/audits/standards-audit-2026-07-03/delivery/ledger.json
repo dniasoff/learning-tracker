@@ -8418,13 +8418,18 @@
   {
    "id": "AUD-guardrails-30",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Hoist duplicated seder-Hebrew-name and Torah-title static tables from sibling *_fetcher.dart classes into SefariaFetcherBase",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "216143f42b156b421a5d07bb9749ed6729c52011"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-30 AC1 OK: exactly one def each - torahTitles (base:136) + sederHebrewName (base:151); zero _torahTitles/_sederHebrewName copies left in tool/",
+    "AUD-guardrails-30 AC2 OK: 44/44 green; 2 new tests pin Hebrew seder output; mishna \\u-escapes decode identical to shared literals (all 6), torahTitles byte-identical"
+   ],
+   "notes": "Confirmed dup _sederHebrewName (bavli/mishna) and _torahTitles (chumash/nach). Hoisted into SefariaFetcherBase; removed 4 copies. AC1: grep shows exactly one definition each. AC2: 2 new regression tests pin exact Hebrew output, green pre/post; suite 42/42 -> 44/44."
   },
   {
    "id": "AUD-firebase-15",
