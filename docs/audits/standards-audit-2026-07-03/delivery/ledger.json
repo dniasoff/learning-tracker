@@ -9189,13 +9189,18 @@
   {
    "id": "AUD-guardrails-26",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Extract the Sefaria TOC category-walk loop shared by curate_curricula/main.py (2x) and audit_seed.py (1x) instead of copy-pasting it",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "c2887f265bde118a8cd6dc4e8d75ae395385fd23"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-26 AC1 OK: 0 walk-loop-marker matches in main.py+audit_seed.py (was 2+1); both delegate to walk_toc_path; sole impl in sefaria_toc_utils.py",
+    "AUD-guardrails-26 AC2 OK: walk_toc_path is byte-identical to pre-fix loop; sample-path test passes (Seder Zeraim->['Berakhot']); return semantics preserved"
+   ],
+   "notes": "Confirmed 3x copy-pasted TOC-walk loop (main.py _toc_subtree/_toc_books; audit_seed.py _books_in_category). Extracted sefaria_toc_utils.py::walk_toc_path; all 3 sites delegate. AC1: source-scan test red pre-fix, green post-fix. AC2: fixture + stubbed-runtime tests match pre-refactor behavior."
   },
   {
    "id": "AUD-guardrails-33",
