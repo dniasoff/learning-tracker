@@ -12,7 +12,6 @@
   "done": "הושלם",
   "points": "נקודות",
   "pages": "עמודים",
-  "todaysLearning": "הלימוד של היום",
   "remaining": "{count} נותרו",
   "@remaining": {
     "placeholders": {
@@ -325,12 +324,6 @@
   "@errorWithMessage": {
     "description": "AUD-progress-08: generic failure message for an AsyncValue error branch — never interpolate the raw exception (EH-5)."
   },
-  "errorLoadingTasks": "שגיאה בטעינת המשימות: {error}",
-  "@errorLoadingTasks": {
-    "placeholders": {
-      "error": {"type": "String"}
-    }
-  },
   "noActiveTracks": "אין מסלולים פעילים",
   "askGrownUpToAddTrack": "בקשו ממבוגר להוסיף מסלול לימוד.",
   "addTrackToStart": "הוסיפו מסלול כדי להתחיל ללמוד.",
@@ -361,7 +354,6 @@
   "accountOfflineSignInToSync": "עובד במצב לא מקוון עבור חשבון זה. התחבר כדי לחדש את הסנכרון בענן.",
   "textReaderNextDailyTask": "המשימה הבאה",
   "noProjection": "אין תחזית",
-  "today": "היום",
   "plusNMore": "+{count} נוספים",
   "@plusNMore": {
     "placeholders": {
@@ -1874,14 +1866,6 @@
   "parentDeleteTrackArchiveBody": "מה לעשות עם היסטוריית ההשלמות של ילדך?",
   "deleteTrackArchive": "ארכיון (שמור היסטוריה)",
   "deleteTrackWipe": "מחק ומחה היסטוריה",
-  "notificationReminderTitle": "תזכורת לימוד",
-  "notificationReminderBody": "{taskCount,plural, =0{אין משימות להיום — שמרו על הרצף!} =1{יש לכם משימה אחת ב{curriculumCount,plural, =1{תוכנית לימוד אחת} other{{curriculumCount} תוכניות לימוד}} היום} other{יש לכם {taskCount} משימות ב{curriculumCount,plural, =1{תוכנית לימוד אחת} other{{curriculumCount} תוכניות לימוד}} היום}}",
-  "@notificationReminderBody": {
-    "placeholders": {
-      "taskCount": { "type": "int" },
-      "curriculumCount": { "type": "int" }
-    }
-  },
 
   "startingPositionTargetDate": "תאריך יעד",
   "calendarNoLocalEntryFound": "לא נמצאה רשומת לוח שנה מקומית לתאריך זה.",

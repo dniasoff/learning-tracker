@@ -1237,13 +1237,21 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/platform_deep_link_hosting_check.$$$$.log; \
 	fi; \
-	echo "93/93 — AUD-platform-04: no config drift/invalid value in ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS across the Debug/Release/Profile XCBuildConfiguration blocks in ios/Runner.xcodeproj/project.pbxproj (must all be the same valid YES/NO, never a copy-paste bleed like AppIcon from ASSETCATALOG_COMPILER_APPICON_NAME)"; \
+	echo "93/94 — AUD-platform-04: no config drift/invalid value in ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS across the Debug/Release/Profile XCBuildConfiguration blocks in ios/Runner.xcodeproj/project.pbxproj (must all be the same valid YES/NO, never a copy-paste bleed like AppIcon from ASSETCATALOG_COMPILER_APPICON_NAME)"; \
 	if ! dart run tool/check_ios_asset_symbol_extensions.dart > /tmp/ios_asset_symbol_extensions_check.$$$$.log 2>&1; then \
 	  cat /tmp/ios_asset_symbol_extensions_check.$$$$.log; \
 	  rm -f /tmp/ios_asset_symbol_extensions_check.$$$$.log; \
 	  FAIL=1; \
 	else \
 	  rm -f /tmp/ios_asset_symbol_extensions_check.$$$$.log; \
+	fi; \
+	echo "94/94 — Rule-0: no duplicate top-level key in lib/l10n/app_en.arb or app_he.arb — JSON last-key-wins silently shadows the first definition, defeating arb-parity/gen-l10n/analyze (which all parse via jsonDecode too) and letting dead ICU branches rot unnoticed (AUD-l10n-01)"; \
+	if ! dart run tool/check_arb_duplicate_keys.dart > /tmp/arb_duplicate_keys_check.$$$$.log 2>&1; then \
+	  cat /tmp/arb_duplicate_keys_check.$$$$.log; \
+	  rm -f /tmp/arb_duplicate_keys_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/arb_duplicate_keys_check.$$$$.log; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
