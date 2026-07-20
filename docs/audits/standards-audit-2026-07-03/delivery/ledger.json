@@ -11008,13 +11008,17 @@
   {
    "id": "AUD-guardrails-22",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete or wire up tool/curate_curricula/sefaria_settings.py — a vestigial placeholder never referenced by the documented workflow",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "f83e422735970c819d8cf5a73953814eb7b38ce5"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-22 AC1 OK: file removed (git ls-files no match; diff=10-line deletion); git grep excl docs/audits=zero refs; nothing imported it"
+   ],
+   "notes": "Re-verified: grep for 'sefaria_settings' (excl. audit artifacts) = zero hits; never imported/referenced by documented workflow (README has dev hand-write local_settings.py instead). Deleted file per AC option A. Post-delete grep re-confirms zero refs."
   },
   {
    "id": "AUD-guardrails-28",
