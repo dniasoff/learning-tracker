@@ -2984,13 +2984,22 @@
     {
       "id": "AUD-l10n-01",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P2",
       "title": "Deduplicate 5 shadowed top-level keys in app_he.arb/app_en.arb — one silently kills a zero-task notification branch",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "1b2d09c946582a19859a5170cbe52064622c517d"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-l10n-01 AC1 OK: raw-text bracket-depth parser; reproduced RED exit=1 on synthetic dup + reintroduced todaysLearning dup (named key+lines); GREEN on tree",
+        "AUD-l10n-01 AC1 OK: wired into make audit as 93/93 (Makefile diff + audit output); test suite 6/6 incl RED + nested-key + missing-file cases",
+        "AUD-l10n-01 AC2 OK: grep -c = 1 for all 5 keys in BOTH app_en.arb and app_he.arb",
+        "AUD-l10n-01 AC2 OK: surviving copies are live last-wins (en todaysLearning parameterized, today='Today'); net-zero generated relocation confirms runtime match",
+        "AUD-l10n-01 AC3 OK: surviving notificationReminderBody has only =1/other; generated body byte-identical before/after (=0 already dead); vestigial =0 removed",
+        "AUD-l10n-01 AC3 OK: D2-fix guard notification_providers.dart:605 (taskCount==0 -> cancel;return) makes =0 unreachable; behavior preserved, no orphan"
+      ],
+      "notes": "Confirmed 5 dup ARB keys (jsonDecode masks it). Added checker (raw-text parser), RED captured, wired into make audit, 6 new tests. Deleted shadowed copies, kept live copy; removed vestigial zero-task ICU branch (matches D2-fix guard+test). Regenerated l10n files, pure relocation."
     },
     {
       "id": "AUD-t-cross-13",
