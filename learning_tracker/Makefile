@@ -1220,6 +1220,15 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	else \
 	  rm -f /tmp/dart_test_tags_check.$$$$.log; \
 	fi; \
+	echo "91/91 — Rule-0: no dead UIBackgroundModes entries in ios/Runner/Info.plist — a declared mode must have a matching AppDelegate.swift handler (App Review 2.5.4 friction + misleading signal for future push work, AUD-platform-02)"; \
+	if grep -A2 "UIBackgroundModes" ios/Runner/Info.plist | grep -q .; then \
+	  echo "  ios/Runner/Info.plist declares UIBackgroundModes with no corresponding AppDelegate.swift handler"; \
+	  echo "  (no performFetchWithCompletionHandler/didReceiveRemoteNotification override, no registerForRemoteNotifications() call)."; \
+	  echo "  Either remove the key (notification delivery is 100% local via zonedSchedule today), or land the real"; \
+	  echo "  handler + firebase_messaging dependency in the same change and reference a Linear ticket (AUD-platform-02):"; \
+	  grep -A2 "UIBackgroundModes" ios/Runner/Info.plist; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
