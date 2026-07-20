@@ -8446,13 +8446,18 @@
   {
    "id": "AUD-guardrails-23",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Delete the 4 unused SCREENS_*_ARCHIVED dead-code arrays from tool/vision_find_pass.js",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "1073078cf74a72f2c234b353290c960f00451e8f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-23 AC1 OK: grep for all 4 SCREENS_*_ARCHIVED names -> 0 hits (exit 1); grep ARCHIVED -> 0 hits. All four arrays removed.",
+    "AUD-guardrails-23 no-regression OK: active `const SCREENS` intact at tool/vision_find_pass.js:10, still feeds round-loop at line 145; node --check exit 0."
+   ],
+   "notes": "Re-verified: grep matched only each array's own def line, 0 other refs. Deleted the 4 ARCHIVED arrays + header comments, diff -79/+0. AC self-check: grep -n ARCHIVED tool/vision_find_pass.js -> 0 hits (exit 1). node --check passes."
   },
   {
    "id": "AUD-docs-31",
