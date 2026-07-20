@@ -9221,13 +9221,18 @@
   {
    "id": "AUD-guardrails-33",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Mark tool/text_extract/ as retired in-repo and fix extract_books.py's footnote-stripping regression before any reuse",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "105eeca0e8d3b3fbb110f1670be728b11ef69d9f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-33 AC1 OK: README.md:3-15 retirement banner names build_text_cache.dart + build_daily_content.dart + docs/seed-build.md; all 3 exist, links resolve",
+    "AUD-guardrails-33 AC2 OK: test asserts _clean drops <i class=footnote>..</i> wholesale + equals main.py; red-first verified (reverted copy 2/4 FAIL), green after 4/4"
+   ],
+   "notes": "Evidence unchanged, not drifted/fixed. AC1: retirement banner added naming replacement build tools. AC2: red-first test imports real extract_books.py via importlib+django/sefaria stubs, captured failing footnote-leak, then mirrored main.py's _FOOTNOTE regex into _clean(); 4/4 tests green after."
   },
   {
    "id": "AUD-guardrails-25",
