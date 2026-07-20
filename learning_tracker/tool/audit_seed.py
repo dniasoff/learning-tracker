@@ -26,6 +26,7 @@ import django  # noqa: E402
 django.setup()
 
 from sefaria.model import IndexSet, library  # noqa: E402
+from sefaria_toc_utils import walk_toc_path  # noqa: E402
 
 APP_ROOT = Path(__file__).resolve().parent.parent
 ASSET_XZ = APP_ROOT / "assets" / "db" / "content.db.xz"
@@ -193,17 +194,9 @@ def expected_titles_for(curriculum: str) -> list[str]:
 
 
 def _books_in_category(path: str, main_subcats=None) -> list[str]:
-    toc = library.get_toc()
-    parts = path.split("/")
-    node = {"contents": toc}
-    for p in parts:
-        contents = node.get("contents") if isinstance(node, dict) else None
-        if not contents:
-            return []
-        match = next((c for c in contents if c.get("category") == p), None)
-        if not match:
-            return []
-        node = match
+    node = walk_toc_path(library.get_toc(), path)
+    if not node:
+        return []
     out = []
 
     def walk(n, allow_subcat: bool):
