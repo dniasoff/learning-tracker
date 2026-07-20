@@ -75,7 +75,8 @@ def _resolve_one(ref_str: str) -> tuple[str, str] | None:
         if not en and not he:
             return None
         return en, he
-    except Exception:
+    except Exception as e:
+        sys.stderr.write(f"  _resolve_one({ref_str!r}) failed: {e}\n")
         return None
 
 

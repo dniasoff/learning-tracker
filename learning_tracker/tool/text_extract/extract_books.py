@@ -181,7 +181,8 @@ def _walk_node(node, granularity="segment"):
     if hasattr(node, "full_title"):
         try:
             title = node.full_title("en")
-        except Exception:
+        except Exception as e:
+            sys.stderr.write(f"  full_title() failed for node: {e}\n")
             title = None
     if title:
         try:
@@ -196,7 +197,8 @@ def _walk_node(node, granularity="segment"):
                         sr = nref.subref(i)
                         yielded = True
                         yield sr
-                    except Exception:
+                    except Exception as e:
+                        sys.stderr.write(f"  subref({title!r}, {i}) failed: {e}\n")
                         continue
             else:
                 for r in nref.all_segment_refs():
@@ -204,8 +206,8 @@ def _walk_node(node, granularity="segment"):
                     yield r
             if yielded:
                 return
-        except Exception:
-            pass
+        except Exception as e:
+            sys.stderr.write(f"  _walk_node({title!r}, {granularity!r}) failed: {e}\n")
     children = getattr(node, "children", None)
     if children:
         for child in children:
