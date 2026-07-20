@@ -46,7 +46,7 @@ class BavliFetcher extends SefariaFetcherBase {
           ContentItem(
             curriculumId: curriculumId,
             level1: sederName,
-            displayNameHe: _sederHebrewName(sederName),
+            displayNameHe: SefariaFetcherBase.sederHebrewName(sederName),
             displayNameEn: sederName,
             sefariaRef: sederName,
             sortOrder: sortOrder++,
@@ -146,19 +146,6 @@ class BavliFetcher extends SefariaFetcherBase {
         totalItems: leafCount,
       ),
     );
-  }
-
-  /// Hebrew names for Talmud Bavli sedarim.
-  static String _sederHebrewName(String english) {
-    const map = {
-      'Seder Zeraim': 'סדר זרעים',
-      'Seder Moed': 'סדר מועד',
-      'Seder Nashim': 'סדר נשים',
-      'Seder Nezikin': 'סדר נזיקין',
-      'Seder Kodashim': 'סדר קדשים',
-      'Seder Tahorot': 'סדר טהרות',
-    };
-    return map[english] ?? english;
   }
 
   /// Converts an integer to a basic Hebrew numeral representation.

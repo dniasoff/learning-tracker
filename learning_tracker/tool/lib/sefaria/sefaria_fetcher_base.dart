@@ -126,4 +126,37 @@ abstract class SefariaFetcherBase implements CurriculumContentFetcher {
   static String _stripHtml(String html) {
     return HebrewUtils.cleanSefariaText(html);
   }
+
+  /// Titles of the five Torah books as they appear in Sefaria's Tanakh
+  /// shape-API `title` field, in canonical order.
+  ///
+  /// Shared by [ChumashFetcher] (which keeps only these) and [NachFetcher]
+  /// (which excludes them) — hoisted out of two identical private copies
+  /// (AUD-guardrails-30) so the two stay in sync by construction.
+  static const List<String> torahTitles = [
+    'Genesis',
+    'Exodus',
+    'Leviticus',
+    'Numbers',
+    'Deuteronomy',
+  ];
+
+  /// Hebrew names for the six sedarim (orders) of Mishnah/Talmud, keyed by
+  /// their English Sefaria `section` value.
+  ///
+  /// Falls back to [english] unchanged for a seder outside this canonical
+  /// set of six. Shared by [BavliFetcher] and [MishnaFetcher] — hoisted out
+  /// of two identical private maps (AUD-guardrails-30) so the two stay in
+  /// sync by construction.
+  static String sederHebrewName(String english) {
+    const names = {
+      'Seder Zeraim': 'סדר זרעים',
+      'Seder Moed': 'סדר מועד',
+      'Seder Nashim': 'סדר נשים',
+      'Seder Nezikin': 'סדר נזיקין',
+      'Seder Kodashim': 'סדר קדשים',
+      'Seder Tahorot': 'סדר טהרות',
+    };
+    return names[english] ?? english;
+  }
 }
