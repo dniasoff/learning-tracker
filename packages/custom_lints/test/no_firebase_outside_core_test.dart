@@ -103,61 +103,48 @@ void main() {}
     });
 
     group('whitelist — file path checks', () {
-      test('isWhitelisted returns true for lib/core/auth/ path', () {
-        expect(_invokeIsWhitelisted('lib/core/auth/firebase_auth_service.dart'),
-            isTrue);
-      });
-
-      test('isWhitelisted returns true for lib/core/sync/ path', () {
+      test('firebase_auth import allowed in generated .g.dart file', () async {
+        final file = _tmpFileNamed('''
+import 'package:firebase_auth/firebase_auth.dart';
+void main() {}
+''', 'lib/features/dashboard',
+            'test_firebase_gen_${DateTime.now().microsecondsSinceEpoch}.g.dart');
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-            _invokeIsWhitelisted('lib/core/sync/firestore_sync_service.dart'),
-            isTrue);
-      });
-
-      test('isWhitelisted returns true for .g.dart', () {
-        expect(_invokeIsWhitelisted('some.g.dart'), isTrue);
-      });
-
-      test('isWhitelisted returns true for .freezed.dart', () {
-        expect(_invokeIsWhitelisted('model.freezed.dart'), isTrue);
-      });
-
-      test('isWhitelisted returns false for feature file', () {
-        expect(
-          _invokeIsWhitelisted(
-              'lib/features/dashboard/presentation/screen.dart'),
-          isFalse,
+          errors.where((e) => e.errorCode.name == 'no_firebase_outside_core'),
+          isEmpty,
+          reason: 'Generated .g.dart files are whitelisted',
         );
       });
 
-      test('isWhitelisted returns false for core/analytics file', () {
+      test('firebase_auth import allowed in generated .freezed.dart file',
+          () async {
+        final file = _tmpFileNamed('''
+import 'package:firebase_auth/firebase_auth.dart';
+void main() {}
+''', 'lib/features/dashboard',
+            'test_firebase_gen_${DateTime.now().microsecondsSinceEpoch}.freezed.dart');
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _invokeIsWhitelisted('lib/core/analytics/parent_analytics.dart'),
-          isFalse,
+          errors.where((e) => e.errorCode.name == 'no_firebase_outside_core'),
+          isEmpty,
+          reason: 'Generated .freezed.dart files are whitelisted',
         );
       });
 
-      // AUD-guardrails-05: docs/coding-standards.md Rule 3 and Makefile
-      // check 6 both authorise `lib/features/auth/` as an auth-repository /
-      // auth-provider tree; the lint rule's whitelist must agree.
-      test('isWhitelisted returns true for lib/features/auth/ path', () {
-        expect(
-          _invokeIsWhitelisted('lib/features/auth/auth_repository_impl.dart'),
-          isTrue,
-        );
-      });
-
-      // AUD-guardrails-05: `lib/core/providers/firebase_providers.dart` is
-      // the sole Riverpod injection point named by docs/coding-standards.md
-      // Rule 3 and already carved out by Makefile check 11 — it directly
-      // imports `firebase_storage` to construct the provider and must not
-      // be flagged.
       test(
-          'isWhitelisted returns true for '
-          'lib/core/providers/firebase_providers.dart', () {
+          'flags cloud_firestore import in lib/core/analytics '
+          '(near-miss of core/auth|sync)', () async {
+        final file = _tmpFileAt('''
+import 'package:cloud_firestore/cloud_firestore.dart';
+void main() {}
+''', 'lib/core/analytics');
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _invokeIsWhitelisted('lib/core/providers/firebase_providers.dart'),
-          isTrue,
+          errors.where((e) => e.errorCode.name == 'no_firebase_outside_core'),
+          isNotEmpty,
+          reason: 'lib/core/analytics/ is not in the whitelist and must '
+              'still be flagged',
         );
       });
 
@@ -187,6 +174,9 @@ void main() {}
         );
       });
 
+      // AUD-guardrails-05: docs/coding-standards.md Rule 3 and Makefile
+      // check 6 both authorise `lib/features/auth/` as an auth-repository /
+      // auth-provider tree; the lint rule's whitelist must agree.
       test('firebase_auth import allowed in lib/features/auth/', () async {
         final file = _tmpFileAt('''
 import 'package:firebase_auth/firebase_auth.dart';
@@ -200,6 +190,11 @@ void main() {}
         );
       });
 
+      // AUD-guardrails-05: `lib/core/providers/firebase_providers.dart` is
+      // the sole Riverpod injection point named by docs/coding-standards.md
+      // Rule 3 and already carved out by Makefile check 11 — it directly
+      // imports `firebase_storage` to construct the provider and must not
+      // be flagged.
       test(
           'firebase_storage import allowed in '
           'lib/core/providers/firebase_providers.dart', () async {
@@ -217,18 +212,4 @@ void main() {}
       });
     });
   });
-}
-
-/// Mirrors the private _isWhitelisted logic for unit-level path testing.
-bool _invokeIsWhitelisted(String path) {
-  final normalised = path.replaceAll(r'\', '/');
-  if (normalised.contains('lib/core/auth/')) return true;
-  if (normalised.contains('lib/core/sync/')) return true;
-  if (normalised.contains('lib/features/auth/')) return true;
-  if (normalised.endsWith('lib/core/providers/firebase_providers.dart')) {
-    return true;
-  }
-  if (normalised.endsWith('.g.dart')) return true;
-  if (normalised.endsWith('.freezed.dart')) return true;
-  return false;
 }

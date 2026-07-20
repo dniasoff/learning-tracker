@@ -14,6 +14,17 @@ File _tmpFile(String content) {
   return file;
 }
 
+/// Writes [content] to a temp file whose name ends with [suffix] (e.g.
+/// `.g.dart`) so the rule's suffix-based generated-file skip is exercised
+/// through the real analyzer path rather than a hand-copied helper.
+File _tmpFileWithSuffix(String content, String suffix) {
+  final file = File(
+    '${Directory.systemTemp.path}/test_rtl_gen_${DateTime.now().microsecondsSinceEpoch}$suffix',
+  );
+  file.writeAsStringSync(content);
+  return file;
+}
+
 void main() {
   const rule = NoHardcodedTextDirection();
 
@@ -294,28 +305,38 @@ class Foo extends StatelessWidget {
     });
 
     group('whitelist — generated files', () {
-      test('isGenerated returns true for .g.dart', () {
-        expect(_invokeIsGenerated('some.g.dart'), isTrue);
-      });
-
-      test('isGenerated returns true for .freezed.dart', () {
-        expect(_invokeIsGenerated('model.freezed.dart'), isTrue);
-      });
-
-      test('isGenerated returns false for regular dart file', () {
+      test('does not flag Alignment.centerLeft in a generated .g.dart file',
+          () async {
+        final file = _tmpFileWithSuffix('''
+class Foo {
+  final align = Alignment.centerLeft;
+}
+''', '.g.dart');
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _invokeIsGenerated('lib/features/dashboard/presentation/screen.dart'),
-          isFalse,
+          errors
+              .where((e) => e.errorCode.name == 'no_hardcoded_text_direction'),
+          isEmpty,
+          reason: 'Generated .g.dart files are skipped entirely',
+        );
+      });
+
+      test(
+          'does not flag Alignment.centerLeft in a generated .freezed.dart '
+          'file', () async {
+        final file = _tmpFileWithSuffix('''
+class Foo {
+  final align = Alignment.centerLeft;
+}
+''', '.freezed.dart');
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors
+              .where((e) => e.errorCode.name == 'no_hardcoded_text_direction'),
+          isEmpty,
+          reason: 'Generated .freezed.dart files are skipped entirely',
         );
       });
     });
   });
-}
-
-/// Mirrors the private _isGenerated logic for unit-level path testing.
-bool _invokeIsGenerated(String path) {
-  final normalised = path.replaceAll(r'\', '/');
-  if (normalised.endsWith('.g.dart')) return true;
-  if (normalised.endsWith('.freezed.dart')) return true;
-  return false;
 }

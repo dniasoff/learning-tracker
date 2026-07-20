@@ -18,17 +18,6 @@ File _tmpFileAt(String content, String pathSegment) {
   return file;
 }
 
-/// Mirrors the private [NoFeatureCrossImport._featureOf] static helper.
-String? _featureOf(String filePath) {
-  final pattern = RegExp(r'[/\\]features[/\\]([^/\\]+)[/\\]');
-  return pattern.firstMatch(filePath)?.group(1);
-}
-
-/// Mirrors the private [NoFeatureCrossImport._isBarrel] static helper.
-bool _isBarrel(String importedFeature, String importedPath) {
-  return importedPath == '$importedFeature.dart';
-}
-
 void main() {
   const rule = NoFeatureCrossImport();
 
@@ -202,65 +191,76 @@ void main() {}
         expect(
           errors.where((e) => e.errorCode.name == 'no_feature_cross_import'),
           isEmpty,
-          reason:
-              'Files outside lib/features/ are not subject to this rule',
+          reason: 'Files outside lib/features/ are not subject to this rule',
         );
       });
     });
 
-    group('_featureOf — static helper', () {
-      test('extracts feature segment from feature file path', () {
+    group('feature classification — real analyzer path', () {
+      test('does not lint host files outside lib/features/ (e.g. lib/app/)',
+          () async {
+        final file = _tmpFileAt(
+          '''
+import 'package:learning_tracker/features/tracks/domain/models/track.dart';
+void main() {}
+''',
+          'lib/app/bootstrap',
+        );
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _featureOf('lib/features/dashboard/presentation/screens/foo.dart'),
-          equals('dashboard'),
+          errors.where((e) => e.errorCode.name == 'no_feature_cross_import'),
+          isEmpty,
+          reason: 'Host files outside lib/features/ (e.g. lib/app/) are not '
+              'subject to this rule',
         );
       });
 
-      test('extracts feature from nested sub-feature path', () {
+      test(
+          'classifies a host file nested under a sub-feature by its '
+          'top-level feature', () async {
+        // The host file itself lives under features/tracks/stages/… (a
+        // nested sub-feature); it must still be classified as feature
+        // "tracks" so a deep import from a genuinely different feature is
+        // flagged.
+        final file = _tmpFileAt(
+          '''
+import 'package:learning_tracker/features/dashboard/domain/models/summary.dart';
+void main() {}
+''',
+          'lib/features/tracks/stages/domain/models',
+        );
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _featureOf('lib/features/tracks/stages/domain/models/bar.dart'),
-          equals('tracks'),
+          errors.where((e) => e.errorCode.name == 'no_feature_cross_import'),
+          isNotEmpty,
+          reason: 'A nested sub-feature host file is still classified under '
+              'its top-level feature',
         );
       });
 
-      test('returns null for core/ file', () {
-        expect(_featureOf('lib/core/logging/logger.dart'), isNull);
-      });
-
-      test('returns null for app/ file', () {
-        expect(_featureOf('lib/app/bootstrap/firebase_bootstrap.dart'), isNull);
-      });
-
-      test('handles Windows-style path separators', () {
-        expect(
-          _featureOf(r'lib\features\dashboard\presentation\foo.dart'),
-          equals('dashboard'),
+      test(
+          'classifies host feature correctly with Windows-style backslash '
+          'path segments', () async {
+        // Simulates a Windows-reported path — a single directory literally
+        // named "lib\features\tracks\presentation" (backslashes as
+        // characters, not separators, since this test runs on Linux) so the
+        // rule's path-separator-tolerant regex is exercised through the
+        // real analyzer path.
+        final file = _tmpFileAt(
+          '''
+import 'package:learning_tracker/features/dashboard/domain/models/summary.dart';
+void main() {}
+''',
+          r'lib\features\tracks\presentation',
         );
-      });
-    });
-
-    group('_isBarrel — static helper', () {
-      test('recognises tracks barrel', () {
-        expect(_isBarrel('tracks', 'tracks.dart'), isTrue);
-      });
-
-      test('recognises account barrel', () {
-        expect(_isBarrel('account', 'account.dart'), isTrue);
-      });
-
-      test('does not recognise providers.dart as barrel', () {
-        expect(_isBarrel('tracks', 'providers.dart'), isFalse);
-      });
-
-      test('does not recognise deep path as barrel', () {
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _isBarrel('tracks', 'domain/models/track.dart'),
-          isFalse,
+          errors.where((e) => e.errorCode.name == 'no_feature_cross_import'),
+          isNotEmpty,
+          reason: 'Windows-style backslash path segments must still '
+              'classify the host feature as tracks and flag the '
+              'cross-feature import',
         );
-      });
-
-      test('does not match wrong barrel name', () {
-        expect(_isBarrel('tracks', 'dashboard.dart'), isFalse);
       });
     });
   });
