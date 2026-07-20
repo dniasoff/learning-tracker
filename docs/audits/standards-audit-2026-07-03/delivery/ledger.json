@@ -11275,13 +11275,17 @@
   {
    "id": "AUD-guardrails-39",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "tool/merge_arb.py silently no-ops because all 4 hardcoded source branches (r1-tracks2 etc.) no longer exist",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "6711f65539e51dde6b0511ecda712f1295a9e1aa"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-39 AC1 OK: tool/merge_arb.py removed (file gone, diff=50-line deletion); zero live refs; AC 'script removed' option met"
+   ],
+   "notes": "Re-verified: lines 10/18 matched evidence exactly; git branch -a confirms all 4 branches gone (R1 merged via 757ca4f2). Grep found zero live refs to merge_arb.py. Deleted file (recommendation option 1, history preserved). AC ('exits non-zero OR removed') satisfied by removal."
   },
   {
    "id": "AUD-docs-30",
