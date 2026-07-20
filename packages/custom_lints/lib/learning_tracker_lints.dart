@@ -1,6 +1,6 @@
 /// Custom lint rules for the Learning Tracker project.
 ///
-/// Provides nineteen rules:
+/// Provides twenty rules:
 ///   - [NoColorLiteralOutsideTheme]: warns on direct `Color(0x…)` hex-literal
 ///     constructor calls outside `lib/core/theme/`; use AppColors/AppTheme constants.
 ///   - [NoCurriculumDisplayNameBypass]: prevents access to `.displayNameEn` /
