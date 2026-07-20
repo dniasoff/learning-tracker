@@ -11039,13 +11039,17 @@
   {
    "id": "AUD-guardrails-28",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix stale password_hasher.dart path printed by tool/argon2id_benchmark.dart — file moved from features/auth to features/account",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "decf43893167802eb100f8ffe2fc92dc27ad7ed"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-28 AC1 OK: benchmark:155 prints lib/features/account/.../password_hasher.dart = real Argon2idParams.production loc (file:28); stale auth/ path 0 hits"
+   ],
+   "notes": "Re-verified: line 154 printed stale lib/features/auth/... path; real file is lib/features/account/.../password_hasher.dart (Argon2idParams.production line 28). Fixed the writeln. Checker: grep for stale path in tool/ -> none; grep for correct path -> hits fix."
   },
   {
    "id": "AUD-guardrails-34",
