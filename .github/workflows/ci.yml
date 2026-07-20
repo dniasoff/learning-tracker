@@ -45,38 +45,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Flutter bootstrap (codegen + l10n)
+      - name: Flutter bootstrap (codegen + l10n + asset + secrets)
         uses: ./.github/actions/flutter-bootstrap
         with:
           run-codegen: 'true'
           run-l10n: 'true'
+          prepare-asset: 'true'
+          decode-secrets: 'true'
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          firebase-options-dart: ${{ secrets.FIREBASE_OPTIONS_DART }}
 
       # ── AG-7 freshness gate (docs/coding-standards.md) ──
       # Committed generated output (*.g.dart, *.freezed.dart, *.gr.dart, and
       # lib/l10n/app_localizations*.dart) must match what build_runner/gen-l10n
-      # produce on a clean tree. Runs before the secret-writing steps below so
-      # that decoding google-services.json / firebase_options.dart (gitignored,
-      # not tracked) can never be mistaken for codegen drift.
+      # produce on a clean tree. google-services.json, firebase_options.dart,
+      # and content.db.gz (written by the bootstrap's secret-decode/asset-prep
+      # steps above) are all gitignored (learning_tracker/.gitignore) and
+      # therefore untracked — plain `git diff` never reports them, so folding
+      # those steps into the same bootstrap call as codegen/l10n (AUD-guardrails-25)
+      # cannot be mistaken for codegen drift regardless of step order.
       - name: Verify generated code is fresh (AG-7)
         run: |
           if ! git diff --exit-code; then
             echo "::error::Generated code is stale — committed *.g.dart/*.freezed.dart/l10n output does not match what 'dart run build_runner build --delete-conflicting-outputs' and 'flutter gen-l10n' produce. Regenerate in learning_tracker/ and commit the result. See docs/coding-standards.md AG-7."
             exit 1
           fi
-
-      - name: Prepare bundled seed asset (xz → gzip)
-        working-directory: learning_tracker
-        run: dart run tool/prepare_asset.dart
-
-      - name: Decode google-services.json
-        env:
-          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
-        run: echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > learning_tracker/android/app/google-services.json
-
-      - name: Generate firebase_options.dart
-        env:
-          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
-        run: echo "$FIREBASE_OPTIONS_DART" > learning_tracker/lib/firebase_options.dart
 
       - name: Analyze code
         working-directory: learning_tracker
