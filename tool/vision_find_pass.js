@@ -62,20 +62,6 @@ KNOWN-DEFERRED — do NOT report these as findings (they are intended/product-de
    originates in content-DB displayNameHe data; asset-regen pending. Do NOT re-flag.
  - curriculum-settings scope count "11 Masechta" uses the singular level-noun for >1 — DEFERRED (needs a per-nusach
    plural-forms table Masechtos/Sefarim/Perakim). Do NOT re-flag.
- - the Notification-Settings tile icon uses a saturated red disc vs the pastel palette — known minor, do NOT re-flag.
- - transient ghost/flash frames during font-scale re-layout or first paint (e.g. a Hebrew label flashing before it
-   resolves to transliteration) are transient and NOT defects — do NOT report transient single-frame artifacts.
- - mixed-script rows (Hebrew domain term beside English chrome) IN ENGLISH MODE — documented design split (product).
- - daily "TODAY DUE" is a rolling queue that stays constant; daf completion clears both amudim — product-decisions.
- - points-but-no-rewards "doing great" empty state; single-member siyum aggregate; filtered-streak headline — product-decisions.
- - Manage Goals == Manage Tracks destination; prev-chevron disabled after complete; auth copy voice — product-decisions.
- - city subtitle still shows raw GeoNames code "NN" (the build SCRIPT is fixed; the cities.sqlite ASSET regen is
- - add-track wizard step-count denominator branches (6 → 7 → 4) by path — this is INTENDED, pinned by TS-11 tests
-   (program reveals a step then auto-skips scope/study-days/goal). Do NOT re-flag the changing denominator.
- - Kodshim renders with slightly different Hebrew spelling (קודשים vs קדשים) between a Bavli vs Mishnayos track —
-   originates in content-DB displayNameHe data; asset-regen pending. Do NOT re-flag.
- - curriculum-settings scope count "11 Masechta" uses the singular level-noun for >1 — DEFERRED (needs a per-nusach
-   plural-forms table Masechtos/Sefarim/Perakim). Do NOT re-flag.
  - when the UI language is Hebrew, the Hebrew-Terms toggle is intentionally hidden (terms already render in Hebrew) —
    product-decision pending Daniel. Do NOT re-flag the "missing toggle".
  - the Notification-Settings tile icon uses a saturated red disc vs the pastel palette — known minor, do NOT re-flag.
