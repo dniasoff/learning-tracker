@@ -53,5 +53,6 @@
   "chunk": "grp-113",
   "normArea": "features/tracks",
   "id": "AUD-tracks-10",
-  "linearPriority": "Medium"
+  "linearPriority": "Medium",
+  "deliveryHint": "DELIVERY HINT (2026-07-20 tail cleanup, was PO-parked): A pre-built reference commit 96c1597d exists in the object DB (`git show 96c1597d`) carrying the intended Semantics label wording and the 4 ARB keys (trackEditPaceIncrease, trackEditPaceDecrease, chazaraCustomDayIncrease, chazaraCustomDayDecrease) for app_en.arb/app_he.arb — reuse its label text/values. CRITICAL COLLISION: dev already has a large (~1200-line) test/features/tracks/setup/edit_track_screen_l1_test.dart from a DIFFERENT finding — do NOT recreate or overwrite it (96c1597d added a same-named 140-line file on an older base). Put your Semantics assertions into that existing file or a distinctly-named new test (e.g. tracks_10_semantics_test.dart). After adding the 4 ARB keys, regenerate l10n (the project's gen-l10n / build step) so app_localizations*.dart stay consistent — never hand-edit generated files partially. Targets: edit_track_screen.dart + chazara_widgets.dart icon-only pace/chazara stepper buttons."
 }

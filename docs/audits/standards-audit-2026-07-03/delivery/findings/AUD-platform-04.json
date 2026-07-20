@@ -46,5 +46,6 @@
   "chunk": "grp-162",
   "normArea": "platform",
   "id": "AUD-platform-04",
-  "linearPriority": "Low"
+  "linearPriority": "Low",
+  "deliveryHint": "DELIVERY HINT (2026-07-20 tail cleanup, was PO-parked): current dev state — project.pbxproj has ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES in one XCBuildConfiguration and = AppIcon in the other two; 'AppIcon' is an INVALID value for this boolean key (looks copy-pasted from ASSETCATALOG_COMPILER_APPICON_NAME). Fix: set all three blocks to the SAME valid value — use NO (the app has no code consuming generated asset symbols; match Flutter's default) unless you find real consumers, in which case YES. ENVIRONMENT: this is Linux — xcodebuild is NOT available, so do NOT try to run it for AC2. Satisfy AC2 with a static lint instead: a checker/grep that parses project.pbxproj and fails if the three ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS values diverge or are not a valid YES/NO. Ship it with a fixture proof (fires on divergence, clean after); wire into make audit if practical."
 }
