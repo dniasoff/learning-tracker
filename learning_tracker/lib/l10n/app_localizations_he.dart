@@ -3800,6 +3800,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get trackEditGoalTypeLocked => 'לא ניתן לשנות את סוג היעד לאחר ההגדרה';
 
   @override
+  String get trackEditPaceDecrease => 'הפחת את ערך הקצב';
+
+  @override
+  String get trackEditPaceIncrease => 'הגדל את ערך הקצב';
+
+  @override
   String get trackEditProgramLocked =>
       'חזרה, היקף ויימי לימוד מנוהלים על ידי התוכנית.';
 
@@ -5265,6 +5271,12 @@ class AppLocalizationsHe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get chazaraCustomDayDecrease => 'הפחת את מספר ימי החזרה';
+
+  @override
+  String get chazaraCustomDayIncrease => 'הגדל את מספר ימי החזרה';
 
   @override
   String scopeChooseLevelPrompt(String levelLabel) {

@@ -6597,6 +6597,18 @@ abstract class AppLocalizations {
   /// **'Goal type cannot be changed after setup'**
   String get trackEditGoalTypeLocked;
 
+  /// AUD-tracks-10 (AX-3): accessibility label for the icon-only stepper button that decreases the pace goal's target value on Edit Track's goal editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease pace value'**
+  String get trackEditPaceDecrease;
+
+  /// AUD-tracks-10 (AX-3): accessibility label for the icon-only stepper button that increases the pace goal's target value on Edit Track's goal editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase pace value'**
+  String get trackEditPaceIncrease;
+
   /// No description provided for @trackEditProgramLocked.
   ///
   /// In en, this message translates to:
@@ -8909,6 +8921,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{Day} other{Days}}'**
   String chazaraDayUnitLabel(int count);
+
+  /// AUD-tracks-10 (AX-3): accessibility label for the icon-only TinyCircleButton that decreases a custom-cycle review round's delay-day count.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease review day count'**
+  String get chazaraCustomDayDecrease;
+
+  /// AUD-tracks-10 (AX-3): accessibility label for the icon-only TinyCircleButton that increases a custom-cycle review round's delay-day count.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase review day count'**
+  String get chazaraCustomDayIncrease;
 
   /// R1-(6): top-level scope breadcrumb prompt. Shown after the curriculum chip; must NOT repeat the curriculum name. levelLabel is the localized level word (e.g. Sefer, Seder).
   ///

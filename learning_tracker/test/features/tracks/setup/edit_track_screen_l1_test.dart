@@ -503,6 +503,83 @@ void main() {
 
       await _tearDown(tester);
     });
+
+    testWidgets(
+      'AUD-tracks-10 (AX-3): pace +/- stepper buttons expose non-empty, '
+      'button-role Semantics labels for their increase/decrease actions',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+
+        final trackId = await seedTrack(
+          db,
+          profileId: 1,
+          curriculumId: 'mishnayos',
+        );
+        await _seedGoal(
+          db,
+          profileId: 1,
+          trackId: trackId,
+          goalType: 'pace',
+          paceValue: 3,
+          pacePeriod: 'per_week',
+        );
+
+        await tester.pumpWidget(
+          _buildApp(
+            track: _track(id: trackId),
+            db: db,
+            mockService: mockService,
+          ),
+        );
+        await _pump(tester);
+
+        final decreaseIcon = find.byIcon(Icons.remove_rounded);
+        final increaseIcon = find.byIcon(Icons.add_rounded);
+        expect(decreaseIcon, findsOneWidget);
+        expect(increaseIcon, findsOneWidget);
+
+        // AC2 (literal): a widget test finds a Semantics node with a button
+        // role and non-empty label at each control's location.
+        final decreaseSemantics = tester.getSemantics(decreaseIcon);
+        final increaseSemantics = tester.getSemantics(increaseIcon);
+
+        // The stepper also conveys enabled/disabled state (the decrease
+        // button disables at paceValue == 1), so `enabled:` is threaded
+        // into Semantics — hence hasEnabledState/isEnabled appear here too.
+        expect(
+          decreaseSemantics,
+          matchesSemantics(
+            label: 'Decrease pace value',
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+          ),
+          reason:
+              'AUD-tracks-10: the pace "decrease" stepper button must '
+              'expose a non-empty, button-role Semantics label',
+        );
+        expect(
+          increaseSemantics,
+          matchesSemantics(
+            label: 'Increase pace value',
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+          ),
+          reason:
+              'AUD-tracks-10: the pace "increase" stepper button must '
+              'expose a non-empty, button-role Semantics label',
+        );
+        expect(
+          decreaseSemantics.label,
+          isNot(equals(increaseSemantics.label)),
+          reason: 'AUD-tracks-10: increase/decrease must carry distinct labels',
+        );
+
+        handle.dispose();
+        await _tearDown(tester);
+      },
+    );
   });
 
   // ── Group: study-days day-6 label (nusach + Hebrew terms) ─────────────────
@@ -1110,6 +1187,69 @@ void main() {
 
       await _tearDown(tester);
     });
+
+    testWidgets(
+      'AUD-tracks-10 (AX-3): per-round day +/- TinyCircleButton controls '
+      'expose non-empty, button-role Semantics labels',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+
+        await tester.pumpWidget(
+          _buildChazaraApp(
+            curriculumId: CurriculumId.mishnayos,
+            initialDelays: [3], // not a preset → custom mode, 1 round
+            onComplete: (_) {},
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.byType(CustomDayEditorChip), findsNWidgets(1));
+
+        // Scope to descendants of the chip — Icons.add is otherwise
+        // ambiguous with the sibling AddRoundChip (also Icons.add; see the
+        // comments on the two tests above).
+        final chip = find.byType(CustomDayEditorChip);
+        final decreaseIcon = find.descendant(
+          of: chip,
+          matching: find.byIcon(Icons.remove),
+        );
+        final increaseIcon = find.descendant(
+          of: chip,
+          matching: find.byIcon(Icons.add),
+        );
+        expect(decreaseIcon, findsOneWidget);
+        expect(increaseIcon, findsOneWidget);
+
+        // AC2 (literal): a widget test finds a Semantics node with a button
+        // role and non-empty label at each control's location.
+        final decreaseSemantics = tester.getSemantics(decreaseIcon);
+        final increaseSemantics = tester.getSemantics(increaseIcon);
+
+        expect(
+          decreaseSemantics,
+          matchesSemantics(label: 'Decrease review day count', isButton: true),
+          reason:
+              'AUD-tracks-10: the per-round "decrease day" TinyCircleButton '
+              'must expose a non-empty, button-role Semantics label',
+        );
+        expect(
+          increaseSemantics,
+          matchesSemantics(label: 'Increase review day count', isButton: true),
+          reason:
+              'AUD-tracks-10: the per-round "increase day" TinyCircleButton '
+              'must expose a non-empty, button-role Semantics label',
+        );
+        expect(
+          decreaseSemantics.label,
+          isNot(equals(increaseSemantics.label)),
+          reason: 'AUD-tracks-10: increase/decrease must carry distinct labels',
+        );
+
+        handle.dispose();
+        await _tearDown(tester);
+      },
+    );
 
     testWidgets('Learn Only preset produces noReview wizard result', (
       tester,

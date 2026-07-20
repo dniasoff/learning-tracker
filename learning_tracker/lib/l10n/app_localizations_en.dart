@@ -3846,6 +3846,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Goal type cannot be changed after setup';
 
   @override
+  String get trackEditPaceDecrease => 'Decrease pace value';
+
+  @override
+  String get trackEditPaceIncrease => 'Increase pace value';
+
+  @override
   String get trackEditProgramLocked =>
       'Review, scope, and study days are managed by the program.';
 
@@ -5319,6 +5325,12 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get chazaraCustomDayDecrease => 'Decrease review day count';
+
+  @override
+  String get chazaraCustomDayIncrease => 'Increase review day count';
 
   @override
   String scopeChooseLevelPrompt(String levelLabel) {
