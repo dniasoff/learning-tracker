@@ -136,7 +136,11 @@ def main() -> int:
     ok = PROFILE in names
     print(f"\n{'PASS' if ok else 'FAIL'}: profile '{PROFILE}' "
           f"{'synced to cloud' if ok else 'NOT in cloud'}", flush=True)
-    print(f"TEST_UID={uid}", flush=True)  # for cleanup
+    # No automated cleanup consumes this — nothing in this repo reads a
+    # TEST_UID= line. The Firebase Auth account and its learner_profiles
+    # doc are left in the live project; purge them manually periodically
+    # (see tool/device_e2e/README.md "Test-data cleanup").
+    print(f"TEST_UID={uid}", flush=True)
     return 0 if ok else 1
 
 
