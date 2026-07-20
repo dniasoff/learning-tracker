@@ -6,9 +6,11 @@ on:
   push:
     branches: [main, dev, dev/**]
 
-# Shared Flutter + pub setup extracted via composite action pattern (inline reuse via YAML anchors)
-# GitHub Actions does not support YAML anchors natively, so setup steps are duplicated per job.
-# Each job is self-contained so it can run in parallel without coordination overhead.
+# Shared checkout/Flutter/pub bootstrap is factored into the composite action
+# at .github/actions/flutter-bootstrap (GitHub Actions has no native YAML
+# anchors, so a composite action — not per-job copy/paste — is the GHA-native
+# reuse mechanism; AUD-guardrails-25). Each job still runs independently in
+# parallel; only the bootstrap steps are shared, not the runners themselves.
 
 jobs:
   # ── 1. format-check ────────────────────────────────────────────────────────
@@ -18,28 +20,8 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.pub-cache
-            learning_tracker/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Install dependencies
-        working-directory: learning_tracker
-        run: flutter pub get
+      - name: Flutter bootstrap
+        uses: ./.github/actions/flutter-bootstrap
 
       - name: Verify formatting
         working-directory: learning_tracker
@@ -52,36 +34,11 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: Flutter bootstrap (codegen + l10n)
+        uses: ./.github/actions/flutter-bootstrap
         with:
-          channel: 'stable'
-          cache: true
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.pub-cache
-            learning_tracker/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Install dependencies
-        working-directory: learning_tracker
-        run: flutter pub get
-
-      - name: Generate code
-        working-directory: learning_tracker
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Generate l10n
-        working-directory: learning_tracker
-        run: flutter gen-l10n
+          run-codegen: 'true'
+          run-l10n: 'true'
 
       # ── AG-7 freshness gate (docs/coding-standards.md) ──
       # Committed generated output (*.g.dart, *.freezed.dart, *.gr.dart, and
@@ -127,29 +84,10 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: Flutter bootstrap
+        uses: ./.github/actions/flutter-bootstrap
         with:
-          channel: 'stable'
-          cache: true
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.pub-cache
-            learning_tracker/.dart_tool
-            packages/custom_lints/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock', 'packages/custom_lints/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Install dependencies
-        working-directory: learning_tracker
-        run: flutter pub get
+          cache-custom-lints: 'true'
 
       - name: Run audit (skip gracefully if target absent)
         working-directory: learning_tracker
@@ -188,28 +126,8 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.pub-cache
-            learning_tracker/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Install dependencies
-        working-directory: learning_tracker
-        run: flutter pub get
+      - name: Flutter bootstrap
+        uses: ./.github/actions/flutter-bootstrap
 
       - name: Run custom_lint (currently a no-op — see AUD-guardrails-03 comment above)
         working-directory: learning_tracker
@@ -230,47 +148,15 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: Flutter bootstrap (codegen + asset + secrets)
+        uses: ./.github/actions/flutter-bootstrap
         with:
-          channel: 'stable'
-          cache: true
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.pub-cache
-            learning_tracker/.dart_tool
-            packages/custom_lints/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock', 'packages/custom_lints/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Install dependencies
-        working-directory: learning_tracker
-        run: flutter pub get
-
-      - name: Generate code
-        working-directory: learning_tracker
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Prepare bundled seed asset (xz → gzip)
-        working-directory: learning_tracker
-        run: dart run tool/prepare_asset.dart
-
-      - name: Decode google-services.json
-        env:
-          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
-        run: echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > learning_tracker/android/app/google-services.json
-
-      - name: Generate firebase_options.dart
-        env:
-          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
-        run: echo "$FIREBASE_OPTIONS_DART" > learning_tracker/lib/firebase_options.dart
+          cache-custom-lints: 'true'
+          run-codegen: 'true'
+          prepare-asset: 'true'
+          decode-secrets: 'true'
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          firebase-options-dart: ${{ secrets.FIREBASE_OPTIONS_DART }}
 
       # Installed before `make ci` (not just before the floor check below) so
       # the `test` Makefile target's own lcov.info generated-file exclusion
@@ -462,28 +348,8 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.pub-cache
-            learning_tracker/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Install dependencies
-        working-directory: learning_tracker
-        run: flutter pub get
+      - name: Flutter bootstrap
+        uses: ./.github/actions/flutter-bootstrap
 
       - name: Run ARB parity check (make arb-parity)
         run: make arb-parity

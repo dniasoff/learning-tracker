@@ -1,0 +1,132 @@
+name: Flutter bootstrap
+description: >
+  Shared checkout + Flutter setup + pub cache + dependency install, with
+  optional codegen, l10n, seed-asset prep, secret decoding, and Java/Gradle
+  setup toggled by input flags. GitHub Actions has no native YAML-anchor
+  support, so a composite action (not hand-copied steps) is the GHA-native
+  way to share this bootstrap sequence across ci.yml's jobs, build.yml, and
+  deploy-play-store.yml. See docs/coding-standards.md AG-11 and
+  AUD-guardrails-25.
+
+inputs:
+  fetch-depth:
+    description: 'Passed through to actions/checkout fetch-depth (e.g. deploy-play-store.yml needs history for `git log` release notes).'
+    required: false
+    default: '1'
+  setup-java:
+    description: 'Set up Java (Temurin 21) — required by the Gradle/Android build.'
+    required: false
+    default: 'false'
+  cache-gradle:
+    description: 'Cache ~/.gradle and learning_tracker/android/.gradle.'
+    required: false
+    default: 'false'
+  cache-custom-lints:
+    description: 'Also cache packages/custom_lints/.dart_tool and fold its pubspec.lock into the pub cache key.'
+    required: false
+    default: 'false'
+  run-codegen:
+    description: 'Run `dart run build_runner build --delete-conflicting-outputs`.'
+    required: false
+    default: 'false'
+  run-l10n:
+    description: 'Run `flutter gen-l10n`.'
+    required: false
+    default: 'false'
+  prepare-asset:
+    description: 'Run `dart run tool/prepare_asset.dart` (bundled seed asset xz to gzip).'
+    required: false
+    default: 'false'
+  decode-secrets:
+    description: 'Decode google-services.json and write lib/firebase_options.dart.'
+    required: false
+    default: 'false'
+  google-services-json-base64:
+    description: 'Base64-encoded google-services.json (pass secrets.GOOGLE_SERVICES_JSON_BASE64). Required when decode-secrets is true.'
+    required: false
+    default: ''
+  firebase-options-dart:
+    description: 'Contents of lib/firebase_options.dart (pass secrets.FIREBASE_OPTIONS_DART). Required when decode-secrets is true.'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: 'stable'
+        cache: true
+
+    - name: Setup Java
+      if: inputs.setup-java == 'true'
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Cache pub dependencies
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.pub-cache
+          learning_tracker/.dart_tool
+          ${{ inputs.cache-custom-lints == 'true' && 'packages/custom_lints/.dart_tool' || '' }}
+        key: ${{ inputs.cache-custom-lints == 'true' && format('{0}-pub-{1}', runner.os, hashFiles('learning_tracker/pubspec.lock', 'packages/custom_lints/pubspec.lock')) || format('{0}-pub-{1}', runner.os, hashFiles('learning_tracker/pubspec.lock')) }}
+        restore-keys: |
+          ${{ runner.os }}-pub-
+
+    - name: Cache Gradle dependencies
+      if: inputs.cache-gradle == 'true'
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+          learning_tracker/android/.gradle
+        key: ${{ runner.os }}-gradle-${{ hashFiles('learning_tracker/android/**/*.gradle*', 'learning_tracker/android/gradle/wrapper/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Install dependencies
+      working-directory: learning_tracker
+      shell: bash
+      run: flutter pub get
+
+    - name: Generate code
+      if: inputs.run-codegen == 'true'
+      working-directory: learning_tracker
+      shell: bash
+      run: dart run build_runner build --delete-conflicting-outputs
+
+    - name: Generate l10n
+      if: inputs.run-l10n == 'true'
+      working-directory: learning_tracker
+      shell: bash
+      run: flutter gen-l10n
+
+    - name: Prepare bundled seed asset (xz → gzip)
+      if: inputs.prepare-asset == 'true'
+      working-directory: learning_tracker
+      shell: bash
+      run: dart run tool/prepare_asset.dart
+
+    - name: Decode google-services.json
+      if: inputs.decode-secrets == 'true'
+      env:
+        GOOGLE_SERVICES_JSON_BASE64: ${{ inputs.google-services-json-base64 }}
+      shell: bash
+      run: echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > learning_tracker/android/app/google-services.json
+
+    - name: Generate firebase_options.dart
+      if: inputs.decode-secrets == 'true'
+      env:
+        FIREBASE_OPTIONS_DART: ${{ inputs.firebase-options-dart }}
+      shell: bash
+      run: echo "$FIREBASE_OPTIONS_DART" > learning_tracker/lib/firebase_options.dart

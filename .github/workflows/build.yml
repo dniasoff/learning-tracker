@@ -18,63 +18,16 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - name: Flutter bootstrap (Java + Gradle + codegen + asset + secrets)
+        uses: ./.github/actions/flutter-bootstrap
         with:
-          channel: 'stable'
-          cache: true
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.pub-cache
-            learning_tracker/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            learning_tracker/android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('learning_tracker/android/**/*.gradle*', 'learning_tracker/android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Install dependencies
-        working-directory: learning_tracker
-        run: flutter pub get
-
-      - name: Generate code
-        working-directory: learning_tracker
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Prepare content asset
-        working-directory: learning_tracker
-        run: dart run tool/prepare_asset.dart
-
-      - name: Decode google-services.json
-        env:
-          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
-        run: echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > learning_tracker/android/app/google-services.json
-
-      - name: Generate firebase_options.dart
-        env:
-          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
-        run: echo "$FIREBASE_OPTIONS_DART" > learning_tracker/lib/firebase_options.dart
+          setup-java: 'true'
+          cache-gradle: 'true'
+          run-codegen: 'true'
+          prepare-asset: 'true'
+          decode-secrets: 'true'
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          firebase-options-dart: ${{ secrets.FIREBASE_OPTIONS_DART }}
 
       - name: Decode keystore (Release only)
         if: ${{ github.event.inputs.build_type == 'release' }}
