@@ -9272,13 +9272,18 @@
   {
    "id": "AUD-guardrails-31",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Hoist the triplicated screenshot names[] list in tool/upload_store_assets.py to one constant",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "1d2fee21590978ab6199cc246e7433901642b9bd",
+    "3465be3a0743c6f2b67dd4b776ecccea9326e566"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-31 AC1 OK: grep -c=1, sole occurrence at upload_store_assets.py:34 (SCREENSHOT_NAMES); 3 former copies now use SCREENSHOT_NAMES[i-1], behavior identical"
+   ],
+   "notes": "Re-verified: list still triplicated at lines 141/150/159 (unchanged since register verify). Hoisted to module-level SCREENSHOT_NAMES constant, replaced 3 duplicates, no behavior change. AC verified: grep for the literal list now returns exactly 1 match (line 34, the constant def). Merged --no-ff onto dev (w4r1c2, mergeSha 3465be3a0743c6f2b67dd4b776ecccea9326e566). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (no issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base 71292f3764e61d1a591ae273ce2ebfe8d8bedcbf), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-docs-34",
