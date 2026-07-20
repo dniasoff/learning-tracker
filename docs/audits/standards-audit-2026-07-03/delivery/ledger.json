@@ -11236,13 +11236,18 @@
   {
    "id": "AUD-guardrails-35",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove the duplicated/truncated KNOWN-DEFERRED block in tool/vision_find_pass.js",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "dc573c985547d38cd60df898a7b4edd70cf1c0c7"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-35 AC1 OK: grep -c 'add-track wizard step-count denominator branches' returns 1 (was 2); all 10 formerly-dup bullets now count 1",
+    "AUD-guardrails-35 AC2 OK: city-subtitle bullet now closes (line 74-75 '...do not re-flag).'), KNOWN literal closes at line 79, node --check exit 0 confirms intact"
+   ],
+   "notes": "Re-verified: dup/truncation still present (line #s shifted by prior AUD-guardrails-23, content unchanged); grep -c was 2. Removed dup/truncated span from 1st KNOWN-DEFERRED copy, kept 2 bullets unique to 1st copy + complete 2nd copy. AC1 grep=1 now; AC2 no truncated sentences."
   },
   {
    "id": "AUD-guardrails-39",
