@@ -75,6 +75,16 @@ A standard can also be **deliberately not applied** at a specific site, instead 
 
 **Enforce:** [Enforced] `make audit` check 82/82 — greps `lib/features/scheduler/domain/` for a hand-written `bool operator ==`, excluding generated files (`.g.dart`/`.freezed.dart`) and the three files listed above. Any *new* hand-rolled equality in scheduler domain code outside this documented list fails the gate. The equivalent flat DTOs that had **no** equality override at all (`SchedulerCompletion`, `SchedulerContentItem`, `SchedulerStage`, `SchedulerOrderItem` in `lib/features/scheduler/domain/repositories/`) were converted to `@freezed` rather than added to this list — they carried a live correctness gap (identity-only comparison), not just future-maintenance debt, and had no sealed-hierarchy or zero-codegen constraint blocking the migration. Repo-wide hand-rolled-equality sites outside `features/scheduler/domain/` (e.g. `features/account/domain/models/auth_state.dart`, `features/progress/domain/models/lifetime_knowledge.dart`, `features/profiles/domain/models/profile_session.dart`, `features/progress/domain/services/pace_calculator.dart`) are pre-existing and tracked separately, not yet in this gate.
 
+### `tool/lib/dio_client.dart` — raw Talker import exemption
+
+**Rule:** [Rule 4 — Raw Talker confined to `core/logging/`](#rule-4--raw-talker-confined-to-corelogging) — "`package:talker/talker.dart` MUST only be imported inside `lib/core/logging/`."
+
+| Site | Reason |
+|------|--------|
+| `tool/lib/dio_client.dart` — `createDioClient()` | `tool/` is a standalone Dart CLI context (the Sefaria content-fetch scripts under `tool/lib/sefaria/`), not the Flutter app — `AppLogger` (`lib/core/logging/logger.dart`) depends on Flutter/Riverpod wiring that doesn't exist in that context, so routing through it isn't a straightforward swap. `createDioClient()` wires a `Talker`-backed `TalkerDioLogger` interceptor that logs only request URLs, methods, and response status codes — request/response bodies are explicitly excluded (see the function's doc comment) to avoid leaking emails/passwords/PINs. There is no Crashlytics breadcrumb surface in this dev-only build tooling for `AppLogger`'s bypass concern to apply to (AUD-guardrails-37). |
+
+**Enforce:** [Enforced] `make audit` check 4/4 scans `lib/` and `tool/lib/` for raw `talker` imports, excluding `lib/core/logging/` and this one named file. Any *new* raw Talker import under `tool/lib/` outside this documented exemption fails the gate.
+
 ---
 
 ## Layering Rules
@@ -127,7 +137,9 @@ The `Y.dart` barrel is the **only** sanctioned re-export file per feature. Do no
 
 All other code receives Firebase instances through the injected Riverpod providers exposed by that file. No file outside these trees (and this one file) may import `firebase_auth`, `cloud_firestore`, or `firebase_storage` packages directly.
 
-**Lint:** `no_firebase_outside_core` · **Audit:** inner checks 1–3
+**Scope (AUD-guardrails-37):** Rule 3 is in scope for `tool/lib/` as well as `lib/` — `tool/` is dev/build tooling that shares this Dart package (it imports `package:learning_tracker/core/...`), so a Firebase-symbol regression introduced there is just as real as one in `lib/`. `make audit` checks 1–3 scan both trees; there are currently no Firebase symbols under `tool/lib/`, so this scope extension has no exemptions to record.
+
+**Lint:** `no_firebase_outside_core` · **Audit:** inner checks 1–3 (scans `lib/` and `tool/lib/`)
 
 ### Rule 4 — Raw Talker confined to `core/logging/`
 
@@ -135,7 +147,9 @@ All other code receives Firebase instances through the injected Riverpod provide
 
 All other code logs through `AppLogger` (`lib/core/logging/logger.dart`). Importing the raw `Talker` instance bypasses PII redaction, log-level filtering, and Crashlytics breadcrumb integration that `AppLogger` provides.
 
-**Lint:** `no_raw_talker` · **Audit:** inner check 4
+**Scope (AUD-guardrails-37):** Rule 4 is in scope for `tool/lib/` as well as `lib/` — see the Rule 3 scope note above for why. One site is currently exempted; see [Documented Judgment Calls](#documented-judgment-calls).
+
+**Lint:** `no_raw_talker` · **Audit:** inner check 4 (scans `lib/` and `tool/lib/`, excluding the documented exemption below)
 
 ### Rule 5 — `.displayNameEn` / `.displayNameHe` confined to `core/labels/` and generated files
 
@@ -770,10 +784,10 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 
 | # | What it checks |
 |---|----------------|
-| 1 | No `firebase_auth` imports outside `core/auth`, `features/auth` |
-| 2 | No `FirebaseFirestore`/`FirebaseStorage` outside `core/sync`, `core/auth`, `core/providers` |
-| 3 | No `FirebaseAuth.instance.signOut` outside `core/auth` |
-| 4 | No raw `talker` import outside `core/logging` |
+| 1 | No `firebase_auth` imports outside `core/auth`, `features/auth` — scans `lib/` and `tool/lib/` (AUD-guardrails-37) |
+| 2 | No `FirebaseFirestore`/`FirebaseStorage` outside `core/sync`, `core/auth`, `core/providers` — scans `lib/` and `tool/lib/` (AUD-guardrails-37) |
+| 3 | No `FirebaseAuth.instance.signOut` outside `core/auth` — scans `lib/` and `tool/lib/` (AUD-guardrails-37) |
+| 4 | No raw `talker` import outside `core/logging` — scans `lib/` and `tool/lib/`, excluding the documented `tool/lib/dio_client.dart` exemption (AUD-guardrails-37; see [Documented Judgment Calls](#documented-judgment-calls)) |
 | 5 | No `debugPrint` / bare `print()` in production code |
 | 6 | No `DateTime.now()` outside `core/time` |
 | 7 | No `useHebrewTermsProvider` read outside `core/labels`, `core/preferences`, settings/onboarding screens |
