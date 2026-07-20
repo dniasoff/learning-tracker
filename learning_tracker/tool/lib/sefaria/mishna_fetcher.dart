@@ -38,7 +38,7 @@ class MishnaFetcher extends SefariaFetcherBase {
           ContentItem(
             curriculumId: curriculumId,
             level1: sederName,
-            displayNameHe: _sederHebrewName(sederName),
+            displayNameHe: SefariaFetcherBase.sederHebrewName(sederName),
             displayNameEn: sederName,
             sefariaRef: sederName,
             sortOrder: sortOrder++,
@@ -114,18 +114,5 @@ class MishnaFetcher extends SefariaFetcherBase {
         totalItems: leafCount,
       ),
     );
-  }
-
-  static String _sederHebrewName(String sederName) {
-    const mapping = {
-      'Seder Zeraim': '\u05E1\u05D3\u05E8 \u05D6\u05E8\u05E2\u05D9\u05DD',
-      'Seder Moed': '\u05E1\u05D3\u05E8 \u05DE\u05D5\u05E2\u05D3',
-      'Seder Nashim': '\u05E1\u05D3\u05E8 \u05E0\u05E9\u05D9\u05DD',
-      'Seder Nezikin':
-          '\u05E1\u05D3\u05E8 \u05E0\u05D6\u05D9\u05E7\u05D9\u05DF',
-      'Seder Kodashim': '\u05E1\u05D3\u05E8 \u05E7\u05D3\u05E9\u05D9\u05DD',
-      'Seder Tahorot': '\u05E1\u05D3\u05E8 \u05D8\u05D4\u05E8\u05D5\u05EA',
-    };
-    return mapping[sederName] ?? sederName;
   }
 }

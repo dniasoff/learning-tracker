@@ -135,6 +135,29 @@ void main() {
       }
     });
 
+    test('seder containers use the canonical Hebrew seder names', () async {
+      // Pins the exact Hebrew value produced by the seder-name lookup
+      // (AUD-guardrails-30: shared with BavliFetcher via
+      // SefariaFetcherBase.sederHebrewName). Regression guard for the
+      // hoist out of a private per-fetcher table.
+      mockShapeResponse(
+        '/api/shape/Mishnah',
+        loadFixture('mishnah_shape.json'),
+      );
+
+      final result = await fetcher.fetchAllContent();
+
+      final sedarim = {
+        for (final item in result.items.where(
+          (i) => i.level2 == null && !i.isLeaf,
+        ))
+          item.level1: item.displayNameHe,
+      };
+
+      expect(sedarim['Seder Zeraim'], 'סדר זרעים');
+      expect(sedarim['Seder Moed'], 'סדר מועד');
+    });
+
     test('populates curriculum_hierarchy_config correctly', () async {
       mockShapeResponse(
         '/api/shape/Mishnah',
@@ -245,6 +268,26 @@ void main() {
       for (final d in dapim) {
         expect(d.isLeaf, false);
       }
+    });
+
+    test('seder containers use the canonical Hebrew seder names', () async {
+      // Pins the exact Hebrew value produced by the seder-name lookup
+      // (AUD-guardrails-30: shared with MishnaFetcher via
+      // SefariaFetcherBase.sederHebrewName). Regression guard for the
+      // hoist out of a private per-fetcher table.
+      mockShapeResponse('/api/shape/Bavli', loadFixture('bavli_shape.json'));
+
+      final result = await fetcher.fetchAllContent();
+
+      final sedarim = {
+        for (final item in result.items.where(
+          (i) => i.level2 == null && !i.isLeaf,
+        ))
+          item.level1: item.displayNameHe,
+      };
+
+      expect(sedarim['Seder Zeraim'], 'סדר זרעים');
+      expect(sedarim['Seder Moed'], 'סדר מועד');
     });
   });
 

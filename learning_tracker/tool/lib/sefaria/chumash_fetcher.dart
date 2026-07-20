@@ -27,7 +27,11 @@ class ChumashFetcher extends SefariaFetcherBase {
 
     // Filter to Torah books only (first 5 books in Tanakh).
     final torahBooks = shapeData
-        .where((book) => _torahTitles.contains(book['title'] as String? ?? ''))
+        .where(
+          (book) => SefariaFetcherBase.torahTitles.contains(
+            book['title'] as String? ?? '',
+          ),
+        )
         .toList();
 
     for (final book in torahBooks) {
@@ -129,14 +133,6 @@ class ChumashFetcher extends SefariaFetcherBase {
       ),
     );
   }
-
-  static const _torahTitles = [
-    'Genesis',
-    'Exodus',
-    'Leviticus',
-    'Numbers',
-    'Deuteronomy',
-  ];
 
   /// Weekly Torah portion boundaries by book.
   static const Map<String, List<_ParshaInfo>> _parshaBoundaries = {
