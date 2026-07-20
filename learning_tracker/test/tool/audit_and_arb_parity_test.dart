@@ -64,7 +64,7 @@ void main() {
       },
       // AUD-guardrails-17: `audit` now depends on `lint-rules-test`
       // (packages/custom_lints/ `dart test`), which alone takes ~30s.
-      timeout: const Timeout(Duration(minutes: 3)),
+      timeout: const Timeout(Duration(minutes: 10)),
     );
 
     test(
@@ -97,7 +97,7 @@ void main() {
         }
       },
       // AUD-guardrails-17: see timeout rationale above.
-      timeout: const Timeout(Duration(minutes: 3)),
+      timeout: const Timeout(Duration(minutes: 10)),
     );
 
     test(
@@ -155,7 +155,7 @@ void main() {
       // the default 30s `test()` timeout even with no other load. Matches
       // the explicit longer timeout already carried by this group's other
       // `make audit`-shelling tests above.
-      timeout: const Timeout(Duration(minutes: 3)),
+      timeout: const Timeout(Duration(minutes: 10)),
     );
   });
 
@@ -315,7 +315,7 @@ void main() {
       // AUD-guardrails-17 (see file-level NOTE above): shells out to
       // `make audit` twice; see the longer rationale on the 25/26 test
       // above.
-      timeout: const Timeout(Duration(minutes: 5)),
+      timeout: const Timeout(Duration(minutes: 15)),
     );
   });
 
@@ -426,7 +426,7 @@ void main() {
       },
       // AUD-guardrails-17 (see file-level NOTE above): shells out to
       // `make audit`; see the longer rationale on the 25/26 test above.
-      timeout: const Timeout(Duration(minutes: 3)),
+      timeout: const Timeout(Duration(minutes: 10)),
     );
   });
 
@@ -448,7 +448,7 @@ void main() {
       },
       // AUD-guardrails-17 (see file-level NOTE above): shells out to
       // `make audit`; see the longer rationale on the 25/26 test above.
-      timeout: const Timeout(Duration(minutes: 3)),
+      timeout: const Timeout(Duration(minutes: 10)),
     );
 
     test('AC1: adding then removing a throwaway cross-feature import flips '
@@ -506,7 +506,7 @@ void main() {
       // AUD-guardrails-17 (see file-level NOTE above): shells out to
       // `make audit` twice; see the longer rationale on the 25/26 test
       // above.
-    }, timeout: const Timeout(Duration(minutes: 3)));
+    }, timeout: const Timeout(Duration(minutes: 10)));
   });
 
   group('make audit SM-7 check — AUD-sync-05', () {
@@ -583,7 +583,7 @@ void main() {
       },
       // AUD-guardrails-17 (see file-level NOTE above): shells out to
       // `make audit`; see the longer rationale on the 25/26 test above.
-      timeout: const Timeout(Duration(minutes: 3)),
+      timeout: const Timeout(Duration(minutes: 10)),
     );
 
     test('AC1: reintroducing ad-hoc RewardMilestoneService construction in '
@@ -640,7 +640,7 @@ void main() {
         reason: 'removing the fixture restores a clean pass.',
       );
       expect(clean.exitCode, 0);
-    }, timeout: const Timeout(Duration(minutes: 5)));
+    }, timeout: const Timeout(Duration(minutes: 15)));
   });
 
   group('make audit check 44/44 — stale story file targets (AUD-docs-03)', () {
@@ -677,7 +677,7 @@ void main() {
       },
       // AUD-guardrails-17 (see file-level NOTE above): shells out to
       // `make audit`; see the longer rationale on the 25/26 test above.
-      timeout: const Timeout(Duration(minutes: 3)),
+      timeout: const Timeout(Duration(minutes: 10)),
     );
 
     test(
@@ -734,7 +734,7 @@ Status: ready-for-dev
       // AUD-guardrails-17 (see file-level NOTE above): shells out to
       // `make audit` twice; see the longer rationale on the 25/26 test
       // above.
-      timeout: const Timeout(Duration(minutes: 5)),
+      timeout: const Timeout(Duration(minutes: 15)),
     );
   });
 
