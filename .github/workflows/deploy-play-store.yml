@@ -68,10 +68,32 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      # Local composite actions (`uses: ./...`) resolve from the runner's
+      # workspace, which starts empty — the repo must be checked out before
+      # the composite's action.yml can be found (AUD-guardrails-25 bounce).
+      # This initial checkout only needs to land the action.yml itself; the
+      # composite's own checkout step (fetch-depth: 10, below) re-checks out
+      # with the history depth this job's `git log` release-notes step needs.
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Flutter bootstrap (Java + Gradle + codegen + asset + secrets)
+        uses: ./.github/actions/flutter-bootstrap
         with:
-          fetch-depth: 10
+          fetch-depth: '10'
+          setup-java: 'true'
+          cache-gradle: 'true'
+          run-codegen: 'true'
+          prepare-asset: 'true'
+          decode-secrets: 'true'
+          google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          firebase-options-dart: ${{ secrets.FIREBASE_OPTIONS_DART }}
+
+      # Repo commits assets/db/content.db.xz (62 MB) so the file fits under
+      # GitHub's 100 MB hard limit; the bootstrap action's asset-prep step
+      # (dart run tool/prepare_asset.dart) re-compresses it (xz → gzip) for
+      # the runtime SeedManager's native dart:io gzip reader before this
+      # job's flutter build.
 
       - name: Determine track
         id: track
@@ -89,66 +111,6 @@ jobs:
           fi
           echo "track=$TRACK" >> "$GITHUB_OUTPUT"
           echo "Deploying to track: $TRACK (ref: ${{ github.ref_name }})"
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Cache pub dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.pub-cache
-            learning_tracker/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            learning_tracker/android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('learning_tracker/android/**/*.gradle*', 'learning_tracker/android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Install dependencies
-        working-directory: learning_tracker
-        run: flutter pub get
-
-      - name: Generate code
-        working-directory: learning_tracker
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Prepare bundled seed asset (xz → gzip)
-        working-directory: learning_tracker
-        run: |
-          # Repo commits assets/db/content.db.xz (62 MB) so the file fits
-          # under GitHub's 100 MB hard limit. Runtime SeedManager uses
-          # native dart:io gzip (fast, isolate-free), so we re-compress
-          # before flutter build.
-          dart run tool/prepare_asset.dart
-
-      - name: Decode google-services.json
-        env:
-          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
-        run: echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > learning_tracker/android/app/google-services.json
-
-      - name: Generate firebase_options.dart
-        env:
-          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
-        run: echo "$FIREBASE_OPTIONS_DART" > learning_tracker/lib/firebase_options.dart
 
       - name: Decode keystore
         env:
