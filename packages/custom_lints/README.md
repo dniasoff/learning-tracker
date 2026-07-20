@@ -332,6 +332,411 @@ class AuthStateNotifier extends _$AuthStateNotifier {
 
 ---
 
+## Rule 8 — `no_color_literal_outside_theme`
+
+### What it checks
+
+Fails on any direct `Color(0xFF…)` / `Color(0x…)` hex-literal constructor call in a file that is **not** under `lib/core/theme/`.
+
+Generated files (`.g.dart`, `.freezed.dart`) are excluded automatically.
+
+### Why it exists
+
+Colour definitions belong in `lib/core/theme/app_colors.dart` or `lib/core/theme/app_theme.dart` (W5.14/W5.15). Feature and widget code must reference the named constants from those files instead of embedding hex literals, so theming stays consistent and future dark-mode/brand work has one place to change a colour.
+
+### How to fix
+
+**Before (banned):**
+```dart
+// In lib/features/dashboard/presentation/widgets/foo.dart
+color: const Color(0xFF1A57C2),
+```
+
+**After (correct):**
+```dart
+import 'package:learning_tracker/core/theme/app_theme.dart';
+color: AppTheme.brandBlueBright,
+
+// or
+import 'package:learning_tracker/core/theme/app_colors.dart';
+color: AppColors.blueMedium,
+```
+
+---
+
+## Rule 9 — `no_dead_error_field`
+
+### What it checks
+
+Flags a Riverpod Notifier (including `riverpod_generator`'s `class Foo extends _$Foo` codegen shape) whose state carries a `loading`/`error`-shaped pair of fields — evidenced by a `copyWith(loading: ..., error: ..., ...)` call somewhere in the file — where the file contains **zero** `copyWith(...)` call that sets `error:` to anything other than the literal `null`.
+
+### Why it exists
+
+AUD-gamification-10: if every `copyWith(error: ...)` call in a file only ever resets the field to `null`, the field is declared-but-dead — any exception not already special-cased elsewhere becomes a silent, invisible failure. The user taps an action, nothing happens, and no code path ever surfaces why (`RewardConfigController` before the fix never set `error` to a failure value from any of its four async mutation methods).
+
+### How to fix
+
+**Before (banned — error field never driven by a failure):**
+```dart
+Future<void> save() async {
+  state = state.copyWith(loading: true, error: null);
+  try {
+    await _repo.save(config);
+    state = state.copyWith(loading: false, error: null);
+  } catch (_) {
+    state = state.copyWith(loading: false, error: null); // dead field
+  }
+}
+```
+
+**After (correct — the failure path surfaces a real error):**
+```dart
+Future<void> save() async {
+  state = state.copyWith(loading: true, error: null);
+  try {
+    await _repo.save(config);
+    state = state.copyWith(loading: false, error: null);
+  } catch (e) {
+    state = state.copyWith(loading: false, error: e.toString());
+  }
+}
+```
+
+---
+
+## Rule 10 — `no_eager_list_in_non_lazy_scroll_container`
+
+### What it checks
+
+Flags an eagerly-expanded widget list — `for (final x in y) Widget(...)`, `…iterable.map((x) => Widget(...))` / `.map(...).toList()`, or `List.generate(count, (i) => Widget(...))` — fed directly into the `children:` of a non-lazy container:
+
+- `ListView(children: […])` — the plain/default constructor, not `.builder`/`.separated`/`.custom`, which are already lazy;
+- a `Column(children: […])` wrapped in a `SingleChildScrollView`; or
+- an `ExpansionTile(children: […])`.
+
+Known-bounded sources are not flagged: `SomeEnum.values`, an iterable capped via `.take(n)`, a list/set literal, or a `List.generate(n, ...)` whose count is a literal int or a `.length` read off one of those bounded sources.
+
+### Why it exists
+
+PF-2: an unbounded, provider-driven collection fed into one of these shapes is fully realized in a single frame regardless of viewport (AUD-tutoring-08, AUD-scheduler-01, AUD-settings-08).
+
+### How to fix
+
+**Before (banned):**
+```dart
+ListView(
+  children: [for (final grant in incomingTutorGrants) GrantTile(grant)],
+)
+```
+
+**After (correct):**
+```dart
+ListView.builder(
+  itemCount: incomingTutorGrants.length,
+  itemBuilder: (context, i) => GrantTile(incomingTutorGrants[i]),
+)
+```
+
+---
+
+## Rule 11 — `no_e_to_string_in_ui`
+
+### What it checks
+
+Warns when a caught exception (identifiers named `e`, `err`, `ex`, `error`, `exception`) is converted to a string via `.toString()` inside a `presentation/` file.
+
+### Why it exists
+
+Propagating a raw exception message to the UI leaks internal implementation details and untranslated text to users. Presentation code should display a localised, user-friendly message instead (W7.18/W7.20).
+
+### How to fix
+
+**Before (banned):**
+```dart
+Text(e.toString())
+```
+
+**After (correct):**
+```dart
+Text(l10n.errorGeneric)
+AppErrorView(message: l10n.errorUnknown)
+```
+
+---
+
+## Rule 12 — `no_hardcoded_domain_term`
+
+### What it checks
+
+Flags a Torah domain-term English literal hardcoded in a user-facing string in presentation code. The curated term list is deliberately conservative — ambiguous common English words (Review, Page, Seder, Daf, Amud, Perek, Mishnah, Siyum) are excluded to avoid false positives.
+
+### Why it exists
+
+The app must render Torah domain terms through the shared label library (`domainTermLabels` / `CurriculumLabels` / `CurriculumLabelRenderer`) or via l10n so they honour the Hebrew-terms contract and the Ashkenazi/Sephardi nusach setting (`docs/hebrew-terms.md`). A bare English literal bypasses that contract.
+
+### How to fix
+
+**Before (banned):**
+```dart
+Text('Mishnayos done!')
+```
+
+**After (correct):**
+```dart
+Text(domainTermLabels(ref).mishnayos)
+Text(l10n.mishnayosDone)
+```
+
+---
+
+## Rule 13 — `no_hardcoded_error_widget_string`
+
+### What it checks
+
+Flags any hardcoded English literal in a user-facing string slot inside `AppErrorView`, `ErrorDisplay`, or `PinEntryWidget` specifically — deliberately scoped to exactly those three files, not all of `lib/core/widgets/`.
+
+### Why it exists
+
+AUD-core-widgets-01 (AX-2/EH-5): these are shared, widely reused widgets in a Hebrew-first, EN+HE app (`AppErrorView` alone is used from 16+ screens; `PinEntryWidget` gates parent-mode PIN entry). A hardcoded English literal in any of their string slots ships untranslated text into an otherwise-Hebrew UI.
+
+### How to fix
+
+**Before (banned):**
+```dart
+Text('Retry')
+_ErrorConfig(title: 'Something went wrong', ...)
+```
+
+**After (correct):**
+```dart
+Text(l10n.actionRetry)
+_ErrorConfig(title: l10n.appErrorViewGenericTitle, subtitle: l10n.appErrorViewGenericBody, ...)
+```
+
+---
+
+## Rule 14 — `no_log_less_catch`
+
+### What it checks
+
+Flags any `catch` clause under `lib/` whose body contains no call to `AppLogger.instance.<method>(...)` and no `rethrow` — regardless of whether the body is literally empty, comment-only, or does something else (e.g. a bare `setState`/`return`) without ever recording why the exception was swallowed. Files outside `lib/` and generated files (`.g.dart`/`.freezed.dart`/`.gr.dart`) are excluded.
+
+### Why it exists
+
+AUD-onboarding-11, EH-3: "Never swallow an error: every `catch` rethrows, converts, or logs through `AppLogger`." The analyzer's built-in `empty_catches` lint only flags a literally-empty `{}` body, and Dart's own style guidance silences that exact lint by adding a comment inside the block — precisely the shape that slips past it undetected (e.g. the pre-fix `catch (_) { // comment }`).
+
+### How to fix
+
+**Before (banned):**
+```dart
+try {
+  await _loadPreExistingCompletions();
+} catch (_) {
+  // ignore
+}
+```
+
+**After (correct):**
+```dart
+try {
+  await _loadPreExistingCompletions();
+} catch (e, st) {
+  AppLogger.instance.error(event: 'load_completions_failed', exception: e, stackTrace: st);
+}
+```
+
+---
+
+## Rule 15 — `no_onboarding_raw_string_literal`
+
+### What it checks
+
+Flags a raw (non-empty) string literal — or a string interpolation whose literal text chunks are non-empty — passed directly as a user-facing text argument under `lib/features/onboarding/presentation/**`: a positional argument to `Text(`/`SnackBar(`/`Tooltip(`, or the value of a UI-facing named argument (`errorText:`, `hintText:`, `labelText:`, `label:`, `title:`, `text:`, `message:`, `content:`, `semanticLabel:`, `tooltip:`) on any constructor/method call.
+
+### Why it exists
+
+AUD-onboarding-04/AX-2: the onboarding flow is this app's Hebrew-locale first-impression surface. A bare English literal here ships untranslated text into the Hebrew build. This is a directory-scoped follow-on to `no_hardcoded_domain_term`, not a general-purpose AX-2 literals checker for the whole app (that remains Pending per `docs/coding-standards.md`).
+
+### How to fix
+
+**Before (banned):**
+```dart
+Text('Set a 4-digit PIN')
+AppBarTitle(text: 'All Set!')
+TextFormField(decoration: InputDecoration(errorText: 'PINs do not match'))
+```
+
+**After (correct):**
+```dart
+Text(l10n.onboardingSetPinTitle)
+AppBarTitle(text: l10n.onboardingAllSetTitle)
+TextFormField(decoration: InputDecoration(errorText: l10n.pinMismatch))
+```
+
+---
+
+## Rule 16 — `no_raw_logevent`
+
+### What it checks
+
+Prevents direct calls to `logEvent(name, …)` in any file that is **not** under `lib/core/analytics/`.
+
+### Why it exists
+
+All analytics events must be dispatched through the typed helper methods on `AnalyticsService` (e.g. `analyticsService.logTrackAdded(...)`) rather than calling `logEvent` directly, so event names stay defined as constants, parameter schemas are validated at the call site, and tests can verify analytics through the typed surface (W7.21).
+
+### How to fix
+
+**Before (banned):**
+```dart
+analyticsService.logEvent('custom_event', parameters: {'key': 'value'});
+```
+
+**After (correct):**
+```dart
+// Add a typed helper to AnalyticsService and call that instead.
+analyticsService.logCustomEvent(key: 'value');
+```
+
+---
+
+## Rule 17 — `no_ref_after_await_without_mounted_check`
+
+### What it checks
+
+Flags a `ref.read(...)`/`ref.watch(...)`/`ref.invalidate(...)`/`ref.refresh(...)`/`ref.listen(...)` call, or an assignment to a bare `state` variable, that runs after an earlier `await` in the same async method/closure with no `if (!ref.mounted) return;`-shaped guard in between.
+
+### Why it exists
+
+SM-4/AUD-sync-04: Riverpod 3 throws `UnmountedRefException` when a disposed `Ref` is touched. An autoDispose provider can be torn down mid-`await` (e.g. a profile switch or sign-out while a network round trip is in flight), and the very next `ref.read`/`state =` after that `await` crashes.
+
+### How to fix
+
+**Before (banned):**
+```dart
+Future<void> onEnqueueDrain() async {
+  await _drain();
+  state = state.copyWith(draining: false); // may run after disposal
+}
+```
+
+**After (correct):**
+```dart
+Future<void> onEnqueueDrain() async {
+  await _drain();
+  if (!ref.mounted) return;
+  state = state.copyWith(draining: false);
+}
+```
+
+---
+
+## Rule 18 — `no_shrink_wrap_reorderable_list`
+
+### What it checks
+
+Flags the plain (non-`.builder`) `ReorderableListView(...)` constructor combined with `shrinkWrap: true`, anywhere under `lib/features/**`.
+
+### Why it exists
+
+AUD-tracks-05 (PF-2): `shrinkWrap: true` forces every row to be realized up front regardless of viewport, no matter how many items the list holds — and the plain `ReorderableListView(children: [...])` constructor also expands its full item list eagerly before the widget is even built. Switching to `.builder` alone does not fix this: `shrinkWrap: true` forces eager realization of a `.builder` list too. A Mishna Berurah track has 697 Simanim, all realized in one frame by a single tap of "Reorder Learning Order" pre-fix.
+
+### How to fix
+
+**Before (banned):**
+```dart
+ReorderableListView(
+  shrinkWrap: true,
+  children: [for (final s in simanim) SimanTile(s)],
+  onReorder: _onReorder,
+)
+```
+
+**After (correct — host as a lazy sliver, no shrinkWrap):**
+```dart
+CustomScrollView(
+  slivers: [
+    SliverReorderableList(
+      itemCount: simanim.length,
+      itemBuilder: (context, i) => SimanTile(simanim[i], key: ValueKey(simanim[i].id)),
+      onReorder: _onReorder,
+    ),
+  ],
+)
+```
+
+---
+
+## Rule 19 — `no_side_effect_in_provider_build`
+
+### What it checks
+
+Flags two side-effect shapes found directly (synchronously) inside the `create` callback passed to a legacy `Provider`/`StreamProvider`/`FutureProvider` constructor (including `.autoDispose`/`.family`):
+
+1. A chained-property assignment — `a.b.c = value;` where the assignment target is itself a member-access chain, not a bare local/`ref` identifier (e.g. reaching through a getter chain to mutate a field owned by some other object).
+2. A call to `unawaited(...)`.
+
+`@riverpod`-codegen `Notifier`/`AsyncNotifier` classes are not flagged — those are covered by `no_unguarded_async_notifier_init` for their own build-time hazard shape.
+
+### Why it exists
+
+AUD-sync-08 (SM-2 backstop): SM-2 requires provider `build`/`create` bodies to stay pure — "no writes, no request-firing, no side effects." `build`/`create` can rerun for reasons unrelated to a meaningful state change (a sibling watched provider rebuilding, hot-reload, provider disposal/recreation, test overrides), so a synchronous field mutation or fire-and-forget call there re-fires on every such rerun with no way to gate it.
+
+### How to fix
+
+**Before (banned — the pre-fix `outboxSyncWriteFacadeProvider` shape):**
+```dart
+final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
+  final facade = OutboxSyncWriteFacade(...);
+  database.pointsBalanceDao.syncSink = facade;
+  unawaited(database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(profileId));
+  return facade;
+});
+```
+
+**After (correct — move the side effects behind an explicit, triggered action):**
+```dart
+final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
+  return OutboxSyncWriteFacade(...);
+});
+
+// Wire the sink and the re-enqueue drain from an explicit lifecycle hook
+// (e.g. app startup / sign-in flow), not from the provider's own build.
+```
+
+---
+
+## Rule 20 — `no_unguarded_state_touch_after_await`
+
+### What it checks
+
+Flags a `state = ...` assignment or a bare `setState(...)` call that appears after an `await` in the same method body's statement sequence (including inside `try`/`catch` blocks), with no intervening `if (!mounted) return;` / `if (!ref.mounted) return;` (or an `if (mounted) { ... }` / `if (ref.mounted) { ... }` wrapping guard) in between. Scoped to Riverpod Notifier-like classes and `State`/`ConsumerState` subclasses whose method is `async`.
+
+### Why it exists
+
+SM-4/AUD-onboarding-01: an autoDispose provider or a widget can be torn down while an `await` is still in flight (backgrounding the app, popping the route mid-write). Resuming without a guard throws `UnmountedRefException` (Riverpod 3) or Flutter's `setState() called after dispose()`.
+
+### How to fix
+
+**Before (banned):**
+```dart
+Future<void> _createProfile() async {
+  final profile = await _repo.create(name);
+  setState(() => _profile = profile); // may run after dispose
+}
+```
+
+**After (correct):**
+```dart
+Future<void> _createProfile() async {
+  final profile = await _repo.create(name);
+  if (!mounted) return;
+  setState(() => _profile = profile);
+}
+```
+
+---
+
 ## Configuration
 
 All rules are enabled automatically. To disable one (discouraged):
@@ -340,11 +745,24 @@ All rules are enabled automatically. To disable one (discouraged):
 # analysis_options.yaml
 custom_lint:
   rules:
-    - no_curriculum_display_name_bypass: false   # discouraged
-    - no_feature_cross_import: false             # discouraged
-    - no_firebase_outside_core: false            # discouraged
-    - no_raw_talker: false                       # discouraged
-    - no_hardcoded_text_direction: false         # discouraged
-    - no_hand_rolled_async_state_notifier: false # discouraged
-    - no_unguarded_async_notifier_init: false    # discouraged
+    - no_curriculum_display_name_bypass: false      # discouraged
+    - no_feature_cross_import: false                # discouraged
+    - no_firebase_outside_core: false                # discouraged
+    - no_raw_talker: false                          # discouraged
+    - no_hardcoded_text_direction: false            # discouraged
+    - no_hand_rolled_async_state_notifier: false    # discouraged
+    - no_unguarded_async_notifier_init: false       # discouraged
+    - no_color_literal_outside_theme: false         # discouraged
+    - no_dead_error_field: false                    # discouraged
+    - no_eager_list_in_non_lazy_scroll_container: false # discouraged
+    - no_e_to_string_in_ui: false                   # discouraged
+    - no_hardcoded_domain_term: false                # discouraged
+    - no_hardcoded_error_widget_string: false       # discouraged
+    - no_log_less_catch: false                      # discouraged
+    - no_onboarding_raw_string_literal: false       # discouraged
+    - no_raw_logevent: false                        # discouraged
+    - no_ref_after_await_without_mounted_check: false # discouraged
+    - no_shrink_wrap_reorderable_list: false        # discouraged
+    - no_side_effect_in_provider_build: false       # discouraged
+    - no_unguarded_state_touch_after_await: false   # discouraged
 ```
