@@ -8478,11 +8478,12 @@
       "severity": "P3",
       "title": "Fail fast on missing key.properties instead of silently debug-signing release Android builds (build.gradle.kts)",
       "commits": [
-        "aa20f38e"
+        "aa20f38e",
+        "dd602ec2"
       ],
       "reviewRounds": 0,
       "acVerified": true,
-      "notes": "merged (recovery 2026-07-21): candidate fix f0e11692 (built by final-05 engine, review lost to process restart) cherry-picked clean to dev as aa20f38e. AC1: build.gradle.kts gradle.taskGraph.whenReady throws GradleException on a Release assemble/bundle task when REQUIRE_RELEASE_SIGNING=true and key.properties missing (deferred to task-exec time, not eager in buildTypes{}, so assembleDebug is unaffected). AC2: build.yml release step extracts tool/decode_release_keystore.sh which emits ::error:: + exits 1 on empty KEYSTORE_BASE64. Documented local-dev debug-signing fallback preserved (deployment-guide.md). Ships decode_release_keystore.test.mjs (4/4 pass, verified on dev). RED baseline + post-fix + assembleDebug regression check documented in commit. AC-audited in the final-05 tail sweep."
+      "notes": "merged (recovery 2026-07-21): candidate fix f0e11692 (built by final-05 engine, review lost to process restart) cherry-picked clean to dev as aa20f38e. AC1: build.gradle.kts gradle.taskGraph.whenReady throws GradleException on a Release assemble/bundle task when REQUIRE_RELEASE_SIGNING=true and key.properties missing (deferred to task-exec time, not eager in buildTypes{}, so assembleDebug is unaffected). AC2: build.yml release step extracts tool/decode_release_keystore.sh which emits ::error:: + exits 1 on empty KEYSTORE_BASE64. Documented local-dev debug-signing fallback preserved (deployment-guide.md). Ships decode_release_keystore.test.mjs (4/4 pass, verified on dev). RED baseline + post-fix + assembleDebug regression check documented in commit. AC-audited in the final-05 tail sweep. | STRENGTHENED 2026-07-21: two independent AC audits read AC1 literally (unconditional local fail) as unmet. AC1 is superseded by the finding own verify.corrections, which mandates preserving the intentional+safe local debug-signing fallback (unique per-machine debug keys, no collision risk). Added a loud boxed gradle warning on any locally debug-signed release, closing AC1 core \"silently\" defect without breaking local dev; CI hard-fail (AC2) fully met + node test 4/4."
     },
     {
       "id": "AUD-guardrails-23",
