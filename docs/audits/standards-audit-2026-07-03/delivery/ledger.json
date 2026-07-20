@@ -11096,13 +11096,17 @@
   {
    "id": "AUD-guardrails-29",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix the stale \"50%\" coverage-floor comment in ci.yml (actual floor is 60%)",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "7331afba5ec07525fde8c3de6403f8648f8f781a"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-29 AC1 OK: ci.yml:299 comment '60% line coverage' == FLOOR=60 (ci.yml:314); grep '50' in ci.yml = 0 hits, no stale % remains"
+   ],
+   "notes": "Re-verified: ci.yml section-6 comment said 50% while step name/FLOOR var say 60% - still stale (lines drifted 249/264->299/314, mismatch unchanged). Fixed to 60%. AC grep-checker: pre-fix 50 vs 60 MISMATCH; post-fix 60 vs 60 MATCH."
   },
   {
    "id": "AUD-t-cross-66",
