@@ -12,7 +12,6 @@
   "done": "DONE",
   "points": "POINTS",
   "pages": "PAGES",
-  "todaysLearning": "Today's Learning",
   "remaining": "{count} remaining",
   "@remaining": {
     "placeholders": {
@@ -412,12 +411,6 @@
   "@errorWithMessage": {
     "description": "AUD-progress-08: generic failure message for an AsyncValue error branch — never interpolate the raw exception (EH-5)."
   },
-  "errorLoadingTasks": "Error loading tasks: {error}",
-  "@errorLoadingTasks": {
-    "placeholders": {
-      "error": {"type": "String"}
-    }
-  },
   "noActiveTracks": "No active tracks",
   "askGrownUpToAddTrack": "Ask a grown-up to add a learning track.",
   "addTrackToStart": "Add a track to start learning.",
@@ -448,7 +441,6 @@
   "accountOfflineSignInToSync": "Working offline for this account. Sign in to resume cloud sync.",
   "textReaderNextDailyTask": "Next daily task",
   "noProjection": "No projection",
-  "today": "TODAY",
   "plusNMore": "+{count} more",
   "@plusNMore": {
     "placeholders": {
@@ -2159,14 +2151,6 @@
   "parentDeleteTrackArchiveBody": "What should happen to your child's completion history?",
   "deleteTrackArchive": "Archive (keep history)",
   "deleteTrackWipe": "Delete and wipe history",
-  "notificationReminderTitle": "Learning Reminder",
-  "notificationReminderBody": "{taskCount,plural, =0{No tasks today — stay on track!} =1{You have 1 task across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today} other{You have {taskCount} tasks across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today}}",
-  "@notificationReminderBody": {
-    "placeholders": {
-      "taskCount": { "type": "int" },
-      "curriculumCount": { "type": "int" }
-    }
-  },
 
   "startingPositionTargetDate": "TARGET DATE",
   "calendarNoLocalEntryFound": "No local calendar entry found for this date.",

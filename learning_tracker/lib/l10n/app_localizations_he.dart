@@ -45,11 +45,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get pages => 'עמודים';
 
   @override
-  String todaysLearning(int count) {
-    return 'לימוד היום ($count)';
-  }
-
-  @override
   String remaining(int count) {
     return '$count נותרו';
   }
@@ -693,11 +688,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get errorWithMessage => 'משהו השתבש. נסה שוב.';
 
   @override
-  String errorLoadingTasks(String error) {
-    return 'שגיאה בטעינת משימות: $error';
-  }
-
-  @override
   String get noActiveTracks => 'אין מסלולים פעילים';
 
   @override
@@ -748,9 +738,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get noProjection => 'אין תחזית';
-
-  @override
-  String get today => 'היום';
 
   @override
   String plusNMore(int count) {
@@ -2447,6 +2434,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String errorLoadingTasks(String error) {
+    return 'שגיאה בטעינת משימות: $error';
+  }
+
+  @override
   String errorLoadingOrder(String error) {
     return 'שגיאה בטעינת הסדר: $error';
   }
@@ -2597,6 +2589,11 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String todaysReview(int count) {
     return 'חזרה של היום ($count)';
+  }
+
+  @override
+  String todaysLearning(int count) {
+    return 'לימוד היום ($count)';
   }
 
   @override
@@ -3872,26 +3869,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get deleteTrackWipe => 'מחק ומחה היסטוריה';
 
   @override
-  String get notificationReminderTitle => 'תזכורת לימוד';
-
-  @override
-  String notificationReminderBody(int taskCount, int curriculumCount) {
-    String _temp0 = intl.Intl.pluralLogic(
-      taskCount,
-      locale: localeName,
-      other: '$taskCount משימות',
-      one: 'משימה אחת',
-    );
-    String _temp1 = intl.Intl.pluralLogic(
-      curriculumCount,
-      locale: localeName,
-      other: '$curriculumCount תוכניות לימוד',
-      one: 'תוכנית לימוד אחת',
-    );
-    return 'יש לכם $_temp0 ב$_temp1 היום';
-  }
-
-  @override
   String get startingPositionTargetDate => 'תאריך יעד';
 
   @override
@@ -4238,6 +4215,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get lifetimeLabel => 'ידע כולל';
+
+  @override
+  String get today => 'היום';
 
   @override
   String get streakLabel => 'רצף';
@@ -5172,6 +5152,26 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get deviceNotificationsBlockedHint =>
       'התראות חסומות. הפעילו אותן בהגדרות > אפליקציות > Learning Tracker > התראות.';
+
+  @override
+  String get notificationReminderTitle => 'תזכורת לימוד';
+
+  @override
+  String notificationReminderBody(int taskCount, int curriculumCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      taskCount,
+      locale: localeName,
+      other: '$taskCount משימות',
+      one: 'משימה אחת',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      curriculumCount,
+      locale: localeName,
+      other: '$curriculumCount תוכניות לימוד',
+      one: 'תוכנית לימוד אחת',
+    );
+    return 'יש לכם $_temp0 ב$_temp1 היום';
+  }
 
   @override
   String get notificationReminderGenericBody =>

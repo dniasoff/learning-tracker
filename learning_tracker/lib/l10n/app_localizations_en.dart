@@ -45,11 +45,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pages => 'PAGES';
 
   @override
-  String todaysLearning(int count) {
-    return 'Today\'s learning ($count)';
-  }
-
-  @override
   String remaining(int count) {
     return '$count remaining';
   }
@@ -695,11 +690,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorWithMessage => 'Something went wrong. Please try again.';
 
   @override
-  String errorLoadingTasks(String error) {
-    return 'Error loading tasks: $error';
-  }
-
-  @override
   String get noActiveTracks => 'No active tracks';
 
   @override
@@ -750,9 +740,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noProjection => 'No projection';
-
-  @override
-  String get today => 'Today';
 
   @override
   String plusNMore(int count) {
@@ -2473,6 +2460,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String errorLoadingTasks(String error) {
+    return 'Error loading tasks: $error';
+  }
+
+  @override
   String errorLoadingOrder(String error) {
     return 'Error loading order: $error';
   }
@@ -2626,6 +2618,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String todaysReview(int count) {
     return 'Today\'s review ($count)';
+  }
+
+  @override
+  String todaysLearning(int count) {
+    return 'Today\'s learning ($count)';
   }
 
   @override
@@ -3919,26 +3916,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteTrackWipe => 'Delete and wipe history';
 
   @override
-  String get notificationReminderTitle => 'Learning Reminder';
-
-  @override
-  String notificationReminderBody(int taskCount, int curriculumCount) {
-    String _temp0 = intl.Intl.pluralLogic(
-      taskCount,
-      locale: localeName,
-      other: '$taskCount tasks',
-      one: '1 task',
-    );
-    String _temp1 = intl.Intl.pluralLogic(
-      curriculumCount,
-      locale: localeName,
-      other: '$curriculumCount curricula',
-      one: '1 curriculum',
-    );
-    return 'You have $_temp0 across $_temp1 today';
-  }
-
-  @override
   String get startingPositionTargetDate => 'TARGET DATE';
 
   @override
@@ -4283,6 +4260,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lifetimeLabel => 'Lifetime';
+
+  @override
+  String get today => 'Today';
 
   @override
   String get streakLabel => 'Streak';
@@ -5227,6 +5207,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get deviceNotificationsBlockedHint =>
       'Notifications blocked. Enable them in Settings > Apps > Learning Tracker > Notifications.';
+
+  @override
+  String get notificationReminderTitle => 'Learning Reminder';
+
+  @override
+  String notificationReminderBody(int taskCount, int curriculumCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      taskCount,
+      locale: localeName,
+      other: '$taskCount tasks',
+      one: '1 task',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      curriculumCount,
+      locale: localeName,
+      other: '$curriculumCount curricula',
+      one: '1 curriculum',
+    );
+    return 'You have $_temp0 across $_temp1 today';
+  }
 
   @override
   String get notificationReminderGenericBody =>

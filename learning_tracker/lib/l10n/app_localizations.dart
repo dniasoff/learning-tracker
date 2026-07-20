@@ -170,12 +170,6 @@ abstract class AppLocalizations {
   /// **'PAGES'**
   String get pages;
 
-  /// No description provided for @todaysLearning.
-  ///
-  /// In en, this message translates to:
-  /// **'Today\'s learning ({count})'**
-  String todaysLearning(int count);
-
   /// No description provided for @remaining.
   ///
   /// In en, this message translates to:
@@ -1293,12 +1287,6 @@ abstract class AppLocalizations {
   /// **'Something went wrong. Please try again.'**
   String get errorWithMessage;
 
-  /// No description provided for @errorLoadingTasks.
-  ///
-  /// In en, this message translates to:
-  /// **'Error loading tasks: {error}'**
-  String errorLoadingTasks(String error);
-
   /// No description provided for @noActiveTracks.
   ///
   /// In en, this message translates to:
@@ -1388,12 +1376,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No projection'**
   String get noProjection;
-
-  /// Today label — used in dashboard/recent activity sections.
-  ///
-  /// In en, this message translates to:
-  /// **'Today'**
-  String get today;
 
   /// No description provided for @plusNMore.
   ///
@@ -4389,6 +4371,12 @@ abstract class AppLocalizations {
   /// **'Error: {error}'**
   String errorGeneric(String error);
 
+  /// No description provided for @errorLoadingTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading tasks: {error}'**
+  String errorLoadingTasks(String error);
+
   /// No description provided for @errorLoadingOrder.
   ///
   /// In en, this message translates to:
@@ -4622,6 +4610,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Today\'s review ({count})'**
   String todaysReview(int count);
+
+  /// No description provided for @todaysLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s learning ({count})'**
+  String todaysLearning(int count);
 
   /// No description provided for @dailyTasksTitle.
   ///
@@ -6723,18 +6717,6 @@ abstract class AppLocalizations {
   /// **'Delete and wipe history'**
   String get deleteTrackWipe;
 
-  /// No description provided for @notificationReminderTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Learning Reminder'**
-  String get notificationReminderTitle;
-
-  /// No description provided for @notificationReminderBody.
-  ///
-  /// In en, this message translates to:
-  /// **'You have {taskCount, plural, =1{1 task} other{{taskCount} tasks}} across {curriculumCount, plural, =1{1 curriculum} other{{curriculumCount} curricula}} today'**
-  String notificationReminderBody(int taskCount, int curriculumCount);
-
   /// No description provided for @startingPositionTargetDate.
   ///
   /// In en, this message translates to:
@@ -7262,6 +7244,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lifetime'**
   String get lifetimeLabel;
+
+  /// Today label — used in dashboard/recent activity sections.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get today;
 
   /// Title-case 'Streak' label — distinct from the existing all-caps `streak` key. Used in recent-activity screen section headers.
   ///
@@ -8783,6 +8771,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notifications blocked. Enable them in Settings > Apps > Learning Tracker > Notifications.'**
   String get deviceNotificationsBlockedHint;
+
+  /// No description provided for @notificationReminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Reminder'**
+  String get notificationReminderTitle;
+
+  /// No description provided for @notificationReminderBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You have {taskCount, plural, =1{1 task} other{{taskCount} tasks}} across {curriculumCount, plural, =1{1 curriculum} other{{curriculumCount} curricula}} today'**
+  String notificationReminderBody(int taskCount, int curriculumCount);
 
   /// No description provided for @notificationReminderGenericBody.
   ///
