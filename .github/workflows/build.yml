@@ -18,6 +18,12 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      # Local composite actions (`uses: ./...`) resolve from the runner's
+      # workspace, which starts empty — the repo must be checked out before
+      # the composite's action.yml can be found (AUD-guardrails-25 bounce).
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Flutter bootstrap (Java + Gradle + codegen + asset + secrets)
         uses: ./.github/actions/flutter-bootstrap
         with:

@@ -20,6 +20,12 @@ jobs:
     timeout-minutes: 5
 
     steps:
+      # Local composite actions (`uses: ./...`) resolve from the runner's
+      # workspace, which starts empty — the repo must be checked out before
+      # the composite's action.yml can be found (AUD-guardrails-25 bounce).
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Flutter bootstrap
         uses: ./.github/actions/flutter-bootstrap
 
@@ -34,6 +40,11 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      # See the format-check job above: local composite actions require the
+      # repo to already be checked out (AUD-guardrails-25 bounce).
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Flutter bootstrap (codegen + l10n)
         uses: ./.github/actions/flutter-bootstrap
         with:
@@ -84,6 +95,11 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      # See the format-check job above: local composite actions require the
+      # repo to already be checked out (AUD-guardrails-25 bounce).
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Flutter bootstrap
         uses: ./.github/actions/flutter-bootstrap
         with:
@@ -126,6 +142,11 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      # See the format-check job above: local composite actions require the
+      # repo to already be checked out (AUD-guardrails-25 bounce).
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Flutter bootstrap
         uses: ./.github/actions/flutter-bootstrap
 
@@ -148,6 +169,11 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      # See the format-check job above: local composite actions require the
+      # repo to already be checked out (AUD-guardrails-25 bounce).
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Flutter bootstrap (codegen + asset + secrets)
         uses: ./.github/actions/flutter-bootstrap
         with:
@@ -348,6 +374,11 @@ jobs:
     timeout-minutes: 5
 
     steps:
+      # See the format-check job above: local composite actions require the
+      # repo to already be checked out (AUD-guardrails-25 bounce).
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Flutter bootstrap
         uses: ./.github/actions/flutter-bootstrap
 

@@ -68,6 +68,15 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      # Local composite actions (`uses: ./...`) resolve from the runner's
+      # workspace, which starts empty — the repo must be checked out before
+      # the composite's action.yml can be found (AUD-guardrails-25 bounce).
+      # This initial checkout only needs to land the action.yml itself; the
+      # composite's own checkout step (fetch-depth: 10, below) re-checks out
+      # with the history depth this job's `git log` release-notes step needs.
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Flutter bootstrap (Java + Gradle + codegen + asset + secrets)
         uses: ./.github/actions/flutter-bootstrap
         with:
