@@ -318,31 +318,32 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
-	if grep -rn "package:firebase_auth" lib/ --include="*.dart" \
+	if grep -rn "package:firebase_auth" lib/ tool/lib/ --include="*.dart" \
 	    | grep -v "lib/core/auth/" | grep -v "lib/features/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -q .; then \
-	  grep -rn "package:firebase_auth" lib/ --include="*.dart" \
+	  grep -rn "package:firebase_auth" lib/ tool/lib/ --include="*.dart" \
 	    | grep -v "lib/core/auth/" | grep -v "lib/features/auth/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"; \
 	  FAIL=1; \
 	fi; \
 	echo "2/15 — No FirebaseFirestore/FirebaseStorage outside core/sync or core/auth"; \
-	if grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ --include="*.dart" \
+	if grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ tool/lib/ --include="*.dart" \
 	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "lib/core/providers/" \
 	    | grep -v "lib/features/" | grep -v "\.g\.dart" | grep -q .; then \
-	  grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ --include="*.dart" \
+	  grep -rn "FirebaseFirestore\|FirebaseStorage\|firebase_firestore\|firebase_storage" lib/ tool/lib/ --include="*.dart" \
 	    | grep -v "lib/core/sync/" | grep -v "lib/core/auth/" | grep -v "lib/core/providers/" \
 	    | grep -v "lib/features/" | grep -v "\.g\.dart"; \
 	  FAIL=1; \
 	fi; \
 	echo "3/15 — No FirebaseAuth.instance.signOut outside core/auth"; \
-	if grep -rn "FirebaseAuth\.instance\.signOut" lib/ --include="*.dart" \
+	if grep -rn "FirebaseAuth\.instance\.signOut" lib/ tool/lib/ --include="*.dart" \
 	    | grep -v "lib/core/auth/" | grep -q .; then \
-	  grep -rn "FirebaseAuth\.instance\.signOut" lib/ --include="*.dart" | grep -v "lib/core/auth/"; \
+	  grep -rn "FirebaseAuth\.instance\.signOut" lib/ tool/lib/ --include="*.dart" | grep -v "lib/core/auth/"; \
 	  FAIL=1; \
 	fi; \
 	echo "4/15 — No raw talker import outside core/logging"; \
-	if grep -rn "import 'package:talker/talker\.dart'" lib/ --include="*.dart" \
-	    | grep -v "lib/core/logging/" | grep -q .; then \
-	  grep -rn "import 'package:talker/talker\.dart'" lib/ --include="*.dart" | grep -v "lib/core/logging/"; \
+	if grep -rn "import 'package:talker/talker\.dart'" lib/ tool/lib/ --include="*.dart" \
+	    | grep -v "lib/core/logging/" | grep -v "tool/lib/dio_client\.dart" | grep -q .; then \
+	  grep -rn "import 'package:talker/talker\.dart'" lib/ tool/lib/ --include="*.dart" \
+	    | grep -v "lib/core/logging/" | grep -v "tool/lib/dio_client\.dart"; \
 	  FAIL=1; \
 	fi; \
 	echo "5/15 — No debugPrint or bare print() in production code"; \
