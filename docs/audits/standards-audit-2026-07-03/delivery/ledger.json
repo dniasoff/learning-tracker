@@ -12035,13 +12035,19 @@
     {
       "id": "AUD-platform-05",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Pin distributionSha256Sum in android/gradle/wrapper/gradle-wrapper.properties",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "f51594eb71dbc43c74e61e644ec3063a4bac1896",
+        "8e17d73a4e82f0384e8820d6335cbd100cec2e7f"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-platform-05 AC1 OK: wrapper.properties:6 sha256=efe9a3d...02d1 == official gradle-8.14-all.zip.sha256 (fetched live) == actual SHA256 of real download",
+        "AUD-platform-05 AC2 OK: live RED test - all-zeros checksum -> gradlew 'Verification failed' exit 1 (fail-closed); real bytes == pinned so GREEN passes"
+      ],
+      "notes": "Confirmed missing distributionSha256Sum; added checksum for gradle-8.14-all.zip, verified via 2 official sources + re-derivation from real download. AC1+AC2 shown live: RED (wrong checksum) exit 1 'Verification failed'; GREEN (real checksum) exit 0 'Welcome to Gradle 8.14!'. Merged --no-ff onto dev (w4r1c7, mergeSha 8e17d73a4e82f0384e8820d6335cbd100cec2e7f). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (no issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base 3eec24d655918960bc1f59bc54e3114d08abdf98), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate. NOTE: during the post-rebase gate window, dev/ledger advanced twice from outside this merge-lane session (commits af054b50 [dangling, never reached dev] proposing a conflicting 'already pinned' narrative for this same finding, and 4b734a14 landing directly on dev) -- flagged to the orchestrator as a concurrent-writer anomaly; this row's content reflects only this session's own verified work."
     },
     {
       "id": "AUD-guardrails-38",
