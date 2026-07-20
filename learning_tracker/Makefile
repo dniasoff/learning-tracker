@@ -7,7 +7,7 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
 test: ## Run all tests with coverage instrumentation
-	flutter test --coverage
+	flutter test --coverage --exclude-tags serial-tools
 	@# AUD-t-cross-16: generated Drift/Freezed code inflates line-coverage
 	@# numbers without protecting any hand-written behavior (nothing in lib/
 	@# calls db.managers.*) — strip it from the report so coverage reflects
@@ -30,6 +30,9 @@ test: ## Run all tests with coverage instrumentation
 
 test-invariants: ## Run the N1–N7 quality-crisis invariant net
 	flutter test test/story_acceptance/regression_invariants_test.dart --reporter=expanded
+
+test-serial-tools: ## Run tool tests that shell out to `make audit` (serially; they contend under the parallel suite)
+	flutter test --tags serial-tools --concurrency=1
 
 test-rules: ## Run Firestore security-rules tests + TQ-9 rule-coverage gate under the emulator (L5)
 	firebase emulators:exec --only firestore --project demo-rules "node --test functions/test/firestore_rules.test.mjs && node functions/tool/check_rule_coverage.mjs demo-rules firestore.rules"
@@ -248,7 +251,7 @@ test-story-i4: ## Run Story I-4 (Curriculum overlap deduplication) acceptance te
 test-epic-28: ## Run all Epic 28 (Curriculum overlap) acceptance tests
 	flutter test test/story_acceptance/epic_28_curriculum_overlap_test.dart
 
-ci: analyze validate-calendar lint-rules-test test test-rules test-functions ## Run full CI pipeline (analyze + seed validation + lint-rules-test + all tests + rules tests + Cloud Functions tests)
+ci: analyze validate-calendar lint-rules-test test test-serial-tools test-rules test-functions ## Run full CI pipeline (analyze + seed validation + lint-rules-test + all tests + rules tests + Cloud Functions tests)
 
 analyze: ## Run dart analyze (matches CI --fatal-infos flag)
 	dart analyze --fatal-infos

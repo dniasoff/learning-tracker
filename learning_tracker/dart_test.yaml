@@ -2,6 +2,10 @@
 # Prevents "unknown tag" warnings when running flutter test --tags.
 
 tags:
+  # Serial tool tests: shell out to real `make audit`; must not run in the
+  # parallel suite (see test/tool/audit_and_arb_parity_test.dart header).
+  serial-tools:
+
   # Epic tags (15)
   epic_1:
   epic_2:

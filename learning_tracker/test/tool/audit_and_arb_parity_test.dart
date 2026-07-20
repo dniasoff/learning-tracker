@@ -19,6 +19,15 @@
 // blows the default 30s `test()` timeout — the two tests below that shell
 // out to `make audit` carry an explicit longer timeout to account for it.
 
+@Tags(['serial-tools'])
+// serial-tools: every case here shells out to the real `make audit`
+// (~90s each, ~18m for the file). Run under `flutter test --coverage`
+// alongside the full parallel suite they contend for CPU and blow their
+// per-test timeouts ('did not complete'), failing `make ci`. The ci
+// pipeline therefore excludes this tag from the parallel run and
+// executes it separately via `make test-serial-tools` (--concurrency=1).
+library;
+
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
