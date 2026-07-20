@@ -26,6 +26,17 @@ File _tmpFileAt(String content, String pathSegment) {
   return file;
 }
 
+/// Writes [content] to a temp file whose name ends with [suffix] (e.g.
+/// `.g.dart`) so the rule's suffix-based whitelist checks are exercised
+/// through the real analyzer path rather than a hand-copied helper.
+File _tmpFileWithSuffix(String content, String suffix) {
+  final file = File(
+    '${Directory.systemTemp.path}/test_color_gen_${DateTime.now().microsecondsSinceEpoch}$suffix',
+  );
+  file.writeAsStringSync(content);
+  return file;
+}
+
 void main() {
   const rule = NoColorLiteralOutsideTheme();
 
@@ -100,36 +111,13 @@ final c = Color(colorValue);
             (e) => e.errorCode.name == 'no_color_literal_outside_theme',
           ),
           isEmpty,
-          reason: 'Color(variable) must not be flagged — only Color(0x…) literals',
+          reason:
+              'Color(variable) must not be flagged — only Color(0x…) literals',
         );
       });
     });
 
     group('whitelist — file path checks', () {
-      test('isWhitelisted returns true for lib/core/theme/ path', () {
-        expect(
-          _invokeIsWhitelisted('lib/core/theme/app_colors.dart'),
-          isTrue,
-        );
-      });
-
-      test('isWhitelisted returns true for .g.dart', () {
-        expect(_invokeIsWhitelisted('some.g.dart'), isTrue);
-      });
-
-      test('isWhitelisted returns true for .freezed.dart', () {
-        expect(_invokeIsWhitelisted('model.freezed.dart'), isTrue);
-      });
-
-      test('isWhitelisted returns false for feature file', () {
-        expect(
-          _invokeIsWhitelisted(
-            'lib/features/dashboard/presentation/widgets/foo.dart',
-          ),
-          isFalse,
-        );
-      });
-
       test('Color(0xFF…) allowed in lib/core/theme/', () async {
         final file = _tmpFileAt('''
 import 'package:flutter/material.dart';
@@ -144,15 +132,36 @@ const Color myColor = Color(0xFF0038A8);
           reason: 'Color(0xFF…) is allowed inside lib/core/theme/',
         );
       });
+
+      test('Color(0xFF…) allowed in a generated .g.dart file', () async {
+        final file = _tmpFileWithSuffix('''
+const x = Color(0xFF123456);
+class Color { const Color(int v); }
+''', '.g.dart');
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors.where(
+            (e) => e.errorCode.name == 'no_color_literal_outside_theme',
+          ),
+          isEmpty,
+          reason: 'Generated .g.dart files are whitelisted',
+        );
+      });
+
+      test('Color(0xFF…) allowed in a generated .freezed.dart file', () async {
+        final file = _tmpFileWithSuffix('''
+const x = Color(0xFF123456);
+class Color { const Color(int v); }
+''', '.freezed.dart');
+        final errors = await rule.testAnalyzeAndRun(file);
+        expect(
+          errors.where(
+            (e) => e.errorCode.name == 'no_color_literal_outside_theme',
+          ),
+          isEmpty,
+          reason: 'Generated .freezed.dart files are whitelisted',
+        );
+      });
     });
   });
-}
-
-/// Mirrors the private _isWhitelisted logic for unit-level path testing.
-bool _invokeIsWhitelisted(String path) {
-  final normalised = path.replaceAll(r'\', '/');
-  if (normalised.contains('lib/core/theme/')) return true;
-  if (normalised.endsWith('.g.dart')) return true;
-  if (normalised.endsWith('.freezed.dart')) return true;
-  return false;
 }

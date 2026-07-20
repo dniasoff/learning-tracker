@@ -27,13 +27,15 @@ File _tmpFileAt(String content, String pathSegment) {
   return file;
 }
 
-/// Mirrors the private _isWhitelisted logic from the rule for unit-level tests.
-bool _invokeIsWhitelisted(String path) {
-  final normalised = path.replaceAll(r'\', '/');
-  if (normalised.contains('lib/core/labels/')) return true;
-  if (normalised.endsWith('.g.dart')) return true;
-  if (normalised.endsWith('.freezed.dart')) return true;
-  return false;
+/// Writes [content] to a temp file whose name ends with [suffix] (e.g.
+/// `.g.dart`) so the rule's suffix-based whitelist checks are exercised
+/// through the real analyzer path rather than a hand-copied helper.
+File _tmpFileWithSuffix(String content, String suffix) {
+  final file = File(
+    '${Directory.systemTemp.path}/test_display_name_gen_${DateTime.now().microsecondsSinceEpoch}$suffix',
+  );
+  file.writeAsStringSync(content);
+  return file;
 }
 
 void main() {
@@ -212,50 +214,76 @@ void main() {
     });
 
     group('whitelist — file path checks', () {
-      test('isWhitelisted returns true for lib/core/labels/ path', () {
+      test('displayNameEn access allowed in generated .g.dart file', () async {
+        final file = _tmpFileWithSuffix('''
+class MockCurriculum {
+  String get displayNameEn => "Chumash";
+}
+
+void main() {
+  final c = MockCurriculum();
+  print(c.displayNameEn);
+}
+''', '.g.dart');
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _invokeIsWhitelisted('lib/core/labels/curriculum_label.dart'),
-          isTrue,
+          errors.where(
+            (e) => e.errorCode.name == 'no_curriculum_display_name_bypass',
+          ),
+          isEmpty,
+          reason: 'Generated .g.dart files are whitelisted',
         );
       });
 
-      test('isWhitelisted returns true for nested lib/core/labels/ path', () {
+      test('displayNameHe access allowed in generated .freezed.dart file',
+          () async {
+        final file = _tmpFileWithSuffix('''
+class MockCurriculum {
+  String get displayNameHe => "גמרא";
+}
+
+void main() {
+  final c = MockCurriculum();
+  print(c.displayNameHe);
+}
+''', '.freezed.dart');
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _invokeIsWhitelisted('lib/core/labels/renderers/label_renderer.dart'),
-          isTrue,
+          errors.where(
+            (e) => e.errorCode.name == 'no_curriculum_display_name_bypass',
+          ),
+          isEmpty,
+          reason: 'Generated .freezed.dart files are whitelisted',
         );
       });
 
-      test('isWhitelisted returns true for .g.dart file', () {
-        expect(_invokeIsWhitelisted('lib/features/foo/foo.g.dart'), isTrue);
-      });
+      test(
+          'displayNameEn access allowed with Windows-style backslash path '
+          'segments', () async {
+        // Simulates a Windows-reported path — a single directory literally
+        // named "lib\core\labels" (backslashes as characters, not
+        // separators, since this test runs on Linux) so the rule's
+        // path.replaceAll(r'\', '/') normalisation is exercised through the
+        // real analyzer path, matching production behavior when `dart
+        // analyze` runs on Windows.
+        final file = _tmpFileAt('''
+class MockCurriculum {
+  String get displayNameEn => "Chumash";
+}
 
-      test('isWhitelisted returns true for .freezed.dart file', () {
+void main() {
+  final c = MockCurriculum();
+  print(c.displayNameEn); // allowed here
+}
+''', r'lib\core\labels');
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _invokeIsWhitelisted('lib/features/foo/foo.freezed.dart'),
-          isTrue,
-        );
-      });
-
-      test('isWhitelisted returns false for feature file', () {
-        expect(
-          _invokeIsWhitelisted('lib/features/dashboard/screen.dart'),
-          isFalse,
-        );
-      });
-
-      test('isWhitelisted returns false for core/sync file', () {
-        expect(
-          _invokeIsWhitelisted('lib/core/sync/some_merger.dart'),
-          isFalse,
-        );
-      });
-
-      test('isWhitelisted handles Windows-style separators for labels path',
-          () {
-        expect(
-          _invokeIsWhitelisted(r'lib\core\labels\curriculum_label.dart'),
-          isTrue,
+          errors.where(
+            (e) => e.errorCode.name == 'no_curriculum_display_name_bypass',
+          ),
+          isEmpty,
+          reason: 'Windows-style backslash path segments must normalise to '
+              'lib/core/labels/ and be allowed',
         );
       });
     });

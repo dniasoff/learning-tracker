@@ -27,6 +27,17 @@ File _tmpFileAt(String content, String pathSegment) {
   return file;
 }
 
+/// Writes [content] to a temp file whose name ends with [suffix] (e.g.
+/// `.g.dart`) so the rule's suffix-based whitelist checks are exercised
+/// through the real analyzer path rather than a hand-copied helper.
+File _tmpFileWithSuffix(String content, String suffix) {
+  final file = File(
+    '${Directory.systemTemp.path}/test_talker_gen_${DateTime.now().microsecondsSinceEpoch}$suffix',
+  );
+  file.writeAsStringSync(content);
+  return file;
+}
+
 void main() {
   const rule = NoRawTalker();
 
@@ -104,26 +115,29 @@ void main() {}
     });
 
     group('whitelist — file path checks', () {
-      test('isWhitelisted returns true for lib/core/logging/ path', () {
+      test('allows talker import in generated .g.dart file', () async {
+        final file = _tmpFileWithSuffix('''
+import 'package:talker/talker.dart';
+void main() {}
+''', '.g.dart');
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _invokeIsWhitelisted('lib/core/logging/app_logger.dart'),
-          isTrue,
+          errors.where((e) => e.errorCode.name == 'no_raw_talker'),
+          isEmpty,
+          reason: 'Generated .g.dart files are whitelisted',
         );
       });
 
-      test('isWhitelisted returns true for .g.dart', () {
-        expect(_invokeIsWhitelisted('some.g.dart'), isTrue);
-      });
-
-      test('isWhitelisted returns true for .freezed.dart', () {
-        expect(_invokeIsWhitelisted('model.freezed.dart'), isTrue);
-      });
-
-      test('isWhitelisted returns false for feature file', () {
+      test('allows talker import in generated .freezed.dart file', () async {
+        final file = _tmpFileWithSuffix('''
+import 'package:talker/talker.dart';
+void main() {}
+''', '.freezed.dart');
+        final errors = await rule.testAnalyzeAndRun(file);
         expect(
-          _invokeIsWhitelisted(
-              'lib/features/dashboard/presentation/screen.dart'),
-          isFalse,
+          errors.where((e) => e.errorCode.name == 'no_raw_talker'),
+          isEmpty,
+          reason: 'Generated .freezed.dart files are whitelisted',
         );
       });
 
@@ -142,13 +156,4 @@ void main() {}
       });
     });
   });
-}
-
-/// Mirrors the private _isWhitelisted logic for unit-level path testing.
-bool _invokeIsWhitelisted(String path) {
-  final normalised = path.replaceAll(r'\', '/');
-  if (normalised.contains('lib/core/logging/')) return true;
-  if (normalised.endsWith('.g.dart')) return true;
-  if (normalised.endsWith('.freezed.dart')) return true;
-  return false;
 }
