@@ -11254,13 +11254,18 @@
   {
    "id": "AUD-platform-06",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Remove or wire up the unused heritage_navy color resource in android colors.xml",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "0926db2e741e26a498ab4dd6ab6d672d9a5e2a3a",
+    "34bd395a5d819735537f4cea017439b278c1e8e4"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-platform-06 AC1 OK: grep -rn heritage_navy learning_tracker/android/ = zero (exit 1); repo-wide zero too, so removal is correct branch."
+   ],
+   "notes": "Re-verified: heritage_navy had zero consumers under learning_tracker/android/. Deleted the unused <color name=\"heritage_navy\"> line from colors.xml per recommendation; no native tint/manifest use case found to justify wiring up instead. AC grep now returns zero results. Merged --no-ff onto dev (w4r1c8, mergeSha 34bd395a5d819735537f4cea017439b278c1e8e4). Post-rebase gate: make audit PASSED (all 67 greps clean), flutter analyze clean (no issues found). gatePolicy=disjoint-skip: rebase vs dev tip was file-disjoint (no overlapping paths since merge-base 3eec24d655918960bc1f59bc54e3114d08abdf98), so payload.testsToRun was not re-run here; the wave-closing full make ci is the integration gate."
   },
   {
    "id": "AUD-guardrails-35",
