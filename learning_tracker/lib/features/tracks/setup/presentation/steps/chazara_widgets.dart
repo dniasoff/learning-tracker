@@ -140,9 +140,17 @@ class CustomDayEditorChip extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              TinyCircleButton(icon: Icons.remove, onTap: onMinus),
+              TinyCircleButton(
+                icon: Icons.remove,
+                onTap: onMinus,
+                semanticLabel: l10n.chazaraCustomDayDecrease,
+              ),
               const SizedBox(width: 8),
-              TinyCircleButton(icon: Icons.add, onTap: onPlus),
+              TinyCircleButton(
+                icon: Icons.add,
+                onTap: onPlus,
+                semanticLabel: l10n.chazaraCustomDayIncrease,
+              ),
             ],
           ),
           if (onRemove != null) ...[
@@ -212,25 +220,40 @@ class AddRoundChip extends StatelessWidget {
 }
 
 class TinyCircleButton extends StatelessWidget {
-  const TinyCircleButton({required this.icon, required this.onTap, super.key});
+  const TinyCircleButton({
+    required this.icon,
+    required this.onTap,
+    required this.semanticLabel,
+    super.key,
+  });
 
   final IconData icon;
   final VoidCallback onTap;
 
+  /// AUD-tracks-10 (AX-3): this control is icon-only, so it must carry an
+  /// explicit, action-specific label for TalkBack/VoiceOver. Callers pass
+  /// the ARB-sourced string (e.g. `l10n.chazaraCustomDayDecrease`).
+  final String semanticLabel;
+
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 22,
-        height: 22,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: const Color(0xFFF1F3F7),
-          border: Border.all(color: const Color(0xFFDDE2EB)),
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: const Color(0xFFF1F3F7),
+            border: Border.all(color: const Color(0xFFDDE2EB)),
+          ),
+          child: Icon(icon, size: 14, color: AppTheme.brandInkMuted),
         ),
-        child: Icon(icon, size: 14, color: AppTheme.brandInkMuted),
       ),
     );
   }

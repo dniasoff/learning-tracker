@@ -1843,6 +1843,8 @@
     }
   },
   "trackEditGoalTypeLocked": "לא ניתן לשנות את סוג היעד לאחר ההגדרה",
+  "trackEditPaceDecrease": "הפחת את ערך הקצב",
+  "trackEditPaceIncrease": "הגדל את ערך הקצב",
   "trackEditProgramLocked": "חזרה, היקף ויימי לימוד מנוהלים על ידי התוכנית.",
   "trackEditReviewSummaryNone": "ללא חזרה",
   "trackEditReviewSummaryDays": "אחרי {delays}",
@@ -2770,6 +2772,8 @@
       "count": { "type": "int" }
     }
   },
+  "chazaraCustomDayDecrease": "הפחת את מספר ימי החזרה",
+  "chazaraCustomDayIncrease": "הגדל את מספר ימי החזרה",
   "scopeChooseLevelPrompt": "בחרו {levelLabel}",
   "@scopeChooseLevelPrompt": {
     "description": "R1-(6): top-level scope breadcrumb prompt. Shown after the curriculum chip; must NOT repeat the curriculum name.",

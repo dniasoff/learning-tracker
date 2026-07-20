@@ -2122,6 +2122,14 @@
     }
   },
   "trackEditGoalTypeLocked": "Goal type cannot be changed after setup",
+  "trackEditPaceDecrease": "Decrease pace value",
+  "@trackEditPaceDecrease": {
+    "description": "AUD-tracks-10 (AX-3): accessibility label for the icon-only stepper button that decreases the pace goal's target value on Edit Track's goal editor."
+  },
+  "trackEditPaceIncrease": "Increase pace value",
+  "@trackEditPaceIncrease": {
+    "description": "AUD-tracks-10 (AX-3): accessibility label for the icon-only stepper button that increases the pace goal's target value on Edit Track's goal editor."
+  },
   "trackEditProgramLocked": "Review, scope, and study days are managed by the program.",
   "trackEditReviewSummaryNone": "No review",
   "trackEditReviewSummaryDays": "After {delays}",
@@ -3115,6 +3123,14 @@
     "placeholders": {
       "count": { "type": "int" }
     }
+  },
+  "chazaraCustomDayDecrease": "Decrease review day count",
+  "@chazaraCustomDayDecrease": {
+    "description": "AUD-tracks-10 (AX-3): accessibility label for the icon-only TinyCircleButton that decreases a custom-cycle review round's delay-day count."
+  },
+  "chazaraCustomDayIncrease": "Increase review day count",
+  "@chazaraCustomDayIncrease": {
+    "description": "AUD-tracks-10 (AX-3): accessibility label for the icon-only TinyCircleButton that increases a custom-cycle review round's delay-day count."
   },
   "scopeChooseLevelPrompt": "Choose a {levelLabel}",
   "@scopeChooseLevelPrompt": {

@@ -616,6 +616,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               onPressed: _paceValue > 1
                   ? () => setState(() => _paceValue--)
                   : null,
+              semanticLabel: l10n.trackEditPaceDecrease,
             ),
             const SizedBox(width: 16),
             Text(
@@ -629,6 +630,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             _StepperButton(
               icon: Icons.add_rounded,
               onPressed: () => setState(() => _paceValue++),
+              semanticLabel: l10n.trackEditPaceIncrease,
             ),
             const SizedBox(width: 16),
             Text(
@@ -968,26 +970,41 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _StepperButton extends StatelessWidget {
-  const _StepperButton({required this.icon, required this.onPressed});
+  const _StepperButton({
+    required this.icon,
+    required this.onPressed,
+    required this.semanticLabel,
+  });
   final IconData icon;
   final VoidCallback? onPressed;
 
+  /// AUD-tracks-10 (AX-3): this control is icon-only, so it must carry an
+  /// explicit, action-specific label for TalkBack/VoiceOver. Callers pass
+  /// the ARB-sourced string (e.g. `l10n.trackEditPaceDecrease`).
+  final String semanticLabel;
+
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surfaceBlueNeutral,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      enabled: onPressed != null,
+      excludeSemantics: true,
+      child: Material(
+        color: AppColors.surfaceBlueNeutral,
         borderRadius: BorderRadius.circular(10),
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Icon(
-            icon,
-            size: 20,
-            color: onPressed != null
-                ? AppTheme.brandBlueDeep
-                : AppTheme.brandInkMuted,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(
+              icon,
+              size: 20,
+              color: onPressed != null
+                  ? AppTheme.brandBlueDeep
+                  : AppTheme.brandInkMuted,
+            ),
           ),
         ),
       ),
