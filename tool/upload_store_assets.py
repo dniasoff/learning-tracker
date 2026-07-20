@@ -31,6 +31,8 @@ FULL_DESC_MAX  = 4000
 
 SCOPES = ["https://www.googleapis.com/auth/androidpublisher"]
 
+SCREENSHOT_NAMES = ["dashboard", "learning", "progress", "scheduler", "gamification"]
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -138,8 +140,7 @@ def main():
         print("\nUploading phone screenshots ...")
         clear_image_type(service, edit_id, "phoneScreenshots")
         for i in range(1, 6):
-            names = ["dashboard", "learning", "progress", "scheduler", "gamification"]
-            path = os.path.join(ASSETS_DIR, f"phone_{i}_{names[i-1]}.png")
+            path = os.path.join(ASSETS_DIR, f"phone_{i}_{SCREENSHOT_NAMES[i-1]}.png")
             r = upload_image(service, edit_id, "phoneScreenshots", path)
             print(f"  [{i}/5] {os.path.basename(path)}")
 
@@ -147,8 +148,7 @@ def main():
         print("\nUploading 7-inch tablet screenshots ...")
         clear_image_type(service, edit_id, "sevenInchScreenshots")
         for i in range(1, 6):
-            names = ["dashboard", "learning", "progress", "scheduler", "gamification"]
-            path = os.path.join(ASSETS_DIR, f"tablet_7inch_phone_{i}_{names[i-1]}.png")
+            path = os.path.join(ASSETS_DIR, f"tablet_7inch_phone_{i}_{SCREENSHOT_NAMES[i-1]}.png")
             r = upload_image(service, edit_id, "sevenInchScreenshots", path)
             print(f"  [{i}/5] {os.path.basename(path)}")
 
@@ -156,8 +156,7 @@ def main():
         print("\nUploading 10-inch tablet screenshots ...")
         clear_image_type(service, edit_id, "tenInchScreenshots")
         for i in range(1, 6):
-            names = ["dashboard", "learning", "progress", "scheduler", "gamification"]
-            path = os.path.join(ASSETS_DIR, f"tablet_10inch_phone_{i}_{names[i-1]}.png")
+            path = os.path.join(ASSETS_DIR, f"tablet_10inch_phone_{i}_{SCREENSHOT_NAMES[i-1]}.png")
             r = upload_image(service, edit_id, "tenInchScreenshots", path)
             print(f"  [{i}/5] {os.path.basename(path)}")
 
