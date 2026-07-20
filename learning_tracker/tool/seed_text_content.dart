@@ -147,12 +147,14 @@ Future<void> _processCurriculum(
           try {
             final texts = await _fetchBothLanguages(dio, ref);
             return (ref: ref, he: texts.he, en: texts.en, error: false);
-          } catch (_) {
+          } catch (e) {
+            print('  ERROR fetching $ref (retry): $e');
             return (ref: ref, he: '', en: '', error: true);
           }
         }
         return (ref: ref, he: '', en: '', error: true);
-      } catch (_) {
+      } catch (e) {
+        print('  ERROR fetching $ref: $e');
         return (ref: ref, he: '', en: '', error: true);
       }
     });

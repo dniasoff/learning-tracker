@@ -199,11 +199,19 @@ Future<Map<String, String>> _fetchDay(HttpClient client, DateTime d) async {
         if (dispHe != null) out['${k}__he'] = dispHe;
       }
       return out;
-    } on Object {
+    } on IOException catch (e) {
+      _logFetchFailure(d, attempt, e);
+      await Future<void>.delayed(Duration(seconds: 2 << attempt));
+    } on FormatException catch (e) {
+      _logFetchFailure(d, attempt, e);
       await Future<void>.delayed(Duration(seconds: 2 << attempt));
     }
   }
   return const {};
+}
+
+void _logFetchFailure(DateTime d, int attempt, Object e) {
+  stderr.writeln('  WARN ${_fmt(d)} fetch attempt $attempt failed: $e');
 }
 
 String _fmt(DateTime d) =>
