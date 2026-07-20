@@ -296,7 +296,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # ── 6. coverage-floor (50% line coverage, always enforced) ──
+      # ── 6. coverage-floor (60% line coverage, always enforced) ──
       # lcov is installed earlier (before `make ci`) so the `test` Makefile
       # target can exclude generated files from coverage/lcov.info itself;
       # this step reads that already-filtered file.
