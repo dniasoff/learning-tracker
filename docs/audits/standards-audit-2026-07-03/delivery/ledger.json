@@ -9265,13 +9265,18 @@
     {
       "id": "AUD-platform-04",
       "wave": "parked",
-      "status": "parked",
+      "status": "merged",
       "severity": "P3",
       "title": "Fix invalid ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS value in Debug/Release Xcode configs (project.pbxproj)",
-      "commits": [],
-      "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+      "commits": [
+        "3b9982137569c7aafcf7d944a0bb50bc4ead08e9"
+      ],
+      "reviewRounds": 1,
+      "acVerified": [
+        "AUD-platform-04 AC1 OK: pbxproj lines 314(Profile)/434(Debug)/491(Release) all = NO (grep), one valid identical boolean, matches 3 evidence sites",
+        "AUD-platform-04 AC2 OK: check_ios_asset_symbol_extensions.dart fires exit1 on divergence, exit0 on real file; make audit exits2 when I reintroduced divergence"
+      ],
+      "notes": "Evidence matched tree exactly. Set all 3 blocks to NO. Shipped check_ios_asset_symbol_extensions.dart lint (xcodebuild unavailable on Linux); RED pre-fix (exit 1), GREEN post-fix (exit 0). 7 tests pass. Wired into make audit 93/93; audit PASSED."
     },
     {
       "id": "AUD-platform-02",
