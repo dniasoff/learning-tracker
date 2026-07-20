@@ -38,6 +38,9 @@ APP_ROOT = Path(__file__).resolve().parents[2]
 HIERARCHY_DIR = APP_ROOT / "assets" / "content" / "hierarchy"
 BOOK_TEXT_CACHE = APP_ROOT / "tool" / "data" / "book_text_cache.json"
 
+sys.path.insert(0, str(APP_ROOT / "tool"))
+from sefaria_toc_utils import walk_toc_path  # noqa: E402
+
 _TEXT_REFS: set[str] | None = None
 
 
@@ -132,18 +135,7 @@ def _hebrew_numeral(n: int) -> str:
 
 def _toc_subtree(path: str):
     """Walk Sefaria TOC categories by '/' delimited path, return the node."""
-    toc = library.get_toc()
-    parts = path.split("/")
-    node = {"contents": toc}
-    for p in parts:
-        contents = node.get("contents") if isinstance(node, dict) else None
-        if not contents:
-            return None
-        match = next((c for c in contents if c.get("category") == p), None)
-        if not match:
-            return None
-        node = match
-    return node
+    return walk_toc_path(library.get_toc(), path)
 
 
 def _toc_book_titles(path: str):
@@ -506,17 +498,9 @@ def _toc_books(category_path: str, main_subcats: list[str] | None = None):
     under a Sefaria TOC category. main_subcats restricts which sub-categories
     to descend into (e.g. exclude commentary subtrees). subcat_en/subcat_he
     are None at the top level."""
-    toc = library.get_toc()
-    parts = category_path.split("/")
-    node = {"contents": toc}
-    for p in parts:
-        contents = node.get("contents") if isinstance(node, dict) else None
-        if not contents:
-            return
-        match = next((c for c in contents if c.get("category") == p), None)
-        if not match:
-            return
-        node = match
+    node = walk_toc_path(library.get_toc(), category_path)
+    if not node:
+        return
 
     def walk(n, subcat_en, subcat_he):
         for it in n.get("contents", []):
