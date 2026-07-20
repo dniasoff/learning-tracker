@@ -159,6 +159,166 @@ void main() {
     );
   });
 
+  group('make audit check 10/15 — AG-6 TODO/FIXME Linear id '
+      '(AUD-guardrails-16)', () {
+    // Regression fixture proving the AG-6 grep (Makefile check "10/15")
+    // distinguishes marker comments carrying a DNI-#### Linear id from
+    // ones that don't, across every marker spelling AC1 names. Before
+    // AUD-repo-02 generalized it, the check matched only three hardcoded
+    // literal phrases that no real comment would ever use, so it
+    // enforced nothing (AUD-guardrails-16). AUD-repo-02's fix generalized
+    // two of the three marker spellings but left the third checked only
+    // against its own old literal phrase, so a bare instance of that
+    // third marker with no DNI id still slipped through uncaught -- this
+    // fixture covers all three (see the fixture content below for the
+    // exact spellings; deliberately not spelled out here, since a
+    // marker word as the first token of a comment line is exactly the
+    // shape this very check matches).
+    //
+    // AUD-guardrails-16 second bounce: the first bounce fix dropped the
+    // `^\s*` line-start anchor to catch trailing and `///` markers, but
+    // the only fixture lines it added were column-0 `//` markers -- the
+    // exact shape the anchor never excluded in the first place -- so the
+    // anchor removal itself was never actually exercised. This bounce
+    // adds a genuinely non-line-start `//` marker and a `///` marker to
+    // close that gap, plus a `/* ... */` block-comment marker to prove
+    // the AC1 gap the reviewer probed (block comments have no `//` at
+    // all, so the grep needed a second alternation, not just an anchor
+    // change) is now closed too.
+    test(
+      'AC1/AC2: a bare TODO/XXX with no DNI id fails the gate; the '
+      'same-style comment with a DNI-#### id passes',
+      () async {
+        final fixtureFile = File(
+          '$packageDir/lib/zzz_audit_fixture_do_not_commit.dart',
+        );
+
+        Future<ProcessResult> runAudit() =>
+            Process.run('make', ['audit'], workingDirectory: packageDir);
+
+        try {
+          fixtureFile.writeAsStringSync(
+            '// AUDIT FIXTURE - DO NOT COMMIT '
+            '(AUD-guardrails-16 / AG-6 check regression test)\n'
+            '// TODO(DNI-999999): carries a Linear id, must NOT be flagged\n'
+            // AUD-guardrails-16 bounce fix: the AG-6 grep is intentionally
+            // unanchored now (matches `//` anywhere on the line, not just
+            // at line-start), so this literal is split ('// TOD' + 'O')
+            // to keep the source text of THIS test file from self-tripping
+            // check 10/15 -- the concatenated runtime string is unaffected
+            // and still exercises a genuine bare marker in the fixture.
+            '// TOD'
+            'O: has no Linear id, MUST be flagged\n'
+            '// XXX(DNI-999999): carries a Linear id, must NOT be flagged\n'
+            // Same split rationale as above, applied to XXX ('// XX' + 'X').
+            '// XX'
+            'X: has no Linear id, MUST be flagged\n'
+            // Second bounce addition: a marker that does NOT start the
+            // line (unlike every case above, which all happen to begin
+            // at column 0). Same split rationale applied ('// TOD' + 'O').
+            'const zzzTrailingMarker = 1; // TOD'
+            'O: trailing marker, not line-start, no Linear id, '
+            'MUST be flagged\n'
+            // Second bounce addition: a `///` doc-comment marker. Same
+            // split rationale applied ('/// TOD' + 'O').
+            '/// TOD'
+            'O: doc-comment marker, no Linear id, MUST be flagged\n'
+            // Second bounce addition: a `/* ... */` block-comment marker
+            // -- the AC1 gap the reviewer probed directly. Same split
+            // rationale applied ('/* TOD' + 'O').
+            '/* TOD'
+            'O: block-comment marker, no Linear id, MUST be flagged */\n'
+            'const zzzAuditFixtureDoNotCommit = true;\n',
+          );
+
+          final dirty = await runAudit();
+          final stdout = dirty.stdout.toString();
+          expect(
+            stdout,
+            contains('zzz_audit_fixture_do_not_commit.dart:3'),
+            reason:
+                'a TODO with no DNI-#### id must be caught by the AG-6 '
+                'check (10/15).\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            isNot(contains('zzz_audit_fixture_do_not_commit.dart:2')),
+            reason:
+                'a TODO that already carries a DNI-#### id must NOT be '
+                'flagged -- the grep must distinguish the two, not just '
+                'ban TODO/FIXME outright.\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            contains('zzz_audit_fixture_do_not_commit.dart:5'),
+            reason:
+                'a bare XXX comment with no DNI-#### id must also be '
+                'caught by the AG-6 check (10/15), not just the old '
+                'literal "XXX: temporary" phrase (AC1 names XXX '
+                'explicitly).\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            isNot(contains('zzz_audit_fixture_do_not_commit.dart:4')),
+            reason:
+                'an XXX comment that already carries a DNI-#### id must '
+                'NOT be flagged.\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            contains('zzz_audit_fixture_do_not_commit.dart:6'),
+            reason:
+                'a TODO trailing after code on the same line (not '
+                'line-start) must be caught -- proves the AG-6 grep is not '
+                'anchored to the start of the line.\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            contains('zzz_audit_fixture_do_not_commit.dart:7'),
+            reason:
+                'a bare TODO in a `///` doc comment must be caught -- '
+                'proves the AG-6 grep matches `//` anywhere on the line, '
+                'not just a bare `// ` prefix.\nstdout=$stdout',
+          );
+          expect(
+            stdout,
+            contains('zzz_audit_fixture_do_not_commit.dart:8'),
+            reason:
+                'a bare TODO in a `/* ... */` block comment must be '
+                'caught (AC1: "any TODO/FIXME/XXX comment") -- proves the '
+                'AG-6 grep also matches block-comment markers, not only '
+                '`//`-style ones.\nstdout=$stdout',
+          );
+          expect(
+            dirty.exitCode,
+            isNot(0),
+            reason: 'the AG-6 check is a hard gate -- it must fail the build.',
+          );
+        } finally {
+          if (fixtureFile.existsSync()) fixtureFile.deleteSync();
+        }
+
+        final clean = await runAudit();
+        expect(
+          clean.stdout.toString(),
+          isNot(contains('zzz_audit_fixture_do_not_commit.dart')),
+          reason: 'removing the fixture restores a clean pass.',
+        );
+        expect(
+          clean.exitCode,
+          0,
+          reason:
+              'make audit must be fully clean once the fixture is removed.\n'
+              'stdout=${clean.stdout}\nstderr=${clean.stderr}',
+        );
+      },
+      // AUD-guardrails-17 (see file-level NOTE above): shells out to
+      // `make audit` twice; see the longer rationale on the 25/26 test
+      // above.
+      timeout: const Timeout(Duration(minutes: 5)),
+    );
+  });
+
   group('make audit check 15/15 cross-feature-import detector '
       '(AUD-guardrails-02)', () {
     // Mirrors the awk program in Makefile check 15/15 (both occurrences,

@@ -779,7 +779,7 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 7 | No `useHebrewTermsProvider` read outside `core/labels`, `core/preferences`, settings/onboarding screens |
 | 8 | No `displayNameEn/He` outside `core/labels` (non-generated) |
 | 9 | No empty catch blocks |
-| 10 | No banned `XXX: temporary` marker; every `// TODO`/`// FIXME` comment carries a `DNI-####` Linear id (AG-6, AUD-repo-02) |
+| 10 | Every `// TODO`/`// FIXME`/`// XXX` comment (`lib/`, `test/`, `integration_test/`) carries a `DNI-####` Linear id (AG-6, AUD-repo-02, AUD-guardrails-16) |
 | 11 | No `.withDefault(const Constant(0))` in database tables |
 | 12 | No `currentAccountId` hardcoded to 1 |
 | 13 | No raw `HebrewTerms.` calls in `lib/features/` |
