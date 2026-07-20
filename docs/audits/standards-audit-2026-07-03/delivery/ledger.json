@@ -6445,13 +6445,24 @@
   {
    "id": "AUD-guardrails-16",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P2",
    "title": "Replace make audit's dead literal-phrase TODO/FIXME/XXX grep with a real AG-6 check",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "039e2962d803a2280145c30125ceed6ed5dc436e"
+   ],
+   "reviewRounds": 3,
+   "acVerified": [
+    "AUD-guardrails-16 AC1 OK: Makefile:387,391 grep -rnP '(//|/\\*)\\s*(TODO|FIXME|XXX)\\b' over lib/ test/ integration_test/ minus 'DNI-[0-9]', FAIL=1 on hit",
+    "AUD-guardrails-16 AC1 OK: my probe lib/zzz_probe_review.dart - checker FIRED on all 9 bare shapes (//, trailing //, ///, /* */, FIXME, XXX, //TODO no-space)",
+    "AUD-guardrails-16 AC1 OK: same probe correctly did NOT flag 4 DNI'd variants nor 2 prose/string mentions; it discriminates, not blanket-bans",
+    "AUD-guardrails-16 AC1 OK: hard gate - test asserts dirty make audit exitCode isNot(0); passed",
+    "AUD-guardrails-16 AC2 OK: audit_and_arb_parity_test.dart:161-321 group 'check 10/15 - AG-6 TODO/FIXME Linear id' shells out to real make audit, not a mock",
+    "AUD-guardrails-16 AC2 OK: fixture asserts lines 3,5,6,7,8 flagged AND lines 2,4 NOT flagged - negative asserts discriminate check-10 output",
+    "AUD-guardrails-16 AC2 OK: my run - flutter test --plain-name 'AC1/AC2: a bare TODO/XXX' => All tests passed, 1 passed, exit 0",
+    "AUD-guardrails-16 red-first OK: commit 40625e54 body shows line 8 (/* TODO */) NOT caught before Makefile fix, caught after"
+   ],
+   "notes": "Evidence stale (AUD-repo-02 pre-generalized TODO/FIXME) but both ACs unmet. AC1: XXX only checked via dead literal, bare XXX w/o DNI slipped through - fixed via unified regex for TODO/FIXME/XXX. AC2: no regression fixture existed - added one proving grep distinguishes DNI'd vs non-DNI'd markers."
   },
   {
    "id": "AUD-firebase-05",
