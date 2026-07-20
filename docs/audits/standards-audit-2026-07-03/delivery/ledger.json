@@ -8474,13 +8474,15 @@
     {
       "id": "AUD-platform-03",
       "wave": "parked",
-      "status": "blocked",
+      "status": "merged",
       "severity": "P3",
       "title": "Fail fast on missing key.properties instead of silently debug-signing release Android builds (build.gradle.kts)",
-      "commits": [],
+      "commits": [
+        "aa20f38e"
+      ],
       "reviewRounds": 0,
-      "acVerified": [],
-      "notes": "blocked (merge-lane w4r3c1, 2026-07-20). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. Candidate commit f0e11692e200225b99bba92ed2e70a85c73b5ec2 \"fix(android): AUD-platform-03 - fail fast on missing release keystore in CI\" lived on worktree wf_7a49164e-852-14 (branch worktree-wf_7a49164e-852-14), not merged here (findingsMerged=[] for this pass). git cherry dev worktree-wf_7a49164e-852-14 confirms f0e11692e200225b99bba92ed2e70a85c73b5ec2 is not patch-equivalent to anything already on dev (+), so per protocol that branch is left intact (not deleted) and flagged to the orchestrator as unmerged residue for a future review/merge pass; only its worktree directory was removed per this pass's cleanup scope. Two further independent candidate commits for this same finding were observed on other concurrently-live worktrees outside this pass's scope (not touched, not verified, ownership unclear): 4c62506e \"fix(android): AUD-platform-03 - fail fast instead of debug-signing a missing-key release build\" on branch worktree-wf_7a49164e-852-13, and 19294454 \"fix(platform): AUD-platform-03 - fail fast on missing release keystore in CI\" on branch worktree-wf_7a49164e-852-3 -- both still checked out live at the time of this pass, neither an ancestor of dev. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03.\"); prior basis preserved here for context (was: parked)."
+      "acVerified": true,
+      "notes": "merged (recovery 2026-07-21): candidate fix f0e11692 (built by final-05 engine, review lost to process restart) cherry-picked clean to dev as aa20f38e. AC1: build.gradle.kts gradle.taskGraph.whenReady throws GradleException on a Release assemble/bundle task when REQUIRE_RELEASE_SIGNING=true and key.properties missing (deferred to task-exec time, not eager in buildTypes{}, so assembleDebug is unaffected). AC2: build.yml release step extracts tool/decode_release_keystore.sh which emits ::error:: + exits 1 on empty KEYSTORE_BASE64. Documented local-dev debug-signing fallback preserved (deployment-guide.md). Ships decode_release_keystore.test.mjs (4/4 pass, verified on dev). RED baseline + post-fix + assembleDebug regression check documented in commit. AC-audited in the final-05 tail sweep."
     },
     {
       "id": "AUD-guardrails-23",
