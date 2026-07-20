@@ -3490,13 +3490,18 @@
   {
    "id": "AUD-guardrails-11",
    "wave": "parked",
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Escape jq string interpolation in tool/linear-sync.sh before it corrupts YAML on titles/authors containing a quote",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c1, 2026-07-20). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (531e2f830aceed419c641017ff87bc1dec3cd53e, \"fix(guardrails): AUD-guardrails-11 - escape jq YAML title/author interpolation in tool/linear-sync.sh\", on stray worktree branch worktree-wf_79789e5b-0d2-1) touching tool/linear-sync.sh and adding tool/test-linear-sync-quote-escaping.sh -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_79789e5b-0d2-1 confirms the commit is not patch-equivalent to anything already on dev, so per protocol the stray worktree directory was removed but the worktree-wf_79789e5b-0d2-1 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-10, AUD-guardrails-14, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03.\"); prior basis preserved here for context (was: parked)."
+   "commits": [
+    "bd7120b7a2df07d604838ae25eb20f1fb7d4cf0b"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-11 AC1 OK: tool/test-linear-sync-quote-escaping.sh feeds a stubbed linearis issue/comment with an embedded \" in .title/.user.name through cmd_sync and cmd_story, then validates every emitted YAML file via python3 yaml.safe_load with exact round-trip of the quoted value -- 5/5 checks pass on the fixed script (re-run by gate-repair: PASS x5, 0 failed). Pre-fix repro (reverting the 5 sites to the old raw-concatenation form) reproduces a genuine yaml.parser.ParserError, confirming the test is a real regression guard, not a tautology.",
+    "AUD-guardrails-11 AC2 OK: all 5 sites (tool/linear-sync.sh, originally lines 301/323/336/381/388) now build the YAML scalar via `(.field | tojson)` instead of manual `\"...\\\"\"` concatenation -- confirmed by diff."
+   ],
+   "notes": "gate-repair 2026-07-20: prior ledger entry recorded this as \"blocked (merge-lane w4r1c1) ... review agent lost (quota) ... review round for the fix commit never completed\" -- that is an internal engine-process failure, not a genuine external blocker, so the finding stayed non-genuinely blocked with the real fix stranded on stray branch worktree-wf_79789e5b-0d2-1 (commit 531e2f830aceed419c641017ff87bc1dec3cd53e) and never reached dev. gate-repair reviewed that candidate commit directly (diff + commit-message evidence), found it correctly implements both ACs with a genuine red-first regression test, cherry-picked it onto dev as bd7120b7a2df07d604838ae25eb20f1fb7d4cf0b (git cherry-pick -x, content/author/message preserved, no conflicts -- files disjoint from everything merged on dev since the branch's base), re-ran the full verification suite post-merge (bash tool/test-linear-sync-quote-escaping.sh: 5/5 pass; cd learning_tracker && flutter analyze: No issues found!; cd learning_tracker && make audit: PASSED, all 67 greps clean), then deleted the now-fully-merged stray branch worktree-wf_79789e5b-0d2-1 and removed its stray worktree directory as residue cleanup. Both ACs verified green; no test weakened. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03.\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-docs-07",
@@ -5392,10 +5397,14 @@
    "status": "blocked",
    "severity": "P2",
    "title": "Reconcile the first AVD entry across avd-setup.ps1, emulators-start.ps1, and adb-connect-wsl.sh",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c4, 2026-07-20). AC1 fixed/verified: avd-setup.ps1 row -> api=28/device=pixel_2/name=lt_api28_pixel2, rationale + 2 stale refs fixed. AC2 (5/5 ONLINE live boot) unexecutable: needs Windows+Android emulator+GPU, absent here (doc local-only, never CI). Traced by hand, committed green fix, no fabricated result. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03.\"); prior basis preserved here for context (was: parked)."
+   "commits": [
+    "8ec0c5cf62443f6789ddc22f2d5eba384598c378"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-15 AC1 OK: commit 8ec0c5cf62443f6789ddc22f2d5eba384598c378 reverts tool/avd-setup.ps1's port-5554 $MATRIX row to api=28/device=pixel_2/name=lt_api28_pixel2 (plus the rationale comment and 2 stale doc references), matching emulators-start.ps1's $ALL_AVDS and adb-connect-wsl.sh's EXPECTED_NAMES/EXPECTED_APIS, which already agreed with each other. gate-repair re-verified post-merge: `grep -rn \"lt_api24_nexus5\\|api.?24\\|Nexus 5\" tool/avd-setup.ps1 tool/emulators-start.ps1 tool/adb-connect-wsl.sh` -> 0 hits; cross-file check confirms all 3 scripts now agree on lt_api28_pixel2/API 28/port 5554, matching the pattern of the other 4 matrix rows."
+   ],
+   "notes": "gate-repair 2026-07-20: prior ledger entry claimed \"AC1 fixed/verified ... committed green fix\" but the ledger's own commits/acVerified fields were empty ([]) -- a register-vs-reality gap. Root cause: the AC1 fix (commit 8a47c27a35241a58694424d8c5bc2ff38ea746b0) was genuinely built and verified but only ever committed to stray branch worktree-wf_79789e5b-0d2-4, never merged to dev, and the ledger row was never updated with the real commit/evidence once that branch went stray. gate-repair reviewed that candidate commit directly, confirmed it correctly implements AC1 (diff + grep re-verification above), cherry-picked it onto dev as 8ec0c5cf62443f6789ddc22f2d5eba384598c378 (git cherry-pick -x, content/author/message preserved, no conflicts), re-ran verification post-merge (cd learning_tracker && flutter analyze: No issues found!; cd learning_tracker && make audit: PASSED, all 67 greps clean; no .dart/.arb files touched so flutter test/arb-parity are not applicable), then deleted the now-fully-merged stray branch worktree-wf_79789e5b-0d2-4 as residue cleanup (no separate worktree directory existed for it). AC1 is now genuinely fixed, merged to dev, and evidenced above -- status stays 'blocked' (not 'merged') because AC2 ('running avd-setup.ps1 then emulators-start.ps1 boots all 5 emulators, verified by adb-connect-wsl.sh reporting 5/5 ONLINE') remains genuinely unexecutable: it requires a Windows host with the Android SDK/emulator and GPU passthrough, which no sandbox in this delivery chain (worktree, gate-repair, or CI) has ever had -- this test layer (docs/test-options.md layer 9) is documented as local-only, never run in CI. Per TQ-7, this is not being cleared by weakening or skipping AC2; it is left genuinely blocked on a real environment gap, with AC1's fix and evidence now correctly on the record. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03.\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-docs-19",
@@ -6434,13 +6443,18 @@
   {
    "id": "AUD-guardrails-14",
    "wave": "parked",
-   "status": "blocked",
+   "status": "merged",
    "severity": "P2",
    "title": "Gate deploy-play-store.yml on a passing CI run for the exact SHA being deployed",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "blocked (merge-lane w4r1c3, 2026-07-20). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. A candidate fix commit exists (a0c26b7b23843f24b34332cff175061d4e407565, \"fix(guardrails): AUD-guardrails-14 - gate deploy-play-store.yml on a green ci.yml run for the deploying SHA\", on stray worktree branch worktree-wf_79789e5b-0d2-3) touching .github/workflows/deploy-play-store.yml, tool/check_deploy_ci_gate.mjs, tool/check_deploy_ci_gate.test.mjs -- but it was never independently reviewed against the finding's ACs, so it is not merged here (findingsMerged=[] for this pass). git cherry dev vs worktree-wf_79789e5b-0d2-3 confirms the commit is not patch-equivalent to anything already on dev, so per protocol the stray worktree directory was removed but the worktree-wf_79789e5b-0d2-3 branch itself was left intact (not deleted), holding this commit, and is flagged to the orchestrator as unmerged residue for a future review/merge or residue-harvest pass -- same quota-incident pattern previously logged against AUD-tracks-10, AUD-t-cross-64 and AUD-t-cross-81. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03.\"); prior basis preserved here for context (was: parked)."
+   "commits": [
+    "b35c57694b74a7f703fbcc77be911e147031dc51"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-14 AC1 OK: .github/workflows/deploy-play-store.yml's `deploy` job now carries `needs: gate-ci-status`, and the new `gate-ci-status` job runs its unit tests then `node tool/check_deploy_ci_gate.mjs` (which fails closed on missing/red CI or any API error) BEFORE any build/signing step -- confirmed by diff placement and job dependency graph.",
+    "AUD-guardrails-14 AC2 OK: live dry run against the real public repo (dniasoff/learning-tracker) in the commit message demonstrates the gate blocking on a SHA with no ci.yml run (`BLOCKED -- no ci.yml run found ... exit=1`) and on a SHA with only an in-progress run (`BLOCKED ... none completed successfully (in_progress/pending) ... exit=1`), and opening on a SHA with a green run (`OK ... exit=0`); re-run by gate-repair post-merge: `node --test tool/check_deploy_ci_gate.test.mjs` -> 8 pass, 0 fail, covering the same missing/in-progress/failed/cancelled/wrong-SHA/re-run cases as pure unit tests (no network needed to re-verify the decision logic)."
+   ],
+   "notes": "gate-repair 2026-07-20: prior ledger entry recorded this as \"blocked (merge-lane w4r1c3) ... review agent lost (quota) ... review round never completed\" -- an internal engine-process failure, not a genuine external blocker, so the finding stayed non-genuinely blocked with the real fix stranded on stray branch worktree-wf_79789e5b-0d2-3 (commit a0c26b7b23843f24b34332cff175061d4e407565) and never reached dev. gate-repair reviewed that candidate commit directly (diff + commit-message evidence including a live dry run against the real repo), found it correctly implements both ACs with its own red-first unit-test suite (Rule 0 -- the checker ships with its own correctness gate), cherry-picked it onto dev as b35c57694b74a7f703fbcc77be911e147031dc51 (git cherry-pick -x, content/author/message preserved, no conflicts), re-ran verification post-merge (node --test tool/check_deploy_ci_gate.test.mjs: 8 pass/0 fail; cd learning_tracker && flutter analyze: No issues found!; cd learning_tracker && make audit: PASSED, all 67 greps clean), then deleted the now-fully-merged stray branch worktree-wf_79789e5b-0d2-3 and removed its stray worktree directory as residue cleanup. Both ACs verified green; no test weakened. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03.\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-guardrails-16",
