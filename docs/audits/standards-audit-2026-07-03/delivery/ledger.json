@@ -12031,13 +12031,19 @@
   {
    "id": "AUD-guardrails-38",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "tool/device_e2e/journey_01_signup_profile.py promises TEST_UID cleanup that nothing implements",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "06dd0e27149d42f6e65cdf09919c941049f1886e"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-38 AC1 OK (branch a): grep 'for cleanup' tool/device_e2e/ exits 1; journey line 139-143 comment now accurately states nothing consumes TEST_UID=",
+    "AUD-guardrails-38 AC1 OK (branch b): README 'Test-data cleanup (manual)' section added; refs accurate - admin_verify_email at journey:33, path matches coll at journey:127",
+    "AUD-guardrails-38 upheld: repo-wide grep finds no script/Makefile/doc consuming a TEST_UID= line (only print, new comment, README ref)"
+   ],
+   "notes": "Re-verified: line 139 printed TEST_UID with no consumer anywhere (grep confirmed), no README mention - finding upheld. Took AC's second branch: replaced misleading comment with an accurate one, added 'Test-data cleanup (manual)' section to README.md with purge steps."
   },
   {
    "id": "AUD-docs-27",
