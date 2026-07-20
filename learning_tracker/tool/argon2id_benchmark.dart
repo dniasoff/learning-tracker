@@ -151,6 +151,8 @@ Future<void> main(List<String> args) async {
     '  - Use the highest row that still fits the budget on-device.',
   );
   stdout.writeln('  - Update Argon2idParams.production in');
-  stdout.writeln('    lib/features/auth/domain/services/password_hasher.dart');
+  stdout.writeln(
+    '    lib/features/account/domain/services/password_hasher.dart',
+  );
   stdout.writeln('    once the device run confirms a winning row.');
 }
