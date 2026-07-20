@@ -1229,13 +1229,21 @@ audit: lint-rules-test ## Run all 67 enforcement greps (NFR19) — exits non-zer
 	  grep -A2 "UIBackgroundModes" ios/Runner/Info.plist; \
 	  FAIL=1; \
 	fi; \
-	echo "92/92 — AUD-platform-01: firebase.json declares a hosting block (auto-served assetlinks.json, appAssociation not disabled) and AndroidManifest.xml's autoVerify sign-in/invite intent-filters still match AuthRepositoryImpl's link domain — static half of the fix; the live half (assetlinks.json actually resolving 200) is tool/check_assetlinks_live.sh, run post-deploy in CI since it needs network access"; \
+	echo "92/93 — AUD-platform-01: firebase.json declares a hosting block (auto-served assetlinks.json, appAssociation not disabled) and AndroidManifest.xml's autoVerify sign-in/invite intent-filters still match AuthRepositoryImpl's link domain — static half of the fix; the live half (assetlinks.json actually resolving 200) is tool/check_assetlinks_live.sh, run post-deploy in CI since it needs network access"; \
 	if ! dart run tool/check_platform_deep_link_hosting.dart > /tmp/platform_deep_link_hosting_check.$$$$.log 2>&1; then \
 	  cat /tmp/platform_deep_link_hosting_check.$$$$.log; \
 	  rm -f /tmp/platform_deep_link_hosting_check.$$$$.log; \
 	  FAIL=1; \
 	else \
 	  rm -f /tmp/platform_deep_link_hosting_check.$$$$.log; \
+	fi; \
+	echo "93/93 — AUD-platform-04: no config drift/invalid value in ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS across the Debug/Release/Profile XCBuildConfiguration blocks in ios/Runner.xcodeproj/project.pbxproj (must all be the same valid YES/NO, never a copy-paste bleed like AppIcon from ASSETCATALOG_COMPILER_APPICON_NAME)"; \
+	if ! dart run tool/check_ios_asset_symbol_extensions.dart > /tmp/ios_asset_symbol_extensions_check.$$$$.log 2>&1; then \
+	  cat /tmp/ios_asset_symbol_extensions_check.$$$$.log; \
+	  rm -f /tmp/ios_asset_symbol_extensions_check.$$$$.log; \
+	  FAIL=1; \
+	else \
+	  rm -f /tmp/ios_asset_symbol_extensions_check.$$$$.log; \
 	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
