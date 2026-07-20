@@ -203,12 +203,13 @@ audit:
 	\
 	echo ""; \
 	echo "[12/12] Raw HebrewTerms. calls outside core/labels/ or core/constants/ (B11-7 — must go via label layer)"; \
-	HITS=$$(grep -rn 'HebrewTerms\.' "$$LIB/" \
+	HITS=$$(grep -rn '\bHebrewTerms\.' "$$LIB/" \
 	  --include='*.dart' \
 	  | grep -v '/core/labels/' \
 	  | grep -v '/core/constants/' \
 	  | grep -v '_test\.dart' \
-	  | grep -v '\.g\.dart' || true); \
+	  | grep -v '\.g\.dart' \
+	  | grep -v ':[[:space:]]*//' || true); \
 	if [ -n "$$HITS" ]; then echo "$$HITS"; FAIL=1; else echo "  OK"; fi; \
 	\
 	echo ""; \

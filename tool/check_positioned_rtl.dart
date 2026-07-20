@@ -57,6 +57,10 @@ library;
 
 import 'dart:io';
 
+/// (2026-07-21 re-pin: text_display_screen 544->543, learning_screen 238->237,
+/// step_starting_position_calendar 267->293 — same baselined sites, line numbers
+/// drifted as those files were edited by unrelated work. AUD-profiles-23 scoped
+/// these to baseline, not fix.)
 /// Pre-existing `Positioned(left:/right:)` sites this checker's broadened
 /// (multi-line-aware) scan surfaces, none of them the AUD-profiles-23
 /// evidence site — out of scope here.
@@ -64,10 +68,10 @@ const _baseline = <String>{
   'learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart:559',
   'learning_tracker/lib/features/account/presentation/screens/sign_in_screen.dart:293',
   'learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart:102',
-  'learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart:544',
+  'learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart:543',
   'learning_tracker/lib/features/dashboard/presentation/widgets/child_points_rewards_tab_card.dart:56',
   'learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_all_caught_up_card.dart:56',
-  'learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart:238',
+  'learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart:237',
   'learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart:276',
   'learning_tracker/lib/features/onboarding/presentation/widgets/intro_daily_plan_page.dart:28',
   'learning_tracker/lib/features/onboarding/presentation/widgets/intro_daily_plan_page.dart:94',
@@ -80,7 +84,7 @@ const _baseline = <String>{
   'learning_tracker/lib/features/profiles/presentation/widgets/add_profile_mode_pick_card.dart:92',
   'learning_tracker/lib/features/profiles/presentation/widgets/profile_card.dart:122',
   'learning_tracker/lib/features/settings/presentation/utils/account_actions.dart:79',
-  'learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart:267',
+  'learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart:293',
 };
 
 void main() {
