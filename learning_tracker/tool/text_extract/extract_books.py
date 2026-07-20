@@ -110,12 +110,18 @@ CURRICULUM_BOOK_SPECS: dict[str, dict] = {
 }
 
 
+# Sefaria's `Ref().text(lang).as_string()` returns text with internal HTML
+# (notes, italics). Strip footnote *bodies* before stripping tags — mirrors
+# main.py's `_FOOTNOTE` regex (AUD-guardrails-33: this used to only strip
+# tags, leaving footnote text merged into the main body).
 _HTML = re.compile(r"<[^>]+>")
+_FOOTNOTE = re.compile(r" ?\(…\)|<i class=\"footnote\".*?</i>", re.S)
 
 
 def _clean(s: str) -> str:
     if not s:
         return ""
+    s = _FOOTNOTE.sub("", s)
     s = _HTML.sub("", s)
     return s.strip()
 
