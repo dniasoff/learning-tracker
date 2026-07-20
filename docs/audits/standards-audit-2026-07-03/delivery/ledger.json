@@ -9216,13 +9216,13 @@
   {
    "id": "AUD-guardrails-25",
    "wave": "parked",
-   "status": "parked",
+   "status": "blocked",
    "severity": "P3",
    "title": "Extract duplicated CI bootstrap steps into a shared composite action",
    "commits": [],
    "reviewRounds": 0,
    "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "notes": "blocked (merge-lane w4r1c4, 2026-07-20). review agent lost (quota) -- reopened from parked for a fix attempt; the review round for the fix commit never completed because the review agent was lost to quota exhaustion, so the finding could not be closed out through the normal merge path. Two candidate commits exist on isolated worktrees, neither merged here (findingsMerged=[] for this pass): 6a0ab316c54c0d82d680f8ca3c0dab85acefc7b5 \"fix(guardrails): AUD-guardrails-25 - extract shared CI bootstrap into a composite action\" (still on branch worktree-wf_13a3c5fa-c53-4, adding a .github/actions/flutter-bootstrap composite action and converting ci.yml/build.yml/deploy-play-store.yml jobs to use it), and a follow-up fe7101117b1d904ccb37deaceecf6a70846c938c \"fix(ci): w4r1c4 - AUD-guardrails-25 bounce: checkout before local composite action\" responding to a reviewer bounce (all 8 converted jobs invoked the local composite action with no preceding actions/checkout, which would fail action-prep on every runner since local composite actions must already exist on the runner's filesystem). The bounce-fix commit lived only on the detached-HEAD worktree wf_13a3c5fa-c53-14 with no branch pointer, so once that worktree is removed per this pass's cleanup it becomes unreachable. git cherry dev worktree-wf_13a3c5fa-c53-4 confirms 6a0ab316c54c0d82d680f8ca3c0dab85acefc7b5 is not patch-equivalent to anything already on dev (+), so per protocol that branch is left intact (not deleted) and flagged to the orchestrator as unmerged residue for a future review/merge pass; its worktree directory was removed. Ledger row was previously parked (PO-approved scope, 2026-07-03: \"roadmap section-4 uncited - parked per PO-approved scope 2026-07-03.\"); prior basis preserved here for context (was: parked)."
   },
   {
    "id": "AUD-platform-04",
