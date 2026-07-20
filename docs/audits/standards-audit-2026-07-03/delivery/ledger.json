@@ -8390,13 +8390,19 @@
   {
    "id": "AUD-guardrails-27",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Fix curate_curricula/README.md status table: 13 of 14 curricula are marked TODO though main.py already implements them",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "44144142b6c389ebe3abdba592191ecff830c290"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-27 AC1 OK: AST-extracted final STRATEGIES keys (15, after nach add / nach_prophets del at main.py:714-715) byte-identical to README table's 15 keys",
+    "AUD-guardrails-27 AC2 OK: shemirat_halashon present at README.md:64",
+    "AUD-guardrails-27 AC3 OK: grep TODO on README returns none; all 15 rows marked done"
+   ],
+   "notes": "Confirmed: main.py's STRATEGIES dict has 15 working strategy functions; all 15 already have generated hierarchy JSON assets. Fixed README's Status column (TODO->done for 13 rows), added missing shemirat_halashon row, added a caveat re: --diff-review status. All 3 ACs met."
   },
   {
    "id": "AUD-guardrails-30",
