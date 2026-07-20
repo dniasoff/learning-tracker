@@ -11175,13 +11175,19 @@
   {
    "id": "AUD-guardrails-24",
    "wave": "parked",
-   "status": "parked",
+   "status": "merged",
    "severity": "P3",
    "title": "Document all 9 shipped custom_lint rules in README.md; fix the 'eight rules' miscount",
-   "commits": [],
-   "reviewRounds": 0,
-   "acVerified": [],
-   "notes": "roadmap section-4 uncited - parked per PO-approved scope 2026-07-03."
+   "commits": [
+    "0deb153329fd15c508dff6eb16e249670622428f"
+   ],
+   "reviewRounds": 1,
+   "acVerified": [
+    "AUD-guardrails-24 AC1 OK: README '## Rule N' headers cover all 20 registered LintCode names (set-diff registered-vs-README empty).",
+    "AUD-guardrails-24 AC1 OK: all 9 originally-cited rules present in README, plus disable-list enumerates all 20.",
+    "AUD-guardrails-24 AC2 OK: doc comment 'Provides twenty rules' == 20 bullets == 20 getLintRules() registrations (diff empty)."
+   ],
+   "notes": "At cited 4018a91c doc said 'eight rules' (matches evidence), but tree drifted further: rules grew 9->20, doc already read 'nineteen' (off-by-one), README covered 7/20. Real defect, not refutable. Added README Rules 8-20, extended disable-list to 20, fixed count to 'twenty'. Verified 20==20==20. gatePolicy=disjoint-skip (tip diff {README.md, learning_tracker_lints.dart} vs dev diff {} from merge-base -- no overlap)."
   },
   {
    "id": "AUD-platform-06",
