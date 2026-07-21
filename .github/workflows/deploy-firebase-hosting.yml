@@ -77,6 +77,36 @@ jobs:
             "$SHA256" \
             --project torah-study-tracker
 
+      # Firebase Hosting's appAssociation=AUTO was verified on 2026-07-21 to
+      # serve an empty `[]` for this project even with the fingerprint
+      # registered above (AUTO only includes an app once it is linked to the
+      # Hosting site in the console — the CLI cannot do that link), so we serve
+      # a STATIC hosting/public/.well-known/assetlinks.json and inject the Play
+      # App Signing SHA-256 (the cert Google re-signs the distributed AAB with)
+      # into it here, alongside any dev/debug fingerprint already committed.
+      - name: Inject Play App Signing fingerprint into assetlinks.json
+        env:
+          SHA256: ${{ secrets.PLAY_APP_SIGNING_SHA256 }}
+        working-directory: learning_tracker
+        run: |
+          python3 - "hosting/public/.well-known/assetlinks.json" "$SHA256" <<'PY'
+          import json, os, sys
+          path, sha = sys.argv[1], sys.argv[2].strip().upper()
+          os.makedirs(os.path.dirname(path), exist_ok=True)
+          try:
+              data = json.load(open(path))
+          except (FileNotFoundError, ValueError):
+              data = [{"relation": ["delegate_permission/common.handle_all_urls"],
+                       "target": {"namespace": "android_app",
+                                  "package_name": "com.jcom.torah.learning_tracker",
+                                  "sha256_cert_fingerprints": []}}]
+          fps = data[0]["target"]["sha256_cert_fingerprints"]
+          if sha and sha not in fps:
+              fps.append(sha)
+          json.dump(data, open(path, "w"), indent=2)
+          print("assetlinks fingerprints ->", fps)
+          PY
+
       - name: Deploy Firebase Hosting
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
