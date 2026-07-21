@@ -97,6 +97,8 @@ jobs:
         uses: ./.github/actions/flutter-bootstrap
         with:
           cache-custom-lints: 'true'
+          run-codegen: 'true'
+          run-l10n: 'true'
           prepare-asset: 'true'
           decode-secrets: 'true'
           google-services-json-base64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
