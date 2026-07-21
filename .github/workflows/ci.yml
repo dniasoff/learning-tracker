@@ -201,9 +201,19 @@ jobs:
       - name: Install lcov
         run: sudo apt-get install -y lcov
 
-      - name: Run tests with coverage (make ci)
+      # 2026-07-21: was `make ci` (analyze + validate-calendar + lint-rules-test
+      # + test + test-serial-tools + test-rules + test-functions), which
+      # redundantly re-ran 4 of those 7 targets that already have their own
+      # dedicated, faster jobs in this workflow: `analyze` (the `analyze` job),
+      # `lint-rules-test` (already covered by the `audit` job's `make audit`,
+      # per this file's own comment above), `test-rules`/`test-functions`
+      # (their own emulator-spinning-up jobs below). That redundancy is why
+      # this job needed 60+ minutes on a standard runner. Trimmed to only the
+      # 3 targets genuinely unique to this job; lcov.info (needed by the
+      # coverage-floor/Codecov steps below) is produced by `test` either way.
+      - name: Run tests with coverage
         working-directory: learning_tracker
-        run: make ci
+        run: make validate-calendar test test-serial-tools
 
       - name: Upload golden failure artifacts
         if: failure()
